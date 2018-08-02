@@ -1,0 +1,11 @@
+.DStore
+.idea
+*.ipy*
+*.test.*
+*.pyc
+.cache*
+storage/*
+config/personal_config.py
+*.jar
+venv/*
+data/*

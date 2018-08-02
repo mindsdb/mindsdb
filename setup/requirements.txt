@@ -1,0 +1,12 @@
+autobahn
+twisted
+pandas
+numpy
+scipy
+sklearn
+python-dateutil
+pymongo
+click
+JayDeBeApi
+torch
+torchvision

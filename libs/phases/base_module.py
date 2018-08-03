@@ -47,7 +47,7 @@ class BaseModule():
         self.logging = self.session.logging
 
     def loadPhaseModule(self, module_name):
-        return self.transaction.getModuleInstance(module_name)
+        return self.transaction.getPhaseInstance(module_name)
 
     def run(self):
         pass

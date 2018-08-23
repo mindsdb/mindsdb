@@ -38,6 +38,7 @@ class SessionController():
         self.current_transaction = None
 
 
-    def newTransaction(self, sql_query, breakpoint = PHASE_END):
-        return TransactionController(session=self, sql_query=sql_query, breakpoint = breakpoint)
+    def newTransaction(self, transaction_metadata, breakpoint = PHASE_END):
+
+        return TransactionController(session=self, transaction_metadata=transaction_metadata, breakpoint = breakpoint)
 

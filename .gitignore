@@ -9,3 +9,4 @@ config/personal_config.py
 *.jar
 venv/*
 data/*
+clean_data

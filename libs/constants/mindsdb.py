@@ -29,6 +29,8 @@ KEY_MODEL_MODEL_TYPE = 'predictor'
 KEY_MODEL_PREDICT_FROM_TABLE = 'model_predict_from_table'
 KEY_CONFIDENCE ='confidence'
 
+KEY_TRANSACTION_TYPE = 'transaction_type'
+
 LEARNING_RATE_INDEX = 0
 EPOCHS_INDEX = 1
 

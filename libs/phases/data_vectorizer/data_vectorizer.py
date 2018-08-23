@@ -50,25 +50,23 @@ class DataVectorizer(BaseModule):
 
     def run(self):
 
-
-        group_by = self.transaction.model_metadata[KEY_MODEL_GROUP_BY]
+        group_by = self.transaction.metadata.model_group_by
         group_by_index = None
-
-        target_columns = [self.transaction.model_metadata[KEY_MODEL_PREDICT_COLUMNS]]
 
         # this is a template of how we store columns
         column_packs_template = OrderedDict()
 
-        for i, column_name in enumerate(self.transaction.input_metadata[KEY_COLUMNS]):
+        for i, column_name in enumerate(self.transaction.persistent_model_metadata.columns):
             if group_by is not None and group_by == column_name:
                 group_by_index = i
+                # TODO: Consider supporting more than one index column
 
             column_packs_template[column_name] = []
 
         # This is used to calculate if its a test based on the existance of self.transaction.input_test_data_array
         # self.transaction.input_test_data_array only exists if the train query contains TEST FROM() statement
 
-        input_data_initial_len = len(self.transaction.input_data_array)
+        input_data_initial_len = len(self.transaction.input_data.data_array)
         if self.transaction.type == TRANSACTION_LEARN and self.transaction.input_test_data_array:
             self.transaction.input_data_array += self.transaction.input_test_data_array
 
@@ -76,7 +74,7 @@ class DataVectorizer(BaseModule):
 
 
             if group_by is not None:
-                # TODO: it can be more than one group by
+
                 group_by_hash = self.hashCell(row[group_by_index])
                 if group_by_hash in self.transaction.model_data[KEYS.TEST_SET]:
                     is_test = True

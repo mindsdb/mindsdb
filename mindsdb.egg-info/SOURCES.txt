@@ -41,7 +41,6 @@ libs/data_types/sampler.py
 libs/data_types/tester_response.py
 libs/data_types/trainer_response.py
 libs/helpers/__init__.py
-libs/helpers/drill_helpers.py
 libs/helpers/file_helpers.py
 libs/helpers/general_helpers.py
 libs/helpers/json_helpers.py

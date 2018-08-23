@@ -11,6 +11,11 @@
 
 from libs.constants.mindsdb import *
 from libs.helpers.general_helpers import *
+from libs.data_types.transaction_metadata import TransactionMetadata
+from libs.data_types.persistent_model_metadata import PersistentModelMetadata
+from libs.data_types.persistent_model_metrics import PersistentModelMetrics
+from libs.data_types.transaction_data import TransactionData
+from libs.data_types.model_data import ModelData
 
 import config as CONFIG
 import re
@@ -25,48 +30,40 @@ from bson.objectid import ObjectId
 
 class TransactionController:
 
-    def __init__(self, session, type,  transaction_metadata, breakpoint = PHASE_END):
+    def __init__(self, session, transaction_metadata, breakpoint = PHASE_END):
         """
         A transaction is the interface to start some MindsDB operation within a session
 
         :param session:
-        :param type:
+        :type session: utils.controllers.session_controller.SessionController
+        :param transaction_type:
         :param transaction_metadata:
+        :type transaction_metadata: TransactionMetadata
         :param breakpoint:
         """
 
         self.session = session
         self.breakpoint = breakpoint
         self.session.current_transaction = self
+        self.metadata = transaction_metadata #type: TransactionMetadata
 
-        self.transaction_metadata = transaction_metadata
-        self.type = type
 
         # variables to de defined by setup
         self.error = None
         self.errorMsg = None
 
+        self.input_data = TransactionData() # [[]]
+        self.output_data = TransactionData()
 
-        self.input_data_sql = None # This is the query that can be used to extract actual data needed for this transaction
-        self.input_data_array = None # [[]]
-        self.input_test_data_array = None
-        self.input_metadata = None
+        self.model_data = ModelData()
 
-        self.predict_metadata = None # This is the metadata of a predict statement
-
-        self.model_data = {KEYS.TRAIN_SET:{}, KEYS.TEST_SET:{}, KEYS.ALL_SET: {}, KEYS.PREDICT_SET:{}}
-        self.model_data_input_array_map = {KEYS.TRAIN_SET:{}, KEYS.TEST_SET:{}, KEYS.ALL_SET: {}, KEYS.PREDICT_SET:{}}
-        self.input_vectors_group_by = False
+        # variables that can be persisted
+        self.persistent_model_metadata = PersistentModelMetadata()
+        self.persistent_model_metadata.model_name = self.metadata.model_name
+        self.persistent_model_metrics = PersistentModelMetrics()
+        self.persistent_model_metrics.model_name = self.metadata.model_name
 
 
-        self.model_stats = None
-
-        # this defines what data model to use
-        self.data_model_framework = FRAMEWORKS.PYTORCH
-        self.data_model_predictor = 'DefaultPredictor'
-
-        self.output_data_array = None
-        self.output_metadata = None
         self.run()
 
 
@@ -109,57 +106,45 @@ class TransactionController:
         """
 
         self.callPhaseModule('DataExtractor')
-        if not self.input_data_array or len(self.input_data_array[0])<=0:
+        if len(self.input_data.data_array) <= 0 or len(self.input_data.data_array[0]) <=0:
             self.type = TRANSACTION_BAD_QUERY
             self.errorMsg = "No results for this query."
             return
 
-        model_name = self.transaction_metadata[KEY_MODEL_NAME]
-
         try:
-            model_stats = self.session.mongo.mindsdb.model_stats
+            # make sure that we remove all previous data about this model
+            self.persistent_model_metadata.delete()
+            self.persistent_model_metrics.delete()
 
-            model_stats.insert({'model_name': model_name,
-                                'submodel_name': None,
-                                "model_metadata":self.transaction_metadata,
-                                "status": MODEL_STATUS_ANALYZING,
-                                "_id": str(ObjectId())
-                                })
+            # start populating data
+            self.persistent_model_metadata.train_metadata = self.metadata.getAsDict()
+            self.persistent_model_metadata.current_phase = MODEL_STATUS_ANALYZING
+            self.persistent_model_metadata.columns = self.input_data.columns # this is populated by data extractor
+            self.persistent_model_metadata.insert()
+
 
             self.callPhaseModule('StatsGenerator')
-            model_stats.update_one({'model_name': model_name, 'submodel_name': None},
-                                   {'$set': {
-                                       "status": MODEL_STATUS_PREPARING
-                                   }})
-            stats = model_stats.find_one({'model_name': model_name, 'submodel_name': None})['stats']
-            self.model_stats = stats
+            self.persistent_model_metadata.current_phase = MODEL_STATUS_PREPARING
+            self.persistent_model_metadata.update()
+
 
             self.callPhaseModule('DataVectorizer')
-            model_stats.update_one({'model_name': model_name, 'submodel_name': None},
-                                   {'$set': {
-                                       "status": MODEL_STATUS_TRAINING
-                                   }})
+            self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
+            self.persistent_model_metadata.update()
 
             # self.callPhaseModule('DataEncoder')
-            # model_stats.update_one({'model_name': model_name, 'submodel_name': None},
-            #                        {'$set': {
-            #                            "status": MODEL_STATUS_TRAINING
-            #                        }})
-
-            # self.callPhaseModule('DataDevectorizer')
             self.callPhaseModule('ModelTrainer')
-            model_stats.update_one({'model_name': model_name, 'submodel_name': None},
-                                   {'$set': {
-                                       "status": MODEL_STATUS_TRAINED
-                                   }})
+            # TODO: Loop over all stats and when all stats are done, then we can mark model as MODEL_STATUS_TRAINED
+
             return
         except Exception as e:
-            self.session.logging.error(traceback.print_exc())
+
+            self.persistent_model_metadata.current_phase = MODEL_STATUS_ERROR
+            self.persistent_model_metadata.error_msg = traceback.print_exc()
+            self.persistent_model_metadata.update()
+            self.session.logging.error(self.persistent_model_metadata.error_msg)
             self.session.logging.error(e)
-            model_stats.update_one({'model_name': model_name, 'submodel_name': None},
-                                   {'$set': {
-                                       "status": MODEL_STATUS_ERROR
-                                   }})
+
             return
 
 
@@ -169,22 +154,13 @@ class TransactionController:
         :return:
         """
 
-        #TODO: remove model directory, remove drill view
-        model_name =self.transaction_metadata[KEY_MODEL_NAME]
-        model_stats = self.session.mongo.mindsdb.model_stats
-        model_train_stats = self.session.mongo.mindsdb.model_train_stats
-        model = model_stats.find_one({'model_name': model_name})
-        if not model:
-            self.type = TRANSACTION_BAD_QUERY
-            self.errorMsg = "Model '" + model_name + "' not found."
-            return
+        # make sure that we remove all previous data about this model
+        self.persistent_model_metadata.delete()
+        self.persistent_model_stats.delete()
 
-        model_stats.delete_one({'model_name': model_name})
-        model_train_stats.delete_one({'model_name': model_name})
-        self.output_data_array = [['Model '+model_name+' deleted.']]
-        self.output_metadata = {
-            KEY_COLUMNS: ['Status']
-        }
+        self.output_data.data_array = [['Model '+self.metadata.model_name+' deleted.']]
+        self.output_data.columns = ['Status']
+
         return
 
 
@@ -195,8 +171,7 @@ class TransactionController:
         """
 
         self.callPhaseModule('DataExtractor')
-        self.output_data_array = self.input_data_array
-        self.output_metadata = self.transaction_metadata
+        self.output_data = self.input_data
         return
 
 
@@ -208,15 +183,13 @@ class TransactionController:
 
         self.callPhaseModule('StatsLoader')
         self.callPhaseModule('DataExtractor')
-        if not self.input_data_array or len(self.input_data_array[0])<=0:
-            self.output_data_array = self.input_data_array
-            self.output_metadata = self.transaction_metadata
+        if len(self.input_data.data_array[0])<=0:
+            self.output_data = self.input_data
             return
 
         self.callPhaseModule('DataVectorizer')
         self.callPhaseModule('ModelPredictor')
-        self.output_data_array = self.input_data_array
-        self.output_metadata = self.transaction_metadata
+
         return
 
 
@@ -226,30 +199,29 @@ class TransactionController:
         :return:
         """
 
-        if self.type == TRANSACTION_BAD_QUERY:
+        if self.metadata.type == TRANSACTION_BAD_QUERY:
             self.session.logging.error(self.errorMsg)
             self.error = True
             return
 
-        if self.type == TRANSACTION_DROP_MODEL:
+        if self.metadata.type == TRANSACTION_DROP_MODEL:
             self.executeDropModel()
             return
 
 
-        if self.type == TRANSACTION_LEARN:
-            self.output_data_array = [['Model ' + self.model_metadata[KEY_MODEL_NAME] + ' training.']]
-            self.output_metadata = {
-                KEY_COLUMNS: ['Status']
-            }
+        if self.metadata.type == TRANSACTION_LEARN:
+            self.output_data.data_array = [['Model ' + self.metadata.model_name + ' training.']]
+            self.output_data.columns = ['Status']
+
             if CONFIG.EXEC_LEARN_IN_THREAD == False:
                 self.executeLearn()
             else:
                 _thread.start_new_thread(self.executeLearn, ())
             return
 
-        elif self.type == TRANSACTION_PREDICT:
+        elif self.metadata.type == TRANSACTION_PREDICT:
             self.executePredict()
-        elif self.type == TRANSACTION_NORMAL_SELECT:
+        elif self.metadata.type == TRANSACTION_NORMAL_SELECT:
             self.executeNormalSelect()
 
 

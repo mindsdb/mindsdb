@@ -234,50 +234,29 @@ class StatsGenerator(BaseModule):
         }
         return ret
 
-    def saveStats(self, model_name, stats):
 
-        """ Saves the stats on a mongo db collection """
-
-        # if testing offline don't save the stats into a collection but into a file
-
-        model_stats = self.session.mongo.mindsdb.model_stats
-        model_stats.update_one({'model_name': model_name, 'submodel_name': None},
-                          {'$set': {
-                              "model_name": model_name,
-                              'submodel_name': None,
-                              KEY_COLUMNS: self.transaction.input_metadata[KEY_COLUMNS],
-                              "stats": stats
-                          }}, upsert=True)
-
-        self.transaction.model_stats = stats
-        return
 
     def run(self):
-        model_name = self.transaction.model_metadata[KEY_MODEL_NAME]
-        model_stats = self.session.mongo.mindsdb.model_stats
 
-        header = self.transaction.input_metadata[KEY_COLUMNS]
+        header = self.transaction.input_data.columns
         origData = {}
+
         for column in header:
             origData[column] = []
 
         empty_count = {}
         column_count = {}
 
-        population_size = len(self.transaction.input_data_array)
+        # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
+        population_size = len(self.transaction.input_data.data_array)
         sample_size = int(sampleSize(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
+
+        # get the indexes of randomly selected rows given the population size
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
         self.logging.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
-        meta = self.transaction.model_metadata
-        meta['status_percentage'] = 0
-        model_stats.update_one({'model_name': model_name, 'submodel_name': None},
-                               {'$set': {
-                                   'submodel_name': None,
-                                    KEY_COLUMNS: self.transaction.input_metadata[KEY_COLUMNS],
-                                   "model_metadata": meta
-                               }}, upsert=True)
+
         for sample_i in input_data_sample_indexes:
-            row = self.transaction.input_data_array[sample_i]
+            row = self.transaction.input_data.data_array[sample_i]
             for i, val in enumerate(row):
                 column = header[i]
                 value = self.cast(val)
@@ -303,16 +282,14 @@ class StatsGenerator(BaseModule):
                 for value in col_data:
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
-                col_data = newData
+
                 col_data = [float(i) for i in newData if str(i) not in ['', None, False, np.nan, 'NaN', 'nan']]
-                data = pd.Series(col_data)
-                # best_fit_name, bestFitParamms, x, y = self.getBestFitDistribution(
-                #     data)
-                # best_dist = getattr(st, best_fit_name)
+
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
                 x = x.tolist()
                 y = y.tolist()
+
                 if len(col_data) > 0:
                     max_value = max(col_data)
                     min_value = min(col_data)
@@ -330,7 +307,6 @@ class StatsGenerator(BaseModule):
                     skew = 0
                     kurtosis = 0
 
-                # distribution_params = self.getParamsAsDictionary(bestFitParamms)
 
                 col_stats = {
                     "column": col_name,
@@ -385,36 +361,37 @@ class StatsGenerator(BaseModule):
                 }
                 stats[col_name] = col_stats
 
-            meta = self.transaction.model_metadata
-            meta['status_percentage'] =  (i +1)/ len(origData) * 100
-            if self.transaction.input_test_data_array:
-                train_rows = len(self.transaction.input_data_array)
-                test_rows = len(self.transaction.input_test_data_array)
-                total_rows = train_rows + test_rows
-            else:
-                total_rows = len(self.transaction.input_data_array)
-                test_rows = int(total_rows * CONFIG.TEST_TRAIN_RATIO)
-                train_rows = total_rows - test_rows
 
-            model_stats.update_one({'model_name': model_name, 'submodel_name': None},
-                                   {'$set': {
-                                       "model_metadata":meta,
-                                       "global_stats": {
-                                           "total_rows": total_rows,
-                                           "test_rows": test_rows,
-                                           "train_rows": train_rows
-                                       }
-                                   }}, upsert=True)
-            self.saveStats(model_name, stats)
+        if len(self.transaction.input_data.test_data_array) > 0:
+            test_rows = len(self.transaction.input_data.test_data_array)
+            validate_rows = int(len(self.transaction.input_data.data_array) * CONFIG.TEST_TRAIN_RATIO)
+            train_rows = len(self.transaction.input_data.data_array) - validate_rows
+            total_rows = train_rows + test_rows + validate_rows
+        else:
+            total_rows = len(self.transaction.input_data.data_array)
+            test_rows = int(total_rows * CONFIG.TEST_TRAIN_RATIO)
+            validate_rows = test_rows
+            train_rows = total_rows - 2*test_rows
+
+        self.transaction.persistent_model_metadata.column_stats = stats
+        self.transaction.persistent_model_metadata.total_row_count = total_rows
+        self.transaction.persistent_model_metadata.test_row_count = test_rows
+        self.transaction.persistent_model_metadata.train_row_count = train_rows
+        self.transaction.persistent_model_metadata.validate_row_count = validate_rows
+
+        self.transaction.persistent_model_metadata.update()
+
         return stats
 
 
+
 def test():
-    from libs.test.test_controller import TestController
-    TestController('CREATE MODEL FROM (SELECT * FROM Uploads.views.diamonds) AS diamonds PREDICT price', PHASE_DATA_STATS)
+    from libs.controllers.mindsdb_controller import MindsDBController as MindsDB
 
-
+    mdb = MindsDB()
+    mdb.learn(from_query='select * from position_tgt', predict='position', model_name='mdsb_model', test_query=None, breakpoint = PHASE_DATA_STATS)
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     test()
+

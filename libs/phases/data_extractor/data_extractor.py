@@ -29,8 +29,21 @@ class DataExtractor(BaseModule):
     phase_name = PHASE_DATA_EXTRACTION
 
     def run(self):
+
+        if self.transaction.metadata.model_order_by:
+            order_by_fields = self.transaction.metadata.model_order_by if self.transaction.metadata.model_group_by is None else [self.transaction.metadata.model_group_by] + self.transaction.metadata.model_order_by
+        else:
+            order_by_fields = []
+
+        order_by_string = ", ".join(order_by_fields)
+
+        if len(order_by_fields):
+            query_wrapper = '''select * from ({orig_query}) orgi order by {order_by_string}'''
+        else:
+            query_wrapper = '''{orig_query}'''
+
         try:
-            query = self.transaction.metadata.model_query
+            query = query_wrapper.format(orig_query = self.transaction.metadata.model_query, order_by_string=order_by_string)
 
             self.transaction.session.logging.info('About to pull query {query}'.format(query=query))
 
@@ -77,7 +90,7 @@ class DataExtractor(BaseModule):
 
             if self.transaction.metadata.model_test_query:
                 try:
-                    test_query = self.transaction.metadata.test_query
+                    test_query = query_wrapper.format(orig_query = self.transaction.metadata.test_query, order_by_string= order_by_string)
                     self.transaction.session.logging.info('About to pull TEST query {query}'.format(query=test_query))
                     #drill = self.session.drill.query(test_query, timeout=CONFIG.DRILL_TIMEOUT)
                     df = pandas.read_sql_query(test_query, conn)
@@ -193,7 +206,7 @@ def test():
     from libs.controllers.mindsdb_controller import MindsDBController as MindsDB
 
     mdb = MindsDB()
-    mdb.learn(from_query='select * from position_tgt', group_by = 'id', predict='position', model_name='mdsb_model', test_query=None, breakpoint = PHASE_DATA_EXTRACTION)
+    mdb.learn(from_query='select * from position_tgt', group_by = 'id', order_by=['max_time_rec'], predict='position', model_name='mdsb_model', test_query=None, breakpoint = PHASE_DATA_EXTRACTION)
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

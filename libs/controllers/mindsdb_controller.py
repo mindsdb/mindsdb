@@ -50,7 +50,7 @@ class MindsDBController:
         return pandas.read_sql_query(query, self.conn)
 
 
-    def learn(self, from_query, predict, model_name='mdsb_model', test_query=None, group_by = None, breakpoint = PHASE_END):
+    def learn(self, from_query, predict, model_name='mdsb_model', test_query=None, group_by = None, order_by = [], breakpoint = PHASE_END):
         """
 
         :param from_query:
@@ -70,6 +70,7 @@ class MindsDBController:
         transaction_metadata.model_predict_columns = predict_columns
         transaction_metadata.model_test_query = test_query
         transaction_metadata.model_group_by = group_by
+        transaction_metadata.model_order_by = order_by
         transaction_metadata.type = transaction_type
 
 

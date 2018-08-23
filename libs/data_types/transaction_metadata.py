@@ -9,6 +9,7 @@ class TransactionMetadata(ObjectDict):
         self.model_test_query = None
         self.model_when_conditions = None
         self.model_group_by = None
+        self.model_order_by = []
         self.type = None
 
 

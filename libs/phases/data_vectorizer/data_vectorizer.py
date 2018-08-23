@@ -55,20 +55,13 @@ class DataVectorizer(BaseModule):
 
         # this is a template of how we store columns
         column_packs_template = OrderedDict()
+        group_by_index = self.transaction.input_data.columns.index(group_by) # TODO: Consider supporting more than one index column
 
-        for i, column_name in enumerate(self.transaction.persistent_model_metadata.columns):
-            if group_by is not None and group_by == column_name:
-                group_by_index = i
-                # TODO: Consider supporting more than one index column
+        for i, column_name in enumerate(self.transaction.input_data.columns):
+
 
             column_packs_template[column_name] = []
 
-        # This is used to calculate if its a test based on the existance of self.transaction.input_test_data_array
-        # self.transaction.input_test_data_array only exists if the train query contains TEST FROM() statement
-
-        input_data_initial_len = len(self.transaction.input_data.data_array)
-        if self.transaction.type == TRANSACTION_LEARN and self.transaction.input_test_data_array:
-            self.transaction.input_data_array += self.transaction.input_test_data_array
 
         for j, row in enumerate(self.transaction.input_data_array):
 

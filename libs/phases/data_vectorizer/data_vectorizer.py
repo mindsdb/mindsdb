@@ -20,6 +20,7 @@ from libs.constants.mindsdb import *
 from libs.phases.base_module import BaseModule
 from collections import OrderedDict
 from libs.helpers.norm_denorm_helpers import norm
+from libs.helpers.text_helpers import hashtext
 
 
 class DataVectorizer(BaseModule):
@@ -42,33 +43,29 @@ class DataVectorizer(BaseModule):
                     return string
 
 
-    def hashCell(self, cell):
-        text = json.dumps(cell)
-        hash = hashlib.md5(text.encode('utf8')).hexdigest()
-        return hash
+
 
 
     def run(self):
 
         group_by = self.transaction.metadata.model_group_by
         group_by_index = None
+        if group_by:
+            group_by_index = self.transaction.input_data.columns.index(group_by)  # TODO: Consider supporting more than one index column
 
         # this is a template of how we store columns
         column_packs_template = OrderedDict()
-        group_by_index = self.transaction.input_data.columns.index(group_by) # TODO: Consider supporting more than one index column
 
+        # create a template of the column packs
         for i, column_name in enumerate(self.transaction.input_data.columns):
-
-
             column_packs_template[column_name] = []
 
 
         for j, row in enumerate(self.transaction.input_data_array):
 
-
             if group_by is not None:
 
-                group_by_hash = self.hashCell(row[group_by_index])
+                group_by_hash = hashtext(row[group_by_index])
                 if group_by_hash in self.transaction.model_data[KEYS.TEST_SET]:
                     is_test = True
                 elif group_by_hash in self.transaction.model_data[KEYS.TRAIN_SET]:

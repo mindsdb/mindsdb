@@ -180,7 +180,7 @@ class DataExtractor(BaseModule):
                         else:
                             self.transaction.input_data.train_indexes += [i]
 
-        self.transaction.session.logging.info(self.transaction.input_data)
+
 
 
 

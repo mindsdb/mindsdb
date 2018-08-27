@@ -19,6 +19,9 @@ from libs.data_types.sampler import Sampler
 from libs.helpers.norm_denorm_helpers import denorm
 from bson.objectid import ObjectId
 
+from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
+from libs.data_entities.persistent_model_metrics import PersistentModelMetrics
+
 import importlib
 import config as CONFIG
 import json
@@ -28,31 +31,30 @@ import os
 
 class TrainWorker():
     
-    def __init__(self, data, model_name, data_model='pytorch.models.column_based_fcnn', config={}, submodel_name=None):
+    def __init__(self, data, model_name, ml_model_name='pytorch.models.column_based_fcnn', config={}):
         """
 
         :param data:
         :param model_name:
-        :param data_model:
+        :param ml_model_name:
         :param config:
         """
 
         self.data = data
         self.model_name = model_name
-        self.submodel_name = submodel_name
-        self.data_model = data_model
+        self.ml_model_name = ml_model_name
         self.config = config
         
 
         # get basic variables defined
-        self.mongo = MongoClient(CONFIG.MONGO_SERVER_HOST)
-        self.mongo_gfs = gridfs.GridFS(self.mongo.mindsdb)
 
-        self.stats = self.mongo.mindsdb.model_stats.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name})
+        self.metadata = PersistentModelMetadata().find_one({'model_name': self.model_name})
+        self.metrics = PersistentModelMetrics().find_one({'model_name': self.model_name, 'ml_model_name': self.ml_model_name})
+
         self.config_serialize = json.dumps(self.config)
 
-        self.framework, self.dummy, self.data_model_name = self.data_model.split('.')
-        self.data_model_module_path = 'libs.data_models.' + self.data_model + '.' + self.data_model_name
+        self.framework, self.dummy, self.data_model_name = self.ml_model_name.split('.')
+        self.data_model_module_path = 'libs.data_models.' + self.ml_model_name + '.' + self.data_model_name
         self.data_model_class_name = convert_snake_to_cammelcase_string(self.data_model_name)
 
         self.data_model_module = importlib.import_module(self.data_model_module_path)
@@ -105,7 +107,7 @@ class TrainWorker():
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error
                         logging.info('Lowest ERROR so far! Saving: model {model_name}:{submodel_name}, {data_model} config:{config}'.format(
-                            model_name=self.model_name, data_model=self.data_model, config=self.config_serialize, submodel_name=self.submodel_name))
+                            model_name=self.model_name, data_model=self.ml_model_name, config=self.config_serialize, submodel_name=self.submodel_name))
 
                         # save model local file
                         local_files = self.saveToDisk(local_files)
@@ -125,7 +127,7 @@ class TrainWorker():
             # after its done with the first batch group, get the one with the lowest error and keep training
 
             model_state_collection = self.mongo.mindsdb.model_state.find_one(
-                {'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.data_model, 'config': self.config_serialize})
+                {'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize})
 
             if model_state_collection is None:
                 # TODO: Make sure we have a model for this
@@ -173,7 +175,7 @@ class TrainWorker():
         primary_key = {
                 'model_name': self.model_name,
                 'submodel_name': self.submodel_name,
-                'data_model': self.data_model,
+                'data_model': self.ml_model_name,
                 'config': self.config_serialize
             }
 
@@ -316,11 +318,11 @@ class TrainWorker():
         file_ids = [ret.file_id for ret in return_objects]
 
         self.mongo.mindsdb.model_state.update_one(
-            {'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.data_model, 'config': self.config_serialize},
+            {'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize},
             {'$set': {
                 "model_name": self.model_name,
                 'submodel_name': self.submodel_name,
-                'data_model': self.data_model,
+                'data_model': self.ml_model_name,
                 'config': self.config_serialize,
                 "fs_file_ids": file_ids
             }}, upsert=True)
@@ -348,7 +350,7 @@ class TrainWorker():
         self.gfs_save_head_time = current_time
 
         # delete any existing files if they exist
-        model_state = self.mongo.mindsdb.model_state.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.data_model, 'config': self.config_serialize})
+        model_state = self.mongo.mindsdb.model_state.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize})
         if model_state and 'gridfs_file_ids' in model_state:
             for file_id in model_state['gridfs_file_ids']:
                 try:
@@ -364,28 +366,28 @@ class TrainWorker():
             file_ids += [file_id]
 
         logging.info('[DONE] files into GridFS saved')
-        self.mongo.mindsdb.model_state.update_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.data_model, 'config': self.config_serialize},
-                               {'$set': {
+        self.mongo.mindsdb.model_state.update_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize},
+                                                  {'$set': {
                                    "model_name": self.model_name,
                                    'submodel_name': self.submodel_name,
-                                   'data_model': self.data_model,
+                                   'data_model': self.ml_model_name,
                                    'config': self.config_serialize,
                                    "gridfs_file_ids": file_ids
                                }}, upsert=True)
 
     
     @staticmethod
-    def start(data, model_name, data_model, config={}):
+    def start(data, model_name, ml_model, config={}):
         """
         We use this worker to parallel train different data models and data model configurations
     
         :param data: This is the vectorized data
         :param model_name: This will be the model name so we can pull stats and other
-        :param data_model: This will be the data model name, which can let us find the data model implementation
+        :param ml_model: This will be the data model name, which can let us find the data model implementation
         :param config: this is the hyperparameter config
         """
 
-        return TrainWorker(data, model_name, data_model, config)
+        return TrainWorker(data, model_name, ml_model, config)
 
 
 # TODO: Use ray

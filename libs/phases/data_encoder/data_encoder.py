@@ -87,7 +87,7 @@ class DataEncoder(BaseModule):
                         model_name=model_name, total_time=total_time, submodel_name=submodel_name))
 
                 train_start_time = time.time()
-                TrainWorker.start(data, model_name=model_name, data_model=data_model,
+                TrainWorker.start(data, model_name=model_name, ml_model=data_model,
                                   config=config, submodel_name=submodel_name)
                 total_time = time.time() - train_start_time
                 self.session.logging.info(

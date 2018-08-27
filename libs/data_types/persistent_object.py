@@ -3,6 +3,11 @@ from pymongo import MongoClient
 import config as CONFIG
 from bson.objectid import ObjectId
 
+import sys
+import os
+from libs.helpers.general_helpers import convert_snake_to_cammelcase_string, convert_cammelcase_to_snake_string
+
+
 class PersistentObject(ObjectDict):
 
     _entity_name = 'generic'
@@ -45,3 +50,16 @@ class PersistentObject(ObjectDict):
         orig_pkey = self.getPkey()
         pkey = {key:orig_pkey[key] for key in orig_pkey if orig_pkey[key] != None}
         self._collection.delete_many(pkey)
+
+
+    def find_one(self, p_key_data):
+        resp = self._collection.find_one(p_key_data)
+        class_object = self.__class__()
+        if resp is None:
+            return  None
+
+        for var_name in resp:
+            setattr(class_object,var_name, resp[var_name])
+
+        return class_object
+

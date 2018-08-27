@@ -56,7 +56,7 @@ class ModelTrainer(BaseModule):
             config = data_model_data[1]
             data_model = data_model_data[0]
             if CONFIG.EXEC_LEARN_IN_THREAD == False or len(data_models) == 1:
-                TrainWorker.start(self.transaction.model_data, model_name=model_name, data_model=data_model, config=config)
+                TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=data_model, config=config)
 
             else:
                 # Todo: use Ray https://github.com/ray-project/tutorial

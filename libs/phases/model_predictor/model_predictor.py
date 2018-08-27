@@ -24,14 +24,15 @@ class ModelPredictor(BaseModule):
 
         model_name = self.transaction.persistent_model_metadata.model_name
         self.train_start_time = time.time()
-
-
         self.session.logging.info('Training: model {model_name}, epoch 0'.format(model_name=model_name))
 
         self.last_time = time.time()
+
         # We moved everything to a worker so we can run many of these in parallel
         # Todo: use Ray https://github.com/ray-project/tutorial
+
         ret_diffs = PredictWorker.start(self.transaction.model_data, model_name=model_name)
+
         model_stats = self.session.mongo.mindsdb.model_train_stats
         model_stat = model_stats.find_one({'model_name': model_name})
         # confusion_matrixes = model_stat['reduced_confusion_matrices']

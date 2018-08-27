@@ -65,7 +65,7 @@ class DataVectorizer(BaseModule):
                 },
                 {
                     'name': 'train',
-                    'target_Set': self.transaction.model_data.train_set,
+                    'target_set': self.transaction.model_data.train_set,
                     'map': self.transaction.model_data.train_set_map,
                     'indexes': self.transaction.input_data.train_indexes
                 },
@@ -115,7 +115,7 @@ class DataVectorizer(BaseModule):
                     column_name = self.transaction.input_data.columns[column_index]
 
                     value = self.cast(cell_value)
-                    stats = self.transaction.persistent_model_metadata.column_stats
+                    stats = self.transaction.persistent_model_metadata.column_stats[column_name]
 
                     # TODO: Provide framework for custom nom functions
                     # TODO: FIX norm allways add column for is null

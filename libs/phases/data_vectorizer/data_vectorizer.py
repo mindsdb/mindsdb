@@ -136,7 +136,7 @@ class DataVectorizer(BaseModule):
 
 
 
-
+        return []
 
 
 def test():
@@ -144,7 +144,7 @@ def test():
 
     mdb = MindsDB()
     mdb.learn(
-        from_query='select * from position_tgt',
+        from_query='select * from position_target_table',
         group_by='id',
         order_by=['max_time_rec'],
         predict='position',

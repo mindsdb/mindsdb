@@ -22,8 +22,9 @@ class ModelPredictor(BaseModule):
 
     def run(self):
 
-        model_name = self.transaction.model_metadata[KEY_MODEL_NAME]
+        model_name = self.transaction.persistent_model_metadata.model_name
         self.train_start_time = time.time()
+
 
         self.session.logging.info('Training: model {model_name}, epoch 0'.format(model_name=model_name))
 

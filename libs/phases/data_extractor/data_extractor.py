@@ -206,7 +206,7 @@ def test():
     from libs.controllers.mindsdb_controller import MindsDBController as MindsDB
 
     mdb = MindsDB()
-    mdb.learn(from_query='select * from position_tgt', group_by = 'id', order_by=['max_time_rec'], predict='position', model_name='mdsb_model', test_query=None, breakpoint = PHASE_DATA_EXTRACTION)
+    mdb.learn(from_query='select * from position_target_table', group_by = 'id', order_by=['max_time_rec'], predict='position', model_name='mdsb_model', test_query=None, breakpoint = PHASE_DATA_EXTRACTION)
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

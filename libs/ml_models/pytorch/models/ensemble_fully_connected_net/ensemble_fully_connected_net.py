@@ -17,7 +17,7 @@ import math
 import torch.nn as nn
 
 
-from libs.data_models.pytorch.libs.base_model import BaseModel
+from libs.ml_models.pytorch.libs.base_model import BaseModel
 
 
 

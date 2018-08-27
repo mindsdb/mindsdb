@@ -22,8 +22,8 @@ import numpy as np
 
 from config import USE_CUDA
 from libs.constants.mindsdb import *
-from libs.data_models.pytorch.libs.torch_helpers import arrayToFloatVariable, variableToArray
-from libs.data_models.pytorch.libs.torch_helpers import getTorchObjectBinary, storeTorchObject, getStoredTorchObject, RMSELoss
+from libs.ml_models.pytorch.libs.torch_helpers import arrayToFloatVariable, variableToArray
+from libs.ml_models.pytorch.libs.torch_helpers import getTorchObjectBinary, storeTorchObject, getStoredTorchObject, RMSELoss
 
 from libs.data_types.trainer_response import TrainerResponse
 from libs.data_types.tester_response import TesterResponse

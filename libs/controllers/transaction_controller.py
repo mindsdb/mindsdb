@@ -12,21 +12,18 @@
 from libs.constants.mindsdb import *
 from libs.helpers.general_helpers import *
 from libs.data_types.transaction_metadata import TransactionMetadata
-from libs.data_types.persistent_model_metadata import PersistentModelMetadata
-from libs.data_types.persistent_model_metrics import PersistentModelMetrics
+from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
+from libs.data_entities.persistent_model_metrics import PersistentModelMetrics
 from libs.data_types.transaction_data import TransactionData
 from libs.data_types.model_data import ModelData
 
 import config as CONFIG
-import re
 # import logging
-from libs.helpers.logging import logging
 
 import _thread
 import traceback
 import importlib
 
-from bson.objectid import ObjectId
 
 class TransactionController:
 

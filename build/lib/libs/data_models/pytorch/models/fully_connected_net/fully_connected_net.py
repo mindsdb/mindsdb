@@ -15,7 +15,7 @@ from libs.constants.mindsdb import *
 import math
 import torch
 import torch.nn as nn
-from libs.data_models.pytorch.libs.base_model import BaseModel
+from libs.ml_models.pytorch.libs.base_model import BaseModel
 
 
 

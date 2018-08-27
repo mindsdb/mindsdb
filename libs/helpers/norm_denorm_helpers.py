@@ -16,7 +16,7 @@ from libs.helpers.text_helpers import splitRecursive
 
 def norm(value, cell_stats):
     if (value == None or value == '' or value == '\n' or value == '\r') and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.TEXT:
-        return [0, 1]
+        return [0, 0]
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
         if cell_stats['max'] - cell_stats['min'] != 0:
@@ -30,7 +30,7 @@ def norm(value, cell_stats):
         if normalizedValue > 10:
             raise ValueError('Something is wrong with normalized value')
 
-        return [normalizedValue, 0]
+        return [normalizedValue, 1]
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:
         timestamp = int(parseDate(value).timestamp())
@@ -39,7 +39,7 @@ def norm(value, cell_stats):
                               (cell_stats['max'] - cell_stats['min'])
         else:
             normalizedValue = timestamp / cell_stats['max']
-        return [normalizedValue, 0]
+        return [normalizedValue, 1]
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
         # is it a word
@@ -49,8 +49,11 @@ def norm(value, cell_stats):
             arr = [0] * vector_length
             if value in [None, '']:
                 # return NULL value, which is an empy hot vector array with the last item in list with value 1
-                arr[vector_length - 1] = 1  # set null as 1
+                arr[vector_length - 1] = 0  # set notnull as 0
                 return arr
+
+            else:
+                arr[vector_length - 1] = 1 # set notnull as 1
 
             # else return one hot vector
             # if word is a strange word it will not be in the dictionary

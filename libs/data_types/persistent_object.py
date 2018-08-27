@@ -3,10 +3,6 @@ from pymongo import MongoClient
 import config as CONFIG
 from bson.objectid import ObjectId
 
-import sys
-import os
-from libs.helpers.general_helpers import convert_snake_to_cammelcase_string, convert_cammelcase_to_snake_string
-
 
 class PersistentObject(ObjectDict):
 

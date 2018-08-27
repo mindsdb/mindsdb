@@ -18,7 +18,7 @@ from libs.helpers.logging import logging
 import config as CONFIG
 from libs.constants.mindsdb import *
 from libs.data_types.batch import Batch
-
+from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 
 # this implements sampling without replacement and encodes sequential data using encoders
 # as described here, its best to sample without replacement:
@@ -26,13 +26,20 @@ from libs.data_types.batch import Batch
 
 class Sampler:
 
-    def __init__(self, data, stats_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = [] ):
+    def __init__(self, data, metadata_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = []):
+        """
 
+        :param data:
+        :param metadata_as_stored:
+        :type metadata_as_stored: PersistentModelMetadata
+        :param batch_size:
+        :param ignore_types:
+        """
         self.data = data
 
-        self.meta_data = stats_as_stored['model_metadata']
-        self.stats = stats_as_stored['stats']
-        self.model_columns = [col for col in stats_as_stored[KEY_COLUMNS] if self.stats[col][KEYS.DATA_TYPE] not in ignore_types]
+        self.meta_data = metadata_as_stored
+        self.stats = metadata_as_stored.column_stats
+        self.model_columns = [col for col in metadata_as_stored.columns if self.stats[col][KEYS.DATA_TYPE] not in ignore_types]
         self.ignore_columns_with_type = ignore_types
 
 

@@ -45,7 +45,7 @@ class PredictWorker():
 
         self.stats = self.mongo.mindsdb.model_stats.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name})
 
-        self.predict_sampler = Sampler(self.data[KEYS.PREDICT_SET], stats_as_stored=self.stats)
+        self.predict_sampler = Sampler(self.data[KEYS.PREDICT_SET], metadata_as_stored=self.stats)
 
         collection_item = self.mongo.mindsdb.model_train_stats.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name},sort=[('lowest_error', -1)])
 

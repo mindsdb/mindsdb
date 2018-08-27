@@ -79,7 +79,15 @@ def test():
 
     mdb = MindsDB()
     mdb.learn(
-        from_query='''select  from position_target_table'',
+        from_query='''
+            select 
+                id,
+                max_time_rec,
+                min_time_rec,
+                
+                position 
+            from position_target_table
+        ''',
         group_by='id',
         order_by=['max_time_rec'],
         predict='position',

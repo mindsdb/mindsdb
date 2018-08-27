@@ -21,6 +21,7 @@ from bson.objectid import ObjectId
 
 from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 from libs.data_entities.persistent_model_metrics import PersistentModelMetrics
+from libs.data_types.model_data import ModelData
 
 import importlib
 import config as CONFIG
@@ -35,6 +36,7 @@ class TrainWorker():
         """
 
         :param data:
+        :type data: ModelData
         :param model_name:
         :param ml_model_name:
         :param config:
@@ -44,33 +46,34 @@ class TrainWorker():
         self.model_name = model_name
         self.ml_model_name = ml_model_name
         self.config = config
-        
 
         # get basic variables defined
 
         self.metadata = PersistentModelMetadata().find_one({'model_name': self.model_name})
-        self.metrics = PersistentModelMetrics().find_one({'model_name': self.model_name, 'ml_model_name': self.ml_model_name})
 
-        self.config_serialize = json.dumps(self.config)
+        self.metrics = PersistentModelMetrics()
+        self.metrics.model_name = self.model_name
+        self.metrics.ml_model_name = self.ml_model_name
+        self.metrics.config_serialized = json.dumps(self.config)
 
         self.framework, self.dummy, self.data_model_name = self.ml_model_name.split('.')
-        self.data_model_module_path = 'libs.data_models.' + self.ml_model_name + '.' + self.data_model_name
-        self.data_model_class_name = convert_snake_to_cammelcase_string(self.data_model_name)
+        self.ml_model_module_path = 'libs.ml_models.' + self.ml_model_name + '.' + self.data_model_name
+        self.ml_model_class_name = convert_snake_to_cammelcase_string(self.data_model_name)
 
-        self.data_model_module = importlib.import_module(self.data_model_module_path)
-        self.data_model_class = getattr(self.data_model_module, self.data_model_class_name)
+        self.ml_model_module = importlib.import_module(self.ml_model_module_path)
+        self.ml_model_class = getattr(self.ml_model_module, self.ml_model_class_name)
 
-        self.train_sampler = Sampler(self.data[KEYS.TRAIN_SET], stats_as_stored=self.stats, ignore_types=self.data_model_class.ignore_types)
-        self.test_sampler = Sampler(self.data[KEYS.TEST_SET], stats_as_stored=self.stats, ignore_types=self.data_model_class.ignore_types)
+        self.train_sampler = Sampler(self.data.train_set, metadata_as_stored=self.metadata, ignore_types=self.ml_model_class.ignore_types)
+        self.test_sampler = Sampler(self.data.test_set, metadata_as_stored=self.metadata, ignore_types=self.ml_model_class.ignore_types)
 
-        self.train_sampler.variable_wrapper = self.data_model_class.variable_wrapper
-        self.test_sampler.variable_wrapper = self.data_model_class.variable_wrapper
+        self.train_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
+        self.test_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
         self.sample_batch = self.train_sampler.getSampleBatch()
 
         self.gfs_save_head_time = time.time() # the last time it was saved into GridFS, assume it was now
 
         logging.info('Starting model...')
-        self.data_model_object = self.data_model_class(self.sample_batch)
+        self.data_model_object = self.ml_model_class(self.sample_batch)
         logging.info('Training model...')
         self.train()
 
@@ -106,8 +109,8 @@ class TrainWorker():
                     if lowest_error is None or lowest_error > test_ret.error:
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error
-                        logging.info('Lowest ERROR so far! Saving: model {model_name}:{submodel_name}, {data_model} config:{config}'.format(
-                            model_name=self.model_name, data_model=self.ml_model_name, config=self.config_serialize, submodel_name=self.submodel_name))
+                        logging.info('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
+                            model_name=self.model_name, data_model=self.ml_model_name, config=self.metrics.config_serialized))
 
                         # save model local file
                         local_files = self.saveToDisk(local_files)
@@ -115,7 +118,7 @@ class TrainWorker():
                         self.saveToGridFs(local_files, throttle=True)
 
                         # save model predicted - real vectors
-                        logging.info('Saved: model {model_name}:{submodel_name} state vars into db [OK]'.format(model_name=self.model_name, submodel_name=self.submodel_name))
+                        logging.info('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name, ml_model_name = self.ml_model_name))
 
                     # check if continue training
                     if self.shouldContinue() == False:
@@ -136,7 +139,7 @@ class TrainWorker():
 
             fs_file_ids = model_state_collection['fs_file_ids']
 
-            self.data_model_object = self.data_model_class.loadFromDisk(file_ids=fs_file_ids)
+            self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
 
 
 

@@ -58,8 +58,8 @@ class TrainWorker():
         self.data_model_module = importlib.import_module(self.data_model_module_path)
         self.data_model_class = getattr(self.data_model_module, self.data_model_class_name)
 
-        self.train_sampler = Sampler(self.data[KEYS.TRAIN_SET], stats_as_stored=self.stats, ignore_types=self.data_model_class.ignore_types)
-        self.test_sampler = Sampler(self.data[KEYS.TEST_SET], stats_as_stored=self.stats, ignore_types=self.data_model_class.ignore_types)
+        self.train_sampler = Sampler(self.data[KEYS.TRAIN_SET], metadata_as_stored=self.stats, ignore_types=self.data_model_class.ignore_types)
+        self.test_sampler = Sampler(self.data[KEYS.TEST_SET], metadata_as_stored=self.stats, ignore_types=self.data_model_class.ignore_types)
 
         self.train_sampler.variable_wrapper = self.data_model_class.variable_wrapper
         self.test_sampler.variable_wrapper = self.data_model_class.variable_wrapper

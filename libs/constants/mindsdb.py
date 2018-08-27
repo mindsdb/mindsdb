@@ -44,6 +44,8 @@ KEY_STATUS = 'status'
 FULL_TEXT_ENCODING_EXTRA_LENGTH = 4 #(len)[is_start, is_end, unfrequent_word, is_null]
 TEXT_ENCODING_EXTRA_LENGTH = 2 #(len)[unfrequent_word, is_null]
 
+ALL_INDEXES_LIST = ['*']
+
 class DATA_TYPES:
     FULL_TEXT = 'FullText'
     NUMERIC = 'Numeric'

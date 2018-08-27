@@ -18,5 +18,5 @@ class PersistentModelMetadata(PersistentObject):
         self.total_row_count = None
         self.test_row_count = None
         self.train_row_count= None
-        self.validate_row_count = None
+        self.validation_row_count = None
 

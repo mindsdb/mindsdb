@@ -362,22 +362,17 @@ class StatsGenerator(BaseModule):
                 stats[col_name] = col_stats
 
 
-        if len(self.transaction.input_data.test_data_array) > 0:
-            test_rows = len(self.transaction.input_data.test_data_array)
-            validate_rows = int(len(self.transaction.input_data.data_array) * CONFIG.TEST_TRAIN_RATIO)
-            train_rows = len(self.transaction.input_data.data_array) - validate_rows
-            total_rows = train_rows + test_rows + validate_rows
-        else:
-            total_rows = len(self.transaction.input_data.data_array)
-            test_rows = int(total_rows * CONFIG.TEST_TRAIN_RATIO)
-            validate_rows = test_rows
-            train_rows = total_rows - 2*test_rows
+
+        total_rows = len(self.transaction.input_data.data_array)
+        test_rows = len(self.transaction.input_data.test_indexes)
+        validation_rows = len(self.transaction.input_data.validation_indexes)
+        train_rows = len(self.transaction.input_data.train_indexes)
 
         self.transaction.persistent_model_metadata.column_stats = stats
         self.transaction.persistent_model_metadata.total_row_count = total_rows
         self.transaction.persistent_model_metadata.test_row_count = test_rows
         self.transaction.persistent_model_metadata.train_row_count = train_rows
-        self.transaction.persistent_model_metadata.validate_row_count = validate_rows
+        self.transaction.persistent_model_metadata.validation_row_count = validation_rows
 
         self.transaction.persistent_model_metadata.update()
 

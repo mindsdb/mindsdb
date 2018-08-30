@@ -20,7 +20,7 @@ from libs.helpers.norm_denorm_helpers import denorm
 from bson.objectid import ObjectId
 
 from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
-from libs.data_entities.persistent_model_metrics import PersistentModelMetrics
+from libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
 from libs.data_types.model_data import ModelData
 
 import importlib
@@ -51,10 +51,11 @@ class TrainWorker():
 
         self.metadata = PersistentModelMetadata().find_one({'model_name': self.model_name})
 
-        self.metrics = PersistentModelMetrics()
-        self.metrics.model_name = self.model_name
-        self.metrics.ml_model_name = self.ml_model_name
-        self.metrics.config_serialized = json.dumps(self.config)
+        self.ml_model_info = PersistentMlModelInfo()
+        self.ml_model_info.model_name = self.model_name
+        self.ml_model_info.ml_model_name = self.ml_model_name
+        self.ml_model_info.config_serialized = json.dumps(self.config)
+        self.ml_model_info.insert()
 
         self.framework, self.dummy, self.data_model_name = self.ml_model_name.split('.')
         self.ml_model_module_path = 'libs.ml_models.' + self.ml_model_name + '.' + self.data_model_name
@@ -110,12 +111,12 @@ class TrainWorker():
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error
                         logging.info('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
-                            model_name=self.model_name, data_model=self.ml_model_name, config=self.metrics.config_serialized))
+                            model_name=self.model_name, data_model=self.ml_model_name, config=self.ml_model_info.config_serialized))
 
                         # save model local file
                         local_files = self.saveToDisk(local_files)
                         # throttle model saving into GridFS to 10 minutes
-                        self.saveToGridFs(local_files, throttle=True)
+                        # self.saveToGridFs(local_files, throttle=True)
 
                         # save model predicted - real vectors
                         logging.info('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name, ml_model_name = self.ml_model_name))
@@ -129,15 +130,19 @@ class TrainWorker():
             logging.info('Loading model from store for retrain on new learning rate {lr}'.format(lr=self.data_model_object.learning_rates[i][LEARNING_RATE_INDEX]))
             # after its done with the first batch group, get the one with the lowest error and keep training
 
-            model_state_collection = self.mongo.mindsdb.model_state.find_one(
-                {'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize})
+            ml_model_info = self.ml_model_info.find_one({
+                'model_name': self.model_name,
+                'ml_model_name': self.ml_model_name,
+                'config_serialized': json.dumps(self.config)
+            })
 
-            if model_state_collection is None:
+
+            if ml_model_info is None:
                 # TODO: Make sure we have a model for this
                 logging.info('No model found in storage')
                 return
 
-            fs_file_ids = model_state_collection['fs_file_ids']
+            fs_file_ids = ml_model_info['fs_file_ids']
 
             self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
 
@@ -148,7 +153,7 @@ class TrainWorker():
         # - if stop or finished leave as is (TODO: Have the hability to stop model training, but not necessarily delete it)
         #   * save best lowest error into GridFS (we only save into GridFS at the end because it takes too long)
         #   * remove local model file
-        self.saveToGridFs(local_files=local_files, throttle=False)
+        # self.saveToGridFs(local_files=local_files, throttle=False)
 
 
     def registerModelData(self, train_ret, test_ret, lowest_error_epoch = False):
@@ -175,22 +180,15 @@ class TrainWorker():
         #       - suggestions for model, given that model is defined as: athing that we have to: from X predict Y
         # ########
 
-        primary_key = {
-                'model_name': self.model_name,
-                'submodel_name': self.submodel_name,
-                'data_model': self.ml_model_name,
-                'config': self.config_serialize
-            }
+
+
 
         # Operations that happen regardless of it being or not a lowest error epoch or not
-        operations = {
-            '$push': {
-               "loss_y": train_ret.loss,
-               "loss_x": train_ret.epoch,
-               "error_y": test_ret.error,
-               "error_x": train_ret.epoch
-            }
-        }
+
+        self.ml_model_info.loss_y += [train_ret.loss]
+        self.ml_model_info.loss_x += [train_ret.epoch]
+        self.ml_model_info.error_y += [test_ret.error]
+        self.ml_model_info.error_x += [train_ret.epoch]
 
         if lowest_error_epoch == True:
             # #########
@@ -198,14 +196,14 @@ class TrainWorker():
             # ########
 
             # denorm the real and predicted
-            predicted_targets = {col:[denorm(row, self.stats['stats'][col]) for row in test_ret.predicted_targets[col]] for col in test_ret.predicted_targets}
-            real_targets = {col: [denorm(row, self.stats['stats'][col]) for row in test_ret.real_targets[col]] for col in test_ret.real_targets}
+            predicted_targets = {col:[denorm(row, self.metadata.column_stats[col]) for row in test_ret.predicted_targets[col]] for col in test_ret.predicted_targets}
+            real_targets = {col: [denorm(row, self.metadata.column_stats[col]) for row in test_ret.real_targets[col]] for col in test_ret.real_targets}
             # confusion matrices with zeros
             confusion_matrices = {
                 col: {
-                    'labels': [ label for label in self.stats['stats'][col]['histogram']['x'] ],
-                    'real_x_predicted_dist': [ [ 0 for i in self.stats['stats'][col]['histogram']['x']] for j in self.stats['stats'][col]['histogram']['x'] ],
-                    'real_x_predicted': [[0 for i in self.stats['stats'][col]['histogram']['x']] for j in self.stats['stats'][col]['histogram']['x']]
+                    'labels': [ label for label in self.metadata.column_stats[col]['histogram']['x'] ],
+                    'real_x_predicted_dist': [ [ 0 for i in self.metadata.column_stats[col]['histogram']['x']] for j in self.metadata.column_stats[col]['histogram']['x'] ],
+                    'real_x_predicted': [[0 for i in self.metadata.column_stats[col]['histogram']['x']] for j in self.metadata.column_stats[col]['histogram']['x']]
                 }
                 for col in real_targets
             }
@@ -227,7 +225,7 @@ class TrainWorker():
 
             # calculate confusion matrices real vs predicted
             for col in predicted_targets:
-                totals = [0]*len(self.stats['stats'][col]['histogram']['x'])
+                totals = [0]*len(self.metadata.column_stats[col]['histogram']['x'])
                 reduced_totals = [0]*len(reduced_buckets)
                 for i, predicted_value in enumerate(predicted_targets[col]):
                     predicted_index = get_label_index_for_value(predicted_value, confusion_matrices[col]['labels'])
@@ -255,23 +253,16 @@ class TrainWorker():
                         else:
                             reduced_confusion_matrices[col]['real_x_predicted'][real_j][pred_j] = reduced_confusion_matrices[col]['real_x_predicted_dist'][real_j][pred_j] / reduced_totals[pred_j]
 
-            operations['$set'] = {}
-            operations['$set']['lowest_error'] = test_ret.error
-            operations['$set']['predicted_targets'] =  predicted_targets
-            operations['$set']['real_targets'] =  real_targets
-            operations['$set']['confusion_matrices'] = confusion_matrices
-            operations['$set']['reduced_confusion_matrices'] =reduced_confusion_matrices
-            operations['$set']['accuracy'] = test_ret.accuracy
+            self.ml_model_info.lowest_error = test_ret.error
+            self.ml_model_info.predicted_targets = predicted_targets
+            self.ml_model_info.real_targets = real_targets
+            self.ml_model_info.accuracy = test_ret.accuray
+            self.ml_model_info.r_squared = test_ret.accuray
 
-        # save model train stats and push data do it
-        model_stats = self.mongo.mindsdb.model_train_stats
-        model = model_stats.find_one(primary_key)
-        if not model:
-            insert_key  = primary_key.copy()
-            insert_key['_id'] = str(ObjectId())
-            model_stats.insert(insert_key)
 
-        model_stats.update_one(primary_key, operations, upsert=True)
+
+        self.ml_model_info.update()
+
 
         return True
 
@@ -285,19 +276,22 @@ class TrainWorker():
 
         # check if stop training is set in which case we should exit the training
 
-        model = self.mongo.mindsdb.model_stats.find_one({'model_name': model_name})
+        model_data = self.metadata.find_one({'model_name': self.model_name}) #type: PersistentModelMetadata
 
-        if model and STOP_TRAINING in model and model[STOP_TRAINING] == True:
+
+        if model_data is None:
             return False
 
-        if model and KILL_TRAINING in model and model[KILL_TRAINING] == True:
+        if model_data.stop_training == True:
             logging.info('[FORCED] Stopping model training....')
-            model_stats = self.mongo.mindsdb.model_stats
-            model_stats.delete_many({'model_name': model_name, 'submodel_name': self.submodel_name})
-            model_state = self.mongo.mindsdb.model_state
-            model_state.delete_many({'model_name': model_name, 'submodel_name': self.submodel_name})
-            model_train_stats = self.mongo.mindsdb.model_train_stats
-            model_train_stats.delete_many({'model_name': model_name, 'submodel_name': self.submodel_name})
+            return False
+
+        elif model_data.kill_training == True:
+
+            logging.info('[FORCED] Stopping model training....')
+            self.metadata.delete()
+            self.ml_model_info.delete()
+
             return False
 
         return True
@@ -320,63 +314,56 @@ class TrainWorker():
 
         file_ids = [ret.file_id for ret in return_objects]
 
-        self.mongo.mindsdb.model_state.update_one(
-            {'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize},
-            {'$set': {
-                "model_name": self.model_name,
-                'submodel_name': self.submodel_name,
-                'data_model': self.ml_model_name,
-                'config': self.config_serialize,
-                "fs_file_ids": file_ids
-            }}, upsert=True)
+        self.ml_model_info.fs_file_ids = file_ids
+        self.ml_model_info.update()
 
         return return_objects
 
-
-    def saveToGridFs(self, local_files, throttle = False):
-        """
-        This method is to save to the gridfs local files
-
-        :param local_files:
-        :param throttle:
-        :return:
-        """
-        current_time = time.time()
-
-        if throttle == True or local_files is None or len(local_files) == 0:
-
-            if (current_time - self.gfs_save_head_time) < 60 * 10:
-                logging.info('Not saving yet, throttle time not met')
-                return
-
-        # if time met, save to GFS
-        self.gfs_save_head_time = current_time
-
-        # delete any existing files if they exist
-        model_state = self.mongo.mindsdb.model_state.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize})
-        if model_state and 'gridfs_file_ids' in model_state:
-            for file_id in model_state['gridfs_file_ids']:
-                try:
-                    self.mongo_gfs.delete(file_id)
-                except:
-                    logging.warning('could not delete gfs {file_id}'.format(file_id=file_id))
-
-        file_ids = []
-        # save into gridfs
-        for file_response_object in local_files:
-            logging.info('Saving file into GridFS, this may take a while ...')
-            file_id = self.mongo_gfs.put(open(file_response_object.path, "rb").read())
-            file_ids += [file_id]
-
-        logging.info('[DONE] files into GridFS saved')
-        self.mongo.mindsdb.model_state.update_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize},
-                                                  {'$set': {
-                                   "model_name": self.model_name,
-                                   'submodel_name': self.submodel_name,
-                                   'data_model': self.ml_model_name,
-                                   'config': self.config_serialize,
-                                   "gridfs_file_ids": file_ids
-                               }}, upsert=True)
+    # TODO: Revise if we keep this or not
+    # def saveToGridFs(self, local_files, throttle = False):
+    #     """
+    #     This method is to save to the gridfs local files
+    #
+    #     :param local_files:
+    #     :param throttle:
+    #     :return:
+    #     """
+    #     current_time = time.time()
+    #
+    #     if throttle == True or local_files is None or len(local_files) == 0:
+    #
+    #         if (current_time - self.gfs_save_head_time) < 60 * 10:
+    #             logging.info('Not saving yet, throttle time not met')
+    #             return
+    #
+    #     # if time met, save to GFS
+    #     self.gfs_save_head_time = current_time
+    #
+    #     # delete any existing files if they exist
+    #     model_state = self.mongo.mindsdb.model_state.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize})
+    #     if model_state and 'gridfs_file_ids' in model_state:
+    #         for file_id in model_state['gridfs_file_ids']:
+    #             try:
+    #                 self.mongo_gfs.delete(file_id)
+    #             except:
+    #                 logging.warning('could not delete gfs {file_id}'.format(file_id=file_id))
+    #
+    #     file_ids = []
+    #     # save into gridfs
+    #     for file_response_object in local_files:
+    #         logging.info('Saving file into GridFS, this may take a while ...')
+    #         file_id = self.mongo_gfs.put(open(file_response_object.path, "rb").read())
+    #         file_ids += [file_id]
+    #
+    #     logging.info('[DONE] files into GridFS saved')
+    #     self.mongo.mindsdb.model_state.update_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize},
+    #                                               {'$set': {
+    #                                "model_name": self.model_name,
+    #                                'submodel_name': self.submodel_name,
+    #                                'data_model': self.ml_model_name,
+    #                                'config': self.config_serialize,
+    #                                "gridfs_file_ids": file_ids
+    #                            }}, upsert=True)
 
     
     @staticmethod

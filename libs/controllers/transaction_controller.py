@@ -13,7 +13,7 @@ from libs.constants.mindsdb import *
 from libs.helpers.general_helpers import *
 from libs.data_types.transaction_metadata import TransactionMetadata
 from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
-from libs.data_entities.persistent_model_metrics import PersistentModelMetrics
+from libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
 from libs.data_types.transaction_data import TransactionData
 from libs.data_types.model_data import ModelData
 
@@ -57,8 +57,8 @@ class TransactionController:
         # variables that can be persisted
         self.persistent_model_metadata = PersistentModelMetadata()
         self.persistent_model_metadata.model_name = self.metadata.model_name
-        self.persistent_model_metrics = PersistentModelMetrics()
-        self.persistent_model_metrics.model_name = self.metadata.model_name
+        self.persistent_ml_model_info = PersistentMlModelInfo()
+        self.persistent_ml_model_info.model_name = self.metadata.model_name
 
 
         self.run()
@@ -111,12 +111,13 @@ class TransactionController:
         try:
             # make sure that we remove all previous data about this model
             self.persistent_model_metadata.delete()
-            self.persistent_model_metrics.delete()
+            self.persistent_ml_model_info.delete()
 
             # start populating data
             self.persistent_model_metadata.train_metadata = self.metadata.getAsDict()
             self.persistent_model_metadata.current_phase = MODEL_STATUS_ANALYZING
             self.persistent_model_metadata.columns = self.input_data.columns # this is populated by data extractor
+            self.persistent_model_metadata.predict_columns = self.metadata.model_predict_columns
             self.persistent_model_metadata.insert()
 
 

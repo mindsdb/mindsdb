@@ -17,6 +17,7 @@ class Batch:
         """
 
         :param sampler: The object generating batches
+        :type sampler: libs.data_types.sampler.Sampler
         :param data_dict: the actual data
         :param mirror: if you want input and target to be the same
         """
@@ -46,7 +47,7 @@ class Batch:
                 ret['target'][col] = self.data_dict[col]
                 ret['input'][col] = self.data_dict[col]
 
-            elif col in self.sampler.meta_data[KEY_MODEL_PREDICT_COLUMNS]:
+            elif col in self.sampler.meta_data.predict_columns:
                 ret['target'][col] = self.data_dict[col]
             else:
                 ret['input'][col] = self.data_dict[col]
@@ -99,7 +100,7 @@ class Batch:
         for col in self.sampler.model_columns:
             # this is to populate always in same order
 
-            if col in self.sampler.meta_data[KEY_MODEL_PREDICT_COLUMNS]:
+            if col in self.sampler.meta_data.predict_columns:
                 end = self.data_dict[col].shape[1] # get when it ends
                 ret[col] = flat_vector[:,start:end]
                 start = end
@@ -110,7 +111,7 @@ class Batch:
 
         stats = {}
 
-        for col in self.sampler.meta_data[KEY_MODEL_PREDICT_COLUMNS]:
+        for col in self.sampler.meta_data.predict_columns:
             stats[col] = self.sampler.stats[col]
 
         return stats
@@ -120,7 +121,7 @@ class Batch:
         stats = {}
 
         for col in self.sampler.model_columns:
-            if col not in self.sampler.meta_data[KEY_MODEL_PREDICT_COLUMNS]:
+            if col not in self.sampler.meta_data.predict_columns:
                 stats[col] = self.sampler.stats[col]
 
         return stats

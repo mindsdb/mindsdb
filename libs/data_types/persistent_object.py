@@ -41,6 +41,13 @@ class PersistentObject(ObjectDict):
             {'$set': vals}
         )
 
+    def push(self, vals):
+
+        self._collection.update_one(
+            self.getPkey(),
+            {'$push': vals}
+        )
+
 
     def delete(self):
         orig_pkey = self.getPkey()

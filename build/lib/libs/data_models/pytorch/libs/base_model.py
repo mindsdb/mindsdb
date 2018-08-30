@@ -223,7 +223,7 @@ class BaseModel(nn.Module):
                 if batch_size <= 0:
                     break
                 total_samples += batch_size
-                full_set_loss += int(loss.item(0)) * batch_size # this is because we need to wight the error by samples in batch
+                full_set_loss += int(loss.data[0]) * batch_size # this is because we need to wight the error by samples in batch
                 average_loss = full_set_loss / total_samples
                 loss.backward()
                 model_object.optimize()

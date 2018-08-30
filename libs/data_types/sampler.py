@@ -89,7 +89,7 @@ class Sampler:
                     ret[column] = self.data[group][column][group_pointer:limit]
 
                     # else:
-                    #     # Todo: figure out how to deal with full text here
+                    #     # Todo: figure out how to deal with full text features here
                     #     ret[column] =[0]*(limit-group_pointer)
 
                     # logging.debug('Generated: {column} [OK] in {time_delta:.2f} seconds'.format(column=column, time_delta=(time.time()-col_start_time)))

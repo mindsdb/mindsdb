@@ -9,6 +9,7 @@ class PersistentModelMetadata(PersistentObject):
 
         self.model_name = None
         self.train_metadata = None
+        self.predict_columns = None
         self.columns = None
         self.current_phase = None
         self.column_stats = None
@@ -19,4 +20,7 @@ class PersistentModelMetadata(PersistentObject):
         self.test_row_count = None
         self.train_row_count= None
         self.validation_row_count = None
+
+        self.stop_training = False
+        self.kill_training = False
 

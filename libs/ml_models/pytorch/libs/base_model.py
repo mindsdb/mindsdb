@@ -163,9 +163,13 @@ class BaseModel(nn.Module):
             real_target_all += real_target.data.tolist()
             predicted_target_all += predicted_target.data.tolist()
 
+        if batch is None:
+            logging.error('there is no data in test, we should not be here')
+            return
+
         # caluclate the error for all values
-        predicted_targets = self.sample_batch.deflatTarget(np.array(predicted_target_all))
-        real_targets = self.sample_batch.deflatTarget(np.array(real_target_all))
+        predicted_targets = batch.deflatTarget(np.array(predicted_target_all))
+        real_targets = batch.deflatTarget(np.array(real_target_all))
 
         r_values = {}
         # calculate r and other statistical properties of error

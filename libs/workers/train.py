@@ -104,7 +104,7 @@ class TrainWorker():
                     last_epoch = train_ret.epoch
                     logging.info('New epoch:{epoch}, testing and calculating error'.format(epoch=last_epoch))
                     test_ret = self.data_model_object.testModel(self.test_sampler)
-                    logging.info('Test Error:{error}'.format(error=test_ret.error))
+                    logging.info('Test Error:{error}, Accuracy:{accuracy}'.format(error=test_ret.error, accuracy = test_ret.accuracy))
                     is_it_lowest_error_epoch = False
                     # if lowest error save model
                     if lowest_error is None or lowest_error > test_ret.error:
@@ -142,7 +142,7 @@ class TrainWorker():
                 logging.info('No model found in storage')
                 return
 
-            fs_file_ids = ml_model_info['fs_file_ids']
+            fs_file_ids = ml_model_info.fs_file_ids
 
             self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
 
@@ -170,18 +170,6 @@ class TrainWorker():
         :param lowest_error_epoch   Is this epoch the one with the lowest error so far
         """
 
-        # #########
-        # STORE TRAIN STATS
-        #
-        # Note: The primary key here is composed of the model_name, the data_model and the config
-        #       We do this so we can train multiple data_models per model
-        #
-        # TODO: Find better naming for either model or data_model as it can be confusing
-        #       - suggestions for model, given that model is defined as: athing that we have to: from X predict Y
-        # ########
-
-
-
 
         # Operations that happen regardless of it being or not a lowest error epoch or not
 
@@ -191,73 +179,21 @@ class TrainWorker():
         self.ml_model_info.error_x += [train_ret.epoch]
 
         if lowest_error_epoch == True:
-            # #########
-            # CALCULATE THE CONFUSION MATRIX
-            # ########
 
             # denorm the real and predicted
-            predicted_targets = {col:[denorm(row, self.metadata.column_stats[col]) for row in test_ret.predicted_targets[col]] for col in test_ret.predicted_targets}
-            real_targets = {col: [denorm(row, self.metadata.column_stats[col]) for row in test_ret.real_targets[col]] for col in test_ret.real_targets}
-            # confusion matrices with zeros
-            confusion_matrices = {
-                col: {
-                    'labels': [ label for label in self.metadata.column_stats[col]['histogram']['x'] ],
-                    'real_x_predicted_dist': [ [ 0 for i in self.metadata.column_stats[col]['histogram']['x']] for j in self.metadata.column_stats[col]['histogram']['x'] ],
-                    'real_x_predicted': [[0 for i in self.metadata.column_stats[col]['histogram']['x']] for j in self.metadata.column_stats[col]['histogram']['x']]
-                }
-                for col in real_targets
-            }
-            for col in real_targets:
-                reduced_buckets = []
-                labels = confusion_matrices[col]['labels']
-                for i,label in enumerate(labels):
-                    index = int(i) + 1
-                    if index % 5 == 0:
-                        reduced_buckets.append(int(labels[i]))
+            predicted_targets = {}
+            real_targets = {}
+            for col in test_ret.predicted_targets:
+                predicted_targets[col] = [denorm(row, self.metadata.column_stats[col]) for row in test_ret.predicted_targets[col]]
+                real_targets[col] = [denorm(row, self.metadata.column_stats[col]) for row in test_ret.real_targets[col]]
 
-                reduced_confusion_matrices = {
-                    col:{
-                        'labels':reduced_buckets,
-                        'real_x_predicted_dist':[[0 for i in reduced_buckets] for j in reduced_buckets],
-                        'real_x_predicted':[[0 for i in reduced_buckets] for j in reduced_buckets]
-                    }
-                }
 
-            # calculate confusion matrices real vs predicted
-            for col in predicted_targets:
-                totals = [0]*len(self.metadata.column_stats[col]['histogram']['x'])
-                reduced_totals = [0]*len(reduced_buckets)
-                for i, predicted_value in enumerate(predicted_targets[col]):
-                    predicted_index = get_label_index_for_value(predicted_value, confusion_matrices[col]['labels'])
-                    real_index = get_label_index_for_value(real_targets[col][i], confusion_matrices[col]['labels'])
-                    confusion_matrices[col]['real_x_predicted_dist'][real_index][predicted_index] += 1
-                    totals[predicted_index] += 1
-
-                    reduced_predicted_index = get_label_index_for_value(predicted_value, reduced_confusion_matrices[col]['labels'])
-                    reduced_real_index = get_label_index_for_value(real_targets[col][i], reduced_confusion_matrices[col]['labels'])
-                    reduced_confusion_matrices[col]['real_x_predicted_dist'][reduced_real_index][reduced_predicted_index] += 1
-                    reduced_totals[reduced_predicted_index] += 1
-
-                # calculate probability of predicted being correct P(predicted=real|predicted)
-                for pred_j, label in  enumerate(confusion_matrices[col]['labels']):
-                    for real_j, label  in enumerate(confusion_matrices[col]['labels']):
-                        if totals[pred_j] == 0:
-                            confusion_matrices[col]['real_x_predicted'][real_j][pred_j] = 0
-                        else:
-                            confusion_matrices[col]['real_x_predicted'][real_j][pred_j] = confusion_matrices[col]['real_x_predicted_dist'][real_j][pred_j] / totals[pred_j]
-
-                for pred_j, label in  enumerate(reduced_confusion_matrices[col]['labels']):
-                    for real_j, label  in enumerate(reduced_confusion_matrices[col]['labels']):
-                        if reduced_totals[pred_j] == 0:
-                            reduced_confusion_matrices[col]['real_x_predicted'][real_j][pred_j] = 0
-                        else:
-                            reduced_confusion_matrices[col]['real_x_predicted'][real_j][pred_j] = reduced_confusion_matrices[col]['real_x_predicted_dist'][real_j][pred_j] / reduced_totals[pred_j]
 
             self.ml_model_info.lowest_error = test_ret.error
             self.ml_model_info.predicted_targets = predicted_targets
             self.ml_model_info.real_targets = real_targets
-            self.ml_model_info.accuracy = test_ret.accuray
-            self.ml_model_info.r_squared = test_ret.accuray
+            self.ml_model_info.accuracy = test_ret.accuracy
+            self.ml_model_info.r_squared = test_ret.accuracy
 
 
 
@@ -265,6 +201,83 @@ class TrainWorker():
 
 
         return True
+
+
+    def calculateConfusionMatrices(self, real_targets, predicted_targets):
+        """
+        This calcilates confusion matrices for the realx_predicted
+
+        :param real_targets:
+        :param predicted_targets:
+        TODO: Make this logarithmic confussion matrix for NUMERIC types
+
+        :return: a dictionary with the confusion matrices, with info as ready as possible to plot
+
+        """
+        # confusion matrices with zeros
+        confusion_matrices = {
+            col: {
+                'labels': [label for label in self.metadata.column_stats[col]['histogram']['x']],
+                'real_x_predicted_dist': [[0 for i in self.metadata.column_stats[col]['histogram']['x']] for j in
+                                          self.metadata.column_stats[col]['histogram']['x']],
+                'real_x_predicted': [[0 for i in self.metadata.column_stats[col]['histogram']['x']] for j in
+                                     self.metadata.column_stats[col]['histogram']['x']]
+            }
+            for col in real_targets
+        }
+        for col in real_targets:
+            reduced_buckets = []
+            labels = confusion_matrices[col]['labels']
+            for i, label in enumerate(labels):
+                index = int(i) + 1
+                if index % 5 == 0:
+                    reduced_buckets.append(int(labels[i]))
+
+            reduced_confusion_matrices = {
+                col: {
+                    'labels': reduced_buckets,
+                    'real_x_predicted_dist': [[0 for i in reduced_buckets] for j in reduced_buckets],
+                    'real_x_predicted': [[0 for i in reduced_buckets] for j in reduced_buckets]
+                }
+            }
+
+        # calculate confusion matrices real vs predicted
+        for col in predicted_targets:
+            totals = [0] * len(self.metadata.column_stats[col]['histogram']['x'])
+            reduced_totals = [0] * len(reduced_buckets)
+            for i, predicted_value in enumerate(predicted_targets[col]):
+                predicted_index = get_label_index_for_value(predicted_value, confusion_matrices[col]['labels'])
+                real_index = get_label_index_for_value(real_targets[col][i], confusion_matrices[col]['labels'])
+                confusion_matrices[col]['real_x_predicted_dist'][real_index][predicted_index] += 1
+                totals[predicted_index] += 1
+
+                reduced_predicted_index = get_label_index_for_value(predicted_value,
+                                                                    reduced_confusion_matrices[col]['labels'])
+                reduced_real_index = get_label_index_for_value(real_targets[col][i],
+                                                               reduced_confusion_matrices[col]['labels'])
+                reduced_confusion_matrices[col]['real_x_predicted_dist'][reduced_real_index][
+                    reduced_predicted_index] += 1
+                reduced_totals[reduced_predicted_index] += 1
+
+            # calculate probability of predicted being correct P(predicted=real|predicted)
+            for pred_j, label in enumerate(confusion_matrices[col]['labels']):
+                for real_j, label in enumerate(confusion_matrices[col]['labels']):
+                    if totals[pred_j] == 0:
+                        confusion_matrices[col]['real_x_predicted'][real_j][pred_j] = 0
+                    else:
+                        confusion_matrices[col]['real_x_predicted'][real_j][pred_j] = \
+                        confusion_matrices[col]['real_x_predicted_dist'][real_j][pred_j] / totals[pred_j]
+
+            for pred_j, label in enumerate(reduced_confusion_matrices[col]['labels']):
+                for real_j, label in enumerate(reduced_confusion_matrices[col]['labels']):
+                    if reduced_totals[pred_j] == 0:
+                        reduced_confusion_matrices[col]['real_x_predicted'][real_j][pred_j] = 0
+                    else:
+                        reduced_confusion_matrices[col]['real_x_predicted'][real_j][pred_j] = \
+                        reduced_confusion_matrices[col]['real_x_predicted_dist'][real_j][pred_j] / reduced_totals[
+                            pred_j]
+
+        return confusion_matrices
 
     def shouldContinue(self):
         """

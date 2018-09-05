@@ -12,7 +12,6 @@
 #import logging
 from libs.helpers.logging import logging
 
-from pymongo import MongoClient
 from libs.helpers.general_helpers import convert_snake_to_cammelcase_string, get_label_index_for_value
 from libs.constants.mindsdb import *
 from libs.data_types.sampler import Sampler

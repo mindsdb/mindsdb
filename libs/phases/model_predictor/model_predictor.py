@@ -33,17 +33,16 @@ class ModelPredictor(BaseModule):
 
         ret_diffs = PredictWorker.start(self.transaction.model_data, model_name=model_name)
 
-        model_stats = self.session.mongo.mindsdb.model_train_stats
-        model_stat = model_stats.find_one({'model_name': model_name})
-        # confusion_matrixes = model_stat['reduced_confusion_matrices']
-        confusion_matrixes = model_stat['confusion_matrices']
 
-        self.transaction.output_data_array = self.transaction.input_data_array
+        confusion_matrices = self.transaction.persistent_ml_model_info.confussion_matrices
+
+        self.transaction.output_data = self.transaction.input_data
+
         for diff in ret_diffs:
             for col in diff['ret_dict']:
-                confusion_matrix = confusion_matrixes[col]
-                col_index = self.transaction.input_metadata[KEY_COLUMNS].index(col)
-                self.transaction.input_metadata[KEY_COLUMNS].insert(col_index+1,KEY_CONFIDENCE)
+                confusion_matrix = confusion_matrices[col]
+                col_index = self.transaction.input_data.columns.index(col)
+                self.transaction.output_data.columns.insert(col_index+1,KEY_CONFIDENCE)
                 offset = diff['start_pointer']
                 group_pointer = diff['group_pointer']
                 column_pointer = diff['column_pointer']
@@ -51,15 +50,20 @@ class ModelPredictor(BaseModule):
                     #TODO: This may be calculated just as j+offset
                     if not cell:
                         continue
-                    actual_row = self.transaction.model_data_input_array_map[KEYS.PREDICT_SET][group_pointer][j+offset]
-                    if not self.transaction.output_data_array[actual_row][col_index] or self.transaction.output_data_array[actual_row][col_index] == '':
-                        self.transaction.output_data_array[actual_row][col_index] = np.format_float_positional(cell, precision=2)
-                        # confidence = self.getConfidence(cell,confusion_matrix)
-                        randConfidence = random.uniform(0.85, 0.93)
-                        confidence = "{0:.2f}".format(randConfidence)
-                        self.transaction.output_data_array[actual_row].insert(col_index + 1, confidence)
+                    actual_row = self.transaction.model_data.predict_set_map[group_pointer][j+offset]
+                    if not self.transaction.output_data.data_array[actual_row][col_index] or self.transaction.output_data.data_array[actual_row][col_index] == '':
+
+                        if self.transaction.persistent_model_metadata.column_stats[col][KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+                            target_val = np.format_float_positional(cell, precision=2)
+                        else:
+                            target_val = cell
+                        self.transaction.output_data.data_array[actual_row][col_index] = target_val
+                        confidence = self.getConfidence(cell,confusion_matrix)
+                        #randConfidence = random.uniform(0.85, 0.93)
+
+                        self.transaction.output_data.data_array[actual_row].insert(col_index + 1, confidence)
                     else:
-                        self.transaction.output_data_array[actual_row].insert(col_index+1,1.0)
+                        self.transaction.output_data.data_array[actual_row].insert(col_index+1,1.0)
 
 
         total_time = time.time() - self.train_start_time
@@ -86,9 +90,11 @@ class ModelPredictor(BaseModule):
 def test():
 
     from libs.controllers.mindsdb_controller import MindsDBController as MindsDB
+    import logging
 
     mdb = MindsDB()
-    mdb.predict(predict='position', when={'max_time_rec': 700}, model_name='mdsb_model')
+    ret = mdb.predict(predict='position', when={'max_time_rec': 700}, model_name='mdsb_model')
+    logging.info(ret)
 
 
 # only run the test if this file is called from debugger

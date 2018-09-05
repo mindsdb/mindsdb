@@ -50,7 +50,7 @@ class TrainWorker():
 
         # get basic variables defined
 
-        self.metadata = PersistentModelMetadata().find_one({'model_name': self.model_name})
+        self.persistent_model_metadata = PersistentModelMetadata().find_one({'model_name': self.model_name})
 
         self.ml_model_info = PersistentMlModelInfo()
         self.ml_model_info.model_name = self.model_name
@@ -65,8 +65,8 @@ class TrainWorker():
         self.ml_model_module = importlib.import_module(self.ml_model_module_path)
         self.ml_model_class = getattr(self.ml_model_module, self.ml_model_class_name)
 
-        self.train_sampler = Sampler(self.data.train_set, metadata_as_stored=self.metadata, ignore_types=self.ml_model_class.ignore_types)
-        self.test_sampler = Sampler(self.data.test_set, metadata_as_stored=self.metadata, ignore_types=self.ml_model_class.ignore_types)
+        self.train_sampler = Sampler(self.data.train_set, metadata_as_stored=self.persistent_model_metadata, ignore_types=self.ml_model_class.ignore_types)
+        self.test_sampler = Sampler(self.data.test_set, metadata_as_stored=self.persistent_model_metadata, ignore_types=self.ml_model_class.ignore_types)
 
         self.train_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
         self.test_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
@@ -185,8 +185,8 @@ class TrainWorker():
             predicted_targets = {}
             real_targets = {}
             for col in test_ret.predicted_targets:
-                predicted_targets[col] = [denorm(row, self.metadata.column_stats[col]) for row in test_ret.predicted_targets[col]]
-                real_targets[col] = [denorm(row, self.metadata.column_stats[col]) for row in test_ret.real_targets[col]]
+                predicted_targets[col] = [denorm(row, self.persistent_model_metadata.column_stats[col]) for row in test_ret.predicted_targets[col]]
+                real_targets[col] = [denorm(row, self.persistent_model_metadata.column_stats[col]) for row in test_ret.real_targets[col]]
 
 
             self.ml_model_info.confussion_matrices = self.calculateConfusionMatrices(real_targets, predicted_targets)
@@ -218,11 +218,11 @@ class TrainWorker():
         # confusion matrices with zeros
         confusion_matrices = {
             col: {
-                'labels': [label for label in self.metadata.column_stats[col]['histogram']['x']],
-                'real_x_predicted_dist': [[0 for i in self.metadata.column_stats[col]['histogram']['x']] for j in
-                                          self.metadata.column_stats[col]['histogram']['x']],
-                'real_x_predicted': [[0 for i in self.metadata.column_stats[col]['histogram']['x']] for j in
-                                     self.metadata.column_stats[col]['histogram']['x']]
+                'labels': [label for label in self.persistent_model_metadata.column_stats[col]['histogram']['x']],
+                'real_x_predicted_dist': [[0 for i in self.persistent_model_metadata.column_stats[col]['histogram']['x']] for j in
+                                          self.persistent_model_metadata.column_stats[col]['histogram']['x']],
+                'real_x_predicted': [[0 for i in self.persistent_model_metadata.column_stats[col]['histogram']['x']] for j in
+                                     self.persistent_model_metadata.column_stats[col]['histogram']['x']]
             }
             for col in real_targets
         }
@@ -230,7 +230,7 @@ class TrainWorker():
 
         for col in real_targets:
             reduced_buckets = []
-            stats = self.metadata.column_stats[col]
+            stats = self.persistent_model_metadata.column_stats[col]
             if stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
 
                 labels = confusion_matrices[col]['labels']
@@ -253,7 +253,7 @@ class TrainWorker():
 
         # calculate confusion matrices real vs predicted
         for col in predicted_targets:
-            totals = [0] * len(self.metadata.column_stats[col]['histogram']['x'])
+            totals = [0] * len(self.persistent_model_metadata.column_stats[col]['histogram']['x'])
             reduced_totals = [0] * len(reduced_buckets)
             for i, predicted_value in enumerate(predicted_targets[col]):
                 predicted_index = get_label_index_for_value(predicted_value, confusion_matrices[col]['labels'])
@@ -299,7 +299,7 @@ class TrainWorker():
 
         # check if stop training is set in which case we should exit the training
 
-        model_data = self.metadata.find_one({'model_name': self.model_name}) #type: PersistentModelMetadata
+        model_data = self.persistent_model_metadata.find_one({'model_name': self.model_name}) #type: PersistentModelMetadata
 
 
         if model_data is None:
@@ -312,7 +312,7 @@ class TrainWorker():
         elif model_data.kill_training == True:
 
             logging.info('[FORCED] Stopping model training....')
-            self.metadata.delete()
+            self.persistent_model_metadata.delete()
             self.ml_model_info.delete()
 
             return False

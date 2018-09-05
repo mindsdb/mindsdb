@@ -1,11 +1,21 @@
 import sqlite3
 import pandas
+import requests
+import logging
+import os
+import platform
+import _thread
+import uuid
+
 from libs.helpers.sqlite_helpers import *
 from config import SQLITE_FILE
+import config as CONFIG
 
 from libs.data_types.transaction_metadata import TransactionMetadata
 from libs.controllers.session_controller import SessionController
 from libs.constants.mindsdb import *
+from pathlib import Path
+
 
 class MindsDBController:
 
@@ -15,6 +25,7 @@ class MindsDBController:
         :param file:
         """
 
+        _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()
         self.conn = sqlite3.connect(file)
         self.conn.create_aggregate("first_value", 1, FirstValueAgg)
@@ -99,3 +110,26 @@ class MindsDBController:
         transaction = self.session.newTransaction(transaction_metadata, breakpoint)
 
         return transaction.output_data
+
+    @staticmethod
+    def checkForUpdates():
+        # tmp files
+        mdb_file = CONFIG.MINDSDB_STORAGE_PATH + '/start.mdb_base'
+        file_path = Path(mdb_file)
+        if file_path.is_file():
+            token = open(mdb_file).read()
+        else:
+            token = '{system}.{version}.{uid}'.format(system=platform.system(), version=MDB_VERSION, uid=str(uuid.uuid4()))
+            try:
+                open(mdb_file,'w').write(token)
+            except:
+                logging.warn('Cannot store token, Please add write permissions to file:'+mdb_file)
+                token = token+'.NO_WRITE'
+
+        r = requests.get('http://mindsdb.com/checkupdates?token={token}'.format(token=token))
+        try:
+            ret = r.json()
+            if 'new_version' in ret:
+                logging.warn('There is an update available for mindsdb, please go: pip install mindsdb --upgrade')
+        except:
+            logging.warning('could not check for MindsDB updates')

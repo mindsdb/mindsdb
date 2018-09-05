@@ -1,3 +1,5 @@
+MDB_VERSION = 'horza05'
+
 TRANSACTION_LEARN = 'learn'
 TRANSACTION_PREDICT = 'predict'
 TRANSACTION_CLUSTER = 'cluster'

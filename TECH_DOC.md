@@ -3,10 +3,7 @@
 #### Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
 
 MindsDB's goal is to make it very simple for developers to use the power
-of artificial neural networks in their projects. To do this we started 
-by adding the word PREDICT to the SQL language 
-(which did not exist before), as such, it radically simplifies 
-answering predictive questions about your business. 
+of artificial neural networks in their projects. 
 
 
 # Why use MindsDB?
@@ -49,6 +46,25 @@ After that; MindsDB figures out how to:
 On top of all this it provides you with a step by step explanation of what is doing to obtain such predictions and what finds to be important within your data. 
 
 Currently MindsDB works with relational data sources. What this means, is data lives in tables in: excel spreadsheets, CSV files or tables in any of the following database servers (oracle, mysql, postgres,  mariadb, redshift, aurora, oracle, TyDB)
+
+
+
+
+# The code
+
+ * ```config/__init__.py```: All server configuration variables are set here or via env variables
+ * ```external_libs```: Any library or code that is not originally developed by mindsDB
+ * ```libs```: All mindsDB code
+    * ```constants```: All mindsDB constants and structs
+    * ```controllers```: The server controllers; which handle transaction requests
+    * ```data_models/<framework>```: Here are the various model templates by framework, given the dynamic graph capabilities of pytorch we ship with only pytorch models, but support for tensorflow is provided
+    * ```data_types```: These are MindsDB data types shared across modules
+    * ```helpers```: These are the mindsDB collection of functions that can be used across modules
+    * ```phases```: These are the modular phases involved in any given transaction in MindsDB
+    * ```workers```: Since we can distribute train and test over a computing cloud, we place train and test as worker code that can run independently and in entirely different memory spaces.
+
+
+
 
 
 # Architecture
@@ -163,148 +179,5 @@ the Phase Modules in the next section)
 * **ModelPredictor**: The model predictor is called when the transaction is a *PREDICT* transaction. It loads the model with the highest $R^2$, the lookup for the models available is the columns in the input and output, it will look for models that match the same order in column names and data types. Once the Predictions are done, it replaces the predicted values in an output tensor (which is a copy of the input tensor).  
 
 * **DataDeVectorizer**: Once the output data is ready and updated with the predictions, it proceeds to denomalize each vector that corresponds to a cell and produces a list of lists that contains the out, which will be taken by the proxy and returned to the client as if the data excited in the data store. Unless specified, it also adds a column for confidence, which is pulled from the training stats of the model, in which it can determine $P(O_{predicted}=O_{real})$ and we produce as the confidence of the individual prediction. 
-
-
-## MindsDB client
-
-MindsDB can be used by connecting to its proxy and sending queries to it. Here we provide examples of the API to MindsDB.
-
-### SQL API
-
-The following describes a few examples of the MindsDB custom SQL queries
-
-
-#### Creating a data model
-
-You have a dataset about prices of diamonds, and you want to create a model that predicts price:
-
-```sql
-CREATE/UPDATE MODEL FROM ( select * from diamonds ) AS diamond_pricing PREDICT price
-```
-
-Sample query
-
-```sql
--- GET ALL DIAMONDS AND FILL IN THE PRICE IF ITS NULL
-SELECT * FROM diamond PREDICT price;
-```
-
-#### Creating a data model
-
-You have a dataset about patients, in 3 tables 
-
-* patient: Where the patient demographic data exists
-* patient_chronic_condition: The chronic conditions of patients (if any)
-* patient_visits: The visits performed by each patient to the hospital if any.
-
-And you want to predict the care_plan that each patient will belong to in the future.
-
-```sql
-CREATE/UPDATE MODEL FROM (
-    select
-        p.patient_id,
-        p.patient_current_age,
-        p.patient_sex,
-        p.care_plan,
-        cc.chronic_condition,
-        v.visit_diagnosis_cd,
-        v.start_time
-        v.end_date
-    from patient p
-    left join patient_visit v
-        on p.patient_id = v.patient_id
-    left join patient_chronic_condition cc
-        on p.patient_id = cc.patient_id
-        and cc.date >= v.start_date
-        and cc.data <= v.end_date
-) AS patient_history
--- OPTIONAL:
-GROUP BY patient_id
-ORDER BY start_date
-PREDICT *, CLUSTERS
-UPDATE (hourly, weekly, monthly)
-```
-
-
-##### possible queries
-```sql
--- PREDICT A SINGLE COLUMN
-SELECT * FROM patient_history PREDICT care_plan WHEN start_time > NOW();
--- GET CLUSTERS that patients belong to using patient_history, clusters column is a json
-SELECT *, CLUSTERS FROM patient PREDICT 10 CLUSTERS USING patient_history;
--- GET CLUSTERS that patients belong at any given time in their history, clusters column is a json
-SELECT *, CLUSTERS[0].id, CLUSTERS[0].confidence  FROM patient_history PREDICT 10 CLUSTERS;
--- GET 200 most alike patients to patient_id=100, ALIKE column is a percentage
-SELECT *, ALIKE FROM patient PREDICT 200 ALIKE patient_id=100 USING patient_history;
--- PREDICT patient_sex on a differnt patient history given what was learnt from patient_history
-SELECT * FROM other_patient_history PREDICT patient_sex USING patient_history;
-```
-
-
-
-##### simulate given a trained model
-
-```sql
-WITH (
-    SELECT
-        15 as patient_current_age,
-        'plus' as care_plan,
-        'diabetes' as chronic_condition
-) as test
-SELECT * from test PREDICT patient_sex USING patient_history
-```
-
-
-## Python API
-
-In Sept 1, 2018 we are releasing a developer version so you can use MindsDB straight from python like this:
-
-
-### Example
-
-You have a csv file with information about diamonds and their price (see kaggle dataset)
-
-##### Train a model
-```python
-import mindsdb
-
-mdb = mindsdb.newSession()
-mdb.create_model(from='pricing.csv', predict='price', model_name='price_model')
-```
-
-##### Use a model
-```python
-import mindsdb
-
-mdb = mindsdb.newSession()
-prediction = mdb.predict(when={'cut':'Premium', 'carat': 0.3}, model_name='price_model')
-
-```
-
-```newSession``` can take one of the following optional arguments
-
-* ```mongodb_server_url``` By default MindsDB expects that you have a mongodb server running in localhost without authentication, you can change that by setting a mongo url of the form ```mongodb://[username:password@]host1[:port1][/[database][?options]]```
-
-* ```mindsdb_server_url``` If you wish computation to run remotely on a remote MindsDB instance, you can set it as ```mindsdb://[username:password@]host[:port]```
-
-
-This is possible thanks to a lightweight MindsDB server that can also run in the same execution thread as the caller script. However models can be pushed to a MindsDB server instance. This is so people can start working with MindsDB on a server-less setting but as they move to production they can do so seamlessly.
-
-![](https://docs.google.com/drawings/d/e/2PACX-1vQvrMZLGQJXMaLkfSMenLz7-XnNDglSkOLRr2yLsJsm8unQeaPZBwf54VhdLR2P6Pc476fcwKaAp1zQ/pub?w=364&h=678)
-
-
-### MindsDB frontend
-
-A mindsDB server installation comes with a frontend system, which exposed via a web user interface that allows it's users to manage the server's state, data sources, models and other elements that facilitate to understand how the different parts of MindsDB work, a few examples:
-
-#### DataSource Management
-
-![](https://docs.google.com/drawings/d/e/2PACX-1vT34rhNF6M92vYWg23BGdKkl1JSOVpeKfKnEERcjG7AK8f7jhVG4Odv5rqgau-RujEDcpfzUvHNFJis/pub?w=760&h=720)
-
-#### Model Management
-
-![](https://docs.google.com/drawings/d/e/2PACX-1vRA0ZEbBqHez3Dnku8Jrs59WMTojQy6SLyIhq98CaozZFDu38QieN0NzjiHXGh3eOktD-_0bIRO-_C8/pub?w=760&h=720)
-
-
 
 

@@ -1,12 +1,7 @@
 
-class TransactionData():
+class TransactionOutputData():
 
     def __init__(self):
         self.data_array = []
-
-        self.train_indexes = []
-        self.test_indexes = []
-        self.validation_indexes = []
-
         self.columns = []
 

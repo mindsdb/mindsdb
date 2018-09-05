@@ -15,6 +15,7 @@ from libs.data_types.transaction_metadata import TransactionMetadata
 from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 from libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
 from libs.data_types.transaction_data import TransactionData
+from libs.data_types.transaction_output_data import TransactionOutputData
 from libs.data_types.model_data import ModelData
 
 import config as CONFIG
@@ -49,8 +50,8 @@ class TransactionController:
         self.error = None
         self.errorMsg = None
 
-        self.input_data = TransactionData() # [[]]
-        self.output_data = TransactionData()
+        self.input_data = TransactionData()
+        self.output_data = TransactionOutputData()
 
         self.model_data = ModelData()
 

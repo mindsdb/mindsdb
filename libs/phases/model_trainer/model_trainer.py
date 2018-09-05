@@ -88,6 +88,7 @@ def test():
                 position 
             from position_target_table
         ''',
+        from_file=CONFIG.MINDSDB_STORAGE_PATH+'/position_target_table.csv',
         group_by='id',
         order_by=['max_time_rec'],
         predict='position',

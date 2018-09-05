@@ -16,6 +16,7 @@ from libs.controllers.session_controller import SessionController
 from libs.constants.mindsdb import *
 from pathlib import Path
 
+from libs.data_sources.csv_file_ds import CSVFileDS
 
 class MindsDBController:
 
@@ -61,7 +62,7 @@ class MindsDBController:
         return pandas.read_sql_query(query, self.conn)
 
 
-    def learn(self, from_query, predict, model_name='mdsb_model', test_query=None, group_by = None, order_by = [], breakpoint = PHASE_END):
+    def learn(self, predict, from_query=None, from_file=None, model_name='mdsb_model', test_query=None, group_by = None, order_by = [], breakpoint = PHASE_END):
         """
 
         :param from_query:
@@ -70,6 +71,13 @@ class MindsDBController:
         :param test_query:
         :return:
         """
+
+        if from_file is not None:
+            from_file_dest = os.path.basename(from_file).split('.')[0]
+            self.addTable(CSVFileDS(from_file), from_file_dest)
+            if from_query is None:
+                from_query = 'select * from {from_file_dest}'.format(from_file_dest=from_file_dest)
+                logging.info('setting up custom learn query for file. '+from_query)
 
         transaction_type = TRANSACTION_LEARN
 

@@ -88,21 +88,8 @@ def test():
     from libs.controllers.mindsdb_controller import MindsDBController as MindsDB
 
     mdb = MindsDB()
-    mdb.learn(
-        from_query='''
-            select 
-                id,
-                max_time_rec,
-                min_time_rec,
-                position 
-            from position_target_table
-        ''',
-        group_by='id',
-        order_by=['max_time_rec'],
-        predict='position',
-        model_name='mdsb_model',
-        breakpoint=PHASE_MODEL_TRAINER
-    )
+    mdb.predict(predict='position', when={'max_time_rec': 700}, model_name='mdsb_model')
+
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

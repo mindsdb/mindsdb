@@ -77,7 +77,7 @@ class MindsDBController:
         self.session.newTransaction(transaction_metadata, breakpoint)
 
 
-    def predict(self, predict, when={}, model_name='mdsb_model'):
+    def predict(self, predict, when={}, model_name='mdsb_model', breakpoint= PHASE_END):
         """
 
         :param predict:

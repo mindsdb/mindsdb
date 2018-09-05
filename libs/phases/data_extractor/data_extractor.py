@@ -30,6 +30,63 @@ class DataExtractor(BaseModule):
 
     def run(self):
 
+        # Handle transactions differently depending on the type of query
+        # For now we only support LEARN and PREDICT
+
+        if self.transaction.metadata.type == TRANSACTION_PREDICT:
+
+            # If its a predict function
+            # Create a query statement where data can be pulled from
+            # for now we can just populate the when statement in a select queryt
+            # TODO: combine WHEN and WHERE
+
+            # make when_conditions a list of dictionaries
+            if type(self.transaction.metadata.model_when_conditions) != type([]):
+                when_conditions = [self.transaction.metadata.model_when_conditions]
+            else:
+                when_conditions = self.transaction.metadata.model_when_conditions
+
+            # these are the columns in the model, pulled from persistent_data
+            columns = self.transaction.persistent_model_metadata.columns # type: list
+
+            when_conditions_list = []
+            # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
+            for when_condition in when_conditions:
+                cond_list = ["NULL"]*len(columns) # empty list with blanks for values
+
+                for condition_col in when_condition:
+                    col_index = columns.index(condition_col)
+                    cond_list[col_index] = when_condition[condition_col]
+
+                when_conditions_list.append(cond_list)
+
+            # create the strings to be populated in the query as follows
+            values_string = ",\n ".join([ "({val_string})".format(val_string=", ".join([str(val) for val in when_condition])) for when_condition in when_conditions_list])
+            fields_string = ', '.join(['column{i} as {col_name}'.format(i=i+1, col_name = col_name) for i, col_name in enumerate(columns)])
+
+            query = '''
+            select
+                {fields_string}
+            
+            from (
+                values
+                    {values_string}
+            ) 
+            
+            '''.format(fields_string = fields_string, values_string=values_string)
+
+            self.session.logging.info('Making PREDICT from query: {query}'.format(query=query))
+            self.transaction.metadata.model_query = query
+
+        elif self.transaction.metadata.type not in [TRANSACTION_PREDICT, TRANSACTION_LEARN]:
+
+            self.session.logging.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
+            self.transaction.error = True
+            self.transaction.errorMsg = traceback.print_exc(1)
+            return
+
+
+
         if self.transaction.metadata.model_order_by:
             order_by_fields = self.transaction.metadata.model_order_by if self.transaction.metadata.model_group_by is None else [self.transaction.metadata.model_group_by] + self.transaction.metadata.model_order_by
         else:
@@ -44,35 +101,24 @@ class DataExtractor(BaseModule):
 
         try:
             query = query_wrapper.format(orig_query = self.transaction.metadata.model_query, order_by_string=order_by_string)
-
             self.transaction.session.logging.info('About to pull query {query}'.format(query=query))
-
-            #drill = self.session.drill.query(self.transaction.input_data_sql, timeout=CONFIG.DRILL_TIMEOUT)
-
             conn = sqlite3.connect("/tmp/mindsdb")
-            print(self.transaction.metadata.model_query)
+            self.logging.info(self.transaction.metadata.model_query)
             df = pandas.read_sql_query(query, conn)
-
             result = df.where((pandas.notnull(df)), None)
-
-            df = None
-
+            df = None # clean memory
 
         except Exception:
 
-            # If testing offline, get results from a .cache file
             self.session.logging.error(traceback.print_exc())
             self.transaction.error =True
             self.transaction.errorMsg = traceback.print_exc(1)
             return
 
-
-
         columns = list(result.columns.values)
         data_array = list(result.values.tolist())
 
         self.transaction.input_data.columns = columns
-
 
         if len(data_array[0])>0 and  self.transaction.metadata.model_predict_columns:
             for col_target in self.transaction.metadata.model_predict_columns:

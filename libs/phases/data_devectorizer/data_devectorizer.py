@@ -23,35 +23,24 @@ class DataDevectorizer(BaseModule):
 
     def run(self):
 
+        result = []
 
-        group_by = self.transaction.model_metadata[KEY_MODEL_GROUP_BY]
-        group_by_index = None
+        #NOTE: we only use this model in PREDICT
 
-        target_columns = [self.transaction.model_metadata[KEY_MODEL_PREDICT_COLUMNS]]
+        for group in self.transaction.model_data.predict_set:
+            for column in self.transaction.model_data.predict_set[group]:
+                column_results = []
+                for value in self.transaction.model_data.predict_set[group][column]:
+                    stats = self.transaction.model_stats[column]
+                    denormed = denorm(value=value, cell_stats=stats)
+                    column_results.append(denormed)
+                result.append(column_results)
 
-        # this is a template of how we store columns
-        column_packs_template = OrderedDict()
+        # Why transponse?
+        #result = numpy.transpose(result)
+        #result = result.tolist()
 
-        for i, column_name in enumerate(self.transaction.input_metadata[KEY_COLUMNS]):
-            if group_by is not None and group_by == column_name:
-                group_by_index = i
 
-            column_packs_template[column_name] = []
-
-        result = {}
-
-        for test_train_all in self.transaction.model_data:
-            result[test_train_all] = []
-            for group in self.transaction.model_data[test_train_all]:
-                for column in self.transaction.model_data[test_train_all][group]:
-                    column_results = []
-                    for value in self.transaction.model_data[test_train_all][group][column]:
-                        stats = self.transaction.model_stats[column]
-                        denormed = denorm(value=value,cell_stats=stats)
-                        column_results.append(denormed)
-                    result[test_train_all].append(column_results)
-            result[test_train_all] = numpy.transpose(result[test_train_all])
-            result[test_train_all] = result[test_train_all].tolist()
         return result
 
 

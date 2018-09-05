@@ -96,4 +96,4 @@ class MindsDBController:
         transaction_metadata.model_when_conditions = when
         transaction_metadata.type = transaction_type
 
-        self.session.newTransaction(transaction_metadata)
+        self.session.newTransaction(transaction_metadata, breakpoint)

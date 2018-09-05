@@ -85,11 +85,24 @@ class ModelPredictor(BaseModule):
 
 def test():
 
-    from libs.test.test_controller import TestController
+    from libs.controllers.mindsdb_controller import MindsDBController as MindsDB
 
-    module = TestController('SELECT * FROM Uploads.views.diamonds PREDICT price limit 100 USING diamonds', PHASE_PREDICTION)
-
-    return
+    mdb = MindsDB()
+    mdb.learn(
+        from_query='''
+            select 
+                id,
+                max_time_rec,
+                min_time_rec,
+                position 
+            from position_target_table
+        ''',
+        group_by='id',
+        order_by=['max_time_rec'],
+        predict='position',
+        model_name='mdsb_model',
+        breakpoint=PHASE_MODEL_TRAINER
+    )
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

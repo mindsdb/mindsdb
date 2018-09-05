@@ -27,6 +27,7 @@ import importlib
 import json
 import time
 import os
+import copy
 
 class TrainWorker():
     
@@ -188,7 +189,7 @@ class TrainWorker():
                 real_targets[col] = [denorm(row, self.metadata.column_stats[col]) for row in test_ret.real_targets[col]]
 
 
-
+            self.ml_model_info.confussion_matrices = self.calculateConfusionMatrices(real_targets, predicted_targets)
             self.ml_model_info.lowest_error = test_ret.error
             self.ml_model_info.predicted_targets = predicted_targets
             self.ml_model_info.real_targets = real_targets
@@ -225,21 +226,30 @@ class TrainWorker():
             }
             for col in real_targets
         }
+
+
         for col in real_targets:
             reduced_buckets = []
-            labels = confusion_matrices[col]['labels']
-            for i, label in enumerate(labels):
-                index = int(i) + 1
-                if index % 5 == 0:
-                    reduced_buckets.append(int(labels[i]))
+            stats = self.metadata.column_stats[col]
+            if stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
 
-            reduced_confusion_matrices = {
-                col: {
-                    'labels': reduced_buckets,
-                    'real_x_predicted_dist': [[0 for i in reduced_buckets] for j in reduced_buckets],
-                    'real_x_predicted': [[0 for i in reduced_buckets] for j in reduced_buckets]
+                labels = confusion_matrices[col]['labels']
+                for i, label in enumerate(labels):
+                    index = int(i) + 1
+                    if index % 5 == 0:
+                        reduced_buckets.append(int(labels[i]))
+
+                reduced_confusion_matrices = {
+                    col: {
+                        'labels': reduced_buckets,
+                        'real_x_predicted_dist': [[0 for i in reduced_buckets] for j in reduced_buckets],
+                        'real_x_predicted': [[0 for i in reduced_buckets] for j in reduced_buckets]
+                    }
                 }
-            }
+            else:
+                #TODO: Smarter way to deal with reduced buckets for other data types
+                reduced_buckets = confusion_matrices[col]['labels']
+                reduced_confusion_matrices = copy.copy(confusion_matrices)
 
         # calculate confusion matrices real vs predicted
         for col in predicted_targets:

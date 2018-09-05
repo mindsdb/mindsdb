@@ -22,6 +22,8 @@ class PersistentMlModelInfo(PersistentObject):
         self.error_y = []
         self.error_x = []
 
+        self.confussion_matrices = None
+
         self.lowest_error = None
         self.predicted_targets = None
         self.real_targets = None

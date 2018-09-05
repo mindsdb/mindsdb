@@ -66,3 +66,25 @@ class PersistentObject(ObjectDict):
 
         return class_object
 
+
+    def find(self, conditions, order_by= None, limit = None):
+        resp = self._collection.find(conditions)
+        if order_by is not None:
+            resp = resp.sort(order_by)
+        if limit is not None:
+            resp = resp.limit(limit)
+
+        ret = []
+
+        if resp is None:
+            return  []
+
+        for item in resp:
+            class_object = self.__class__()
+            for var_name in item:
+                setattr(class_object,var_name, resp[var_name])
+
+            ret.append(class_object)
+
+        return ret
+

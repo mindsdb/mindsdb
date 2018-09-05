@@ -40,6 +40,7 @@ class BaseModel(nn.Module):
         """
 
         :param sample_batch:
+        :type sample_batch: utils.
         :param use_cuda:
         :param kwargs:
         """
@@ -113,14 +114,14 @@ class BaseModel(nn.Module):
         return loss, batch_size
 
 
-    def saveToDisk(self):
+    def saveToDisk(self, file_id = None):
         """
 
         :return:
         """
         sample_batch = self.sample_batch
         self.sample_batch = None
-        file_id, path = storeTorchObject(self)
+        file_id, path = storeTorchObject(self, file_id)
         self.latest_file_id = file_id
         self.sample_batch = sample_batch
         return [FileSavedResponse(file_id, path)]

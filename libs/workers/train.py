@@ -12,21 +12,19 @@
 # import logging
 from libs.helpers.logging import logging
 
-from pymongo import MongoClient
+
 from libs.helpers.general_helpers import convert_snake_to_cammelcase_string, get_label_index_for_value
+from libs.helpers.text_helpers import hashtext
 from libs.constants.mindsdb import *
 from libs.data_types.sampler import Sampler
 from libs.helpers.norm_denorm_helpers import denorm
-from bson.objectid import ObjectId
 
 from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 from libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
 from libs.data_types.model_data import ModelData
 
 import importlib
-import config as CONFIG
 import json
-import gridfs
 import time
 import os
 
@@ -46,6 +44,8 @@ class TrainWorker():
         self.model_name = model_name
         self.ml_model_name = ml_model_name
         self.config = config
+        self.config_serialized = json.dumps(self.config)
+        self.config_hash = hashtext(self.config_serialized)
 
         # get basic variables defined
 
@@ -54,7 +54,7 @@ class TrainWorker():
         self.ml_model_info = PersistentMlModelInfo()
         self.ml_model_info.model_name = self.model_name
         self.ml_model_info.ml_model_name = self.ml_model_name
-        self.ml_model_info.config_serialized = json.dumps(self.config)
+        self.ml_model_info.config_serialized = self.config_serialized
         self.ml_model_info.insert()
 
         self.framework, self.dummy, self.data_model_name = self.ml_model_name.split('.')
@@ -104,7 +104,7 @@ class TrainWorker():
                     last_epoch = train_ret.epoch
                     logging.info('New epoch:{epoch}, testing and calculating error'.format(epoch=last_epoch))
                     test_ret = self.data_model_object.testModel(self.test_sampler)
-                    logging.info('Test Error:{error}, Accuracy:{accuracy}'.format(error=test_ret.error, accuracy = test_ret.accuracy))
+                    logging.info('Test Error:{error}, Accuracy:{accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
                     is_it_lowest_error_epoch = False
                     # if lowest error save model
                     if lowest_error is None or lowest_error > test_ret.error:
@@ -323,7 +323,8 @@ class TrainWorker():
                 except:
                     logging.info('Could not delete file {path}'.format(path=file_response_object.path))
 
-        return_objects =  self.data_model_object.saveToDisk()
+        file_id = '{model_name}.{ml_model_name}.{config_hash}'.format(model_name=self.model_name, ml_model_name=self.ml_model_name, config_hash=self.config_hash)
+        return_objects =  self.data_model_object.saveToDisk(file_id)
 
         file_ids = [ret.file_id for ret in return_objects]
 

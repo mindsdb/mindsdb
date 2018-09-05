@@ -62,7 +62,8 @@ class PersistentObject(ObjectDict):
             return  None
 
         for var_name in resp:
-            setattr(class_object,var_name, resp[var_name])
+            if hasattr(class_object, var_name):
+                setattr(class_object,var_name, resp[var_name])
 
         return class_object
 
@@ -82,7 +83,8 @@ class PersistentObject(ObjectDict):
         for item in resp:
             class_object = self.__class__()
             for var_name in item:
-                setattr(class_object,var_name, resp[var_name])
+                if hasattr(class_object, var_name):
+                    setattr(class_object,var_name, item[var_name])
 
             ret.append(class_object)
 

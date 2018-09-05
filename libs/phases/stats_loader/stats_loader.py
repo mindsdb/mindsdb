@@ -26,9 +26,12 @@ class StatsLoader(BaseModule):
 
         self.transaction.persistent_model_metadata = self.transaction.persistent_model_metadata.find_one(self.transaction.persistent_model_metadata.getPkey())
 
+        # laod the most accurate model
 
+        info = self.transaction.persistent_ml_model_info.find({'model_name':self.transaction.metadata.model_name}, order_by=[('r_squared',-1)], limit=1)
 
-
+        if info is not None and len(info)>0:
+            self.transaction.persistent_ml_model_info = info[0]
 
 def test():
 

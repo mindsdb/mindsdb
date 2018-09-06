@@ -11,6 +11,6 @@ venv/*
 data/*
 dist/*
 build/*
-mindsdb.egg-infol*
+mindsdb.egg-info/*
 clean_data
 .pypirc

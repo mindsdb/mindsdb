@@ -13,6 +13,8 @@ import config as CONFIG
 from libs.constants.mindsdb import *
 from libs.phases.base_module import BaseModule
 
+from collections import OrderedDict
+
 import sys
 import json
 import random
@@ -27,113 +29,230 @@ class DataExtractor(BaseModule):
     phase_name = PHASE_DATA_EXTRACTION
 
     def run(self):
-        try:
-            if self.transaction.predict_metadata is None:
-                query = self.transaction.input_data_sql
+
+        # Handle transactions differently depending on the type of query
+        # For now we only support LEARN and PREDICT
+
+        if self.transaction.metadata.type == TRANSACTION_PREDICT:
+
+            # If its a predict function
+            # Create a query statement where data can be pulled from
+            # for now we can just populate the when statement in a select queryt
+            # TODO: combine WHEN and WHERE
+
+            # make when_conditions a list of dictionaries
+            if type(self.transaction.metadata.model_when_conditions) != type([]):
+                when_conditions = [self.transaction.metadata.model_when_conditions]
             else:
-                query = self.transaction.predict_metadata[KEY_MODEL_QUERY]
-            self.transaction.session.logging.info('About to pull query {query}'.format(query=self.transaction.input_data_sql))
+                when_conditions = self.transaction.metadata.model_when_conditions
 
-            #drill = self.session.drill.query(self.transaction.input_data_sql, timeout=CONFIG.DRILL_TIMEOUT)
+            # these are the columns in the model, pulled from persistent_data
+            columns = self.transaction.persistent_model_metadata.columns # type: list
 
-            conn = sqlite3.connect("/tmp/mindsdb")
-            print(self.transaction.input_data_sql)
-            df = pandas.read_sql_query(self.transaction.input_data_sql, conn)
+            when_conditions_list = []
+            # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
+            for when_condition in when_conditions:
+                cond_list = ["NULL"]*len(columns) # empty list with blanks for values
 
-            result = df.where((pandas.notnull(df)), None)
+                for condition_col in when_condition:
+                    col_index = columns.index(condition_col)
+                    cond_list[col_index] = when_condition[condition_col]
 
-            df = None
+                when_conditions_list.append(cond_list)
 
+            # create the strings to be populated in the query as follows
+            values_string = ",\n ".join([ "({val_string})".format(val_string=", ".join([str(val) for val in when_condition])) for when_condition in when_conditions_list])
+            fields_string = ', '.join(['column{i} as {col_name}'.format(i=i+1, col_name = col_name) for i, col_name in enumerate(columns)])
 
-        except Exception:
+            query = '''
+            select
+                {fields_string}
+            
+            from (
+                values
+                    {values_string}
+            ) 
+            
+            '''.format(fields_string = fields_string, values_string=values_string)
 
-            # If testing offline, get results from a .cache file
-            self.session.logging.error(traceback.print_exc())
-            self.transaction.error =True
+            self.session.logging.info('Making PREDICT from query: {query}'.format(query=query))
+            self.transaction.metadata.model_query = query
+
+        elif self.transaction.metadata.type not in [TRANSACTION_PREDICT, TRANSACTION_LEARN]:
+
+            self.session.logging.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
+            self.transaction.error = True
             self.transaction.errorMsg = traceback.print_exc(1)
             return
 
 
 
+        if self.transaction.metadata.model_order_by:
+            order_by_fields = self.transaction.metadata.model_order_by if self.transaction.metadata.model_group_by is None else [self.transaction.metadata.model_group_by] + self.transaction.metadata.model_order_by
+        else:
+            order_by_fields = []
+
+        order_by_string = ", ".join(order_by_fields)
+
+        if len(order_by_fields):
+            query_wrapper = '''select * from ({orig_query}) orgi order by {order_by_string}'''
+        else:
+            query_wrapper = '''{orig_query}'''
+
+        try:
+            query = query_wrapper.format(orig_query = self.transaction.metadata.model_query, order_by_string=order_by_string)
+            self.transaction.session.logging.info('About to pull query {query}'.format(query=query))
+            conn = sqlite3.connect("/tmp/mindsdb")
+            self.logging.info(self.transaction.metadata.model_query)
+            df = pandas.read_sql_query(query, conn)
+            result = df.where((pandas.notnull(df)), None)
+            df = None # clean memory
+
+        except Exception:
+
+            self.session.logging.error(traceback.print_exc())
+            self.transaction.error =True
+            self.transaction.errorMsg = traceback.print_exc(1)
+            return
+
         columns = list(result.columns.values)
         data_array = list(result.values.tolist())
 
-        # TODO: ABstract this into the drill driver
-        # data_array = []
-        # for row in data:
-        #     row_array = []
-        #     for column in columns:
-        #         row_array += [row[column]]
-        #     data_array += [row_array]
+        self.transaction.input_data.columns = columns
 
-        self.transaction.input_metadata = {
-            KEY_COLUMNS: columns
-        }
-
-        if len(data_array[0])>0 and self.transaction.model_metadata and self.transaction.model_metadata[KEY_MODEL_PREDICT_COLUMNS]:
-            for col_target in self.transaction.model_metadata[KEY_MODEL_PREDICT_COLUMNS]:
-                if col_target not in self.transaction.input_metadata[KEY_COLUMNS]:
+        if len(data_array[0])>0 and  self.transaction.metadata.model_predict_columns:
+            for col_target in self.transaction.metadata.model_predict_columns:
+                if col_target not in self.transaction.input_data.columns:
                     err = 'Trying to predict column {column} but column not in source data'.format(column=col_target)
                     self.session.logging.error(err)
                     self.transaction.error = True
                     self.transaction.errorMsg = err
                     return
 
-        self.transaction.input_data_array = data_array
+        self.transaction.input_data.data_array = data_array
 
         # extract test data if this is a learn transaction and there is a test query
-        if self.transaction.type == TRANSACTION_LEARN \
-                and KEY_MODEL_TEST_QUERY in self.transaction.model_metadata \
-                and self.transaction.model_metadata[KEY_MODEL_TEST_QUERY]:
-            try:
-                test_query = self.transaction.model_metadata[KEY_MODEL_TEST_QUERY]
-                self.transaction.session.logging.info(
-                    'About to pull TEST query {query}'.format(query=self.transaction.input_data_sql))
-                #drill = self.session.drill.query(test_query, timeout=CONFIG.DRILL_TIMEOUT)
-                df = pandas.read_sql_query(test_query, conn)
+        if self.transaction.metadata.type == TRANSACTION_LEARN:
+
+            if self.transaction.metadata.model_test_query:
+                try:
+                    test_query = query_wrapper.format(orig_query = self.transaction.metadata.test_query, order_by_string= order_by_string)
+                    self.transaction.session.logging.info('About to pull TEST query {query}'.format(query=test_query))
+                    #drill = self.session.drill.query(test_query, timeout=CONFIG.DRILL_TIMEOUT)
+                    df = pandas.read_sql_query(test_query, conn)
+                    result = df.where((pandas.notnull(df)), None)
+                    df = None
+
+                    #result = vars(drill)['data']
+                except Exception:
+
+                    # If testing offline, get results from a .cache file
+                    self.session.logging.error(traceback.print_exc())
+                    self.transaction.error = True
+                    self.transaction.errorMsg = traceback.print_exc(1)
+                    return
+
+                columns = list(result.columns.values)
+                data_array = result.values.tolist()
+
+                # Make sure that test adn train sets match column wise
+                if columns != self.transaction.input_data.columns:
+                    err = 'Trying to get data for test but columns in train set and test set dont match'
+                    self.session.logging.error(err)
+                    self.transaction.error = True
+                    self.transaction.errorMsg = err
+                    return
+                total_data_array = len(self.transaction.input_data.data_array)
+                total_test_array =  len(data_array)
+                test_indexes = [i for i in range(total_data_array, total_data_array+total_test_array)]
+
+                self.transaction.input_data.test_data_indexes = test_indexes
+                # make the input data relevant
+                self.transaction.input_data.data_array += data_array
+
+                # we later use this to either regenerate or not
+                test_prob = 0
+
+            else:
+                test_prob = CONFIG.TEST_TRAIN_RATIO
+
+            validation_prob = CONFIG.TEST_TRAIN_RATIO / (1-test_prob)
+
+            group_by = self.transaction.metadata.model_group_by
+
+            if group_by:
+                try:
+                    group_by_index = self.transaction.input_data.columns.index(group_by)
+                except:
+                    group_by_index = None
+                    err = 'Trying to group by, {column} but column not in source data'.format(column=group_by)
+                    self.session.logging.error(err)
+                    self.transaction.error = True
+                    self.transaction.errorMsg = err
+                    return
+
+                # get unique group by values
+                all_group_by_items_query = ''' select distinct {group_by_column} as grp from ( {query} ) sub'''.format(group_by_column=group_by, query=self.transaction.metadata.model_query)
+                self.transaction.session.logging.info('About to pull GROUP BY query {query}'.format(query=all_group_by_items_query))
+                df = pandas.read_sql_query(all_group_by_items_query, conn)
                 result = df.where((pandas.notnull(df)), None)
-                df = None
+                # create a list of values in group by, this is because result is array of array we want just array
+                all_group_by_values = [i[0] for i in result.values.tolist()]
 
-                #result = vars(drill)['data']
-            except Exception:
+                # we will fill these depending on the test_prob and validation_prob
+                test_group_by_values = []
+                validation_group_by_values = []
+                train_group_by_values = []
 
-                # If testing offline, get results from a .cache file
-                self.session.logging.error(traceback.print_exc())
-                self.transaction.error = True
-                self.transaction.errorMsg = traceback.print_exc(1)
-                return
+                # split the data into test, validation, train by group by data
+                for group_by_value in all_group_by_values:
 
-            columns = list(result.columns.values)
-            data_array = result.values.tolist()
+                    # depending on a random number if less than x_prob belongs to such group
+                    # remember that test_prob can be 0 or the config value depending on if the test test was passed as a query
+                    if float(random.random()) < test_prob:
+                        test_group_by_values += [group_by_value]
+                    elif float(random.random()) < validation_prob:
+                        validation_group_by_values += [group_by_value]
+                    else:
+                        train_group_by_values += [group_by_value]
 
-            # Make sure that test adn train sets match column wise
-            if columns != self.transaction.input_metadata[KEY_COLUMNS]:
-                err = 'Trying to get data for test but columns in train set and test set dont match'.format(column=col_target)
-                self.session.logging.error(err)
-                self.transaction.error = True
-                self.transaction.errorMsg = err
-                return
+            for i, row in enumerate(self.transaction.input_data.data_array):
 
-            # # TODO: ABstract this into the drill driver
-            # data_array = []
-            # for row in data:
-            #     row_array = []
-            #     for column in columns:
-            #         row_array += [row[column]]
-            #     data_array += [row_array]
+                in_test = True if i in self.transaction.input_data.test_indexes else False
+                if not in_test:
+                    if group_by:
+
+                        group_by_value = row[group_by_index]
+                        if group_by_value in test_group_by_values or len(self.transaction.input_data.test_indexes) == 0:
+                            self.transaction.input_data.test_indexes += [i]
+                        elif group_by_value in train_group_by_values or len(self.transaction.input_data.train_indexes) == 0:
+                            self.transaction.input_data.train_indexes += [i]
+                        elif group_by_value in validation_group_by_values or len(self.transaction.input_data.validation_indexes) == 0:
+                            self.transaction.input_data.validation_indexes += [i]
+
+                    else:
+                        # remember that test_prob can be 0 or the config value depending on if the test test was passed as a query
+                        if float(random.random()) <= test_prob or len(self.transaction.input_data.test_indexes) == 0:
+                            self.transaction.input_data.test_indexes += [i]
+                        elif float(random.random()) <= validation_prob or len(self.transaction.input_data.validation_indexes)==0:
+                            self.transaction.input_data.validation_indexes += [i]
+                        else:
+                            self.transaction.input_data.train_indexes += [i]
 
 
 
 
-            self.transaction.input_test_data_array = data_array
+
+
+
+
+
 
 def test():
+    from libs.controllers.mindsdb_controller import MindsDBController as MindsDB
 
-    from libs.test.test_controller import TestController
-
-    module = TestController('CREATE MODEL FROM (SELECT * FROM vitals_tgt) AS vitals PREDICT vitals ', PHASE_DATA_EXTRACTION)
-
-    return
+    mdb = MindsDB()
+    mdb.learn(from_query='select * from position_target_table', group_by = 'id', order_by=['max_time_rec'], predict='position', model_name='mdsb_model', test_query=None, breakpoint = PHASE_DATA_EXTRACTION)
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

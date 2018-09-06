@@ -24,18 +24,14 @@ class StatsLoader(BaseModule):
 
     def run(self):
 
-        model_name = self.transaction.predict_metadata[KEY_MODEL_NAME]
-        stats = self.session.mongo.mindsdb.model_stats.find_one({KEY_MODEL_NAME: model_name})
+        self.transaction.persistent_model_metadata = self.transaction.persistent_model_metadata.find_one(self.transaction.persistent_model_metadata.getPkey())
 
-        self.transaction.input_metadata = {
-            KEY_COLUMNS: stats[KEY_COLUMNS]
-        }
+        # laod the most accurate model
 
-        self.transaction.model_stats = stats[KEY_STATS]
-        self.transaction.model_metadata = stats[KEY_MODEL_METADATA]
+        info = self.transaction.persistent_ml_model_info.find({'model_name':self.transaction.metadata.model_name}, order_by=[('r_squared',-1)], limit=1)
 
-
-
+        if info is not None and len(info)>0:
+            self.transaction.persistent_ml_model_info = info[0]
 
 def test():
 

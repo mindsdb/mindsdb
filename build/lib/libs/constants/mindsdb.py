@@ -1,3 +1,5 @@
+MDB_VERSION = 'horza05'
+
 TRANSACTION_LEARN = 'learn'
 TRANSACTION_PREDICT = 'predict'
 TRANSACTION_CLUSTER = 'cluster'
@@ -29,6 +31,8 @@ KEY_MODEL_MODEL_TYPE = 'predictor'
 KEY_MODEL_PREDICT_FROM_TABLE = 'model_predict_from_table'
 KEY_CONFIDENCE ='confidence'
 
+KEY_TRANSACTION_TYPE = 'transaction_type'
+
 LEARNING_RATE_INDEX = 0
 EPOCHS_INDEX = 1
 
@@ -41,6 +45,8 @@ KEY_STATUS = 'status'
 
 FULL_TEXT_ENCODING_EXTRA_LENGTH = 4 #(len)[is_start, is_end, unfrequent_word, is_null]
 TEXT_ENCODING_EXTRA_LENGTH = 2 #(len)[unfrequent_word, is_null]
+
+ALL_INDEXES_LIST = ['*']
 
 class DATA_TYPES:
     FULL_TEXT = 'FullText'

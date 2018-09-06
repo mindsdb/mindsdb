@@ -36,11 +36,13 @@ class ModelTrainer(BaseModule):
         """
 
 
-        model_name = self.transaction.model_metadata[KEY_MODEL_NAME]
-        data_models = [
-            ('pytorch.models.fully_connected_net', {}),
-            ('pytorch.models.ensemble_conv_net', {}),
-            ('pytorch.models.ensemble_fully_connected_net', {})]
+        model_name = self.transaction.persistent_model_metadata.model_name
+
+        ml_models = [
+            ('pytorch.models.fully_connected_net', {})
+            #, ('pytorch.models.ensemble_conv_net', {})
+            #, ('pytorch.models.ensemble_fully_connected_net', {})
+        ]
 
         self.train_start_time = time.time()
 
@@ -52,16 +54,17 @@ class ModelTrainer(BaseModule):
         # Train column encoders
 
 
-        for data_model_data in data_models:
-            config = data_model_data[1]
-            data_model = data_model_data[0]
-            if CONFIG.EXEC_LEARN_IN_THREAD == False or len(data_models) == 1:
-                TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=data_model, config=config)
+        for ml_model_data in ml_models:
+            config = ml_model_data[1]
+            ml_model = ml_model_data[0]
+
+            if CONFIG.EXEC_LEARN_IN_THREAD == False or len(ml_models) == 1:
+                TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=ml_model, config=config)
 
             else:
                 # Todo: use Ray https://github.com/ray-project/tutorial
                 # Before moving to actual workers: MUST FIND A WAY TO SEND model data to the worker in an efficient way first
-                _thread.start_new_thread(TrainWorker.start, (self.transaction.model_data, model_name, data_model, config))
+                _thread.start_new_thread(TrainWorker.start, (self.transaction.model_data, model_name, ml_model, config))
             # return
 
         total_time = time.time() - self.train_start_time
@@ -72,14 +75,31 @@ class ModelTrainer(BaseModule):
 
 
 def test():
+    from libs.controllers.mindsdb_controller import MindsDBController as MindsDB
 
-    from libs.test.test_controller import TestController
+    mdb = MindsDB()
+    mdb.learn(
+        from_query='''
+            select 
+                id,
+                max_time_rec,
+                min_time_rec,
+                
+                position 
+            from position_target_table
+        ''',
+        from_file=CONFIG.MINDSDB_STORAGE_PATH+'/position_target_table.csv',
+        group_by='id',
+        order_by=['max_time_rec'],
+        predict='position',
+        model_name='mdsb_model',
+        breakpoint=PHASE_MODEL_TRAINER
+    )
 
-    module = TestController("CREATE MODEL FROM (SELECT * FROM vitals_tgt) AS vitals PREDICT vitals", PHASE_MODEL_TRAINER)
-
-    return
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     test()
+
+
 

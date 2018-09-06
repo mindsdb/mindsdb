@@ -10,6 +10,8 @@
 """
 
 from libs.constants.mindsdb import *
+import json
+import hashlib
 
 def splitRecursive(word, tokens):
     words = [word]
@@ -20,6 +22,11 @@ def splitRecursive(word, tokens):
         words = new_split
     words = [word for word in words if word not in ['', None] ]
     return words
+
+def hashtext(cell):
+    text = json.dumps(cell)
+    hash = hashlib.md5(text.encode('utf8')).hexdigest()
+    return hash
 
 def test():
     print(splitRecursive('ABC.C HELLO, one:123.45 67', WORD_SEPARATORS))

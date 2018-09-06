@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="mindsdb",
-    version="0.5.0",
+    version="0.5.1",
     author="MindsDB Inc",
     author_email="jorge@mindsdb.com",
     description="MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. ",

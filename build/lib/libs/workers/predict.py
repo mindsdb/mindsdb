@@ -12,18 +12,16 @@
 #import logging
 from libs.helpers.logging import logging
 
-from pymongo import MongoClient
 from libs.helpers.general_helpers import convert_snake_to_cammelcase_string, get_label_index_for_value
 from libs.constants.mindsdb import *
 from libs.data_types.sampler import Sampler
 from libs.helpers.norm_denorm_helpers import denorm
 
+from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
+from libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
+
 import importlib
-import config as CONFIG
-import json
-import gridfs
 import time
-import os
 
 
 class PredictWorker():
@@ -39,44 +37,45 @@ class PredictWorker():
         self.model_name = model_name
         self.submodel_name = submodel_name
 
-        # get basic variables defined
-        self.mongo = MongoClient(CONFIG.MONGO_SERVER_HOST)
-        self.mongo_gfs = gridfs.GridFS(self.mongo.mindsdb)
+        self.persistent_model_metadata = PersistentModelMetadata()
+        self.persistent_model_metadata.model_name = self.model_name
+        self.persistent_ml_model_info = PersistentMlModelInfo()
+        self.persistent_ml_model_info.model_name = self.model_name
 
-        self.stats = self.mongo.mindsdb.model_stats.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name})
+        self.persistent_model_metadata = self.persistent_model_metadata.find_one(self.persistent_model_metadata.getPkey())
 
-        self.predict_sampler = Sampler(self.data[KEYS.PREDICT_SET], metadata_as_stored=self.stats)
 
-        collection_item = self.mongo.mindsdb.model_train_stats.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name},sort=[('lowest_error', -1)])
+        # laod the most accurate model
 
-        if collection_item is None:
-            #TODO: Make sure we have a model for this
+        info = self.persistent_ml_model_info.find({'model_name': self.model_name}, order_by=[('r_squared', -1)], limit=1)
+
+        if info is not None and len(info) > 0:
+            self.persistent_ml_model_info = info[0] #type: PersistentMlModelInfo
+        else:
+            # TODO: Make sure we have a model for this
             logging.info('No model found')
             return
 
-        self.data_model = collection_item['data_model']
-        self.config_serialize = collection_item['config']
 
-        model_state_collection = self.mongo.mindsdb.model_state.find_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.data_model, 'config': self.config_serialize})
-        if model_state_collection is None:
-            #TODO: Make sure we have a model for this
-            logging.info('No model found in storage')
-            return
+        self.predict_sampler = Sampler(self.data.predict_set, metadata_as_stored=self.persistent_model_metadata)
 
-        fs_file_ids = model_state_collection['fs_file_ids']
-        self.framework, self.dummy, self.data_model_name = self.data_model.split('.')
-        self.data_model_module_path = 'libs.data_models.' + self.data_model + '.' + self.data_model_name
-        self.data_model_class_name = convert_snake_to_cammelcase_string(self.data_model_name)
+        self.ml_model_name = self.persistent_ml_model_info.ml_model_name
+        self.config_serialized = self.persistent_ml_model_info.config_serialized
 
-        self.data_model_module = importlib.import_module(self.data_model_module_path)
-        self.data_model_class = getattr(self.data_model_module, self.data_model_class_name)
+        fs_file_ids = self.persistent_ml_model_info.fs_file_ids
+        self.framework, self.dummy, self.ml_model_name = self.ml_model_name.split('.')
+        self.ml_model_module_path = 'libs.ml_models.' + self.framework + '.models.' + self.ml_model_name + '.' + self.ml_model_name
+        self.ml_model_class_name = convert_snake_to_cammelcase_string(self.ml_model_name)
+
+        self.ml_model_module = importlib.import_module(self.ml_model_module_path)
+        self.ml_model_class = getattr(self.ml_model_module, self.ml_model_class_name)
 
         self.sample_batch = self.predict_sampler.getSampleBatch()
 
         self.gfs_save_head_time = time.time()  # the last time it was saved into GridFS, assume it was now
 
         logging.info('Starting model...')
-        self.data_model_object = self.data_model_class.loadFromDisk(file_ids=fs_file_ids)
+        self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
         self.data_model_object.sample_batch = self.sample_batch
 
 
@@ -89,8 +88,8 @@ class PredictWorker():
         :return: diffs, which is a list of dictionaries with pointers as to where to replace the prediction given the value that was predicted
 
         """
-        self.predict_sampler.variable_wrapper = self.data_model_class.variable_wrapper
-        self.predict_sampler.variable_unwrapper = self.data_model_class.variable_unwrapper
+        self.predict_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
+        self.predict_sampler.variable_unwrapper = self.ml_model_class.variable_unwrapper
 
         ret_diffs = []
         for batch in self.predict_sampler:
@@ -106,12 +105,12 @@ class PredictWorker():
 
 
             for col in ret_dict:
-                ret_dict[col] = self.data_model_class.variable_unwrapper(ret_dict[col])
+                ret_dict[col] = self.ml_model_class.variable_unwrapper(ret_dict[col])
                 for row in ret_dict[col]:
                     if col not in ret_dict_denorm:
                         ret_dict_denorm[col] = []
 
-                    ret_dict_denorm[col] += [denorm(row, self.stats[KEY_STATS][col])]
+                    ret_dict_denorm[col] += [denorm(row, self.persistent_model_metadata.column_stats[col])]
 
 
             ret_total_item = {

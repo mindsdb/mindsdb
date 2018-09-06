@@ -139,8 +139,14 @@ def denorm(value, cell_stats, return_nones = True, return_dates_as_time_stamps =
 
             if value[-2] == 1:
                 return '*'
+            max = -100
+            index = None
+            for j, v in enumerate(value):
+                if v > max:
+                    index = j
+                    max = v
 
-            index = value.index(1)
+
             return cell_stats['dictionary'][index]
         else:
             return ''

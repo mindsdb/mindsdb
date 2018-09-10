@@ -133,7 +133,9 @@ class BaseModel(nn.Module):
         :param file_ids:
         :return:
         """
-        return getStoredTorchObject(file_ids[0])
+        obj = getStoredTorchObject(file_ids[0])
+        obj.eval()
+        return obj
 
 
     def getLatestFromDisk(self):
@@ -141,7 +143,9 @@ class BaseModel(nn.Module):
 
         :return:
         """
-        return getStoredTorchObject(self.latest_file_id)
+        obj = getStoredTorchObject(self.latest_file_id)
+        obj.eval()
+        return obj
 
 
     def testModel(self, test_sampler):
@@ -154,7 +158,7 @@ class BaseModel(nn.Module):
 
         real_target_all = []
         predicted_target_all = []
-
+        self.eval() # toggle eval
         for batch_number, batch in enumerate(test_sampler):
             logging.info('[EPOCH-BATCH] testing batch: {batch_number}'.format(batch_number=batch_number))
             # get real and predicted values by running the model with the input of this batch
@@ -224,7 +228,7 @@ class BaseModel(nn.Module):
                 response.batch = batch_number
                 logging.info('[EPOCH-BATCH] Training on epoch: {epoch}/{num_epochs}, batch: {batch_number}'.format(
                         epoch=epoch + 1, num_epochs=self.total_epochs, batch_number=batch_number))
-
+                model_object.train() # toggle to train
                 model_object.zeroGradOptimizer()
                 loss, batch_size = model_object.calculateBatchLoss(batch)
                 if batch_size <= 0:

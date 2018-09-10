@@ -13,12 +13,17 @@ from libs.constants.mindsdb import *
 from dateutil.parser import parse as parseDate
 from libs.helpers.text_helpers import splitRecursive
 import numpy as np
+import datetime
 
 def norm(value, cell_stats):
-    if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or  (value == None or value == '' or value == '\n' or value == '\r')) and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.TEXT:
-        return [0, 1]
+
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+
+        if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
+                value == None or value == '' or value == '\n' or value == '\r')):
+            return [0, 1]
+
         if cell_stats['max'] - cell_stats['min'] != 0:
 
             normalizedValue = (value - cell_stats['min']) / \
@@ -35,16 +40,51 @@ def norm(value, cell_stats):
         return [normalizedValue, 0]
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:
+        #[ timestamp, year, month, day, minute, second, is null]
+        if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
+                value == None or value == '' or value == '\n' or value == '\r')):
+            ret = [0]*7
+            ret[-1] = 1
+            return ret
+
         try:
             timestamp = int(parseDate(value).timestamp())
         except:
-            return [0,1]
+            ret = [0] * 7
+            ret[-1] = 1
+            return ret
+        date = datetime.datetime.fromtimestamp(timestamp)
+        date_max = datetime.datetime.fromtimestamp(cell_stats['max'])
+        date_min = datetime.datetime.fromtimestamp(cell_stats['min'])
+
+        attrs = ['year', 'month', 'day', 'minute', 'second']
+        maxes = {'day': 31, 'minute': 60, 'second': 60, 'month': 12}
+
+        norm_vals = []
+
         if cell_stats['max'] - cell_stats['min'] != 0:
-            normalizedValue = (timestamp - cell_stats['min']) / \
-                              (cell_stats['max'] - cell_stats['min'])
+            norm_vals.append( (timestamp - cell_stats['min']) / (cell_stats['max'] - cell_stats['min']) )
         else:
-            normalizedValue = timestamp / cell_stats['max']
-        return [normalizedValue, 0]
+            norm_vals.append( timestamp / cell_stats['max'] )
+
+        for k_attr  in attrs:
+
+            curr = getattr(date, k_attr)
+            if k_attr in maxes:
+                d_max = maxes[k_attr]
+                d_min = 0
+            else:
+                d_max = getattr(date_max, k_attr)
+                d_min = getattr(date_min, k_attr)
+
+            if d_max - d_min !=0:
+                norm_vals.append( (curr -d_min)/(d_max-d_min) )
+            else:
+                norm_vals.append((curr) / (d_max))
+
+        norm_vals.append(0)
+
+        return norm_vals
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
         # is it a word
@@ -72,6 +112,11 @@ def norm(value, cell_stats):
             return []
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+
+        if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
+                value == None or value == '' or value == '\n' or value == '\r')):
+            return [0, 1]
+
         # is it a full text
         if cell_stats['dictionaryAvailable']:
             # all the words in the dictionary +2 (one for rare words and one for null)

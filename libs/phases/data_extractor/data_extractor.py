@@ -102,7 +102,7 @@ class DataExtractor(BaseModule):
         try:
             query = query_wrapper.format(orig_query = self.transaction.metadata.model_query, order_by_string=order_by_string)
             self.transaction.session.logging.info('About to pull query {query}'.format(query=query))
-            conn = sqlite3.connect("/tmp/mindsdb")
+            conn = sqlite3.connect(self.transaction.metadata.storage_file)
             self.logging.info(self.transaction.metadata.model_query)
             df = pandas.read_sql_query(query, conn)
             result = df.where((pandas.notnull(df)), None)

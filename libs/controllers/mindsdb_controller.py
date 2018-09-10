@@ -28,6 +28,7 @@ class MindsDBController:
 
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()
+        self.storage_file = file
         self.conn = sqlite3.connect(file)
         self.conn.create_aggregate("first_value", 1, FirstValueAgg)
         self.conn.create_aggregate("array_agg_json", 2, ArrayAggJSON)
@@ -114,6 +115,7 @@ class MindsDBController:
         transaction_metadata.model_predict_columns = predict_columns
         transaction_metadata.model_when_conditions = when
         transaction_metadata.type = transaction_type
+        transaction_metadata.storage_file = self.storage_file
 
         transaction = self.session.newTransaction(transaction_metadata, breakpoint)
 

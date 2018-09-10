@@ -13,6 +13,7 @@ import random
 import json
 import time
 import warnings
+import logging
 import traceback
 import sys
 
@@ -275,7 +276,15 @@ class StatsGenerator(BaseModule):
             data_type = self.getColumnDataType(col_data)
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
-                    col_data[i] = int(parseDate(element).timestamp())
+                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']:
+                        col_data[i] = None
+                    else:
+                        try:
+                            col_data[i] = int(parseDate(element).timestamp())
+                        except:
+                            logging.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
+                            col_data[i] = None
+
             if data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
                 newData = []
 
@@ -283,7 +292,8 @@ class StatsGenerator(BaseModule):
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
 
-                col_data = [float(i) for i in newData if str(i) not in ['', None, False, np.nan, 'NaN', 'nan']]
+
+                col_data = [float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
 
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0

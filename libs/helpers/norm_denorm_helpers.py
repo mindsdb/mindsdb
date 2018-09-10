@@ -12,16 +12,18 @@
 from libs.constants.mindsdb import *
 from dateutil.parser import parse as parseDate
 from libs.helpers.text_helpers import splitRecursive
-
+import numpy as np
 
 def norm(value, cell_stats):
-    if (value == None or value == '' or value == '\n' or value == '\r') and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.TEXT:
+    if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or  (value == None or value == '' or value == '\n' or value == '\r')) and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.TEXT:
         return [0, 1]
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
         if cell_stats['max'] - cell_stats['min'] != 0:
+
             normalizedValue = (value - cell_stats['min']) / \
                               (cell_stats['max'] - cell_stats['min'])
+
         elif cell_stats['max'] != 0:
             normalizedValue = value / cell_stats['max']
         else:
@@ -33,7 +35,10 @@ def norm(value, cell_stats):
         return [normalizedValue, 0]
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:
-        timestamp = int(parseDate(value).timestamp())
+        try:
+            timestamp = int(parseDate(value).timestamp())
+        except:
+            return [0,1]
         if cell_stats['max'] - cell_stats['min'] != 0:
             normalizedValue = (timestamp - cell_stats['min']) / \
                               (cell_stats['max'] - cell_stats['min'])

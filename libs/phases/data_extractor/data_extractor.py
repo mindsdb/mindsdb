@@ -94,13 +94,18 @@ class DataExtractor(BaseModule):
 
         order_by_string = ", ".join(order_by_fields)
 
+        where_not_null_string = ''
+        if self.transaction.metadata.model_ignore_null_targets:
+            not_null_conditions = " AND ".join([" {col} IS NOT NULL ".format(col=t_col) for t_col in self.transaction.metadata.model_predict_columns])
+            where_not_null_string = 'WHERE {not_null_conditions} '.format(not_null_conditions=not_null_conditions)
+
         if len(order_by_fields):
-            query_wrapper = '''select * from ({orig_query}) orgi order by {order_by_string}'''
+            query_wrapper = '''select * from ({orig_query}) orgi {where_not_null_string} order by {order_by_string}'''
         else:
-            query_wrapper = '''{orig_query}'''
+            query_wrapper = '''select * from ({orig_query}) orgi {where_not_null_string} '''
 
         try:
-            query = query_wrapper.format(orig_query = self.transaction.metadata.model_query, order_by_string=order_by_string)
+            query = query_wrapper.format(orig_query = self.transaction.metadata.model_query, order_by_string=order_by_string, where_not_null_string=where_not_null_string)
             self.transaction.session.logging.info('About to pull query {query}'.format(query=query))
             conn = sqlite3.connect(self.transaction.metadata.storage_file)
             self.logging.info(self.transaction.metadata.model_query)

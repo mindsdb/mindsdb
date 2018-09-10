@@ -32,9 +32,19 @@ class CSVFileDS(DataSource):
 
         return  clean_header
 
-    def __init__(self, filepath, clean = True):
+    def cleanRow(self, row):
+        n_row = []
+        for cell in row:
+            if str(cell) in ['', ' ', '  ', 'NaN', 'nan', 'NA']:
+                cell = None
+            n_row.append(cell)
 
-        if clean == False:
+        return n_row
+
+
+    def __init__(self, filepath, clean_header = True, clean_rows = True):
+
+        if clean_header == False:
             self._df = pandas.read_csv(filepath)
         else:
             with open(filepath) as csv_file:
@@ -47,6 +57,8 @@ class CSVFileDS(DataSource):
                     if len(header) == 0:
                         header = self.clean(row)
                     else:
+                        if clean_rows == True:
+                            row = self.cleanRow(row)
                         file_list_data.append(row)
 
 

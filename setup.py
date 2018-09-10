@@ -1,11 +1,12 @@
 import setuptools
-
+from libs.constants.mindsdb import MDB_VERSION
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+
 setuptools.setup(
     name="mindsdb",
-    version="0.5.1",
+    version=MDB_VERSION,
     author="MindsDB Inc",
     author_email="jorge@mindsdb.com",
     description="MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. ",

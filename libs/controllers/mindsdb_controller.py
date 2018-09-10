@@ -127,7 +127,7 @@ class MindsDBController:
         if file_path.is_file():
             token = open(mdb_file).read()
         else:
-            token = '{system}.{version}.{uid}'.format(system=platform.system(), version=MDB_VERSION, uid=str(uuid.uuid4()))
+            token = '{system}|{version}|{uid}'.format(system=platform.system(), version=MDB_VERSION, uid=str(uuid.uuid4()))
             try:
                 open(mdb_file,'w').write(token)
             except:

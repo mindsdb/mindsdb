@@ -1,4 +1,4 @@
-MDB_VERSION = 'horza05'
+MDB_VERSION = "0.5.2"
 
 TRANSACTION_LEARN = 'learn'
 TRANSACTION_PREDICT = 'predict'

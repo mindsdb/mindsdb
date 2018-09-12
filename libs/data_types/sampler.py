@@ -10,7 +10,8 @@
 """
 
 import time
-
+import itertools
+import numpy as np
 
 # import logging
 from libs.helpers.logging import logging
@@ -19,6 +20,7 @@ import config as CONFIG
 from libs.constants.mindsdb import *
 from libs.data_types.batch import Batch
 from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
+from libs.data_types.transaction_metadata import TransactionMetadata
 
 # this implements sampling without replacement and encodes sequential data using encoders
 # as described here, its best to sample without replacement:
@@ -26,7 +28,7 @@ from libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 
 class Sampler:
 
-    def __init__(self, data, metadata_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = []):
+    def __init__(self, data, metadata_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = [],  sampler_mode = SAMPLER_MODES.DEFAULT):
         """
 
         :param data:
@@ -41,7 +43,7 @@ class Sampler:
         self.stats = metadata_as_stored.column_stats
         self.model_columns = [col for col in metadata_as_stored.columns if self.stats[col][KEYS.DATA_TYPE] not in ignore_types]
         self.ignore_columns_with_type = ignore_types
-
+        self.sampler_mode = sampler_mode
 
         self.batch_size = batch_size
         self.variable_wrapper = None

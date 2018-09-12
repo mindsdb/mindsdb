@@ -12,13 +12,15 @@
 
 import copy
 import numpy as np
-
+import itertools
+import logging
 
 from libs.constants.mindsdb import *
 from libs.phases.base_module import BaseModule
 from collections import OrderedDict
 from libs.helpers.norm_denorm_helpers import norm
 from libs.helpers.text_helpers import hashtext
+from libs.data_types.transaction_metadata import TransactionMetadata
 
 
 class DataVectorizer(BaseModule):
@@ -41,9 +43,46 @@ class DataVectorizer(BaseModule):
                     return string
 
 
+    def _getRowExtraVector(self, ret, column, col_row_index, distances):
+
+        desired_total = self.train_meta_data.model_group_by_limit
+        batch_height = len(ret[column])
+        remaining_row_count = batch_height - (col_row_index +1)
+
+
+        harvest_count = desired_total if desired_total < remaining_row_count else remaining_row_count
+        empty_count = desired_total - harvest_count
+        empty_vector_len = (len(ret[column][col_row_index]) + 1) * empty_count # this is the width of the padding
+
+
+        row_extra_vector = []
+
+        for i in range(harvest_count):
+            try:
+                row_extra_vector += ret[column][col_row_index + i+1]
+                row_extra_vector += [distances[col_row_index + i+1]]
+            except:
+
+                logging.error('something is not right, seems like we got here with np arrays and they should not be1')
+
+        if empty_count > 0:
+            # complete with empty
+            row_extra_vector += [0] *  empty_vector_len
+
+        return row_extra_vector
+
+
+
+
     def run(self):
 
-        group_by = self.transaction.metadata.model_group_by
+
+
+        self.train_meta_data = TransactionMetadata()
+        self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
+
+        group_by = self.train_meta_data.model_group_by
+
         group_by_index = None
         if group_by:
             group_by_index = self.transaction.input_data.columns.index(group_by)  # TODO: Consider supporting more than one index column
@@ -90,11 +129,12 @@ class DataVectorizer(BaseModule):
 
         for group in groups:
 
+            target_set = group['target_set'] # for ease use a pointer
+
             # iterate over all indexes taht belong to this group
             for input_row_index in group['indexes']:
 
                 row = self.transaction.input_data.data_array[input_row_index] # extract the row from input data
-                target_set = group['target_set'] # for ease use a pointer
                 map = group['map']
 
                 if group_by is not None:
@@ -129,9 +169,52 @@ class DataVectorizer(BaseModule):
                     target_set[group_by_hash][column_name] += [normalized]
 
 
+
+
             # turn into numpy arrays:
             for group_by_hash in target_set:
+
+                distances = None
+
+                # if we have a group by and order by calculate a distances vector for each data point in this batch
+                if self.train_meta_data.model_group_by is not None and self.train_meta_data.model_order_by is not None:
+                    distances = []
+                    batch_height = len(target_set[group_by_hash][self.train_meta_data.model_group_by])
+
+                    # create a vector for the top distance
+
+                    for j in range(batch_height):
+                        order_by_bottom_vector = np.array(
+                            list(itertools.chain.from_iterable(
+                                [target_set[group_by_hash][order_by_col][j] for order_by_col in
+                                 self.train_meta_data.model_order_by]
+                            ))
+                        )
+                        if j == 0:
+                            order_by_top_vector = order_by_bottom_vector
+                        else:
+                            order_by_top_vector = np.array(list(itertools.chain.from_iterable(
+                                [target_set[group_by_hash][order_by_col][j - 1] for order_by_col in
+                                 self.train_meta_data.model_order_by])))
+                        # create a vector for the current row
+
+                        # calculate distance and append to distances
+                        distance = float(np.linalg.norm(order_by_top_vector - order_by_bottom_vector))
+                        distances.append(distance)
+
                 for column_name in target_set[group_by_hash]:
+
+                    # if there is a group by and order by and this is not a column to be predicted, append history vector
+                    # TODO: Encode the history vector if possible
+                    non_groupable_columns = self.train_meta_data.model_predict_columns + [self.train_meta_data.model_group_by] +  self.train_meta_data.model_order_by
+                    if distances is not None and column_name not in non_groupable_columns:
+                        # for each row create a vector of history and append to it
+                        prev = 0
+                        for col_row_index, col_row in enumerate(target_set[group_by_hash][column_name]):
+                            row_extra_vector = self._getRowExtraVector(target_set[group_by_hash], column_name, col_row_index, distances)
+                            target_set[group_by_hash][column_name][col_row_index] = target_set[group_by_hash][column_name][col_row_index]+ row_extra_vector
+
+
                     target_set[group_by_hash][column_name] = np.array(target_set[group_by_hash][column_name])
 
 

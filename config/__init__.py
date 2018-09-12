@@ -63,7 +63,6 @@ LOGGING_WEBSOCKET_URL = ifEnvElse('LOGGING_WEBSOCKET_URL', "ws://127.0.0.1:9001"
 MINDSDB_STORAGE_PATH = os.path.abspath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/../storage/')
 
 
-
 try:
     from config.personal_config import *
 except:

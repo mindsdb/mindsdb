@@ -65,8 +65,8 @@ class TrainWorker():
         self.ml_model_module = importlib.import_module(self.ml_model_module_path)
         self.ml_model_class = getattr(self.ml_model_module, self.ml_model_class_name)
 
-        self.train_sampler = Sampler(self.data.train_set, metadata_as_stored=self.persistent_model_metadata, ignore_types=self.ml_model_class.ignore_types)
-        self.test_sampler = Sampler(self.data.test_set, metadata_as_stored=self.persistent_model_metadata, ignore_types=self.ml_model_class.ignore_types)
+        self.train_sampler = Sampler(self.data.train_set, metadata_as_stored=self.persistent_model_metadata, ignore_types=self.ml_model_class.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
+        self.test_sampler = Sampler(self.data.test_set, metadata_as_stored=self.persistent_model_metadata, ignore_types=self.ml_model_class.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
 
         self.train_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
         self.test_sampler.variable_wrapper = self.ml_model_class.variable_wrapper

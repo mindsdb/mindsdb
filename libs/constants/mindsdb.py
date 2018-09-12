@@ -1,4 +1,4 @@
-MDB_VERSION = "0.5.4"
+MDB_VERSION = "0.5.5"
 
 TRANSACTION_LEARN = 'learn'
 TRANSACTION_PREDICT = 'predict'
@@ -59,6 +59,11 @@ class SAMPLE_TYPES:
     TRAIN_SET = 'train'
     PREDICT_SET = 'predict'
 
+class SAMPLER_MODES:
+    LEARN = 'learn'
+    PREDICT = 'predict'
+    DEFAULT = None
+
 class KEYS:
     TEST_SET = 'test'
     TRAIN_SET = 'train'
@@ -101,6 +106,8 @@ WORD_SEPARATORS = [',', "\t", ' ']
 
 SAMPLER_FLAT_TENSORS = 'flat_vectors'
 SAMPLER_COLUMN_TENSORS = 'column_tensors'
+
+MODEL_GROUP_BY_DEAFAULT_LIMIT = 80
 
 # Types of queries
 

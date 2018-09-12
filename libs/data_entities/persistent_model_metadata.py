@@ -10,12 +10,14 @@ class PersistentModelMetadata(PersistentObject):
         self.model_name = None
         self.train_metadata = None
         self.predict_columns = None
+
         self.columns = None
         self.current_phase = None
         self.column_stats = None
         self.start_time = None
         self.end_time = None
         self.error_msg = None
+        self.max_group_by_count = 0
         self.total_row_count = None
         self.test_row_count = None
         self.train_row_count= None

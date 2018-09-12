@@ -197,12 +197,18 @@ class DataExtractor(BaseModule):
                     return
 
                 # get unique group by values
-                all_group_by_items_query = ''' select distinct {group_by_column} as grp from ( {query} ) sub'''.format(group_by_column=group_by, query=self.transaction.metadata.model_query)
+                all_group_by_items_query = ''' select {group_by_column} as grp, count(1) as total from ( {query} ) sub group by {group_by_column}'''.format(group_by_column=group_by, query=self.transaction.metadata.model_query)
                 self.transaction.session.logging.info('About to pull GROUP BY query {query}'.format(query=all_group_by_items_query))
                 df = pandas.read_sql_query(all_group_by_items_query, conn)
                 result = df.where((pandas.notnull(df)), None)
                 # create a list of values in group by, this is because result is array of array we want just array
-                all_group_by_values = [i[0] for i in result.values.tolist()]
+
+                all_group_by_counts = {i[0]:i[1] for i in result.values.tolist()}
+                all_group_by_values = all_group_by_counts.keys()
+
+                max_group_by = max(list(all_group_by_counts.values()))
+
+                self.transaction.persistent_model_metadata.max_group_by_count = max_group_by
 
                 # we will fill these depending on the test_prob and validation_prob
                 test_group_by_values = []

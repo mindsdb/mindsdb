@@ -92,7 +92,8 @@ class DataExtractor(BaseModule):
         else:
             order_by_fields = []
 
-        order_by_string = ", ".join(order_by_fields)
+
+        order_by_string = ", ".join(["{oby} {type}".format(oby=oby, type=DEFAULT_ORDER_BY_TYPE) for oby in order_by_fields])
 
         where_not_null_string = ''
         if self.transaction.metadata.model_ignore_null_targets:
@@ -141,7 +142,7 @@ class DataExtractor(BaseModule):
 
             if self.transaction.metadata.model_test_query:
                 try:
-                    test_query = query_wrapper.format(orig_query = self.transaction.metadata.test_query, order_by_string= order_by_string)
+                    test_query = query_wrapper.format(orig_query = self.transaction.metadata.model_test_query, order_by_string= order_by_string, where_not_null_string=where_not_null_string)
                     self.transaction.session.logging.info('About to pull TEST query {query}'.format(query=test_query))
                     #drill = self.session.drill.query(test_query, timeout=CONFIG.DRILL_TIMEOUT)
                     df = pandas.read_sql_query(test_query, conn)

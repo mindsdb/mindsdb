@@ -11,3 +11,7 @@ class DataSource:
 
     def setDF(self, df):
         self._df = df
+
+    def applyFunctionToColumn(self, column, function):
+
+        self._df[column] = self._df[column].apply(lambda col: function(col))

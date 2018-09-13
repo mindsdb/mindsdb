@@ -39,9 +39,9 @@ class ModelTrainer(BaseModule):
         model_name = self.transaction.persistent_model_metadata.model_name
 
         ml_models = [
-            ('pytorch.models.fully_connected_net', {})
+            #('pytorch.models.fully_connected_net', {})
             #, ('pytorch.models.ensemble_conv_net', {})
-            #, ('pytorch.models.ensemble_fully_connected_net', {})
+            ('pytorch.models.ensemble_fully_connected_net', {})
         ]
 
         self.train_start_time = time.time()

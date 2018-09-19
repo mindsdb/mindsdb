@@ -1,4 +1,4 @@
 
 # MindsDB
 
-* [Installing MindsDB](installing.md)
+* [Installing MindsDB](Installing.md)

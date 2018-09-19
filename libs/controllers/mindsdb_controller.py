@@ -94,9 +94,12 @@ class MindsDBController:
         transaction_metadata.model_group_by_limit = group_by_limit
         transaction_metadata.type = transaction_type
 
-
+        self.startInfoServer()
         self.session.newTransaction(transaction_metadata, breakpoint)
 
+
+    def startInfoServer(self):
+        pass
 
     def predict(self, predict, when={}, model_name='mdsb_model', breakpoint= PHASE_END):
         """

@@ -40,22 +40,10 @@ Note: You must have a MongoDB server running, by default, MindsDB will look for 
 
 Note2: MindsDB uses sqlite as its sql engine, it is recommended SQLite versions >=(3.25.0):
 
-You can learn more in the [MindsDB Quick docs](docs/READE.md)
+You can learn more in the [MindsDB Quick docs](docs/README.md)
 
-### CONFIG Settings
 
-You can manipulate the default settings of MindsDB by setting env variables before importing the mindsdb module
 
-For example: if you want to specify a different Mongo Server
-
-```python
-import os
-
-os.environ['MONGO_SERVER_HOST'] = 'mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]'
-
-# now we import mindsdb
-from mindsdb import MindsDB
-```
 
 
 ### Why use MindsDB?

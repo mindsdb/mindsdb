@@ -16,10 +16,10 @@ import os
 import mindsdb.config as CONFIG
 from torch.autograd import Variable
 import numpy as np
-import mindsdb.config
+
 
 def arrayToFloatVariable(arr):
-    if config.USE_CUDA:
+    if CONFIG.USE_CUDA:
         ret = Variable(torch.FloatTensor(arr))
         ret = ret.cuda()
         return ret

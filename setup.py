@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="mindsdb",
-    version="0.6.7mv ",
+    version="0.6.8 ",
     author="MindsDB Inc",
     author_email="jorge@mindsdb.com",
     description="MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. ",
@@ -15,6 +15,8 @@ setuptools.setup(
     url="https://github.com/mindsdb/main",
     packages=setuptools.find_packages(),
     install_requires=[
+        'tinydb',
+        'tinymongo',
         'autobahn',
         'twisted',
         'pandas',

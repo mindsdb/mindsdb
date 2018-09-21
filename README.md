@@ -36,9 +36,6 @@ predicted_sales = mdb.predict(predict='sales', when={'month': 'Sept'}, model_nam
 
 ```
 
-Note: You must have a MongoDB server running, by default, MindsDB will look for it in ```mongodb://127.0.0.1/mindsdb```
-
-Note2: MindsDB uses sqlite as its sql engine, it is recommended SQLite versions >=(3.25.0):
 
 You can learn more in the [MindsDB Quick docs](docs/README.md)
 

@@ -1,6 +1,7 @@
+[<Back to Table of Contents](README.md)
 ### CONFIG Settings
 
-You can manipulate the default settings of MindsDB by setting env variables before importing the mindsdb module
+You can manipulate the default settings of MindsDB by setting ENV variables before importing the mindsdb module,
 
 For example: if you want to specify a different Mongo Server
 

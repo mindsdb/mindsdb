@@ -7,27 +7,9 @@ You can install MindsDB as follows
  pip3 install mindsdb --user
 ```
 
+#### OPTIONAL
 
-#### You need:
-
-****MongoDB server****:  By default, MindsDB will look for it in mongodb://127.0.0.1/mindsdb
-
-On MacOS
-
-```bash
-brew install mongodb
-
-```
-
-To run it
-
-```bash
-sudo mongod
-```
-
-#### Good to have
-
-***SQLite***: Although by default python3 comes with SQLite, you would want to have SQLite versions >=(3.25.0) as it support WINDOW functions, which can be very handy for data preparation
+***SQLite***: Although by default python3 comes with SQLite, you would want to have SQLite versions >=(3.25.0) as it supports WINDOW functions, which can be very handy for data preparation
 
 On MacOS
 

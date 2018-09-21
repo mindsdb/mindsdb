@@ -4,7 +4,7 @@ import mindsdb.config as CONFIG
 from bson.objectid import ObjectId
 
 
-class PersistentObject(ObjectDict):
+class PersistentObjectMongo(ObjectDict):
 
     _entity_name = 'generic'
     _pkey = []

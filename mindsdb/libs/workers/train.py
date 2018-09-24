@@ -96,22 +96,25 @@ class TrainWorker():
 
             for train_ret in self.data_model_object.trainModel(self.train_sampler):
 
-                logging.info('Training State epoch:{epoch}, batch:{batch}, loss:{loss}'.format(epoch=train_ret.epoch,
+                logging.debug('Training State epoch:{epoch}, batch:{batch}, loss:{loss}'.format(epoch=train_ret.epoch,
                                                                                                batch=train_ret.batch,
                                                                                                loss=train_ret.loss))
 
                 # save model every new epoch
                 if last_epoch != train_ret.epoch:
                     last_epoch = train_ret.epoch
-                    logging.info('New epoch:{epoch}, testing and calculating error'.format(epoch=last_epoch))
+                    logging.debug('New epoch:{epoch}, testing and calculating error'.format(epoch=last_epoch))
                     test_ret = self.data_model_object.testModel(self.test_sampler)
                     logging.info('Test Error:{error}, Accuracy:{accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
                     is_it_lowest_error_epoch = False
                     # if lowest error save model
-                    if lowest_error is None or lowest_error > test_ret.error:
+                    if lowest_error in [None]:
+                        lowest_error = test_ret.error
+                    if lowest_error > test_ret.error:
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error
-                        logging.info('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
+                        logging.info('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}'.format(error=test_ret.error))
+                        logging.debug('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
                             model_name=self.model_name, data_model=self.ml_model_name, config=self.ml_model_info.config_serialized))
 
                         # save model local file
@@ -120,7 +123,7 @@ class TrainWorker():
                         # self.saveToGridFs(local_files, throttle=True)
 
                         # save model predicted - real vectors
-                        logging.info('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name, ml_model_name = self.ml_model_name))
+                        logging.debug('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name, ml_model_name = self.ml_model_name))
 
                     # check if continue training
                     if self.shouldContinue() == False:

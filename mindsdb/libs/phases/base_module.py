@@ -61,7 +61,7 @@ class BaseModule():
             self.session.logging.error('Module {class_name} has no \'phase_name\' defined and therefore it cannot be properly tested'.format(class_name=class_name))
 
         if self.log_on_run:
-            self.session.logging.debug('[START] {class_name}'.format(class_name=class_name))
+            self.session.logging.info('[START] {class_name}'.format(class_name=class_name))
 
         # if we are past the breakpoint do nothing, breakpoints are used when testing a particular module
         if self.transaction.breakpoint is not None and self.phase_name > self.transaction.breakpoint:
@@ -73,7 +73,7 @@ class BaseModule():
         ret = self.run(**kwargs)
         execution_time = time.time() - start
         if self.log_on_run:
-            self.session.logging.debug('[END] {class_name}, execution time: {execution_time:.3f} seconds'.format(class_name=class_name, execution_time=execution_time))
+            self.session.logging.info('[END] {class_name}, execution time: {execution_time:.3f} seconds'.format(class_name=class_name, execution_time=execution_time))
         return ret
 
     def setup(self, **kwargs):

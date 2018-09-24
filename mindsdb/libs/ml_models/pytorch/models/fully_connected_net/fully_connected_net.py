@@ -1,13 +1,4 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
+
 
 from mindsdb.config import *
 from mindsdb.libs.constants.mindsdb import *

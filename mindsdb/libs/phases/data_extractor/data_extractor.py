@@ -199,7 +199,7 @@ class DataExtractor(BaseModule):
 
                 # get unique group by values
                 all_group_by_items_query = ''' select {group_by_column} as grp, count(1) as total from ( {query} ) sub group by {group_by_column}'''.format(group_by_column=group_by, query=self.transaction.metadata.model_query)
-                self.transaction.session.logging.info('About to pull GROUP BY query {query}'.format(query=all_group_by_items_query))
+                self.transaction.session.logging.debug('About to pull GROUP BY query {query}'.format(query=all_group_by_items_query))
                 df = pandas.read_sql_query(all_group_by_items_query, conn)
                 result = df.where((pandas.notnull(df)), None)
                 # create a list of values in group by, this is because result is array of array we want just array

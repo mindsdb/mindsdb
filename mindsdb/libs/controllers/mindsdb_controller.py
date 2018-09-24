@@ -26,6 +26,8 @@ class MindsDBController:
         :param file:
         """
 
+        logging.basicConfig(**CONFIG.PROXY_LOG_CONFIG)
+
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()
         self.storage_file = file

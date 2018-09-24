@@ -160,7 +160,7 @@ class BaseModel(nn.Module):
         predicted_target_all = []
         self.eval() # toggle eval
         for batch_number, batch in enumerate(test_sampler):
-            logging.info('[EPOCH-BATCH] testing batch: {batch_number}'.format(batch_number=batch_number))
+            logging.debug('[EPOCH-BATCH] testing batch: {batch_number}'.format(batch_number=batch_number))
             # get real and predicted values by running the model with the input of this batch
             predicted_target = self.forward(batch.getInput(flatten=self.flatInput))
             real_target = batch.getTarget(flatten=self.flatTarget)
@@ -226,7 +226,7 @@ class BaseModel(nn.Module):
             # train epoch
             for batch_number, batch in enumerate(train_sampler):
                 response.batch = batch_number
-                logging.info('[EPOCH-BATCH] Training on epoch: {epoch}/{num_epochs}, batch: {batch_number}'.format(
+                logging.debug('[EPOCH-BATCH] Training on epoch: {epoch}/{num_epochs}, batch: {batch_number}'.format(
                         epoch=epoch + 1, num_epochs=self.total_epochs, batch_number=batch_number))
                 model_object.train() # toggle to train
                 model_object.zeroGradOptimizer()

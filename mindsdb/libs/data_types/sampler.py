@@ -75,7 +75,7 @@ class Sampler:
             group_pointer = 0
             first_column = next(iter(self.data[group]))
             total_length = len(self.data[group][first_column])
-            logging.info('Iterator on group {group}/{total_groups}, total rows: {total_rows}'.format(group=group, total_groups=total_groups, total_rows=total_length))
+            logging.debug('Iterator on group {group}/{total_groups}, total rows: {total_rows}'.format(group=group, total_groups=total_groups, total_rows=total_length))
 
             while group_pointer < total_length:
                 limit = group_pointer + self.batch_size

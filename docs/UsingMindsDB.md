@@ -1,18 +1,10 @@
+[<Back to Table of Contents](README.md)
+# Using MindsDB
 
-# MindsDB
+MindsDB objective is that you can build powerful predictive models with just a few lines of code.
 
-MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. 
-
-## Getting started
-
-It's very simple to setup
-
-```bash
- pip3 install mindsdb --user
-```
-
-
-
+To illustrate this:
+Asume that you have a CSV File of sales, you would like to learn how to best predict sales given the data 
 To train a model:
 
 ```python
@@ -36,8 +28,4 @@ predicted_sales = mdb.predict(predict='sales', when={'month': 'Sept'}, model_nam
 
 ```
 
-
-You can learn more in the [MindsDB Quick docs](docs/README.md)
-
-
-
+But there is much more to MindsDB. Please read play with the examples.

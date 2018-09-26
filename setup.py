@@ -17,6 +17,7 @@ setuptools.setup(
     install_requires=[
         'tinydb',
         'tinymongo',
+        'requests',
         'autobahn',
         'twisted',
         'pandas',

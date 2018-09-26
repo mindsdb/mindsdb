@@ -1,4 +1,4 @@
-[<Back to Examples](../README.md)
+[<Back to Examples](../)
 # MindsDB Basics
 
 Here you will find a file [home_rentals.csv](home_rentals.csv), containing the final rental pricing for some properties.

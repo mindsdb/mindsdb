@@ -6,7 +6,6 @@ Please do not hesitate to file Issues and requests [here](https://github.com/min
 ## Table of Contents
 * [Installing MindsDB](Installing.md)
 * [Config Settings](Config.md)
-* [Using MindsDB](UsingMindsDB.md)
 * [Learning from Examples](examples/README.md)
 * [Inside MindsDB](InsideMindsDB.md)
 

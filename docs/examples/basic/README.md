@@ -1,4 +1,4 @@
-[<Back to Examples](../)
+[<Back to TOC](../../)
 # MindsDB Basics
 
 Here you will find a file [home_rentals.csv](home_rentals.csv), containing the final rental pricing for some properties.
@@ -71,4 +71,4 @@ Please note the **when** argument, in this case assuming we only know that:
 * 'number_of_bathrooms':1 
 * 'sqft': 1190
 
-So long the columns that you pass in the when statement exist in the data taht we learnt from (see columns in [home_rentals.csv](home_rentals.csv))
+So long the columns that you pass in the when statement exist in the data it learnt from it will work (see columns in [home_rentals.csv](home_rentals.csv))

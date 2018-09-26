@@ -30,7 +30,7 @@ KEY_MODEL_CACHE = 'model_cache'
 KEY_COLUMN_MAP = 'column_map'
 KEY_MODEL_MODEL_TYPE = 'predictor'
 KEY_MODEL_PREDICT_FROM_TABLE = 'model_predict_from_table'
-KEY_CONFIDENCE ='confidence'
+KEY_CONFIDENCE ='prediction_confidence'
 
 KEY_TRANSACTION_TYPE = 'transaction_type'
 

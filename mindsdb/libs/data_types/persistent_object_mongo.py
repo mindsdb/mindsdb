@@ -2,7 +2,7 @@ from mindsdb.libs.data_types.object_dict import ObjectDict
 from pymongo import MongoClient
 import mindsdb.config as CONFIG
 from bson.objectid import ObjectId
-
+import logging
 
 class PersistentObjectMongo(ObjectDict):
 
@@ -73,7 +73,10 @@ class PersistentObjectMongo(ObjectDict):
         if order_by is not None:
             resp = resp.sort(order_by)
         if limit is not None:
-            resp = resp.limit(limit)
+            if hasattr(resp, 'limit'):
+                resp = resp.limit(limit)
+            else:
+                logging.warning('This driver supports no limit on query')
 
         ret = []
 

@@ -96,7 +96,7 @@ class DataExtractor(BaseModule):
         order_by_string = ", ".join(["{oby} {type}".format(oby=oby, type=DEFAULT_ORDER_BY_TYPE) for oby in order_by_fields])
 
         where_not_null_string = ''
-        if self.transaction.metadata.model_ignore_null_targets:
+        if self.transaction.metadata.model_ignore_null_targets and self.transaction.metadata.type != TRANSACTION_PREDICT:
             not_null_conditions = " AND ".join([" {col} IS NOT NULL ".format(col=t_col) for t_col in self.transaction.metadata.model_predict_columns])
             where_not_null_string = 'WHERE {not_null_conditions} '.format(not_null_conditions=not_null_conditions)
 

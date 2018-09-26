@@ -13,10 +13,7 @@ import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 
-import sys
-import json
-import random
-import traceback
+import logging
 
 class StatsLoader(BaseModule):
 
@@ -28,10 +25,14 @@ class StatsLoader(BaseModule):
 
         # laod the most accurate model
 
-        info = self.transaction.persistent_ml_model_info.find({'model_name':self.transaction.metadata.model_name}, order_by=[('r_squared',-1)], limit=1)
+        info = self.transaction.persistent_ml_model_info.find({'model_name':self.transaction.metadata.model_name}, order_by=[('r_squared',-1)])
 
         if info is not None and len(info)>0:
             self.transaction.persistent_ml_model_info = info[0]
+
+        else:
+
+            logging.error('No model found for this statement, please check if model_name {model_name} was trained'.format(model_name=self.transaction.metadata.model_name))
 
 def test():
 

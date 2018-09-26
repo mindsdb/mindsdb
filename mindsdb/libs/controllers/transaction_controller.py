@@ -51,7 +51,7 @@ class TransactionController:
         self.errorMsg = None
 
         self.input_data = TransactionData()
-        self.output_data = TransactionOutputData()
+        self.output_data = TransactionOutputData(predicted_columns=self.metadata.model_predict_columns)
 
         self.model_data = ModelData()
 

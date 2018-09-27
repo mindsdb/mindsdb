@@ -32,8 +32,6 @@ class SessionController():
         self.username = None
         self.auth = False
         self.logging = logging
-        self.mongo = MongoClient(CONFIG.MONGO_SERVER_HOST)
-        #self.drill = PyDrill(host=CONFIG.DRILL_SERVER_HOST, port=CONFIG.DRILL_SERVER_PORT)
 
         self.current_transaction = None
 

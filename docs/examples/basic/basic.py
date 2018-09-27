@@ -9,8 +9,11 @@ The example code objective here is to:
 In order to to this we have a dataset "data_sources/home_rentals.csv"
 
 """
+
 from mindsdb import *
-import os
+
+#
+
 
 # First we initiate MindsDB
 mdb = MindsDB()

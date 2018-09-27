@@ -15,6 +15,7 @@ from .helpers import *
 
 # These are the paths for storing data regarding mindsdb models and model info
 MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', '{mindsdb_path}/storage'.format(mindsdb_path=getMindsDBPath()))
+
 SQLITE_FILE = ifEnvElse('SQLITE_FILE', '{storage_path}/mindsdb.mdb'.format(storage_path=MINDSDB_STORAGE_PATH))
 LOCALSTORE_PATH = ifEnvElse('LOCALSTORE_PATH', '{storage_path}/local_jsondb_store'.format(storage_path=MINDSDB_STORAGE_PATH))
 
@@ -22,7 +23,6 @@ LOCALSTORE_PATH = ifEnvElse('LOCALSTORE_PATH', '{storage_path}/local_jsondb_stor
 STORE_INFO_IN_MONGODB = ifEnvElse('STORE_INFO_IN_MONGODB', False)
 
 # If STORE_INFO_IN_MONGODB == True
-MONGO_SERVER_PORT = ifEnvElse('MONGO_SERVER_PORT', 27017)
 MONGO_SERVER_HOST = ifEnvElse('MONGO_SERVER_HOST', 'mongodb://127.0.0.1/mindsdb')
 
 # What percentage of data do we want to keep as test, and what as train default 10% is test
@@ -62,8 +62,6 @@ PROXY_LOG_CONFIG = {
 }
 
 
-# flag that config vars have been set to original values
-set('MINDSDB_CONFIG_VARS_SET', True, vars())
 
 
 

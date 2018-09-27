@@ -27,7 +27,7 @@ mdb.learn(
 
 
 # Here we use the model to make predictions
-result = mdb.predict(predict='rented_price', when={'number_of_rooms': 2,'number_of_bathrooms':1}, model_name='home_rentals')
+result = mdb.predict(predict='rented_price', when={'number_of_rooms': 2,'number_of_bathrooms':1, 'sqft': 1190}, model_name='home_rentals')
 
 # you can now print the results
 print('The predicted price is ${price} with {conf} confidence'.format(price=result.predicted_values[0]['rented_price'], conf=result.predicted_values[0]['prediction_confidence']))

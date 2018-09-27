@@ -25,7 +25,7 @@ import time
 
 
 class PredictWorker():
-    def __init__(self, data, model_name, submodel_name = None):
+    def __init__(self, data, model_name):
         """
         Load basic data needed to find the model data
         :param data: data to make predictions on
@@ -35,7 +35,6 @@ class PredictWorker():
 
         self.data = data
         self.model_name = model_name
-        self.submodel_name = submodel_name
 
         self.persistent_model_metadata = PersistentModelMetadata()
         self.persistent_model_metadata.model_name = self.model_name

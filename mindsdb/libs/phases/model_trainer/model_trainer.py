@@ -16,6 +16,8 @@ from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.workers.train import TrainWorker
 
+from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
+
 import _thread
 import time
 
@@ -37,12 +39,25 @@ class ModelTrainer(BaseModule):
 
 
         model_name = self.transaction.persistent_model_metadata.model_name
+        self.train_meta_data = TransactionMetadata()
+        self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 
-        ml_models = [
-            #('pytorch.models.fully_connected_net', {})
-            #, ('pytorch.models.ensemble_conv_net', {})
-            ('pytorch.models.ensemble_fully_connected_net', {})
-        ]
+        group_by = self.train_meta_data.model_group_by
+
+        # choose which models to try
+        # NOTE: On server mode more than one can be used, on serverless, choose only
+        # TODO: On serverless mode bring smarter way to choose
+        if group_by:
+            ml_models = [
+                ('pytorch.models.ensemble_fully_connected_net', {})
+                # ,('pytorch.models.ensemble_conv_net', {})
+            ]
+        else:
+            ml_models = [
+                ('pytorch.models.fully_connected_net', {})
+                #,('pytorch.models.ensemble_fully_connected_net', {})
+            ]
+
 
         self.train_start_time = time.time()
 

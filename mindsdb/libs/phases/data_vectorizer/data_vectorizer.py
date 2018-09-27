@@ -43,27 +43,33 @@ class DataVectorizer(BaseModule):
                     return string
 
 
-    def _getRowExtraVector(self, ret, column, col_row_index, distances):
+    def _getRowExtraVector(self, ret, column_name, col_row_index, distances):
+
+        predict_columns = self.train_meta_data.model_predict_columns
 
         desired_total = self.train_meta_data.model_group_by_limit
-        batch_height = len(ret[column])
+        batch_height = len(ret[column_name])
         remaining_row_count = batch_height - (col_row_index +1)
 
 
         harvest_count = desired_total if desired_total < remaining_row_count else remaining_row_count
         empty_count = desired_total - harvest_count
-        empty_vector_len = (len(ret[column][col_row_index]) + 1) * empty_count # this is the width of the padding
+        empty_vector_len = (len(ret[column_name][col_row_index]) + 1) * empty_count # this is the width of the padding
 
 
         row_extra_vector = []
 
         for i in range(harvest_count):
             try:
-                row_extra_vector += ret[column][col_row_index + i+1]
+                row_extra_vector += ret[column_name][col_row_index + i + 1]
                 row_extra_vector += [distances[col_row_index + i+1]]
+
+                # append the target values before:
+                for predict_col_name in predict_columns:
+                    row_extra_vector += ret[predict_col_name][col_row_index + i + 1]
             except:
 
-                logging.error('something is not right, seems like we got here with np arrays and they should not be1')
+                logging.error('something is not right, seems like we got here with np arrays and they should not be!')
 
         if empty_count > 0:
             # complete with empty
@@ -207,6 +213,7 @@ class DataVectorizer(BaseModule):
                     # if there is a group by and order by and this is not a column to be predicted, append history vector
                     # TODO: Encode the history vector if possible
                     non_groupable_columns = self.train_meta_data.model_predict_columns + [self.train_meta_data.model_group_by] +  self.train_meta_data.model_order_by
+                    # NOTE: since distances is only not None if there is a group by this is only evaluated for group by queries
                     if distances is not None and column_name not in non_groupable_columns:
                         # for each row create a vector of history and append to it
                         prev = 0

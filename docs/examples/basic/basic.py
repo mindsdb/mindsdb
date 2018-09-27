@@ -10,16 +10,17 @@ In order to to this we have a dataset "data_sources/home_rentals.csv"
 
 """
 from mindsdb import *
+import os
 
 # First we initiate MindsDB
 mdb = MindsDB()
 
 # We tell mindsDB what we want to learn and from what data
-# mdb.learn(
-#     from_file="data_sources/home_rentals.csv", # the path to the file where we can learn from
-#     predict='rented_price', # the column we want to learn to predict given all the data in the file
-#     model_name='home_rentals' # the name of this model
-# )
+mdb.learn(
+    from_file="home_rentals.csv", # the path to the file where we can learn from
+    predict='rented_price', # the column we want to learn to predict given all the data in the file
+    model_name='home_rentals' # the name of this model
+)
 
 
 # Here we use the model to make predictions

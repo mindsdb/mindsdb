@@ -9,20 +9,12 @@
  *******************************************************
 """
 
-import os
-import logging
 
-import inspect
+from .helpers import *
 
-def ifEnvElse(env_var, else_value):
-    """
-    return else_value if env_var is not set in environment variables
-    :return:
-    """
-    return else_value if env_var not in os.environ else os.environ[env_var]
 
 # These are the paths for storing data regarding mindsdb models and model info
-MINDSDB_STORAGE_PATH = os.path.abspath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/../storage/')
+MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', '{mindsdb_path}/storage'.format(mindsdb_path=getMindsDBPath()))
 SQLITE_FILE = ifEnvElse('SQLITE_FILE', '{storage_path}/mindsdb.mdb'.format(storage_path=MINDSDB_STORAGE_PATH))
 LOCALSTORE_PATH = ifEnvElse('LOCALSTORE_PATH', '{storage_path}/local_jsondb_store'.format(storage_path=MINDSDB_STORAGE_PATH))
 
@@ -65,11 +57,14 @@ PROXY_SERVER_HOST = ifEnvElse('MINDSDB_PROXY_SERVER_HOST', 'localhost')
 # LOG Config settings
 PROXY_LOG_CONFIG = {
     'format': ifEnvElse('MINDSDB_PROXY_LOG_FORMAT', '[%(levelname)s] %(message)s'),
-    'level': ifEnvElse('MINDSDB_PROXY_LOG_LEVEL', logging.DEBUG),
+    'level': ifEnvElse('MINDSDB_PROXY_LOG_LEVEL', logging.WARNING),
     'filename': ifEnvElse('MINDSDB_PROXY_LOG_FILENAME', None)
 }
 
-try:
-    from mindsdb.config.personal_config import *
-except:
-    logging.debug('No personal config (NOTE: you can set personal configs in config/presonal_config.py)')
+
+# flag that config vars have been set to original values
+set('MINDSDB_CONFIG_VARS_SET', True, vars())
+
+
+
+

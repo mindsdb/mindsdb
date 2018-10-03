@@ -65,8 +65,8 @@ class DataVectorizer(BaseModule):
                 row_extra_vector += [distances[col_row_index + i+1]]
 
                 # append the target values before:
-                for predict_col_name in predict_columns:
-                    row_extra_vector += ret[predict_col_name][col_row_index + i + 1]
+                # for predict_col_name in predict_columns:
+                #     row_extra_vector += ret[predict_col_name][col_row_index + i + 1]
             except:
 
                 logging.error('something is not right, seems like we got here with np arrays and they should not be!')

@@ -22,7 +22,7 @@ def norm(value, cell_stats):
 
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
-            return [0, 1]
+            return [0, 0]
 
         if cell_stats['max'] - cell_stats['min'] != 0:
 
@@ -37,21 +37,21 @@ def norm(value, cell_stats):
         if normalizedValue > 10:
             raise ValueError('Something is wrong with normalized value')
 
-        return [normalizedValue, 0]
+        return [normalizedValue, 1.0]
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:
         #[ timestamp, year, month, day, minute, second, is null]
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
             ret = [0]*7
-            ret[-1] = 1
+            ret[-1] = 0
             return ret
 
         try:
             timestamp = int(parseDate(value).timestamp())
         except:
             ret = [0] * 7
-            ret[-1] = 1
+            ret[-1] = 0
             return ret
         date = datetime.datetime.fromtimestamp(timestamp)
         date_max = datetime.datetime.fromtimestamp(cell_stats['max'])
@@ -82,7 +82,7 @@ def norm(value, cell_stats):
             else:
                 norm_vals.append((curr) / (d_max))
 
-        norm_vals.append(0)
+        norm_vals.append(1.0)
 
         return norm_vals
 
@@ -92,9 +92,10 @@ def norm(value, cell_stats):
             # all the words in the dictionary +2 (one for rare words and one for null)
             vector_length = len(cell_stats['dictionary']) + TEXT_ENCODING_EXTRA_LENGTH
             arr = [0] * vector_length
+            arr[-1] = 1.0
             if value in [None, '']:
                 # return NULL value, which is an empy hot vector array with the last item in list with value 1
-                arr[vector_length - 1] = 1  # set null as 1
+                arr[vector_length - 1] = 0  # set null as 1
                 return arr
 
             # else return one hot vector
@@ -104,7 +105,7 @@ def norm(value, cell_stats):
             except:
                 index = vector_length - 2
 
-            arr[index] = 1
+            arr[index] = 0
             return arr
 
         else:
@@ -115,13 +116,14 @@ def norm(value, cell_stats):
 
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
-            return [0, 1]
+            return [0, 0]
 
         # is it a full text
         if cell_stats['dictionaryAvailable']:
             # all the words in the dictionary +2 (one for rare words and one for null)
             vector_length = len(cell_stats['dictionary']) + FULL_TEXT_ENCODING_EXTRA_LENGTH
             arr = [0] * vector_length
+
             if value in [None, '']:
                 # return NULL value, which is an empty hot vector array with the last item in list with value 1
                 return [[vector_length - 1]]
@@ -155,7 +157,7 @@ def norm(value, cell_stats):
 def denorm(value, cell_stats, return_nones = True, return_dates_as_time_stamps = False):
 
     # TODO: Get a format for dates
-    if abs(value[-1]) >= 1 and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.TEXT:
+    if round(abs(value[-1])) <= 0 and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.TEXT:
         if return_nones:
             return None
         elif cell_stats[KEYS.DATA_TYPE] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE]:
@@ -184,7 +186,7 @@ def denorm(value, cell_stats, return_nones = True, return_dates_as_time_stamps =
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
         if cell_stats['dictionaryAvailable']:
-            if value[-1] == 1:
+            if value[-1] == 0:
                 return ''
 
             if value[-2] == 1:

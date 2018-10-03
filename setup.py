@@ -1,12 +1,12 @@
 import setuptools
-
+from version import mindsdb_version
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 
 setuptools.setup(
     name="mindsdb",
-    version="0.7.1",
+    version=mindsdb_version,
     author="MindsDB Inc",
     author_email="jorge@mindsdb.com",
     description="MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. ",

@@ -170,10 +170,13 @@ class MindsDBController:
                 logging.warn('Cannot store token, Please add write permissions to file:'+mdb_file)
                 token = token+'.NO_WRITE'
 
-        r = requests.get('http://mindsdb.com/checkupdates?token={token}'.format(token=token))
+        r = requests.get('http://github.com/mindsdb/main/master/version.py', headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)})
         try:
             ret = r.json()
             if 'new_version' in ret:
                 logging.warn('There is an update available for mindsdb, please go: pip install mindsdb --upgrade')
         except:
             logging.warning('could not check for MindsDB updates')
+
+
+MindsDBController.checkForUpdates()

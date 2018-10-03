@@ -113,7 +113,7 @@ class TrainWorker():
                     if lowest_error > test_ret.error:
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error
-                        logging.info('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}'.format(error=test_ret.error))
+                        logging.info('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}, Accuracy: {accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
                         logging.debug('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
                             model_name=self.model_name, data_model=self.ml_model_name, config=self.ml_model_info.config_serialized))
 

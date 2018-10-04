@@ -7,7 +7,7 @@ from mindsdb.libs.data_types.data_source import DataSource
 
 class ArrayToColsDS(DataSource):
 
-    def __init__(self, df, cols_to_split = {}):
+    def _setup(self, df, cols_to_split = {}):
 
         header = list(df.columns.values)
         data = df.values.tolist()

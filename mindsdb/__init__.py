@@ -4,3 +4,4 @@ from .libs.controllers.mindsdb_controller import MindsDBController
 
 name = "mindsdb"
 MindsDB = MindsDBController
+MDS = DataSource # A Mindsdb Data Source

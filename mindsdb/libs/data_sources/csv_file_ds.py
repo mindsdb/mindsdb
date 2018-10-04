@@ -49,9 +49,9 @@ class CSVFileDS(DataSource):
         return n_row
 
 
-    def __init__(self, filepath, clean_header = True, clean_rows = True):
+    def _setup(self, filepath, clean_header = True, clean_rows = True):
 
-        self._col_map = {}
+
 
         if clean_header == False:
             self._df = pandas.read_csv(filepath)

@@ -8,7 +8,7 @@ from mindsdb.libs.data_types.data_source import DataSource
 
 class WindowDS(DataSource):
 
-    def __init__(self, df, col_max, col_min, window_size=300, step_size=30, min_size = 100):
+    def _setup(self, df, col_max, col_min, window_size=300, step_size=30, min_size = 100):
 
         header = list(df.columns.values)
         data = df.values.tolist()

@@ -93,7 +93,7 @@ class MindsDBController:
         return pandas.read_sql_query(query, self.conn)
 
 
-    def learn(self, predict, from_query=None, from_ds = None, from_file=None, model_name='mdsb_model', test_query=None, group_by = None, group_by_limit = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END):
+    def learn(self, predict, from_query=None, from_ds = None, from_file=None, model_name='mdsb_model', test_query=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END):
         """
 
         :param from_query:
@@ -129,7 +129,7 @@ class MindsDBController:
         transaction_metadata.model_test_query = test_query
         transaction_metadata.model_group_by = group_by
         transaction_metadata.model_order_by = order_by if type(order_by) == type([]) else [order_by]
-        transaction_metadata.model_group_by_limit = group_by_limit
+        transaction_metadata.window_size = window_size
         transaction_metadata.type = transaction_type
 
         self.startInfoServer()

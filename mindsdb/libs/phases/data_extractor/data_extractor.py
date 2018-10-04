@@ -12,6 +12,7 @@
 import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
+from mindsdb.libs.helpers.logging import logging
 
 from collections import OrderedDict
 
@@ -22,6 +23,7 @@ import traceback
 import sqlite3
 import pandas
 import json
+
 
 
 class DataExtractor(BaseModule):
@@ -221,7 +223,7 @@ class DataExtractor(BaseModule):
 
                     # depending on a random number if less than x_prob belongs to such group
                     # remember that test_prob can be 0 or the config value depending on if the test test was passed as a query
-                    if float(random.random()) < test_prob:
+                    if float(random.random()) < test_prob and len(train_group_by_values) > 0:
                         test_group_by_values += [group_by_value]
                     # elif float(random.random()) < validation_prob:
                     #     validation_group_by_values += [group_by_value]
@@ -251,13 +253,18 @@ class DataExtractor(BaseModule):
                         else:
                             self.transaction.input_data.train_indexes += [i]
 
+            if len(self.transaction.input_data.test_indexes) == 0:
+                logging.debug('Size of test set is zero, last split')
+                ratio = CONFIG.TEST_TRAIN_RATIO
+                if group_by and len(self.transaction.input_data.train_indexes) > 2000:
+                    # it seems to be a good practice to not overfit, to double the ratio, as time series data tends to be abundant
+                    ratio = ratio*2
+                test_size = int(len(self.transaction.input_data.train_indexes) * ratio)
+                self.transaction.input_data.test_indexes = self.transaction.input_data.train_indexes[-test_size:]
+                self.transaction.input_data.train_indexes = self.transaction.input_data.train_indexes[:-test_size]
 
-
-
-
-
-
-
+            logging.info('- Test: {size} rows'.format(size=len(self.transaction.input_data.test_indexes)))
+            logging.info('- Train: {size} rows'.format(size=len(self.transaction.input_data.train_indexes)))
 
 
 def test():

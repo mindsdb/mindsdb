@@ -48,7 +48,7 @@ class DataVectorizer(BaseModule):
 
         predict_columns = self.train_meta_data.model_predict_columns
 
-        desired_total = self.train_meta_data.model_group_by_limit
+        desired_total = self.train_meta_data.window_size
         batch_height = len(ret[column_name])
         remaining_row_count = batch_height - (col_row_index +1)
 

@@ -13,7 +13,7 @@ class TransactionMetadata(ObjectDict):
         self.model_group_by = None
         self.model_order_by = []
         self.model_order_by_type = []
-        self.model_group_by_limit = MODEL_GROUP_BY_DEAFAULT_LIMIT
+        self.window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT
         self.model_ignore_null_targets = True
         self.storage_file = CONFIG.SQLITE_FILE
         self.type = None

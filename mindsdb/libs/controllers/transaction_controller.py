@@ -111,6 +111,9 @@ class TransactionController:
 
         try:
             # make sure that we remove all previous data about this model
+            info = self.persistent_ml_model_info.find_one(self.persistent_model_metadata.getPkey())
+            if info is not None:
+                info.deleteFiles()
             self.persistent_model_metadata.delete()
             self.persistent_ml_model_info.delete()
             # TODO: Clean the storage elements of this model too

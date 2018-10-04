@@ -1,4 +1,7 @@
 from mindsdb.libs.data_types.persistent_object import PersistentObject
+from mindsdb.config import *
+import os
+import logging
 
 class PersistentMlModelInfo(PersistentObject):
 
@@ -34,3 +37,20 @@ class PersistentMlModelInfo(PersistentObject):
         self.kill_training = False
 
 
+    def deleteFiles(self):
+        """
+        This deletes the model files from storage
+        :return:
+        """
+        if self.fs_file_ids is None:
+            return
+
+        files = self.fs_file_ids
+        if type(files) != type([]):
+            files = [files]
+        for file in files:
+            filename = '{path}/{filename}.pt'.format(path=MINDSDB_STORAGE_PATH, filename=file)
+            try:
+                os.remove(filename)
+            except OSError:
+                logging.error('could not delete file {file}'.format(filename))

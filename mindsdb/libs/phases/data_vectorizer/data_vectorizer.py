@@ -14,6 +14,7 @@ import copy
 import numpy as np
 import itertools
 import logging
+import traceback
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
@@ -54,7 +55,10 @@ class DataVectorizer(BaseModule):
 
         harvest_count = desired_total if desired_total < remaining_row_count else remaining_row_count
         empty_count = desired_total - harvest_count
-        empty_vector_len = (len(ret[column_name][col_row_index]) + 1) * empty_count # this is the width of the padding
+        empty_vector_len = (
+                len(ret[column_name][col_row_index])
+                + sum( [ len(ret[predict_col_name][0]) for predict_col_name in predict_columns])
+                + 1) * empty_count # this is the width of the padding
 
 
         row_extra_vector = []
@@ -65,10 +69,10 @@ class DataVectorizer(BaseModule):
                 row_extra_vector += [distances[col_row_index + i+1]]
 
                 # append the target values before:
-                # for predict_col_name in predict_columns:
-                #     row_extra_vector += ret[predict_col_name][col_row_index + i + 1]
+                for predict_col_name in predict_columns:
+                     row_extra_vector += [float(v) for v in ret[predict_col_name][col_row_index + i + 1]]
             except:
-
+                logging.error(traceback.format_exc())
                 logging.error('something is not right, seems like we got here with np arrays and they should not be!')
 
         if empty_count > 0:
@@ -208,7 +212,12 @@ class DataVectorizer(BaseModule):
                         distance = float(np.linalg.norm(order_by_top_vector - order_by_bottom_vector))
                         distances.append(distance)
 
-                for column_name in target_set[group_by_hash]:
+                # Append the time series data to each column
+                # NOTE: we want to make sure that the self.train_meta_data.model_predict_columns are the first in being converted into vectors
+                #       the reason for this is that if there is a time series query then we will want to add the history of the target value (see self._getRowExtraVector)
+                columns_in_order = self.train_meta_data.model_predict_columns + [column_name for column_name in target_set[group_by_hash] if column_name not in self.train_meta_data.model_predict_columns]
+
+                for column_name in columns_in_order:
 
                     # if there is a group by and order by and this is not a column to be predicted, append history vector
                     # TODO: Encode the history vector if possible

@@ -72,7 +72,7 @@ class BaseModel(nn.Module):
         self.input_column_names =  self.sample_batch.input_column_names
 
         # column permutations for learning Nones
-        self.col_permutations = getColPermutations(self.input_column_names) + [[]]
+        self.col_permutations = [[]] #getColPermutations(self.input_column_names) + [[]]
 
 
     def zeroGradOptimizer(self):

@@ -172,7 +172,7 @@ class DataExtractor(BaseModule):
                 total_test_array =  len(data_array)
                 test_indexes = [i for i in range(total_data_array, total_data_array+total_test_array)]
 
-                self.transaction.input_data.test_data_indexes = test_indexes
+                self.transaction.input_data.test_indexes = test_indexes
                 # make the input data relevant
                 self.transaction.input_data.data_array += data_array
 
@@ -223,8 +223,8 @@ class DataExtractor(BaseModule):
                     # remember that test_prob can be 0 or the config value depending on if the test test was passed as a query
                     if float(random.random()) < test_prob:
                         test_group_by_values += [group_by_value]
-                    elif float(random.random()) < validation_prob:
-                        validation_group_by_values += [group_by_value]
+                    # elif float(random.random()) < validation_prob:
+                    #     validation_group_by_values += [group_by_value]
                     else:
                         train_group_by_values += [group_by_value]
 
@@ -235,11 +235,11 @@ class DataExtractor(BaseModule):
                     if group_by:
 
                         group_by_value = row[group_by_index]
-                        if group_by_value in test_group_by_values or len(self.transaction.input_data.test_indexes) == 0:
+                        if group_by_value in test_group_by_values :
                             self.transaction.input_data.test_indexes += [i]
-                        elif group_by_value in train_group_by_values or len(self.transaction.input_data.train_indexes) == 0:
+                        elif group_by_value in train_group_by_values :
                             self.transaction.input_data.train_indexes += [i]
-                        elif group_by_value in validation_group_by_values or len(self.transaction.input_data.validation_indexes) == 0:
+                        elif group_by_value in validation_group_by_values :
                             self.transaction.input_data.validation_indexes += [i]
 
                     else:

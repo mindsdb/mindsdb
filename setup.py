@@ -3,6 +3,8 @@ from version import mindsdb_version
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+with open('requirements.txt') as req_file:
+    requirements = req_file.read().splitlines()
 
 setuptools.setup(
     name="mindsdb",
@@ -14,24 +16,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/mindsdb/main",
     packages=setuptools.find_packages(),
-    install_requires=[
-        'tinydb',
-        'tinymongo',
-        'requests',
-        'autobahn',
-        'twisted',
-        'pandas',
-        'numpy',
-        'scipy',
-        'sklearn',
-        'python-dateutil',
-        'pymongo',
-        'click',
-        'torch',
-        'torchvision',
-        'flask',
-        'flask_socketio'
-    ],
+    install_requires=requirements,
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

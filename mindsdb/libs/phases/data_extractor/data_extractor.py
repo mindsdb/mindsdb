@@ -13,6 +13,7 @@ import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.logging import logging
+from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 from collections import OrderedDict
 
@@ -30,55 +31,92 @@ class DataExtractor(BaseModule):
 
     phase_name = PHASE_DATA_EXTRACTION
 
+    def populatePredictQuery(self):
+
+        # If its a predict function
+        # Create a query statement where data can be pulled from
+        # for now we can just populate the when statement in a select queryt
+        # TODO: combine WHEN and WHERE
+
+        # make when_conditions a list of dictionaries
+        if type(self.transaction.metadata.model_when_conditions) != type([]):
+            when_conditions = [self.transaction.metadata.model_when_conditions]
+        else:
+            when_conditions = self.transaction.metadata.model_when_conditions
+
+        # these are the columns in the model, pulled from persistent_data
+        columns = self.transaction.persistent_model_metadata.columns  # type: list
+
+        when_conditions_list = []
+        # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
+        for when_condition in when_conditions:
+            cond_list = ["NULL"] * len(columns)  # empty list with blanks for values
+
+            for condition_col in when_condition:
+                col_index = columns.index(condition_col)
+                cond_list[col_index] = when_condition[condition_col]
+
+            when_conditions_list.append(cond_list)
+
+        # create the strings to be populated in the query as follows
+        values_string = ",\n ".join(
+            ["({val_string})".format(val_string=", ".join([str(val) for val in when_condition])) for when_condition in
+             when_conditions_list])
+        fields_string = ', '.join(
+            ['column{i} as {col_name}'.format(i=i + 1, col_name=col_name) for i, col_name in enumerate(columns)])
+
+        query = '''
+                    select
+                        {fields_string}
+
+                    from (
+                        values
+                            {values_string}
+                    ) 
+
+                    '''.format(fields_string=fields_string, values_string=values_string)
+
+        self.session.logging.info('Making PREDICT from query: {query}'.format(query=query))
+        self.transaction.metadata.model_query = query
+
+    def prepareFullQuery(self, train_metadata):
+
+        if train_metadata.model_order_by:
+            order_by_fields = train_metadata.model_order_by if train_metadata.model_group_by is None else [train_metadata.model_group_by] + train_metadata.model_order_by
+        else:
+            order_by_fields = []
+
+
+        order_by_string = ", ".join(["{oby} {type}".format(oby=oby, type=DEFAULT_ORDER_BY_TYPE) for oby in order_by_fields])
+
+        where_not_null_string = ''
+        if train_metadata.model_ignore_null_targets and self.transaction.metadata.type != TRANSACTION_PREDICT:
+            not_null_conditions = " AND ".join([" {col} IS NOT NULL ".format(col=t_col) for t_col in self.transaction.metadata.model_predict_columns])
+            where_not_null_string = 'WHERE {not_null_conditions} '.format(not_null_conditions=not_null_conditions)
+
+        if len(order_by_fields):
+            query_wrapper = '''select * from ({orig_query}) orgi {where_not_null_string} order by {order_by_string}'''
+        else:
+            query_wrapper = '''select * from ({orig_query}) orgi {where_not_null_string} '''
+
+        query = query_wrapper.format(orig_query=train_metadata.model_query, order_by_string=order_by_string,
+                                     where_not_null_string=where_not_null_string)
+
+        return query
+
     def run(self):
 
         # Handle transactions differently depending on the type of query
         # For now we only support LEARN and PREDICT
 
+        train_metadata = self.transaction.metadata
+
         if self.transaction.metadata.type == TRANSACTION_PREDICT:
 
-            # If its a predict function
-            # Create a query statement where data can be pulled from
-            # for now we can just populate the when statement in a select queryt
-            # TODO: combine WHEN and WHERE
+            self.populatePredictQuery()
 
-            # make when_conditions a list of dictionaries
-            if type(self.transaction.metadata.model_when_conditions) != type([]):
-                when_conditions = [self.transaction.metadata.model_when_conditions]
-            else:
-                when_conditions = self.transaction.metadata.model_when_conditions
-
-            # these are the columns in the model, pulled from persistent_data
-            columns = self.transaction.persistent_model_metadata.columns # type: list
-
-            when_conditions_list = []
-            # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
-            for when_condition in when_conditions:
-                cond_list = ["NULL"]*len(columns) # empty list with blanks for values
-
-                for condition_col in when_condition:
-                    col_index = columns.index(condition_col)
-                    cond_list[col_index] = when_condition[condition_col]
-
-                when_conditions_list.append(cond_list)
-
-            # create the strings to be populated in the query as follows
-            values_string = ",\n ".join([ "({val_string})".format(val_string=", ".join([str(val) for val in when_condition])) for when_condition in when_conditions_list])
-            fields_string = ', '.join(['column{i} as {col_name}'.format(i=i+1, col_name = col_name) for i, col_name in enumerate(columns)])
-
-            query = '''
-            select
-                {fields_string}
-            
-            from (
-                values
-                    {values_string}
-            ) 
-            
-            '''.format(fields_string = fields_string, values_string=values_string)
-
-            self.session.logging.info('Making PREDICT from query: {query}'.format(query=query))
-            self.transaction.metadata.model_query = query
+            train_metadata = TransactionMetadata()
+            train_metadata.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 
         elif self.transaction.metadata.type not in [TRANSACTION_PREDICT, TRANSACTION_LEARN]:
 
@@ -89,26 +127,9 @@ class DataExtractor(BaseModule):
 
 
 
-        if self.transaction.metadata.model_order_by:
-            order_by_fields = self.transaction.metadata.model_order_by if self.transaction.metadata.model_group_by is None else [self.transaction.metadata.model_group_by] + self.transaction.metadata.model_order_by
-        else:
-            order_by_fields = []
-
-
-        order_by_string = ", ".join(["{oby} {type}".format(oby=oby, type=DEFAULT_ORDER_BY_TYPE) for oby in order_by_fields])
-
-        where_not_null_string = ''
-        if self.transaction.metadata.model_ignore_null_targets and self.transaction.metadata.type != TRANSACTION_PREDICT:
-            not_null_conditions = " AND ".join([" {col} IS NOT NULL ".format(col=t_col) for t_col in self.transaction.metadata.model_predict_columns])
-            where_not_null_string = 'WHERE {not_null_conditions} '.format(not_null_conditions=not_null_conditions)
-
-        if len(order_by_fields):
-            query_wrapper = '''select * from ({orig_query}) orgi {where_not_null_string} order by {order_by_string}'''
-        else:
-            query_wrapper = '''select * from ({orig_query}) orgi {where_not_null_string} '''
+        query = self.prepareFullQuery(train_metadata)
 
         try:
-            query = query_wrapper.format(orig_query = self.transaction.metadata.model_query, order_by_string=order_by_string, where_not_null_string=where_not_null_string)
             self.transaction.session.logging.info('About to pull query {query}'.format(query=query))
             conn = sqlite3.connect(self.transaction.metadata.storage_file)
             self.logging.info(self.transaction.metadata.model_query)

@@ -18,8 +18,7 @@ from mindsdb import *
 # First we initiate MindsDB
 mdb = MindsDB()
 
-
-# Here we use the model to make predictions (NOTE: You need to run basic_predict.py first)
+# Here we use the model to make predictions (NOTE: You need to run train.py first)
 result = mdb.predict(predict='rented_price', when={ 'sqft': 863, 'days_on_market':50}, model_name='home_rentals')
 
 # you can now print the results

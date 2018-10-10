@@ -29,6 +29,7 @@ fi
 
 if [ "$mode" = "dev" ]; then
     pip3 uninstall mindsdb
+    pip3 uninstall mindsdb --user
     python3 setup.py develop --uninstall
     python3 setup.py develop
 fi

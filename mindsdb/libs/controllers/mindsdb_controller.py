@@ -17,7 +17,9 @@ from mindsdb.libs.controllers.session_controller import SessionController
 from mindsdb.libs.constants.mindsdb import *
 from pathlib import Path
 
+from mindsdb.libs.data_types.data_source import DataSource
 from mindsdb.libs.data_sources.csv_file_ds import CSVFileDS
+from pathlib import Path
 
 class MindsDBController:
 
@@ -93,7 +95,7 @@ class MindsDBController:
         return pandas.read_sql_query(query, self.conn)
 
 
-    def learn(self, predict, from_query=None, from_ds = None, from_file=None, model_name='mdsb_model', test_query=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END):
+    def learn(self, predict, from_file=None, from_data = None, model_name='mdsb_model', test_query=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END):
         """
 
         :param from_query:
@@ -103,6 +105,20 @@ class MindsDBController:
         :return:
         """
 
+        from_ds = None
+        from_query = None
+
+        # automatically detect if what type of data this is
+        # TODO: Do the same with test_from_data
+        if from_data is not None:
+            if isinstance(from_data, DataSource):
+                from_ds = from_data
+            elif Path(from_data).is_file():
+                from_file = from_data
+            else: # assume is a query
+                from_query = from_data
+
+        # if its a file or a data frame load it and build a from_query
         if from_file is not None or from_ds is not None:
             if from_file is not None:
                 from_file_dest = os.path.basename(from_file).split('.')[0]
@@ -131,6 +147,7 @@ class MindsDBController:
         transaction_metadata.model_order_by = order_by if type(order_by) == type([]) else [order_by]
         transaction_metadata.window_size = window_size
         transaction_metadata.type = transaction_type
+        #transaction_metadata.from_data = from_data
 
         self.startInfoServer()
         self.session.newTransaction(transaction_metadata, breakpoint)
@@ -139,7 +156,7 @@ class MindsDBController:
     def startInfoServer(self):
         pass
 
-    def predict(self, predict, when={}, model_name='mdsb_model', breakpoint= PHASE_END):
+    def predict(self, predict, from_data = None, when={}, model_name='mdsb_model', breakpoint= PHASE_END):
         """
 
         :param predict:
@@ -158,6 +175,7 @@ class MindsDBController:
         transaction_metadata.model_when_conditions = when
         transaction_metadata.type = transaction_type
         transaction_metadata.storage_file = self.storage_file
+        transaction_metadata.from_data = from_data
 
         transaction = self.session.newTransaction(transaction_metadata, breakpoint)
 

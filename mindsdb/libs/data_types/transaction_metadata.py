@@ -16,6 +16,7 @@ class TransactionMetadata(ObjectDict):
         self.window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT
         self.model_ignore_null_targets = True
         self.storage_file = CONFIG.SQLITE_FILE
+        self.from_data = None
         self.type = None
 
 

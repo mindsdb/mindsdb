@@ -1,4 +1,5 @@
 # TODO
+- Add transformation as angurment to train
 - Syntax on predict, when, give values for time series
 - Update the documentation, we changed is null boolean dimension for not null
 - Print stats data on stats generator
@@ -6,7 +7,7 @@
 - Only create time series col representation if average(count(distinct column)) in column by group by is <=1
 - On time series, break test-train automatically
 - When model is finished training, test by column, store importance matrix
-- Distributions on test and validaiton sets 
+- Distributions on test and validation sets 
 - Fix time series include target column for past readings (IMPORTANT)
 - Update loss function to be log relative
 - Implement logging proxy visualizer

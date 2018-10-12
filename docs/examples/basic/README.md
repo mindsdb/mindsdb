@@ -1,7 +1,7 @@
 [<Back to TOC](../../)
 # MindsDB Basics
 
-Here you will find a file [home_rentals.csv](home_rentals.csv), containing the final rental pricing for some properties.
+Here you will find a file [home_rentals.csv](https://raw.githubusercontent.com/mindsdb/main/master/docs/examples/basic/home_rentals.csv), containing the final rental pricing for some properties.
 
 ### Goal
 The goal is to be able to predict the best **rental_price** for a new properties given the information that we have in home_rentals.csv.

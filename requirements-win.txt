@@ -36,4 +36,4 @@ txaio==18.8.1
 urllib3==1.23
 Werkzeug==0.14.1
 zope.interface==4.5.0
-PyHamcrest
+PyHamcrest==1.9.0

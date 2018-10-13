@@ -29,7 +29,7 @@ mdb.learn(
     predict = 'Main_Engine_Fuel_Consumption_MT_day',
     order_by='Time',
     group_by='id',
-    window_size=24, # just 24 hours
+    window_size=240, # just 24 hours
     model_name='fuel'
 )
 

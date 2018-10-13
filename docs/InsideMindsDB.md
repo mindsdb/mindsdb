@@ -1,4 +1,4 @@
-[<Back to Table of Contents](README.md)
+[<Back to Table of Contents](../README.md)
 ### Inside MindsDB
 
 ![](https://docs.google.com/drawings/d/e/2PACX-1vQPGU3nzH0dwpgjzZ-bb95nJRhYUDYFuTuzIUERoVBGMMZW1ocUA1LAyDCldNKKp5RCw3Wxac21qPP7/pub?w=960&h=252)

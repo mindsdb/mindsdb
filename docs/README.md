@@ -1,16 +1,4 @@
-# MindsDB
-
-Welcome to mindsDB, the following links will walk you through the basic steps to MindsDB.
-Please do not hesitate to file Issues and requests [here](https://github.com/mindsdb/main/issues)
-
-## Table of Contents
-* [Installing MindsDB](Installing.md)
-* [Config Settings](Config.md)
-* [Learning from Examples](examples/basic)
-* [Inside MindsDB](InsideMindsDB.md)
-
-
-
+[<Back to Table of Contents](../README.md)
 ### Why use MindsDB?
 
 Developers today are more aware of the capabilities of Machine Learning, however from ideas of using ML to actual implementations,  there are many hurdles and therefore most ideas of using Machine Learning never even start.

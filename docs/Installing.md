@@ -1,4 +1,4 @@
-[<Back to Table of Contents](README.md)
+[<Back to Table of Contents](../README.md)
 # Installing MindsDB
 
 You can install MindsDB as follows

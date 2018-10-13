@@ -1,4 +1,4 @@
-[<Back to Table of Contents](README.md)
+[<Back to Table of Contents](../README.md)
 ### CONFIG Settings
 
 MindsDB has caonfig variables that can be set by as environment variables or on script.

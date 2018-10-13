@@ -38,9 +38,15 @@ predicted_sales = mdb.predict(predict='sales', when={'month': 'Sept'}, model_nam
 
 ## Learn More
 
+* [Why MindsDB?](docs/README.md)
+* [Installing MindsDB](docs/Installing.md)
+* [Config Settings](docs/Config.md)
+* [Learning from Examples](docs/examples/basic)
+* [Inside MindsDB](docs/InsideMindsDB.md)
 
 
-You can learn more in the [MindsDB Quick docs](docs/README.md)
+
+
 
 
 

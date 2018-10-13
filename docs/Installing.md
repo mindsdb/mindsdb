@@ -19,7 +19,9 @@ Follow [these instructions](https://conda.io/miniconda.html) to install Python m
 ```bash
 
 conda install -c blaze sqlite3 peterjc123 pytorch
-pip install torchvision mindsdb
+curl -o reqs.txt https://raw.githubusercontent.com/mindsdb/main/master/requirements-win.txt
+pip install --requirement reqs.txt
+pip install mindsdb --no-dependencies
 ```
 
 

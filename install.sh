@@ -13,6 +13,7 @@ if [ "$mode" = "prod" ]; then
     python3 setup.py clean
     python3 setup.py build
     #python3 setup.py install
+    #python3 setup.py bdist_egg -p win32
     python3 setup.py sdist bdist_wheel
 
     echo "Do you want to publish this version (yes/no)?"

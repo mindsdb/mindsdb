@@ -4,26 +4,25 @@
 MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. 
 
 
-## Learn More
-
 * [Installing MindsDB](docs/Installing.md)
 * [Config Settings](docs/Config.md)
-* [Learning from Examples](docs/examples/basic)
+* [Learning from Examples](docs/examples/basic/README.md)
 * [Inside MindsDB](docs/InsideMindsDB.md)
 
 
 
-## Getting started
+## Quick Overview
 
-It's very simple to setup [(more)](docs/Installing.md)
+It's very simple to setup [(learn more)](docs/Installing.md)
 
 ```bash
  pip3 install mindsdb --user
 ```
 
+Once you have MindsDB installed, you can use it as follows [(learn more)](docs/examples/basic/README.md):
 
 
-To train a model:
+To **train a model**:
 
 ```python
 from mindsdb import MindsDB
@@ -36,7 +35,7 @@ mdb.learn(
 )
 ```
 
-To use a Model:
+To **use a Model**:
 
 ```python
 from mindsdb import MindsDB

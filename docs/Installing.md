@@ -12,11 +12,14 @@ You can install MindsDB
 ##### On Windows 10
 
 
-Follow [these instructions](https://conda.io/miniconda.html) to install Python miniConda and then from command line
+Follow [these instructions](https://conda.io/miniconda.html) to install Python miniConda.
+ 
+ and then run the **anaconda prompt**: 
 
 ```bash
-conda install -c blaze sqlite3 pytorch
-pip3 install mindsdb
+
+conda install -c blaze sqlite3 peterjc123 pytorch
+pip install torchvision mindsdb
 ```
 
 

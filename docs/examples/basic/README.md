@@ -1,4 +1,4 @@
-[<Back to TOC](../../../)
+[<Back to TOC](../../../README.md)
 # MindsDB Basics
 
 Here you will find a file [home_rentals.csv](https://raw.githubusercontent.com/mindsdb/main/master/docs/examples/basic/home_rentals.csv), containing the final rental pricing for some properties.

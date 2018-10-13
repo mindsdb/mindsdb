@@ -1,11 +1,25 @@
 [<Back to Table of Contents](../README.md)
 # Installing MindsDB
 
-You can install MindsDB as follows
+You can install MindsDB 
+
+##### On Mac or Linux 
 
 ```bash
  pip3 install mindsdb --user
 ```
+
+##### On Windows 10
+
+
+Follow [these instructions](https://conda.io/miniconda.html) to install Python miniConda and then from command line
+
+```bash
+conda install -c blaze sqlite3 pytorch
+pip3 install mindsdb
+```
+
+
 
 #### OPTIONAL
 
@@ -23,17 +37,5 @@ You can check your version in Python:
 >>> import sqlite3
 >>> sqlite3.version
 ```
-
-
-##### On Windows
-
-
-Install Python
-
-https://docs.python.org/3/using/windows.html
-
-install pip
-
-https://pip.pypa.io/en/stable/installing/
 
 

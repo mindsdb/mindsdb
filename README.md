@@ -6,7 +6,6 @@ MindsDB's goal is to make it very simple for developers to use the power of arti
 
 ## Learn More
 
-* [Why MindsDB?](docs/README.md)
 * [Installing MindsDB](docs/Installing.md)
 * [Config Settings](docs/Config.md)
 * [Learning from Examples](docs/examples/basic)

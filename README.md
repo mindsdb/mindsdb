@@ -3,9 +3,20 @@
 
 MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. 
 
+
+## Learn More
+
+* [Why MindsDB?](docs/README.md)
+* [Installing MindsDB](docs/Installing.md)
+* [Config Settings](docs/Config.md)
+* [Learning from Examples](docs/examples/basic)
+* [Inside MindsDB](docs/InsideMindsDB.md)
+
+
+
 ## Getting started
 
-It's very simple to setup
+It's very simple to setup [(more)]()
 
 ```bash
  pip3 install mindsdb --user
@@ -35,15 +46,6 @@ mdb = MindsDB()
 predicted_sales = mdb.predict(predict='sales', when={'month': 'Sept'}, model_name='sales_model')
 
 ```
-
-## Learn More
-
-* [Why MindsDB?](docs/README.md)
-* [Installing MindsDB](docs/Installing.md)
-* [Config Settings](docs/Config.md)
-* [Learning from Examples](docs/examples/basic)
-* [Inside MindsDB](docs/InsideMindsDB.md)
-
 
 
 

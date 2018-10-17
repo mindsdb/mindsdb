@@ -104,51 +104,76 @@ class DataExtractor(BaseModule):
 
         return query
 
+
+    def getPreparedInputDF(self, train_metadata):
+        """
+
+        :param train_metadata:
+        :type train_metadata: TransactionMetadata
+        :return:
+        """
+        if self.transaction.metadata.type == TRANSACTION_PREDICT:
+            if type(self.transaction.metadata.model_when_conditions) != type([]):
+                when_conditions = [self.transaction.metadata.model_when_conditions]
+            else:
+                when_conditions = self.transaction.metadata.model_when_conditions
+
+                # these are the columns in the model, pulled from persistent_data
+            columns = self.transaction.persistent_model_metadata.columns   # type: list
+
+            when_conditions_list = []
+            # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
+            for when_condition in when_conditions:
+                cond_list = [None] * len(columns)  # empty list with blanks for values
+
+                for condition_col in when_condition:
+                    col_index = columns.index(condition_col)
+                    cond_list[col_index] = when_condition[condition_col]
+
+                when_conditions_list.append(cond_list)
+
+            result = pandas.DataFrame(when_conditions_list, columns = columns)
+        else:
+            df = train_metadata.from_data
+            result = df.where((pandas.notnull(df)), None)
+        return result
+
     def run(self):
 
         # Handle transactions differently depending on the type of query
         # For now we only support LEARN and PREDICT
 
-        train_metadata = self.transaction.metadata
+        # Train metadata is the metadata that was used when training the model,
+        # note: that we need this train metadata even if we are predicting, so we can understand about the model
+        train_metadata = None
 
         if self.transaction.metadata.type == TRANSACTION_PREDICT:
-
-            self.populatePredictQuery()
-
+            # extract this from the persistent_model_metadata
             train_metadata = TransactionMetadata()
             train_metadata.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 
-        elif self.transaction.metadata.type not in [TRANSACTION_PREDICT, TRANSACTION_LEARN]:
+        elif self.transaction.metadata.type == TRANSACTION_LEARN:
+            # Pull this straight from the the current transaction
+            train_metadata = self.transaction.metadata
 
+        else:
+            # We cannot proceed without train metadata
             self.session.logging.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
             self.transaction.error = True
             self.transaction.errorMsg = traceback.print_exc(1)
             return
 
+        result = self.getPreparedInputDF(train_metadata)
 
-
-        query = self.prepareFullQuery(train_metadata)
-
-        try:
-            self.transaction.session.logging.info('About to pull query {query}'.format(query=query))
-            conn = sqlite3.connect(self.transaction.metadata.storage_file)
-            self.logging.info(self.transaction.metadata.model_query)
-            df = pandas.read_sql_query(query, conn)
-            result = df.where((pandas.notnull(df)), None)
-            df = None # clean memory
-
-        except Exception:
-
-            self.session.logging.error(traceback.print_exc())
-            self.transaction.error =True
-            self.transaction.errorMsg = traceback.print_exc(1)
-            return
 
         columns = list(result.columns.values)
         data_array = list(result.values.tolist())
 
         self.transaction.input_data.columns = columns
 
+        # make sure that the column we are trying to predict is on the input_data
+        # else fail, because we cannot predict data we dont have
+        # TODO: Revise this, I may pass a source data that doesnt have the column I want to predict and that may still be ok if we are making a prediction that is not time series
         if len(data_array[0])>0 and  self.transaction.metadata.model_predict_columns:
             for col_target in self.transaction.metadata.model_predict_columns:
                 if col_target not in self.transaction.input_data.columns:
@@ -163,26 +188,13 @@ class DataExtractor(BaseModule):
         # extract test data if this is a learn transaction and there is a test query
         if self.transaction.metadata.type == TRANSACTION_LEARN:
 
-            if self.transaction.metadata.model_test_query:
-                try:
-                    test_query = query_wrapper.format(orig_query = self.transaction.metadata.model_test_query, order_by_string= order_by_string, where_not_null_string=where_not_null_string)
-                    self.transaction.session.logging.info('About to pull TEST query {query}'.format(query=test_query))
-                    #drill = self.session.drill.query(test_query, timeout=CONFIG.DRILL_TIMEOUT)
-                    df = pandas.read_sql_query(test_query, conn)
-                    result = df.where((pandas.notnull(df)), None)
-                    df = None
+            # if a test_data set was given use it
+            if self.transaction.metadata.test_from_data:
+                df = self.transaction.metadata.test_from_data.df
+                test_result = df.where((pandas.notnull(df)), None)
 
-                    #result = vars(drill)['data']
-                except Exception:
-
-                    # If testing offline, get results from a .cache file
-                    self.session.logging.error(traceback.print_exc())
-                    self.transaction.error = True
-                    self.transaction.errorMsg = traceback.print_exc(1)
-                    return
-
-                columns = list(result.columns.values)
-                data_array = result.values.tolist()
+                columns = list(test_result.columns.values)
+                data_array = test_result.values.tolist()
 
                 # Make sure that test adn train sets match column wise
                 if columns != self.transaction.input_data.columns:
@@ -221,14 +233,16 @@ class DataExtractor(BaseModule):
                     return
 
                 # get unique group by values
-                all_group_by_items_query = ''' select {group_by_column} as grp, count(1) as total from ( {query} ) sub group by {group_by_column}'''.format(group_by_column=group_by, query=self.transaction.metadata.model_query)
-                self.transaction.session.logging.debug('About to pull GROUP BY query {query}'.format(query=all_group_by_items_query))
-                df = pandas.read_sql_query(all_group_by_items_query, conn)
-                result = df.where((pandas.notnull(df)), None)
+                #all_group_by_items_query = ''' select {group_by_column} as grp, count(1) as total from ( {query} ) sub group by {group_by_column}'''.format(group_by_column=group_by, query=self.transaction.metadata.model_query)
+                #self.transaction.session.logging.debug('About to pull GROUP BY query {query}'.format(query=all_group_by_items_query))
+
+                uniques = result.groupby([group_by]).size()
+                all_group_by_values = uniques.index.tolist()
+                uniques_counts = uniques.values.tolist()
+
                 # create a list of values in group by, this is because result is array of array we want just array
 
-                all_group_by_counts = {i[0]:i[1] for i in result.values.tolist()}
-                all_group_by_values = all_group_by_counts.keys()
+                all_group_by_counts = {value:uniques_counts[i] for i, value in enumerate(all_group_by_values)}
 
                 max_group_by = max(list(all_group_by_counts.values()))
 

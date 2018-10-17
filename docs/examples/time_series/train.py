@@ -17,7 +17,7 @@ data_source.dropColumns(['Shaft Speed (RPM)', 'Shaft Torque (kNm)', 'Shaft Power
 # Transform Date Column so that MindsDB can extract learn better
 data_source.applyFunctionToColumn('Time', lambda x: datetime.datetime.fromtimestamp(int(x)).isoformat())
 # Give it a column that we can group by (MindsDB needs a group by column if we are going to do time series)
-data_source['id'] = 1
+data_source['id'] = 10
 
 
 ########

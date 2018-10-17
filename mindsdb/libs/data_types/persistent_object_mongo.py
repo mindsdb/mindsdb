@@ -25,7 +25,7 @@ class PersistentObjectMongo(ObjectDict):
 
         dict = self.getAsDict()
         dict["_id"] = str(ObjectId())
-        self._collection.insert(self.getAsDict())
+        self._collection.insert(dict)
 
 
     def getPkey(self):

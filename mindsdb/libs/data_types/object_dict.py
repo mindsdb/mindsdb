@@ -3,7 +3,11 @@ import logging
 class ObjectDict():
 
     def getAsDict(self):
-        ret = {key:self.__dict__[key] for key in self.__dict__ if key[0] != '_'}
+        if hasattr(self, '_ignore_keys'):
+            ignore_keys = self._ignore_keys
+        else:
+            ignore_keys = []
+        ret = {key:self.__dict__[key] for key in self.__dict__ if key[0] != '_' and key not in ignore_keys}
         return ret
 
     def setFromDict(self, dict):

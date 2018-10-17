@@ -116,7 +116,6 @@ class TransactionController:
                 info.deleteFiles()
             self.persistent_model_metadata.delete()
             self.persistent_ml_model_info.delete()
-            # TODO: Clean the storage elements of this model too
 
             # start populating data
             self.persistent_model_metadata.train_metadata = self.metadata.getAsDict()

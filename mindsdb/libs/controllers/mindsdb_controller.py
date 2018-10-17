@@ -9,6 +9,7 @@ import uuid
 import traceback
 
 from mindsdb.libs.helpers.sqlite_helpers import *
+from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.config import SQLITE_FILE
 import mindsdb.config as CONFIG
 
@@ -95,7 +96,7 @@ class MindsDBController:
         return pandas.read_sql_query(query, self.conn)
 
 
-    def learn(self, predict, from_file=None, from_data = None, model_name='mdsb_model', test_query=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END):
+    def learn(self, predict, from_file=None, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END):
         """
 
         :param from_query:
@@ -105,34 +106,8 @@ class MindsDBController:
         :return:
         """
 
-        from_ds = None
-        from_query = None
-
-        # automatically detect if what type of data this is
-        # TODO: Do the same with test_from_data
-        if from_data is not None:
-            if isinstance(from_data, DataSource):
-                from_ds = from_data
-            elif Path(from_data).is_file():
-                from_file = from_data
-            else: # assume is a query
-                from_query = from_data
-
-        # if its a file or a data frame load it and build a from_query
-        if from_file is not None or from_ds is not None:
-            if from_file is not None:
-                from_file_dest = os.path.basename(from_file).split('.')[0]
-                # TODO: Support from datasource or dataframe and skip table creation if possible
-                ds = CSVFileDS(from_file)
-            else:
-                from_file_dest = model_name
-                ds = from_ds
-            predict=ds.getColNameAsInDF(predict)
-            self.addTable(ds, from_file_dest)
-            ds = None
-            if from_query is None:
-                from_query = 'select * from {from_file_dest}'.format(from_file_dest=from_file_dest)
-                logging.info('setting up custom learn query for file. '+from_query)
+        from_ds = getDS(from_data) if from_file is None else getDS(from_file)
+        test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
 
         transaction_type = TRANSACTION_LEARN
 
@@ -140,14 +115,13 @@ class MindsDBController:
 
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = model_name
-        transaction_metadata.model_query = from_query
         transaction_metadata.model_predict_columns = predict_columns
-        transaction_metadata.model_test_query = test_query
         transaction_metadata.model_group_by = group_by
         transaction_metadata.model_order_by = order_by if type(order_by) == type([]) else [order_by]
         transaction_metadata.window_size = window_size
         transaction_metadata.type = transaction_type
-        #transaction_metadata.from_data = from_data
+        transaction_metadata.from_data = from_ds
+        transaction_metadata.test_from_data = test_from_ds
 
         self.startInfoServer()
         self.session.newTransaction(transaction_metadata, breakpoint)

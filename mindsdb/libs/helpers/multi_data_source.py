@@ -1,5 +1,5 @@
 from mindsdb.libs.data_types.data_source import DataSource
-from mindsdb.libs.data_sources.csv_file_ds import CSVFileDS
+from mindsdb.libs.data_sources.file_ds import FileDS
 from pathlib import Path
 
 # import logging
@@ -16,10 +16,11 @@ def getDS(from_data):
 
     if isinstance(from_data, DataSource):
         from_ds = from_data
-    elif Path(from_data).is_file():
-        from_ds = CSVFileDS(from_data)
-    else:  # assume is a query
-        logging.error('No data matched the input data')
+
+    else:  # assume is a file
+        from_ds = FileDS(from_data)
+        if from_ds is None:
+            logging.error('No data matched the input data')
 
     return from_ds
 

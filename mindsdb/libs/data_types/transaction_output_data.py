@@ -38,7 +38,10 @@ class TransactionOutputData():
             if as_list: # add confidence if its a dictionary
                 ret_row += row[col_index]
             else:
-                ret_row[KEY_CONFIDENCE] = row[col_index]
+                if col_index not in ret_row:
+                    ret_row[KEY_CONFIDENCE] = 0
+                else:
+                    ret_row[KEY_CONFIDENCE] = row[col_index]
 
             # append row to result
             ret += [ret_row]

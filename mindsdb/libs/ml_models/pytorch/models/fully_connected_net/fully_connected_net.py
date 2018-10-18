@@ -36,6 +36,8 @@ class FullyConnectedNet(BaseModel):
             nn.Linear(int(math.ceil(input_size/2)), output_size)
         )
 
+
+
         if USE_CUDA:
             self.net.cuda()
 

@@ -54,8 +54,9 @@ class ModelTrainer(BaseModule):
             ]
         else:
             ml_models = [
+                #('pytorch.models.ensemble_conv_net', {})
                 ('pytorch.models.fully_connected_net', {})
-                #,('pytorch.models.ensemble_fully_connected_net', {})
+                #('pytorch.models.ensemble_fully_connected_net', {})
             ]
 
 

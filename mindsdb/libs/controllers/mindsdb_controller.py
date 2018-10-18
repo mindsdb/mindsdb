@@ -16,10 +16,7 @@ import mindsdb.config as CONFIG
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.controllers.session_controller import SessionController
 from mindsdb.libs.constants.mindsdb import *
-from pathlib import Path
 
-from mindsdb.libs.data_types.data_source import DataSource
-from mindsdb.libs.data_sources.csv_file_ds import CSVFileDS
 from pathlib import Path
 
 class MindsDBController:

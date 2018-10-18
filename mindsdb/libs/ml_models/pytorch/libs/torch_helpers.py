@@ -15,6 +15,8 @@ import uuid
 import os
 import mindsdb.config as CONFIG
 from torch.autograd import Variable
+from torch.nn import functional
+from torch.nn import MSELoss
 import numpy as np
 
 
@@ -81,3 +83,36 @@ class RMSELoss(nn.Module):
 
     def forward(self, input, target):
         return torch.sqrt(self.loss(input, target))
+
+
+def log_loss(input, target, size_average=None, reduce=None, reduction='elementwise_mean'):
+    r"""mse_loss(input, target, size_average=None, reduce=None, reduction='elementwise_mean') -> Tensor
+
+    Measures the element-wise mean squared error.
+
+    See :class:`~torch.nn.MSELoss` for details.
+    """
+    if size_average is not None or reduce is not None:
+        reduction = functional._Reduction.legacy_get_enum(size_average, reduce)
+    else:
+        reduction = functional._Reduction.get_enum(reduction)
+    l = lambda a, b: (torch.log(a)/torch.log(b)-1) ** 2
+
+    return functional._pointwise_loss(l, l, input, target, reduction)
+
+
+class LogLoss(MSELoss):
+
+    def __init__(self):
+        super(LogLoss, self).__init__()
+        self.loss = torch.nn.MSELoss()
+        self.loss2 = torch.nn.MSELoss()
+
+
+    def forward(self, input, target):
+
+        tgt = torch.atan(target)
+        inp = torch.atan(input)
+
+        loss = torch.sqrt(self.loss(inp, tgt))
+        return loss

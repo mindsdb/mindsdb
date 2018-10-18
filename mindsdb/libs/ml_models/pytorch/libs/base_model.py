@@ -24,7 +24,7 @@ import numpy as np
 from mindsdb.config import USE_CUDA
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import arrayToFloatVariable, variableToArray
-from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import getTorchObjectBinary, storeTorchObject, getStoredTorchObject, RMSELoss
+from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import getTorchObjectBinary, storeTorchObject, getStoredTorchObject, RMSELoss, LogLoss
 
 from mindsdb.libs.data_types.trainer_response import TrainerResponse
 from mindsdb.libs.data_types.tester_response import TesterResponse
@@ -48,13 +48,18 @@ class BaseModel(nn.Module):
         """
         super(BaseModel, self).__init__()
 
-        self.lossFunction = torch.nn.MSELoss()
-        self.errorFunction = torch.nn.MSELoss()
+        self.lossFunction = LogLoss()
+        self.errorFunction = LogLoss()
         self.sample_batch = sample_batch
 
         # self.learning_rates = [(0.09, 100), (0.1, 100), (0.05, 100), (0.08, 100), (0.09, 100), (0.04, 100), (0.07, 100), (0.08, 100), (0.03, 100)] #experiment 70%
         # self.learning_rates =  [(0.1, 100), (0.3, 100), (0.09, 100), (0.1, 100), (0.05, 100),(0.001,100)] ##Jorge, git
-        self.learning_rates = [(0.1, 300), (0.01, 300), (0.001, 300),(0.05, 300), (0.005, 300),(0.1, 300), (0.01, 300), (0.001, 300)]
+        self.learning_rates = [(1, 200), (0.8, 20), (0.6, 200),(0.4, 20), (0.2, 200),(0.1, 20), (0.01, 30), (0.001, 30)]
+
+        for i in range(30):
+            self.learning_rates += [(1, 20), (0.8, 20), (0.6, 20),(0.4, 20), (0.2, 20),(0.1, 20), (0.01, 20), (0.001, 20)]
+
+
         #
         # self.learning_rates = [(0.01,40)]
         self.setLearningRateIndex(0)
@@ -64,7 +69,7 @@ class BaseModel(nn.Module):
         self.flatTarget = True
         self.flatInput = True
         self.optimizer = None
-        self.optimizer_class = optim.Adam
+        self.optimizer_class = optim.ASGD
         self.setup(sample_batch,  **kwargs)
 
         # extract all possible meta data from sample batch so it is no longer needed in future

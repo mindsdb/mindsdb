@@ -88,6 +88,7 @@ class TrainWorker():
 
         last_epoch = 0
         lowest_error = None
+        highest_accuracy = 0
         local_files = None
 
         for i in range(len(self.data_model_object.learning_rates)):
@@ -105,7 +106,7 @@ class TrainWorker():
                     last_epoch = train_ret.epoch
                     logging.debug('New epoch:{epoch}, testing and calculating error'.format(epoch=last_epoch))
                     test_ret = self.data_model_object.testModel(self.test_sampler)
-                    logging.info('Test Error:{error}, Accuracy:{accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
+                    logging.info('Test Error:{error}, Accuracy:{accuracy} | Best Accuracy so far: {best_accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy, best_accuracy=highest_accuracy))
                     is_it_lowest_error_epoch = False
                     # if lowest error save model
                     if lowest_error in [None]:
@@ -113,6 +114,7 @@ class TrainWorker():
                     if lowest_error > test_ret.error:
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error
+                        highest_accuracy = test_ret.accuracy
                         logging.info('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}, Accuracy: {accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
                         logging.debug('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
                             model_name=self.model_name, data_model=self.ml_model_name, config=self.ml_model_info.config_serialized))

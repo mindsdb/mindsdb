@@ -52,16 +52,15 @@ class BaseModel(nn.Module):
         self.errorFunction = LogLoss()
         self.sample_batch = sample_batch
 
-        # self.learning_rates = [(0.09, 100), (0.1, 100), (0.05, 100), (0.08, 100), (0.09, 100), (0.04, 100), (0.07, 100), (0.08, 100), (0.03, 100)] #experiment 70%
-        # self.learning_rates =  [(0.1, 100), (0.3, 100), (0.09, 100), (0.1, 100), (0.05, 100),(0.001,100)] ##Jorge, git
-        self.learning_rates = [(1, 200), (0.8, 20), (0.6, 200),(0.4, 20), (0.2, 200),(0.1, 20), (0.01, 30), (0.001, 30)]
-
-        for i in range(30):
+        # Implementing this
+        # https://towardsdatascience.com/understanding-learning-rates-and-how-it-improves-performance-in-deep-learning-d0d4059c1c10
+        self.learning_rates = [(1, 200), (0.8, 20), (0.6, 200),(0.4, 20), (0.2, 200),(0.1, 100), (0.01, 50), (0.001, 50)]
+        for i in range(15):
             self.learning_rates += [(1, 20), (0.8, 20), (0.6, 20),(0.4, 20), (0.2, 20),(0.1, 20), (0.01, 20), (0.001, 20)]
+        for i in range(5):
+            self.learning_rates += [(0.1, 30), (0.08, 30), (0.06, 30),(0.4, 20), (0.02, 30),(0.1, 30), (0.005, 30), (0.001, 30)]
 
 
-        #
-        # self.learning_rates = [(0.01,40)]
         self.setLearningRateIndex(0)
 
         self.latest_file_id = None

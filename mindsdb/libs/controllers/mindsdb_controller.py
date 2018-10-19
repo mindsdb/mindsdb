@@ -7,6 +7,7 @@ import platform
 import _thread
 import uuid
 import traceback
+import urllib
 
 from mindsdb.libs.helpers.sqlite_helpers import *
 from mindsdb.libs.helpers.multi_data_source import getDS
@@ -16,6 +17,8 @@ import mindsdb.config as CONFIG
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.controllers.session_controller import SessionController
 from mindsdb.libs.constants.mindsdb import *
+
+from mindsdb.version import mindsdb_version as MINDSDB_VERSION
 
 from pathlib import Path
 
@@ -160,17 +163,18 @@ class MindsDBController:
         if file_path.is_file():
             token = open(mdb_file).read()
         else:
-            token = '{system}|{version}|{uid}'.format(system=platform.system(), version=MDB_VERSION, uid=str(uuid.uuid4()))
+            token = '{system}|{version}|{uid}'.format(system=platform.system(), version=MINDSDB_VERSION, uid=str(uuid.uuid4()))
             try:
                 open(mdb_file,'w').write(token)
             except:
                 logging.warn('Cannot store token, Please add write permissions to file:'+mdb_file)
                 token = token+'.NO_WRITE'
-
-        r = requests.get('https://github.com/mindsdb/main/blob/master/version.py', headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)})
+        extra = urllib.parse.quote_plus(token)
+        r = requests.get('http://mindsdb.com/updates/check/{extra}'.format(extra=extra), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)})
         try:
             # TODO: Extract version, compare with version in version.py
-            # ret = r.json()
+            ret = r.json()
+            logging.error(ret)
             # if 'new_version' in ret:
             #     logging.warn('There is an update available for mindsdb, please go: pip install mindsdb --upgrade')
             pass

@@ -1,5 +1,5 @@
 import setuptools
-from version import mindsdb_version
+from mindsdb.version import mindsdb_version
 with open("README.md", "r") as fh:
     long_description = fh.read()
 

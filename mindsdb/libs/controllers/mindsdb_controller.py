@@ -54,7 +54,8 @@ class MindsDBController:
         if not os.path.exists(CONFIG.MINDSDB_STORAGE_PATH):
             try:
                 logging.info('{folder} does not exist, creating it now'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
-                os.mkdir(CONFIG.MINDSDB_STORAGE_PATH)
+                path = Path(CONFIG.MINDSDB_STORAGE_PATH)
+                path.mkdir(exist_ok=True, parents=True)
             except:
                 logging.info(traceback.format_exc())
                 storage_ok = False
@@ -174,11 +175,14 @@ class MindsDBController:
         try:
             # TODO: Extract version, compare with version in version.py
             ret = r.json()
-            logging.error(ret)
-            # if 'new_version' in ret:
-            #     logging.warn('There is an update available for mindsdb, please go: pip install mindsdb --upgrade')
-            pass
+
+            if 'version' in ret and ret['version']!= MINDSDB_VERSION:
+                logging.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip2 install mindsdb --user".format(version=ret['version']))
+            else:
+                logging.warning('could not check for MindsDB updates')
+
         except:
+
             logging.warning('could not check for MindsDB updates')
 
 

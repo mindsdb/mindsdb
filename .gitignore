@@ -6,6 +6,7 @@
 *.pyc
 .cache*
 storage/*
+mindsdb_storage/*
 config/personal_config.py
 *.jar
 venv/*

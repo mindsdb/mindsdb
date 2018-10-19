@@ -9,7 +9,7 @@ from .helpers import *
 
 
 # These are the paths for storing data regarding mindsdb models and model info
-MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', '{mindsdb_path}/storage'.format(mindsdb_path=getMindsDBPath()))
+MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', getMindsDBStoragePath())
 
 SQLITE_FILE = ifEnvElse('SQLITE_FILE', '{storage_path}/mindsdb.mdb'.format(storage_path=MINDSDB_STORAGE_PATH))
 LOCALSTORE_PATH = ifEnvElse('LOCALSTORE_PATH', '{storage_path}/local_jsondb_store'.format(storage_path=MINDSDB_STORAGE_PATH))

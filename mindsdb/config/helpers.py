@@ -30,7 +30,7 @@ def set(var, val, mindsdb_config_vars_pointer = None):
     MINDSDB_CONFIG_VARS[var] = val
 
 def getMindsDBStoragePath():
-    return os.path.abspath('{mindsdb_path}/../mindsdb_storage/{version}'.format(mindsdb_path=getMindsDBPath(),
+    return os.path.abspath('{mindsdb_path}/mindsdb_storage/{version}'.format(mindsdb_path=getMindsDBPath(),
                                                                          version=mindsdb_version.replace('.', '_')))
 def getMindsDBPath():
     return os.path.abspath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/../')

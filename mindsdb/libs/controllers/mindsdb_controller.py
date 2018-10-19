@@ -179,7 +179,7 @@ class MindsDBController:
             if 'version' in ret and ret['version']!= MINDSDB_VERSION:
                 logging.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip2 install mindsdb --user".format(version=ret['version']))
             else:
-                logging.warning('could not check for MindsDB updates')
+                logging.debug('MindsDB is up to date!')
 
         except:
 

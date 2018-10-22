@@ -24,29 +24,39 @@ Once you have MindsDB installed, you can use it as follows [(learn more)](docs/e
 
 To **train a model**:
 
-```python
-from mindsdb import MindsDB
 
+
+```python
+
+from mindsdb import *
+
+# First we initiate MindsDB
 mdb = MindsDB()
+
+# We tell mindsDB what we want to learn and from what data
 mdb.learn(
-    from_file='monthly_sales.csv',
-    predict='sales',
-    model_name='sales_model'
+    from_data="https://raw.githubusercontent.com/mindsdb/main/master/docs/examples/basic/home_rentals.csv", # the path to the file where we can learn from, (note: can be url)
+    predict='rented_price', # the column we want to learn to predict given all the data in the file
+    model_name='home_rentals' # the name of this model
 )
+
 ```
 
-To **use a Model**:
+
+To **use the model**:
+
 
 ```python
-from mindsdb import MindsDB
 
+from mindsdb import *
+
+# First we initiate MindsDB
 mdb = MindsDB()
-predicted_sales = mdb.predict(predict='sales', when={'month': 'Sept'}, model_name='sales_model')
+
+# use the model to make predictions
+result = mdb.predict(predict='rented_price', when={'number_of_rooms': 2,'number_of_bathrooms':1, 'sqft': 1190}, model_name='home_rentals')
+
+# you can now print the results
+print('The predicted price is ${price} with {conf} confidence'.format(price=result.predicted_values[0]['rented_price'], conf=result.predicted_values[0]['prediction_confidence']))
 
 ```
-
-
-
-
-
-

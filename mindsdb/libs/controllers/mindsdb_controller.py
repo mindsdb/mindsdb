@@ -159,12 +159,25 @@ class MindsDBController:
     @staticmethod
     def checkForUpdates():
         # tmp files
+        uuid_file = CONFIG.MINDSDB_STORAGE_PATH + '/../uuid.mdb_base'
         mdb_file = CONFIG.MINDSDB_STORAGE_PATH + '/start.mdb_base'
+
+        uuid_file_path = Path(uuid_file)
+        if uuid_file_path.is_file():
+            uuid_str = open(uuid_file).read()
+        else:
+            uuid_str = str(uuid.uuid4())
+            try:
+                open(uuid_file, 'w').write(uuid_str)
+            except:
+                logging.warn('Cannot store token, Please add write permissions to file:' + mdb_file)
+                uuid_str = uuid_str + '.NO_WRITE'
+
         file_path = Path(mdb_file)
         if file_path.is_file():
             token = open(mdb_file).read()
         else:
-            token = '{system}|{version}|{uid}'.format(system=platform.system(), version=MINDSDB_VERSION, uid=str(uuid.uuid4()))
+            token = '{system}|{version}|{uid}'.format(system=platform.system(), version=MINDSDB_VERSION, uid=uuid_str)
             try:
                 open(mdb_file,'w').write(token)
             except:

@@ -200,7 +200,7 @@ class BaseModel(nn.Module):
 
 
         # calculate error using error function
-        errors = {target_key: float(self.errorFunction(Variable(torch.FloatTensor(predicted_targets[target_key])), Variable(torch.FloatTensor(real_targets[target_key]))).data[0]) for target_key in real_targets}
+        errors = {target_key: float(self.errorFunction(Variable(torch.FloatTensor(predicted_targets[target_key])), Variable(torch.FloatTensor(real_targets[target_key]))).item()) for target_key in real_targets}
         error = np.average([errors[key] for key in errors])
         r_value = np.average([r_values[key] for key in r_values])
 

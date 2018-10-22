@@ -109,9 +109,9 @@ class TrainWorker():
                     logging.info('Test Error:{error}, Accuracy:{accuracy} | Best Accuracy so far: {best_accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy, best_accuracy=highest_accuracy))
                     is_it_lowest_error_epoch = False
                     # if lowest error save model
-                    if lowest_error in [None]:
+                    if lowest_error in [None] and test_ret.accuracy > 0:
                         lowest_error = test_ret.error
-                    if lowest_error > test_ret.error:
+                    if lowest_error > test_ret.error and test_ret.accuracy > 0:
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error
                         highest_accuracy = test_ret.accuracy
@@ -149,8 +149,8 @@ class TrainWorker():
                 return
 
             fs_file_ids = ml_model_info.fs_file_ids
-
-            self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
+            if fs_file_ids is not None:
+                self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
 
 
 

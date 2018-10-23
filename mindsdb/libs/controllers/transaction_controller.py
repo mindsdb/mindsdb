@@ -184,6 +184,10 @@ class TransactionController:
         """
 
         self.callPhaseModule('StatsLoader')
+        if self.persistent_model_metadata is None:
+            self.session.logging.error('No metadata found for this model')
+            return
+
         self.callPhaseModule('DataExtractor')
         if len(self.input_data.data_array[0])<=0:
             self.output_data = self.input_data

@@ -68,7 +68,13 @@ class BaseModel(nn.Module):
         self.flatTarget = True
         self.flatInput = True
         self.optimizer = None
-        self.optimizer_class = optim.ASGD
+
+        self.current_accuracy = 0
+
+        self.optimizer_class_list = [(0.7, optim.ASGD), (2, optim.Adam)] # this is (limit on accuracy, and optimizer)
+        self.optimizer_class_list_pointer = 0
+        self.optimizer_class = self.optimizer_class_list[self.optimizer_class_list_pointer][1]
+
         self.setup(sample_batch,  **kwargs)
 
         # extract all possible meta data from sample batch so it is no longer needed in future
@@ -76,17 +82,33 @@ class BaseModel(nn.Module):
         self.input_column_names =  self.sample_batch.input_column_names
 
         # column permutations for learning Nones
-        self.col_permutations =  [[]] # getColPermutations(self.input_column_names) + [[]]
+        self.col_permutations =  getOneColPermutations(self.input_column_names) + [[]]
 
 
     def zeroGradOptimizer(self):
         """
+        Optimizers are reset every n epochs, to make sure that we walk as much of the random state of the weights
+        We do this to try to ensure that models converge in the same minimas, and avoid saddle points
 
-        :return:
+        :return: None
         """
+
+
         if self.optimizer is None:
+
+            # see if we need to change the optimizer class
+            # Note: change happens when the accuracy is greater than specified in the self.optimizer_class_list
+            current_pointer = self.optimizer_class_list_pointer
+            next_optimizer_pointer = current_pointer + 1 if len(self.optimizer_class_list) -1 > current_pointer else current_pointer
+            accuracy_threshold = self.optimizer_class_list[current_pointer][0]
+            self.optimizer_class = self.optimizer_class if self.current_accuracy <=  accuracy_threshold else self.optimizer_class_list[next_optimizer_pointer][1]
+
+            # initialize new optimizer
             self.optimizer = self.optimizer_class(self.parameters(), lr=self.current_learning_rate)
+
+        # very important
         self.optimizer.zero_grad()
+
 
     def setLearningRateIndex(self, index):
         """
@@ -223,6 +245,8 @@ class BaseModel(nn.Module):
             predicted_targets = predicted_targets_ret,
             real_targets = real_targets_ret
         )
+
+        self.current_accuracy = r_value
 
         return resp
 

@@ -1,8 +1,10 @@
 from mindsdb.libs.data_types.object_dict import ObjectDict
 from mindsdb.libs.data_types.persistent_object_mongo import PersistentObjectMongo
 from tinymongo import TinyMongoClient
+from mindsdb.libs.helpers.logging import logging
 
 import mindsdb.config as CONFIG
+import shutil
 
 
 class PersistentObjectTinydb(PersistentObjectMongo):
@@ -13,7 +15,13 @@ class PersistentObjectTinydb(PersistentObjectMongo):
     def __init__(self):
 
         self._mongo = TinyMongoClient(CONFIG.LOCALSTORE_PATH)
-        self._collection =  self._mongo.mindsdb[self._entity_name]
+        try:
+            self._collection =  self._mongo.mindsdb[self._entity_name]
+        except:
+            logging.error('No collection will be found, db corrupted, truncating it')
+            shutil.rmtree(CONFIG.LOCALSTORE_PATH)
+            raise ValueError('MindsDB local document store corruped. No other way to put this, trained model data will be lost')
+
         self.setup()
 
 

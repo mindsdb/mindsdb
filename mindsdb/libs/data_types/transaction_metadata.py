@@ -20,6 +20,7 @@ class TransactionMetadata(ObjectDict):
         self.from_data = None
         self.test_from_data = None
         self.type = None
+        self.ignore_columns = []
 
 
 

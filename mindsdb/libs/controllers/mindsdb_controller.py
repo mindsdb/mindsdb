@@ -97,7 +97,7 @@ class MindsDBController:
         return pandas.read_sql_query(query, self.conn)
 
 
-    def learn(self, predict, from_file=None, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END):
+    def learn(self, predict, from_file=None, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END, ignore_columns = []):
         """
 
         :param from_query:
@@ -123,6 +123,7 @@ class MindsDBController:
         transaction_metadata.type = transaction_type
         transaction_metadata.from_data = from_ds
         transaction_metadata.test_from_data = test_from_ds
+        transaction_metadata.ignore_columns = ignore_columns
 
         self.startInfoServer()
         self.session.newTransaction(transaction_metadata, breakpoint)

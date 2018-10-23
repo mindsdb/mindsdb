@@ -109,8 +109,10 @@ class TrainWorker():
                     logging.info('Test Error:{error}, Accuracy:{accuracy} | Best Accuracy so far: {best_accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy, best_accuracy=highest_accuracy))
                     is_it_lowest_error_epoch = False
                     # if lowest error save model
-                    if lowest_error in [None] and test_ret.accuracy > 0:
+                    if lowest_error in [None]:
                         lowest_error = test_ret.error
+                        highest_accuracy = test_ret.accuracy
+
                     if lowest_error > test_ret.error and test_ret.accuracy > 0:
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error

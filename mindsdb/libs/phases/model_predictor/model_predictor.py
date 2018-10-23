@@ -24,7 +24,7 @@ class ModelPredictor(BaseModule):
 
         model_name = self.transaction.persistent_model_metadata.model_name
         self.train_start_time = time.time()
-        self.session.logging.info('Training: model {model_name}, epoch 0'.format(model_name=model_name))
+        self.session.logging.info('Predict: model {model_name}, epoch 0'.format(model_name=model_name))
 
         self.last_time = time.time()
 
@@ -70,7 +70,7 @@ class ModelPredictor(BaseModule):
 
         total_time = time.time() - self.train_start_time
         self.session.logging.info(
-            'Trained: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name=model_name,
+            'Predict: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name=model_name,
                                                                                             total_time=total_time))
 
         pass
@@ -84,7 +84,7 @@ class ModelPredictor(BaseModule):
                 break
 
         transposed = np.transpose(confusion_matrix['real_x_predicted'])
-        confidence = max(transposed[index])
+        confidence = transposed[index][index]
         if confidence >=1:
             confidence = 0.99
         return "{0:.2f}".format(confidence)

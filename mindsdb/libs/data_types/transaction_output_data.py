@@ -1,5 +1,7 @@
 from mindsdb.libs.constants.mindsdb import *
 
+from mindsdb.libs.helpers.logging import logging
+
 class TransactionOutputData():
 
     def __init__(self, predicted_columns=[]):
@@ -38,7 +40,8 @@ class TransactionOutputData():
             if as_list: # add confidence if its a dictionary
                 ret_row += row[col_index]
             else:
-                if col_index not in ret_row:
+                if len(row) < col_index:
+                    logging.warning('Output is smaller than expected, see transaction_output_data.py')
                     ret_row[KEY_CONFIDENCE] = 0
                 else:
                     ret_row[KEY_CONFIDENCE] = row[col_index]

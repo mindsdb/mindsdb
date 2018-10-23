@@ -30,7 +30,7 @@ from mindsdb.libs.data_types.trainer_response import TrainerResponse
 from mindsdb.libs.data_types.tester_response import TesterResponse
 from mindsdb.libs.data_types.file_saved_response import FileSavedResponse
 from mindsdb.libs.helpers.norm_denorm_helpers import denorm
-from mindsdb.libs.helpers.train_helpers import getColPermutations
+from mindsdb.libs.helpers.train_helpers import getColPermutations, getAllButOnePermutations, getOneColPermutations
 
 class BaseModel(nn.Module):
 
@@ -54,11 +54,11 @@ class BaseModel(nn.Module):
 
         # Implementing this
         # https://towardsdatascience.com/understanding-learning-rates-and-how-it-improves-performance-in-deep-learning-d0d4059c1c10
-        self.learning_rates = [(1, 200), (0.8, 20), (0.6, 200),(0.4, 20), (0.2, 200),(0.1, 100), (0.01, 50), (0.001, 50)]
-        for i in range(15):
-            self.learning_rates += [(1, 20), (0.8, 20), (0.6, 20),(0.4, 20), (0.2, 20),(0.1, 20), (0.01, 20), (0.001, 20)]
+        self.learning_rates = [(1, 200), (0.8, 20), (0.6, 20),(0.4, 20), (0.2, 40),(0.1, 60), (0.01, 80), (0.001, 100)]
         for i in range(5):
-            self.learning_rates += [(0.1, 30), (0.08, 30), (0.06, 30),(0.4, 20), (0.02, 30),(0.1, 30), (0.005, 30), (0.001, 30)]
+            self.learning_rates += [(1, 40), (0.8, 20), (0.6, 20),(0.4, 20), (0.2, 20),(0.1, 20), (0.01, 30), (0.001, 40)]
+        for i in range(5):
+            self.learning_rates += [(0.1, 60), (0.08, 30), (0.06, 30),(0.04, 20), (0.02, 30),(0.01, 30), (0.005, 40), (0.001, 50)]
 
 
         self.setLearningRateIndex(0)
@@ -76,7 +76,7 @@ class BaseModel(nn.Module):
         self.input_column_names =  self.sample_batch.input_column_names
 
         # column permutations for learning Nones
-        self.col_permutations = [[]] #getColPermutations(self.input_column_names) + [[]]
+        self.col_permutations =  [[]] # getColPermutations(self.input_column_names) + [[]]
 
 
     def zeroGradOptimizer(self):
@@ -171,9 +171,13 @@ class BaseModel(nn.Module):
 
         real_target_all = []
         predicted_target_all = []
+
+        real_target_all_ret = []
+        predicted_target_all_ret = []
+
         self.eval() # toggle eval
         for batch_number, batch in enumerate(test_sampler):
-            for permutation in self.col_permutations:
+            for permutation in  self.col_permutations:
                 batch.blank_columns = permutation
                 #batch.blank_columns = []
                 logging.debug('[EPOCH-BATCH] testing batch: {batch_number}'.format(batch_number=batch_number))
@@ -184,6 +188,11 @@ class BaseModel(nn.Module):
                 real_target_all += real_target.data.tolist()
                 predicted_target_all += predicted_target.data.tolist()
 
+                if len(permutation) == 0:
+                    # append to all targets and all real values
+                    real_target_all_ret += real_target.data.tolist()
+                    predicted_target_all_ret += predicted_target.data.tolist()
+
         if batch is None:
             logging.error('there is no data in test, we should not be here')
             return
@@ -191,12 +200,15 @@ class BaseModel(nn.Module):
         # caluclate the error for all values
         predicted_targets = batch.deflatTarget(np.array(predicted_target_all))
         real_targets = batch.deflatTarget(np.array(real_target_all))
+        # caluclate the error for all values
+        predicted_targets_ret = batch.deflatTarget(np.array(predicted_target_all_ret))
+        real_targets_ret = batch.deflatTarget(np.array(real_target_all_ret))
 
         r_values = {}
         # calculate r and other statistical properties of error
-        for target_key in real_targets:
+        for target_key in real_targets_ret:
 
-            r_values[target_key] =  explained_variance_score(real_targets[target_key], predicted_targets[target_key], multioutput='variance_weighted')
+            r_values[target_key] =  explained_variance_score(real_targets_ret[target_key], predicted_targets_ret[target_key], multioutput='variance_weighted')
 
 
         # calculate error using error function
@@ -208,8 +220,8 @@ class BaseModel(nn.Module):
         resp = TesterResponse(
             error = error,
             accuracy= r_value,
-            predicted_targets = predicted_targets,
-            real_targets = real_targets
+            predicted_targets = predicted_targets_ret,
+            real_targets = real_targets_ret
         )
 
         return resp

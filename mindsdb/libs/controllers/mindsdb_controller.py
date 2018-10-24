@@ -143,6 +143,8 @@ class MindsDBController:
 
         transaction_type = TRANSACTION_PREDICT
 
+        from_ds = None if from_data is None else getDS(from_data)
+
         predict_columns = [predict] if type(predict) != type([]) else predict
 
         transaction_metadata = TransactionMetadata()
@@ -151,7 +153,7 @@ class MindsDBController:
         transaction_metadata.model_when_conditions = when
         transaction_metadata.type = transaction_type
         transaction_metadata.storage_file = self.storage_file
-        transaction_metadata.from_data = from_data
+        transaction_metadata.from_data = from_ds
 
         transaction = self.session.newTransaction(transaction_metadata, breakpoint)
 

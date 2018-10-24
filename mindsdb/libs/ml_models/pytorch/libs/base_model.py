@@ -10,14 +10,12 @@
 """
 # import logging
 from mindsdb.libs.helpers.logging import logging
-from numpy import linalg as LA
 
 import torch
 import torch.nn as nn
 from torch import optim
 from torch.autograd import Variable
 from sklearn.metrics import r2_score, explained_variance_score
-from scipy import stats
 
 import numpy as np
 
@@ -31,6 +29,8 @@ from mindsdb.libs.data_types.tester_response import TesterResponse
 from mindsdb.libs.data_types.file_saved_response import FileSavedResponse
 from mindsdb.libs.helpers.norm_denorm_helpers import denorm
 from mindsdb.libs.helpers.train_helpers import getColPermutations, getAllButOnePermutations, getOneColPermutations
+
+import random
 
 class BaseModel(nn.Module):
 
@@ -71,9 +71,8 @@ class BaseModel(nn.Module):
 
         self.current_accuracy = 0
 
-        self.optimizer_class_list = [(0.7, optim.ASGD), (2, optim.Adam)] # this is (limit on accuracy, and optimizer)
-        self.optimizer_class_list_pointer = 0
-        self.optimizer_class = self.optimizer_class_list[self.optimizer_class_list_pointer][1]
+        self.optimizer_class_list = [optim.ASGD] #, optim.Adam] # this is (limit on accuracy, and optimizer)
+        self.optimizer_class = self.optimizer_class_list[0]
 
         self.setup(sample_batch,  **kwargs)
 
@@ -98,11 +97,17 @@ class BaseModel(nn.Module):
 
             # see if we need to change the optimizer class
             # Note: change happens when the accuracy is greater than specified in the self.optimizer_class_list
-            current_pointer = self.optimizer_class_list_pointer
-            next_optimizer_pointer = current_pointer + 1 if len(self.optimizer_class_list) -1 > current_pointer else current_pointer
-            accuracy_threshold = self.optimizer_class_list[current_pointer][0]
-            self.optimizer_class = self.optimizer_class if self.current_accuracy <=  accuracy_threshold else self.optimizer_class_list[next_optimizer_pointer][1]
+            next_index = 0
 
+            if self.current_accuracy !=0 :
+                current_index = self.optimizer_class_list.index(self.optimizer_class)
+
+                if current_index + 1 >= len(self.optimizer_class_list):
+                    next_index = 0
+                else:
+                    next_index = current_index + 1
+
+            self.optimizer_class = self.optimizer_class_list[next_index]
             # initialize new optimizer
             self.optimizer = self.optimizer_class(self.parameters(), lr=self.current_learning_rate)
 

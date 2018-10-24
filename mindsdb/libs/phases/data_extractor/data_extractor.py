@@ -113,29 +113,70 @@ class DataExtractor(BaseModule):
         :return:
         """
         if self.transaction.metadata.type == TRANSACTION_PREDICT:
-            if type(self.transaction.metadata.model_when_conditions) != type([]):
-                when_conditions = [self.transaction.metadata.model_when_conditions]
+
+            # these are the columns in the model, pulled from persistent_data
+            columns = self.transaction.persistent_model_metadata.columns  # type: list
+
+            # if the predict statement comes with some data as from_date use it
+            if self.transaction.metadata.from_data is not None:
+
+                # make sure we build a dataframe that has all the columns we need
+                df = self.transaction.metadata.from_data
+                df = df.where((pandas.notnull(df)), None)
+
+                from_data_columns = df.columns
+
+                # remove the ones that dont exist in the train data
+                for col in from_data_columns:
+                    if col not in columns:
+                        logging.debug('Removing column "{col}" from data as it did not exist in training'.format(col=col))
+                        df.drop(columns=[col])
+
+                # add the ones that dont exist in
+                for col in columns:
+                    if col not in from_data_columns:
+                        df[col] = None
+
+                # amke sure it has the same order
+                result = df[columns]
+
+
             else:
-                when_conditions = self.transaction.metadata.model_when_conditions
 
-                # these are the columns in the model, pulled from persistent_data
-            columns = self.transaction.persistent_model_metadata.columns   # type: list
+                if type(self.transaction.metadata.model_when_conditions) != type([]):
+                    when_conditions = [self.transaction.metadata.model_when_conditions]
+                else:
+                    when_conditions = self.transaction.metadata.model_when_conditions
 
-            when_conditions_list = []
-            # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
-            for when_condition in when_conditions:
-                cond_list = [None] * len(columns)  # empty list with blanks for values
 
-                for condition_col in when_condition:
-                    col_index = columns.index(condition_col)
-                    cond_list[col_index] = when_condition[condition_col]
 
-                when_conditions_list.append(cond_list)
+                when_conditions_list = []
+                # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
+                for when_condition in when_conditions:
+                    cond_list = [None] * len(columns)  # empty list with blanks for values
 
-            result = pandas.DataFrame(when_conditions_list, columns = columns)
+                    for condition_col in when_condition:
+                        col_index = columns.index(condition_col)
+                        cond_list[col_index] = when_condition[condition_col]
+
+                    when_conditions_list.append(cond_list)
+
+                result = pandas.DataFrame(when_conditions_list, columns = columns)
         else:
+
             df = train_metadata.from_data
             result = df.where((pandas.notnull(df)), None)
+
+
+        # apply order by (group_by, order_by)
+        if train_metadata.model_order_by:
+            if train_metadata.model_group_by:
+                sort_by = [train_metadata.model_group_by] + train_metadata.model_order_by
+                result = result.sort_values(sort_by, ascending=[True, True])
+            else:
+                sort_by = [train_metadata.model_order_by]
+                result = result.sort_values(sort_by, ascending=[True])
+
         return result
 
     def run(self):

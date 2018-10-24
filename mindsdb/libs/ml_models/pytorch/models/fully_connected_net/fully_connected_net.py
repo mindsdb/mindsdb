@@ -31,8 +31,10 @@ class FullyConnectedNet(BaseModel):
         self.net = nn.Sequential(
             nn.Linear(input_size, input_size),
             torch.nn.LeakyReLU(),
+            nn.Dropout(0.2),
             nn.Linear(input_size, int(math.ceil(input_size/2))),
             torch.nn.LeakyReLU(),
+            nn.Dropout(0.2),
             nn.Linear(int(math.ceil(input_size/2)), output_size)
         )
 

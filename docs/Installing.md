@@ -1,46 +1,34 @@
 [<Back to Table of Contents](../README.md)
 # Installing MindsDB
 
-You can install MindsDB 
 
+Before you begin, you need **[python3](https://realpython.com/installing-python/)** or **[Conda Python3](https://www.anaconda.com/download/)**, and make sure you have the **latest pip3**
+```bash
+pip3 install --upgrade pip
+```
+
+Once that, you can install MindsDB
 ##### On Mac or Linux 
 
 ```bash
- pip3 install mindsdb --user
+pip3 install mindsdb --user
 ```
 
 ##### On Windows 10
 
 
-Follow [these instructions](https://conda.io/miniconda.html) to install Python miniConda.
+Install Conda [download here](https://www.anaconda.com/download/#windows).
  
  and then run the **anaconda prompt**: 
 
 ```bash
 
-conda install -c blaze sqlite3 peterjc123 pytorch
+conda install -c blaze 
+conda install -c sqlite3 
+conda install -c peterjc123 
+conda install -c pytorch
 curl -o reqs.txt https://raw.githubusercontent.com/mindsdb/main/master/requirements-win.txt
 pip install --requirement reqs.txt
 pip install mindsdb --no-dependencies
 ```
-
-
-
-#### OPTIONAL
-
-***SQLite***: Although by default python3 comes with SQLite, you would want to have SQLite versions >=(3.25.0) as it supports WINDOW functions, which can be very handy for data preparation
-
-##### On MacOS
-
-```bash
-brew upgrade sqlite
-```
-
-You can check your version in Python:
-
-```python
->>> import sqlite3
->>> sqlite3.version
-```
-
 

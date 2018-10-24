@@ -16,6 +16,7 @@ MindsDB's goal is to make it very simple for developers to use the power of arti
 It's very simple to setup [(learn more)](docs/Installing.md)
 
 ```bash
+ pip3 install --upgrade pip
  pip3 install mindsdb --user
 ```
 

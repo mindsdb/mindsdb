@@ -35,7 +35,8 @@ class FullyConnectedNet(BaseModel):
             nn.Linear(input_size, int(math.ceil(input_size/2))),
             torch.nn.LeakyReLU(),
             nn.Dropout(0.2),
-            nn.Linear(int(math.ceil(input_size/2)), output_size)
+            nn.Linear(int(math.ceil(input_size/2)), output_size),
+            torch.nn.LeakyReLU()
         )
 
 

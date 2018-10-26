@@ -15,6 +15,8 @@ from mindsdb.libs.helpers.text_helpers import splitRecursive
 import numpy as np
 import datetime
 
+OFFSET = 0.00000001
+
 def norm(value, cell_stats):
 
 
@@ -22,22 +24,27 @@ def norm(value, cell_stats):
 
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
-            return [0, 0]
+            return [0, 0, 0]
 
         if cell_stats['max'] - cell_stats['min'] != 0:
 
             normalizedValue = (value - cell_stats['min']) / \
                               (cell_stats['max'] - cell_stats['min'])
 
+
         elif cell_stats['max'] != 0:
             normalizedValue = value / cell_stats['max']
         else:
             normalizedValue = value
 
-        if normalizedValue > 10:
-            raise ValueError('Something is wrong with normalized value')
+        # if normalizedValue > 10:
+        #     raise ValueError('Something is wrong with normalized value')
 
-        return [normalizedValue, 1.0]
+        sign = 1 if normalizedValue >= 0 else 0
+
+        normalizedValue = abs(normalizedValue) + OFFSET
+
+        return [normalizedValue, sign, 1.0]
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:
         #[ timestamp, year, month, day, minute, second, is null]
@@ -105,7 +112,7 @@ def norm(value, cell_stats):
             except:
                 index = vector_length - 2
 
-            arr[index] = 0
+            arr[index] = 1
             return arr
 
         else:
@@ -166,13 +173,16 @@ def denorm(value, cell_stats, return_nones = True, return_dates_as_time_stamps =
             return ''
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
-        value = value[0]
+        sign_value = value[1]
+        value = abs(value[0] - OFFSET)
+
         if cell_stats['max'] - cell_stats['min'] != 0:
             denormalized = value * (cell_stats['max'] - cell_stats['min']) + cell_stats['min']
         else:
             denormalized = value * cell_stats['max']
 
-
+        if sign_value < 0.5:
+            denormalized = -1*denormalized
         return denormalized
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:
@@ -186,14 +196,19 @@ def denorm(value, cell_stats, return_nones = True, return_dates_as_time_stamps =
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
         if cell_stats['dictionaryAvailable']:
-            if value[-1] == 0:
+            not_null = True if value[-1] >= 0.5 else False
+            other = True if value[-2] >= 0.5 else False
+
+            if not_null is False:
                 return ''
 
-            if value[-2] == 1:
+            if other is True:
                 return '*'
+
             max = -100
             index = None
-            for j, v in enumerate(value):
+
+            for j, v in enumerate(value[:-2]):
                 if v > max:
                     index = j
                     max = v

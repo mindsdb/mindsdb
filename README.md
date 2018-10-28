@@ -13,12 +13,13 @@ MindsDB's goal is to make it very simple for developers to use the power of arti
 
 ## Quick Overview
 
-It's very simple to setup [(learn more)](docs/Installing.md)
+It's very simple to setup 
 
 ```bash
- curl https://bootstrap.pypa.io/get-pip.py | python3
  pip3 install mindsdb --user
 ```
+
+[(Having issues? learn more)](docs/Installing.md)
 
 Once you have MindsDB installed, you can use it as follows [(learn more)](docs/examples/basic/README.md):
 
@@ -34,8 +35,8 @@ from mindsdb import *
 
 # We tell mindsDB what we want to learn and from what data
 MindsDB().learn(
-    from_data="https://raw.githubusercontent.com/mindsdb/main/master/docs/examples/basic/home_rentals.csv", # the path to the file where we can learn from, (note: can be url)
-    predict='rented_price', # the column we want to learn to predict given all the data in the file
+    from_data="home_rentals.csv", # the path to the file where we can learn from, (note: can be url)
+    predict='rental_price', # the column we want to learn to predict given all the data in the file
     model_name='home_rentals' # the name of this model
 )
 
@@ -50,9 +51,9 @@ To **use the model**:
 from mindsdb import *
 
 # use the model to make predictions
-result = MindsDB().predict(predict='rented_price', when={'number_of_rooms': 2,'number_of_bathrooms':1, 'sqft': 1190}, model_name='home_rentals')
+result = MindsDB().predict(predict='rental_price', when={'number_of_rooms': 2,'number_of_bathrooms':1, 'sqft': 1190}, model_name='home_rentals')
 
 # you can now print the results
-print('The predicted price is ${price} with {conf} confidence'.format(price=result.predicted_values[0]['rented_price'], conf=result.predicted_values[0]['prediction_confidence']))
+print('The predicted price is ${price} with {conf} confidence'.format(price=result.predicted_values[0]['rental_price'], conf=result.predicted_values[0]['prediction_confidence']))
 
 ```

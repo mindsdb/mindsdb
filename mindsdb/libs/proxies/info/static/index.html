@@ -1,5 +1,12 @@
 <html>
     <head>
+
+        <meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>MindsDB</title>
+		<link rel="shortcut icon" href="favicon.ico">
+
         <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
         <script type="text/javascript" charset="utf-8">
             var socket = io.connect('http://' + document.domain + ':' + location.port);
@@ -7,9 +14,154 @@
                 socket.emit('my event', {data: 'I\'m connected!'});
             });
         </script>
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.6.8/c3.min.css"/>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.7.0/d3.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.6.8/c3.min.js"></script>
+
     </head>
-    <body>
-        <h1>MindsDB model Info</h1>
+    <body style="background:#ffffff"> <!---#181818" > -->
+
+    <div class="w-100 h-100 flex-wrap" style="font-family: monospace;">
+                <div class="w-100" id="header-box" style="height:75px;padding:0px;background-color:#ffffff;  text-align: left">
+
+                    <img src="img/logo.png" height="59px" style="padding-left: 10px; padding-top: 8px; padding-bottom: 8px;padding-right: 10px" onclick="demo.init()">
+
+                </div>
+
+                <div class="d-flex flex-wrap align-content-center h-75 w-100 align-items-center justify-content-center" >
+
+                    <div class="col-sm-3 text-left h-50" style="padding:20px">
+                        Models
+                        <hr/>
+                        <div class="" >
+                            <strong style="color:dodgerblue">- rentals pricing</strong>
+                        </div>
+                        <div> - number of days in market  </div>
+                    </div>
+                    <div class="col-sm-5">
+                        <div class="" id="chart">
+
+                        </div>
+                        <div class="text-center small" style="font-family: monospace;">
+                            This chart shows Real vs. Predicted values over the test set
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="h-100 w-100" style="color: lightslategrey; overflow: scroll; padding: 20px; font-size:smaller; white-space: pre-wrap; ">[START] DataExtractor
+  - Test: 1869 rows
+  - Train: 7478 rows
+[END] DataExtractor, execution time: 0.058 seconds
+[START] StatsGenerator
+   population_size=9347,  sample_size=2483  26.56%
+[END] StatsGenerator, execution time: 0.691 seconds
+[START] DataVectorizer
+[END] DataVectorizer, execution time: 14.782 seconds
+[START] ModelTrainer
+    Training: model fuel, epoch 0
+    Starting model...
+    Training model...
+    Test Error:0.20495392382144928, Accuracy:0.00041369945028502103 | Best Accuracy so far: 0
+    Test Error:0.20359119772911072, Accuracy:0.000661569204295942 | Best Accuracy so far: 0.00041369945028502103
+    [SAVING MODEL] Lowest ERROR so far! - Test Error: 0.20359119772911072, Accuracy: 0.000661569204295942
+    Test Error:0.20221589505672455, Accuracy:0.0008354401654367959 | Best Accuracy so far: 0.000661569204295942
+    [SAVING MODEL] Lowest ERROR so far! - Test Error: 0.20221589505672455, Accuracy: 0.0008354401654367959
+    Test Error:0.20003311336040497, Accuracy:0.0009891926070993984 | Best Accuracy so far: 0.0008354401654367959
+    [SAVING MODEL] Lowest ERROR so far! - Test Error: 0.20003311336040497, Accuracy: 0.0009891926070993984
+    Test Error:0.1977817416191101, Accuracy:0.0011442710625051422 | Best Accuracy so far: 0.0009891926070993984
+    [SAVING MODEL] Lowest ERROR so far! - Test Error: 0.1977817416191101, Accuracy: 0.0011442710625051422
+    Test Error:0.1989939659833908, Accuracy:0.0013530876843501627 | Best Accuracy so far: 0.0011442710625051422
+    Test Error:0.19832544028759003, Accuracy:0.0014875365200074375 | Best Accuracy so far: 0.0011442710625051422
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="w-100">
+                    <div style="text-align: right; padding-right: 15px;">
+                        <div style="padding: 10px;  bottom: 0px; right:0px; position: absolute; color: whitesmoke; background: #e04643;
+;">
+                            <small><strong>MindsDB v0.9.0</strong></small>
+                        </div>
+
+                    </div>
+
+                </div>
+
+    </div>
+
+
+
+
+
+
+
+
+
+
+		<script>
+
+
+
+
+
+            $(document).ready(function(){
+                //$('#header-box').hide();
+                //$('#body-box').hide();
+                //$('#header-box').show('slow');
+
+
+                var chart = c3.generate({
+                    bindto: '#chart',
+                    data: {
+                        xs: {
+                            setosa: 'setosa_x',
+                            versicolor: 'versicolor_x',
+                        },
+                        // iris data from R
+                        columns: [
+                            ["setosa_x", 3.5, 3.0, 3.2, 3.1, 3.6, 3.9, 3.4, 3.4, 2.9, 3.1, 3.7, 3.4, 3.0, 3.0, 4.0, 4.4, 3.9, 3.5, 3.8, 3.8, 3.4, 3.7, 3.6, 3.3, 3.4, 3.0, 3.4, 3.5, 3.4, 3.2, 3.1, 3.4, 4.1, 4.2, 3.1, 3.2, 3.5, 3.6, 3.0, 3.4, 3.5, 2.3, 3.2, 3.5, 3.8, 3.0, 3.8, 3.2, 3.7, 3.3],
+                            ["versicolor_x", 3.2, 3.2, 3.1, 2.3, 2.8, 2.8, 3.3, 2.4, 2.9, 2.7, 2.0, 3.0, 2.2, 2.9, 2.9, 3.1, 3.0, 2.7, 2.2, 2.5, 3.2, 2.8, 2.5, 2.8, 2.9, 3.0, 2.8, 3.0, 2.9, 2.6, 2.4, 2.4, 2.7, 2.7, 3.0, 3.4, 3.1, 2.3, 3.0, 2.5, 2.6, 3.0, 2.6, 2.3, 2.7, 3.0, 2.9, 2.9, 2.5, 2.8],
+                            ["setosa", 0.2, 0.2, 0.2, 0.2, 0.2, 0.4, 0.3, 0.2, 0.2, 0.1, 0.2, 0.2, 0.1, 0.1, 0.2, 0.4, 0.4, 0.3, 0.3, 0.3, 0.2, 0.4, 0.2, 0.5, 0.2, 0.2, 0.4, 0.2, 0.2, 0.2, 0.2, 0.4, 0.1, 0.2, 0.2, 0.2, 0.2, 0.1, 0.2, 0.2, 0.3, 0.3, 0.2, 0.6, 0.4, 0.3, 0.2, 0.2, 0.2, 0.2],
+                            ["versicolor", 1.4, 1.5, 1.5, 1.3, 1.5, 1.3, 1.6, 1.0, 1.3, 1.4, 1.0, 1.5, 1.0, 1.4, 1.3, 1.4, 1.5, 1.0, 1.5, 1.1, 1.8, 1.3, 1.5, 1.2, 1.3, 1.4, 1.4, 1.7, 1.5, 1.0, 1.1, 1.0, 1.2, 1.6, 1.5, 1.6, 1.5, 1.3, 1.3, 1.3, 1.2, 1.4, 1.2, 1.0, 1.3, 1.2, 1.3, 1.3, 1.1, 1.3],
+                        ],
+                        type: 'scatter'
+                    },
+                    axis: {
+                        x: {
+                            label: 'Real',
+                            tick: {
+                                fit: false
+                            }
+                        },
+                        y: {
+                            label: 'Predicted'
+                        }
+                    }
+                });
+
+
+                // demo.init(function(){
+                //
+                //     $('#body-box').show();
+                //
+                // });
+
+
+
+            })
+		</script>
+        <script src="js/settings.js"></script>
+        <script src="js/loading.js"></script>
+
+
+
 
     </body>
 </html>

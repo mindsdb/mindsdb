@@ -1,5 +1,6 @@
 attrs==18.2.0
-autobahn==18.9.2
+socketio==2.0.0
+eventlet=0.24.1
 Automat==0.7.0
 certifi==2018.8.24
 chardet==3.0.4

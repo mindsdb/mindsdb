@@ -44,7 +44,8 @@ WEBSOCKET_PROXY = ifEnvElse('WEBSOCKET_PROXY', False)
 WEBSOCKET_URL = ifEnvElse('WEBSOCKET_URL', "ws://127.0.0.1:9000")
 
 LOGGING_WEBSOCKET_PROXY = ifEnvElse('LOGGING_WEBSOCKET_PROXY', True)
-LOGGING_WEBSOCKET_URL = ifEnvElse('LOGGING_WEBSOCKET_URL', "ws://127.0.0.1:9001")
+LOGGING_WEBSOCKET_URL = ifEnvElse('LOGGING_WEBSOCKET_URL', "ws://127.0.0.1:6996")
+
 
 PROXY_SERVER_PORT = ifEnvElse('MINDSDB_PROXY_SERVER_PORT', 3306)
 PROXY_SERVER_HOST = ifEnvElse('MINDSDB_PROXY_SERVER_HOST', 'localhost')
@@ -52,7 +53,7 @@ PROXY_SERVER_HOST = ifEnvElse('MINDSDB_PROXY_SERVER_HOST', 'localhost')
 # LOG Config settings
 PROXY_LOG_CONFIG = {
     'format': ifEnvElse('MINDSDB_PROXY_LOG_FORMAT', '[%(levelname)s] %(message)s'),
-    'level': ifEnvElse('MINDSDB_PROXY_LOG_LEVEL', logging.WARNING),
+    'level': ifEnvElse('MINDSDB_PROXY_LOG_LEVEL', logging.INFO),
     'filename': ifEnvElse('MINDSDB_PROXY_LOG_FILENAME', None)
 }
 

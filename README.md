@@ -1,5 +1,10 @@
 
-# MindsDB
+![MindsDB](https://raw.githubusercontent.com/mindsdb/main/master/mindsdb/libs/proxies/info/static/img/logo1gw.png "MindsDB")
+
+#
+
+
+
 
 MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. 
 

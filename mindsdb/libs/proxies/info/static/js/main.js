@@ -6,10 +6,10 @@ function validateEmail(email) {
   return re.test(email);
 }
 
-var onReady = function(){
-
+var showInitScreen=function(){
     plotInit();
     hideInit();
+
     $('#page_body').hide();
     $('#logo_img2').css({left: "22%",  });
 
@@ -19,10 +19,13 @@ var onReady = function(){
         top: "45%"
 
     });
+};
 
+var initSocket = function() {
     mdbsocket = io.connect(MINDSDB_CONFIG.LOGGING_WEBSOCKET_URL);
 
-    $('.menu_nav').show();
+
+    //$('.menu_nav').show();
 
 
 
@@ -30,28 +33,94 @@ var onReady = function(){
         showServerHelp();
         //mdbsocket.close();
     });
-    mdbsocket.on('connect', function() {
-        startWithServer();
-        mdbsocket.emit('my event', {data: 'I\'m connected!'});
+
+
+    mdbsocket.resp_calls = {};
+
+    mdbsocket.registerResponse = function(uid, callback){
+        mdbsocket.resp_calls[uid] = callback;
+    };
+
+    mdbsocket.on('call_response', function(payload){
+        var uid = payload.uid;
+        var response = payload.response;
+        var error = payload.error;
+        error = (typeof error !== 'undefined') ?  error : false;
+        if(error != false){
+            console.error(error);
+        }
+        else{
+            if(uid in mdbsocket.resp_calls){
+                mdbsocket.resp_calls[uid](response);
+                delete mdbsocket.resp_calls[uid];
+            }
+            else{
+                console.info('callback for response not defined, not a bad thing, but logging it, just in case, call-uid:'+uid);
+
+            }
+
+        }
     });
 
 
+    mdbsocket.callService = function(service, data, callback) {
+        callback = (typeof callback !== 'undefined') ?  callback : false;
+        console.log(callback);
+        var uid = _.uniqueId('uid_');
+        if(callback!=false){
+            mdbsocket.registerResponse(uid, callback);
+        }
+        mdbsocket.emit('call', {service:service, data:data, uid:uid});
+    }
+};
+
+var onReady = function(){
 
 
+    showInitScreen();
+    initSocket();
 
+    mdbsocket.on('connect', function() {
+
+        mdbsocket.callService('getUserEmail', false, function(email){
+
+            $('.menu_nav').show();
+            var email = (typeof email !== 'undefined')? email: false;
+            console.log(email);
+            if(email in [false]){
+                startWithServer();
+            }
+            else {
+                startWithServer();
+                continueToLogs(email);
+            }
+        });
+    });
 
 };
 
-var continueToLogs = function(){
-    var email = $('#email_input').val()
 
-    is_valid = validateEmail(email);
+
+
+var continueToLogs = function(email){
+    console.log(email);
+    var email = (typeof email !== 'undefined')? email:  $('#email_input').val();
+    if (email == false) return;
+
+    $('#email_input').val(email);
+
+    var is_valid = validateEmail(email);
+
     if (is_valid) {
-         $('#page_body').show();
+        mdbsocket.callService('setUserEmail', {email: email});
+
+
+        $('#page_body').show();
         hideInit();
 
         $('#logo_img2').css({left: "5px", top:"5px"});
         $('#give_us_email').show();
+        $('#terms_conditions').hide();
         collapseMenu();
     }
     else {

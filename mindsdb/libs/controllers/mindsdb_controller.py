@@ -97,6 +97,40 @@ class MindsDBController:
         return pandas.read_sql_query(query, self.conn)
 
 
+    def setUserEmail(self, email):
+        """
+
+        :param email:
+        :return:
+        """
+        email_file = CONFIG.MINDSDB_STORAGE_PATH + '/../email.mdb_base'
+
+
+        try:
+            open(email_file, 'w').write(email)
+            return True
+        except:
+            logging.warning('Cannot store token, Please add write permissions to file:' + email_file)
+            return False
+
+    def getUserEmail(self):
+        """
+
+        :return:
+        """
+        email_file = CONFIG.MINDSDB_STORAGE_PATH + '/../email.mdb_base'
+        email_file_path  = Path(email_file)
+
+        try:
+            if email_file_path.is_file():
+                email = open(email_file, 'r').read()
+                return email
+            else:
+                return None
+        except:
+            logging.warning('Cannot read email, Please add write permissions to file:' + email_file)
+            return None
+
     def learn(self, predict, from_file=None, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END, ignore_columns = []):
         """
 
@@ -173,7 +207,7 @@ class MindsDBController:
             try:
                 open(uuid_file, 'w').write(uuid_str)
             except:
-                logging.warn('Cannot store token, Please add write permissions to file:' + mdb_file)
+                logging.warning('Cannot store token, Please add write permissions to file:' + uuid_file)
                 uuid_str = uuid_str + '.NO_WRITE'
 
         file_path = Path(mdb_file)
@@ -184,7 +218,7 @@ class MindsDBController:
             try:
                 open(mdb_file,'w').write(token)
             except:
-                logging.warn('Cannot store token, Please add write permissions to file:'+mdb_file)
+                logging.warning('Cannot store token, Please add write permissions to file:'+mdb_file)
                 token = token+'.NO_WRITE'
         extra = urllib.parse.quote_plus(token)
         r = requests.get('http://mindsdb.com/updates/check/{extra}'.format(extra=extra), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)})

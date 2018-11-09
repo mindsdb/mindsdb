@@ -6,18 +6,6 @@ function validateEmail(email) {
   return re.test(email);
 }
 
-var showLogsScreen = function() {
-
-    $('.hide_on_start').hide();
-    $('#page_body').show();
-    $('#give_us_email').show();
-    $('#terms_conditions').hide();
-    $('#logo_img_black_bg').css({left: "5px", top:"5px"});
-
-    expandMenu();
-};
-
-
 
 var showInitScreen=function(){
 
@@ -142,7 +130,6 @@ var onReady = function(){
         init_state.showServerHelp();
     });
 
-
 };
 
 
@@ -172,21 +159,6 @@ var continueToLogs = function(email){
 };
 
 
-
-var startWithServer = function() {
-    hideInit();
-    $('#logo_img_black_bg').css({left: "22%"});
-    $('#give_us_email').show();
-    expandMenu();
-
-    $('#terms_conditions').css({opacity:1});
-
-};
-
-var hideInit = function() {
-
-    $('.hide_on_start').hide();
-};
 
 var plotInit = function() {
     var chart = c3.generate({
@@ -262,9 +234,7 @@ var expandMenu = function() {
 
                 }
             });
-
-
-
+            
 
             $('.menu_nav').css({'visibility':'visible'});
             $('.menu_nav').show();

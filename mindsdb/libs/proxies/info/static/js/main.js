@@ -1,4 +1,4 @@
-var expanded = false;
+var expanded = true;
 
 
 function validateEmail(email) {
@@ -6,19 +6,44 @@ function validateEmail(email) {
   return re.test(email);
 }
 
-var showInitScreen=function(){
-    plotInit();
-    hideInit();
+var showLogsScreen = function() {
+    $('.hide_on_start').hide();
+    $('#page_body').show();
+    $('#logo_img2').css({left: "5px", top:"5px"});
+    $('#give_us_email').show();
+    $('#terms_conditions').hide();
+    expandMenu();
+};
 
+var showInitEmailScreen = function() {
+    $('#body_cover').hide();
+    $('.hide_on_start').hide();
     $('#page_body').hide();
-    $('#logo_img2').css({left: "22%",  });
+    $('#give_us_email').show();
 
+    $('#logo_img_black_bg').hide();
+    $('#logo_img_black_bg').css({opacity:0, left:'20%'});
+    $('#logo_img_black_bg').show();
     anime({
-        targets: '#logo_img2',
-        opacity:1,
-        top: "45%"
-
+        targets: '#logo_img_black_bg',
+        top:'48%',
+        opacity: 1
     });
+
+    $('#email_input').focus();
+
+
+
+};
+
+var showInitScreen=function(){
+    $('#body_cover').show();
+
+    $('#page_body').show();
+    hideInit();
+    plotInit();
+    $('.hide_on_start').hide();
+
 };
 
 var initSocket = function() {
@@ -76,7 +101,6 @@ var initSocket = function() {
 
 var onReady = function(){
 
-
     showInitScreen();
     initSocket();
 
@@ -84,14 +108,16 @@ var onReady = function(){
 
         mdbsocket.callService('getUserEmail', false, function(email){
 
-            $('.menu_nav').show();
-            var email = (typeof email !== 'undefined')? email: false;
-            console.log(email);
-            if(email in [false]){
-                startWithServer();
+            var email = false;//(typeof email !== 'undefined')? email: false;
+
+            if(!email){
+
+                showInitEmailScreen();
+
             }
             else {
-                startWithServer();
+
+
                 continueToLogs(email);
             }
         });
@@ -103,7 +129,7 @@ var onReady = function(){
 
 
 var continueToLogs = function(email){
-    console.log(email);
+
     var email = (typeof email !== 'undefined')? email:  $('#email_input').val();
     if (email == false) return;
 
@@ -113,15 +139,8 @@ var continueToLogs = function(email){
 
     if (is_valid) {
         mdbsocket.callService('setUserEmail', {email: email});
+        showLogsScreen();
 
-
-        $('#page_body').show();
-        hideInit();
-
-        $('#logo_img2').css({left: "5px", top:"5px"});
-        $('#give_us_email').show();
-        $('#terms_conditions').hide();
-        collapseMenu();
     }
     else {
         $('#email_not_valid').show();
@@ -149,7 +168,6 @@ var startWithServer = function() {
 };
 
 var hideInit = function() {
-    //$('.menu_nav').hide();
 
     $('.hide_on_start').hide();
 };
@@ -234,7 +252,7 @@ var expandMenu = function() {
 
             $('.menu_nav').css({'visibility':'visible'});
             $('.menu_nav').show();
-            $('#email_input').focus();
+
             anime({
               targets: '.itemss',
               translateX: 20,

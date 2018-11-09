@@ -34,13 +34,20 @@ GENERAL
 }
 
 
+.logo_height {
+    height: 43px;
+    padding-left: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-right: 10px;
+}
+
 .logo_img {
     position: absolute;
     padding-left: 10px;
     padding-top: 8px;
     padding-bottom: 8px;
     padding-right: 10px;
-    opacity: 0;
     height: 43px;
 }
 

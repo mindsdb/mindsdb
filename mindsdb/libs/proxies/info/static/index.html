@@ -32,47 +32,45 @@
     </head>
     <body id="outer_body" class="mdb_black_bg mdb_main_body" >
 
-                <img class="logo_img" id="logo_img2" src="img/logo1g.png" >
+        <img class="logo_img hide_on_start" id="logo_img_black_bg" src="img/logo1g.png" >
 
-                <div  class="menu_box" style="position:absolute;top:10px;right:15px;height:24px;z-index:1000; cursor:pointer " onclick="menuToggle(); ">
-                        <svg class="bothbgs" id="icon-menu-alt" viewBox="0 0 24 24"  height="100%">
-                            <title>menu alt</title>
-                            <path d="M10.4,6H0V3h10.4C10.4,3,10.4,6,10.4,6z M10.4,10.5H0v3h10.4C10.4,13.5,10.4,10.5,10.4,10.5z M15.1,18H9v3h6.1V18z M23.4,6H13V3h10.4C23.4,3,23.4,6,23.4,6z M23.4,10.5H13v3h10.4C23.4,13.5,23.4,10.5,23.4,10.5z M23.5,18h-6.1v3h6.1V18z"></path>
-                        </svg>
-                </div>
+        <div  class="menu_box" style="position:absolute;top:10px;right:15px;height:24px;z-index:1000; cursor:pointer " onclick="menuToggle(); ">
+                <svg class="bothbgs" id="icon-menu-alt" viewBox="0 0 24 24"  height="100%">
+                    <title>menu alt</title>
+                    <path d="M10.4,6H0V3h10.4C10.4,3,10.4,6,10.4,6z M10.4,10.5H0v3h10.4C10.4,13.5,10.4,10.5,10.4,10.5z M15.1,18H9v3h6.1V18z M23.4,6H13V3h10.4C23.4,3,23.4,6,23.4,6z M23.4,10.5H13v3h10.4C23.4,13.5,23.4,10.5,23.4,10.5z M23.5,18h-6.1v3h6.1V18z"></path>
+                </svg>
+        </div>
 
-                <div class="menu_nav" style="position:absolute;   right: 0px; left: 65%; top:25%; height:50%; bottom: 0px; z-index:0">
-                        <div  class="d-flex flex-wrap align-content-center h-100 w-100 align-items-center " style="color: rgb(215, 215, 215); padding-right: 10%; ">
-                            <div id="give_us_email" class="hide_on_start">
-                                    Welcome to MindsDB, please enter your e-mail address to continue.
+        <div class="menu_nav" style="position:absolute;   right: 0px; left: 65%; top:25%; height:50%; bottom: 0px; z-index:0">
+                <div  class="d-flex flex-wrap align-content-center h-100 w-100 align-items-center " style="color: rgb(215, 215, 215); padding-right: 10%; ">
+                    <div id="give_us_email" class="hide_on_start">
+                            Welcome to MindsDB, please enter your e-mail address to continue.
 
-                                    <br/>
-                                <div class="w-100 itemss" style="padding: 15px;">
-                                    email: <input id="email_input" class="w-75" placeholder="you@emial.com" type="email" alt="email" value="" style="background: rgba(0,0,0,0); border: 0px; color: #2ab673; height: 30px; outline:none"/>
-                                </div>
-                                <div class="w-100 align-end" style="">
-                                    <span id="email_not_valid" class="hide_on_start" style="width:60%;  color: rgb(224, 70, 67); position:absolute">
-                                       Not a valid e-mail.
-                                    </span>
-                                    <span class="" style="padding-left: 70%">
-                                        <input type="button" value="CONTINUE" style="background: rgba(0,0,0,0); color: rgb(215, 215, 215); border: 1px solid whitesmoke" onclick="continueToLogs();">
-
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div id="server_help" class="hide_on_start hide_on_starts">
-                                Seems like MindsDB is not running yet, in your terminal type:
-
-                                <div class="terminal" style="padding:10px;margin-top:20px; background: rgba(100,100,100,0.3);">
-                                    python -c "import mindsdb; mindsdb.startUIBackend()"
-
-                                </div>
-                            </div>
+                            <br/>
+                        <div class="w-100 itemss" style="padding: 15px;">
+                            email: <input id="email_input" class="w-75" placeholder="you@emial.com" type="email" alt="email" value="" style="background: rgba(0,0,0,0); border: 0px; color: #2ab673; height: 30px; outline:none"/>
                         </div>
+                        <div class="w-100 align-end" style="">
+                            <span id="email_not_valid" class="hide_on_start" style="width:60%;  color: rgb(224, 70, 67); position:absolute">
+                               Not a valid e-mail.
+                            </span>
+                            <span class="" style="padding-left: 70%">
+                                <input type="button" value="CONTINUE" style="background: rgba(0,0,0,0); color: rgb(215, 215, 215); border: 1px solid whitesmoke" onclick="continueToLogs();">
 
+                            </span>
+                        </div>
+                    </div>
 
+                    <div id="server_help" class="hide_on_start hide_on_starts">
+                        Seems like MindsDB is not running yet, in your terminal type:
+
+                        <div class="terminal" style="padding:10px;margin-top:20px; background: rgba(100,100,100,0.3);">
+                            python -c "import mindsdb; mindsdb.startUIBackend()"
+
+                        </div>
+                    </div>
                 </div>
+        </div>
 
         <div id="page_body" class="w-100 h-100 flex-wrap" style="font-family: monospace; background:#ffffff; zindex:100">
             <img id="logo_img" src="img/logo1gw.png" height="43px" style="position: absolute; padding-left: 10px; padding-top: 8px; padding-bottom: 8px;padding-right: 10px" onclick="demo.init()">
@@ -141,6 +139,11 @@
                     <small><strong>MindsDB v0.9.0</strong></small>
                 </div>
             </div>
+
+        </div>
+
+        <div id="body_cover" class="mdb_black_bg" style="position: absolute; top:0px;bottom:0px;left:0px;right:0px;">
+
 
         </div>
 		<script>

@@ -7,58 +7,76 @@ function validateEmail(email) {
 }
 
 var showLogsScreen = function() {
+
     $('.hide_on_start').hide();
     $('#page_body').show();
-    $('#logo_img2').css({left: "5px", top:"5px"});
     $('#give_us_email').show();
     $('#terms_conditions').hide();
+    $('#logo_img_black_bg').css({left: "5px", top:"5px"});
+
     expandMenu();
 };
 
-var showInitEmailScreen = function() {
-    $('#body_cover').hide();
-    $('.hide_on_start').hide();
-    $('#page_body').hide();
-    $('#give_us_email').show();
 
-    $('#logo_img_black_bg').hide();
-    $('#logo_img_black_bg').css({opacity:0, left:'20%'});
-    $('#logo_img_black_bg').show();
+
+var showInitScreen=function(){
+
+    $('#body_cover').show();
+    $('#page_body').show();
+    plotInit();
+    $('#page_body').hide();
+    $('.hide_on_start').hide();
+
+    var bg_selecttor = $('#logo_img_black_bg');
+    bg_selecttor.hide();
+    bg_selecttor.css({opacity:0, left:'20%'});
+    bg_selecttor.show();
+
     anime({
         targets: '#logo_img_black_bg',
         top:'48%',
         opacity: 1
     });
 
-    $('#email_input').focus();
+    return {
+        showServerHelp : function(){
+            $('#body_cover').hide();
+            $('#give_us_email').hide();
+            $('#server_help').show();
+        },
+        showEmailInput: function() {
+            $('#body_cover').hide();
+            $('#server_help').hide();
+            $('#give_us_email').show();
+            $('#email_input').focus();
+        },
+        showLogsScreen: function() {
+            $('#body_cover').hide();
+            $('.hide_on_start').hide();
+            $('#give_us_email').show();
+            $('#terms_conditions').hide();
+            $('#page_body').show();
 
+            anime({
+                targets: '#logo_img_black_bg',
+                top:'0%',
+                opacity: 0,
+                complete: function(){
+                    bg_selecttor.css({opacity:0, left:'0%', top:'0%'});
+                    bg_selecttor.show();
+                }
+            });
 
+            expandMenu();
+        }
+    }
 
 };
 
-var showInitScreen=function(){
-    $('#body_cover').show();
 
-    $('#page_body').show();
-    hideInit();
-    plotInit();
-    $('.hide_on_start').hide();
-
-};
 
 var initSocket = function() {
     mdbsocket = io.connect(MINDSDB_CONFIG.LOGGING_WEBSOCKET_URL);
-
-
-    //$('.menu_nav').show();
-
-
-
-    mdbsocket.on('connect_error', function(){
-        showServerHelp();
-        //mdbsocket.close();
-    });
-
 
     mdbsocket.resp_calls = {};
 
@@ -70,7 +88,9 @@ var initSocket = function() {
         var uid = payload.uid;
         var response = payload.response;
         var error = payload.error;
+
         error = (typeof error !== 'undefined') ?  error : false;
+
         if(error != false){
             console.error(error);
         }
@@ -81,9 +101,7 @@ var initSocket = function() {
             }
             else{
                 console.info('callback for response not defined, not a bad thing, but logging it, just in case, call-uid:'+uid);
-
             }
-
         }
     });
 
@@ -101,27 +119,29 @@ var initSocket = function() {
 
 var onReady = function(){
 
-    showInitScreen();
+    var init_state = showInitScreen();
     initSocket();
 
     mdbsocket.on('connect', function() {
 
         mdbsocket.callService('getUserEmail', false, function(email){
 
-            var email = false;//(typeof email !== 'undefined')? email: false;
+            var email = (typeof email !== 'undefined')? email: false;
 
             if(!email){
-
-                showInitEmailScreen();
-
+                init_state.showEmailInput();
             }
             else {
-
-
-                continueToLogs(email);
+                init_state.showLogsScreen();
             }
         });
     });
+
+
+    mdbsocket.on('connect_error', function(){
+        init_state.showServerHelp();
+    });
+
 
 };
 
@@ -151,15 +171,11 @@ var continueToLogs = function(email){
 
 };
 
-var showServerHelp = function(){
-    hideInit();
-    $('#server_help').show();
-    //startWithServer();
-};
+
 
 var startWithServer = function() {
     hideInit();
-    $('#logo_img2').css({left: "22%"});
+    $('#logo_img_black_bg').css({left: "22%"});
     $('#give_us_email').show();
     expandMenu();
 
@@ -238,7 +254,7 @@ var expandMenu = function() {
             });
 
             anime({
-                targets: '#logo_img2',
+                targets: '#logo_img_black_bg',
                 opacity: 1,
 
                 complete: function(){
@@ -276,7 +292,7 @@ var collapseMenu = function() {
 
 
     anime({
-        targets: '#logo_img2',
+        targets: '#logo_img_black_bg',
         opacity: 0
     });
 

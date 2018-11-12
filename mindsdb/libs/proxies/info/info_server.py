@@ -24,6 +24,10 @@ class InfoServer:
         def send_js(path):
             return send_from_directory('static/js', path, cache_timeout=-1)
 
+        @app.route('/jsx/<path:path>')
+        def send_jsx(path):
+            return send_from_directory('static/jsx', path, cache_timeout=-1)
+
         @app.route('/css/<path:path>')
         def send_css(path):
             return send_from_directory('static/css', path, cache_timeout=-1)

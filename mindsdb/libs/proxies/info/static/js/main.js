@@ -7,62 +7,6 @@ function validateEmail(email) {
 }
 
 
-var showInitScreen=function(){
-
-    $('#body_cover').show();
-    $('#page_body').show();
-    plotInit();
-    $('#page_body').hide();
-    $('.hide_on_start').hide();
-
-    var bg_selecttor = $('#logo_img_black_bg');
-    bg_selecttor.hide();
-    bg_selecttor.css({opacity:0, left:'20%'});
-    bg_selecttor.show();
-
-    anime({
-        targets: '#logo_img_black_bg',
-        top:'48%',
-        opacity: 1
-    });
-
-    return {
-        showServerHelp : function(){
-            $('#body_cover').hide();
-            $('#give_us_email').hide();
-            $('#server_help').show();
-        },
-        showEmailInput: function() {
-            $('#body_cover').hide();
-            $('#server_help').hide();
-            $('#give_us_email').show();
-            $('#email_input').focus();
-        },
-        showLogsScreen: function() {
-            $('#body_cover').hide();
-            $('.hide_on_start').hide();
-            $('#give_us_email').show();
-            $('#terms_conditions').hide();
-            $('#page_body').show();
-
-            anime({
-                targets: '#logo_img_black_bg',
-                top:'0%',
-                opacity: 0,
-                complete: function(){
-                    bg_selecttor.css({opacity:0, left:'0%', top:'0%'});
-                    bg_selecttor.show();
-                }
-            });
-
-            expandMenu();
-        }
-    }
-
-};
-
-
-
 var initSocket = function() {
     mdbsocket = io.connect(MINDSDB_CONFIG.LOGGING_WEBSOCKET_URL);
 
@@ -96,18 +40,90 @@ var initSocket = function() {
 
     mdbsocket.callService = function(service, data, callback) {
         callback = (typeof callback !== 'undefined') ?  callback : false;
-        console.log(callback);
+
         var uid = _.uniqueId('uid_');
         if(callback!=false){
             mdbsocket.registerResponse(uid, callback);
         }
         mdbsocket.emit('call', {service:service, data:data, uid:uid});
-    }
+    };
+
+    mdbsocket.subscribeToCollection = function(collection, filter, callback) {
+        var uid = _.uniqueId('uid_');
+        mdbsocket.emit('collection', {collection:collection, filter:filter, uid:uid});
+    };
 };
+
+var showInitScreen=function(){
+
+    $('#body_cover').show();
+    $('#page_body').show();
+    plotInit();
+    $('#page_body').hide();
+    $('.hide_on_start').hide();
+
+    var bg_selecttor = $('#logo_img_black_bg');
+    bg_selecttor.hide();
+    bg_selecttor.css({opacity:0, left:'20%'});
+    bg_selecttor.show();
+
+    anime({
+        targets: '#logo_img_black_bg',
+        top:'48%',
+        opacity: 1
+    });
+
+    return {
+        showServerHelp : function(){
+            $('#body_cover').hide();
+            $('#give_us_email').hide();
+            $('#server_help').show();
+        },
+        showEmailInput: function(email) {
+            $('#body_cover').hide();
+            $('#server_help').hide();
+            $('#give_us_email').show();
+            $('#email_input').focus();
+            var email = (typeof email !== 'undefined')? email:  $('#email_input').val();
+            if (email == false) return;
+            $('#email_input').val(email);
+
+        },
+        showLogsScreen: function() {
+            $('#body_cover').hide();
+            $('.hide_on_start').hide();
+            $('#give_us_email').show();
+            $('#terms_conditions').hide();
+            $('#page_body').show();
+
+            anime({
+                targets: '#logo_img_black_bg',
+                top:'0%',
+                opacity: 0,
+                complete: function(){
+                    bg_selecttor.css({opacity:0, left:'0%', top:'0%'});
+                    bg_selecttor.show();
+                }
+            });
+
+            expandMenu();
+        },
+        renderMlModels: function(ml_models) {
+
+        }
+    }
+
+};
+
+
+var current_state =  false;
+
 
 var onReady = function(){
 
     var init_state = showInitScreen();
+    current_state = init_state;
+
     initSocket();
 
     mdbsocket.on('connect', function() {
@@ -120,6 +136,7 @@ var onReady = function(){
                 init_state.showEmailInput();
             }
             else {
+                init_state.showEmailInput(email);
                 init_state.showLogsScreen();
             }
         });
@@ -130,7 +147,16 @@ var onReady = function(){
         init_state.showServerHelp();
     });
 
+    mdbsocket.subscribeToCollection('ml_models', {}, function(ml_models) {
+        init_state.renderMlModels(ml_models);
+    });
+
+    mdbsocket.subscribeToCollection('models_data', {}, function(models_data) {
+        init_state.renderMlModelsData(models_data);
+    });
+
 };
+
 
 
 
@@ -146,7 +172,6 @@ var continueToLogs = function(email){
 
     if (is_valid) {
         mdbsocket.callService('setUserEmail', {email: email});
-        showLogsScreen();
 
     }
     else {
@@ -234,7 +259,7 @@ var expandMenu = function() {
 
                 }
             });
-            
+
 
             $('.menu_nav').css({'visibility':'visible'});
             $('.menu_nav').show();

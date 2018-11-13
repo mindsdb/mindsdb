@@ -16,4 +16,3 @@ build
 mindsdb.egg-info
 clean_data
 .pypirc
-mindsdb/test/*

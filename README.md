@@ -1,5 +1,5 @@
 
-![MindsDB](https://raw.githubusercontent.com/mindsdb/main/master/mindsdb/proxies/info/static/img/logo1gw.png "MindsDB")
+![MindsDB](https://raw.githubusercontent.com/mindsdb/main/master/mindsdb/proxies/web/static/img/logo1gw.png "MindsDB")
 
 #
 

@@ -1,5 +1,5 @@
 [<Back to TOC](../README.md)
-# MindsDB Basics
+# MindsDB Time Series
 
 Here you will find a file [fuel.csv](https://raw.githubusercontent.com/mindsdb/main/master/docs/examples/time_series/fuel.csv), containing the historical fuel consumption data.
 

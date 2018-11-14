@@ -123,36 +123,32 @@ def norm(value, cell_stats):
 
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
-            return [0, 0]
+            return [FULL_TEXT_NONE_VALUE]
 
         # is it a full text
         if cell_stats['dictionaryAvailable']:
             # all the words in the dictionary +2 (one for rare words and one for null)
             vector_length = len(cell_stats['dictionary']) + FULL_TEXT_ENCODING_EXTRA_LENGTH
-            arr = [0] * vector_length
 
-            if value in [None, '']:
-                # return NULL value, which is an empty hot vector array with the last item in list with value 1
-                return [[vector_length - 1]]
 
             # else return a list of one hot vectors
             values = splitRecursive(value, WORD_SEPARATORS)
             array_of_arrays = []
             first_word = vector_length - 4
 
-            array_of_arrays += [first_word]
+            array_of_arrays += [FULL_TEXT_IS_START]
             for word in values:
                 # else return one hot vector
                 # if word is a strange word it will not be in the dictionary
                 try:
                     index = cell_stats['dictionary'].index(word)
                 except:
-                    index = vector_length - 2
+                    index = FULL_TEXT_UN_FREQUENT
                 array_of_arrays += [index]
 
-            last_word = vector_length - 3
 
-            array_of_arrays += [last_word]
+
+            array_of_arrays += [FULL_TEXT_IS_END]
             # return [array_of_arrays]
             # TODO: ask about this
             return array_of_arrays

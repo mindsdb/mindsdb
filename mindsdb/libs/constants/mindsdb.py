@@ -45,6 +45,11 @@ KEY_METADATA = 'metadata'
 KEY_STATUS = 'status'
 
 FULL_TEXT_ENCODING_EXTRA_LENGTH = 4 #(len)[is_start, is_end, unfrequent_word, is_null]
+FULL_TEXT_NONE_VALUE = 0
+FULL_TEXT_IS_START = 1
+FULL_TEXT_IS_END = 2
+FULL_TEXT_UN_FREQUENT = 3
+
 TEXT_ENCODING_EXTRA_LENGTH = 2 #(len)[unfrequent_word, is_null]
 
 ALL_INDEXES_LIST = ['*']

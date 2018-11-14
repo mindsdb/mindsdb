@@ -39,6 +39,7 @@ class WebProxy:
 
         @app.route('/')
         def root():
+            print('aaaaa')
             r = open('static/index.html')
             vars_to_expose = ['WEBSOCKET_URL', 'LOGGING_WEBSOCKET_URL']
             text = r.read()
@@ -92,6 +93,7 @@ class WebProxy:
 
         logging_real.info('Starting MindsDB webserver ... ')
         app = self.startWebServer()
+        print('aaaaaa')
         logging_real.info('Starting MindsDB Logging websocket server on {config}'.format(config=config.LOGGING_WEBSOCKET_URL))
         port = int(config.LOGGING_WEBSOCKET_URL.split(':')[-1])
         sio = self.startWebSocketServer()
@@ -99,7 +101,7 @@ class WebProxy:
         app = socketio.Middleware(sio, app)
 
         # deploy as an eventlet WSGI server
-        #app.run(port=config.LOGGING_WEB_PORT)
+        #app.run()
         eventlet.wsgi.server(eventlet.listen(('', port)), app)
 
 
@@ -110,6 +112,7 @@ class WebProxy:
 
 if __name__ == '__main__':
     from mindsdb import MindsDB
+
     logging_real.basicConfig()
     logging_real.getLogger().setLevel(logging_real.DEBUG)
     controller = MindsDB()

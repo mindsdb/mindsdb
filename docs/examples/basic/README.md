@@ -1,4 +1,4 @@
-[<Back to TOC](../../../README.md)
+[<Back to TOC](../README.md)
 # MindsDB Basics
 
 Here you will find a file [home_rentals.csv](https://raw.githubusercontent.com/mindsdb/main/master/docs/examples/basic/home_rentals.csv), containing the final rental pricing for some properties.
@@ -25,6 +25,8 @@ mdb.learn(
 )
 
 ```
+
+**Note**: that the argument **from_data** can be a path to a file, a URL or a pandas data_frame
 
 
 #### Predicting
@@ -72,3 +74,6 @@ Please note the **when** argument, in this case assuming we only know that:
 * 'sqft': 1190
 
 So long the columns that you pass in the when statement exist in the data it learnt from it will work (see columns in [home_rentals.csv](home_rentals.csv))
+
+
+**Next:** [Time Series Data](../time_series) 

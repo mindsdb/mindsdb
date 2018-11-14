@@ -2,11 +2,7 @@
 
 This example we will walk you over the basics of MindsDB
 
-The example code objective here is to:
-
-- learn a model to predict the best retal price for a given property.
-
-In order to to this we have a dataset "data_sources/home_rentals.csv"
+The example code objective here is to predict the best retail price for a given property.
 
 """
 

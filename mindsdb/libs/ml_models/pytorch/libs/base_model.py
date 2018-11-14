@@ -15,7 +15,16 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.autograd import Variable
-from sklearn.metrics import r2_score, explained_variance_score
+
+###################
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings('error')
+    try:
+        from sklearn.metrics import r2_score, explained_variance_score
+    except Warning:
+        logging.debug('Known warning on imp module')
+#####################
 
 import numpy as np
 

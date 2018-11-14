@@ -25,7 +25,7 @@ import time
 
 
 class PredictWorker():
-    def __init__(self, data, model_name):
+    def __init__(self, model_name, data=None):
         """
         Load basic data needed to find the model data
         :param data: data to make predictions on
@@ -33,16 +33,14 @@ class PredictWorker():
         :param submodel_name: if its also a submodel, the submodel name
         """
 
-        self.data = data
         self.model_name = model_name
-
+        self.data = data
         self.persistent_model_metadata = PersistentModelMetadata()
         self.persistent_model_metadata.model_name = self.model_name
         self.persistent_ml_model_info = PersistentMlModelInfo()
         self.persistent_ml_model_info.model_name = self.model_name
 
         self.persistent_model_metadata = self.persistent_model_metadata.find_one(self.persistent_model_metadata.getPkey())
-
 
         # laod the most accurate model
 
@@ -55,9 +53,6 @@ class PredictWorker():
             logging.info('No model found')
             return
 
-
-        self.predict_sampler = Sampler(self.data.predict_set, metadata_as_stored=self.persistent_model_metadata)
-
         self.ml_model_name = self.persistent_ml_model_info.ml_model_name
         self.config_serialized = self.persistent_ml_model_info.config_serialized
 
@@ -69,24 +64,38 @@ class PredictWorker():
         self.ml_model_module = importlib.import_module(self.ml_model_module_path)
         self.ml_model_class = getattr(self.ml_model_module, self.ml_model_class_name)
 
-        self.sample_batch = self.predict_sampler.getSampleBatch()
-
         self.gfs_save_head_time = time.time()  # the last time it was saved into GridFS, assume it was now
 
         logging.info('Starting model...')
         self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
+
+        if self.data != None:
+            self._loadData(data)
+
+
+    def _loadData(self, data):
+        """
+        Load data
+        :param data:
+        :return:
+        """
+        self.data = data
+        self.predict_sampler = Sampler(self.data.predict_set, metadata_as_stored=self.persistent_model_metadata)
+        self.sample_batch = self.predict_sampler.getSampleBatch()
         self.data_model_object.sample_batch = self.sample_batch
 
 
-
-
-    def predict(self):
+    def predict(self, data=None):
         """
         This actually calls the model and returns the predictions in diff form
 
         :return: diffs, which is a list of dictionaries with pointers as to where to replace the prediction given the value that was predicted
 
         """
+
+        if data != None:
+            self._loadData(data)
+
         self.predict_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
         self.predict_sampler.variable_unwrapper = self.ml_model_class.variable_unwrapper
 
@@ -126,7 +135,7 @@ class PredictWorker():
 
 
     @staticmethod
-    def start(data, model_name):
+    def start(model_name, data):
         """
         We use this worker to parallel train different data models and data model configurations
 
@@ -136,7 +145,7 @@ class PredictWorker():
         :param config: this is the hyperparameter config
         """
 
-        w = PredictWorker(data, model_name)
+        w = PredictWorker(model_name)
         logging.info('Inferring from model and data...')
-        return w.predict()
+        return w.predict(data)
 

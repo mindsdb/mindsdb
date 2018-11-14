@@ -72,11 +72,15 @@ class PersistentObjectMongo(ObjectDict):
         resp = self._collection.find(conditions)
         if order_by is not None:
             resp = resp.sort(order_by)
+
+        if resp is None:
+            return  []
+
         if limit is not None:
             if hasattr(resp, 'limit'):
                 resp = resp.limit(limit)
             else:
-                logging.warning('This driver supports no limit on query')
+                logging.info('This driver supports no limit on query')
 
         ret = []
 

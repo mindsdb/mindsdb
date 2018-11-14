@@ -46,22 +46,42 @@
 
         <div class="menu_nav" style="position:absolute;   right: 0px; left: 65%; top:25%; height:50%; bottom: 0px; z-index:0">
                 <div  class="d-flex flex-wrap align-content-center h-100 w-100 align-items-center " style="color: rgb(215, 215, 215); padding-right: 10%; ">
+                    <div id="model_list" class="hide_on_start">
+                        <strong>Models</strong>
+                        <hr>
+                        <p class="model_item" style="cursor: pointer" onclick="collapseMenu()"><- real_estate.rental_price</p>
+                    </div>
                     <div id="give_us_email" class="hide_on_start">
-                            Welcome to MindsDB, please enter your e-mail address to continue.
 
-                            <br/>
+                        Help improve MindsDB,
+
+                        <p>
+                            <br>
+                        Share with us the accuracy of the models generated as well as errors (if any). This will help us better understand where we can do better.
+
+                        </p>
+
                         <div class="w-100 itemss" style="padding: 15px;">
                             email: <input id="email_input" class="w-75" placeholder="you@emial.com" type="email" alt="email" value="" style="background: rgba(0,0,0,0); border: 0px; color: #2ab673; height: 30px; outline:none"/>
                         </div>
+
+
                         <div class="w-100 align-end" style="">
                             <span id="email_not_valid" class="hide_on_start" style="width:60%;  color: rgb(224, 70, 67); position:absolute">
                                Not a valid e-mail.
                             </span>
                             <span class="" style="padding-left: 70%">
-                                <input type="button" value="CONTINUE" style="background: rgba(0,0,0,0); color: rgb(215, 215, 215); border: 1px solid whitesmoke" onclick="continueToLogs();">
+                                <input type="button" value="REGISTER" style="background: rgba(0,0,0,0); color: rgb(215, 215, 215); border: 1px solid whitesmoke" onclick="continueToLogs();">
 
                             </span>
+
                         </div>
+
+                         <p>
+                            <br><small>
+                             NOTE: That no sensitive data is ever sent. You can skip this step <strong>(here)</strong>.</small>
+                        </p>
+
                     </div>
 
                     <div id="server_help" class="hide_on_start hide_on_starts">
@@ -113,10 +133,10 @@
                     <div class="" id="chart">
 
                     </div>
-                    <div class="text-center small" style="font-family: monospace;">
+                    <div class="text-center small" style="font-family: monospace;color:black">
                         Real vs. Predicted values over with <big> <strong class="">
                             73.94%
-                    </strong> </big> accuracy.
+                    </strong> </big> accuracy. (1x1k)
                     </div>
                 </div>
 

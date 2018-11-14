@@ -5,6 +5,7 @@
 
  * ```config/__init__.py```: All server configuration variables are set here or via env variables
  * ```external_libs```: Any library or code that is not originally developed by mindsDB
+ * ```proxies```: Different ways we can expose MindsDB controller
  * ```libs```: All mindsDB code
     * ```constants```: All mindsDB constants and structs
     * ```controllers```: The server controllers; which handle transaction requests
@@ -17,28 +18,6 @@
     * ```data_entities```: MindsDB stores training data in an object database and these are the entities that we access these through.
 
         
-
-
-# Why use MindsDB?
-
-Developers today are more aware of the capabilities of Machine Learning,
-however from ideas of using ML to actual implementations, there are many
-hurdles and therefore most ideas of using Machine Learning never even
-start.
-
-Thanks to MindsDB people building products can **focus more on**:
-
-* Understanding what problems/predictions are interesting for the business.
-* What data should be of interest for a given prediction.
-
-**Less on:**  spending countless hours building models, making data fit into such models, training, testing, validating, tuning hyper-parameters, ....
-
-MindsDB makes the journey of incorporating AI/Machine Learning to a project 
-simpler than ever before; to do this we use a combination of various Neural 
-Networks methodologies, we picked this approach of all Machine Learning 
-techniques because Neural Nets have shown to be optimal at diverse 
-problems and for various reasons  they tend to outperform non-neural 
-network approaches to learning from data.
 
 # How does it work?
 

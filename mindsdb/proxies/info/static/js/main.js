@@ -90,11 +90,12 @@ var showInitScreen=function(){
 
         },
         showLogsScreen: function() {
+            $('#give_us_email').hide();
             $('#body_cover').hide();
             $('.hide_on_start').hide();
-            $('#give_us_email').show();
             $('#terms_conditions').hide();
             $('#page_body').show();
+            $('#model_list').show();
 
             anime({
                 targets: '#logo_img_black_bg',
@@ -171,7 +172,9 @@ var continueToLogs = function(email){
     var is_valid = validateEmail(email);
 
     if (is_valid) {
-        mdbsocket.callService('setUserEmail', {email: email});
+        mdbsocket.callService('setUserEmail', {email: email}, function() {
+            current_state.showLogsScreen();
+        });
 
     }
     else {

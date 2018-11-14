@@ -15,7 +15,8 @@ import time
 import json
 import traceback
 
-class InfoServer:
+class WebProxy:
+
     def startWebServer(self, test_config=None):
         # create and configure the app
         app = Flask(__name__, instance_relative_config=True)
@@ -112,7 +113,7 @@ if __name__ == '__main__':
     logging_real.basicConfig()
     logging_real.getLogger().setLevel(logging_real.DEBUG)
     controller = MindsDB()
-    info_server = InfoServer(controller)
+    info_server = WebProxy(controller)
     info_server.startProxy()
 
     a = input('exit?')

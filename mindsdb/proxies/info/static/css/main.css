@@ -51,3 +51,7 @@ GENERAL
     height: 43px;
 }
 
+.model_item:hover {
+    color: #2ab673;
+}
+

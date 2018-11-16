@@ -221,7 +221,11 @@ class MindsDBController:
                 logging.warning('Cannot store token, Please add write permissions to file:'+mdb_file)
                 token = token+'.NO_WRITE'
         extra = urllib.parse.quote_plus(token)
-        r = requests.get('http://mindsdb.com/updates/check/{extra}'.format(extra=extra), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)})
+        try:
+            r = requests.get('http://mindsdb.com/updates/check/{extra}'.format(extra=extra), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)})
+        except:
+            logging.warning('Could not check for updates')
+            return
         try:
             # TODO: Extract version, compare with version in version.py
             ret = r.json()

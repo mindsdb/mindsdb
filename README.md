@@ -62,3 +62,9 @@ result = MindsDB().predict(predict='rental_price', when={'number_of_rooms': 2,'n
 print('The predicted price is ${price} with {conf} confidence'.format(price=result.predicted_values[0]['rental_price'], conf=result.predicted_values[0]['prediction_confidence']))
 
 ```
+
+## Report Issues
+
+Please help us by reporting any issues you may have while using MindsDB.
+
+https://github.com/mindsdb/main/blob/master/.github/ISSUE_TEMPLATE/bug_report.md

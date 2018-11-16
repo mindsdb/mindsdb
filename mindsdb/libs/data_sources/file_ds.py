@@ -67,18 +67,24 @@ class FileDS(DataSource):
         # get file as io object
         ############
 
+        data = BytesIO()
+
         # get data from either url or file load in memory
         if file[:5] == 'http:' or file[:6] == 'https:':
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             http = urllib3.PoolManager()
             r = http.request('GET', file, preload_content=False)
-            data = BytesIO()
+
             data.write(r.read())
             data.seek(0)
 
         # else read file from local file system
         else:
-            data = open(file)
+            try:
+                data = open(file)
+            except Exception as e:
+                logging.error('Could not load file, possible exception : {exception}'.format(exception = e))
+                exit(1)
 
 
         dialect = None

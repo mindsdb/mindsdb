@@ -83,8 +83,9 @@ class FileDS(DataSource):
             try:
                 data = open(file)
             except Exception as e:
-                logging.error('Could not load file, possible exception : {exception}'.format(exception = e))
-                exit(1)
+                error = 'Could not load file, possible exception : {exception}'.format(exception = e)
+                logging.error(error)
+                raise ValueError(error)
 
 
         dialect = None

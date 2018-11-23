@@ -1,6 +1,4 @@
-.DStore
-.DS_Store
-.idea
+
 *.ipy*
 *.test.*
 *.pyc
@@ -9,10 +7,49 @@ storage/*
 mindsdb_storage/*
 config/personal_config.py
 *.jar
-venv/*
 data/*
-dist
-build
 mindsdb.egg-info
 clean_data
 .pypirc
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# visual studio code
+.DStore
+.DS_Store
+.idea
+
+# virtualenv
+.venv
+venv/
+ENV/
+
+# pyenv
+.python-version
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+

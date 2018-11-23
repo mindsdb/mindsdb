@@ -1,7 +1,6 @@
 
 *.ipy*
 *.test.*
-*.pyc
 .cache*
 storage/*
 mindsdb_storage/*

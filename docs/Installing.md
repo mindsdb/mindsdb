@@ -23,10 +23,9 @@ Install Conda [download here](https://www.anaconda.com/download/#windows).
  and then run the **anaconda prompt**: 
 
 ```bash
+conda install -c peterjc123 pytorch
 conda install -c blaze 
 conda install -c sqlite3 
-conda install -c peterjc123 
-conda install -c pytorch
 curl -o reqs.txt https://raw.githubusercontent.com/mindsdb/main/master/requirements-win.txt
 pip install --requirement reqs.txt
 pip install mindsdb --no-dependencies

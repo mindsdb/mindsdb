@@ -53,7 +53,7 @@ PROXY_SERVER_HOST = ifEnvElse('MINDSDB_PROXY_SERVER_HOST', 'localhost')
 # LOG Config settings
 PROXY_LOG_CONFIG = {
     'format': ifEnvElse('MINDSDB_PROXY_LOG_FORMAT', '[%(levelname)s] %(message)s'),
-    'level': ifEnvElse('MINDSDB_PROXY_LOG_LEVEL', logging.WARNING ),
+    'level': ifEnvElse('MINDSDB_PROXY_LOG_LEVEL', logging.WARNING),
     'filename': ifEnvElse('MINDSDB_PROXY_LOG_FILENAME', None)
 }
 

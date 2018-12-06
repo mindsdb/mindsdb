@@ -300,6 +300,8 @@ class StatsGenerator(BaseModule):
                 x = x.tolist()
                 y = y.tolist()
 
+                xp = []
+
                 if len(col_data) > 0:
                     max_value = max(col_data)
                     min_value = min(col_data)
@@ -308,6 +310,38 @@ class StatsGenerator(BaseModule):
                     var = np.var(col_data)
                     skew = st.skew(col_data)
                     kurtosis = st.kurtosis(col_data)
+
+                    inc_rate = 0.04
+                    initial_step_size = abs(max_value-min_value)/100
+
+                    xp += [min_value]
+                    i = min_value + initial_step_size
+
+                    while i < max_value:
+
+                        xp += [i]
+                        i_inc = abs(i-min_value)*inc_rate
+                        i = i + i_inc
+
+
+                    # TODO: Solve inc_rate for N
+                    #    min*inx_rate + (min+min*inc_rate)*inc_rate + (min+(min+min*inc_rate)*inc_rate)*inc_rate ....
+                    #
+                    #      x_0 = 0
+                    #      x_i = (min+x_(i-1)) * inc_rate = min*inc_rate + x_(i-1)*inc_rate
+                    #
+                    #      sum of x_i_{i=1}^n (x_i) = max_value = inc_rate ( n * min + sum(x_(i-1)) )
+                    #
+                    #      mx_value/inc_rate = n*min + inc_rate ( n * min + sum(x_(i-2)) )
+                    #
+                    #     mx_value = n*min*in_rate + inc_rate^2*n*min + inc_rate^2*sum(x_(i-2))
+                    #              = n*min(inc_rate+inc_rate^2) + inc_rate^2*sum(x_(i-2))
+                    #              = n*min(inc_rate+inc_rate^2) + inc_rate^2*(inc_rate ( n * min + sum(x_(i-3)) ))
+                    #              = n*min(sum_(i=1)^(i=n)(inc_rate^i))
+                    #    =>  sum_(i=1)^(i=n)(inc_rate^i)) = max_value/(n*min(sum_(i=1)^(i=n))
+                    #
+                    # # i + i*x
+
                 else:
                     max_value = 0
                     min_value = 0
@@ -316,6 +350,10 @@ class StatsGenerator(BaseModule):
                     var = 0
                     skew = 0
                     kurtosis = 0
+                    xp = []
+
+
+
 
 
                 col_stats = {
@@ -335,7 +373,8 @@ class StatsGenerator(BaseModule):
                     "histogram": {
                         "x": x,
                         "y": y
-                    }
+                    },
+                    "percentage_buckets": xp
                 }
                 stats[col_name] = col_stats
             # else if its text

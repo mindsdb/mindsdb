@@ -81,7 +81,7 @@ class FileDS(DataSource):
         # else read file from local file system
         else:
             try:
-                data = open(file)
+                data = open(file, 'rb')
             except Exception as e:
                 error = 'Could not load file, possible exception : {exception}'.format(exception = e)
                 logging.error(error)
@@ -96,6 +96,7 @@ class FileDS(DataSource):
 
         # try to guess if its an excel file
         xlsx_sig = b'\x50\x4B\x05\06'
+        xlsx_sig2 = b'\x50\x4B\x03\x04'
         xls_sig = b'\x09\x08\x10\x00\x00\x06\x05\x00'
 
         # differnt whence, offset, size for different types
@@ -113,21 +114,19 @@ class FileDS(DataSource):
                     return data, 'xls', dialect
                 elif bytes == xlsx_sig:
                     return data, 'xlsx', dialect
-                else:
-                    break
+
             except:
                 data.seek(0)
-                break
 
         # if not excel it can be a json file or a CSV, convert from binary to stringio
-        if isinstance(data, BytesIO):
-            byte_str = data.read()
-            # Move it to StringIO
-            try:
-                data = StringIO(byte_str.decode('UTF-8'))
-            except:
-                logging.error(traceback.format_exc())
-                logging.error('Could not load into string')
+
+        byte_str = data.read()
+        # Move it to StringIO
+        try:
+            data = StringIO(byte_str.decode('UTF-8'))
+        except:
+            logging.error(traceback.format_exc())
+            logging.error('Could not load into string')
 
         # see if its JSON
         buffer = data.read(100)
@@ -161,6 +160,8 @@ class FileDS(DataSource):
                 return data, None, dialect
         except:
             data.seek(0)
+            logging.error('Could not detect format for this file')
+            logging.error(traceback.format_exc())
             # No file type identified
             return data, None, dialect
 

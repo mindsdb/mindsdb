@@ -4,7 +4,7 @@ from mindsdb.libs.constants.mindsdb import *
 import torch
 import math
 import torch.nn as nn
-
+import numpy as np
 
 from mindsdb.libs.ml_models.pytorch.libs.base_model import BaseModel
 from mindsdb.libs.ml_models.pytorch.encoders.rnn.encoder_rnn import EncoderRNN
@@ -13,6 +13,7 @@ from mindsdb.libs.ml_models.pytorch.encoders.rnn.encoder_rnn import EncoderRNN
 class EnsembleFullyConnectedNet(BaseModel):
 
     ignore_types = [] # NONE
+    use_full_text_input = True
 
     def setup(self, sample_batch):
         """
@@ -28,6 +29,7 @@ class EnsembleFullyConnectedNet(BaseModel):
         self.dropout_pct = 0.2 # this is what we dropout of the neurons to minimize saddle points TODO: This can be a config value
 
         sample_input = sample_batch.getInput(flatten=self.flatInput)
+        sample_full_text_input = sample_batch.getFullTextInput()
         sample_target = sample_batch.getTarget(flatten=self.flatTarget)
         output_size = sample_target.size()[1]
 
@@ -41,14 +43,23 @@ class EnsembleFullyConnectedNet(BaseModel):
         self.nets = {}
         self.encoders = {}
 
-        for col in sample_input:
+
+        input_cols = [col for col in sample_input] + [col for col in sample_full_text_input]
+
+        for col in input_cols:
 
             is_text = True if sample_batch.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT else False
 
-            col_size = sample_input[col].size()[1]
+            is_numeric_or_date = True if sample_batch.sampler.stats[col][KEYS.DATA_TYPE] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] else False
 
-            if col_size > self.input_encoder_size*2:
-                initial_size = col_size if is_text == False else self.fulltext_encoder_hidden_size
+            if is_text: # also create an encoder
+                lang_len = len(sample_batch.sampler.stats[col]['dictionary']) + FULL_TEXT_ENCODING_EXTRA_LENGTH
+                self.encoders[col] = EncoderRNN(lang_len, self.fulltext_encoder_hidden_size)
+                initial_size = self.fulltext_encoder_hidden_size
+            else:
+                initial_size = sample_input[col].size()[1]
+
+            if initial_size > self.input_encoder_size*2:
 
                 self.nets[col] =   nn.Sequential(
                     nn.Linear(initial_size, self.input_encoder_size*2),
@@ -66,15 +77,13 @@ class EnsembleFullyConnectedNet(BaseModel):
                     nn.Linear(sample_input[col].size()[1], output_size),
                 )
 
-            if is_text: # also create an encoder
-                lang_len = len(sample_batch.sampler.stats[col]['dictionary']) + FULL_TEXT_ENCODING_EXTRA_LENGTH
-                self.encoders[col] = EncoderRNN(lang_len, self.fulltext_encoder_hidden_size)
+
 
         self.ordered_cols = [col for col in self.nets]
 
 
         # the input of the last neural net is the flat input + all the predictions per column
-        input2_size = len(sample_input)*output_size #+ sum([sample_input[col].size()[1] for col in sample_input])
+        input2_size = (len(sample_input) + len(sample_full_text_input))*output_size #+ sum([sample_input[col].size()[1] for col in sample_input])
 
 
         self.regnet = nn.Sequential(
@@ -97,7 +106,7 @@ class EnsembleFullyConnectedNet(BaseModel):
         :return:
         """
 
-        predicted_target, inner_preds = self.forward(batch.getInput(flatten=self.flatInput), True)
+        predicted_target, inner_preds = self.forward(batch.getInput(flatten=self.flatInput), full_text_input = batch.getFullTextInput(), return_inner_outputs =True)
         real_target = batch.getTarget(flatten=self.flatTarget)
         loss = 0
         for pred in inner_preds:
@@ -111,7 +120,7 @@ class EnsembleFullyConnectedNet(BaseModel):
 
 
 
-    def forward(self, input, return_inner_outputs = False):
+    def forward(self, input, full_text_input, return_inner_outputs = False):
         """
         In this particular model, we just need to forward the network defined in setup, with our input
 
@@ -122,23 +131,24 @@ class EnsembleFullyConnectedNet(BaseModel):
 
         for col in self.ordered_cols:
 
-            if col in self.encoders:
+            if col in self.encoders and col in full_text_input:
                 encoder_hidden = self.encoders[col].initHidden()
-                total_rows = input[col].size(0) # this should give the number of rows, TODO: Confirm this
+                total_rows = len(full_text_input[col])  # this should give the number of rows, TODO: Confirm this
                 input_tensor = [] # TODO:this should be an empty tensor
 
                 # encode each row
                 for row_i in range(total_rows):
                     # foreach row encode each word, take the encoder hidden
-                    r_input_length = input[col][row_i].size(0)
+                    r_input_length = len(full_text_input[col][row_i])
+
                     for ei in range(r_input_length):
-                        encoder_output, encoder_hidden = self.encoders[col](input[col][row_i][ei], encoder_hidden)
+                        encoder_output, encoder_hidden = self.encoders[col](full_text_input[col][row_i][ei], encoder_hidden)
 
                     # use the last encoded hidden states to create an input vector for each row
                     input_tensor += [encoder_hidden] # todo this is more about appending rows to the tensor
 
                 # run the column network with the hidden estates
-                inner_outputs += [self.nets[col](input_tensor)]
+                inner_outputs += [self.nets[col](torch.cat(input_tensor,1)[0])]
 
             else:
                 inner_outputs += [self.nets[col](input[col])]

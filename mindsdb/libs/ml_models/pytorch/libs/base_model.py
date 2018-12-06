@@ -39,6 +39,7 @@ class BaseModel(nn.Module):
     variable_wrapper = arrayToFloatVariable
     variable_unwrapper = variableToArray
     ignore_types = [DATA_TYPES.FULL_TEXT]
+    use_full_text_input = False
 
     def __init__(self, sample_batch, **kwargs):
         """
@@ -83,7 +84,7 @@ class BaseModel(nn.Module):
         self.input_column_names =  self.sample_batch.input_column_names
 
         # column permutations for learning Nones
-        self.col_permutations =  getOneColPermutations(self.input_column_names) + [[]]
+        self.col_permutations =  getOneColPermutations(self.input_column_names) #+ [[]]
 
 
     def zeroGradOptimizer(self):
@@ -141,6 +142,11 @@ class BaseModel(nn.Module):
             self.optimizer = self.optimizer_class(self.parameters(), lr=self.current_learning_rate)
         self.optimizer.step()
 
+    def forwardWrapper(self, batch):
+        if self.use_full_text_input == False:
+            return self.forward(batch.getInput(flatten=self.flatInput))
+        else:
+            return self.forward(batch.getInput(flatten=self.flatInput), full_text_input = batch.getFullTextInput())
 
     def calculateBatchLoss(self, batch):
         """
@@ -149,7 +155,7 @@ class BaseModel(nn.Module):
         :return:
         """
 
-        predicted_target = self.forward(batch.getInput(flatten=self.flatInput))
+        predicted_target = self.forwardWrapper(batch)
         real_target = batch.getTarget(flatten=self.flatTarget)
         loss = self.lossFunction(predicted_target, real_target)
         batch_size = real_target.size()[0]
@@ -205,13 +211,23 @@ class BaseModel(nn.Module):
         predicted_target_all_ret = []
 
         self.eval() # toggle eval
+        perm_index = 0
+
         for batch_number, batch in enumerate(test_sampler):
-            for permutation in  self.col_permutations:
+
+            # do only one permutation at a time, if we 2 or more columns
+            if len(self.input_column_names) > 1:
+                perms = [self.col_permutations[perm_index], []]
+                perm_index = perm_index + 1 if perm_index + 1 < len(self.col_permutations) else 0
+            else:
+                perms = [[]]
+
+            for permutation in perms:
                 batch.blank_columns = permutation
                 #batch.blank_columns = []
                 logging.debug('[EPOCH-BATCH] testing batch: {batch_number}'.format(batch_number=batch_number))
                 # get real and predicted values by running the model with the input of this batch
-                predicted_target = self.forward(batch.getInput(flatten=self.flatInput))
+                predicted_target = self.forwardWrapper(batch)
                 real_target = batch.getTarget(flatten=self.flatTarget)
                 # append to all targets and all real values
                 real_target_all += real_target.data.tolist()
@@ -282,13 +298,24 @@ class BaseModel(nn.Module):
             full_set_loss = 0
             total_samples = 0
             response.epoch = epoch
+            perm_index = 0
             # train epoch
             for batch_number, batch in enumerate(train_sampler):
                 # TODO: Build machanics for model to learn about missing data
                 # How? Here build permutation list of all possible combinations of blank columns
                 # Iterate over permutations on train loop (which is what is inside this for statement)
                 # Interface: Batch.setNullColumns(cols=<type: list>)
-                for permutation in self.col_permutations:
+
+                # do only one permutation at a time, if we 2 or more columns
+                if len(self.input_column_names) > 1:
+                    perms = [self.col_permutations[perm_index], []]
+                    perm_index = perm_index +1 if perm_index + 1 < len(self.col_permutations) else 0
+                else:
+                    perms = [[]]
+                # so here we pass one column per batch that can use as permutation,
+                # essentially on every batch it makes sure that we pass all columns [[]] and also we do a run with one column with none values
+
+                for permutation in perms:
                     batch.blank_columns = permutation
                     response.batch = batch_number
                     logging.debug('[EPOCH-BATCH] Training on epoch: {epoch}/{num_epochs}, batch: {batch_number}'.format(
@@ -301,7 +328,7 @@ class BaseModel(nn.Module):
                     total_samples += batch_size
                     full_set_loss += int(loss.item()) * batch_size # this is because we need to wight the error by samples in batch
                     average_loss = full_set_loss / total_samples
-                    loss.backward()
+                    loss.backward()#retain_graph=True)
                     model_object.optimize()
                     response.loss = average_loss
 

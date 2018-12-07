@@ -136,7 +136,7 @@ class FileDS(DataSource):
         if len(text) > 0:
             text = text.strip()
             # it it looks like a json, then try to parse it
-            if text != "" and ((text[0] == "{" and text[-1] == "}") or (text[0] == "[" and text[-1] == "]")):
+            if text != "" and ((text[0] == "{") or (text[0] == "[")):
                 try:
                     json.loads(data.read())
                     data.seek(0)
@@ -203,7 +203,7 @@ class FileDS(DataSource):
 
         elif format == 'json':
             data.seek(0)
-            json_doc = json.loads(data)
+            json_doc = json.loads(data.read())
             df = json_normalize(json_doc)
             header = df.columns.values.tolist()
             file_data = df.values.tolist()

@@ -1,6 +1,6 @@
 from mindsdb.libs.data_types.data_source import DataSource
 from mindsdb.libs.data_sources.file_ds import FileDS
-from pathlib import Path
+from pandas import DataFrame
 
 # import logging
 from mindsdb.libs.helpers.logging import logging
@@ -16,6 +16,10 @@ def getDS(from_data):
 
     if isinstance(from_data, DataSource):
         from_ds = from_data
+
+    elif isinstance(from_data, DataFrame):
+        from_ds = DataSource(from_data)
+
 
     else:  # assume is a file
         from_ds = FileDS(from_data)

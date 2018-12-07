@@ -10,7 +10,7 @@ from mindsdb.libs.ml_models.pytorch.libs.base_model import BaseModel
 
 
 
-class FullyConnectedNet(BaseModel):
+class FullyConnectedBucketsNet(BaseModel):
 
 
     def setup(self, sample_batch):
@@ -23,8 +23,12 @@ class FullyConnectedNet(BaseModel):
         self.flatTarget = True # True means that we will expect target to be a flat vector per row, even if its multiple variables
         self.flatInput = True # True means that we will expect input to be a a flat vector per row, even if it smade of multiple variables
 
+        self.lossFunctionForBuckets = nn.CrossEntropyLoss() # this is the loss function for buckets
+
         sample_input = sample_batch.getInput(flatten=self.flatInput)
         sample_target = sample_batch.getTarget(flatten=self.flatTarget)
+        sample_target_by_buckets = sample_batch.getTarget(flatten = False, by_buckets = True)
+
         input_size = sample_input.size()[1]
         output_size = sample_target.size()[1]
 
@@ -38,14 +42,36 @@ class FullyConnectedNet(BaseModel):
             nn.Linear(int(math.ceil(input_size/2)), output_size)
         )
 
-
+        self.nets = { col: nn.Sequential(
+            nn.Linear(output_size, sample_target_by_buckets[col].size()[1])
+        ) for col in sample_target_by_buckets }
 
         if USE_CUDA:
             self.net.cuda()
 
 
+    def calculateBatchLoss(self, batch):
+        """
 
-    def forward(self, input):
+        :param batch:
+        :return:
+        """
+
+        predicted_target, predicted_buckets = self.forward(batch.getInput(flatten=self.flatInput), return_bucket_outputs =True)
+        real_target = batch.getTarget(flatten=self.flatTarget)
+        real_targets_buckets = batch.getTarget(flatten=False, by_buckets=True)
+
+        loss = 0
+        for col in predicted_buckets:
+
+            loss += self.lossFunction(predicted_buckets[col], real_targets_buckets[col])
+
+        loss += self.lossFunction(predicted_target, real_target)
+        batch_size = real_target.size()[0]
+        return loss, batch_size
+
+
+    def forward(self, input, return_bucket_outputs = False):
         """
         In this particular model, we just need to forward the network defined in setup, with our input
 
@@ -53,7 +79,16 @@ class FullyConnectedNet(BaseModel):
         :return:
         """
         output = self.net(input)
-        return output
+
+        if return_bucket_outputs is False:
+
+            return output
+
+        output_buckets = {}
+        for col in self.nets:
+            output_buckets[col] = self.nets[col](output)
+
+        return output, output_buckets
 
 
 

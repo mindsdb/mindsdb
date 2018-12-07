@@ -179,7 +179,7 @@ class DataVectorizer(BaseModule):
                     target_set[group_by_hash][column_name] += [normalized]
 
                     if self.transaction.persistent_model_metadata.column_stats[column_name][KEYS.DATA_TYPE] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] and column_name in self.train_meta_data.model_predict_columns:
-                        column_name_expanded = '{column_name}.extensions.buckets'.format(column_name=column_name)
+                        column_name_expanded = EXTENSION_COLUMNS_TEMPLATE.format(column_name=column_name)
                         if column_name_expanded not in target_set[group_by_hash]:
                             target_set[group_by_hash][column_name_expanded] = []
 

@@ -19,8 +19,9 @@ OFFSET = 0.00000001
 
 def norm_buckets(value, cell_stats):
     '''
+
     This will return a list of len of cell_stats['percentage_buckets']+2
-    Last two values in list are [greater_than_max_value, is_not_null]
+    Last two values in list are [greater_than_max_value, is_null]
     First value of list is [smaller than min]
 
     :param value: the value to encode
@@ -32,9 +33,10 @@ def norm_buckets(value, cell_stats):
         ret = [0]*(len(cell_stats['percentage_buckets'])+2)
         # if noen return empty list
         if value == None:
+            ret[-1] = 1
             return ret
         # else set the last item as 1
-        ret[-1]=1
+
 
         # if it's greater than the maximum set the 'second last' to one
         if value > cell_stats['max']:

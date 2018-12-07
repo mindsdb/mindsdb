@@ -90,6 +90,9 @@ class Sampler:
                     #if self.stats[column][KEYS.DATA_TYPE] != DATA_TYPES.FULL_TEXT:
                     ret[column] = self.data[group][column][group_pointer:limit]
 
+                    ext_col_name = EXTENSION_COLUMNS_TEMPLATE.format(column_name=column)
+                    if ext_col_name in self.data[group]:
+                        ret[ext_col_name] = self.data[group][ext_col_name][group_pointer:limit]
                     # else:
                     #     # Todo: figure out how to deal with full text features here
                     #     ret[column] =[0]*(limit-group_pointer)

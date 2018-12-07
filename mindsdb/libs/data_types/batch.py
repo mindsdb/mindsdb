@@ -12,6 +12,8 @@
 from mindsdb.libs.constants.mindsdb import *
 import numpy as np
 import torch
+import logging
+import traceback
 
 class Batch:
     def __init__(self, sampler, data_dict, mirror = False, group=None, column=None, start=None, end=None):
@@ -73,9 +75,9 @@ class Batch:
     def getColumn(self, what, col, by_buckets = False):
 
         if by_buckets and self.sampler.stats[col][KEYS.DATA_TYPE]==DATA_TYPES.NUMERIC:
-            col_name = '{column_name}.extensions.buckets'.format(column_name=col)
-            if col_name in self.xy[what]:
-                ret = self.xy[what][col_name]
+            col_name = EXTENSION_COLUMNS_TEMPLATE.format(column_name=col)
+            if col_name in self.data_dict:
+                ret = self.data_dict[col_name]
             else:
                 raise Exception('No extension column {col}'.format(col=col_name))
             return ret
@@ -93,7 +95,7 @@ class Batch:
                 if col not in self.xy[what]:
                     continue
 
-                #do not include full text as its a variable length tensor, which we cannot wrap
+                # do not include full text as its a variable length tensor, which we cannot wrap
                 if self.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
                     continue
 
@@ -116,7 +118,8 @@ class Batch:
                 try:
                     ret[col] = self.sampler.variable_wrapper(self.getColumn(what,col, by_buckets))
                 except:
-                    raise ValueError('Could not decode column {what}:{col}.'.format(what=what, col=col))
+                    logging.error(traceback.format_exc())
+                    raise ValueError('Could not decode column {what}:{col}'.format(what=what, col=col))
             return ret
         else:
             return self.xy[what]

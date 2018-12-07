@@ -217,6 +217,8 @@ def denorm(value, cell_stats, return_nones = True, return_dates_as_time_stamps =
         else:
             denormalized = value * cell_stats['max']
 
+        if 'is_float' in cell_stats and cell_stats['is_float'] == False:
+            denormalized = int(denormalized)
 
         return denormalized
 

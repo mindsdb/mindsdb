@@ -29,6 +29,9 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive
 from mindsdb.external_libs.stats import sampleSize
 
+from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
+
+
 class StatsGenerator(BaseModule):
 
     phase_name = PHASE_DATA_STATS
@@ -239,6 +242,9 @@ class StatsGenerator(BaseModule):
 
     def run(self):
 
+        self.train_meta_data = TransactionMetadata()
+        self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
+
         header = self.transaction.input_data.columns
         origData = {}
 
@@ -274,6 +280,16 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(origData):
             col_data = origData[col_name] # all rows in just one column
             data_type = self.getColumnDataType(col_data)
+
+            # NOTE: Enable this if you want to assume that some numeric values can be text
+            # We noticed that by default this should not be the behavior
+            # TODO: Evaluate if we want to specify the problem type on predict statement as regression or classification
+            #
+            # if col_name in self.train_meta_data.model_predict_columns and data_type == DATA_TYPES.NUMERIC:
+            #     unique_count = len(set(col_data))
+            #     if unique_count <= CONFIG.ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN:
+            #         data_type = DATA_TYPES.TEXT
+
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']:
@@ -353,7 +369,7 @@ class StatsGenerator(BaseModule):
                     xp = []
 
 
-
+                is_float = True if max([1 if int(i) != i else 0 for i in col_data]) == 1 else False
 
 
                 col_stats = {
@@ -370,6 +386,7 @@ class StatsGenerator(BaseModule):
                     "emptyPercentage": empty_count[col_name] / column_count[col_name] * 100,
                     "max": max_value,
                     "min": min_value,
+                    "is_float": is_float,
                     "histogram": {
                         "x": x,
                         "y": y

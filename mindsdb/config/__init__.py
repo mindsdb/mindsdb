@@ -35,7 +35,8 @@ EXEC_LEARN_IN_THREAD = ifEnvElse('EXEC_LEARN_IN_THREAD', False)
 
 # How big do we want each batch size at training
 SAMPLER_MAX_BATCH_SIZE =  ifEnvElse('SAMPLER_MAX_BATCH_SIZE', 1000)
-
+# We can take in numeric columns as text when the number of unique values in the column is less than this flag
+ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN =  ifEnvElse('ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN', 200)
 
 # MindsDB has various Proxies that you can plug into
 MYSQL_PROXY = ifEnvElse('MYSQL_PROXY', False)

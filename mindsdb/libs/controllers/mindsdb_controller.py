@@ -174,6 +174,9 @@ class MindsDBController:
         :param model_name:
         :return:
         """
+        
+        if not predict:
+            raise ValueError('Please provide valid predict value.')
 
         transaction_type = TRANSACTION_PREDICT
 

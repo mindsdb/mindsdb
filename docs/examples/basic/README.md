@@ -1,7 +1,7 @@
 [<Back to TOC](../README.md)
 # MindsDB Basics
 
-Here you will find a file [home_rentals.csv](https://raw.githubusercontent.com/mindsdb/main/master/docs/examples/basic/home_rentals.csv), containing the final rental pricing for some properties.
+Here you will find a file [home_rentals.csv](https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv), containing the final rental pricing for some properties.
 
 ### Goal
 The goal is to be able to predict the best **rental_price** for a new properties given the information that we have in home_rentals.csv.
@@ -19,7 +19,7 @@ mdb = MindsDB()
 
 # We tell mindsDB what we want to learn and from what data
 mdb.learn(
-    from_data="https://raw.githubusercontent.com/mindsdb/main/master/docs/examples/basic/home_rentals.csv", # the path to the file where we can learn from, (note: can be url)
+    from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv", # the path to the file where we can learn from, (note: can be url)
     predict='rental_price', # the column we want to learn to predict given all the data in the file
     model_name='home_rentals' # the name of this model
 )

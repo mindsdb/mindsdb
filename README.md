@@ -1,5 +1,5 @@
 
-![MindsDB](https://raw.githubusercontent.com/mindsdb/main/master/mindsdb/proxies/web/static/img/logo1gw.png "MindsDB")
+![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/mindsdb/proxies/web/static/img/logo1gw.png "MindsDB")
 
 #
 
@@ -67,4 +67,4 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 
 Please help us by reporting any issues you may have while using MindsDB.
 
-https://github.com/mindsdb/main/blob/master/.github/ISSUE_TEMPLATE/bug_report.md
+https://github.com/mindsdb/mindsdb/blob/master/.github/ISSUE_TEMPLATE/bug_report.md

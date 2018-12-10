@@ -6,7 +6,7 @@ MindsDB uses pandas as its datasource driver, so anything you can convert into a
 
 There is are special implementations of datasources that already do cleaning and various tasks:
 
-You can learn about them in [here](https://github.com/mindsdb/main/tree/master/mindsdb/libs/data_sources):
+You can learn about them in [here](https://github.com/mindsdb/mindsdb/tree/master/mindsdb/libs/data_sources):
 
 #### FileDS
 

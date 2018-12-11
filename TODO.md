@@ -1,15 +1,11 @@
-# TODO
-- Add transformation as angurment to train
-- Syntax on predict, when, give values for time series
-- Update the documentation, we changed is null boolean dimension for not null
-- Print stats data on stats generator
-- Break demo code into train/predict
-- Only create time series col representation if average(count(distinct column)) in column by group by is <=1
-- On time series, break test-train automatically
-- When model is finished training, test by column, store importance matrix
-- Distributions on test and validation sets 
-- Fix time series include target column for past readings (IMPORTANT)
-- Update loss function to be log relative
-- Implement logging proxy visualizer
-- Support from dataframe directly
-- Support stream dataframes (http://matthewrocklin.com/blog/work/2017/10/16/streaming-dataframes-1)
+# TODO v0.8.8
+
+- Make all problems classification problems. For numeric, date, use buckets with 3% error margin
+
+- Update results to be a most likely value for prediction with a probability distribution, we can use this as the output of the softmax
+
+# TODO v0.8.9
+
+- Implement previous step to training the full model,  for encoders-decoders to be trained
+
+- Use encoders to encode all full text columns first and then use the encoded value as the normalized value

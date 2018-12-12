@@ -163,7 +163,7 @@ class Batch:
 
         return ret
 
-    def getInputStats(self):
+    def getTargetStats(self):
 
         stats = {}
 
@@ -172,7 +172,7 @@ class Batch:
 
         return stats
 
-    def getTargetStats(self):
+    def getInputStats(self):
 
         stats = {}
 

@@ -44,7 +44,10 @@ class TransactionOutputData():
                     logging.warning('Output is smaller than expected, see transaction_output_data.py')
                     ret_row[KEY_CONFIDENCE] = 0
                 else:
-                    ret_row[KEY_CONFIDENCE] = row[col_index]
+                    try:
+                        ret_row[KEY_CONFIDENCE] = row[col_index]
+                    except:
+                        ret_row[KEY_CONFIDENCE] = 0
 
             # append row to result
             ret += [ret_row]

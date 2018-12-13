@@ -1,6 +1,6 @@
 [<Back to Table of Contents](../README.md)
 
-##Data Sources
+## Data Sources
 
 MindsDB uses pandas as its datasource driver, so anything you can convert into a dataframe MindsDB can work with.
 

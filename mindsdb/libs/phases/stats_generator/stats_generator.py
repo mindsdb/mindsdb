@@ -327,7 +327,7 @@ class StatsGenerator(BaseModule):
                     skew = st.skew(col_data)
                     kurtosis = st.kurtosis(col_data)
 
-                    inc_rate = 0.04
+                    inc_rate = 0.05
                     initial_step_size = abs(max_value-min_value)/100
 
                     xp += [min_value]

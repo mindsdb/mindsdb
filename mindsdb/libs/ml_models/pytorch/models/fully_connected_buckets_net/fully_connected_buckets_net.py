@@ -66,7 +66,7 @@ class FullyConnectedBucketsNet(BaseModel):
 
             loss += self.lossFunction(predicted_buckets[col], real_targets_buckets[col])
 
-        loss += self.lossFunction(predicted_target, real_target)
+        loss = loss * self.lossFunction(predicted_target, real_target)
         batch_size = real_target.size()[0]
         return loss, batch_size
 

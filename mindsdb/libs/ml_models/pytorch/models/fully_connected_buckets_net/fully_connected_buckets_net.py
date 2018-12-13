@@ -61,7 +61,11 @@ class FullyConnectedBucketsNet(BaseModel):
         real_target = batch.getTarget(flatten=self.flatTarget)
         real_targets_buckets = batch.getTarget(flatten=False, by_buckets=True)
 
-        loss = 0
+        # make sure we have a loss
+        if len(predicted_buckets) > 0:
+            loss = 0
+        else:
+            loss = 1
         for col in predicted_buckets:
 
             loss += self.lossFunction(predicted_buckets[col], real_targets_buckets[col])

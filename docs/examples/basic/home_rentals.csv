@@ -1,4 +1,4 @@
-number_of_rooms,number_of_bathrooms,sqft,location,days_on_market,initial_price,neighborhood,rental_price
+number_of_rooms,number_of_bathrooms,sqft,location,days_on_market,initial_price,neighborhood,rental price
 0,1,484,great,10,2271,south_side,2271
 1,1,674,good,1,2167,downtown,2167
 1,1,554,poor,19,1883,westbrae,1883

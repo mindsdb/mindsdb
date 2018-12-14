@@ -11,6 +11,13 @@
 
 import re
 
+def get_key_for_val(key, dict_map):
+    for orig_col in dict_map:
+        if dict_map[orig_col] == key:
+            return orig_col
+
+    return key
+
 def convert_cammelcase_to_snake_string(cammel_string):
     """
     Converts snake string to cammelcase

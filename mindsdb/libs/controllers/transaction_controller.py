@@ -188,6 +188,10 @@ class TransactionController:
             self.session.logging.error('No metadata found for this model')
             return
 
+        self.metadata.model_predict_columns = self.persistent_model_metadata.predict_columns
+        self.metadata.model_columns_map = self.persistent_model_metadata.train_metadata['model_columns_map']
+        self.metadata.model_when_conditions = {key if key not in self.metadata.model_columns_map else self.metadata.model_columns_map[key] : self.metadata.model_when_conditions[key] for key in self.metadata.model_when_conditions }
+
         self.callPhaseModule('DataExtractor')
         if len(self.input_data.data_array[0])<=0:
             self.output_data = self.input_data

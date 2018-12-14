@@ -34,14 +34,14 @@ class FileDS(DataSource):
                 col = col+'_'+str(col_count[col])
 
             if orig_col != col:
-                logging.warning('[Column renamed] {orig_col} to {col}'.format(orig_col=orig_col, col=col))
+                logging.debug('[Column renamed] {orig_col} to {col}'.format(orig_col=orig_col, col=col))
 
             self._col_map[orig_col] = col
             clean_header.append(col)
 
         if clean_header != header:
             string = """\n    {cols} \n""".format(cols=",\n    ".join(clean_header))
-            logging.warning('The Columns have changed, here are the renamed columns: \n {string}'.format(string=string))
+            logging.debug('The Columns have changed, here are the renamed columns: \n {string}'.format(string=string))
 
 
         return  clean_header

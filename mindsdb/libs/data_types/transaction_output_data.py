@@ -4,10 +4,19 @@ from mindsdb.libs.helpers.logging import logging
 
 class TransactionOutputData():
 
-    def __init__(self, predicted_columns=[]):
+    def __init__(self, predicted_columns=[], columns_map = {}):
         self.data_array = []
         self.columns = []
-        self.predicted_columns = []
+        self.predicted_columns = predicted_columns
+        self.columns_map = columns_map
+
+    def _getOrigColum(self, col):
+
+        for orig_col in self.columns_map:
+            if self.columns_map[orig_col] == col:
+                return orig_col
+
+        return col
 
     @property
     def predicted_values(self, as_list=False, add_header = False):
@@ -32,7 +41,7 @@ class TransactionOutputData():
                 if as_list:
                     ret_row += [row[col_index]]
                 else:
-                    ret_row[col] = row[col_index]
+                    ret_row[self._getOrigColum(col)] = row[col_index]
 
 
             # append confidence
@@ -54,7 +63,7 @@ class TransactionOutputData():
 
         # if add_header and as_list True, add the header to the result
         if as_list and add_header:
-            header = self.predicted_columns + [KEY_CONFIDENCE]
+            header = [self._getOrigColum(col) for col in self.predicted_columns] + [KEY_CONFIDENCE]
             ret = [header] + ret
 
         return ret

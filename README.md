@@ -1,6 +1,6 @@
 
 ![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/mindsdb/proxies/web/static/img/logo1gw.png "MindsDB")
-    v.0.8.9 (dev)
+    v.0.8.9
 #
 
 

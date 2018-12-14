@@ -9,6 +9,8 @@
  *******************************************************
 """
 
+from mindsdb.libs.helpers.logging import logging
+from mindsdb.proxies.mysql.data_types.mysql_datum import Datum
 from mindsdb.mindsdb_server.proxies.mysql.data_types.mysql_packet import Packet
 
 

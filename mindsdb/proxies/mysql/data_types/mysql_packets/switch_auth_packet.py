@@ -9,6 +9,8 @@
  *******************************************************
 """
 
+from mindsdb.libs.helpers.logging import logging
+from mindsdb.proxies.mysql.data_types.mysql_datum import Datum
 from mindsdb.mindsdb_server.proxies.mysql.data_types.mysql_packet import Packet
 
 
@@ -52,6 +54,3 @@ class SwitchOutPacket(Packet):
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     SwitchOutPacket.test()
-
-
-

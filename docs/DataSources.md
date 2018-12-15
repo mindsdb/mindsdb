@@ -20,7 +20,7 @@ ds = FileDS(file, clean_header = True, clean_rows = True, custom_parser = None)
 * ***file*** can be a path in the localsystem, stringio object or a url to a file, supported types are (csv, json, xlsx, xls).
 * ***clean_header*** (default=True) clean column names, so that they don't have special characters or white spaces.
 * ***clean_rows*** (default=True) Goes row by row making sure that nulls are nulls and that no corrupt data exists in them, it also cleans empty rows
-* ***custom_oarser*** (default=None) special function to extract the actual table structure from the file in case you need special transformations.
+* ***custom_parser*** (default=None) special function to extract the actual table structure from the file in case you need special transformations.
 
 #### OPTIONAL
 

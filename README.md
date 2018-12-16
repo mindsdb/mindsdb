@@ -10,7 +10,7 @@ MindsDB's goal is to make it very simple for developers to use the power of arti
 
 
 * [Installing MindsDB](docs/Installing.md)
-* [Using MindsDB on the cloud with Google Colab](docs/GoogleColab.md)
+* [Using MindsDB in the cloud with Google Colab](docs/GoogleColab.md)
 * [Config Settings](docs/Config.md)
 * [Learning from Examples](docs/examples/basic/README.md)
 * [Inside MindsDB](docs/InsideMindsDB.md)

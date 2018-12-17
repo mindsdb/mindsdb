@@ -14,7 +14,7 @@ MindsDB's goal is to make it very simple for developers to use the power of arti
 * [Config Settings](docs/Config.md)
 * [Learning from Examples](docs/examples/basic/README.md)
 * [Inside MindsDB](docs/InsideMindsDB.md)
-* [Help out](https://mindsdb.typeform.com/to/c3CEtj)
+* [Provide feedback to improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
 
 
 ## Quick Overview

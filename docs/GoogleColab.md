@@ -1,7 +1,8 @@
 [<Back to Table of Contents](../README.md)
 # Using MindsDB with Google Colab
 
-[Google Colab](https://colab.research.google.com) is a free cloud service that supports free GPU! You can use MindsDB there, here its how:
+[Google Colab](https://colab.research.google.com) is a free cloud service that supports free GPU! 
+You can use MindsDB there, here its how: [Demo](https://colab.research.google.com/gist/JohannesFerner/88773019cd385fe6ba0a9377a4779f40/mindsdb.ipynb)
 
 Fortunately, this is really easy.
 Inside Google Colab, start a new python 3 notebook and in a cell, insert the following

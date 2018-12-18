@@ -1,0 +1,37 @@
+{
+    "variables": {
+      "release": "",
+      "description": "This file is used to run packer against already running instances, for development/testing/iteration.  This is a stripped version of packer-mindsdb-aws.json"
+    },
+    "builders": [
+      {
+        "type":         "null",
+        "ssh_pty" :     "true",
+        "ssh_host":     "1.2.3.4",
+        "ssh_username": "ubuntu",
+        "ssh_password": "passwordhere"
+      }],
+    "provisioners": [
+      {
+          "type": "shell",
+          "scripts": [
+              "001-prepare-ubuntu.sh"
+          ]
+      },
+      {
+          "type": "shell",
+          "scripts": [
+              "002-prepare-anaconda.sh"
+          ]
+      },
+      {
+          "type": "shell",
+          "environment_vars": [
+              "MINDSDB_RELEASE={{user `release`}}"
+          ],
+          "scripts": [
+              "003-prepare-mindsdb.sh"
+          ]
+      }
+    ]
+}

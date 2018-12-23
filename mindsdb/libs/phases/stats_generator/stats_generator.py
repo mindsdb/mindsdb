@@ -26,7 +26,7 @@ import mindsdb.config as CONFIG
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.helpers.text_helpers import splitRecursive
+from mindsdb.libs.helpers.text_helpers import splitRecursive, cleanfloat
 from mindsdb.external_libs.stats import sampleSize
 
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
@@ -44,7 +44,7 @@ class StatsGenerator(BaseModule):
             return int(string)
         except ValueError:
             try:
-                return float(string)
+                return cleanfloat(string)
             except ValueError:
                 if string == '':
                     return None
@@ -54,7 +54,7 @@ class StatsGenerator(BaseModule):
     def isNumber(self, string):
         """ Returns True if string is a number. """
         try:
-            float(string)
+            cleanfloat(string)
             return True
         except ValueError:
             return False
@@ -309,7 +309,7 @@ class StatsGenerator(BaseModule):
                         newData.append(value)
 
 
-                col_data = [float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
+                col_data = [cleanfloat(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
 
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0

@@ -20,7 +20,7 @@ from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from collections import OrderedDict
 from mindsdb.libs.helpers.norm_denorm_helpers import norm, norm_buckets
-from mindsdb.libs.helpers.text_helpers import hashtext
+from mindsdb.libs.helpers.text_helpers import hashtext, cleanfloat
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 
@@ -36,7 +36,7 @@ class DataVectorizer(BaseModule):
             return int(string)
         except ValueError:
             try:
-                return float(string)
+                return cleanfloat(string)
             except ValueError:
                 if string == '':
                     return None
@@ -70,7 +70,7 @@ class DataVectorizer(BaseModule):
 
                 # append the target values before:
                 for predict_col_name in predict_columns:
-                     row_extra_vector += [float(v) for v in ret[predict_col_name][col_row_index + i + 1]]
+                     row_extra_vector += [cleanfloat(v) for v in ret[predict_col_name][col_row_index + i + 1]]
             except:
                 logging.error(traceback.format_exc())
                 logging.error('something is not right, seems like we got here with np arrays and they should not be!')

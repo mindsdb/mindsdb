@@ -3,6 +3,8 @@
 
 Here you will find a file [home_rentals.csv](https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv), containing the final rental pricing for some properties.
 
+You can follow [this example on Google Colab](https://colab.research.google.com/gist/JohannesFerner/88773019cd385fe6ba0a9377a4779f40/mindsdb.ipynb)
+
 ### Goal
 The goal is to be able to predict the best **rental_price** for a new properties given the information that we have in home_rentals.csv.
 

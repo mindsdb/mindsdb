@@ -157,7 +157,7 @@ class StatsGenerator(BaseModule):
             cell_wseparator = cell
             sep_tag = '{#SEP#}'
             for separator in WORD_SEPARATORS:
-                cell_wseparator = cell_wseparator.replace(separator,sep_tag)
+                cell_wseparator = str(cell_wseparator).replace(separator,sep_tag)
 
             words_split = cell_wseparator.split(sep_tag)
             words = len([ word for word in words_split if word not in ['', None] ])

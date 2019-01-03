@@ -26,8 +26,11 @@ import mindsdb.config as CONFIG
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.helpers.text_helpers import splitRecursive
+from mindsdb.libs.helpers.text_helpers import splitRecursive, cleanfloat
 from mindsdb.external_libs.stats import sampleSize
+
+from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
+
 
 class StatsGenerator(BaseModule):
 
@@ -41,7 +44,7 @@ class StatsGenerator(BaseModule):
             return int(string)
         except ValueError:
             try:
-                return float(string)
+                return cleanfloat(string)
             except ValueError:
                 if string == '':
                     return None
@@ -51,7 +54,7 @@ class StatsGenerator(BaseModule):
     def isNumber(self, string):
         """ Returns True if string is a number. """
         try:
-            float(string)
+            cleanfloat(string)
             return True
         except ValueError:
             return False
@@ -154,7 +157,7 @@ class StatsGenerator(BaseModule):
             cell_wseparator = cell
             sep_tag = '{#SEP#}'
             for separator in WORD_SEPARATORS:
-                cell_wseparator = cell_wseparator.replace(separator,sep_tag)
+                cell_wseparator = str(cell_wseparator).replace(separator,sep_tag)
 
             words_split = cell_wseparator.split(sep_tag)
             words = len([ word for word in words_split if word not in ['', None] ])
@@ -239,6 +242,9 @@ class StatsGenerator(BaseModule):
 
     def run(self):
 
+        self.train_meta_data = TransactionMetadata()
+        self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
+
         header = self.transaction.input_data.columns
         origData = {}
 
@@ -274,6 +280,16 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(origData):
             col_data = origData[col_name] # all rows in just one column
             data_type = self.getColumnDataType(col_data)
+
+            # NOTE: Enable this if you want to assume that some numeric values can be text
+            # We noticed that by default this should not be the behavior
+            # TODO: Evaluate if we want to specify the problem type on predict statement as regression or classification
+            #
+            # if col_name in self.train_meta_data.model_predict_columns and data_type == DATA_TYPES.NUMERIC:
+            #     unique_count = len(set(col_data))
+            #     if unique_count <= CONFIG.ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN:
+            #         data_type = DATA_TYPES.TEXT
+
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']:
@@ -293,12 +309,14 @@ class StatsGenerator(BaseModule):
                         newData.append(value)
 
 
-                col_data = [float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
+                col_data = [cleanfloat(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
 
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
                 x = x.tolist()
                 y = y.tolist()
+
+                xp = []
 
                 if len(col_data) > 0:
                     max_value = max(col_data)
@@ -308,6 +326,38 @@ class StatsGenerator(BaseModule):
                     var = np.var(col_data)
                     skew = st.skew(col_data)
                     kurtosis = st.kurtosis(col_data)
+
+                    inc_rate = 0.05
+                    initial_step_size = abs(max_value-min_value)/100
+
+                    xp += [min_value]
+                    i = min_value + initial_step_size
+
+                    while i < max_value:
+
+                        xp += [i]
+                        i_inc = abs(i-min_value)*inc_rate
+                        i = i + i_inc
+
+
+                    # TODO: Solve inc_rate for N
+                    #    min*inx_rate + (min+min*inc_rate)*inc_rate + (min+(min+min*inc_rate)*inc_rate)*inc_rate ....
+                    #
+                    #      x_0 = 0
+                    #      x_i = (min+x_(i-1)) * inc_rate = min*inc_rate + x_(i-1)*inc_rate
+                    #
+                    #      sum of x_i_{i=1}^n (x_i) = max_value = inc_rate ( n * min + sum(x_(i-1)) )
+                    #
+                    #      mx_value/inc_rate = n*min + inc_rate ( n * min + sum(x_(i-2)) )
+                    #
+                    #     mx_value = n*min*in_rate + inc_rate^2*n*min + inc_rate^2*sum(x_(i-2))
+                    #              = n*min(inc_rate+inc_rate^2) + inc_rate^2*sum(x_(i-2))
+                    #              = n*min(inc_rate+inc_rate^2) + inc_rate^2*(inc_rate ( n * min + sum(x_(i-3)) ))
+                    #              = n*min(sum_(i=1)^(i=n)(inc_rate^i))
+                    #    =>  sum_(i=1)^(i=n)(inc_rate^i)) = max_value/(n*min(sum_(i=1)^(i=n))
+                    #
+                    # # i + i*x
+
                 else:
                     max_value = 0
                     min_value = 0
@@ -316,6 +366,10 @@ class StatsGenerator(BaseModule):
                     var = 0
                     skew = 0
                     kurtosis = 0
+                    xp = []
+
+
+                is_float = True if max([1 if int(i) != i else 0 for i in col_data]) == 1 else False
 
 
                 col_stats = {
@@ -332,10 +386,12 @@ class StatsGenerator(BaseModule):
                     "emptyPercentage": empty_count[col_name] / column_count[col_name] * 100,
                     "max": max_value,
                     "min": min_value,
+                    "is_float": is_float,
                     "histogram": {
                         "x": x,
                         "y": y
-                    }
+                    },
+                    "percentage_buckets": xp
                 }
                 stats[col_name] = col_stats
             # else if its text

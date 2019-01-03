@@ -131,7 +131,7 @@ class MindsDBController:
             logging.warning('Cannot read email, Please add write permissions to file:' + email_file)
             return None
 
-    def learn(self, predict, from_file=None, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END, ignore_columns = []):
+    def learn(self, predict, from_file=None, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = True):
         """
 
         :param from_query:
@@ -146,11 +146,22 @@ class MindsDBController:
 
         transaction_type = TRANSACTION_LEARN
 
+        predict_columns_map = {}
         predict_columns = [predict] if type(predict) != type([]) else predict
+
+        if rename_strange_columns is False:
+            for predict_col in predict_columns:
+                predict_col_as_in_df = from_ds.getColNameAsInDF(predict_col)
+                predict_columns_map[predict_col_as_in_df]=predict_col
+
+            predict_columns = list(predict_columns_map.keys())
+        else:
+            logging.warning('After version 1.0 rename_strange_columns in MindsDB().learn, the default value will be flipped from True to False ')
 
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = model_name
         transaction_metadata.model_predict_columns = predict_columns
+        transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
         transaction_metadata.model_group_by = group_by
         transaction_metadata.model_order_by = order_by if type(order_by) == type([]) else [order_by]
         transaction_metadata.window_size = window_size
@@ -166,7 +177,7 @@ class MindsDBController:
     def startInfoServer(self):
         pass
 
-    def predict(self, predict, from_data = None, when={}, model_name='mdsb_model', breakpoint= PHASE_END):
+    def predict(self, when={}, from_data = None, model_name='mdsb_model', breakpoint= PHASE_END, **kargs):
         """
 
         :param predict:
@@ -174,16 +185,20 @@ class MindsDBController:
         :param model_name:
         :return:
         """
+        
+
 
         transaction_type = TRANSACTION_PREDICT
 
         from_ds = None if from_data is None else getDS(from_data)
 
-        predict_columns = [predict] if type(predict) != type([]) else predict
-
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = model_name
-        transaction_metadata.model_predict_columns = predict_columns
+
+        # This will become irrelevant as if we have trained a model with a predict we just need to pass when or from_data
+        # predict_columns = [predict] if type(predict) != type([]) else predict
+        # transaction_metadata.model_predict_columns = predict_columns
+
         transaction_metadata.model_when_conditions = when
         transaction_metadata.type = transaction_type
         transaction_metadata.storage_file = self.storage_file
@@ -231,7 +246,7 @@ class MindsDBController:
             ret = r.json()
 
             if 'version' in ret and ret['version']!= MINDSDB_VERSION:
-                logging.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip2 install mindsdb --user".format(version=ret['version']))
+                logging.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
             else:
                 logging.debug('MindsDB is up to date!')
 

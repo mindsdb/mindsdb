@@ -17,6 +17,46 @@ import datetime
 
 OFFSET = 0.00000001
 
+def norm_buckets(value, cell_stats):
+    '''
+
+    This will return a list of len of cell_stats['percentage_buckets']+2
+    Last two values in list are [greater_than_max_value, is_null]
+    First value of list is [smaller than min]
+
+    :param value: the value to encode
+    :param cell_stats: the stats for the column
+    :return: a list
+    '''
+
+    if cell_stats[KEYS.DATA_TYPE] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE]:
+        ret = [0]*(len(cell_stats['percentage_buckets'])+2)
+        # if noen return empty list
+        if value == None:
+            ret[-1] = 1
+            return ret
+        # else set the last item as 1
+
+
+        # if it's greater than the maximum set the 'second last' to one
+        if value > cell_stats['max']:
+            ret[-2] = 1
+            return ret
+
+        for i,val in enumerate(cell_stats['percentage_buckets']):
+            if (value <= val and i ==0):
+                ret[0] = 1
+                break
+            elif (value <= val and value > cell_stats['percentage_buckets'][i-1]):
+                ret[i] =1
+                break
+
+        return ret
+
+
+    else:
+        raise Exception('Should not try to get norm buckets for other data types than numeric and date')
+
 def norm(value, cell_stats):
 
 
@@ -24,7 +64,7 @@ def norm(value, cell_stats):
 
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
-            return [0, 0, 0]
+            return [0, 0]
 
         if cell_stats['max'] - cell_stats['min'] != 0:
 
@@ -42,9 +82,9 @@ def norm(value, cell_stats):
 
         sign = 1 if normalizedValue >= 0 else 0
 
-        normalizedValue = abs(normalizedValue) + OFFSET
+        #normalizedValue = abs(normalizedValue) + OFFSET
 
-        return [normalizedValue, sign, 1.0]
+        return [normalizedValue, 1.0]
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:
         #[ timestamp, year, month, day, minute, second, is null]
@@ -169,16 +209,17 @@ def denorm(value, cell_stats, return_nones = True, return_dates_as_time_stamps =
             return ''
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
-        sign_value = value[1]
-        value = abs(value[0] - OFFSET)
+
+        value = value[0]
 
         if cell_stats['max'] - cell_stats['min'] != 0:
             denormalized = value * (cell_stats['max'] - cell_stats['min']) + cell_stats['min']
         else:
             denormalized = value * cell_stats['max']
 
-        if sign_value < 0.5:
-            denormalized = -1*denormalized
+        if 'is_float' in cell_stats and cell_stats['is_float'] == False:
+            denormalized = round(denormalized)
+
         return denormalized
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:

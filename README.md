@@ -1,6 +1,6 @@
 
-![MindsDB](https://raw.githubusercontent.com/mindsdb/main/master/mindsdb/proxies/web/static/img/logo1gw.png "MindsDB")
-
+![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/mindsdb/proxies/web/static/img/logo1gw.png "MindsDB")
+    v.0.8.9
 #
 
 
@@ -10,13 +10,16 @@ MindsDB's goal is to make it very simple for developers to use the power of arti
 
 
 * [Installing MindsDB](docs/Installing.md)
+* [Using MindsDB in the cloud with Google Colab](docs/GoogleColab.md)
 * [Config Settings](docs/Config.md)
 * [Learning from Examples](docs/examples/basic/README.md)
 * [Inside MindsDB](docs/InsideMindsDB.md)
-
+* [Provide feedback to improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
 
 
 ## Quick Overview
+
+You can get started in your own computer/cloud or you can also try it via your browser using [Google Colab](docs/GoogleColab.md).
 
 It's very simple to setup 
 
@@ -67,4 +70,4 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 
 Please help us by reporting any issues you may have while using MindsDB.
 
-https://github.com/mindsdb/main/blob/master/.github/ISSUE_TEMPLATE/bug_report.md
+https://github.com/mindsdb/mindsdb/issues/new/choose

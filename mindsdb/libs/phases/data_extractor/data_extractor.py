@@ -339,9 +339,14 @@ class DataExtractor(BaseModule):
                 self.transaction.input_data.test_indexes = self.transaction.input_data.train_indexes[-test_size:]
                 self.transaction.input_data.train_indexes = self.transaction.input_data.train_indexes[:-test_size]
 
-            logging.info('- Test: {size} rows'.format(size=len(self.transaction.input_data.test_indexes)))
-            logging.info('- Train: {size} rows'.format(size=len(self.transaction.input_data.train_indexes)))
-
+            test_len = len(self.transaction.input_data.test_indexes)
+            train_len = len(self.transaction.input_data.train_indexes)
+            validation_len = len(self.transaction.input_data.validation_indexes)
+            total_len = test_len + train_len + validation_len
+            logging.info('- Train: {size} rows'.format(size=train_len))
+            logging.info('- Test: {size} rows'.format(size=test_len))
+            logging.info('- Validation: {size} rows'.format(size=validation_len))
+            logging.info('-- Total: {size} rows'.format(size=total_len))
 
 def test():
     from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB

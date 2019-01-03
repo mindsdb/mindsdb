@@ -40,6 +40,7 @@ class ModelPredictor(BaseModule):
         # TODO: This may be inneficient, try to work on same pointer
         self.transaction.output_data.data_array = self.transaction.input_data.data_array
         self.transaction.output_data.predicted_columns=self.transaction.metadata.model_predict_columns
+        self.transaction.output_data.columns_map =  self.transaction.metadata.model_columns_map
         for diff in ret_diffs:
             for col in diff['ret_dict']:
                 confusion_matrix = confusion_matrices[col]

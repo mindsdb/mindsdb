@@ -13,6 +13,13 @@ from mindsdb.libs.constants.mindsdb import *
 import json
 import hashlib
 
+def cleanfloat(str):
+    if type(str) in [type(int(1)), type(1.0)]:
+        return float(str)
+
+    str = str.replace(',','.')
+    return float(str)
+
 def splitRecursive(word, tokens):
     words = [word]
     for token in tokens:

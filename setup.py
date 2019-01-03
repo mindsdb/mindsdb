@@ -14,7 +14,7 @@ setuptools.setup(
     description="MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. ",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/mindsdb/main",
+    url="https://github.com/mindsdb/mindsdb",
     packages=setuptools.find_packages(),
     install_requires=requirements,
     classifiers=(

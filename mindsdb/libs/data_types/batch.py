@@ -11,6 +11,9 @@
 
 from mindsdb.libs.constants.mindsdb import *
 import numpy as np
+import torch
+import logging
+import traceback
 
 class Batch:
     def __init__(self, sampler, data_dict, mirror = False, group=None, column=None, start=None, end=None):
@@ -69,23 +72,38 @@ class Batch:
 
         return
 
-    def getColumn(self, what, col):
-        if col in self.blank_columns:
-            return np.zeros_like(self.xy[what][col])
-        return self.xy[what][col]
+    def getColumn(self, what, col, by_buckets = False):
 
-    def get(self, what, flatten = True):
+        if by_buckets and self.sampler.stats[col][KEYS.DATA_TYPE]==DATA_TYPES.NUMERIC:
+            col_name = EXTENSION_COLUMNS_TEMPLATE.format(column_name=col)
+            if col_name in self.data_dict:
+                ret = self.data_dict[col_name]
+            else:
+                raise Exception('No extension column {col}'.format(col=col_name))
+            return ret
+        else:
+            ret = self.xy[what][col]
+        if col in self.blank_columns:
+            return np.zeros_like(ret)
+        return ret
+
+    def get(self, what, flatten = True, by_buckets = False):
         ret = None
         if flatten:
             # make sure we serialize in the same order that input metadata columns
             for col in self.sampler.model_columns:
                 if col not in self.xy[what]:
                     continue
+
+                # do not include full text as its a variable length tensor, which we cannot wrap
+                if self.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+                    continue
+
                 # make sure that this is always in the same order, use a list or make xw[what] an ordered dictionary
                 if ret is None:
-                    ret = self.getColumn(what,col)
+                    ret = self.getColumn(what,col, by_buckets)
                 else:
-                    ret = np.concatenate((ret, self.getColumn(what,col)), axis=1)
+                    ret = np.concatenate((ret, self.getColumn(what,col, by_buckets)), axis=1)
 
             if self.sampler.variable_wrapper is not None:
                 return self.sampler.variable_wrapper(ret)
@@ -95,17 +113,42 @@ class Batch:
         if self.sampler.variable_wrapper is not None:
             ret = {}
             for col in self.xy[what]:
-                ret[col] = self.sampler.variable_wrapper(self.getColumn(what,col))
+                if self.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+                    continue
+                try:
+                    ret[col] = self.sampler.variable_wrapper(self.getColumn(what,col, by_buckets))
+                except:
+                    logging.error(traceback.format_exc())
+                    raise ValueError('Could not decode column {what}:{col}'.format(what=what, col=col))
             return ret
         else:
             return self.xy[what]
+
+    def getFullTextInput(self):
+        """
+        TODO: mOVE THE WRAPPER function to the model, so we can keep this batch framework agnostic
+        :return:
+        """
+        what = 'input'
+        ret = {}
+        for col in self.sampler.model_columns:
+            if col not in self.xy[what] or self.sampler.stats[col][KEYS.DATA_TYPE] != DATA_TYPES.FULL_TEXT:
+                continue
+
+            ret[col] = [torch.tensor(row, dtype=torch.long).view(-1, 1) for row in self.getColumn(what, col)]
+
+
+
+        return ret
+
+
 
     def getInput(self, flatten = True):
         return self.get('input', flatten)
 
 
-    def getTarget(self, flatten = True):
-        return self.get('target', flatten)
+    def getTarget(self, flatten = True, by_buckets = False):
+        return self.get('target', flatten, by_buckets)
 
     def deflatTarget(self, flat_vector):
         ret = {}
@@ -120,7 +163,7 @@ class Batch:
 
         return ret
 
-    def getInputStats(self):
+    def getTargetStats(self):
 
         stats = {}
 
@@ -129,7 +172,7 @@ class Batch:
 
         return stats
 
-    def getTargetStats(self):
+    def getInputStats(self):
 
         stats = {}
 

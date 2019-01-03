@@ -103,7 +103,10 @@ class PredictWorker():
         for batch in self.predict_sampler:
 
             logging.info('predicting batch...')
-            ret = self.data_model_object.forward(batch.getInput(flatten=self.data_model_object.flatInput))
+            if self.data_model_object.use_full_text_input:
+                ret = self.data_model_object.forward(batch.getInput(flatten=self.data_model_object.flatInput), full_text_input=batch.getFullTextInput())
+            else:
+                ret = self.data_model_object.forward(batch.getInput(flatten=self.data_model_object.flatInput))
             if type(ret) != type({}):
                 ret_dict = batch.deflatTarget(ret)
             else:

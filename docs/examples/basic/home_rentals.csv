@@ -1,5 +1,5 @@
 number_of_rooms,number_of_bathrooms,sqft,location,days_on_market,initial_price,neighborhood,rental_price
-0,1,484,great,10,2271,south_side,2271
+0,1,"484,8",great,10,2271,south_side,2271
 1,1,674,good,1,2167,downtown,2167
 1,1,554,poor,19,1883,westbrae,1883
 0,1,529,great,3,2431,south_side,2431
@@ -1688,7 +1688,7 @@ number_of_rooms,number_of_bathrooms,sqft,location,days_on_market,initial_price,n
 3,2,879,great,9,5169,east_elmwood,5169
 2,1,817,good,4,3379,north_berkeley,3379
 3,2,1123,poor,49,4513,frontage_rd,4251.246
-1,1,640,good,0,2184,north_berkeley,2184
+1,1,"640,56",good,0,2184,north_berkeley,2184
 1,1,707,good,1,2168,north_berkeley,2168
 1,1,347,poor,63,1174,frontage_rd,1073.036
 0,1,245,poor,63,1060,frontage_rd,968.84
@@ -1871,7 +1871,7 @@ number_of_rooms,number_of_bathrooms,sqft,location,days_on_market,initial_price,n
 2,1,704,great,6,3707,east_elmwood,3707
 0,1,495,great,13,2226,east_elmwood,2226
 3,2,957,good,11,4708,north_berkeley,4708
-2,1,944,good,0,3581,north_berkeley,3581
+2,1,"944,98",good,0,3581,north_berkeley,3581
 1,1,698,good,10,2132,north_berkeley,2132
 3,2,897,good,3,4677,north_berkeley,4677
 1,1,643,poor,23,1942,frontage_rd,1930.348

@@ -50,6 +50,8 @@ FULL_TEXT_IS_START = 1
 FULL_TEXT_IS_END = 2
 FULL_TEXT_UN_FREQUENT = 3
 
+EXTENSION_COLUMNS_TEMPLATE = '_extensions_.buckets.{column_name}'
+
 TEXT_ENCODING_EXTRA_LENGTH = 2 #(len)[unfrequent_word, is_null]
 
 ALL_INDEXES_LIST = ['*']

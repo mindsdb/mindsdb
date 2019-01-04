@@ -1,9 +1,6 @@
-[<Back to Table of Contents](../README.md)
+[<Back to Table of Contents](../../../README.md)
 
-# Using MindsDB with Kaggle House Prices dataset
-Kaggle allows users to find and publish data sets, explore and build models in a web-based data-science environment.
-There are thousands of datasets available for training the models.
-You can signin or register on https://www.kaggle.com with Google, Facebook, Yahoo or your email.
+[<More Kaggle examples](../README.md)
 
 ## House prices dataset
 For this example we will use [house prices dataset.](https://www.kaggle.com/lespin/house-prices-dataset)

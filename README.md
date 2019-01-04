@@ -13,7 +13,11 @@ MindsDB's goal is to make it very simple for developers to use the power of arti
 * [Using MindsDB in the cloud with Google Colab](docs/GoogleColab.md)
 * [Config Settings](docs/Config.md)
 * [Learning from Examples](docs/examples/basic/README.md)
-* [Inside MindsDB](docs/InsideMindsDB.md)
+    * [Basic Example](docs/examples/basic/README.md)
+    * [Data preparation](docs/DataSources.md)
+    * [Time Series](docs/examples/time_series/README.md)
+    * [Examples from Kaggle](docs/examples/kaggle/README.md)
+* [Frequently Asked Questions](docs/FAQ.md)
 * [Provide feedback to improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
 
 

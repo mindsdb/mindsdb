@@ -5,7 +5,7 @@
 ### Why MindsDB?
 
 We are building MindsDB, because we want to *Democratize Machine Learning*.
-If you want to learn more about why this is important and how we aim to do this, you can checkout our presentation [here](link to ).
+If you want to learn more about why this is important and how we aim to do this, you can checkout our presentation [here](https://docs.google.com/presentation/d/e/2PACX-1vTfmQfc4rV2OjepzAMsCRAK3Z0h-IbOLMx66Ao_tFAvNX6yjNv4f1AkRK31mCLmKm8DbWwz-2F0NeBQ/pub?start=false&loop=false&delayms=3000).
 
 ### Who are we building MindsDB for?
 
@@ -76,7 +76,7 @@ You can help in the following ways:
  
 ### Why is it called MindsDB?
 
-Well, as most names, we needed one, we like science fiction and the culture series, where there are these AI super smart entities called Minds.
+Well, as most names, we needed one, we like science fiction and the [culture series](https://en.wikipedia.org/wiki/The_Culture_(series)), where there are these AI super smart entities called Minds.
 
 How about the DB part?. Although in the future we will support all kinds of data, currently our objective is to add intelligence to existing data stores/databases, hence the term DB.
 As to becoming a **Mind** to your **DB**.

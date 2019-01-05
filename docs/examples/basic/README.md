@@ -1,8 +1,8 @@
 [<Back to TOC](../../../README.md)
 
-* [Basic Example](/README.md#%20MindsDB%20Basics)
-* [Data preparation](../../../DataSources.md)
-* [Config Settings](../../../Config.md)
+* [Basic Example](README.md#%20MindsDB%20Basics)
+* [Data preparation](../../DataSources.md)
+* [Config Settings](../../Config.md)
 * [Time Series](../time_series/README.md)
 * [Examples from Kaggle](../kaggle/README.md)
 

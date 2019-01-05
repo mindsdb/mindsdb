@@ -1,4 +1,8 @@
 [<Back to Table of Contents](../README.md)
+
+* [Installing MindsDB in your environment](GoogleColab.md)
+* [Using MindsDB in the cloud with Google Colab](GoogleColab.md)
+
 # Installing MindsDB
 
 

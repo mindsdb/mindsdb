@@ -1,6 +1,7 @@
 [<Back to TOC](../../../README.md)
 
 * [Basic Example](README.md#mindsdb-basics)
+* [Using MindsDB in the cloud with Google Colab](../../GoogleColab.md)
 * [Data preparation](../../DataSources.md)
 * [Config Settings](../../Config.md)
 * [Time Series](../time_series/README.md)

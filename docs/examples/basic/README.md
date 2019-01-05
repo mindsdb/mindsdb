@@ -1,6 +1,6 @@
 [<Back to TOC](../../../README.md)
 
-* [Basic Example](README.md#%20MindsDB%20Basics)
+* [Basic Example](README.md#mindsdb-basics)
 * [Data preparation](../../DataSources.md)
 * [Config Settings](../../Config.md)
 * [Time Series](../time_series/README.md)

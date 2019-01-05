@@ -1,4 +1,11 @@
 [<Back to TOC](../../../README.md)
+
+* [Basic Example](docs/examples/basic/README.md# MindsDB Basics)
+* [Data preparation](docs/DataSources.md)
+* [Config Settings](docs/Config.md)
+* [Time Series](docs/examples/time_series/README.md)
+* [Examples from Kaggle](docs/examples/kaggle/README.md)
+
 # MindsDB Basics
 
 Here you will find a file [home_rentals.csv](https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv), containing the final rental pricing for some properties.

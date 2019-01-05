@@ -1,10 +1,10 @@
 [<Back to TOC](../../../README.md)
 
-* [Basic Example](docs/examples/basic/README.md# MindsDB Basics)
-* [Data preparation](docs/DataSources.md)
-* [Config Settings](docs/Config.md)
-* [Time Series](docs/examples/time_series/README.md)
-* [Examples from Kaggle](docs/examples/kaggle/README.md)
+* [Basic Example](/README.md#%20MindsDB%20Basics)
+* [Data preparation](../../../DataSources.md)
+* [Config Settings](../../../Config.md)
+* [Time Series](../time_series/README.md)
+* [Examples from Kaggle](../kaggle/README.md)
 
 # MindsDB Basics
 
@@ -85,4 +85,4 @@ Please note the **when** argument, in this case assuming we only know that:
 So long the columns that you pass in the when statement exist in the data it learnt from it will work (see columns in [home_rentals.csv](home_rentals.csv))
 
 
-**Next:** [Time Series Data](../time_series) 
+

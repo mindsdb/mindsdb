@@ -9,7 +9,6 @@
 MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. 
 
 * [Installing MindsDB](docs/Installing.md)
-    * [Using MindsDB in the cloud with Google Colab](docs/GoogleColab.md)
 * [Learning from Examples](docs/examples/basic/README.md)
 * [Frequently Asked Questions](docs/FAQ.md)
 * [Provide feedback to improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)

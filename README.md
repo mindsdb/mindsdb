@@ -8,17 +8,9 @@
 
 MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. 
 
-* Getting Started
-    * [Installing MindsDB](docs/Installing.md)
+* [Installing MindsDB](docs/Installing.md)
     * [Using MindsDB in the cloud with Google Colab](docs/GoogleColab.md)
-    * [Run on Docker](distributions/docker)
-    * [Run on AWS](distributions/aws)
 * [Learning from Examples](docs/examples/basic/README.md)
-    * [Basic Example](docs/examples/basic/README.md)
-    * [Data preparation](docs/DataSources.md)
-    * [Config Settings](docs/Config.md)
-    * [Time Series](docs/examples/time_series/README.md)
-    * [Examples from Kaggle](docs/examples/kaggle/README.md)
 * [Frequently Asked Questions](docs/FAQ.md)
 * [Provide feedback to improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
 

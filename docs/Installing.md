@@ -37,7 +37,7 @@ pip install mindsdb --no-dependencies
 
 # Build and run your docker container
 
-Assuming that you have [docker](https://docs.docker.com/install/) installed in your computer.
+Alternatively, You can also run MindsDB in a docker container. Assuming that you have [docker](https://docs.docker.com/install/) installed in your computer.
 on your terminal, you can do the following:
 
 ```
@@ -45,3 +45,4 @@ sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/dist
 
 ```
 
+We also have prebuilt images in [DockerHub](https://cloud.docker.com/repository/docker/mindsdb/mindsdb)

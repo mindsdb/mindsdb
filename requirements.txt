@@ -6,7 +6,6 @@ attrs>=18.2.0
 eventlet>=0.24.1
 openpyxl>=2.5.8
 Automat>=0.7.0
-certifi>=2018.8.24
 chardet>=3.0.4
 Click>=7.0
 constantly>=15.1.0

@@ -1,5 +1,5 @@
 
-#MindsDB roadmap
+# MindsDB roadmap
 
 * versions > 0.9 was focused on goal 1 *(December 2018)*.
 * versions 1.0 and greater will focus on for goal 2 *(January 2019)*

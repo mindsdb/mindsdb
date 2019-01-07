@@ -1,14 +1,8 @@
 [<Back to Table of Contents](../README.md)
 
 * [Installing MindsDB on your environment](Installing.md#installing-mindsdb)
-
-
-Alternatively you can:
-
-
 * [Use MindsDB in the cloud with Google Colab](GoogleColab.md)
-* [Build your MindsDB docker container](../distributions/docker)
-* [Build your AWS container](../distributions/aws)
+
 
 # Installing MindsDB
 
@@ -41,4 +35,9 @@ curl -o reqs.txt https://raw.githubusercontent.com/mindsdb/mindsdb/master/requir
 pip install --requirement reqs.txt
 pip install mindsdb --no-dependencies
 ```
+
+### Alternatively you can Build a MindsDB container
+
+* [Build your MindsDB docker container](../distributions/docker)
+* [Build your AWS container](../distributions/aws)
 

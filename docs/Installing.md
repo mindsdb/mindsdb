@@ -1,7 +1,14 @@
 [<Back to Table of Contents](../README.md)
 
 * [Installing MindsDB on your environment](Installing.md#installing-mindsdb)
+
+
+Alternatively you can:
+
+
 * [Using MindsDB in the cloud with Google Colab](GoogleColab.md)
+* [Building your MindsDB docker container](../distributions/docker)
+* [Building your AWS container](../distributions/aws)
 
 # Installing MindsDB
 

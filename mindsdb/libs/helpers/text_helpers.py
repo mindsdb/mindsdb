@@ -13,9 +13,14 @@ from mindsdb.libs.constants.mindsdb import *
 import json
 import hashlib
 
+import numpy
+
 def cleanfloat(str):
-    if type(str) in [type(int(1)), type(1.0)]:
+    if type(str) in [type(int(1)), type(1.0)] :
         return float(str)
+
+    if isinstance(str, numpy.float64) or isinstance(str, float):
+        return str
 
     str = str.replace(',','.')
     return float(str)

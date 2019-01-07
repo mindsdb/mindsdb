@@ -7,19 +7,18 @@
 # (eg: dockerhub)
 #
 
-# Farley's super crazy helper which ensures you are in the folder of the repo no matter where this script is ran from
-SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
-    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-    SOURCE="$(readlink "$SOURCE")"
-    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
-done
-DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-cd $DIR/../..
+mkdir mindsdb_docker
+cd mindsdb_docker
+curl https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/Dockerfile > Dockerfile
+docker build -t mindsdb .
+cd ..
+rm -rf mindsdb_docker > /dev/null 2>&1
 
-cp distributions/docker/Dockerfile ./
-cp distributions/docker/requirements-docker.txt ./
+echo "Do you want to run MindsDB container (yes/no)?"
+read run
 
-docker build .
-
-rm -f ./Dockerfile requirements-docker.txt > /dev/null 2>&1
+if [ "$run" = "yes" ]; then
+    echo "Running Mindsdb container..."
+    docker run -d -it  --name=mindsdb mindsdb
+    docker exec -it mindsdb python
+fi

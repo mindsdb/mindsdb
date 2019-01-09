@@ -19,7 +19,7 @@ from mindsdb import *
 This is where it gets interesting. It's now up to you to install any dataset you want, so long as its a CSV file. We'll be linking it to colab next.
 In this example we'll be using a students dataset from kaggle. You can get it [here](https://www.kaggle.com/spscientist/students-performance-in-exams) if you want to follow along.
 
-Once you have your CSV dataset, download it and put it in a new folder on your Google Drive. We'll call ours `Dataset`.
+Once you have your CSV dataset, download it and put it in a new folder on your Google Drive. We'll call ours `Datasets`.
 We'll import it into colab using the following lines
 ```Python
 from google.colab import drive

@@ -24,7 +24,7 @@ the Phase Modules in the next section)
 	
 		![](https://docs.google.com/drawings/d/e/2PACX-1vR7PCdT5QCCuQ8pG6pSRc8RfdmkCPnVVrOZNPAA9QTvqluf8e2EQRdSDXutlXho2ymz_OP3LGxo-GxE/pub?w=359)
 
-		* **text-tokens**: columns where the values are *TEXT* but the distribution of the text is made of workds or combinations of words and the number of uniques does not exceed 10% of the total number of rows. 
+		* **text-tokens**: columns where the values are *TEXT* but the distribution of the text is made of words or combinations of words and the number of uniques does not exceed 10% of the total number of rows. 
 
 		* **numeric-tokens**: columns where the values are *NUMERIC* but the number of uniques does not exceed 10% of the total number of rows.
 

@@ -9,7 +9,7 @@ matrix:
 cache: pip
 # install dependencies
 install:
-  - travis_retry pip install mindsdb
+  - travis_wait pip install mindsdb
 # run tests
 script:
   - pytest

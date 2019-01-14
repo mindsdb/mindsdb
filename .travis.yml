@@ -9,8 +9,8 @@ matrix:
 cache: pip
 # install dependencies
 install:
-  - pip install -r requirements.txt
   - pip install mindsdb
 # run tests
+before_script: cd main
 script:
   - pytest

@@ -11,6 +11,6 @@ cache: pip
 install:
   - pip install mindsdb
 # run tests
-before_script: cd main
+before_script: cd mindsdb
 script:
   - pytest

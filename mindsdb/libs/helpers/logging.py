@@ -18,6 +18,14 @@ class Logging:
             print(msg)
             LOG(msg, 'info')
 
+    def infoChart(self, data, type, uid = None):
+        if self.ws:
+            self.ws.broadCast(self.ws, data)
+            return
+        else:
+            print(data)
+            LOG(data, 'info')
+
     def warning(self, msg):
         if self.ws:
             self.ws.broadCast(self.ws, msg)

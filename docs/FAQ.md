@@ -15,7 +15,7 @@ We are building MindsDB for all of those that can get their hands in data. and c
 
 MindsDB has 3 simple goals.
 
-1) Provide and a way to learn and predict from data with a line of code.
+1) Provide a way to learn and predict from data with a line of code.
 2) Explainable, by answering the following questions:
     * When learning:
         * What is interesting in my data and why?
@@ -25,7 +25,7 @@ MindsDB has 3 simple goals.
     * When predicting:
         * Why this prediction?
         * Why not something else?
-3) Keep it state of the art. Since MindsDB users are delegating the ML part, MindsDB should try to always generate state of the art models for the users.
+3) Remain state of the art. Since MindsDB users are delegating the ML machinery, MindsDB should try to always generate state of the art models for the users.
 
 ### What is the roadmap?
 

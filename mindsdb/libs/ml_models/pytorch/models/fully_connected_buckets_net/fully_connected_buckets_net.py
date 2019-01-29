@@ -1,5 +1,3 @@
-
-
 from mindsdb.config import *
 from mindsdb.libs.constants.mindsdb import *
 
@@ -48,6 +46,9 @@ class FullyConnectedBucketsNet(BaseModel):
 
         if USE_CUDA:
             self.net.cuda()
+            for col in self.nets:
+                self.nets[col].cuda()
+
 
 
     def calculateBatchLoss(self, batch):
@@ -76,6 +77,8 @@ class FullyConnectedBucketsNet(BaseModel):
 
 
     def forward(self, input, return_bucket_outputs = False):
+        if USE_CUDA:
+            input.cuda()
         """
         In this particular model, we just need to forward the network defined in setup, with our input
 
@@ -93,9 +96,3 @@ class FullyConnectedBucketsNet(BaseModel):
             output_buckets[col] = self.nets[col](output)
 
         return output, output_buckets
-
-
-
-
-
-

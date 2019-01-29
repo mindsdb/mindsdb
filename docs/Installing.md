@@ -13,7 +13,7 @@ pip3 install --upgrade pip
 ```
 
 Once that, you can install MindsDB
-##### On Mac or Linux 
+##### On Mac or Linux
 
 ```bash
 pip3 install mindsdb --user
@@ -23,8 +23,8 @@ pip3 install mindsdb --user
 
 
 Install Conda [download here](https://www.anaconda.com/download/#windows).
- 
- and then run the **anaconda prompt**: 
+
+ and then run the **anaconda prompt**:
 
 ```bash
 conda install -c peterjc123 pytorch
@@ -46,3 +46,9 @@ sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/dist
 ```
 
 We also have prebuilt images in [DockerHub](https://cloud.docker.com/repository/docker/mindsdb/mindsdb)
+
+
+# Hardware
+
+Due to the fact that pytorch only supports certain instruction sets, mindsdb can only use certain types of GPUs.
+Currently, on AWS, `g3` and `p3` instance types should be fine, but `p2` and `g2` instances are not supproted

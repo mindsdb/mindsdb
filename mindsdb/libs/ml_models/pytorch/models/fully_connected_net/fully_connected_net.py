@@ -50,5 +50,9 @@ class FullyConnectedNet(BaseModel):
         :param input: a pytorch tensor with the input data of a batch
         :return:
         """
+
+        if USE_CUDA:
+            input.cuda()
+
         output = self.net(input)
         return output

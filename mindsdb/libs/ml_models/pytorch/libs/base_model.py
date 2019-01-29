@@ -40,6 +40,8 @@ class BaseModel(nn.Module):
     variable_unwrapper = variableToArray
     ignore_types = [DATA_TYPES.FULL_TEXT]
     use_full_text_input = False
+    if USE_CUDA:
+        torch.backends.cudnn.benchmark=True
 
     def __init__(self, sample_batch, **kwargs):
         """
@@ -358,8 +360,3 @@ class BaseModel(nn.Module):
         """
         logging.error('You must define a forward method for this model')
         pass
-
-
-
-
-

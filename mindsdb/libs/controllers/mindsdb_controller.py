@@ -8,7 +8,7 @@ import _thread
 import uuid
 import traceback
 import urllib
-
+import pandas as pd
 from mindsdb.libs.helpers.sqlite_helpers import *
 from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.config import SQLITE_FILE
@@ -272,4 +272,9 @@ class MindsDBController:
 
             logging.warning('could not check for MindsDB updates')
 
+        # zhihua
+    def read_csv(self, filepath, delimiter=',', header='infer', encoding=None):
+        data_df = pd.read_csv(filepath, delimiter=delimiter, encoding=encoding, header=header)
+        self._from_data = data_df
+        return self
 

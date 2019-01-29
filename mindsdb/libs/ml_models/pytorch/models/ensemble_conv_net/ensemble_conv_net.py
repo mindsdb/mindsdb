@@ -1,4 +1,3 @@
-
 from mindsdb.config import *
 from mindsdb.libs.constants.mindsdb import *
 
@@ -101,6 +100,9 @@ class EnsembleConvNet(BaseModel):
         :param input: a pytorch tensor with the input data of a batch
         :return:
         """
+        if USE_CUDA:
+            input.cuda()
+        
         inner_outputs = [self.nets[col](input[col]) for col in self.ordered_cols]
 
 
@@ -115,9 +117,3 @@ class EnsembleConvNet(BaseModel):
             return output, inner_outputs
         else:
             return output
-
-
-
-
-
-

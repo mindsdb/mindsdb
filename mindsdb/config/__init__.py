@@ -12,7 +12,8 @@ from .helpers import *
 MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', getMindsDBStoragePath())
 
 SQLITE_FILE = ifEnvElse('SQLITE_FILE', '{storage_path}/mindsdb.mdb'.format(storage_path=MINDSDB_STORAGE_PATH))
-LOCALSTORE_PATH = ifEnvElse('LOCALSTORE_PATH', '{storage_path}/local_jsondb_store'.format(storage_path=MINDSDB_STORAGE_PATH))
+LOCALSTORE_PATH_TEMPLATE = '{storage_path}/local_jsondb_store'
+LOCALSTORE_PATH = ifEnvElse('LOCALSTORE_PATH', LOCALSTORE_PATH_TEMPLATE.format(storage_path=MINDSDB_STORAGE_PATH))
 
 # You can choose to store info about models in MongoDB or not By default it uses a local object store
 STORE_INFO_IN_MONGODB = ifEnvElse('STORE_INFO_IN_MONGODB', False)

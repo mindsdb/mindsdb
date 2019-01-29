@@ -320,20 +320,7 @@ def test():
         model_name='home_rentals',  # the name of this model
         breakpoint = PHASE_DATA_EXTRACTION)
 
-    # We tell mindsDB what we want to learn and from what data
-    mdb.learn(
-        predict='sales',
-        from_data="https://drive.google.com/a/mindsdb.com/uc?authuser=0&id=1uo7qS0D5psD8oYtLj8EV3hr2k0_dSKjT&export=download",
 
-        # test_from_data='test.csv',
-        model_name='sales',
-
-        # Time series arguments:
-
-        order_by='date',
-        group_by=['item', 'store'],
-        window_size=30  # just 24 hours
-    )
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

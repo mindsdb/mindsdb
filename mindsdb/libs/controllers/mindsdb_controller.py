@@ -59,7 +59,7 @@ class MindsDBController:
             except:
                 logging.info(traceback.format_exc())
                 storage_ok = False
-                logging.error('MindsDB storate foldler: {folder} does not exist and could not be created'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                logging.error('MindsDB storage foldler: {folder} does not exist and could not be created'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
         # If storage path is not writable, raise an exception as this can no longer be
         if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK) or storage_ok == False:
@@ -67,34 +67,7 @@ class MindsDBController:
             raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
 
-    def addTable(self, ds, as_table):
-        """
 
-        :param ds:
-        :param as_table:
-        :return:
-        """
-
-        ds.df.to_sql(as_table, self.conn, if_exists='replace', index=False)
-
-    def query(self, query):
-        """
-
-        :param query:
-        :return:
-        """
-
-        cur = self.conn.cursor()
-        return cur.execute(query)
-
-    def queryToDF(self, query):
-        """
-
-        :param query:
-        :return:
-        """
-
-        return pandas.read_sql_query(query, self.conn)
 
 
     def setUserEmail(self, email):
@@ -131,7 +104,7 @@ class MindsDBController:
             logging.warning('Cannot read email, Please add write permissions to file:' + email_file)
             return None
 
-    def learn(self, predict, from_data = None, model_name='mdsb_model', from_file=None, test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = True):
+    def learn(self, predict, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = False):
         """
         This method is the one that defines what to learn and from what, under what contraints
 
@@ -159,20 +132,12 @@ class MindsDBController:
         Optional debug arguments:
         :param breakpoint: If you want the learn process to stop at a given 'PHASE' checkout libs/phases
 
-        To be deprecated
-        :param from_file:  the file you want to learn from, this will be removed in the future as the preferred argument is from_data
 
         :return:
         """
 
-        # legacy argument from_file. To be removed in v1
-        if from_file is None:
-            from_ds = getDS(from_data)
-        else:
-            logging.warning('Note that after version 1.0, the argument from_file will be deprecated')
-            #TODO: V1 remove argument from_file
-            from_ds = getDS(from_file)
 
+        from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
 
         transaction_type = TRANSACTION_LEARN

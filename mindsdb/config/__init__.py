@@ -25,6 +25,8 @@ TEST_TRAIN_RATIO = ifEnvElse('TEST_TRAIN_RATIO', 0.1)
 
 # If you want to use CUDA
 USE_CUDA = ifEnvElse('USE_CUDA', False)
+if USE_CUDA == 'True' or USE_CUDA == 'true' or USE_CUDA == 1:
+    USE_CUDA = True
 
 # THESE ARE VALUES TO ESTIMATE THE SAMPLE SIZE TO GATHER STATISTICAL DATA ABOUT THE DATASET
 DEFAULT_MARGIN_OF_ERROR = ifEnvElse('DEFAULT_MARGIN_OF_ERROR', 0.02)
@@ -57,9 +59,3 @@ PROXY_LOG_CONFIG = {
     'level': ifEnvElse('MINDSDB_PROXY_LOG_LEVEL', logging.WARNING),
     'filename': ifEnvElse('MINDSDB_PROXY_LOG_FILENAME', None)
 }
-
-
-
-
-
-

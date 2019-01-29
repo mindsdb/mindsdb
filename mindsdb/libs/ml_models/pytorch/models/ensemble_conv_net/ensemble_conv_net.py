@@ -1,4 +1,3 @@
-
 from mindsdb.config import *
 from mindsdb.libs.constants.mindsdb import *
 
@@ -115,9 +114,3 @@ class EnsembleConvNet(BaseModel):
             return output, inner_outputs
         else:
             return output
-
-
-
-
-
-

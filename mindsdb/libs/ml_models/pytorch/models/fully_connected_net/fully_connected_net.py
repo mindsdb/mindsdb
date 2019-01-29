@@ -1,5 +1,3 @@
-
-
 from mindsdb.config import *
 from mindsdb.libs.constants.mindsdb import *
 
@@ -54,9 +52,3 @@ class FullyConnectedNet(BaseModel):
         """
         output = self.net(input)
         return output
-
-
-
-
-
-

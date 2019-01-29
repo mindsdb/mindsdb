@@ -1,5 +1,3 @@
-
-
 from mindsdb.config import *
 from mindsdb.libs.constants.mindsdb import *
 
@@ -93,9 +91,3 @@ class FullyConnectedBucketsNet(BaseModel):
             output_buckets[col] = self.nets[col](output)
 
         return output, output_buckets
-
-
-
-
-
-

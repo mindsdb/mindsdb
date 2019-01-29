@@ -143,6 +143,8 @@ class BaseModel(nn.Module):
         self.optimizer.step()
 
     def forwardWrapper(self, batch):
+        if USE_CUDA:
+            batch = batch.cuda()
         if self.use_full_text_input == False:
             return self.forward(batch.getInput(flatten=self.flatInput))
         else:
@@ -358,8 +360,3 @@ class BaseModel(nn.Module):
         """
         logging.error('You must define a forward method for this model')
         pass
-
-
-
-
-

@@ -40,7 +40,8 @@ class BaseModel(nn.Module):
     variable_unwrapper = variableToArray
     ignore_types = [DATA_TYPES.FULL_TEXT]
     use_full_text_input = False
-    torch.backends.cudnn.benchmark=True
+    if USE_CUDA:
+        torch.backends.cudnn.benchmark=True
 
     def __init__(self, sample_batch, **kwargs):
         """

@@ -25,6 +25,21 @@ def cleanfloat(str):
     str = str.replace(',','.')
     return float(str)
 
+def tryCastToNumber(string):
+    """ Returns an integer, float or a string from a string"""
+    try:
+        if string is None:
+            return None
+        return int(string)
+    except ValueError:
+        try:
+            return cleanfloat(string)
+        except ValueError:
+            if string == '':
+                return None
+            else:
+                return string
+
 def splitRecursive(word, tokens):
     words = [word]
     for token in tokens:
@@ -46,4 +61,3 @@ def test():
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     test()
-

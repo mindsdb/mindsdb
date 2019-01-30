@@ -85,7 +85,7 @@ class StatsGenerator(BaseModule):
             else:
                 type_dist[currentGuess] += 1
 
-        curr_data_type = None
+        curr_data_type = DATA_TYPES.TEXT
         max_data_type = 0
 
         for data_type in type_dist:
@@ -455,4 +455,3 @@ def test():
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     test()
-

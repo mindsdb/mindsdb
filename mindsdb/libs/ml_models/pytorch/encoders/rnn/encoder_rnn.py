@@ -21,4 +21,4 @@ class EncoderRNN(nn.Module):
         return output, hidden
 
     def initHidden(self):
-        return torch.zeros(1, 1, self.hidden_size), device=device)
+        return torch.zeros(1, 1, self.hidden_size, device=device)

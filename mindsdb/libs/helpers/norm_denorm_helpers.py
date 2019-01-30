@@ -197,7 +197,7 @@ def norm(value, cell_stats):
 
             return []
 
-def denorm(value, cell_stats, return_nones = True, return_dates_as_time_stamps = False):
+def denorm(value, cell_stats, return_nones = True):
 
     # TODO: Get a format for dates
     if round(abs(value[-1])) <= 0 and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.TEXT:

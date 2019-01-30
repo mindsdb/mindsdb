@@ -20,29 +20,13 @@ from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from collections import OrderedDict
 from mindsdb.libs.helpers.norm_denorm_helpers import norm, norm_buckets
-from mindsdb.libs.helpers.text_helpers import hashtext, cleanfloat
+from mindsdb.libs.helpers.text_helpers import hashtext, cleanfloat, tryCastToNumber
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 
 class DataVectorizer(BaseModule):
 
     phase_name = PHASE_DATA_VECTORIZATION
-
-    def cast(self, string):
-        """ Returns an integer, float or a string from a string"""
-        try:
-            if string is None:
-                return None
-            return int(string)
-        except ValueError:
-            try:
-                return cleanfloat(string)
-            except ValueError:
-                if string == '':
-                    return None
-                else:
-                    return string
-
 
     def _getRowExtraVector(self, ret, column_name, col_row_index, distances):
 
@@ -164,7 +148,7 @@ class DataVectorizer(BaseModule):
 
                     column_name = self.transaction.input_data.columns[column_index]
 
-                    value = self.cast(cell_value)
+                    value = tryCastToNumber(cell_value)
                     stats = self.transaction.persistent_model_metadata.column_stats[column_name]
 
                     # TODO: Provide framework for custom nom functions

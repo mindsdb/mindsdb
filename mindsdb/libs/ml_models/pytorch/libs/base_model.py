@@ -17,20 +17,20 @@ from torch import optim
 from torch.autograd import Variable
 
 
-from sklearn.metrics import r2_score, explained_variance_score
+from sklearn.metrics import explained_variance_score
 
 import numpy as np
 
 from mindsdb.config import USE_CUDA
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import arrayToFloatVariable, variableToArray
-from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import getTorchObjectBinary, storeTorchObject, getStoredTorchObject, RMSELoss, LogLoss
+from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import storeTorchObject, getStoredTorchObject, RMSELoss, LogLoss
 
 from mindsdb.libs.data_types.trainer_response import TrainerResponse
 from mindsdb.libs.data_types.tester_response import TesterResponse
 from mindsdb.libs.data_types.file_saved_response import FileSavedResponse
 from mindsdb.libs.helpers.norm_denorm_helpers import denorm
-from mindsdb.libs.helpers.train_helpers import getColPermutations, getAllButOnePermutations, getOneColPermutations
+from mindsdb.libs.helpers.train_helpers import getOneColPermutations
 
 import random
 

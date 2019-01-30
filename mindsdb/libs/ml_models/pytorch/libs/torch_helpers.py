@@ -59,21 +59,6 @@ def getStoredTorchObject(id):
 
     return obj
 
-def getTorchObjectBinary(object):
-
-    # save models in files
-    # TODO: Figure a way to avoid this and store model in string
-    # NOTE: Tried SrtingiO did not work
-    id, tmp_file = storeTorchObject(object)
-
-    # get the strings
-    object_binary_s = open(tmp_file, "rb").read()
-
-    # remove tmp files
-    os.remove(tmp_file)
-
-    return object_binary_s
-
 
 class RMSELoss(nn.Module):
 

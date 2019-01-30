@@ -180,7 +180,7 @@ class MindsDBController:
     def startInfoServer(self):
         pass
 
-    def predict(self, when={}, from_data = None, model_name='mdsb_model', breakpoint= PHASE_END, **kargs):
+    def predict(self, when={}, from_data = None, model_name='mdsb_model', breakpoint= PHASE_END):
         """
 
         :param predict:
@@ -188,7 +188,7 @@ class MindsDBController:
         :param model_name:
         :return:
         """
-        
+
 
 
         transaction_type = TRANSACTION_PREDICT
@@ -262,4 +262,3 @@ class MindsDBController:
         data_df = pd.read_csv(filepath, delimiter=delimiter, encoding=encoding, header=header)
         self._from_data = data_df
         return self
-

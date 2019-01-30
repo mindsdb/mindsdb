@@ -25,7 +25,7 @@ def cleanfloat(str):
     str = str.replace(',','.')
     return float(str)
 
-def tryCastToNumber(self, string):
+def tryCastToNumber(string):
     """ Returns an integer, float or a string from a string"""
     try:
         if string is None:

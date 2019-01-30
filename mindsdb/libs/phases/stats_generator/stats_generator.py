@@ -26,7 +26,7 @@ import mindsdb.config as CONFIG
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.helpers.text_helpers import splitRecursive, cleanfloat
+from mindsdb.libs.helpers.text_helpers import splitRecursive, cleanfloat, tryCastToNumber
 from mindsdb.external_libs.stats import sampleSize
 
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
@@ -35,21 +35,6 @@ from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 class StatsGenerator(BaseModule):
 
     phase_name = PHASE_DATA_STATS
-
-    def cast(self, string):
-        """ Returns an integer, float or a string from a string"""
-        try:
-            if string is None:
-                return None
-            return int(string)
-        except ValueError:
-            try:
-                return cleanfloat(string)
-            except ValueError:
-                if string == '':
-                    return None
-                else:
-                    return string
 
     def isNumber(self, string):
         """ Returns True if string is a number. """
@@ -266,7 +251,7 @@ class StatsGenerator(BaseModule):
             row = self.transaction.input_data.data_array[sample_i]
             for i, val in enumerate(row):
                 column = header[i]
-                value = self.cast(val)
+                value = tryCastToNumber(val)
                 if not column in empty_count:
                     empty_count[column] = 0
                     column_count[column] = 0
@@ -455,4 +440,3 @@ def test():
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     test()
-

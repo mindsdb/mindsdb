@@ -67,15 +67,19 @@ def test_one_label_prediction():
         predict=label_name,
         model_name='test_one_label_prediction'
     )
+    print('!-------------  Learning ran successfully  -------------!')
 
     mdb = mindsdb.MindsDB()
     results = mdb.predict(from_data=test_file_name, model_name='test_one_label_prediction')
+    print('!-------------  Prediction from file ran successfully  -------------!')
 
+    '''
     for i in range(len(columns_test[0])):
         features = {}
         for n in range(len(columns_test)):
             features[columns[n][0]] = columns_test[n][i]
         result = mdb.predict(when=features, model_name='test_one_label_prediction')
+    '''
 
 
 def test_dual_label_prediction():

@@ -1,4 +1,6 @@
-
+integration_testing/*.csv
+integration_testing/*.tsv
+integration_testing/*.sql
 *.ipy*
 *.test.*
 .cache*

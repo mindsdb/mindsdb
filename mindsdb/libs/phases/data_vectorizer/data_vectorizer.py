@@ -55,9 +55,10 @@ class DataVectorizer(BaseModule):
                 # append the target values before:
                 for predict_col_name in predict_columns:
                      row_extra_vector += [cleanfloat(v) for v in ret[predict_col_name][col_row_index + i + 1]]
-            except:
+            except Exception as e:
                 logging.error(traceback.format_exc())
                 logging.error('something is not right, seems like we got here with np arrays and they should not be!')
+                raise e
 
         if empty_count > 0:
             # complete with empty
@@ -69,9 +70,6 @@ class DataVectorizer(BaseModule):
 
 
     def run(self):
-
-
-
         self.train_meta_data = TransactionMetadata()
         self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 
@@ -131,7 +129,6 @@ class DataVectorizer(BaseModule):
 
             # iterate over all indexes taht belong to this group
             for input_row_index in group['indexes']:
-
                 row = self.transaction.input_data.data_array[input_row_index] # extract the row from input data
                 map = group['map']
 

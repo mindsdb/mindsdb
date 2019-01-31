@@ -1,6 +1,27 @@
 import random
 import string
+import datetime
 from math import log
+
+
+def generate_timeseries(length, bounds=(548934404,1648934404), _type='timestamp',period=24*3600, swing=0, separator=','):
+    column = []
+
+    for n in range(*bounds,period):
+        if len(column) >= length:
+            break
+        column.append(n)
+
+    if _type == 'timestamp':
+        pass
+    elif _type == 'datetime':
+        column = list(map(str, map(datetime.datetime.fromtimestamp ,column)))
+    elif _type == 'date':
+        column = list(map(str, map(lambda x: datetime.datetime.fromtimestamp(x).date() ,column)))
+
+    return column
+
+
 
 def rand_str(length=random.randrange(4,120)):
     # Create a list of unicode characters within the range 0000-D7FF
@@ -14,19 +35,19 @@ def rand_ascii_str(length=random.randrange(4,120)):
 
 
 def rand_int():
-    return int(random.randrange(-pow(2,62), pow(2,62)))
+    return int(random.randrange(-pow(2,33), pow(2,33)))
 
 
 def rand_float():
-    return random.randrange(-pow(2,36), pow(2,36)) * random.random()
+    return random.randrange(-pow(2,22), pow(2,22)) * random.random()
 
 
-def generate_value_cols(types, length, separator=','):
+def generate_value_cols(types, length, separator=',', ts_period=48*3600):
     columns = []
     for t in types:
         columns.append([])
         # This is a header of sorts
-        columns[-1].append(rand_ascii_str(random.randrange(5,20)).replace(separator,'ESCAPED_SEPARATOR').replace('\n','ESCAPED_SEPARATOR').replace('\r','ESCAPED_SEPARATOR'))
+        columns[-1].append(rand_ascii_str(random.randrange(5,20)).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
 
         # Figure out which random generation function to use for this column
         if t == 'str':
@@ -38,13 +59,14 @@ def generate_value_cols(types, length, separator=','):
         elif t == 'float':
             gen_fun = rand_float
         else:
-            gen_fun = rand_str
+            columns[-1].extend(generate_timeseries(length=length,_type=t,period=ts_period, separator=separator))
+            continue
 
         for n in range(length):
             val = gen_fun()
             # @TODO Maybe escpae the separator rather than replace
             if type(val) == str:
-                val = val.replace(separator,'ESCAPED_SEPARATOR').replace('\n','ESCAPED_SEPARATOR').replace('\r','ESCAPED_SEPARATOR')
+                val = val.replace(separator,'_').replace('\n','_').replace('\r','_')
                 if '\n' in val or '\r' in val:
                     print(val)
                     exit()
@@ -58,7 +80,7 @@ def generate_value_cols(types, length, separator=','):
 def generate_labels_1(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(5,20)).replace(separator,'ESCAPED_SEPARATOR').replace('\n','ESCAPED_SEPARATOR').replace('\r','ESCAPED_SEPARATOR'))
+    labels.append(rand_ascii_str(random.randrange(5,20)).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
 
     for n in range(1, len(columns[-1])):
         value = 0
@@ -75,7 +97,7 @@ def generate_labels_1(columns, separator=','):
 def generate_labels_2(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(5,20)).replace(separator,'ESCAPED_SEPARATOR').replace('\n','ESCAPED_SEPARATOR').replace('\r','ESCAPED_SEPARATOR'))
+    labels.append(rand_ascii_str(random.randrange(5,20)).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
 
     for n in range(1, len(columns[-1])):
         value = 1
@@ -88,7 +110,10 @@ def generate_labels_2(columns, separator=','):
             if i % 2 == 0:
                 value = value * operand
             else:
-                value = value / operand
+                try:
+                    value = value / operand
+                except:
+                    value = 1
 
         labels.append(value)
 
@@ -98,7 +123,7 @@ def generate_labels_2(columns, separator=','):
 def generate_labels_3(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(5,20)).replace(separator,'ESCAPED_SEPARATOR').replace('\n','ESCAPED_SEPARATOR').replace('\r','ESCAPED_SEPARATOR'))
+    labels.append(rand_ascii_str(random.randrange(5,20)).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
 
     col_nr = random.randrange(0,len(columns))
     labels.extend(columns[col_nr][1:])

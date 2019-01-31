@@ -76,10 +76,14 @@ class DataVectorizer(BaseModule):
         self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 
         group_by = self.train_meta_data.model_group_by
+        order_by = self.train_meta_data.model_order_by
+        is_time_series = self.transaction.metadata.model_is_time_series
 
-        group_by_index = None
-        if group_by:
-            group_by_index = self.transaction.input_data.columns.index(group_by)  # TODO: Consider supporting more than one index column
+        group_by_indexes = None
+
+        # if order_by this means its a time series
+        if group_by and len(group_by) > 0:
+            group_by_indexes = [self.transaction.input_data.columns.index(group_by_column) for group_by_column in group_by]
 
         # this is a template of how we store columns
         column_packs_template = OrderedDict()
@@ -131,8 +135,11 @@ class DataVectorizer(BaseModule):
                 row = self.transaction.input_data.data_array[input_row_index] # extract the row from input data
                 map = group['map']
 
-                if group_by is not None:
-                    group_by_hash = hashtext(row[group_by_index])
+                if is_time_series:
+                    if group_by_indexes in [None]:
+                        group_by_hash = KEY_NO_GROUP_BY
+                    else:
+                        group_by_hash = hashtext(':'.join([row[group_by_index] for group_by_index in group_by_indexes]))
 
                 else:
                     group_by_hash = KEY_NO_GROUP_BY

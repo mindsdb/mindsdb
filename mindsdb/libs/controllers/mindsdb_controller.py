@@ -38,7 +38,6 @@ class MindsDBController:
         self.conn = sqlite3.connect(file)
         self.conn.create_aggregate("first_value", 1, FirstValueAgg)
         self.conn.create_aggregate("array_agg_json", 2, ArrayAggJSON)
-        self._from_data = None
 
     def setConfigs(self):
         """
@@ -60,7 +59,7 @@ class MindsDBController:
             except:
                 logging.info(traceback.format_exc())
                 storage_ok = False
-                logging.error('MindsDB storate foldler: {folder} does not exist and could not be created'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                logging.error('MindsDB storage foldler: {folder} does not exist and could not be created'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
         # If storage path is not writable, raise an exception as this can no longer be
         if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK) or storage_ok == False:
@@ -68,34 +67,7 @@ class MindsDBController:
             raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
 
-    def addTable(self, ds, as_table):
-        """
 
-        :param ds:
-        :param as_table:
-        :return:
-        """
-
-        ds.df.to_sql(as_table, self.conn, if_exists='replace', index=False)
-
-    def query(self, query):
-        """
-
-        :param query:
-        :return:
-        """
-
-        cur = self.conn.cursor()
-        return cur.execute(query)
-
-    def queryToDF(self, query):
-        """
-
-        :param query:
-        :return:
-        """
-
-        return pandas.read_sql_query(query, self.conn)
 
 
     def setUserEmail(self, email):
@@ -132,25 +104,61 @@ class MindsDBController:
             logging.warning('Cannot read email, Please add write permissions to file:' + email_file)
             return None
 
-    def learn(self, predict, from_file=None, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = True):
+    def learn(self, predict, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = False):
         """
+        This method is the one that defines what to learn and from what, under what contraints
 
-        :param from_query:
-        :param predict:
-        :param model_name:
-        :param test_query:
+        Mandatory arguments:
+        :param predict: what column you want to predict
+        :param from_data: the data that you want to learn from, this can be either a file, a pandas data frame, or url to a file
+
+        Optional arguments:
+        :param model_name: the name you want to give to this model
+        :param test_from_data: If you would like to test this learning from a different data set
+
+        Optional Time series arguments:
+        :param order_by: this order by defines the time series, it can be a list. By default it sorts each sort by column in ascending manner, if you want to change this pass a touple ('column_name', 'boolean_for_ascending <default=true>')
+        :param group_by: This argument tells the time series that it should learn by grouping rows by a given id
+        :param window_size: The number of samples to learn from in the time series
+
+        Optional data transformation arguments:
+        :param ignore_columns: it simply removes the columns from the data sources
+        :param rename_strange_columns: this tells mindsDB that if columns have special characters, it should try to rename them, this is a legacy argument, as now mindsdb supports any column name
+
+        Optional sampling parameters:
+        :param sample_margin_error (DEFAULT 0): Maximum expected difference between the true population parameter, such as the mean, and the sample estimate.
+        :param sample_confidence_level (DEFAULT 0.98): number in the interval (0, 1) If we were to draw a large number of equal-size samples from the population, the true population parameter should lie within this percentage of the intervals (sample_parameter - e, sample_parameter + e) where e is the margin_error.
+
+        Optional debug arguments:
+        :param breakpoint: If you want the learn process to stop at a given 'PHASE' checkout libs/phases
+
+
         :return:
         """
-        if self._from_data is None :
-            from_ds = getDS(from_data) if from_file is None else getDS(from_file)
-        else:
-            from_ds = getDS(self._from_data)
+
+
+        from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
 
         transaction_type = TRANSACTION_LEARN
 
         predict_columns_map = {}
+
+        # lets turn into lists: predict, order_by and group by
         predict_columns = [predict] if type(predict) != type([]) else predict
+        group_by = group_by if type(group_by) == type([]) else [group_by] if group_by else []
+        order_by = order_by if type(order_by) == type([]) else [order_by] if group_by else []
+
+        if len(predict_columns) == 0:
+            error = 'You need to specify a column to predict'
+            logging.error(error)
+            raise ValueError(error)
+
+        # lets turn order by into tuples if not already
+        # each element ('column_name', 'boolean_for_ascending <default=true>')
+        order_by = [(col_name, True) if type(col_name) != type(()) else col_name for col_name in order_by]
+
+        is_time_series = True if len(order_by) > 0 else False
 
         if rename_strange_columns is False:
             for predict_col in predict_columns:
@@ -159,19 +167,22 @@ class MindsDBController:
 
             predict_columns = list(predict_columns_map.keys())
         else:
-            logging.warning('After version 1.0 rename_strange_columns in MindsDB().learn, the default value will be flipped from True to False ')
+            logging.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = model_name
         transaction_metadata.model_predict_columns = predict_columns
         transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
         transaction_metadata.model_group_by = group_by
-        transaction_metadata.model_order_by = order_by if type(order_by) == type([]) else [order_by]
+        transaction_metadata.model_order_by = order_by
+        transaction_metadata.model_is_time_series = is_time_series
         transaction_metadata.window_size = window_size
         transaction_metadata.type = transaction_type
         transaction_metadata.from_data = from_ds
         transaction_metadata.test_from_data = test_from_ds
         transaction_metadata.ignore_columns = ignore_columns
+        transaction_metadata.sample_margin_of_error = sample_margin_of_error
+        transaction_metadata.sample_confidence_level = sample_confidence_level
 
         self.startInfoServer()
         self.session.newTransaction(transaction_metadata, breakpoint)
@@ -197,6 +208,10 @@ class MindsDBController:
 
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = model_name
+
+        # lets turn into lists: when
+        when = when if type(when) in [type(None), type({})] else [when]
+
 
         # This will become irrelevant as if we have trained a model with a predict we just need to pass when or from_data
         # predict_columns = [predict] if type(predict) != type([]) else predict

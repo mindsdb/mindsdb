@@ -84,6 +84,10 @@ class KEYS:
     TS_ENCODED_ROW = 'TS_ENCODED_ROW'
     TS_FLAT_ROW = 'TS_FLAT_ROW'
 
+class ORDER_BY_KEYS:
+    COLUMN = 0
+    ASCENDING_VALUE = 1
+
 class PREDICTORS:
     DEFAULT = 'default'
     CUSTOM = 'custom'

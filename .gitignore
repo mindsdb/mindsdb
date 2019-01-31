@@ -1,6 +1,8 @@
 integration_testing/*.csv
 integration_testing/*.tsv
 integration_testing/*.sql
+test_data.csv
+train_data.csv
 *.ipy*
 *.test.*
 .cache*
@@ -53,4 +55,3 @@ ENV/
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
-

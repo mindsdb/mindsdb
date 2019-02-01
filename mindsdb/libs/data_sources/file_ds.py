@@ -148,10 +148,14 @@ class FileDS(DataSource):
         # lets try to figure out if its a csv
         try:
             data.seek(0)
-            full = len(data.read())
-            data.seek(0)
-            bytes_to_read = int(full*0.3)
-            dialect = csv.Sniffer().sniff(data.read(bytes_to_read))
+            first_few_lines = []
+            i = 0
+            for line in data:
+                i += 1
+                first_few_lines.append(line)
+                if i > 500:
+                    break
+            dialect = csv.Sniffer().sniff(''.join(first_few_lines))
             data.seek(0)
             # if csv dialect identified then return csv
             if dialect:
@@ -220,8 +224,3 @@ class FileDS(DataSource):
             file_list_data = file_data
 
         self.setDF(pandas.DataFrame(file_list_data, columns=header))
-
-
-
-
-

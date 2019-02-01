@@ -146,8 +146,7 @@ class TransactionController:
             self.persistent_model_metadata.update()
             self.session.logging.error(self.persistent_model_metadata.error_msg)
             self.session.logging.error(e)
-
-            return
+            raise e
 
 
     def executeDropModel(self):
@@ -233,5 +232,3 @@ class TransactionController:
             self.executePredict()
         elif self.metadata.type == TRANSACTION_NORMAL_SELECT:
             self.executeNormalSelect()
-
-

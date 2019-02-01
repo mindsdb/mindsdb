@@ -20,29 +20,13 @@ from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from collections import OrderedDict
 from mindsdb.libs.helpers.norm_denorm_helpers import norm, norm_buckets
-from mindsdb.libs.helpers.text_helpers import hashtext, cleanfloat
+from mindsdb.libs.helpers.text_helpers import hashtext, cleanfloat, tryCastToNumber
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 
 class DataVectorizer(BaseModule):
 
     phase_name = PHASE_DATA_VECTORIZATION
-
-    def cast(self, string):
-        """ Returns an integer, float or a string from a string"""
-        try:
-            if string is None:
-                return None
-            return int(string)
-        except ValueError:
-            try:
-                return cleanfloat(string)
-            except ValueError:
-                if string == '':
-                    return None
-                else:
-                    return string
-
 
     def _getRowExtraVector(self, ret, column_name, col_row_index, distances):
 
@@ -71,9 +55,10 @@ class DataVectorizer(BaseModule):
                 # append the target values before:
                 for predict_col_name in predict_columns:
                      row_extra_vector += [cleanfloat(v) for v in ret[predict_col_name][col_row_index + i + 1]]
-            except:
+            except Exception as e:
                 logging.error(traceback.format_exc())
                 logging.error('something is not right, seems like we got here with np arrays and they should not be!')
+                raise e
 
         if empty_count > 0:
             # complete with empty
@@ -85,9 +70,6 @@ class DataVectorizer(BaseModule):
 
 
     def run(self):
-
-
-
         self.train_meta_data = TransactionMetadata()
         self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 
@@ -147,7 +129,6 @@ class DataVectorizer(BaseModule):
 
             # iterate over all indexes taht belong to this group
             for input_row_index in group['indexes']:
-
                 row = self.transaction.input_data.data_array[input_row_index] # extract the row from input data
                 map = group['map']
 
@@ -171,7 +152,7 @@ class DataVectorizer(BaseModule):
 
                     column_name = self.transaction.input_data.columns[column_index]
 
-                    value = self.cast(cell_value)
+                    value = tryCastToNumber(cell_value)
                     stats = self.transaction.persistent_model_metadata.column_stats[column_name]
 
                     # TODO: Provide framework for custom nom functions

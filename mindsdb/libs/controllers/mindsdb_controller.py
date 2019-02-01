@@ -8,6 +8,7 @@ import uuid
 import traceback
 import urllib
 import pandas as pd
+import uuid
 
 import mindsdb.libs.helpers.log as log
 from mindsdb.libs.helpers.sqlite_helpers import *
@@ -31,7 +32,8 @@ class MindsDBController:
         """
 
         self.setConfigs()
-        log.initialize(level=2)
+        controller_uuid = str(uuid.uuid1())
+        log.initialize(controller_uuid, level=2)
 
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()

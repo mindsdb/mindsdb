@@ -6,9 +6,9 @@ from inspect import getframeinfo, stack
 
 global internal_logger
 
-def initialize(level, send_method=None, host='0.0.0.0', por=6666):
+def initialize(id, level, send_method=None, host='0.0.0.0', por=6666):
     global internal_logger
-    internal_logger = logging.getLogger('mindsdb/')
+    internal_logger = logging.getLogger('mindsdb-logger-{}'.format(id))
 
     internal_logger.setLevel(level)
     stream_handler = logging.StreamHandler()

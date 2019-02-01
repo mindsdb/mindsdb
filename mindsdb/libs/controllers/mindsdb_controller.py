@@ -1,7 +1,6 @@
 import sqlite3
 import pandas
 import requests
-import logging
 import os
 import platform
 import _thread
@@ -9,11 +8,12 @@ import uuid
 import traceback
 import urllib
 import pandas as pd
+
+from mindsdb.libs.helpers.log
 from mindsdb.libs.helpers.sqlite_helpers import *
 from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.config import SQLITE_FILE
 import mindsdb.config as CONFIG
-
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.controllers.session_controller import SessionController
 from mindsdb.libs.constants.mindsdb import *
@@ -31,6 +31,11 @@ class MindsDBController:
         """
 
         self.setConfigs()
+        log.initialize(2)
+
+        log.debug('!RFSFGSgsdgsd')
+        log.error("AAA")
+        exit()
 
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()
@@ -44,8 +49,6 @@ class MindsDBController:
         This sets the config settings for this mindsdb instance
         :return:
         """
-        # set logging settings
-        logging.basicConfig(**CONFIG.PROXY_LOG_CONFIG)
 
         # set the mindsdb storage folder
         storage_ok = True # default state
@@ -53,13 +56,13 @@ class MindsDBController:
         # if it does not exist try to create it
         if not os.path.exists(CONFIG.MINDSDB_STORAGE_PATH):
             try:
-                logging.info('{folder} does not exist, creating it now'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                log.info('{folder} does not exist, creating it now'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
                 path = Path(CONFIG.MINDSDB_STORAGE_PATH)
                 path.mkdir(exist_ok=True, parents=True)
             except:
-                logging.info(traceback.format_exc())
+                log.info(traceback.format_exc())
                 storage_ok = False
-                logging.error('MindsDB storage foldler: {folder} does not exist and could not be created'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                log.error('MindsDB storage foldler: {folder} does not exist and could not be created'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
         # If storage path is not writable, raise an exception as this can no longer be
         if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK) or storage_ok == False:
@@ -83,7 +86,7 @@ class MindsDBController:
             open(email_file, 'w').write(email)
             return True
         except:
-            logging.warning('Cannot store token, Please add write permissions to file:' + email_file)
+            log.warning('Cannot store token, Please add write permissions to file:' + email_file)
             return False
 
     def getUserEmail(self):
@@ -101,7 +104,7 @@ class MindsDBController:
             else:
                 return None
         except:
-            logging.warning('Cannot read email, Please add write permissions to file:' + email_file)
+            log.warning('Cannot read email, Please add write permissions to file:' + email_file)
             return None
 
     def learn(self, predict, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = False):
@@ -151,7 +154,7 @@ class MindsDBController:
 
         if len(predict_columns) == 0:
             error = 'You need to specify a column to predict'
-            logging.error(error)
+            log.error(error)
             raise ValueError(error)
 
         # lets turn order by into tuples if not already
@@ -167,7 +170,7 @@ class MindsDBController:
 
             predict_columns = list(predict_columns_map.keys())
         else:
-            logging.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
+            log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = model_name
@@ -240,7 +243,7 @@ class MindsDBController:
             try:
                 open(uuid_file, 'w').write(uuid_str)
             except:
-                logging.warning('Cannot store token, Please add write permissions to file:' + uuid_file)
+                log.warning('Cannot store token, Please add write permissions to file:' + uuid_file)
                 uuid_str = uuid_str + '.NO_WRITE'
 
         file_path = Path(mdb_file)
@@ -251,26 +254,26 @@ class MindsDBController:
             try:
                 open(mdb_file,'w').write(token)
             except:
-                logging.warning('Cannot store token, Please add write permissions to file:'+mdb_file)
+                log.warning('Cannot store token, Please add write permissions to file:'+mdb_file)
                 token = token+'.NO_WRITE'
         extra = urllib.parse.quote_plus(token)
         try:
             r = requests.get('http://mindsdb.com/updates/check/{extra}'.format(extra=extra), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)})
         except:
-            logging.warning('Could not check for updates')
+            log.warning('Could not check for updates')
             return
         try:
             # TODO: Extract version, compare with version in version.py
             ret = r.json()
 
             if 'version' in ret and ret['version']!= MINDSDB_VERSION:
-                logging.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
+                log.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
             else:
-                logging.debug('MindsDB is up to date!')
+                log.debug('MindsDB is up to date!')
 
         except:
 
-            logging.warning('could not check for MindsDB updates')
+            log.warning('could not check for MindsDB updates')
 
         # zhihua
     def read_csv(self, filepath, delimiter=',', header='infer', encoding=None):

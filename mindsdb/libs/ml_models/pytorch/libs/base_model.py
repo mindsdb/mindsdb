@@ -8,8 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-# import logging
-from mindsdb.libs.helpers.logging import logging
+import mindsdb.libs.helpers.log
 
 import torch
 import torch.nn as nn
@@ -128,7 +127,7 @@ class BaseModel(nn.Module):
         """
         if index >= len(self.learning_rates):
             index = len(self.learning_rates) -1
-            logging.warning('Trying to set the learning rate on an index greater than learnign rates available')
+            log.warning('Trying to set the learning rate on an index greater than learnign rates available')
 
         self.current_learning_rate_index = index
         self.total_epochs = self.learning_rates[self.current_learning_rate_index][EPOCHS_INDEX]
@@ -227,7 +226,7 @@ class BaseModel(nn.Module):
             for permutation in perms:
                 batch.blank_columns = permutation
                 #batch.blank_columns = []
-                logging.debug('[EPOCH-BATCH] testing batch: {batch_number}'.format(batch_number=batch_number))
+                log.debug('[EPOCH-BATCH] testing batch: {batch_number}'.format(batch_number=batch_number))
                 # get real and predicted values by running the model with the input of this batch
                 predicted_target = self.forwardWrapper(batch)
                 real_target = batch.getTarget(flatten=self.flatTarget)
@@ -241,7 +240,7 @@ class BaseModel(nn.Module):
                     predicted_target_all_ret += predicted_target.data.tolist()
 
         if batch is None:
-            logging.error('there is no data in test, we should not be here')
+            log.error('there is no data in test, we should not be here')
             return
 
         # caluclate the error for all values
@@ -320,7 +319,7 @@ class BaseModel(nn.Module):
                 for permutation in perms:
                     batch.blank_columns = permutation
                     response.batch = batch_number
-                    logging.debug('[EPOCH-BATCH] Training on epoch: {epoch}/{num_epochs}, batch: {batch_number}'.format(
+                    log.debug('[EPOCH-BATCH] Training on epoch: {epoch}/{num_epochs}, batch: {batch_number}'.format(
                             epoch=epoch + 1, num_epochs=self.total_epochs, batch_number=batch_number))
                     model_object.train() # toggle to train
                     model_object.zeroGradOptimizer()
@@ -349,7 +348,7 @@ class BaseModel(nn.Module):
         :param use_cuda:
         :return:
         """
-        logging.error('You must define a setup method for this model')
+        log.error('You must define a setup method for this model')
         pass
 
     def forward(self, input):
@@ -358,5 +357,5 @@ class BaseModel(nn.Module):
         :param input:
         :return:
         """
-        logging.error('You must define a forward method for this model')
+        log.error('You must define a forward method for this model')
         pass

@@ -1,6 +1,6 @@
 from mindsdb.libs.constants.mindsdb import *
 
-from mindsdb.libs.helpers.logging import logging
+import mindsdb.libs.helpers.log
 
 class TransactionOutputData():
 
@@ -50,7 +50,7 @@ class TransactionOutputData():
                 ret_row += row[col_index]
             else:
                 if len(row) < col_index:
-                    logging.warning('Output is smaller than expected, see transaction_output_data.py')
+                    log.warning('Output is smaller than expected, see transaction_output_data.py')
                     ret_row[KEY_CONFIDENCE] = 0
                 else:
                     try:

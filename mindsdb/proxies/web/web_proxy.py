@@ -8,7 +8,6 @@ import eventlet
 import logging as logging_real
 import mindsdb.config as config
 
-from mindsdb.libs.helpers.logging import logging
 from mindsdb.libs.helpers.json_helpers import json_to_string
 
 import time
@@ -120,5 +119,3 @@ if __name__ == '__main__':
     info_server.startProxy()
 
     a = input('exit?')
-
-

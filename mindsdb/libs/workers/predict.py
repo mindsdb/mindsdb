@@ -9,8 +9,7 @@
  *******************************************************
 """
 
-#import logging
-from mindsdb.libs.helpers.logging import logging
+import mindsdb.libs.helpers.log
 
 from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_string, get_label_index_for_value
 from mindsdb.libs.constants.mindsdb import *
@@ -50,7 +49,7 @@ class PredictWorker():
             self.persistent_ml_model_info = info[0] #type: PersistentMlModelInfo
         else:
             # TODO: Make sure we have a model for this
-            logging.info('No model found')
+            log.info('No model found')
             return
 
         self.ml_model_name = self.persistent_ml_model_info.ml_model_name
@@ -66,7 +65,7 @@ class PredictWorker():
 
         self.gfs_save_head_time = time.time()  # the last time it was saved into GridFS, assume it was now
 
-        logging.info('Starting model...')
+        log.info('Starting model...')
         self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
 
         if self.data != None:
@@ -102,7 +101,7 @@ class PredictWorker():
         ret_diffs = []
         for batch in self.predict_sampler:
 
-            logging.info('predicting batch...')
+            log.info('predicting batch...')
             if self.data_model_object.use_full_text_input:
                 ret = self.data_model_object.forward(batch.getInput(flatten=self.data_model_object.flatInput), full_text_input=batch.getFullTextInput())
             else:
@@ -149,6 +148,5 @@ class PredictWorker():
         """
 
         w = PredictWorker(model_name)
-        logging.info('Inferring from model and data...')
+        log.info('Inferring from model and data...')
         return w.predict(data)
-

@@ -9,7 +9,6 @@
  *******************************************************
 """
 
-from mindsdb.libs.helpers.logging import logging
 from mindsdb.proxies.mysql.data_types.mysql_datum import Datum
 from mindsdb.mindsdb_server.proxies.mysql.data_types.mysql_packet import Packet
 
@@ -54,13 +53,9 @@ class ErrPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        logging.basicConfig(level=10)
         pprint.pprint(str(ErrPacket().getPacketString()))
 
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     ErrPacket.test()
-
-
-

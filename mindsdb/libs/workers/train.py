@@ -10,7 +10,7 @@
 """
 
 # import logging
-from mindsdb.libs.helpers.logging import logging
+import mindsdb.libs.helpers.log
 
 
 from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_string, get_label_index_for_value
@@ -30,7 +30,7 @@ import os
 import copy
 
 class TrainWorker():
-    
+
     def __init__(self, data, model_name, ml_model_name='pytorch.models.column_based_fcnn', config={}):
         """
 
@@ -74,12 +74,12 @@ class TrainWorker():
 
         self.gfs_save_head_time = time.time() # the last time it was saved into GridFS, assume it was now
 
-        logging.info('Starting model...')
+        log.info('Starting model...')
         self.data_model_object = self.ml_model_class(self.sample_batch)
-        logging.info('Training model...')
+        log.info('Training model...')
         self.train()
 
-        
+
     def train(self):
         """
 
@@ -97,16 +97,16 @@ class TrainWorker():
 
             for train_ret in self.data_model_object.trainModel(self.train_sampler):
 
-                logging.debug('Training State epoch:{epoch}, batch:{batch}, loss:{loss}'.format(epoch=train_ret.epoch,
+                log.debug('Training State epoch:{epoch}, batch:{batch}, loss:{loss}'.format(epoch=train_ret.epoch,
                                                                                                batch=train_ret.batch,
                                                                                                loss=train_ret.loss))
 
                 # save model every new epoch
                 if last_epoch != train_ret.epoch:
                     last_epoch = train_ret.epoch
-                    logging.debug('New epoch:{epoch}, testing and calculating error'.format(epoch=last_epoch))
+                    log.debug('New epoch:{epoch}, testing and calculating error'.format(epoch=last_epoch))
                     test_ret = self.data_model_object.testModel(self.test_sampler)
-                    logging.info('Test Error:{error}, Accuracy:{accuracy} | Best Accuracy so far: {best_accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy, best_accuracy=highest_accuracy))
+                    log.info('Test Error:{error}, Accuracy:{accuracy} | Best Accuracy so far: {best_accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy, best_accuracy=highest_accuracy))
                     is_it_lowest_error_epoch = False
                     # if lowest error save model
                     if lowest_error in [None]:
@@ -117,8 +117,8 @@ class TrainWorker():
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error
                         highest_accuracy = test_ret.accuracy
-                        logging.info('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}, Accuracy: {accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
-                        logging.debug('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
+                        log.info('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}, Accuracy: {accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
+                        log.debug('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
                             model_name=self.model_name, data_model=self.ml_model_name, config=self.ml_model_info.config_serialized))
 
                         # save model local file
@@ -127,7 +127,7 @@ class TrainWorker():
                         # self.saveToGridFs(local_files, throttle=True)
 
                         # save model predicted - real vectors
-                        logging.debug('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name, ml_model_name = self.ml_model_name))
+                        log.debug('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name, ml_model_name = self.ml_model_name))
 
                     # check if continue training
                     if self.shouldContinue() == False:
@@ -135,7 +135,7 @@ class TrainWorker():
                     # save/update model loss, error, confusion_matrix
                     self.registerModelData(train_ret, test_ret, is_it_lowest_error_epoch)
 
-            logging.info('Loading model from store for retrain on new learning rate {lr}'.format(lr=self.data_model_object.learning_rates[i][LEARNING_RATE_INDEX]))
+            log.info('Loading model from store for retrain on new learning rate {lr}'.format(lr=self.data_model_object.learning_rates[i][LEARNING_RATE_INDEX]))
             # after its done with the first batch group, get the one with the lowest error and keep training
 
             ml_model_info = self.ml_model_info.find_one({
@@ -147,7 +147,7 @@ class TrainWorker():
 
             if ml_model_info is None:
                 # TODO: Make sure we have a model for this
-                logging.info('No model found in storage')
+                log.info('No model found in storage')
                 return
 
             fs_file_ids = ml_model_info.fs_file_ids
@@ -313,12 +313,12 @@ class TrainWorker():
             return False
 
         if model_data.stop_training == True:
-            logging.info('[FORCED] Stopping model training....')
+            log.info('[FORCED] Stopping model training....')
             return False
 
         elif model_data.kill_training == True:
 
-            logging.info('[FORCED] Stopping model training....')
+            log.info('[FORCED] Stopping model training....')
             self.persistent_model_metadata.delete()
             self.ml_model_info.delete()
 
@@ -338,7 +338,7 @@ class TrainWorker():
                 try:
                     os.remove(file_response_object.path)
                 except:
-                    logging.info('Could not delete file {path}'.format(path=file_response_object.path))
+                    log.info('Could not delete file {path}'.format(path=file_response_object.path))
 
         file_id = '{model_name}.{ml_model_name}.{config_hash}'.format(model_name=self.model_name, ml_model_name=self.ml_model_name, config_hash=self.config_hash)
         return_objects =  self.data_model_object.saveToDisk(file_id)
@@ -364,7 +364,7 @@ class TrainWorker():
     #     if throttle == True or local_files is None or len(local_files) == 0:
     #
     #         if (current_time - self.gfs_save_head_time) < 60 * 10:
-    #             logging.info('Not saving yet, throttle time not met')
+    #             log.info('Not saving yet, throttle time not met')
     #             return
     #
     #     # if time met, save to GFS
@@ -377,16 +377,16 @@ class TrainWorker():
     #             try:
     #                 self.mongo_gfs.delete(file_id)
     #             except:
-    #                 logging.warning('could not delete gfs {file_id}'.format(file_id=file_id))
+    #                 log.warning('could not delete gfs {file_id}'.format(file_id=file_id))
     #
     #     file_ids = []
     #     # save into gridfs
     #     for file_response_object in local_files:
-    #         logging.info('Saving file into GridFS, this may take a while ...')
+    #         log.info('Saving file into GridFS, this may take a while ...')
     #         file_id = self.mongo_gfs.put(open(file_response_object.path, "rb").read())
     #         file_ids += [file_id]
     #
-    #     logging.info('[DONE] files into GridFS saved')
+    #     log.info('[DONE] files into GridFS saved')
     #     self.mongo.mindsdb.model_state.update_one({'model_name': self.model_name, 'submodel_name': self.submodel_name, 'data_model': self.ml_model_name, 'config': self.config_serialize},
     #                                               {'$set': {
     #                                "model_name": self.model_name,
@@ -396,12 +396,12 @@ class TrainWorker():
     #                                "gridfs_file_ids": file_ids
     #                            }}, upsert=True)
 
-    
+
     @staticmethod
     def start(data, model_name, ml_model, config={}):
         """
         We use this worker to parallel train different data models and data model configurations
-    
+
         :param data: This is the vectorized data
         :param model_name: This will be the model name so we can pull stats and other
         :param ml_model: This will be the data model name, which can let us find the data model implementation

@@ -13,8 +13,7 @@ import time
 import itertools
 import numpy as np
 
-# import logging
-from mindsdb.libs.helpers.logging import logging
+import mindsdb.libs.helpers.log
 
 import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
@@ -75,7 +74,7 @@ class Sampler:
             group_pointer = 0
             first_column = next(iter(self.data[group]))
             total_length = len(self.data[group][first_column])
-            logging.debug('Iterator on group {group}/{total_groups}, total rows: {total_rows}'.format(group=group, total_groups=total_groups, total_rows=total_length))
+            log.debug('Iterator on group {group}/{total_groups}, total rows: {total_rows}'.format(group=group, total_groups=total_groups, total_rows=total_length))
 
             while group_pointer < total_length:
                 limit = group_pointer + self.batch_size
@@ -85,7 +84,7 @@ class Sampler:
 
                 for column in self.model_columns:
 
-                    # logging.debug('Generating: pytorch variables, batch: {column}-[{group_pointer}:{limit}]-{column_type}'.format(column=column, group_pointer=group_pointer, limit=limit, column_type=self.stats[column][KEYS.DATA_TYPE]))
+                    # log.debug('Generating: pytorch variables, batch: {column}-[{group_pointer}:{limit}]-{column_type}'.format(column=column, group_pointer=group_pointer, limit=limit, column_type=self.stats[column][KEYS.DATA_TYPE]))
                     # col_start_time = time.time()
                     #if self.stats[column][KEYS.DATA_TYPE] != DATA_TYPES.FULL_TEXT:
                     ret[column] = self.data[group][column][group_pointer:limit]
@@ -97,14 +96,11 @@ class Sampler:
                     #     # Todo: figure out how to deal with full text features here
                     #     ret[column] =[0]*(limit-group_pointer)
 
-                    # logging.debug('Generated: {column} [OK] in {time_delta:.2f} seconds'.format(column=column, time_delta=(time.time()-col_start_time)))
+                    # log.debug('Generated: {column} [OK] in {time_delta:.2f} seconds'.format(column=column, time_delta=(time.time()-col_start_time)))
 
-                logging.debug('Generated: [ALL_COLUMNS] in batch [OK], {time_delta:.2f} seconds'.format(time_delta=(time.time() - allcols_time)))
+                log.debug('Generated: [ALL_COLUMNS] in batch [OK], {time_delta:.2f} seconds'.format(time_delta=(time.time() - allcols_time)))
 
                 yield Batch(self, ret, group=group, column=column, start=group_pointer, end=limit )
 
                 ret = {}
                 group_pointer = limit
-
-
-

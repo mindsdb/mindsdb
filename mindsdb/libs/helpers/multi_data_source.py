@@ -2,8 +2,7 @@ from mindsdb.libs.data_types.data_source import DataSource
 from mindsdb.libs.data_sources.file_ds import FileDS
 from pandas import DataFrame
 
-# import logging
-from mindsdb.libs.helpers.logging import logging
+import mindsdb.libs.helpers.log
 
 
 def getDS(from_data):
@@ -24,7 +23,6 @@ def getDS(from_data):
     else:  # assume is a file
         from_ds = FileDS(from_data)
         if from_ds is None:
-            logging.error('No data matched the input data')
+            log.error('No data matched the input data')
 
     return from_ds
-

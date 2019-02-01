@@ -8,7 +8,7 @@ global internal_logger
 
 def initialize(level, send_method=None, host='0.0.0.0', por=6666):
     global internal_logger
-    internal_logger = logging.getLogger('mindsdb')
+    internal_logger = logging.getLogger('mindsdb/')
 
     internal_logger.setLevel(level)
     stream_handler = logging.StreamHandler()
@@ -29,22 +29,22 @@ def initialize(level, send_method=None, host='0.0.0.0', por=6666):
 def debug(message):
     message = pprint.pformat(str(message))
     caller = getframeinfo(stack()[1][0])
-    internal_logger.debug("%s:%d - %s" % (caller.filename, caller.lineno, message))
+    internal_logger.debug("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
 
 def info(message):
     message = pprint.pformat(str(message))
     caller = getframeinfo(stack()[1][0])
-    internal_logger.info("%s:%d - %s" % (caller.filename, caller.lineno, message))
+    internal_logger.info("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
 
 def warning(message):
     message = pprint.pformat(str(message))
     caller = getframeinfo(stack()[1][0])
-    internal_logger.warning("%s:%d - %s" % (caller.filename, caller.lineno, message))
+    internal_logger.warning("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
 
 def error(message):
     message = pprint.pformat(str(message))
     caller = getframeinfo(stack()[1][0])
-    internal_logger.error("%s:%d - %s" % (caller.filename, caller.lineno, message))
+    internal_logger.error("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
 
 def infoChart(message,type,uid=None):
     pass

@@ -9,7 +9,7 @@ import traceback
 import urllib
 import pandas as pd
 
-from mindsdb.libs.helpers.log
+from mindsdb.libs.helpers.log as log
 from mindsdb.libs.helpers.sqlite_helpers import *
 from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.config import SQLITE_FILE

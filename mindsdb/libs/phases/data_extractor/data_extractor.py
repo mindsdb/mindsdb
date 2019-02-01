@@ -3,7 +3,7 @@
 import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-import mindsdb.libs.helpers.log
+import mindsdb.libs.helpers.log as log
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.helpers.text_helpers import hashtext
 from mindsdb.external_libs.stats import sampleSize

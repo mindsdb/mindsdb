@@ -8,7 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-import mindsdb.libs.helpers.log
+import mindsdb.libs.helpers.log as log
 
 import torch
 import torch.nn as nn

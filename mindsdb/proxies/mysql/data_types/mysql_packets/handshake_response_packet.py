@@ -12,7 +12,7 @@
 import traceback
 from pprint import pformat
 
-import mindsdb.libs.helpers.log
+import mindsdb.libs.helpers.log as log
 from mindsdb.proxies.mysql.data_types.mysql_datum import Datum
 from mindsdb.mindsdb_server.proxies.mysql.data_types.mysql_packet import Packet
 

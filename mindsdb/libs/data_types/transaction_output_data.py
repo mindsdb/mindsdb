@@ -1,6 +1,6 @@
 from mindsdb.libs.constants.mindsdb import *
 
-import mindsdb.libs.helpers.log
+import mindsdb.libs.helpers.log as log
 
 class TransactionOutputData():
 

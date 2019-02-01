@@ -9,7 +9,7 @@ import traceback
 import urllib
 import pandas as pd
 
-from mindsdb.libs.helpers.log as log
+import mindsdb.libs.helpers.log as log
 from mindsdb.libs.helpers.sqlite_helpers import *
 from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.config import SQLITE_FILE
@@ -31,11 +31,7 @@ class MindsDBController:
         """
 
         self.setConfigs()
-        log.initialize(2)
-
-        log.debug('!RFSFGSgsdgsd')
-        log.error("AAA")
-        exit()
+        log.initialize(level=2)
 
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()

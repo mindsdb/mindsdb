@@ -6,9 +6,8 @@ from inspect import getframeinfo, stack
 
 global internal_logger
 
-def initialize(classmethodlevel, send_method=None, host='0.0.0.0', por=6666):
+def initialize(level, send_method=None, host='0.0.0.0', por=6666):
     global internal_logger
-    return logging.getLogger('mindsdb')
     internal_logger = logging.getLogger('mindsdb')
 
     internal_logger.setLevel(level)
@@ -27,33 +26,25 @@ def initialize(classmethodlevel, send_method=None, host='0.0.0.0', por=6666):
 
     internal_logger.setLevel(level)
 
-def debug(classmethodmessage):
-    global internal_logger
-
+def debug(message):
     message = pprint.pformat(str(message))
     caller = getframeinfo(stack()[1][0])
     internal_logger.debug("%s:%d - %s" % (caller.filename, caller.lineno, message))
 
-def info(classmethodmessage):
-    global internal_logger
-
+def info(message):
     message = pprint.pformat(str(message))
     caller = getframeinfo(stack()[1][0])
     internal_logger.info("%s:%d - %s" % (caller.filename, caller.lineno, message))
 
-def warning(classmethodmessage):
-    global internal_logger
-
+def warning(message):
     message = pprint.pformat(str(message))
     caller = getframeinfo(stack()[1][0])
     internal_logger.warning("%s:%d - %s" % (caller.filename, caller.lineno, message))
 
-def error(classmethodmessage):
-    global internal_logger
-
+def error(message):
     message = pprint.pformat(str(message))
     caller = getframeinfo(stack()[1][0])
     internal_logger.error("%s:%d - %s" % (caller.filename, caller.lineno, message))
 
-def infoChart(classmethoddata,type,uid=None):
+def infoChart(message,type,uid=None):
     pass

@@ -13,7 +13,7 @@ import time
 import itertools
 import numpy as np
 
-import mindsdb.libs.helpers.log
+import mindsdb.libs.helpers.log as log
 
 import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *

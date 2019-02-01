@@ -10,7 +10,7 @@
 """
 
 # import logging
-import mindsdb.libs.helpers.log
+import mindsdb.libs.helpers.log as log
 
 
 from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_string, get_label_index_for_value

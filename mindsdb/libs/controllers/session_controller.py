@@ -13,7 +13,7 @@ from pymongo import MongoClient
 import mindsdb.config as CONFIG
 from mindsdb.libs.controllers.transaction_controller import TransactionController
 from mindsdb.libs.constants.mindsdb import *
-import mindsdb.libs.helpers.log
+import mindsdb.libs.helpers.log as log
 
 
 class SessionController():

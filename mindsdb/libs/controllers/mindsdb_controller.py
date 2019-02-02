@@ -24,15 +24,15 @@ from pathlib import Path
 
 class MindsDBController:
 
-    def __init__(self, file=SQLITE_FILE):
+    def __init__(self, file=SQLITE_FILE, check_for_updates = True):
         """
 
         :param file:
         """
 
         self.setConfigs()
-
-        _thread.start_new_thread(MindsDBController.checkForUpdates, ())
+        if check_for_updates:
+            _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()
         self.storage_file = file
         self.conn = sqlite3.connect(file)
@@ -180,7 +180,7 @@ class MindsDBController:
     def startInfoServer(self):
         pass
 
-    def predict(self, when={}, from_data = None, model_name='mdsb_model', breakpoint= PHASE_END):
+    def predict(self, when={}, from_data = None, model_name='mdsb_model', breakpoint= PHASE_END, predict=None):
         """
 
         :param predict:

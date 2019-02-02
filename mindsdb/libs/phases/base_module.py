@@ -61,7 +61,9 @@ class BaseModule():
             self.session.logging.error('Module {class_name} has no \'phase_name\' defined and therefore it cannot be properly tested'.format(class_name=class_name))
 
         if self.log_on_run:
+            print('haaar')
             self.session.logging.info('[START] {class_name}'.format(class_name=class_name))
+            exit()
 
         # if we are past the breakpoint do nothing, breakpoints are used when testing a particular module
         if self.transaction.breakpoint is not None and self.phase_name > self.transaction.breakpoint:

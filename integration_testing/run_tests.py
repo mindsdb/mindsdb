@@ -2,6 +2,7 @@ from data_generators import *
 import sys
 import os
 import itertools
+import logging
 
 # Not working for some reason, we need mindsdb in PYPATH for now
 #sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + '/../mindsdb/__init__.py')
@@ -109,6 +110,7 @@ def run_all_test():
     test_one_label_prediction()
 
 def run_all_test_that_should_work():
+    logging.basicConfig(format='HAHA-I"VE OVEWRITTEN THE MINDSDB CONFIG %(message)s')
     test_one_label_prediction()
 
 #run_all_test()

@@ -43,3 +43,4 @@ urllib3>=1.23
 Werkzeug>=0.14.1
 zope.interface>=4.5.0
 PyHamcrest>=1.9.0
+colorlog>=4.0.2

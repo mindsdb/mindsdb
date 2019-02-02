@@ -8,7 +8,6 @@ import uuid
 import traceback
 import urllib
 import pandas as pd
-import uuid
 
 import mindsdb.libs.helpers.log as log
 from mindsdb.libs.helpers.sqlite_helpers import *
@@ -25,15 +24,14 @@ from pathlib import Path
 
 class MindsDBController:
 
-    def __init__(self, file=SQLITE_FILE):
+    def __init__(self, log_level=1, log_url='http://localhost:35261', file=SQLITE_FILE):
         """
-
         :param file:
         """
 
         self.setConfigs()
         controller_uuid = str(uuid.uuid1())
-        log.initialize(controller_uuid, level=2)
+        log.initialize(controller_uuid, level=2, log_level, log_url)
 
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()
@@ -265,7 +263,8 @@ class MindsDBController:
             ret = r.json()
 
             if 'version' in ret and ret['version']!= MINDSDB_VERSION:
-                log.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
+                pass
+                #log.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
             else:
                 log.debug('MindsDB is up to date!')
 

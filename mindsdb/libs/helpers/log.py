@@ -9,36 +9,39 @@ import socketio
 global internal_logger
 global id
 global sio
-
+global send
 
 
 def gen_char(n, ch):
     return ''.join([ch for i in range(n)])
 
 
-def initialize(uuid, level, log_url):
+def initialize(uuid, level, log_url, send_logs):
     global id
     global internal_logger
     global sio
+    global send
 
     id = uuid
     internal_logger = logging.getLogger('mindsdb-logger-{}'.format(id))
 
-    sio = socketio.Client()
+    send = send_logs
+    if send:
+        sio = socketio.Client()
 
-    @sio.on('connect')
-    def on_connect():
-        print('connection established')
+        @sio.on('connect')
+        def on_connect():
+            print('connection established')
 
-    @sio.on('send_url')
-    def on_call(payload):
-        internal_logger.info('\n\n{eq1}\n{eq2}   You can view your logs at: {url}   {eq2}\n{eq1}\n\n'.format(eq1=gen_char(104, "="), eq2=gen_char(2, "|"), url=payload['url']))
+        @sio.on('send_url')
+        def on_call(payload):
+            internal_logger.info('\n\n{eq1}\n{eq2}   You can view your logs at: {url}   {eq2}\n{eq1}\n\n'.format(eq1=gen_char(104, "="), eq2=gen_char(2, "|"), url=payload['url']))
 
-    @sio.on('disconnect')
-    def on_disconnect():
-        print('disconnected from server')
-
-    sio.connect(log_url)
+        @sio.on('disconnect')
+        def on_disconnect():
+            print('disconnected from server')
+        
+        sio.connect(log_url)
 
     internal_logger.handlers = []
     internal_logger.propagate = False
@@ -62,14 +65,16 @@ def info(message):
 
     message = pprint.pformat(str(message))
     caller = getframeinfo(stack()[1][0])
-    sio.emit('call',{'message':str(message),'uuid':id})
+    if send:
+        sio.emit('call',{'message':str(message),'uuid':id})
     internal_logger.info("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
 
 def warning(message):
     global sio
 
     message = pprint.pformat(str(message))
-    sio.emit('call',{'message':str(message),'uuid':id})
+    if send:
+        sio.emit('call',{'message':str(message),'uuid':id})
     caller = getframeinfo(stack()[1][0])
     internal_logger.warning("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
 
@@ -77,11 +82,13 @@ def error(message):
     global sio
 
     message = pprint.pformat(str(message))
-    sio.emit('call',{'message':str(message),'uuid':id})
+    if send:
+        sio.emit('call',{'message':str(message),'uuid':id})
 
     caller = getframeinfo(stack()[1][0])
     internal_logger.error("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
-    sio.disconnect()
+    if send:
+        sio.disconnect()
 
 def infoChart(message,type,uid=None):
     pass

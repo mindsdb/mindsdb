@@ -24,14 +24,14 @@ from pathlib import Path
 
 class MindsDBController:
 
-    def __init__(self, log_level=1, log_url='http://localhost:35261', file=SQLITE_FILE):
+    def __init__(self, log_level=1, log_url='http://localhost:35261', send_logs=True, file=SQLITE_FILE):
         """
         :param file:
         """
 
         self.setConfigs()
         controller_uuid = str(uuid.uuid1())
-        log.initialize(controller_uuid, level=2, log_level, log_url)
+        log.initialize(controller_uuid, log_level, log_url, send_logs)
 
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()

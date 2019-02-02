@@ -110,7 +110,6 @@ def run_all_test():
     test_one_label_prediction()
 
 def run_all_test_that_should_work():
-    logging.basicConfig(format='HAHA-I"VE OVEWRITTEN THE MINDSDB CONFIG %(message)s')
     test_one_label_prediction()
 
 #run_all_test()

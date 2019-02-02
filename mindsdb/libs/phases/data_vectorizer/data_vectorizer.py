@@ -13,7 +13,7 @@
 import copy
 import numpy as np
 import itertools
-import logging
+import mindsdb.libs.helpers.log as log
 import traceback
 
 from mindsdb.libs.constants.mindsdb import *
@@ -56,8 +56,8 @@ class DataVectorizer(BaseModule):
                 for predict_col_name in predict_columns:
                      row_extra_vector += [cleanfloat(v) for v in ret[predict_col_name][col_row_index + i + 1]]
             except Exception as e:
-                logging.error(traceback.format_exc())
-                logging.error('something is not right, seems like we got here with np arrays and they should not be!')
+                log.error(traceback.format_exc())
+                log.error('something is not right, seems like we got here with np arrays and they should not be!')
                 raise e
 
         if empty_count > 0:

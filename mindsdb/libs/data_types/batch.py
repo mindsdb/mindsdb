@@ -12,7 +12,7 @@
 from mindsdb.libs.constants.mindsdb import *
 import numpy as np
 import torch
-import logging
+import mindsdb.libs.helpers.log as log
 import traceback
 
 class Batch:
@@ -118,7 +118,7 @@ class Batch:
                 try:
                     ret[col] = self.sampler.variable_wrapper(self.getColumn(what,col, by_buckets))
                 except:
-                    logging.error(traceback.format_exc())
+                    log.error(traceback.format_exc())
                     raise ValueError('Could not decode column {what}:{col}'.format(what=what, col=col))
             return ret
         else:

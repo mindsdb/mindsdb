@@ -1,7 +1,7 @@
 from mindsdb.libs.data_types.persistent_object import PersistentObject
 from mindsdb.config import *
 import os
-import logging
+import mindsdb.libs.helpers.log as log
 from pathlib import Path
 
 class PersistentMlModelInfo(PersistentObject):
@@ -58,7 +58,7 @@ class PersistentMlModelInfo(PersistentObject):
                 if file_path.is_file():
                     os.remove(filename)
                 else:
-                    logging.warning('could not delete file {file} becasue it doesnt exist'.format(file=filename))
+                    log.warning('could not delete file {file} becasue it doesnt exist'.format(file=filename))
 
             except OSError:
-                logging.error('could not delete file {file}'.format(file=filename))
+                log.error('could not delete file {file}'.format(file=filename))

@@ -1,4 +1,4 @@
-import logging
+import mindsdb.libs.helpers.log as log
 
 class ObjectDict():
 
@@ -20,5 +20,5 @@ class ObjectDict():
             if key in self.__dict__:
                 self.__setattr__(key, dict[key])
             else:
-                logging.warn('no {key} in class'.format(key=key))
+                log.warn('no {key} in class'.format(key=key))
 

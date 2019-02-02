@@ -56,7 +56,7 @@ def hashtext(cell):
     return hash
 
 def test():
-    print(splitRecursive('ABC.C HELLO, one:123.45 67', WORD_SEPARATORS))
+    log.info(splitRecursive('ABC.C HELLO, one:123.45 67', WORD_SEPARATORS))
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

@@ -93,11 +93,11 @@ class ModelPredictor(BaseModule):
 def test():
 
     from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
-    import logging
+    import mindsdb.libs.helpers.log as log
 
     mdb = MindsDB()
     ret = mdb.predict(predict='position', when={'max_time_rec': 700}, model_name='mdsb_model')
-    logging.info(ret)
+    log.info(ret)
 
 
 # only run the test if this file is called from debugger

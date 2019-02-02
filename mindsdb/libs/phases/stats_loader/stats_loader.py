@@ -13,7 +13,7 @@ import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 
-import logging
+import mindsdb.libs.helpers.log as log
 
 class StatsLoader(BaseModule):
 
@@ -32,7 +32,7 @@ class StatsLoader(BaseModule):
 
         else:
 
-            logging.error('No model found for this statement, please check if model_name {model_name} was trained'.format(model_name=self.transaction.metadata.model_name))
+            log.error('No model found for this statement, please check if model_name {model_name} was trained'.format(model_name=self.transaction.metadata.model_name))
 
 def test():
 

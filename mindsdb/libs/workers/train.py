@@ -9,7 +9,7 @@
  *******************************************************
 """
 
-# import logging
+# import mindsdb.libs.helpers.log as log
 import mindsdb.libs.helpers.log as log
 
 

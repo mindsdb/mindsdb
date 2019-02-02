@@ -13,7 +13,7 @@ import random
 import json
 import time
 import warnings
-import logging
+import mindsdb.libs.helpers.log as log
 import traceback
 import sys
 
@@ -283,7 +283,7 @@ class StatsGenerator(BaseModule):
                         try:
                             col_data[i] = int(parseDate(element).timestamp())
                         except:
-                            logging.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
+                            log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
                             col_data[i] = None
 
             if data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:

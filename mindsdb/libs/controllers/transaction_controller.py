@@ -19,7 +19,7 @@ from mindsdb.libs.data_types.transaction_output_data import TransactionOutputDat
 from mindsdb.libs.data_types.model_data import ModelData
 
 import mindsdb.config as CONFIG
-# import logging
+# import mindsdb.libs.helpers.log as log
 
 import _thread
 import traceback

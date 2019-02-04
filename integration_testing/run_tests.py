@@ -10,7 +10,6 @@ import logging
 
 import mindsdb
 
-
 types_that_fail = ['str','ascii']
 types_that_work = ['int','float','date','datetime','timestamp']
 
@@ -61,7 +60,7 @@ def test_one_label_prediction():
     columns_to_file(columns_test, test_file_name, separator)
 
 
-    mdb = mindsdb.MindsDB(send_logs=False)
+    mdb = mindsdb.MindsDB(log_level=mindsdb.config_vars.DEBUG_LOG_LEVEL, send_logs=False)
 
     mdb.learn(
         from_data=train_file_name,

@@ -11,13 +11,28 @@ global id
 global sio
 global send
 
-# Generates a string consisting of `length` consiting of repeating `character`
+
 def gen_chars(length, character):
+    '''
+    # Generates a string consisting of `length` consiting of repeating `character`
+
+    :param length: length of the string
+    :param chracter: character to use
+    '''
+
     return ''.join([character for i in range(length)])
 
 
-# Initialize the log module, should only be called once at the begging of the program
-def initialize(uuid, level, log_url, send_logs):
+def initialize(level, log_url, send_logs, uuid):
+    '''
+    # Initialize the log module, should only be called once at the begging of the program
+
+    :param level: What logs to display
+    :param log_url: What urls to send logs to
+    :param send_logs: Whether or not to send logs to the remote Mindsdb server
+    :param uuid: The unique id for this MindsDB instance or training/prediction session
+    '''
+
     global id
     global internal_logger
     global sio
@@ -54,8 +69,15 @@ def initialize(uuid, level, log_url, send_logs):
 
     internal_logger.setLevel(level)
 
-# Internal function used for logging, adds the id and caller to the log and prettifies the message
+
 def log_message(message, func):
+    '''
+    # Internal function used for logging, adds the id and caller to the log and prettifies the message
+
+    :param message: message that the logger shoud log
+    :param chracter: logger function to use (example: 'info' or 'error')
+    '''
+    
     global sio
 
     caller = getframeinfo(stack()[2][0])

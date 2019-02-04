@@ -24,14 +24,21 @@ from pathlib import Path
 
 class MindsDBController:
 
-    def __init__(self, log_level=1, log_url='http://localhost:35261', send_logs=True, file=SQLITE_FILE):
-        """
-        :param file:
-        """
+    def __init__(self, log_level=CONFIG.DEFAULT_LOG_LEVEL, log_url='http://localhost:35261', send_logs=False, file=SQLITE_FILE):
+        '''
+        # Initializez the main Mindsdb object, used for training and making predictions
+
+        :param log_level: What logs to display
+        :param log_url: What urls to send logs to
+        :param send_logs: Whether or not to send logs to the remote Mindsdb server
+        :param file: Where to save the trained models
+
+        :return: An instance of Mindsdb
+        '''
 
         self.setConfigs()
         controller_uuid = str(uuid.uuid1())
-        log.initialize(controller_uuid, log_level, log_url, send_logs)
+        log.initialize(log_level, log_url, send_logs, controller_uuid)
 
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()

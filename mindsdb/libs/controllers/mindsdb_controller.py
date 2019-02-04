@@ -1,5 +1,4 @@
-import sqlite3
-import pandas
+
 import requests
 import os
 import platform
@@ -7,7 +6,7 @@ import _thread
 import uuid
 import traceback
 import urllib
-import pandas as pd
+
 
 import mindsdb.libs.helpers.log as log
 from mindsdb.libs.helpers.multi_data_source import getDS

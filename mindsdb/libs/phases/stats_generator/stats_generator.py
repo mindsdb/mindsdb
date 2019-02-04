@@ -27,7 +27,7 @@ import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, cleanfloat, tryCastToNumber
-from mindsdb.external_libs.stats import sampleSize
+from mindsdb.external_libs.stats import calculate_sample_size
 
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
@@ -241,7 +241,7 @@ class StatsGenerator(BaseModule):
 
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
         population_size = len(self.transaction.input_data.data_array)
-        sample_size = int(sampleSize(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
+        sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
 
         # get the indexes of randomly selected rows given the population size
         input_data_sample_indexes = random.sample(range(population_size), sample_size)

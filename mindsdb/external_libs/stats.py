@@ -1,6 +1,6 @@
 # Cochran’s sample size calculator
 
-def sampleSize(
+def calculate_sample_size(
     population_size,
     margin_error=.05,
     confidence_level=.99,

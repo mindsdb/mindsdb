@@ -6,7 +6,7 @@ from mindsdb.libs.phases.base_module import BaseModule
 import mindsdb.libs.helpers.log as log
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.helpers.text_helpers import hashtext
-from mindsdb.external_libs.stats import sampleSize
+from mindsdb.external_libs.stats import calculate_sample_size
 
 
 
@@ -22,9 +22,7 @@ class DataExtractor(BaseModule):
 
     phase_name = PHASE_DATA_EXTRACTION
 
-
-
-    def getDataFrameFromWhenConditions(self, train_metadata):
+    def _get_data_frame_from_when_conditions(self, train_metadata):
         """
 
         :param train_metadata:
@@ -49,10 +47,8 @@ class DataExtractor(BaseModule):
 
         return result
 
-
-    def applyWhenConditionsToDF(self, df):
+    def _apply_when_conditions_to_df(self, df):
         """
-
         :param df:
         :return:
         """
@@ -60,8 +56,7 @@ class DataExtractor(BaseModule):
         # TODO: Apply the when conditions
         return df
 
-
-    def applySortConditionsToDF(self, df, train_metadata):
+    def _apply_sort_conditions_to_df(self, df, train_metadata):
         """
 
         :param df:
@@ -87,7 +82,7 @@ class DataExtractor(BaseModule):
         return df
 
 
-    def getPreparedInputDF(self, train_metadata):
+    def _get_prepared_input_df(self, train_metadata):
         """
 
         :param train_metadata:
@@ -107,9 +102,9 @@ class DataExtractor(BaseModule):
             if self.transaction.metadata.model_when_conditions is not None:
                 # if no data frame yet, make one
                 if df is not None:
-                    df = self.getDataFrameFromWhenConditions(train_metadata)
+                    df = self._get_data_frame_from_when_conditions(train_metadata)
                 else:
-                    df = self.applyWhenConditionsToDF(df)
+                    df = self._apply_when_conditions_to_df(df)
 
         # if by now there is no DF, throw an error
         if df is None:
@@ -118,12 +113,12 @@ class DataExtractor(BaseModule):
             raise ValueError(error)
             return None
 
-        df = self.applySortConditionsToDF(df,train_metadata)
+        df = self._apply_sort_conditions_to_df(df, train_metadata)
 
         return df
 
 
-    def validateInputDataIntegrity(self):
+    def _validate_input_data_integrity(self):
         """
 
         :return:
@@ -177,7 +172,7 @@ class DataExtractor(BaseModule):
             return
 
         # Here you want to organize data, sort, and add/remove columns
-        result = self.getPreparedInputDF(train_metadata)
+        result = self._get_prepared_input_df(train_metadata)
 
 
         columns = list(result.columns.values)
@@ -186,7 +181,7 @@ class DataExtractor(BaseModule):
         self.transaction.input_data.columns = columns
         self.transaction.input_data.data_array = data_array
 
-        self.validateInputDataIntegrity()
+        self._validate_input_data_integrity()
 
         is_time_series = train_metadata.model_is_time_series
         group_by = train_metadata.model_group_by
@@ -218,9 +213,9 @@ class DataExtractor(BaseModule):
 
             if self.transaction.metadata.type == TRANSACTION_LEARN:
 
-                sample_size = int(sampleSize(population_size=length,
-                                             margin_error=self.transaction.metadata.sample_margin_of_error,
-                                             confidence_level=self.transaction.metadata.sample_confidence_level))
+                sample_size = int(calculate_sample_size(population_size=length,
+                                                        margin_error=self.transaction.metadata.sample_margin_of_error,
+                                                        confidence_level=self.transaction.metadata.sample_confidence_level))
 
                 # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
                 should_split_by_group = True if (is_time_series and self.transaction.metadata.window_size > length * CONFIG.TEST_TRAIN_RATIO) else False

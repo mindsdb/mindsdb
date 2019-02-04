@@ -98,6 +98,8 @@ def warning(message):
     log_message(message, 'warning')
 
 def error(message):
+    global send
+    
     log_message(message, 'error')
     if send:
         sio.disconnect()

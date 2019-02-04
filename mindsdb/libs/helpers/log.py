@@ -11,11 +11,12 @@ global id
 global sio
 global send
 
+# Generates a string consisting of `length` consiting of repeating `character`
+def gen_chars(length, character):
+    return ''.join([character for i in range(length)])
 
-def gen_char(n, ch):
-    return ''.join([ch for i in range(n)])
 
-
+# Initialize the log module, should only be called once at the begging of the program
 def initialize(uuid, level, log_url, send_logs):
     global id
     global internal_logger
@@ -53,6 +54,7 @@ def initialize(uuid, level, log_url, send_logs):
 
     internal_logger.setLevel(level)
 
+# Internal function used for logging, adds the id and caller to the log and prettifies the message
 def log_message(message, func):
     global sio
 

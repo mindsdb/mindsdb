@@ -40,7 +40,7 @@ def initialize(uuid, level, log_url, send_logs):
         @sio.on('disconnect')
         def on_disconnect():
             print('disconnected from server')
-        
+
         sio.connect(log_url)
 
     internal_logger.handlers = []
@@ -53,40 +53,28 @@ def initialize(uuid, level, log_url, send_logs):
 
     internal_logger.setLevel(level)
 
-def debug(message):
+def log_message(message, func):
     global sio
 
+    caller = getframeinfo(stack()[2][0])
     message = pprint.pformat(str(message))
-    caller = getframeinfo(stack()[1][0])
-    internal_logger.debug("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
+    if send and func != 'debug':
+        sio.emit('call',{'message':str(message),'uuid':id})
+
+    call = getattr(internal_logger, func)
+    call("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
+
+def debug(message):
+    log_message(message, 'debug')
 
 def info(message):
-    global sio
-
-    message = pprint.pformat(str(message))
-    caller = getframeinfo(stack()[1][0])
-    if send:
-        sio.emit('call',{'message':str(message),'uuid':id})
-    internal_logger.info("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
+    log_message(message, 'info')
 
 def warning(message):
-    global sio
-
-    message = pprint.pformat(str(message))
-    if send:
-        sio.emit('call',{'message':str(message),'uuid':id})
-    caller = getframeinfo(stack()[1][0])
-    internal_logger.warning("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
+    log_message(message, 'warning')
 
 def error(message):
-    global sio
-
-    message = pprint.pformat(str(message))
-    if send:
-        sio.emit('call',{'message':str(message),'uuid':id})
-
-    caller = getframeinfo(stack()[1][0])
-    internal_logger.error("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
+    log_message(message, 'error')
     if send:
         sio.disconnect()
 

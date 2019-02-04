@@ -36,9 +36,9 @@ class MindsDBController:
         :return: An instance of Mindsdb
         '''
 
-        self.setConfigs()
         controller_uuid = str(uuid.uuid1())
         log.initialize(log_level, log_url, send_logs, controller_uuid)
+        self.setConfigs()
 
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()

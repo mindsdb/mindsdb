@@ -6,7 +6,7 @@
 
 
 from .helpers import *
-
+import  mindsdb.libs.constants.mindsdb as CONST
 
 # These are the paths for storing data regarding mindsdb models and model info
 MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', getMindsDBStoragePath())
@@ -42,17 +42,7 @@ SAMPLER_MAX_BATCH_SIZE =  ifEnvElse('SAMPLER_MAX_BATCH_SIZE', 1000)
 ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN =  ifEnvElse('ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN', 200)
 
 # MindsDB has various Proxies that you can plug into
-MYSQL_PROXY = ifEnvElse('MYSQL_PROXY', False)
-
-WEBSOCKET_PROXY = ifEnvElse('WEBSOCKET_PROXY', False)
-WEBSOCKET_URL = ifEnvElse('WEBSOCKET_URL', "ws://127.0.0.1:9000")
-
-LOGGING_WEBSOCKET_PROXY = ifEnvElse('LOGGING_WEBSOCKET_PROXY', True)
-LOGGING_WEBSOCKET_URL = ifEnvElse('LOGGING_WEBSOCKET_URL', "ws://127.0.0.1:6996")
-
-
-PROXY_SERVER_PORT = ifEnvElse('MINDSDB_PROXY_SERVER_PORT', 3306)
-PROXY_SERVER_HOST = ifEnvElse('MINDSDB_PROXY_SERVER_HOST', 'localhost')
+MINDSDB_SERVER_URL = ifEnvElse('MINDSDB_SERVER_URL', 'http://localhost:35261')
 
 # LOG Config settings
 PROXY_LOG_CONFIG = {
@@ -61,8 +51,4 @@ PROXY_LOG_CONFIG = {
     'filename': ifEnvElse('MINDSDB_PROXY_LOG_FILENAME', None)
 }
 
-DEBUG_LOG_LEVEL = 10
-DEFAULT_LOG_LEVEL = 20
-WARNING_LOG_LEVEL = 30
-ERROR_LOG_LEVEL = 40
-NO_LOGS_LOG_LEVEL = 50
+DEFAULT_LOG_LEVEL = ifEnvElse('DEFAULT_LOG_LEVEL', CONST.INFO_LOG_LEVEL)

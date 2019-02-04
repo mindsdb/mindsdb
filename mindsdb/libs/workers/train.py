@@ -10,7 +10,7 @@
 """
 
 # import mindsdb.libs.helpers.log as log
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_string, get_label_index_for_value
@@ -98,8 +98,8 @@ class TrainWorker():
             for train_ret in self.data_model_object.trainModel(self.train_sampler):
 
                 log.debug('Training State epoch:{epoch}, batch:{batch}, loss:{loss}'.format(epoch=train_ret.epoch,
-                                                                                               batch=train_ret.batch,
-                                                                                               loss=train_ret.loss))
+                                                                                            batch=train_ret.batch,
+                                                                                            loss=train_ret.loss))
 
                 # save model every new epoch
                 if last_epoch != train_ret.epoch:

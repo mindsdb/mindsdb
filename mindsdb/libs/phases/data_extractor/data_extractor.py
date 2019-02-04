@@ -3,7 +3,7 @@
 import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.helpers.text_helpers import hashtext
 from mindsdb.external_libs.stats import calculate_sample_size
@@ -13,9 +13,6 @@ from mindsdb.external_libs.stats import calculate_sample_size
 import random
 import traceback
 import pandas
-import numpy as np
-
-
 
 
 class DataExtractor(BaseModule):
@@ -109,7 +106,7 @@ class DataExtractor(BaseModule):
         # if by now there is no DF, throw an error
         if df is None:
             error = 'Could not create a data frame for transaction'
-            log.error(error)
+            self.log.error(error)
             raise ValueError(error)
             return None
 
@@ -128,7 +125,7 @@ class DataExtractor(BaseModule):
 
         if len(self.transaction.input_data.data_array) <= 0:
             error = 'Input Data has no rows, please verify from_data or when_conditions'
-            log.error(error)
+            self.log.error(error)
             raise ValueError(error)
 
         # make sure that the column we are trying to predict is on the input_data
@@ -139,7 +136,7 @@ class DataExtractor(BaseModule):
             for col_target in self.transaction.metadata.model_predict_columns:
                 if col_target not in self.transaction.input_data.columns:
                     err = 'Trying to predict column {column} but column not in source data'.format(column=col_target)
-                    log.error(err)
+                    self.log.error(err)
                     self.transaction.error = True
                     self.transaction.errorMsg = err
                     raise ValueError(err)
@@ -166,7 +163,7 @@ class DataExtractor(BaseModule):
 
         else:
             # We cannot proceed without train metadata
-            log.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
+            self.log.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
             self.transaction.error = True
             self.transaction.errorMsg = traceback.print_exc(1)
             return
@@ -270,23 +267,23 @@ class DataExtractor(BaseModule):
             total_number_of_groupby_groups = len(self.transaction.input_data.all_indexes)
 
             if total_rows_used != total_rows_in_input:
-                log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error))
-                log.info('Using a [Cochran’s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
+                self.log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error))
+                self.log.info('Using a [Cochran’s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
                 data = {
                     'total': [total_rows_in_input, 'Total number of rows in input'],
                     'subsets': [[total_rows_used, 'Total number of rows used']]
                 }
-                log.infoChart(data, type='pie')
+                self.log.infoChart(data, type='pie')
 
             if total_number_of_groupby_groups > 1:
-                log.info('You are grouping your data by [{group_by}], we found:'.format(group_by=', '.join(group_by)))
+                self.log.info('You are grouping your data by [{group_by}], we found:'.format(group_by=', '.join(group_by)))
                 data = {
                     'Total number of groupby groups': total_number_of_groupby_groups,
                     'Average number of rows per groupby group': sum(average_number_of_rows_used_per_groupby.values())/len(average_number_of_rows_used_per_groupby)
                 }
-                log.infoChart(data, type='bars_horizontal')
+                self.log.infoChart(data, type='bars_horizontal')
 
-            log.info('We have split the input data into:')
+            self.log.info('We have split the input data into:')
 
             data = {
                 'subsets': [
@@ -297,7 +294,7 @@ class DataExtractor(BaseModule):
                 'label': 'Number of rows per subset'
             }
 
-            log.infoChart(data, type='pie')
+            self.log.infoChart(data, type='pie')
 
 
 

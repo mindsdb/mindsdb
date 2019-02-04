@@ -44,7 +44,7 @@ class DataEncoder(BaseModule):
 
         self.train_start_time = time.time()
 
-        self.session.logging.info('Training: model {model_name}, epoch 0'.format(model_name=model_name))
+        self.session.log.info('Training: model {model_name}, epoch 0'.format(model_name=model_name))
 
         self.last_time = time.time()
 
@@ -82,7 +82,7 @@ class DataEncoder(BaseModule):
                         data[test_train_key][target_group][src_col]+=self.transaction.model_data[test_train_key][group][src_col]
                     data[test_train_key][target_group][target_col] = data[test_train_key][target_group][src_col]
 
-                self.session.logging.info(
+                self.session.log.info(
                     'Training: model {model_name}, submodel {submodel_name}'.format(
                         model_name=model_name, total_time=total_time, submodel_name=submodel_name))
 
@@ -90,11 +90,11 @@ class DataEncoder(BaseModule):
                 TrainWorker.start(data, model_name=model_name, ml_model=data_model,
                                   config=config, submodel_name=submodel_name)
                 total_time = time.time() - train_start_time
-                self.session.logging.info(
+                self.session.log.info(
                     'Trained: model {model_name}, submodel {submodel_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(
                         model_name=model_name, total_time=total_time, submodel_name=submodel_name))
 
-        self.session.logging.info('Trained: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name = model_name, total_time=total_time))
+        self.session.log.info('Trained: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name = model_name, total_time=total_time))
 
 
 

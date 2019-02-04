@@ -10,16 +10,14 @@
 """
 
 import time
-import itertools
-import numpy as np
 
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.data_types.batch import Batch
 from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
-from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
+
 
 # this implements sampling without replacement and encodes sequential data using encoders
 # as described here, its best to sample without replacement:

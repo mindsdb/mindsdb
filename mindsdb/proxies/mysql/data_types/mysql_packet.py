@@ -71,7 +71,7 @@ class Packet:
         # packet_string = self._socket.request.recv(4)
         # if len(packet_string)<4:
         #     val = 'Expecting packet, but header len is <0'
-        #     logging.error(val)
+        #     log.error(val)
         #     raise ValueError(val)
 
         len_header = MAX_PACKET_SIZE
@@ -80,7 +80,7 @@ class Packet:
         while len_header == MAX_PACKET_SIZE:
             packet_string = self.mysql_socket.request.recv(4)
             if len(packet_string) < 4:
-                logging.warning('Packet with less than 4 bytes in length')
+                log.warning('Packet with less than 4 bytes in length')
                 return False
                 break
             len_header = struct.unpack('i', packet_string[:3] + b'\x00')[0]
@@ -88,8 +88,8 @@ class Packet:
                 break
             count_header = int(packet_string[3])
             body += self.mysql_socket.request.recv(len_header)
-        self.session.logging.debug('Got packet')
-        self.session.logging.debug(body)
+        self.session.log.debug('Got packet')
+        self.session.log.debug(body)
         self.session.count = int(count_header) + 1
         self.setup(len(body), count_header, body)
         return True
@@ -98,8 +98,8 @@ class Packet:
 
         self._seq = self.proxy.count
         string = self.getPacketString()
-        self.session.logging.debug('Sending packet string')
-        self.session.logging.debug(string)
+        self.session.log.debug('Sending packet string')
+        self.session.log.debug(string)
         self.mysql_socket.request.sendall(string)
 
         self.proxy.count += 1

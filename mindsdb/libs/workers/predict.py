@@ -9,10 +9,9 @@
  *******************************************************
 """
 
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 
-from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_string, get_label_index_for_value
-from mindsdb.libs.constants.mindsdb import *
+from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_string
 from mindsdb.libs.data_types.sampler import Sampler
 from mindsdb.libs.helpers.norm_denorm_helpers import denorm
 

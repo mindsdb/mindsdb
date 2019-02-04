@@ -10,15 +10,10 @@
 """
 
 import random
-import json
-import time
 import warnings
-import mindsdb.libs.helpers.log as log
-import traceback
-import sys
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 import numpy as np
-import pandas as pd
 import scipy.stats as st
 from dateutil.parser import parse as parseDate
 
@@ -245,7 +240,7 @@ class StatsGenerator(BaseModule):
 
         # get the indexes of randomly selected rows given the population size
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
-        self.logging.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
+        self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
         for sample_i in input_data_sample_indexes:
             row = self.transaction.input_data.data_array[sample_i]

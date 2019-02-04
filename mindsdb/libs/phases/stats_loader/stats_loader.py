@@ -9,11 +9,10 @@
  *******************************************************
 """
 
-import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 class StatsLoader(BaseModule):
 

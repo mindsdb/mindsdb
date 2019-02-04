@@ -96,7 +96,7 @@ class ResultsetPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        logging.basicConfig(level=10)
+        log.basicConfig(level=10)
         pprint.pprint(str(ResultsetPacket().getPacketString()))
 
 

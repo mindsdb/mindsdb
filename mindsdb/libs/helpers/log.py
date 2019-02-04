@@ -77,7 +77,7 @@ def log_message(message, func):
     :param message: message that the logger shoud log
     :param chracter: logger function to use (example: 'info' or 'error')
     '''
-    
+    global send
     global sio
 
     caller = getframeinfo(stack()[2][0])

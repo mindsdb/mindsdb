@@ -10,7 +10,6 @@ import urllib
 import pandas as pd
 
 import mindsdb.libs.helpers.log as log
-from mindsdb.libs.helpers.sqlite_helpers import *
 from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.config import SQLITE_FILE
 import mindsdb.config as CONFIG
@@ -24,7 +23,7 @@ from pathlib import Path
 
 class MindsDBController:
 
-    def __init__(self, log_level=1, log_url='http://localhost:35261', send_logs=True, file=SQLITE_FILE):
+    def __init__(self, log_level=1, log_url='http://localhost:35261', send_logs=True):
         """
         :param file:
         """
@@ -35,10 +34,7 @@ class MindsDBController:
 
         _thread.start_new_thread(MindsDBController.checkForUpdates, ())
         self.session = SessionController()
-        self.storage_file = file
-        self.conn = sqlite3.connect(file)
-        self.conn.create_aggregate("first_value", 1, FirstValueAgg)
-        self.conn.create_aggregate("array_agg_json", 2, ArrayAggJSON)
+
 
     def setConfigs(self):
         """
@@ -218,7 +214,6 @@ class MindsDBController:
 
         transaction_metadata.model_when_conditions = when
         transaction_metadata.type = transaction_type
-        transaction_metadata.storage_file = self.storage_file
         transaction_metadata.from_data = from_ds
 
         transaction = self.session.newTransaction(transaction_metadata, breakpoint)

@@ -30,7 +30,7 @@ def test_timeseries():
     columns.append(labels)
 
     columns_to_file(columns, data_file_name, separator)
-    mdb = mindsdb.MindsDB()
+    mdb = mindsdb.MindsDB(check_for_updates=False)
     mdb.learn(
         from_data=data_file_name,
         predict=label_name,
@@ -60,26 +60,19 @@ def test_one_label_prediction():
     columns_to_file(columns_test, test_file_name, separator)
 
 
-    mdb = mindsdb.MindsDB()
+    mdb = mindsdb.MindsDB(check_for_updates=False)
 
     mdb.learn(
         from_data=train_file_name,
         predict=label_name,
-        model_name='test_one_label_prediction'
+        model_name='test_one_label_prediction',
     )
-    print('!-------------  Learning ran successfully  -------------!')
 
-    mdb = mindsdb.MindsDB()
     results = mdb.predict(from_data=test_file_name, model_name='test_one_label_prediction')
-    print('!-------------  Prediction from file ran successfully  -------------!')
-
-    '''
-    for i in range(len(columns_test[0])):
-        features = {}
-        for n in range(len(columns_test)):
-            features[columns[n][0]] = columns_test[n][i]
-        result = mdb.predict(when=features, model_name='test_one_label_prediction')
-    '''
+    result_predict = results.predicted_values[0][label_name]
+    if result_predict is None:
+        raise ValueError("Prediction failed!")
+    
 
 
 def test_dual_label_prediction():
@@ -96,20 +89,15 @@ def test_dual_label_prediction():
     columns.append(labels2)
     columns_to_file(columns, data_file_name, separator)
 
-    mdb = mindsdb.MindsDB()
+    mdb = mindsdb.MindsDB(check_for_updates=False)
     mdb.learn(
         from_data=data_file_name,
         predict=label_names,
         model_name='test_dual_label_prediction'
         )
 
-
-def run_all_test():
-    test_dual_label_prediction()
+def run_tests():
     test_one_label_prediction()
 
-def run_all_test_that_should_work():
-    test_one_label_prediction()
-
-#run_all_test()
-run_all_test_that_should_work()
+if __name__ == "__main__":
+    run_tests()

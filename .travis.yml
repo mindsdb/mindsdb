@@ -10,6 +10,7 @@ cache: pip
 # install dependencies
 install:
   - travis_wait pip install mindsdb
+before_script: cd integration_testing
 # run tests
 script:
-  - pytest
+  - python3 run_tests.py

@@ -168,10 +168,10 @@ class StatsGenerator(BaseModule):
         self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 
         header = self.transaction.input_data.columns
-        origData = {}
+        non_null_data = {}
 
         for column in header:
-            origData[column] = []
+            non_null_data[column] = []
 
         empty_count = {}
         column_count = {}
@@ -196,12 +196,12 @@ class StatsGenerator(BaseModule):
                 if value == None:
                     empty_count[column] += 1
                 else:
-                    origData[column].append(value)
+                    non_null_data[column].append(value)
                 column_count[column] += 1
         stats = {}
 
-        for i, col_name in enumerate(origData):
-            col_data = origData[col_name] # all rows in just one column
+        for i, col_name in enumerate(non_null_data):
+            col_data = non_null_data[col_name] # all rows in just one column
             data_type = self.getColumnDataType(col_data)
 
             # NOTE: Enable this if you want to assume that some numeric values can be text
@@ -386,13 +386,13 @@ class StatsGenerator(BaseModule):
 
 
             if 'outlier_indexes' in col_stats:
-                if len(col_stats['outlier_indexes']) < len(origData[col])/expected_outlier_cap:
+                if len(col_stats['outlier_indexes']) < len(non_null_data[col])/expected_outlier_cap:
                     for index in col_stats['outlier_indexes']:
                         log.info('Detect outlier in column "{}", at position "{}", with value "{}"'.
-                        format(col,index,origData[col][index]))
+                        format(col,index,non_null_data[col][index]))
                 else:
                     log.warning('Detected {}% of the data as outliers in column "{}", this might indicate the data in this column is of low quality'
-                    .format( round(len(col_stats['outlier_indexes']) * 100 / len(origData[col]),2) , col ))
+                    .format( round(len(col_stats['outlier_indexes']) * 100 / len(non_null_data[col]),2) , col ))
 
         exit()
         return stats

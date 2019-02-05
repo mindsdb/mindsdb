@@ -35,6 +35,9 @@ def rand_ascii_str(length=None, give_nulls=True):
         length = random.randrange(1,120)
     if length % 4 == 0 and give_nulls==True:
         return ''
+    #Sometimes we should return a number instead of a string
+    if length % 7 == 0:
+        return str(length)
     return ''.join(random.choice([*string.whitespace, *string.ascii_letters]) for _ in range(length))
 
 

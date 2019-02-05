@@ -41,7 +41,7 @@ def tryCastToNumber(string):
                 return string
 
 def splitRecursive(word, tokens):
-    words = [word]
+    words = [str(word)]
     for token in tokens:
         new_split = []
         for word in words:

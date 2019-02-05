@@ -81,9 +81,9 @@ class StatsGenerator(BaseModule):
                 max_data_type = type_dist[data_type]
 
         if curr_data_type == DATA_TYPES.CLASS:
-            return self.getTextType(data)
+            return self.getTextType(data), type_dist
 
-        return curr_data_type
+        return curr_data_type, type_dist
 
 
     def getTextType(self, data):
@@ -202,7 +202,7 @@ class StatsGenerator(BaseModule):
 
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
-            data_type = self.getColumnDataType(col_data)
+            data_type, data_type_dist = self.getColumnDataType(col_data)
 
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
@@ -360,7 +360,7 @@ class StatsGenerator(BaseModule):
                     "histogram": histogram
                 }
                 stats[col_name] = col_stats
-
+            stats[col_name]['data_type_dist'] = data_type_dist
 
 
         total_rows = len(self.transaction.input_data.data_array)
@@ -379,8 +379,14 @@ class StatsGenerator(BaseModule):
         for col in stats:
             col_stats = stats[col]
 
+            data_type_tuples = col_stats['data_type_dist'].items()
+            significant_data_type_tuples = list(filter(lambda x: x[1] > len(non_null_data[col])/20, data_type_tuples))
+            if len(significant_data_type_tuples) > 1:
+                log.warning('The data in column "{}" seems to have members of {} different data types, namely {}, We shall go ahead using data type: {}'
+                .format(col, len(significant_data_type_tuples), significant_data_type_tuples, col_stats[KEYS.DATA_TYPE]))
+
             if col_stats['emptyPercentage'] > 10:
-                log.warning('The data in column: {} has {}% of it\'s values missing'
+                log.warning('The data in column: "{}" has {}% of it\'s values missing'
                 .format(col, round(col_stats['emptyPercentage'],2)))
 
             max_outlier_percentage = 12

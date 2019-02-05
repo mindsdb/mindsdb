@@ -44,9 +44,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def initSession(self):
 
         global connection_id, ALPHABET
-        logging.info('New connection [{ip}:{port}]'.format(
+        log.info('New connection [{ip}:{port}]'.format(
             ip=self.client_address[0], port=self.client_address[1]))
-        logging.debug(self.__dict__)
+        log.debug(self.__dict__)
 
         connection_id += 1
 
@@ -60,7 +60,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.current_transaction = None
 
 
-        logging.debug('session salt: {salt}'.format(salt=self.salt))
+        log.debug('session salt: {salt}'.format(salt=self.salt))
 
 
 
@@ -92,24 +92,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket).send()
             # stay on ping pong loop
             while True:
-                logging.debug('Got a new packet')
+                log.debug('Got a new packet')
                 p = self.packet(CommandPacket)
 
                 try:
                     success = p.get()
 
                     if success == False:
-                        logging.info('Session closed by client')
+                        log.info('Session closed by client')
                         return
 
-                    logging.info('Command TYPE: {type}'.format(
+                    log.info('Command TYPE: {type}'.format(
                         type=VAR_NAME(p.type.value, prefix='COM')))
 
                     if p.type.value == COM_QUERY:
                         try:
                             sql = p.sql.value.decode('utf-8')
                         except:
-                            logging.error('SQL contains non utf-8 values: {sql}'.format(sql=p.sql.value))
+                            log.error('SQL contains non utf-8 values: {sql}'.format(sql=p.sql.value))
                             self.packet(OkPacket).send()
                             continue
                         self.current_transaction = self.session.newTransaction(sql_query=sql)
@@ -121,14 +121,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                                         data_array=self.current_transaction.output_data_array).send()
 
                     else:
-                        logging.info('Command has no specific handler, return OK msg')
-                        logging.debug(str(p))
+                        log.info('Command has no specific handler, return OK msg')
+                        log.debug(str(p))
                         # p.pprintPacket() TODO: Make a version of print packet
                         # that sends it to debug isntead
                         self.packet(OkPacket).send()
                 except:
-                    logging.warning('Session closed, on packet read error')
-                    logging.debug(traceback.format_exc())
+                    log.warning('Session closed, on packet read error')
+                    log.debug(traceback.format_exc())
                     break
 
         # else send error packet
@@ -137,7 +137,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 user=self.session.username)
             self.packet(ErrPacket, err_code=ER_PASSWORD_NO_MATCH,
                         msg=msg).send()
-            logging.warning('AUTH FAIL')
+            log.warning('AUTH FAIL')
 
     def packet(self, packetClass=Packet, **kwargs):
         """
@@ -154,16 +154,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         """
         Create a server and wait for incoming connections until Ctrl-C
         """
-        logging.basicConfig(**CONFIG.PROXY_LOG_CONFIG)
+        log.basicConfig(**CONFIG.PROXY_LOG_CONFIG)
         HOST, PORT = CONFIG.PROXY_SERVER_HOST, CONFIG.PROXY_SERVER_PORT
-        logging.info('Starting MindsDB Mysql proxy server on tcp://{host}:{port}'.format(host=HOST, port=PORT))
+        log.info('Starting MindsDB Mysql proxy server on tcp://{host}:{port}'.format(host=HOST, port=PORT))
 
         # Create the server
         #server = SocketServer.ThreadingUnixDatagramServer(HOST, MysqlProxy)
         server = SocketServer.ThreadingTCPServer(("192.168.1.17", 3306), MysqlProxy)
         # Activate the server; this will keep running until you
         # interrupt the program with Ctrl-C
-        logging.info('Waiting for incoming connections...')
+        log.info('Waiting for incoming connections...')
         server.serve_forever()
 
 if __name__ == "__main__":

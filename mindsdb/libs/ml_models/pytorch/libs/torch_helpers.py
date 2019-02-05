@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import uuid
 import os
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from torch.autograd import Variable
 from torch.nn import functional
 from torch.nn import MSELoss

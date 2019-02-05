@@ -52,7 +52,7 @@ class Datum():
 
             num_str = buff[start:end]
             if end > 9:
-                logging.error('Cant decode integer greater than 8 bytes')
+                log.error('Cant decode integer greater than 8 bytes')
                 return buff[end-1:]
 
             for j in range(8 - (start- end)):
@@ -90,7 +90,7 @@ class Datum():
             end = length
             num_str = buff[:end]
             if end > 8:
-                logging.error('cant decode integer greater than 8 bytes')
+                log.error('cant decode integer greater than 8 bytes')
                 return buff[end:]
             for j in range(8-end):
                 num_str += b'\0'
@@ -166,7 +166,7 @@ def test():
 
     import pprint
 
-    logging.basicConfig(level=10)
+    log.basicConfig(level=10)
     u = Datum('int<8>',DEFAULT_CAPABILITIES >> 16)
     pprint.pprint(u.toStringPacket())
 

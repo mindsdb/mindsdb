@@ -1,7 +1,5 @@
 import pandas
-import mindsdb.libs.helpers.log as log
-import csv
-import mindsdb.config as CONFIG
+import mindsdb.libs.data_types.mindsdb_logger as log
 import re
 import urllib3
 from io import BytesIO, StringIO

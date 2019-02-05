@@ -18,17 +18,18 @@ from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import TransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData
 
-import mindsdb.config as CONFIG
-# import mindsdb.libs.helpers.log as log
+from mindsdb.config import CONFIG
+
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 import _thread
 import traceback
 import importlib
 
 
-class TransactionController:
+class Transaction:
 
-    def __init__(self, session, transaction_metadata, breakpoint = PHASE_END):
+    def __init__(self, session, transaction_metadata, logger =  log, breakpoint = PHASE_END):
         """
         A transaction is the interface to start some MindsDB operation within a session
 
@@ -40,9 +41,9 @@ class TransactionController:
         :param breakpoint:
         """
 
-        self.session = session
+
         self.breakpoint = breakpoint
-        self.session.current_transaction = self
+        self.session = session
         self.metadata = transaction_metadata #type: TransactionMetadata
 
 
@@ -61,6 +62,7 @@ class TransactionController:
         self.persistent_ml_model_info = PersistentMlModelInfo()
         self.persistent_ml_model_info.model_name = self.metadata.model_name
 
+        self.log = logger
 
         self.run()
 
@@ -82,8 +84,10 @@ class TransactionController:
             module = getattr(main_module, module_name)
             return module(self.session, self, **kwargs)
         except:
-            self.session.logging.error('Could not load module {module_name}'.format(module_name=module_name))
-            self.session.logging.error(traceback.format_exc())
+            error = 'Could not load module {module_name}'.format(module_name=module_name)
+            self.log.error('Could not load module {module_name}'.format(module_name=module_name))
+            self.log.error(traceback.format_exc())
+            raise ValueError(error)
             return None
 
 
@@ -144,8 +148,8 @@ class TransactionController:
             self.persistent_model_metadata.current_phase = MODEL_STATUS_ERROR
             self.persistent_model_metadata.error_msg = traceback.print_exc()
             self.persistent_model_metadata.update()
-            self.session.logging.error(self.persistent_model_metadata.error_msg)
-            self.session.logging.error(e)
+            self.log.error(self.persistent_model_metadata.error_msg)
+            self.log.error(e)
             raise e
 
 
@@ -184,7 +188,7 @@ class TransactionController:
 
         self.callPhaseModule('StatsLoader')
         if self.persistent_model_metadata is None:
-            self.session.logging.error('No metadata found for this model')
+            self.log.error('No metadata found for this model')
             return
 
         self.metadata.model_predict_columns = self.persistent_model_metadata.predict_columns
@@ -209,7 +213,7 @@ class TransactionController:
         """
 
         if self.metadata.type == TRANSACTION_BAD_QUERY:
-            self.session.logging.error(self.errorMsg)
+            self.log.error(self.errorMsg)
             self.error = True
             return
 

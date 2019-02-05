@@ -12,7 +12,7 @@
 from mindsdb.libs.constants.mindsdb import *
 import numpy as np
 import torch
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 import traceback
 
 class Batch:

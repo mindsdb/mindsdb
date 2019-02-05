@@ -1,4 +1,4 @@
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 class ObjectDict():
 

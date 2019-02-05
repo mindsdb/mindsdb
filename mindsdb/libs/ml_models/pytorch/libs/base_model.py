@@ -8,7 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 import torch
 import torch.nn as nn
@@ -23,15 +23,13 @@ import numpy as np
 from mindsdb.config import USE_CUDA
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import arrayToFloatVariable, variableToArray
-from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import storeTorchObject, getStoredTorchObject, RMSELoss, LogLoss
+from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import storeTorchObject, getStoredTorchObject, LogLoss
 
 from mindsdb.libs.data_types.trainer_response import TrainerResponse
 from mindsdb.libs.data_types.tester_response import TesterResponse
 from mindsdb.libs.data_types.file_saved_response import FileSavedResponse
-from mindsdb.libs.helpers.norm_denorm_helpers import denorm
 from mindsdb.libs.helpers.train_helpers import getOneColPermutations
 
-import random
 
 class BaseModel(nn.Module):
 

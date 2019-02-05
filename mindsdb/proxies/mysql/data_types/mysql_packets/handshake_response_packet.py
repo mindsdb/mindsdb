@@ -12,7 +12,6 @@
 import traceback
 from pprint import pformat
 
-import mindsdb.libs.helpers.log as log
 from mindsdb.proxies.mysql.data_types.mysql_datum import Datum
 from mindsdb.mindsdb_server.proxies.mysql.data_types.mysql_packet import Packet
 
@@ -73,29 +72,29 @@ class HandshakeResponsePacket(Packet):
 
         try:
             if user != self.username.value.decode('ascii'):
-                self.session.logging.warning('Authentication FAIL: User match error')
+                self.session.log.warning('Authentication FAIL: User match error')
                 return False
 
-            self.session.logging.debug('checking against password: {p}:'.format(p=password))
+            self.session.log.debug('checking against password: {p}:'.format(p=password))
 
             orig_scramble = self.scramble_func(password, self.salt)
-            self.session.logging.debug('scramble of true: {p}:'.format(
+            self.session.log.debug('scramble of true: {p}:'.format(
                 p=pformat(self.enc_password.value)))
-            self.session.logging.debug('scramble of recv: {p}:'.format(
+            self.session.log.debug('scramble of recv: {p}:'.format(
                 p=pformat(orig_scramble)))
             if orig_scramble in self.enc_password.value:
-                self.session.logging.info('Authentication was sucessful')
-                self.session.logging.info('Setting session user as {user}'.format(
+                self.session.log.info('Authentication was sucessful')
+                self.session.log.info('Setting session user as {user}'.format(
                     user=self.username.value))
                 self.session.username = self.username.value
                 self.session.auth = True
                 return True
             else:
-                self.session.logging.info('Authentication FAIL: password match error')
+                self.session.log.info('Authentication FAIL: password match error')
                 return False
         except:
-            self.session.logging.error(traceback.format_exc())
-            self.session.logging.error('failed to authenticate')
+            self.session.log.error(traceback.format_exc())
+            self.session.log.error('failed to authenticate')
 
     def __str__(self):
         return str({

@@ -25,6 +25,16 @@ def cleanfloat(str):
     str = str.replace(',','.')
     return float(str)
 
+
+def gen_chars(length, character):
+    """
+    # lambda to Generates a string consisting of `length` consiting of repeating `character`
+    :param length:
+    :param character:
+    :return:
+    """
+    return ''.join([character for i in range(length)])
+
 def tryCastToNumber(string):
     """ Returns an integer, float or a string from a string"""
     try:

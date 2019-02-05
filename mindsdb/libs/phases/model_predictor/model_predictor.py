@@ -9,13 +9,13 @@
  *******************************************************
 """
 
-import mindsdb.config as CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.workers.predict import PredictWorker
 import numpy as np
 import time
-import random
+
+
 class ModelPredictor(BaseModule):
 
     phase_name = PHASE_PREDICTION
@@ -24,7 +24,7 @@ class ModelPredictor(BaseModule):
 
         model_name = self.transaction.persistent_model_metadata.model_name
         self.train_start_time = time.time()
-        self.session.logging.info('Predict: model {model_name}, epoch 0'.format(model_name=model_name))
+        self.session.log.info('Predict: model {model_name}, epoch 0'.format(model_name=model_name))
 
         self.last_time = time.time()
 
@@ -70,7 +70,7 @@ class ModelPredictor(BaseModule):
 
 
         total_time = time.time() - self.train_start_time
-        self.session.logging.info(
+        self.session.log.info(
             'Predict: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name=model_name,
                                                                                             total_time=total_time))
 
@@ -93,7 +93,7 @@ class ModelPredictor(BaseModule):
 def test():
 
     from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
-    import mindsdb.libs.helpers.log as log
+    from mindsdb.libs.data_types.mindsdb_logger import log
 
     mdb = MindsDB()
     ret = mdb.predict(predict='position', when={'max_time_rec': 700}, model_name='mdsb_model')

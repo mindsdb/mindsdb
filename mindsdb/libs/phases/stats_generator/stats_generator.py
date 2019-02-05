@@ -10,18 +10,12 @@
 """
 
 import random
-import json
-import time
 import warnings
-import mindsdb.libs.helpers.log as log
-import traceback
-import sys
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 import numpy as np
-import pandas as pd
 import scipy.stats as st
 from dateutil.parser import parse as parseDate
-
 from sklearn.ensemble import IsolationForest
 
 import mindsdb.config as CONFIG
@@ -36,7 +30,7 @@ from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 class StatsGenerator(BaseModule):
 
-    phase_name = PHASE_DATA_STATS
+    phase_name = PHASE_STATS_GENERATOR
 
     def isNumber(self, string):
         """ Returns True if string is a number. """
@@ -182,7 +176,7 @@ class StatsGenerator(BaseModule):
 
         # get the indexes of randomly selected rows given the population size
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
-        self.logging.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
+        self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
         for sample_i in input_data_sample_indexes:
             row = self.transaction.input_data.data_array[sample_i]
@@ -404,10 +398,16 @@ class StatsGenerator(BaseModule):
 
 
 def test():
-    from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
-
+    from mindsdb import MindsDB
     mdb = MindsDB()
-    mdb.learn(from_query='select * from position_tgt', predict='position', model_name='mdsb_model', test_query=None, breakpoint = PHASE_DATA_STATS)
+
+    # We tell mindsDB what we want to learn and from what data
+    mdb.learn(
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        model_name='home_rentals',  # the name of this model
+        breakpoint=PHASE_STATS_GENERATOR)
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

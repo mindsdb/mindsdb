@@ -1,9 +1,8 @@
-from mindsdb.libs.data_types.object_dict import ObjectDict
 from mindsdb.libs.data_types.persistent_object_mongo import PersistentObjectMongo
 from tinymongo import TinyMongoClient
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 import shutil
 
 

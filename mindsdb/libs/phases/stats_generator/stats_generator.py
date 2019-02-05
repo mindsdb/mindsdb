@@ -11,7 +11,7 @@
 
 import random
 import warnings
-from mindsdb.libs.data_types.mindsdb_logger import log
+#from mindsdb.libs.data_types.mindsdb_logger import log
 
 import numpy as np
 import scipy.stats as st
@@ -208,7 +208,6 @@ class StatsGenerator(BaseModule):
 
             # Generic stats that can be generated for any data type
 
-            duplicates = len(col_data) - len(set(col_data))
 
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
@@ -218,7 +217,7 @@ class StatsGenerator(BaseModule):
                         try:
                             col_data[i] = int(parseDate(element).timestamp())
                         except:
-                            log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
+                            self.log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
                             col_data[i] = None
 
             if data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
@@ -354,9 +353,11 @@ class StatsGenerator(BaseModule):
                     "histogram": histogram
                 }
                 stats[col_name] = col_stats
-            stats[col_name]['data_type_dist'] = data_type_dist
-            stats[col_name]['duplicates'] = duplicates
 
+            stats[col_name]['data_type_dist'] = data_type_dist
+
+            stats[col_name]['duplicates'] = len(col_data) - len(set(col_data))
+            stats[col_name]['duplicates_percentage'] = stats[col_name]['duplicates']*100/len(col_data)
 
         total_rows = len(self.transaction.input_data.data_array)
         test_rows = len(self.transaction.input_data.test_indexes)
@@ -374,17 +375,17 @@ class StatsGenerator(BaseModule):
         for col in stats:
             col_stats = stats[col]
 
-            log.info(col_stats['duplicates'])
-            exit()
+            if col_stats['duplicates_percentage'] > 15 and col_stats[KEYS.DATA_TYPE] != DATA_TYPES.CLASS and col_stats[KEYS.DATA_TYPE] != DATA_TYPES.DATE:
+                self.log.warning('Column "{}" has {}% of it\'s values duplicated !'.format(col, round(col_stats['duplicates_percentage'],2)))
 
             data_type_tuples = col_stats['data_type_dist'].items()
             significant_data_type_tuples = list(filter(lambda x: x[1] > len(non_null_data[col])/20, data_type_tuples))
             if len(significant_data_type_tuples) > 1:
-                log.warning('The data in column "{}" seems to have members of {} different data types, namely {}, We shall go ahead using data type: {}'
+                self.log.warning('The data in column "{}" seems to have members of {} different data types, namely {}, We shall go ahead using data type: {}'
                 .format(col, len(significant_data_type_tuples), significant_data_type_tuples, col_stats[KEYS.DATA_TYPE]))
 
             if col_stats['emptyPercentage'] > 10:
-                log.warning('The data in column: "{}" has {}% of it\'s values missing'
+                self.log.warning('The data in column: "{}" has {}% of it\'s values missing'
                 .format(col, round(col_stats['emptyPercentage'],2)))
 
             max_outlier_percentage = 12
@@ -392,10 +393,10 @@ class StatsGenerator(BaseModule):
             if 'outlier_indexes' in col_stats:
                 if col_stats['outlier_percentage'] < max_outlier_percentage:
                     for index in col_stats['outlier_indexes']:
-                        log.info('Detect outlier in column "{}", at position "{}", with value "{}"'.
+                        self.log.info('Detect outlier in column "{}", at position "{}", with value "{}"'.
                         format(col,index,non_null_data[col][index]))
                 else:
-                    log.warning('Detected {}% of the data as outliers in column "{}", this might indicate the data in this column is of low quality'
+                    self.log.warning('Detected {}% of the data as outliers in column "{}", this might indicate the data in this column is of low quality'
                     .format( round(col_stats['outlier_percentage'],2) , col ))
 
         exit()

@@ -168,6 +168,9 @@ class DataExtractor(BaseModule):
             self.transaction.errorMsg = traceback.print_exc(1)
             return
 
+        # populate transaction train_metadata variable
+        self.transaction.train_metadata = train_metadata
+
         # Here you want to organize data, sort, and add/remove columns
         result = self._get_prepared_input_df(train_metadata)
 

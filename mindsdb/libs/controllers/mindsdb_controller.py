@@ -205,7 +205,7 @@ class MindsDBController:
             try:
                 open(uuid_file, 'w').write(uuid_str)
             except:
-                self.log.warning('Cannot store token, Please add write permissions to file:' + uuid_file)
+                log.warning('Cannot store token, Please add write permissions to file:' + uuid_file)
                 uuid_str = uuid_str + '.NO_WRITE'
 
         file_path = Path(mdb_file)

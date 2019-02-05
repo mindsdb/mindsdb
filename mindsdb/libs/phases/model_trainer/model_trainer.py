@@ -37,17 +37,15 @@ class ModelTrainer(BaseModule):
         :return: None
         """
 
-
         model_name = self.transaction.persistent_model_metadata.model_name
-        self.train_meta_data = TransactionMetadata()
-        self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
+        train_meta_data = self.transaction.train_metadata # type: TransactionMetadata
 
-        group_by = self.train_meta_data.model_group_by
+        is_time_series = train_meta_data.model_is_time_series
 
         # choose which models to try
         # NOTE: On server mode more than one can be used, on serverless, choose only
-        # TODO: On serverless mode bring smarter way to choose
-        if group_by:
+        # TODO: On server mode bring smarter way to choose
+        if is_time_series:
             ml_models = [
                 ('pytorch.models.ensemble_fully_connected_net', {})
                 # ,('pytorch.models.ensemble_conv_net', {})

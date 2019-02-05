@@ -202,8 +202,7 @@ class StatsGenerator(BaseModule):
 
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
-            data_type, data_type_dist = self.getColumnDataType(col_data)
-
+            data_type, data_type_dist = self.getColumnDataType(col_data))
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
             # TODO: Evaluate if we want to specify the problem type on predict statement as regression or classification
@@ -330,7 +329,6 @@ class StatsGenerator(BaseModule):
                 stats[col_name] = col_stats
             # else if its text
             else:
-
                 # see if its a sentence or a word
                 is_full_text = True if data_type == DATA_TYPES.FULL_TEXT else False
                 dictionary, histogram = self.getWordsDictionary(col_data, is_full_text)

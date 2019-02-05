@@ -325,7 +325,7 @@ class StatsGenerator(BaseModule):
                     },
                     "percentage_buckets": xp,
                     "outlier_indexes": outlier_indexes,
-                    "outlier_percentage": len(outlier_indexes) * 100 / len(column_count[col_name])
+                    "outlier_percentage": len(outlier_indexes) * 100 / column_count[col_name]
                 }
                 stats[col_name] = col_stats
             # else if its text

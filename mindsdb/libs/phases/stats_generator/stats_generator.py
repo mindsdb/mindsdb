@@ -208,6 +208,8 @@ class StatsGenerator(BaseModule):
 
             # Generic stats that can be generated for any data type
 
+            duplicates = len(col_data) - len(set(col_data))
+
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']:
@@ -353,6 +355,7 @@ class StatsGenerator(BaseModule):
                 }
                 stats[col_name] = col_stats
             stats[col_name]['data_type_dist'] = data_type_dist
+            stats[col_name]['duplicates'] = duplicates
 
 
         total_rows = len(self.transaction.input_data.data_array)
@@ -370,6 +373,9 @@ class StatsGenerator(BaseModule):
 
         for col in stats:
             col_stats = stats[col]
+
+            log.info(col_stats['duplicates'])
+            exit()
 
             data_type_tuples = col_stats['data_type_dist'].items()
             significant_data_type_tuples = list(filter(lambda x: x[1] > len(non_null_data[col])/20, data_type_tuples))

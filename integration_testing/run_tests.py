@@ -9,6 +9,7 @@ import logging
 #print(os.path.dirname(os.path.realpath(__file__)) + '/../mindsdb/__init__.py')
 
 import mindsdb
+from mindsdb import config_vars
 
 types_that_fail = ['str','ascii']
 types_that_work = ['int','float','date','datetime','timestamp']

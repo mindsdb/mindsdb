@@ -315,7 +315,7 @@ class StatsGenerator(BaseModule):
                     "skewness": skew,
                     "kurtosis": kurtosis,
                     "emptyCells": empty_count[col_name],
-                    "emptyPercentage": (empty_count[col_name] - column_count[col_name])* 100 / column_count[col_name] ,
+                    "emptyPercentage": empty_count[col_name] * 100 / column_count[col_name] ,
                     "max": max_value,
                     "min": min_value,
                     "is_float": is_float,
@@ -355,7 +355,7 @@ class StatsGenerator(BaseModule):
                     "dictionaryAvailable": dictionary_available,
                     "dictionaryLenghtPercentage": dictionary_lenght_percentage,
                     "emptyCells": empty_count[col_name],
-                    "emptyPercentage": (empty_count[col_name] - column_count[col_name])* 100 / column_count[col_name] ,
+                    "emptyPercentage": empty_count[col_name] * 100 / column_count[col_name] ,
                     "histogram": histogram
                 }
                 stats[col_name] = col_stats
@@ -392,7 +392,7 @@ class StatsGenerator(BaseModule):
                         format(col,index,origData[col][index]))
                 else:
                     log.warning('Detected {}% of the data as outliers in column "{}", this might indicate the data in this column is of low quality'
-                    .format( round((len(col_stats['outlier_indexes']) - len(origData[col])) * 100 / len(origData[col]),2) , col ))
+                    .format( round(len(col_stats['outlier_indexes']) * 100 / len(origData[col]),2) , col ))
 
         exit()
         return stats

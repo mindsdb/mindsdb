@@ -133,7 +133,7 @@ def norm(value, cell_stats):
 
         return norm_vals
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
+    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.CLASS:
         # is it a word
         if cell_stats['dictionaryAvailable']:
             # all the words in the dictionary +2 (one for rare words and one for null)
@@ -200,7 +200,7 @@ def norm(value, cell_stats):
 def denorm(value, cell_stats, return_nones = True):
 
     # TODO: Get a format for dates
-    if round(abs(value[-1])) <= 0 and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.TEXT:
+    if round(abs(value[-1])) <= 0 and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.CLASS:
         if return_nones:
             return None
         elif cell_stats[KEYS.DATA_TYPE] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE]:
@@ -231,7 +231,7 @@ def denorm(value, cell_stats, return_nones = True):
         # this should return a valid timestamp
         return denormalized
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
+    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.CLASS:
         if cell_stats['dictionaryAvailable']:
             not_null = True if value[-1] >= 0.5 else False
             other = True if value[-2] >= 0.5 else False

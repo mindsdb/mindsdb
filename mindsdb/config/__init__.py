@@ -47,8 +47,11 @@ class Config:
     MINDSDB_SERVER_URL = ifEnvElse('MINDSDB_SERVER_URL', 'http://localhost:35261')
 
     # LOG Config settings
-    DEFAULT_LOG_LEVEL = ifEnvElse('DEFAULT_LOG_LEVEL', CONST.INFO_LOG_LEVEL)
-
+    DEBUG_LOG_LEVEL = 10
+    DEFAULT_LOG_LEVEL = 20
+    WARNING_LOG_LEVEL = 30
+    ERROR_LOG_LEVEL = 40
+    NO_LOGS_LOG_LEVEL = 50
 
 
 CONFIG = Config()

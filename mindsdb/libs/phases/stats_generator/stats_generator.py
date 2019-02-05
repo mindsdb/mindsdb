@@ -11,11 +11,12 @@
 
 import random
 import warnings
-from mindsdb.libs.data_types.mindsdb_logger import log
+#from mindsdb.libs.data_types.mindsdb_logger import log
 
 import numpy as np
 import scipy.stats as st
 from dateutil.parser import parse as parseDate
+from sklearn.ensemble import IsolationForest
 
 from mindsdb.config import CONFIG
 
@@ -58,14 +59,14 @@ class StatsGenerator(BaseModule):
             elif self.isDate(element):
                 currentGuess = DATA_TYPES.DATE
             else:
-                currentGuess = DATA_TYPES.TEXT
+                currentGuess = DATA_TYPES.CLASS
 
             if currentGuess not in type_dist:
                 type_dist[currentGuess] = 1
             else:
                 type_dist[currentGuess] += 1
 
-        curr_data_type = DATA_TYPES.TEXT
+        curr_data_type = DATA_TYPES.CLASS
         max_data_type = 0
 
         for data_type in type_dist:
@@ -73,53 +74,11 @@ class StatsGenerator(BaseModule):
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
 
-        if curr_data_type == DATA_TYPES.TEXT:
-            return self.getTextType(data)
+        if curr_data_type == DATA_TYPES.CLASS:
+            return self.getTextType(data), type_dist
 
-        return curr_data_type
+        return curr_data_type, type_dist
 
-    def getBestFitDistribution(self, data, bins=40):
-        """Model data by finding best fit distribution to data"""
-        # Get histogram of original data
-
-        y, x = np.histogram(data, bins=bins, density=False)
-        x = (x + np.roll(x, -1))[:-1] / 2.0
-        # Distributions to check
-        DISTRIBUTIONS = [
-            st.bernoulli, st.beta,  st.cauchy, st.expon,  st.gamma, st.halfcauchy, st.lognorm,
-            st.norm, st.uniform, st.poisson
-        ]
-
-        # Best holders
-        best_distribution = st.norm
-        best_params = (0.0, 1.0)
-        best_sse = np.inf
-        # Estimate distribution parameters from data
-        for i, distribution in enumerate(DISTRIBUTIONS):
-            try:
-                # Ignore warnings from data that can't be fit
-                with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore')
-                    # fit dist to data
-                    params = distribution.fit(data)
-                    # Separate parts of parameters
-                    arg = params[:-2]
-                    loc = params[-2]
-                    scale = params[-1]
-
-                    # Calculate fitted PDF and error with fit in distribution
-                    pdf = distribution.pdf(x, loc=loc, scale=scale, *arg)
-                    sse = np.sum(np.power(y - pdf, 2.0))
-                    # identify if this distribution is better
-                    if best_sse > sse > 0:
-                        best_distribution = distribution
-                        best_params = params
-                        best_sse = sse
-
-            except Exception:
-                pass
-
-        return (best_distribution.name, best_params, x.tolist(), y.tolist())
 
     def getTextType(self, data):
 
@@ -146,34 +105,11 @@ class StatsGenerator(BaseModule):
                 max_number_of_words += words
 
         if max_number_of_words == 1:
-            return DATA_TYPES.TEXT
+            return DATA_TYPES.CLASS
         if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
-            return DATA_TYPES.TEXT
+            return DATA_TYPES.CLASS
         else:
             return DATA_TYPES.FULL_TEXT
-
-
-
-    # def isFullText(self, data):
-    #     """
-    #     It determines if the column is full text right
-    #     Right now we assume its full text if any cell contains any of the WORD_SEPARATORS
-    #
-    #     :param data: a list containing all the column
-    #     :return: Boolean
-    #     """
-    #     for cell in data:
-    #         try:
-    #             if any(separator in cell for separator in WORD_SEPARATORS):
-    #                 return True
-    #         except:
-    #             exc_type, exc_value, exc_traceback = sys.exc_info()
-    #             error = traceback.format_exception(exc_type, exc_value,
-    #                                       exc_traceback)
-    #             return False
-    #     return False
-
-
 
 
 
@@ -226,10 +162,10 @@ class StatsGenerator(BaseModule):
         self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 
         header = self.transaction.input_data.columns
-        origData = {}
+        non_null_data = {}
 
         for column in header:
-            origData[column] = []
+            non_null_data[column] = []
 
         empty_count = {}
         column_count = {}
@@ -244,6 +180,7 @@ class StatsGenerator(BaseModule):
 
         for sample_i in input_data_sample_indexes:
             row = self.transaction.input_data.data_array[sample_i]
+
             for i, val in enumerate(row):
                 column = header[i]
                 value = tryCastToNumber(val)
@@ -253,14 +190,13 @@ class StatsGenerator(BaseModule):
                 if value == None:
                     empty_count[column] += 1
                 else:
-                    origData[column].append(value)
+                    non_null_data[column].append(value)
                 column_count[column] += 1
         stats = {}
 
-        for i, col_name in enumerate(origData):
-            col_data = origData[col_name] # all rows in just one column
-            data_type = self.getColumnDataType(col_data)
-
+        for i, col_name in enumerate(non_null_data):
+            col_data = non_null_data[col_name] # all rows in just one column
+            data_type, data_type_dist = self.getColumnDataType(col_data)
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
             # TODO: Evaluate if we want to specify the problem type on predict statement as regression or classification
@@ -268,7 +204,10 @@ class StatsGenerator(BaseModule):
             # if col_name in self.train_meta_data.model_predict_columns and data_type == DATA_TYPES.NUMERIC:
             #     unique_count = len(set(col_data))
             #     if unique_count <= CONFIG.ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN:
-            #         data_type = DATA_TYPES.TEXT
+            #         data_type = DATA_TYPES.CLASS
+
+            # Generic stats that can be generated for any data type
+
 
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
@@ -278,7 +217,7 @@ class StatsGenerator(BaseModule):
                         try:
                             col_data[i] = int(parseDate(element).timestamp())
                         except:
-                            log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
+                            self.log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
                             col_data[i] = None
 
             if data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
@@ -290,6 +229,12 @@ class StatsGenerator(BaseModule):
 
 
                 col_data = [cleanfloat(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
+
+                np_col_data = np.array(col_data).reshape(-1, 1)
+                clf = IsolationForest(behaviour='new',contamination='auto', n_estimators=1)
+                outliers = clf.fit_predict(np_col_data)
+
+                outlier_indexes = [i for i in range(len(col_data)) if outliers[i] == -1]
 
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
@@ -306,6 +251,7 @@ class StatsGenerator(BaseModule):
                     var = np.var(col_data)
                     skew = st.skew(col_data)
                     kurtosis = st.kurtosis(col_data)
+
 
                     inc_rate = 0.05
                     initial_step_size = abs(max_value-min_value)/100
@@ -362,8 +308,8 @@ class StatsGenerator(BaseModule):
                     "variance": var,
                     "skewness": skew,
                     "kurtosis": kurtosis,
-                    "emptyColumns": empty_count[col_name],
-                    "emptyPercentage": empty_count[col_name] / column_count[col_name] * 100,
+                    "emptyCells": empty_count[col_name],
+                    "emptyPercentage": empty_count[col_name] * 100 / column_count[col_name] ,
                     "max": max_value,
                     "min": min_value,
                     "is_float": is_float,
@@ -371,12 +317,13 @@ class StatsGenerator(BaseModule):
                         "x": x,
                         "y": y
                     },
-                    "percentage_buckets": xp
+                    "percentage_buckets": xp,
+                    "outlier_indexes": outlier_indexes,
+                    "outlier_percentage": len(outlier_indexes) * 100 / column_count[col_name]
                 }
                 stats[col_name] = col_stats
             # else if its text
             else:
-
                 # see if its a sentence or a word
                 is_full_text = True if data_type == DATA_TYPES.FULL_TEXT else False
                 dictionary, histogram = self.getWordsDictionary(col_data, is_full_text)
@@ -401,13 +348,16 @@ class StatsGenerator(BaseModule):
                     "dictionary": dictionary,
                     "dictionaryAvailable": dictionary_available,
                     "dictionaryLenghtPercentage": dictionary_lenght_percentage,
-                    "emptyColumns": empty_count[col_name],
-                    "emptyPercentage": empty_count[col_name] / column_count[col_name] * 100,
+                    "emptyCells": empty_count[col_name],
+                    "emptyPercentage": empty_count[col_name] * 100 / column_count[col_name] ,
                     "histogram": histogram
                 }
                 stats[col_name] = col_stats
 
+            stats[col_name]['data_type_dist'] = data_type_dist
 
+            stats[col_name]['duplicates'] = len(col_data) - len(set(col_data))
+            stats[col_name]['duplicates_percentage'] = stats[col_name]['duplicates']*100/len(col_data)
 
         total_rows = len(self.transaction.input_data.data_array)
         test_rows = len(self.transaction.input_data.test_indexes)
@@ -422,6 +372,34 @@ class StatsGenerator(BaseModule):
 
         self.transaction.persistent_model_metadata.update()
 
+        for col in stats:
+            col_stats = stats[col]
+
+            if col_stats['duplicates_percentage'] > 15 and col_stats[KEYS.DATA_TYPE] != DATA_TYPES.CLASS and col_stats[KEYS.DATA_TYPE] != DATA_TYPES.DATE:
+                self.log.warning('Column "{}" has {}% of it\'s values duplicated !'.format(col, round(col_stats['duplicates_percentage'],2)))
+
+            data_type_tuples = col_stats['data_type_dist'].items()
+            significant_data_type_tuples = list(filter(lambda x: x[1] > len(non_null_data[col])/20, data_type_tuples))
+            if len(significant_data_type_tuples) > 1:
+                self.log.warning('The data in column "{}" seems to have members of {} different data types, namely {}, We shall go ahead using data type: {}'
+                .format(col, len(significant_data_type_tuples), significant_data_type_tuples, col_stats[KEYS.DATA_TYPE]))
+
+            if col_stats['emptyPercentage'] > 10:
+                self.log.warning('The data in column: "{}" has {}% of it\'s values missing'
+                .format(col, round(col_stats['emptyPercentage'],2)))
+
+            max_outlier_percentage = 12
+
+            if 'outlier_indexes' in col_stats:
+                if col_stats['outlier_percentage'] < max_outlier_percentage:
+                    for index in col_stats['outlier_indexes']:
+                        self.log.info('Detect outlier in column "{}", at position "{}", with value "{}"'.
+                        format(col,index,non_null_data[col][index]))
+                else:
+                    self.log.warning('Detected {}% of the data as outliers in column "{}", this might indicate the data in this column is of low quality'
+                    .format( round(col_stats['outlier_percentage'],2) , col ))
+
+        exit()
         return stats
 
 

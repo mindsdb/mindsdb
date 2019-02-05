@@ -9,6 +9,7 @@ import logging
 #print(os.path.dirname(os.path.realpath(__file__)) + '/../mindsdb/__init__.py')
 
 import mindsdb
+from mindsdb import config_vars
 
 types_that_fail = ['str','ascii']
 types_that_work = ['int','float','date','datetime','timestamp']
@@ -47,9 +48,9 @@ def test_one_label_prediction():
     separator = ','
     train_file_name = 'train_data.csv'
     test_file_name = 'test_data.csv'
-    data_len = 800
+    data_len = 200
 
-    columns = generate_value_cols(['int','float'],data_len, separator)
+    columns = generate_value_cols(['int','float','ascii','date'],data_len, separator)
     labels = generate_labels_2(columns, separator)
 
     label_name = labels[0]
@@ -58,7 +59,6 @@ def test_one_label_prediction():
     columns_test = list(map(lambda col: col[int(len(col)*3/4):], columns))
     columns_to_file(columns_train, train_file_name, separator)
     columns_to_file(columns_test, test_file_name, separator)
-
 
     mdb = mindsdb.MindsDB(log_level=mindsdb.config_vars.DEBUG_LOG_LEVEL, send_logs=False)
 

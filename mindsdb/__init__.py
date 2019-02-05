@@ -14,5 +14,12 @@ MindsDB = MindsDBController
 MDS = DataSource # A Mindsdb Data Source
 
 
-CONFIG.DEFAULT_LOG_LEVEL
+class Anon:
+    pass
+config_vars = Anon()
 
+config_vars.__dict__['DEBUG_LOG_LEVEL'] = CONFIG.DEBUG_LOG_LEVEL
+config_vars.__dict__['DEFAULT_LOG_LEVEL'] = CONFIG.DEFAULT_LOG_LEVEL
+config_vars.__dict__['WARNING_LOG_LEVEL'] = CONFIG.WARNING_LOG_LEVEL
+config_vars.__dict__['ERROR_LOG_LEVEL'] = CONFIG.ERROR_LOG_LEVEL
+config_vars.__dict__['NO_LOGS_LOG_LEVEL'] = CONFIG.NO_LOGS_LOG_LEVEL 

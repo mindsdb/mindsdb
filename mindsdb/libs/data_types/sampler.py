@@ -13,7 +13,7 @@ import time
 
 from mindsdb.libs.data_types.mindsdb_logger import log
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.data_types.batch import Batch
 from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata

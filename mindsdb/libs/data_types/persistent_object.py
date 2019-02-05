@@ -3,7 +3,7 @@ from mindsdb.libs.data_types.persistent_object_mongo import PersistentObjectMong
 from mindsdb.libs.data_types.persistent_object_tinydb import PersistentObjectTinydb
 
 from pymongo import MongoClient
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from bson.objectid import ObjectId
 
 if CONFIG.STORE_INFO_IN_MONGODB:

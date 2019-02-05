@@ -1,6 +1,6 @@
 
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.mindsdb_logger import log

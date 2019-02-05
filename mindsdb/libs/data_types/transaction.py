@@ -18,7 +18,7 @@ from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import TransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 
 from mindsdb.libs.data_types.mindsdb_logger import log
 

@@ -17,7 +17,7 @@ import numpy as np
 import scipy.stats as st
 from dateutil.parser import parse as parseDate
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
@@ -29,7 +29,7 @@ from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 class StatsGenerator(BaseModule):
 
-    phase_name = PHASE_DATA_STATS
+    phase_name = PHASE_STATS_GENERATOR
 
     def isNumber(self, string):
         """ Returns True if string is a number. """
@@ -427,10 +427,16 @@ class StatsGenerator(BaseModule):
 
 
 def test():
-    from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
-
+    from mindsdb import MindsDB
     mdb = MindsDB()
-    mdb.learn(from_query='select * from position_tgt', predict='position', model_name='mdsb_model', test_query=None, breakpoint = PHASE_DATA_STATS)
+
+    # We tell mindsDB what we want to learn and from what data
+    mdb.learn(
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        model_name='home_rentals',  # the name of this model
+        breakpoint=PHASE_STATS_GENERATOR)
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 class StatsLoader(BaseModule):
 
-    phase_name = PHASE_DATA_STATS
+    phase_name = PHASE_STATS_GENERATOR
 
     def run(self):
 

@@ -1,11 +1,10 @@
 import pprint
 import logging
-import time
-from logging import handlers
 import colorlog
-from inspect import getframeinfo, stack
 import socketio
 
+from mindsdb.libs.helpers.text_helpers import gen_chars
+from inspect import getframeinfo, stack
 
 
 class MindsdbLogger():
@@ -29,8 +28,7 @@ class MindsdbLogger():
 
         self.send = send_logs
 
-        # lambda to Generates a string consisting of `length` consiting of repeating `character`
-        gen_chars = lambda  length, character: ''.join([character for i in range(length)])
+
 
         if self.send:
             sio = socketio.Client()
@@ -90,8 +88,11 @@ class MindsdbLogger():
         if self.send:
             self.sio.disconnect()
 
-    def infoChart(self, message,type,uid=None):
-        pass
+    def infoChart(self, message,type, uid=None):
+        if self.send:
+            self.info('Data-type: {type}'.format(type=type))
+            self.info(pprint.pformat(message))
+
 
 
 log = None

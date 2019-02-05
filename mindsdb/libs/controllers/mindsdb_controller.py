@@ -11,7 +11,7 @@ from mindsdb.libs.data_types.mindsdb_logger import MindsdbLogger
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.helpers.multi_data_source import getDS
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.data_types.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *

@@ -11,7 +11,7 @@
 
 from __future__ import unicode_literals, print_function, division
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.workers.train import TrainWorker

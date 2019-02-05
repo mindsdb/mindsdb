@@ -56,6 +56,8 @@ class BaseModule():
         start = time.time()
         class_name = type(self).__name__
 
+        if self.phase_name != PHASE_END:
+            self.log.warning('Target phase is different than PHASE_END, Only change this for debug purposes')
         # log warning if no phase name has been set or designed for the model
         if self.phase_name == PHASE_END and self.log_on_run:
             self.log.error('Module {class_name} has no \'phase_name\' defined and therefore it cannot be properly tested'.format(class_name=class_name))
@@ -65,9 +67,10 @@ class BaseModule():
 
         # if we are past the breakpoint do nothing, breakpoints are used when testing a particular module
         if self.transaction.breakpoint is not None and self.phase_name > self.transaction.breakpoint:
-            self.log.warning('Module {class_name} has a phase that is beyond breakpoint, module\'s phase: {current_phase}, transaction\'s breakpoint: {breakpoint}'.format(class_name=class_name, current_phase=self.phase_name, breakpoint=self.transaction.breakpoint))
-            #exit()
-            return self.output
+            warning = 'Module {class_name} has a phase that is beyond breakpoint, module\'s phase: {current_phase}, transaction\'s breakpoint: {breakpoint}'.format(class_name=class_name, current_phase=self.phase_name, breakpoint=self.transaction.breakpoint)
+            self.log.warning(warning)
+            exit()
+
 
         # else run it
         ret = self.run(**kwargs)

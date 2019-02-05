@@ -1,6 +1,6 @@
 from mindsdb.libs.data_types.object_dict import ObjectDict
 from pymongo import MongoClient
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from bson.objectid import ObjectId
 from mindsdb.libs.data_types.mindsdb_logger import log
 

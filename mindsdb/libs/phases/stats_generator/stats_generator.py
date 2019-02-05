@@ -18,7 +18,7 @@ import scipy.stats as st
 from dateutil.parser import parse as parseDate
 from sklearn.ensemble import IsolationForest
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
@@ -196,7 +196,7 @@ class StatsGenerator(BaseModule):
 
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
-            data_type, data_type_dist = self.getColumnDataType(col_data))
+            data_type, data_type_dist = self.getColumnDataType(col_data)
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
             # TODO: Evaluate if we want to specify the problem type on predict statement as regression or classification

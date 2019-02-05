@@ -65,14 +65,14 @@ class StatsGenerator(BaseModule):
             elif self.isDate(element):
                 currentGuess = DATA_TYPES.DATE
             else:
-                currentGuess = DATA_TYPES.TEXT
+                currentGuess = DATA_TYPES.CLASS
 
             if currentGuess not in type_dist:
                 type_dist[currentGuess] = 1
             else:
                 type_dist[currentGuess] += 1
 
-        curr_data_type = DATA_TYPES.TEXT
+        curr_data_type = DATA_TYPES.CLASS
         max_data_type = 0
 
         for data_type in type_dist:
@@ -80,7 +80,7 @@ class StatsGenerator(BaseModule):
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
 
-        if curr_data_type == DATA_TYPES.TEXT:
+        if curr_data_type == DATA_TYPES.CLASS:
             return self.getTextType(data)
 
         return curr_data_type
@@ -111,9 +111,9 @@ class StatsGenerator(BaseModule):
                 max_number_of_words += words
 
         if max_number_of_words == 1:
-            return DATA_TYPES.TEXT
+            return DATA_TYPES.CLASS
         if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
-            return DATA_TYPES.TEXT
+            return DATA_TYPES.CLASS
         else:
             return DATA_TYPES.FULL_TEXT
 
@@ -211,7 +211,7 @@ class StatsGenerator(BaseModule):
             # if col_name in self.train_meta_data.model_predict_columns and data_type == DATA_TYPES.NUMERIC:
             #     unique_count = len(set(col_data))
             #     if unique_count <= CONFIG.ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN:
-            #         data_type = DATA_TYPES.TEXT
+            #         data_type = DATA_TYPES.CLASS
 
             # Generic stats that can be generated for any data type
 

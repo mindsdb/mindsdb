@@ -22,6 +22,8 @@ import pandas as pd
 import scipy.stats as st
 from dateutil.parser import parse as parseDate
 
+from sklearn.ensemble import IsolationForest
+
 import mindsdb.config as CONFIG
 
 from mindsdb.libs.constants.mindsdb import *
@@ -83,48 +85,6 @@ class StatsGenerator(BaseModule):
 
         return curr_data_type
 
-    def getBestFitDistribution(self, data, bins=40):
-        """Model data by finding best fit distribution to data"""
-        # Get histogram of original data
-
-        y, x = np.histogram(data, bins=bins, density=False)
-        x = (x + np.roll(x, -1))[:-1] / 2.0
-        # Distributions to check
-        DISTRIBUTIONS = [
-            st.bernoulli, st.beta,  st.cauchy, st.expon,  st.gamma, st.halfcauchy, st.lognorm,
-            st.norm, st.uniform, st.poisson
-        ]
-
-        # Best holders
-        best_distribution = st.norm
-        best_params = (0.0, 1.0)
-        best_sse = np.inf
-        # Estimate distribution parameters from data
-        for i, distribution in enumerate(DISTRIBUTIONS):
-            try:
-                # Ignore warnings from data that can't be fit
-                with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore')
-                    # fit dist to data
-                    params = distribution.fit(data)
-                    # Separate parts of parameters
-                    arg = params[:-2]
-                    loc = params[-2]
-                    scale = params[-1]
-
-                    # Calculate fitted PDF and error with fit in distribution
-                    pdf = distribution.pdf(x, loc=loc, scale=scale, *arg)
-                    sse = np.sum(np.power(y - pdf, 2.0))
-                    # identify if this distribution is better
-                    if best_sse > sse > 0:
-                        best_distribution = distribution
-                        best_params = params
-                        best_sse = sse
-
-            except Exception:
-                pass
-
-        return (best_distribution.name, best_params, x.tolist(), y.tolist())
 
     def getTextType(self, data):
 
@@ -156,29 +116,6 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.TEXT
         else:
             return DATA_TYPES.FULL_TEXT
-
-
-
-    # def isFullText(self, data):
-    #     """
-    #     It determines if the column is full text right
-    #     Right now we assume its full text if any cell contains any of the WORD_SEPARATORS
-    #
-    #     :param data: a list containing all the column
-    #     :return: Boolean
-    #     """
-    #     for cell in data:
-    #         try:
-    #             if any(separator in cell for separator in WORD_SEPARATORS):
-    #                 return True
-    #         except:
-    #             exc_type, exc_value, exc_traceback = sys.exc_info()
-    #             error = traceback.format_exception(exc_type, exc_value,
-    #                                       exc_traceback)
-    #             return False
-    #     return False
-
-
 
 
 
@@ -249,6 +186,7 @@ class StatsGenerator(BaseModule):
 
         for sample_i in input_data_sample_indexes:
             row = self.transaction.input_data.data_array[sample_i]
+
             for i, val in enumerate(row):
                 column = header[i]
                 value = tryCastToNumber(val)
@@ -275,6 +213,8 @@ class StatsGenerator(BaseModule):
             #     if unique_count <= CONFIG.ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN:
             #         data_type = DATA_TYPES.TEXT
 
+            # Generic stats that can be generated for any data type
+
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']:
@@ -296,6 +236,12 @@ class StatsGenerator(BaseModule):
 
                 col_data = [cleanfloat(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
 
+                np_col_data = np.array(col_data).reshape(-1, 1)
+                clf = IsolationForest(behaviour='new',contamination='auto', n_estimators=1)
+                outliers = clf.fit_predict(np_col_data)
+
+                outlier_indexes = [i for i in range(len(col_data)) if outliers[i] == -1]
+
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
                 x = x.tolist()
@@ -311,6 +257,7 @@ class StatsGenerator(BaseModule):
                     var = np.var(col_data)
                     skew = st.skew(col_data)
                     kurtosis = st.kurtosis(col_data)
+
 
                     inc_rate = 0.05
                     initial_step_size = abs(max_value-min_value)/100
@@ -367,8 +314,8 @@ class StatsGenerator(BaseModule):
                     "variance": var,
                     "skewness": skew,
                     "kurtosis": kurtosis,
-                    "emptyColumns": empty_count[col_name],
-                    "emptyPercentage": empty_count[col_name] / column_count[col_name] * 100,
+                    "emptyCells": empty_count[col_name],
+                    "emptyPercentage": (empty_count[col_name] - column_count[col_name])* 100 / column_count[col_name] ,
                     "max": max_value,
                     "min": min_value,
                     "is_float": is_float,
@@ -376,7 +323,8 @@ class StatsGenerator(BaseModule):
                         "x": x,
                         "y": y
                     },
-                    "percentage_buckets": xp
+                    "percentage_buckets": xp,
+                    "outlier_indexes": outlier_indexes
                 }
                 stats[col_name] = col_stats
             # else if its text
@@ -406,8 +354,8 @@ class StatsGenerator(BaseModule):
                     "dictionary": dictionary,
                     "dictionaryAvailable": dictionary_available,
                     "dictionaryLenghtPercentage": dictionary_lenght_percentage,
-                    "emptyColumns": empty_count[col_name],
-                    "emptyPercentage": empty_count[col_name] / column_count[col_name] * 100,
+                    "emptyCells": empty_count[col_name],
+                    "emptyPercentage": (empty_count[col_name] - column_count[col_name])* 100 / column_count[col_name] ,
                     "histogram": histogram
                 }
                 stats[col_name] = col_stats
@@ -427,6 +375,26 @@ class StatsGenerator(BaseModule):
 
         self.transaction.persistent_model_metadata.update()
 
+        for col in stats:
+            col_stats = stats[col]
+
+            if col_stats['emptyPercentage'] > 10:
+                log.warning('The data in column: {} has {}% of it\'s values missing'
+                .format(col, round(col_stats['emptyPercentage'],2)))
+
+            expected_outlier_cap = 12
+
+
+            if 'outlier_indexes' in col_stats:
+                if len(col_stats['outlier_indexes']) < len(origData[col])/expected_outlier_cap:
+                    for index in col_stats['outlier_indexes']:
+                        log.info('Detect outlier in column "{}", at position "{}", with value "{}"'.
+                        format(col,index,origData[col][index]))
+                else:
+                    log.warning('Detected {}% of the data as outliers in column "{}", this might indicate the data in this column is of low quality'
+                    .format( round((len(col_stats['outlier_indexes']) - len(origData[col])) * 100 / len(origData[col]),2) , col ))
+
+        exit()
         return stats
 
 

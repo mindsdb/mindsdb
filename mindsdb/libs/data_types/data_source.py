@@ -1,10 +1,11 @@
-
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 class DataSource:
 
     def __init__(self, *args, **kwargs):
         self._col_map = {} # you can store here if there were some columns renamed
         self._setup(*args, **kwargs)
+        self.log = log
 
     def _setup(self, df):
         self._df = df

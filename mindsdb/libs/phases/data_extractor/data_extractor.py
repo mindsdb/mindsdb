@@ -268,10 +268,11 @@ class DataExtractor(BaseModule):
 
             if total_rows_used != total_rows_in_input:
                 self.log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error))
-                self.log.info('Using a [Cochran’s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
+                self.log.info('Using a [Cochran\'s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
                 data = {
                     'total': [total_rows_in_input, 'Total number of rows in input'],
-                    'subsets': [[total_rows_used, 'Total number of rows used']]
+                    'subsets': [[total_rows_used, 'Total number of rows used']],
+                    'label': 'Sample size for margin of error of ({sample_margin_of_error}) and a confidence level of ({sample_confidence_level})'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error)
                 }
                 self.log.infoChart(data, type='pie')
 
@@ -279,9 +280,9 @@ class DataExtractor(BaseModule):
                 self.log.info('You are grouping your data by [{group_by}], we found:'.format(group_by=', '.join(group_by)))
                 data = {
                     'Total number of groupby groups': total_number_of_groupby_groups,
-                    'Average number of rows per groupby group': sum(average_number_of_rows_used_per_groupby.values())/len(average_number_of_rows_used_per_groupby)
+                    'Average number of rows per groupby group': int(sum(average_number_of_rows_used_per_groupby.values())/len(average_number_of_rows_used_per_groupby))
                 }
-                self.log.infoChart(data, type='bars_horizontal')
+                self.log.infoChart(data, type='list')
 
             self.log.info('We have split the input data into:')
 
@@ -310,7 +311,9 @@ def test():
         # the path to the file where we can learn from, (note: can be url)
         predict='rental_price',  # the column we want to learn to predict given all the data in the file
         model_name='home_rentals',  # the name of this model
-        breakpoint = PHASE_DATA_EXTRACTION)
+        breakpoint = PHASE_DATA_EXTRACTION,
+        sample_margin_of_error=0.02
+    )
 
 
 

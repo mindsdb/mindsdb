@@ -4,6 +4,7 @@ import colorlog
 import socketio
 import uuid
 
+from mindsdb import CONFIG
 from mindsdb.libs.helpers.text_helpers import gen_chars
 from inspect import getframeinfo, stack
 
@@ -136,4 +137,5 @@ class MindsdbLogger():
 
 
 
-log = None
+main_logger_uuid = 'core-logger'
+log = MindsdbLogger(log_level=CONFIG.DEFAULT_LOG_LEVEL, log_url=None, send_logs=False, uuid=main_logger_uuid)

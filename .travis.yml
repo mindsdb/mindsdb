@@ -6,6 +6,10 @@ matrix:
     - python: 3.7
       dist: xenial
       sudo: true 
+notifications:
+  # send notifications only on master failure
+  email:
+    only: master
 cache: pip
 # install dependencies
 install:

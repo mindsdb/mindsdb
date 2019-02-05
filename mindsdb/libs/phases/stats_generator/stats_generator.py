@@ -324,7 +324,8 @@ class StatsGenerator(BaseModule):
                         "y": y
                     },
                     "percentage_buckets": xp,
-                    "outlier_indexes": outlier_indexes
+                    "outlier_indexes": outlier_indexes,
+                    "outlier_percentage": len(outlier_indexes) * 100 / len(column_count[col_name])
                 }
                 stats[col_name] = col_stats
             # else if its text
@@ -382,17 +383,16 @@ class StatsGenerator(BaseModule):
                 log.warning('The data in column: {} has {}% of it\'s values missing'
                 .format(col, round(col_stats['emptyPercentage'],2)))
 
-            expected_outlier_cap = 12
-
+            max_outlier_percentage = 12
 
             if 'outlier_indexes' in col_stats:
-                if len(col_stats['outlier_indexes']) < len(non_null_data[col])/expected_outlier_cap:
+                if col_stats['outlier_percentage'] < max_outlier_percentage:
                     for index in col_stats['outlier_indexes']:
                         log.info('Detect outlier in column "{}", at position "{}", with value "{}"'.
                         format(col,index,non_null_data[col][index]))
                 else:
                     log.warning('Detected {}% of the data as outliers in column "{}", this might indicate the data in this column is of low quality'
-                    .format( round(len(col_stats['outlier_indexes']) * 100 / len(non_null_data[col]),2) , col ))
+                    .format( round(col_stats['outlier_percentage'],2) , col ))
 
         exit()
         return stats

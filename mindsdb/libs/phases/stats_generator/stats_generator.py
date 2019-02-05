@@ -17,6 +17,7 @@ import numpy as np
 import scipy.stats as st
 from dateutil.parser import parse as parseDate
 from sklearn.ensemble import IsolationForest
+from sklearn.covariance import EmpiricalCovariance
 
 from mindsdb.config import CONFIG
 
@@ -163,9 +164,11 @@ class StatsGenerator(BaseModule):
 
         header = self.transaction.input_data.columns
         non_null_data = {}
+        all_sampled_data = {}
 
         for column in header:
             non_null_data[column] = []
+            all_sampled_data[column] = []
 
         empty_count = {}
         column_count = {}
@@ -191,12 +194,15 @@ class StatsGenerator(BaseModule):
                     empty_count[column] += 1
                 else:
                     non_null_data[column].append(value)
+                all_sampled_data[column].append(value)
                 column_count[column] += 1
         stats = {}
 
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
+            full_col_data = all_sampled_data[col_name]
             data_type, data_type_dist = self.getColumnDataType(col_data)
+
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
             # TODO: Evaluate if we want to specify the problem type on predict statement as regression or classification
@@ -358,6 +364,45 @@ class StatsGenerator(BaseModule):
 
             stats[col_name]['duplicates'] = len(col_data) - len(set(col_data))
             stats[col_name]['duplicates_percentage'] = stats[col_name]['duplicates']*100/len(col_data)
+
+        for i, col_name in enumerate(all_sampled_data):
+            full_col_data = all_sampled_data[col_name]
+
+            from sklearn.tree import DecisionTreeClassifier
+            from sklearn.preprocessing import LabelEncoder
+
+            dt_clf = DecisionTreeClassifier()
+
+            other_feature_names = []
+            other_features = []
+            for _, other_col_name in enumerate(all_sampled_data):
+                if other_col_name == col_name:
+                    continue
+
+                other_feature_names.append(other_col_name)
+                #if stats[other_col_name][KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+                #    other_features.append(all_sampled_data[other_col_name])
+                #else:
+                le = LabelEncoder()
+                _stringified_col = list(map(str,all_sampled_data[other_col_name]))
+                le.fit(_stringified_col)
+                other_features.append(list(le.transform(_stringified_col)))
+
+            other_features_t = np.array(other_features, dtype=object).transpose()
+
+            try:
+                le = LabelEncoder()
+                _stringified_col = list(map(str,full_col_data))
+                le.fit(_stringified_col)
+                y = le.transform(_stringified_col)
+                dt_clf.fit(other_features_t,y)
+                print('\n')
+                print(dt_clf.feature_importances_)
+                print(col_name)
+                print(dt_clf.score(other_features_t,y))
+                print('\n')
+            except:
+                pass
 
         total_rows = len(self.transaction.input_data.data_array)
         test_rows = len(self.transaction.input_data.test_indexes)

@@ -157,36 +157,44 @@ class StatsGenerator(BaseModule):
         }
         return ret
 
-
-    def duplicates_score(stats, columns, col_name):
+    def duplicates_score(self, stats, columns, col_name):
+        duplicates = len(columns[col_name]) - len(set(columns[col_name]))
         data = {
-            'duplicates': len(columns[col_name]) - len(set(columns[col_name]))
-            ,'duplicates_percentage': stats[col_name]['duplicates']*100/len(col_data)
+            'duplicates': duplicates
+            ,'duplicates_percentage': duplicates*100/len(columns[col_name])
         }
-        data['duplicate_score'] = data['duplicates_percentage']/100
+
+        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.CLASS and stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.DATE:
+            data['duplicate_score'] = data['duplicates_percentage']/100
+        else:
+            data['duplicate_score'] = 0
+
         return data
 
-
-    def empty_cells_score(stats, columns, col_name):
+    def empty_cells_score(self, stats, columns, col_name):
         return {'empty_cells_score': stats[col_name]['empty_percentage']/100}
 
-    def clf_based_correlation_score(stats, columns, col_name):
-        full_col_data = all_sampled_data[col_name]
+    def data_dist_score(self, stats, columns, col_name):
+        vals = stats[col_name]['data_type_dist'].values()
+        principal = max(vals)
+        total = len(columns[col_name])
+        data_dist_score = (total - principal)/total
+        return {'data_distribution_score': data_dist_score}
+
+    def clf_based_correlation_score(self, stats, columns, col_name):
+        full_col_data = columns[col_name]
 
         dt_clf = DecisionTreeClassifier()
 
         other_feature_names = []
         other_features = []
-        for _, other_col_name in enumerate(all_sampled_data):
+        for _, other_col_name in enumerate(columns):
             if other_col_name == col_name:
                 continue
 
             other_feature_names.append(other_col_name)
-            #if stats[other_col_name][KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
-            #    other_features.append(all_sampled_data[other_col_name])
-            #else:
             le = LabelEncoder()
-            _stringified_col = list(map(str,all_sampled_data[other_col_name]))
+            _stringified_col = list(map(str,columns[other_col_name]))
             le.fit(_stringified_col)
             other_features.append(list(le.transform(_stringified_col)))
 
@@ -198,15 +206,34 @@ class StatsGenerator(BaseModule):
         y = le.transform(_stringified_col)
         dt_clf.fit(other_features_t,y)
         prediction_score = dt_clf.score(other_features_t,y)
-        highest_correlated_column = max(dt_clf.feature_importances_)
+        corr_scores = list(dt_clf.feature_importances_)
+        highest_correlated_column = max(corr_scores)
         return {
             'correlation_score': prediction_score * highest_correlated_column
-            ,'highest_correlation': max(dt_clf.feature_importances_)
-            ,'most_correlated_column': other_feature_names[dt_clf.feature_importances_.index(max(dt_clf.feature_importances_))]
+            ,'highest_correlation': max(corr_scores)
+            ,'most_correlated_column': other_feature_names[corr_scores.index(max(corr_scores))]
         }
 
 
+    def log_interesting_stats(self, stats):
+        for col_name in stats:
+            col_stats = stats[col_name]
 
+            # Data distribution
+            self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
+
+            if stats[col_name]['data_distribution_score'] > 0.3:
+                self.log.info('Got a rather varried data type distribution for {}, for column: "{}"'.format(stats[col_name]['data_distribution_score'], str(col_name)))
+
+            # Empty/Missing values
+            if col_stats['empty_cells_score'] > 0.5:
+                self.log.info('Column "{}" has {}% of it\'s values missing or null'.format(col_name, round(col_stats['empty_percentage'],2)))
+
+            # Duplicate values
+            if col_stats['duplicate_score'] > 0.5:
+                # Maybe add a chart of frequent duplicate values here
+                
+                self.log.info('Column "{}" has {}% of it\'s values duplicated !'.format(col, round(col_stats['duplicates_percentage'],2)))
 
     def run(self):
 
@@ -408,11 +435,10 @@ class StatsGenerator(BaseModule):
 
 
         for i, col_name in enumerate(all_sampled_data):
-            stats[col_name].update(duplicates_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(empty_cells_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(clf_based_correlation_score(stats, all_sampled_data, col_name))
-
-
+            stats[col_name].update(self.duplicates_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self.empty_cells_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self.clf_based_correlation_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self.data_dist_score(stats, all_sampled_data, col_name))
 
         total_rows = len(self.transaction.input_data.data_array)
         test_rows = len(self.transaction.input_data.test_indexes)
@@ -427,34 +453,7 @@ class StatsGenerator(BaseModule):
 
         self.transaction.persistent_model_metadata.update()
 
-        for col in stats:
-            col_stats = stats[col]
-
-            if col_stats['duplicates_percentage'] > 15 and col_stats[KEYS.DATA_TYPE] != DATA_TYPES.CLASS and col_stats[KEYS.DATA_TYPE] != DATA_TYPES.DATE:
-                self.log.warning('Column "{}" has {}% of it\'s values duplicated !'.format(col, round(col_stats['duplicates_percentage'],2)))
-
-            data_type_tuples = col_stats['data_type_dist'].items()
-            significant_data_type_tuples = list(filter(lambda x: x[1] > len(non_null_data[col])/20, data_type_tuples))
-            if len(significant_data_type_tuples) > 1:
-                self.log.warning('The data in column "{}" seems to have members of {} different data types, namely {}, We shall go ahead using data type: {}'
-                .format(col, len(significant_data_type_tuples), significant_data_type_tuples, col_stats[KEYS.DATA_TYPE]))
-
-            if col_stats['emptyPercentage'] > 10:
-                self.log.warning('The data in column: "{}" has {}% of it\'s values missing'
-                .format(col, round(col_stats['emptyPercentage'],2)))
-
-            max_outlier_percentage = 12
-
-            if 'outlier_indexes' in col_stats:
-                if col_stats['outlier_percentage'] < max_outlier_percentage:
-                    for index in col_stats['outlier_indexes']:
-                        self.log.info('Detect outlier in column "{}", at position "{}", with value "{}"'.
-                        format(col,index,non_null_data[col][index]))
-                else:
-                    self.log.warning('Detected {}% of the data as outliers in column "{}", this might indicate the data in this column is of low quality'
-                    .format( round(col_stats['outlier_percentage'],2) , col ))
-
-        exit()
+        log_interesting_stats(stats)
         return stats
 
 

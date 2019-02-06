@@ -18,6 +18,8 @@ import scipy.stats as st
 from dateutil.parser import parse as parseDate
 from sklearn.ensemble import IsolationForest
 from sklearn.covariance import EmpiricalCovariance
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import LabelEncoder
 
 from mindsdb.config import CONFIG
 
@@ -154,6 +156,55 @@ class StatsGenerator(BaseModule):
             'shape': arg
         }
         return ret
+
+
+    def duplicates_score(stats, columns, col_name):
+        data = {
+            'duplicates': len(columns[col_name]) - len(set(columns[col_name]))
+            ,'duplicates_percentage': stats[col_name]['duplicates']*100/len(col_data)
+        }
+        data['duplicate_score'] = data['duplicates_percentage']/100
+        return data
+
+
+    def empty_cells_score(stats, columns, col_name):
+        return {'empty_cells_score': stats[col_name]['empty_percentage']/100}
+
+    def clf_based_correlation_score(stats, columns, col_name):
+        full_col_data = all_sampled_data[col_name]
+
+        dt_clf = DecisionTreeClassifier()
+
+        other_feature_names = []
+        other_features = []
+        for _, other_col_name in enumerate(all_sampled_data):
+            if other_col_name == col_name:
+                continue
+
+            other_feature_names.append(other_col_name)
+            #if stats[other_col_name][KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+            #    other_features.append(all_sampled_data[other_col_name])
+            #else:
+            le = LabelEncoder()
+            _stringified_col = list(map(str,all_sampled_data[other_col_name]))
+            le.fit(_stringified_col)
+            other_features.append(list(le.transform(_stringified_col)))
+
+        other_features_t = np.array(other_features, dtype=object).transpose()
+
+        le = LabelEncoder()
+        _stringified_col = list(map(str,full_col_data))
+        le.fit(_stringified_col)
+        y = le.transform(_stringified_col)
+        dt_clf.fit(other_features_t,y)
+        prediction_score = dt_clf.score(other_features_t,y)
+        highest_correlated_column = max(dt_clf.feature_importances_)
+        return {
+            'correlation_score': prediction_score * highest_correlated_column
+            ,'highest_correlation': max(dt_clf.feature_importances_)
+            ,'most_correlated_column': other_feature_names[dt_clf.feature_importances_.index(max(dt_clf.feature_importances_))]
+        }
+
 
 
 
@@ -305,17 +356,12 @@ class StatsGenerator(BaseModule):
 
 
                 col_stats = {
-                    "column": col_name,
                     KEYS.DATA_TYPE: data_type,
-                    # "distribution": best_fit_name,
-                    # "distributionParams": distribution_params,
                     "mean": mean,
                     "median": median,
                     "variance": var,
                     "skewness": skew,
                     "kurtosis": kurtosis,
-                    "emptyCells": empty_count[col_name],
-                    "emptyPercentage": empty_count[col_name] * 100 / column_count[col_name] ,
                     "max": max_value,
                     "min": min_value,
                     "is_float": is_float,
@@ -348,61 +394,25 @@ class StatsGenerator(BaseModule):
                         dictionary = []
                         dictionary_available = False
                 col_stats = {
-
-                    "column": col_name,
                     KEYS.DATA_TYPE: DATA_TYPES.FULL_TEXT if is_full_text else data_type,
                     "dictionary": dictionary,
                     "dictionaryAvailable": dictionary_available,
                     "dictionaryLenghtPercentage": dictionary_lenght_percentage,
-                    "emptyCells": empty_count[col_name],
-                    "emptyPercentage": empty_count[col_name] * 100 / column_count[col_name] ,
                     "histogram": histogram
                 }
-                stats[col_name] = col_stats
-
+            stats[col_name] = col_stats
             stats[col_name]['data_type_dist'] = data_type_dist
+            stats[col_name]['column'] = col_name
+            stats[col_name]['empty_cells'] = empty_count[col_name]
+            stats[col_name]['empty_percentage'] = empty_count[col_name] * 100 / column_count[col_name]
 
-            stats[col_name]['duplicates'] = len(col_data) - len(set(col_data))
-            stats[col_name]['duplicates_percentage'] = stats[col_name]['duplicates']*100/len(col_data)
 
         for i, col_name in enumerate(all_sampled_data):
-            full_col_data = all_sampled_data[col_name]
+            stats[col_name].update(duplicates_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(empty_cells_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(clf_based_correlation_score(stats, all_sampled_data, col_name))
 
-            from sklearn.tree import DecisionTreeClassifier
-            from sklearn.preprocessing import LabelEncoder
 
-            dt_clf = DecisionTreeClassifier()
-
-            other_feature_names = []
-            other_features = []
-            for _, other_col_name in enumerate(all_sampled_data):
-                if other_col_name == col_name:
-                    continue
-
-                other_feature_names.append(other_col_name)
-                #if stats[other_col_name][KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
-                #    other_features.append(all_sampled_data[other_col_name])
-                #else:
-                le = LabelEncoder()
-                _stringified_col = list(map(str,all_sampled_data[other_col_name]))
-                le.fit(_stringified_col)
-                other_features.append(list(le.transform(_stringified_col)))
-
-            other_features_t = np.array(other_features, dtype=object).transpose()
-
-            try:
-                le = LabelEncoder()
-                _stringified_col = list(map(str,full_col_data))
-                le.fit(_stringified_col)
-                y = le.transform(_stringified_col)
-                dt_clf.fit(other_features_t,y)
-                print('\n')
-                print(dt_clf.feature_importances_)
-                print(col_name)
-                print(dt_clf.score(other_features_t,y))
-                print('\n')
-            except:
-                pass
 
         total_rows = len(self.transaction.input_data.data_array)
         test_rows = len(self.transaction.input_data.test_indexes)

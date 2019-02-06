@@ -205,9 +205,6 @@ class StatsGenerator(BaseModule):
         outlier_scores = lof.fit_predict(np_col_data)
         outlier_indexes = [i for i in range(len(columns[col_name])) if outlier_scores[i] < -0.8]
 
-        print(len(outlier_indexes))
-        print(len(columns[col_name]))
-
         return {
             'lof_outliers': outlier_indexes
             ,'cummulative_lof_score': len(outlier_indexes)/len(columns[col_name])
@@ -247,6 +244,22 @@ class StatsGenerator(BaseModule):
             ,'most_correlated_column': other_feature_names[corr_scores.index(max(corr_scores))]
         }
 
+    def data_quality_score(self, stats, columns, col_name):
+        scores_used = 0
+        scores_total = 0
+        scores = ['correlation_score', 'cummulative_lof_score', 'cummulative_z_score', 'data_distribution_score', 'empty_cells_score', 'duplicate_score']
+        for score in scores:
+            if score in stats[col_name]:
+                scores_used += 1
+                scores_total += stats[col_name][score]
+
+        quality_score = scores_total/scores_used
+        bad_scores = []
+        for score in scores:
+            if score in stats[col_name]:
+                if stats[col_name][score] > quality_score:
+                    bad_scores.append(score)
+        return {'quality_score': quality_score, 'bad_scores': bad_scores}
 
     def log_interesting_stats(self, stats):
         for col_name in stats:
@@ -271,6 +284,9 @@ class StatsGenerator(BaseModule):
             if 'cummulative_z_score' in col_stats and col_stats['cummulative_z_score'] > 3:
                 self.log.info('Column "{}" has a very high amount of outliers, as signified by the cummulative z score: {}'.format(col_name, round(col_stats['cummulative_z_score'],2)))
 
+            # Overall quality
+            if col_stats['quality_score'] > 0.5:
+                self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission are: {}'.format(col_name, col_stats['bad_scores']))
 
     def run(self):
 
@@ -470,7 +486,7 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self.data_dist_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.z_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.lof_score(stats, all_sampled_data, col_name))
-
+            stats[col_name].update(self.data_quality_score(stats, all_sampled_data, col_name))
 
         total_rows = len(self.transaction.input_data.data_array)
         test_rows = len(self.transaction.input_data.test_indexes)

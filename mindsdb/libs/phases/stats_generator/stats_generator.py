@@ -17,6 +17,7 @@ import numpy as np
 import scipy.stats as st
 from dateutil.parser import parse as parseDate
 from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
 from sklearn.covariance import EmpiricalCovariance
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
@@ -181,6 +182,38 @@ class StatsGenerator(BaseModule):
         data_dist_score = (total - principal)/total
         return {'data_distribution_score': data_dist_score}
 
+    def z_score(self, stats, columns, col_name):
+        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
+            return {}
+
+        z_scores = list(map(abs,(st.zscore(columns[col_name]))))
+        threshold = 3
+        z_score_outlier_indexes = [i for i in range(len(z_scores)) if z_scores[i] > threshold]
+        data = {
+            'z_score_outliers': z_score_outlier_indexes
+            ,'mean_z_score': np.mean(z_scores)
+            ,'cummulative_z_score': len(z_score_outlier_indexes)/len(columns[col_name])
+        }
+        return data
+
+    def lof_score(self, stats, columns, col_name):
+        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
+            return {}
+
+        np_col_data = np.array(columns[col_name]).reshape(-1, 1)
+        lof = LocalOutlierFactor()
+        outlier_scores = lof.fit_predict(np_col_data)
+        outlier_indexes = [i for i in range(len(columns[col_name])) if outlier_scores[i] < -0.8]
+
+        print(len(outlier_indexes))
+        print(len(columns[col_name]))
+
+        return {
+            'lof_outliers': outlier_indexes
+            ,'cummulative_lof_score': len(outlier_indexes)/len(columns[col_name])
+        }
+
+
     def clf_based_correlation_score(self, stats, columns, col_name):
         full_col_data = columns[col_name]
 
@@ -232,8 +265,12 @@ class StatsGenerator(BaseModule):
             # Duplicate values
             if col_stats['duplicate_score'] > 0.5:
                 # Maybe add a chart of frequent duplicate values here
-                
-                self.log.info('Column "{}" has {}% of it\'s values duplicated !'.format(col, round(col_stats['duplicates_percentage'],2)))
+
+                self.log.info('Column "{}" has {}% of it\'s values duplicated !'.format(col_name, round(col_stats['duplicates_percentage'],2)))
+
+            if 'cummulative_z_score' in col_stats and col_stats['cummulative_z_score'] > 3:
+                self.log.info('Column "{}" has a very high amount of outliers, as signified by the cummulative z score: {}'.format(col_name, round(col_stats['cummulative_z_score'],2)))
+
 
     def run(self):
 
@@ -314,12 +351,6 @@ class StatsGenerator(BaseModule):
 
                 col_data = [cleanfloat(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
 
-                np_col_data = np.array(col_data).reshape(-1, 1)
-                clf = IsolationForest(behaviour='new',contamination='auto', n_estimators=1)
-                outliers = clf.fit_predict(np_col_data)
-
-                outlier_indexes = [i for i in range(len(col_data)) if outliers[i] == -1]
-
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
                 x = x.tolist()
@@ -396,9 +427,7 @@ class StatsGenerator(BaseModule):
                         "x": x,
                         "y": y
                     },
-                    "percentage_buckets": xp,
-                    "outlier_indexes": outlier_indexes,
-                    "outlier_percentage": len(outlier_indexes) * 100 / column_count[col_name]
+                    "percentage_buckets": xp
                 }
                 stats[col_name] = col_stats
             # else if its text
@@ -439,6 +468,9 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self.empty_cells_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.clf_based_correlation_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.data_dist_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self.z_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self.lof_score(stats, all_sampled_data, col_name))
+
 
         total_rows = len(self.transaction.input_data.data_array)
         test_rows = len(self.transaction.input_data.test_indexes)
@@ -453,7 +485,7 @@ class StatsGenerator(BaseModule):
 
         self.transaction.persistent_model_metadata.update()
 
-        log_interesting_stats(stats)
+        self.log_interesting_stats(stats)
         return stats
 
 

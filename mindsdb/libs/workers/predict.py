@@ -1,13 +1,4 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
+
 
 from mindsdb.libs.data_types.mindsdb_logger import log
 
@@ -48,7 +39,9 @@ class PredictWorker():
             self.persistent_ml_model_info = info[0] #type: PersistentMlModelInfo
         else:
             # TODO: Make sure we have a model for this
-            log.info('No model found')
+            error = 'Cannot make this prediction, no pre-trained {model_name} model found, use learn first'.format(model_name=self.model_name)
+            log.error(error)
+            raise ValueError(error)
             return
 
         self.ml_model_name = self.persistent_ml_model_info.ml_model_name
@@ -65,13 +58,13 @@ class PredictWorker():
         self.gfs_save_head_time = time.time()  # the last time it was saved into GridFS, assume it was now
 
         log.info('Starting model...')
-        self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
+        self.data_model_object = self.ml_model_class.load_from_disk(file_ids=fs_file_ids)
 
         if self.data != None:
-            self._loadData(data)
+            self._load_data(data)
 
 
-    def _loadData(self, data):
+    def _load_data(self, data):
         """
         Load data
         :param data:
@@ -92,7 +85,7 @@ class PredictWorker():
         """
 
         if data != None:
-            self._loadData(data)
+            self._load_data(data)
 
         self.predict_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
         self.predict_sampler.variable_unwrapper = self.ml_model_class.variable_unwrapper

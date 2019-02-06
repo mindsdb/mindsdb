@@ -31,7 +31,7 @@ import copy
 
 class TrainWorker():
 
-    def __init__(self, data, model_name, ml_model_name='pytorch.models.column_based_fcnn', config={}):
+    def __init__(self, model_name, ml_model_name='pytorch.models.column_based_fcnn', config={}):
         """
 
         :param data:
@@ -41,7 +41,7 @@ class TrainWorker():
         :param config:
         """
 
-        self.data = data
+
         self.model_name = model_name
         self.ml_model_name = ml_model_name
         self.config = config
@@ -65,26 +65,41 @@ class TrainWorker():
         self.ml_model_module = importlib.import_module(self.ml_model_module_path)
         self.ml_model_class = getattr(self.ml_model_module, self.ml_model_class_name)
 
-        self.train_sampler = Sampler(self.data.train_set, metadata_as_stored=self.persistent_model_metadata, ignore_types=self.ml_model_class.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
-        self.test_sampler = Sampler(self.data.test_set, metadata_as_stored=self.persistent_model_metadata, ignore_types=self.ml_model_class.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
+
+
+
+        self.gfs_save_head_time = time.time() # the last time it was saved into GridFS, assume it was now
+
+        # empty objects
+        self.data_model_object = None
+        self.data = None
+        self.train_sampler = None
+
+    def predict(self, data):
+
+        log.info('Starting model...')
+        self.data_model_object = self.ml_model_class.load_from_disk(file_ids=fs_file_ids)
+
+    def train(self, data):
+        """
+
+        :return:
+        """
+        self.data = data
+        self.train_sampler = Sampler(self.data.train_set, metadata_as_stored=self.persistent_model_metadata,
+                                     ignore_types=self.ml_model_class.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
+        self.test_sampler = Sampler(self.data.test_set, metadata_as_stored=self.persistent_model_metadata,
+                                    ignore_types=self.ml_model_class.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
 
         self.train_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
         self.test_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
         self.sample_batch = self.train_sampler.getSampleBatch()
 
-        self.gfs_save_head_time = time.time() # the last time it was saved into GridFS, assume it was now
+        if self.model_name is None:
+            log.info('Starting model...')
+            self.data_model_object = self.ml_model_class(self.sample_batch)
 
-        log.info('Starting model...')
-        self.data_model_object = self.ml_model_class(self.sample_batch)
         log.info('Training model...')
-        self.train()
-
-
-    def train(self):
-        """
-
-        :return:
-        """
 
         last_epoch = 0
         lowest_error = None
@@ -152,7 +167,7 @@ class TrainWorker():
 
             fs_file_ids = ml_model_info.fs_file_ids
             if fs_file_ids is not None:
-                self.data_model_object = self.ml_model_class.loadFromDisk(file_ids=fs_file_ids)
+                self.data_model_object = self.ml_model_class.load_from_disk(file_ids=fs_file_ids)
 
 
 

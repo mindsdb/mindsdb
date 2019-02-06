@@ -16,9 +16,7 @@ import warnings
 import numpy as np
 import scipy.stats as st
 from dateutil.parser import parse as parseDate
-from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
-from sklearn.covariance import EmpiricalCovariance
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
 
@@ -36,7 +34,7 @@ class StatsGenerator(BaseModule):
 
     phase_name = PHASE_STATS_GENERATOR
 
-    def isNumber(self, string):
+    def is_nr(self, string):
         """ Returns True if string is a number. """
         try:
             cleanfloat(string)
@@ -44,7 +42,7 @@ class StatsGenerator(BaseModule):
         except ValueError:
             return False
 
-    def isDate(self, string):
+    def is_date(self, string):
         """ Returns True if string is a valid date format """
         try:
             parseDate(string)
@@ -52,15 +50,15 @@ class StatsGenerator(BaseModule):
         except ValueError:
             return False
 
-    def getColumnDataType(self, data):
+    def get_column_data_type(self, data):
         """ Returns the column datatype based on a random sample of 15 elements """
         currentGuess = DATA_TYPES.NUMERIC
         type_dist = {}
 
         for element in data:
-            if self.isNumber(element):
+            if self.is_nr(element):
                 currentGuess = DATA_TYPES.NUMERIC
-            elif self.isDate(element):
+            elif self.is_date(element):
                 currentGuess = DATA_TYPES.DATE
             else:
                 currentGuess = DATA_TYPES.CLASS
@@ -79,12 +77,12 @@ class StatsGenerator(BaseModule):
                 max_data_type = type_dist[data_type]
 
         if curr_data_type == DATA_TYPES.CLASS:
-            return self.getTextType(data), type_dist
+            return self.get_text_type(data), type_dist
 
         return curr_data_type, type_dist
 
 
-    def getTextType(self, data):
+    def get_text_type(self, data):
 
         total_length = len(data)
         key_count = {}
@@ -117,7 +115,7 @@ class StatsGenerator(BaseModule):
 
 
 
-    def getWordsDictionary(self, data, full_text = False):
+    def get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
 
         splitter = lambda w, t: [wi.split(t) for wi in w] if type(w) == type([]) else splitter(w,t)
@@ -146,7 +144,7 @@ class StatsGenerator(BaseModule):
             }
             return x, histogram
 
-    def getParamsAsDictionary(self, params):
+    def get_params_as_dictionary(self, params):
         """ Returns a dictionary with the params of the distribution """
         arg = params[:-2]
         loc = params[-2]
@@ -332,7 +330,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, data_type_dist = self.getColumnDataType(col_data)
+            data_type, data_type_dist = self.get_column_data_type(col_data)
 
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
@@ -450,7 +448,7 @@ class StatsGenerator(BaseModule):
             else:
                 # see if its a sentence or a word
                 is_full_text = True if data_type == DATA_TYPES.FULL_TEXT else False
-                dictionary, histogram = self.getWordsDictionary(col_data, is_full_text)
+                dictionary, histogram = self.get_words_dictionary(col_data, is_full_text)
 
                 # if no words, then no dictionary
                 if len(col_data) == 0:

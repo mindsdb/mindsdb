@@ -9,7 +9,7 @@ import logging
 #print(os.path.dirname(os.path.realpath(__file__)) + '/../mindsdb/__init__.py')
 
 import mindsdb
-from mindsdb import config_vars
+from mindsdb import CONST
 
 types_that_fail = ['str','ascii']
 types_that_work = ['int','float','date','datetime','timestamp']
@@ -60,7 +60,7 @@ def test_one_label_prediction():
     columns_to_file(columns_train, train_file_name, separator)
     columns_to_file(columns_test, test_file_name, separator)
 
-    mdb = mindsdb.MindsDB(log_level=mindsdb.config_vars.DEBUG_LOG_LEVEL, send_logs=False)
+    mdb = mindsdb.MindsDB(log_level=mindsdb.CONST.INFO_LOG_LEVEL, send_logs=False)
 
     mdb.learn(
         from_data=train_file_name,

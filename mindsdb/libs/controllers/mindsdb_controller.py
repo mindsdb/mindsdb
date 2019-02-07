@@ -33,7 +33,7 @@ class MindsDBController:
         self.log = log
 
         self._set_configs()
-        
+
         _thread.start_new_thread(MindsDBController.check_for_updates, ())
 
 

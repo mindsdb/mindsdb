@@ -172,7 +172,7 @@ class StatsGenerator(BaseModule):
 
         data = {
             'bucket_probabilities': bucket_probabilities
-            ,'value_distribution_score': distribution_score
+            ,'value_distribution_score': value_distribution_score
         }
 
         return data
@@ -521,7 +521,7 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self.duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.empty_cells_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.clf_based_correlation_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self.data_type_dist_score)stats, all_sampled_data, col_name))
+            stats[col_name].update(self.data_type_dist_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.z_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.lof_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.similariy_score(stats, all_sampled_data, col_name))

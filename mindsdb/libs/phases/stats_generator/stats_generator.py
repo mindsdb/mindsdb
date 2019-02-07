@@ -157,6 +157,27 @@ class StatsGenerator(BaseModule):
         }
         return ret
 
+    def value_distribution_score(self, stats, columns, col_name):
+        bucket_probabilities = {}
+        pair = stats[col_name]['histogram']
+        total_vals = sum(pair['y'])
+        for i in range(len(pair['x'])):
+            bucket_probabilities[pair['x'][i]] = pair['y'][i]/total_vals
+
+        probabilities = list(bucket_probabilities.values())
+        mean_max_distribution_diff = 1 - np.mean(probabilities)/max(probabilities)
+        max_probability = max(probabilities)
+
+        value_distribution_score =  (mean_max_distribution_diff - max_probability)/100
+
+        data = {
+            'bucket_probabilities': bucket_probabilities
+            ,'value_distribution_score': distribution_score
+        }
+
+        return data
+
+
     def duplicates_score(self, stats, columns, col_name):
         duplicates = len(columns[col_name]) - len(set(columns[col_name]))
         data = {
@@ -174,12 +195,12 @@ class StatsGenerator(BaseModule):
     def empty_cells_score(self, stats, columns, col_name):
         return {'empty_cells_score': stats[col_name]['empty_percentage']/100}
 
-    def data_dist_score(self, stats, columns, col_name):
+    def data_type_dist_score)self, stats, columns, col_name):
         vals = stats[col_name]['data_type_dist'].values()
         principal = max(vals)
         total = len(columns[col_name])
-        data_dist_score = (total - principal)/total
-        return {'data_distribution_score': data_dist_score}
+        data_type_dist_score = (total - principal)/total
+        return {'data_type_distribution_score': data_type_dist_score}
 
     def z_score(self, stats, columns, col_name):
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
@@ -263,7 +284,7 @@ class StatsGenerator(BaseModule):
     def data_quality_score(self, stats, columns, col_name):
         scores_used = 0
         scores_total = 0
-        scores = ['correlation_score', 'cummulative_lof_score', 'cummulative_z_score', 'data_distribution_score', 'empty_cells_score', 'duplicate_score', 'similarity_score']
+        scores = ['correlation_score', 'cummulative_lof_score', 'cummulative_z_score', 'data_type_distribution_score', 'empty_cells_score', 'duplicate_score', 'similarity_score', 'value_distribution_score']
         for score in scores:
             if score in stats[col_name]:
                 scores_used += 1
@@ -285,8 +306,8 @@ class StatsGenerator(BaseModule):
             self.log.info('Data distribution for column "{}"'.format(col_name))
             self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
-            if stats[col_name]['data_distribution_score'] > 0.3:
-                self.log.info('Got a rather varried data type distribution for {}, for column: "{}"'.format(stats[col_name]['data_distribution_score'], str(col_name)))
+            if stats[col_name]['data_type_distribution_score'] > 0.3:
+                self.log.info('Got a rather varried data type distribution for {}, for column: "{}"'.format(stats[col_name]['data_type_distribution_score'], str(col_name)))
 
             # Empty/Missing values
             if col_stats['empty_cells_score'] > 0.5:
@@ -500,10 +521,11 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self.duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.empty_cells_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.clf_based_correlation_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self.data_dist_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self.data_type_dist_score)stats, all_sampled_data, col_name))
             stats[col_name].update(self.z_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.lof_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.similariy_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self.value_distribution_score(stats, all_sampled_data, col_name))
 
             stats[col_name].update(self.data_quality_score(stats, all_sampled_data, col_name))
 

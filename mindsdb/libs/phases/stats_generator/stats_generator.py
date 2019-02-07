@@ -199,7 +199,7 @@ class StatsGenerator(BaseModule):
             return {}
 
         np_col_data = np.array(columns[col_name]).reshape(-1, 1)
-        lof = LocalOutlierFactor()
+        lof = LocalOutlierFactor(contamination='auto')
         outlier_scores = lof.fit_predict(np_col_data)
         outlier_indexes = [i for i in range(len(columns[col_name])) if outlier_scores[i] < -0.8]
 

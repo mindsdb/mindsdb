@@ -264,6 +264,7 @@ class StatsGenerator(BaseModule):
             col_stats = stats[col_name]
 
             # Data distribution
+            self.log.info('Data distribution for column "{}"'.format(col_name))
             self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
             if stats[col_name]['data_distribution_score'] > 0.3:

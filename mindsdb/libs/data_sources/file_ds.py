@@ -9,6 +9,8 @@ import traceback
 
 from mindsdb.libs.data_types.data_source import DataSource
 from pandas.io.json import json_normalize
+from mindsdb.libs.data_types.mindsdb_logger import log
+
 
 class FileDS(DataSource):
 
@@ -31,14 +33,14 @@ class FileDS(DataSource):
                 col = col+'_'+str(col_count[col])
 
             if orig_col != col:
-                self.log.debug('[Column renamed] {orig_col} to {col}'.format(orig_col=orig_col, col=col))
+                log.debug('[Column renamed] {orig_col} to {col}'.format(orig_col=orig_col, col=col))
 
             self._col_map[orig_col] = col
             clean_header.append(col)
 
         if clean_header != header:
             string = """\n    {cols} \n""".format(cols=",\n    ".join(clean_header))
-            self.log.debug('The Columns have changed, here are the renamed columns: \n {string}'.format(string=string))
+            log.debug('The Columns have changed, here are the renamed columns: \n {string}'.format(string=string))
 
 
         return  clean_header
@@ -81,7 +83,7 @@ class FileDS(DataSource):
                 data = open(file, 'rb')
             except Exception as e:
                 error = 'Could not load file, possible exception : {exception}'.format(exception = e)
-                self.log.error(error)
+                log.error(error)
                 raise ValueError(error)
 
 
@@ -122,8 +124,8 @@ class FileDS(DataSource):
         try:
             data = StringIO(byte_str.decode('UTF-8'))
         except:
-            self.log.error(traceback.format_exc())
-            self.log.error('Could not load into string')
+            log.error(traceback.format_exc())
+            log.error('Could not load into string')
 
         # see if its JSON
         buffer = data.read(100)
@@ -161,8 +163,8 @@ class FileDS(DataSource):
                 return data, None, dialect
         except:
             data.seek(0)
-            self.log.error('Could not detect format for this file')
-            self.log.error(traceback.format_exc())
+            log.error('Could not detect format for this file')
+            log.error(traceback.format_exc())
             # No file type identified
             return data, None, dialect
 
@@ -184,7 +186,7 @@ class FileDS(DataSource):
         data.seek(0) # make sure we are at 0 in file pointer
 
         if format is None:
-            self.log.error('Could not laod file into any format, supported formats are csv, json, xls, xslx')
+            log.error('Could not laod file into any format, supported formats are csv, json, xls, xslx')
 
         if custom_parser:
             header, file_data = custom_parser(data, format)

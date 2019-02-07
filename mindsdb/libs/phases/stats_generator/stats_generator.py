@@ -19,6 +19,7 @@ from dateutil.parser import parse as parseDate
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import matthews_corrcoef
 
 from mindsdb.config import CONFIG
 
@@ -209,6 +210,23 @@ class StatsGenerator(BaseModule):
         }
 
 
+    def similariy_score(self, stats, columns, col_name):
+        col_data = columns[col_name]
+
+        similarities = []
+        for _, other_col_name in enumerate(columns):
+            if other_col_name == col_name:
+                continue
+            else:
+                similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
+                similarities.append((other_col_name,similarity))
+
+        return {
+            'similarities': similarities
+            ,'similarity_score': max(map(lambda x: x[1], similarities))
+        }
+
+
     def clf_based_correlation_score(self, stats, columns, col_name):
         full_col_data = columns[col_name]
 
@@ -245,7 +263,7 @@ class StatsGenerator(BaseModule):
     def data_quality_score(self, stats, columns, col_name):
         scores_used = 0
         scores_total = 0
-        scores = ['correlation_score', 'cummulative_lof_score', 'cummulative_z_score', 'data_distribution_score', 'empty_cells_score', 'duplicate_score']
+        scores = ['correlation_score', 'cummulative_lof_score', 'cummulative_z_score', 'data_distribution_score', 'empty_cells_score', 'duplicate_score', 'similarity_score']
         for score in scores:
             if score in stats[col_name]:
                 scores_used += 1
@@ -485,7 +503,10 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self.data_dist_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.z_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self.lof_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self.similariy_score(stats, all_sampled_data, col_name))
+
             stats[col_name].update(self.data_quality_score(stats, all_sampled_data, col_name))
+
 
         total_rows = len(self.transaction.input_data.data_array)
         test_rows = len(self.transaction.input_data.test_indexes)

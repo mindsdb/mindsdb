@@ -129,7 +129,7 @@ CREATE/UPDATE MODEL FROM (
     select
         *
     from diamonds
-    
+
 ) AS diamond_pricing
 
 PREDICT price
@@ -250,4 +250,3 @@ SELECT product_id FROM customer_history PREDICT product_id WHEN sold_date > NOW(
 -- GET 100 SIMILAR CUSTOMERS to customer 581
 SELECT * FROM customer PREDICT 100 ALIKE customer_id = 581 USING customer_history;
 """
-

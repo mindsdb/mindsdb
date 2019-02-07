@@ -195,7 +195,7 @@ class StatsGenerator(BaseModule):
     def empty_cells_score(self, stats, columns, col_name):
         return {'empty_cells_score': stats[col_name]['empty_percentage']/100}
 
-    def data_type_dist_score)self, stats, columns, col_name):
+    def data_type_dist_score(self, stats, columns, col_name):
         vals = stats[col_name]['data_type_dist'].values()
         principal = max(vals)
         total = len(columns[col_name])

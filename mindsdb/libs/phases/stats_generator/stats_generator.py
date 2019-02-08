@@ -189,7 +189,7 @@ class StatsGenerator(BaseModule):
         :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
         :return: Dictioanry containing:
-            #  A value distribution score from 0 to 1, where 0 is lowest quality and 1 is highest quality.
+            #  A value distribution score from 1 to 0, where 1 is lowest quality and 0 is highest quality.
             #  A dictioanry of with the probabilities that a value values in a bucket, for each of he buckets in the histogram
         """
 
@@ -224,7 +224,7 @@ class StatsGenerator(BaseModule):
         :return: Dictioanry containing:
             #  nr_duplicates, the nr of cells which contain values that are found more than once
             #  duplicates_percentage, % of the values that are found more than once
-            #  duplicate_score, a quality score based on said percentage
+            #  duplicate_score, a quality based on the duplicate percentage score score from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
         occurances = Counter(columns[col_name])

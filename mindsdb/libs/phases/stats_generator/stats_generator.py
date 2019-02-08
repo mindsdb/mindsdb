@@ -236,7 +236,7 @@ class StatsGenerator(BaseModule):
         occurances = Counter(columns[col_name])
         values_that_occur_twice_or_more = filter(lambda val: occurances[val] < 2, occurances)
         nr_of_occurances = map(lambda val: occurances[val], values_that_occur_twice_or_more)
-        nr_duplicates = sum(values_that_occur_twice_or_more)
+        nr_duplicates = sum(nr_of_occurances)
         data = {
             'nr_duplicates': nr_duplicates
             ,'duplicates_percentage': nr_duplicates*100/len(columns[col_name])

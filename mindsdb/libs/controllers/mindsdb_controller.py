@@ -1,4 +1,5 @@
-
+import sqlite3
+import pandas
 import requests
 import os
 import platform
@@ -37,12 +38,10 @@ class MindsDBController:
         _thread.start_new_thread(MindsDBController.check_for_updates, ())
 
 
-
     def _set_configs(self):
         """
         This sets the config settings for this mindsdb instance
-        TODO: Allow for stoage path to be an argument on the __init__
-        :return: None
+        :return:
         """
 
         # set the mindsdb storage folder
@@ -64,6 +63,43 @@ class MindsDBController:
             error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
             raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
+
+
+
+
+    def setUserEmail(self, email):
+        """
+
+        :param email:
+        :return:
+        """
+        email_file = CONFIG.MINDSDB_STORAGE_PATH + '/../email.mdb_base'
+
+
+        try:
+            open(email_file, 'w').write(email)
+            return True
+        except:
+            log.warning('Cannot store token, Please add write permissions to file:' + email_file)
+            return False
+
+    def getUserEmail(self):
+        """
+
+        :return:
+        """
+        email_file = CONFIG.MINDSDB_STORAGE_PATH + '/../email.mdb_base'
+        email_file_path  = Path(email_file)
+
+        try:
+            if email_file_path.is_file():
+                email = open(email_file, 'r').read()
+                return email
+            else:
+                return None
+        except:
+            log.warning('Cannot read email, Please add write permissions to file:' + email_file)
+            return None
 
     def learn(self, predict, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = False):
         """
@@ -149,23 +185,23 @@ class MindsDBController:
         Transaction(session=self, transaction_metadata=transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
+    def startInfoServer(self):
+        pass
 
-
-    def predict(self, when={}, when_data = None, model_name='mdsb_model', breakpoint= PHASE_END):
+    def predict(self, when={}, from_data = None, model_name='mdsb_model', breakpoint= PHASE_END):
         """
 
-        :param when: The conditions that we want to set for our prediction
-        :param when_data: (when making time series predictions)This can be a dataframe that we pass such that we can say predict X when the time series readings have been these
-        :param model_name: the model name that we want to use
-        :param breakpoint: this is only for debugging, do not change
-                TODO: Better deal with breakpoints as a global variable or something
-        :return: the prediction metadata
-        :rtype: mindsdb.libs.data_types.transaction_output_data.TransactionOutputData
+        :param predict:
+        :param when:
+        :param model_name:
+        :return:
         """
+
+
 
         transaction_type = TRANSACTION_PREDICT
 
-        from_ds = None if when_data is None else getDS(when_data)
+        from_ds = None if from_data is None else getDS(from_data)
 
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = model_name
@@ -180,6 +216,7 @@ class MindsDBController:
 
         transaction_metadata.model_when_conditions = when
         transaction_metadata.type = transaction_type
+        transaction_metadata.storage_file = self.storage_file
         transaction_metadata.from_data = from_ds
 
         transaction = self.session.newTransaction(transaction_metadata, breakpoint)
@@ -188,13 +225,6 @@ class MindsDBController:
 
     @staticmethod
     def check_for_updates():
-        """
-        This method, asks mindsdb main server for new versions of mindsdb
-        Since mindsdb is evolving rapidly we want to make sure we can inform people about new versions
-        It is a static method because we want to facilitate calling it on a background thread
-
-        :return: None
-        """
         # tmp files
         uuid_file = CONFIG.MINDSDB_STORAGE_PATH + '/../uuid.mdb_base'
         mdb_file = CONFIG.MINDSDB_STORAGE_PATH + '/start.mdb_base'
@@ -239,3 +269,9 @@ class MindsDBController:
         except:
 
             log.warning('could not check for MindsDB updates')
+
+    # zhihua
+    def read_csv(self, filepath, delimiter=',', header='infer', encoding=None):
+        data_df = pd.read_csv(filepath, delimiter=delimiter, encoding=encoding, header=header)
+        self._from_data = data_df
+        return self

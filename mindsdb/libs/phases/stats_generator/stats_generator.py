@@ -139,7 +139,7 @@ class StatsGenerator(BaseModule):
 
 
 
-    def get_words_dictionary(self, data, full_text = False):
+    def _get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
 
         splitter = lambda w, t: [wi.split(t) for wi in w] if type(w) == type([]) else splitter(w,t)
@@ -168,7 +168,8 @@ class StatsGenerator(BaseModule):
             }
             return x, histogram
 
-    def get_params_as_dictionary(self, params):
+    # @TODO Use or move to scraps.py
+    def _get_params_as_dictionary(self, params):
         """ Returns a dictionary with the params of the distribution """
         arg = params[:-2]
         loc = params[-2]
@@ -180,7 +181,7 @@ class StatsGenerator(BaseModule):
         }
         return ret
 
-    def value_distribution_score(self, stats, columns, col_name):
+    def _compute_value_distribution_score(self, stats, columns, col_name):
         """
         Looks at the histogram and transforms it into a proability mapping for each
         bucket, then generates a quality score (value_distribution_score) based on that
@@ -213,7 +214,7 @@ class StatsGenerator(BaseModule):
         return data
 
 
-    def duplicates_score(self, stats, columns, col_name):
+    def _compute_duplicates_score(self, stats, columns, col_name):
         """
         Looks at the set of distinct values for all the data and computes a quality
         socre based on how many of the values are duplicates
@@ -243,17 +244,17 @@ class StatsGenerator(BaseModule):
 
         return data
 
-    def empty_cells_score(self, stats, columns, col_name):
+    def _compute_empty_cells_score(self, stats, columns, col_name):
         return {'empty_cells_score': stats[col_name]['empty_percentage']/100}
 
-    def data_type_dist_score(self, stats, columns, col_name):
+    def _compute_data_type_dist_score(self, stats, columns, col_name):
         vals = stats[col_name]['data_type_dist'].values()
         principal = max(vals)
         total = len(columns[col_name])
         data_type_dist_score = (total - principal)/total
         return {'data_type_distribution_score': data_type_dist_score}
 
-    def z_score(self, stats, columns, col_name):
+    def _compute_z_score(self, stats, columns, col_name):
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
             return {}
 
@@ -267,7 +268,7 @@ class StatsGenerator(BaseModule):
         }
         return data
 
-    def lof_score(self, stats, columns, col_name):
+    def _compute_lof_score(self, stats, columns, col_name):
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
             return {}
 
@@ -282,7 +283,7 @@ class StatsGenerator(BaseModule):
         }
 
 
-    def similariy_score(self, stats, columns, col_name):
+    def _compute_similariy_score(self, stats, columns, col_name):
         col_data = columns[col_name]
 
         similarities = []
@@ -299,7 +300,7 @@ class StatsGenerator(BaseModule):
         }
 
 
-    def clf_based_correlation_score(self, stats, columns, col_name):
+    def _compute_clf_based_correlation_score(self, stats, columns, col_name):
         full_col_data = columns[col_name]
 
         dt_clf = DecisionTreeClassifier()
@@ -332,7 +333,7 @@ class StatsGenerator(BaseModule):
             ,'most_correlated_column': other_feature_names[corr_scores.index(max(corr_scores))]
         }
 
-    def data_quality_score(self, stats, columns, col_name):
+    def _compute_data_quality_score(self, stats, columns, col_name):
         scores_used = 0
         scores_total = 0
         scores = ['correlation_score', 'cummulative_lof_score', 'cummulative_z_score', 'data_type_distribution_score', 'empty_cells_score', 'duplicate_score', 'similarity_score', 'value_distribution_score']
@@ -349,7 +350,7 @@ class StatsGenerator(BaseModule):
                     bad_scores.append(score)
         return {'quality_score': quality_score, 'bad_scores': bad_scores}
 
-    def log_interesting_stats(self, stats):
+    def _log_interesting_stats(self, stats):
         for col_name in stats:
             col_stats = stats[col_name]
 
@@ -539,7 +540,7 @@ class StatsGenerator(BaseModule):
             else:
                 # see if its a sentence or a word
                 is_full_text = True if data_type == DATA_TYPES.TEXT else False
-                dictionary, histogram = self.get_words_dictionary(col_data, is_full_text)
+                dictionary, histogram = self._get_words_dictionary(col_data, is_full_text)
 
                 # if no words, then no dictionary
                 if len(col_data) == 0:
@@ -569,16 +570,16 @@ class StatsGenerator(BaseModule):
 
 
         for i, col_name in enumerate(all_sampled_data):
-            stats[col_name].update(self.duplicates_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self.empty_cells_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self.clf_based_correlation_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self.data_type_dist_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self.z_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self.lof_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self.similariy_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self.value_distribution_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_duplicates_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_empty_cells_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_data_type_dist_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_z_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_lof_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_similariy_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_value_distribution_score(stats, all_sampled_data, col_name))
 
-            stats[col_name].update(self.data_quality_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_data_quality_score(stats, all_sampled_data, col_name))
 
 
         total_rows = len(self.transaction.input_data.data_array)
@@ -594,7 +595,7 @@ class StatsGenerator(BaseModule):
 
         self.transaction.persistent_model_metadata.update()
 
-        self.log_interesting_stats(stats)
+        self._log_interesting_stats(stats)
         return stats
 
 

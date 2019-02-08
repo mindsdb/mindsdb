@@ -65,14 +65,14 @@ class StatsGenerator(BaseModule):
             elif self.is_date(element):
                 currentGuess = DATA_TYPES.DATE
             else:
-                currentGuess = DATA_TYPES.CLASS
+                currentGuess = DATA_TYPES.CATEGORICAL
 
             if currentGuess not in type_dist:
                 type_dist[currentGuess] = 1
             else:
                 type_dist[currentGuess] += 1
 
-        curr_data_type = DATA_TYPES.CLASS
+        curr_data_type = DATA_TYPES.CATEGORICAL
         max_data_type = 0
 
         for data_type in type_dist:
@@ -80,7 +80,7 @@ class StatsGenerator(BaseModule):
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
 
-        if curr_data_type == DATA_TYPES.CLASS:
+        if curr_data_type == DATA_TYPES.CATEGORICAL:
             return self.get_text_type(data), type_dist
 
         return curr_data_type, type_dist
@@ -111,9 +111,9 @@ class StatsGenerator(BaseModule):
                 max_number_of_words += words
 
         if max_number_of_words == 1:
-            return DATA_TYPES.CLASS
+            return DATA_TYPES.CATEGORICAL
         if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
-            return DATA_TYPES.CLASS
+            return DATA_TYPES.CATEGORICAL
         else:
             return DATA_TYPES.FULL_TEXT
 
@@ -188,7 +188,7 @@ class StatsGenerator(BaseModule):
             ,'duplicates_percentage': duplicates*100/len(columns[col_name])
         }
 
-        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.CLASS and stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.DATE:
+        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.CATEGORICAL and stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.DATE:
             data['duplicate_score'] = data['duplicates_percentage']/100
         else:
             data['duplicate_score'] = 0

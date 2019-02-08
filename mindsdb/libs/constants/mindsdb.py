@@ -62,7 +62,7 @@ class DATA_TYPES:
     NUMERIC = 'Numeric'
     DATE = 'Date'
     TEXT = 'Text'
-    CLASS = 'Class'
+    CATEGORICAL = 'Class'
 
 class SAMPLE_TYPES:
     TEST_SET = 'test'

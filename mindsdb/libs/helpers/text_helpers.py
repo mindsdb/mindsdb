@@ -15,7 +15,7 @@ import hashlib
 
 import numpy
 
-def cleanfloat(str):
+def clean_float(str):
     if type(str) in [type(int(1)), type(1.0)] :
         return float(str)
 
@@ -43,7 +43,7 @@ def tryCastToNumber(string):
         return int(string)
     except ValueError:
         try:
-            return cleanfloat(string)
+            return clean_float(string)
         except ValueError:
             if string == '':
                 return None

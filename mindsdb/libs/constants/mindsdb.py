@@ -58,11 +58,10 @@ TEXT_ENCODING_EXTRA_LENGTH = 2 #(len)[unfrequent_word, is_null]
 ALL_INDEXES_LIST = ['*']
 
 class DATA_TYPES:
-    FULL_TEXT = 'FullText'
     NUMERIC = 'Numeric'
     DATE = 'Date'
     TEXT = 'Text'
-    CLASS = 'Class'
+    CATEGORICAL = 'Class'
 
 class SAMPLE_TYPES:
     TEST_SET = 'test'

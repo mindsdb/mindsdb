@@ -190,8 +190,8 @@ class StatsGenerator(BaseModule):
         :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
         :return: Dictioanry containing:
-            #  A value distribution score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
-            #  A dictioanry of with the probabilities that a value values in a bucket, for each of he buckets in the histogram
+            bucket_probabilities: A value distribution score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            value_distribution_score: A dictioanry of with the probabilities that a value values in a bucket, for each of he buckets in the histogram
         """
 
         bucket_probabilities = {}
@@ -223,9 +223,9 @@ class StatsGenerator(BaseModule):
         :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
         :return: Dictioanry containing:
-            #  nr_duplicates, the nr of cells which contain values that are found more than once
-            #  duplicates_percentage, % of the values that are found more than once
-            #  duplicate_score, a quality based on the duplicate percentage, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            nr_duplicates: the nr of cells which contain values that are found more than once
+            duplicates_percentage: % of the values that are found more than once
+            duplicate_score: a quality based on the duplicate percentage, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
         occurances = Counter(columns[col_name])
@@ -251,7 +251,8 @@ class StatsGenerator(BaseModule):
         :param stats: The stats extracted up until this point for all columns
         :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
-        :return: Dictioanry containing: A quality score based on the nr of empty cells, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+        :return: Dictioanry containing:
+            empty_cells_score: A quality score based on the nr of empty cells, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
         return {'empty_cells_score': stats[col_name]['empty_percentage']/100}
@@ -265,7 +266,8 @@ class StatsGenerator(BaseModule):
         :param stats: The stats extracted up until this point for all columns
         :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
-        :return: Dictioanry containing: A quality score based on the nr of empty cells, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+        :return: Dictioanry containing:
+            data_type_distribution_score: A quality score based on the nr of empty cells, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
         vals = stats[col_name]['data_type_dist'].values()
@@ -284,9 +286,9 @@ class StatsGenerator(BaseModule):
         :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
         :return: Dictioanry containing:
-            The indexs of values which we consider outliers based on the z score
-            The mean z score for the column
-            A quality score based on the nr of outliers as determined by their z score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            z_score_outliers: The indexs of values which we consider outliers based on the z score
+            mean_z_score: The mean z score for the column
+            z_test_based_outlier_score: A quality score based on the nr of outliers as determined by their z score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
             return {}
@@ -312,8 +314,8 @@ class StatsGenerator(BaseModule):
         :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
         :return: Dictioanry containing:
-            The indexs of values which we consider outliers based on LOF
-            A quality score based on the nr of outliers as determined by their LOF score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            lof_outliers: The indexs of values which we consider outliers based on LOF
+            lof_based_outlier_score: A quality score based on the nr of outliers as determined by their LOF score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
@@ -338,8 +340,8 @@ class StatsGenerator(BaseModule):
         :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
         :return: Dictioanry containing:
-            How similar this column is to other columns (with 0 being completely different and 1 being an exact copy).
-            A score equal to the highest similarity found, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            similarities: How similar this column is to other columns (with 0 being completely different and 1 being an exact copy).
+            similarity_score: A score equal to the highest similarity found, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
         col_data = columns[col_name]
 

@@ -32,6 +32,11 @@ from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 
 class StatsGenerator(BaseModule):
+    """
+    # The stats generator phase is responsible for generating the insights we need about the data in order to vectorize it
+    # Additionally, the stats generator also provides the user with some extra meaningful information about his data,
+    thoguh this functionality may be moved to a different step (after vectorization) in the future
+    """
 
     phase_name = PHASE_STATS_GENERATOR
 

@@ -183,14 +183,14 @@ class StatsGenerator(BaseModule):
 
     def _compute_value_distribution_score(self, stats, columns, col_name):
         """
-        Looks at the histogram and transforms it into a proability mapping for each
+        # Looks at the histogram and transforms it into a proability mapping for each
         bucket, then generates a quality score (value_distribution_score) based on that
 
         :param stats: The stats extracted up until this point for all columns
         :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
         :return: Dictioanry containing:
-            #  A value distribution score from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            #  A value distribution score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
             #  A dictioanry of with the probabilities that a value values in a bucket, for each of he buckets in the histogram
         """
 
@@ -216,7 +216,7 @@ class StatsGenerator(BaseModule):
 
     def _compute_duplicates_score(self, stats, columns, col_name):
         """
-        Looks at the set of distinct values for all the data and computes a quality
+        # Looks at the set of distinct values for all the data and computes a quality
         socre based on how many of the values are duplicates
 
         :param stats: The stats extracted up until this point for all columns
@@ -225,7 +225,7 @@ class StatsGenerator(BaseModule):
         :return: Dictioanry containing:
             #  nr_duplicates, the nr of cells which contain values that are found more than once
             #  duplicates_percentage, % of the values that are found more than once
-            #  duplicate_score, a quality based on the duplicate percentage score score from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            #  duplicate_score, a quality based on the duplicate percentage, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
         occurances = Counter(columns[col_name])
@@ -245,9 +245,29 @@ class StatsGenerator(BaseModule):
         return data
 
     def _compute_empty_cells_score(self, stats, columns, col_name):
+        """
+        # Creates a quality socre based on the percentage of empty cells (empty_percentage)
+
+        :param stats: The stats extracted up until this point for all columns
+        :param columns: All the columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing: A quality score based on the nr of empty cells, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+        """
+
         return {'empty_cells_score': stats[col_name]['empty_percentage']/100}
 
     def _compute_data_type_dist_score(self, stats, columns, col_name):
+        """
+        # Creates a quality socre based on the data type distribution, this score is based on
+        the difference between the nr of values with the "main" data type
+        and all the nr of values with all other data types
+
+        :param stats: The stats extracted up until this point for all columns
+        :param columns: All the columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing: A quality score based on the nr of empty cells, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+        """
+
         vals = stats[col_name]['data_type_dist'].values()
         principal = max(vals)
         total = len(columns[col_name])
@@ -255,6 +275,19 @@ class StatsGenerator(BaseModule):
         return {'data_type_distribution_score': data_type_dist_score}
 
     def _compute_z_score(self, stats, columns, col_name):
+        """
+        # Computes the z_score for each value in our column.
+        # This score represents the distance from the mean over the standard deviation.
+        # Based on this, compute a quality metrics.
+
+        :param stats: The stats extracted up until this point for all columns
+        :param columns: All the columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            The indexs of values which we consider outliers based on the z score
+            The mean z score for the column
+            A quality score based on the nr of outliers as determined by their z score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+        """
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
             return {}
 
@@ -264,11 +297,25 @@ class StatsGenerator(BaseModule):
         data = {
             'z_score_outliers': z_score_outlier_indexes
             ,'mean_z_score': np.mean(z_scores)
-            ,'cummulative_z_score': len(z_score_outlier_indexes)/len(columns[col_name])
+            ,'z_test_based_outlier_score': len(z_score_outlier_indexes)/len(columns[col_name])
         }
         return data
 
     def _compute_lof_score(self, stats, columns, col_name):
+        """
+        # Uses LocalOutlierFactor (a KNN clustering based method from sklearn)
+        to determine outliers within our column
+        # All data that has a small score after we call `fit_predict` has a high chance of being an outlier
+        based on the distance from the clusters created by LOF
+
+        :param stats: The stats extracted up until this point for all columns
+        :param columns: All the columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            The indexs of values which we consider outliers based on LOF
+            A quality score based on the nr of outliers as determined by their LOF score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+        """
+
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
             return {}
 
@@ -279,11 +326,21 @@ class StatsGenerator(BaseModule):
 
         return {
             'lof_outliers': outlier_indexes
-            ,'cummulative_lof_score': len(outlier_indexes)/len(columns[col_name])
+            ,'lof_based_outlier_score': len(outlier_indexes)/len(columns[col_name])
         }
 
 
     def _compute_similariy_score(self, stats, columns, col_name):
+        """
+        # Uses matthews correlation to determine up what % of their cells two columns are identical
+
+        :param stats: The stats extracted up until this point for all columns
+        :param columns: All the columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            How similar this column is to other columns (with 0 being completely different and 1 being an exact copy).
+            A score equal to the highest similarity found, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+        """
         col_data = columns[col_name]
 
         similarities = []
@@ -301,6 +358,25 @@ class StatsGenerator(BaseModule):
 
 
     def _compute_clf_based_correlation_score(self, stats, columns, col_name):
+        """
+        # Tries to find correlated columns by trying to predict the values in one
+        column based on all the others using a simple DT classifier
+        # The purpose of this is not to see if a column is predictable, but rather, to
+        see if it can be predicted accurately based on a single other column, or if
+        all other columns play an equally important role
+        # A good prediction score, based on all the columns, doesn't necessarily imply
+        a correlation between columns, it could just mean the data is very garnular (few repeat values)
+
+        :param stats: The stats extracted up until this point for all columns
+        :param columns: All the columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            correlation_score: A score equal to the prediction accuracy * the importance (from 0 to 1)
+                of the most imporant column in making said prediciton,
+                ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            highest_correlation: The importance of the most_correlated_column in the DT classifier
+            most_correlated_column: The column with which our column is correlated most based on the DT
+        """
         full_col_data = columns[col_name]
 
         dt_clf = DecisionTreeClassifier()
@@ -334,9 +410,21 @@ class StatsGenerator(BaseModule):
         }
 
     def _compute_data_quality_score(self, stats, columns, col_name):
+        """
+        # Attempts to determine the quality of the column through aggregating all quality score
+        we could compute about it
+
+        :param stats: The stats extracted up until this point for all columns
+        :param columns: All the columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            quality_score: An aggreagted quality socre that attempts to asses the overall quality of the column,
+                , ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            bad_scores: The socres which lead to use rating this column poorly
+        """
         scores_used = 0
         scores_total = 0
-        scores = ['correlation_score', 'cummulative_lof_score', 'cummulative_z_score', 'data_type_distribution_score', 'empty_cells_score', 'duplicate_score', 'similarity_score', 'value_distribution_score']
+        scores = ['correlation_score', 'lof_based_outlier_score', 'z_test_based_outlier_score', 'data_type_distribution_score', 'empty_cells_score', 'duplicate_score', 'similarity_score', 'value_distribution_score']
         for score in scores:
             if score in stats[col_name]:
                 scores_used += 1
@@ -371,8 +459,8 @@ class StatsGenerator(BaseModule):
 
                 self.log.info('Column "{}" has {}% of it\'s values duplicated !'.format(col_name, round(col_stats['duplicates_percentage'],2)))
 
-            if 'cummulative_z_score' in col_stats and col_stats['cummulative_z_score'] > 3:
-                self.log.info('Column "{}" has a very high amount of outliers, as signified by the cummulative z score: {}'.format(col_name, round(col_stats['cummulative_z_score'],2)))
+            if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 3:
+                self.log.info('Column "{}" has a very high amount of outliers, as signified by the cummulative z score: {}'.format(col_name, round(col_stats['z_test_based_outlier_score'],2)))
 
             # Overall quality
             if col_stats['quality_score'] > 0.5:

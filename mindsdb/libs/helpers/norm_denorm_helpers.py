@@ -159,7 +159,7 @@ def norm(value, cell_stats):
 
             return []
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
 
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
@@ -255,7 +255,7 @@ def denorm(value, cell_stats, return_nones = True):
         else:
             return ''
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
         # is it a full text
         text = []
         vector_length = len(cell_stats['dictionary']) + FULL_TEXT_ENCODING_EXTRA_LENGTH

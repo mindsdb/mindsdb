@@ -25,7 +25,7 @@ from mindsdb.config import CONFIG
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.helpers.text_helpers import splitRecursive, cleanfloat, tryCastToNumber
+from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, tryCastToNumber
 from mindsdb.external_libs.stats import calculate_sample_size
 
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
@@ -35,15 +35,15 @@ class StatsGenerator(BaseModule):
 
     phase_name = PHASE_STATS_GENERATOR
 
-    def is_number(self, string):
+    def _is_number(self, string):
         """ Returns True if string is a number. """
         try:
-            cleanfloat(string)
+            clean_float(string)
             return True
         except ValueError:
             return False
 
-    def is_date(self, string):
+    def _is_date(self, string):
         """ Returns True if string is a valid date format """
         try:
             parseDate(string)
@@ -51,42 +51,14 @@ class StatsGenerator(BaseModule):
         except ValueError:
             return False
 
-    def get_column_data_type(self, data):
+    def _get_text_type(self, data):
+
         """
-        Provided the column data, define it its numeric, data or class
-        :param data:
-        :return:
+        Takes in column data and defiens if its categorical or full_text
+
+        :param data: a list of cells in a column
+        :return: DATA_TYPES.CATEGORICAL or DATA_TYPES.FULL_TEXT
         """
-        type_dist = {}
-
-        for element in data:
-            if self.is_number(element):
-                currentGuess = DATA_TYPES.NUMERIC
-            elif self.is_date(element):
-                currentGuess = DATA_TYPES.DATE
-            else:
-                currentGuess = DATA_TYPES.CATEGORICAL
-
-            if currentGuess not in type_dist:
-                type_dist[currentGuess] = 1
-            else:
-                type_dist[currentGuess] += 1
-
-        curr_data_type = DATA_TYPES.CATEGORICAL
-        max_data_type = 0
-
-        for data_type in type_dist:
-            if type_dist[data_type] > max_data_type:
-                curr_data_type = data_type
-                max_data_type = type_dist[data_type]
-
-        if curr_data_type == DATA_TYPES.CATEGORICAL:
-            return self.get_text_type(data), type_dist
-
-        return curr_data_type, type_dist
-
-
-    def get_text_type(self, data):
 
         total_length = len(data)
         key_count = {}
@@ -115,7 +87,56 @@ class StatsGenerator(BaseModule):
         if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
             return DATA_TYPES.CATEGORICAL
         else:
-            return DATA_TYPES.FULL_TEXT
+            return DATA_TYPES.TEXT
+
+
+    def get_column_data_type(self, data):
+        """
+        Provided the column data, define it its numeric, data or class
+
+        :param data: a list containing each of the cells in a column
+
+        :return: type and type distribution, we can later use type_distribution to determine data quality
+        NOTE: type distribution is the count that this column has for belonging cells to each DATA_TYPE
+        """
+
+        currentGuess = None
+
+        type_dist = {}
+
+        # calculate type_dist
+        for element in data:
+            if self._is_number(element):
+                currentGuess = DATA_TYPES.NUMERIC
+            elif self._is_date(element):
+                currentGuess = DATA_TYPES.DATE
+            else:
+                currentGuess = DATA_TYPES.TEXT
+
+            if currentGuess not in type_dist:
+                type_dist[currentGuess] = 1
+            else:
+                type_dist[currentGuess] += 1
+
+        curr_data_type = DATA_TYPES.TEXT
+        max_data_type = 0
+
+        # assume that the type is the one with the most prevelant type_dist
+        for data_type in type_dist:
+            if type_dist[data_type] > max_data_type:
+                curr_data_type = data_type
+                max_data_type = type_dist[data_type]
+
+        #TODO: If there are cell values that dont match the prevelant type, we should log this information
+
+        # If it finds that the type is categorical it should determine if its categorical or actual text
+        if curr_data_type == DATA_TYPES.TEXT:
+            return self._get_text_type(data), type_dist
+
+        return curr_data_type, type_dist
+
+
+
 
 
 
@@ -406,7 +427,7 @@ class StatsGenerator(BaseModule):
                         newData.append(value)
 
 
-                col_data = [cleanfloat(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
+                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
 
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
@@ -490,7 +511,7 @@ class StatsGenerator(BaseModule):
             # else if its text
             else:
                 # see if its a sentence or a word
-                is_full_text = True if data_type == DATA_TYPES.FULL_TEXT else False
+                is_full_text = True if data_type == DATA_TYPES.TEXT else False
                 dictionary, histogram = self.get_words_dictionary(col_data, is_full_text)
 
                 # if no words, then no dictionary
@@ -507,7 +528,7 @@ class StatsGenerator(BaseModule):
                         dictionary = []
                         dictionary_available = False
                 col_stats = {
-                    KEYS.DATA_TYPE: DATA_TYPES.FULL_TEXT if is_full_text else data_type,
+                    KEYS.DATA_TYPE: DATA_TYPES.TEXT if is_full_text else data_type,
                     "dictionary": dictionary,
                     "dictionaryAvailable": dictionary_available,
                     "dictionaryLenghtPercentage": dictionary_lenght_percentage,

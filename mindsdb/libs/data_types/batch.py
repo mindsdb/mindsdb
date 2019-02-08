@@ -96,7 +96,7 @@ class Batch:
                     continue
 
                 # do not include full text as its a variable length tensor, which we cannot wrap
-                if self.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+                if self.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
                     continue
 
                 # make sure that this is always in the same order, use a list or make xw[what] an ordered dictionary
@@ -113,7 +113,7 @@ class Batch:
         if self.sampler.variable_wrapper is not None:
             ret = {}
             for col in self.xy[what]:
-                if self.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+                if self.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
                     continue
                 try:
                     ret[col] = self.sampler.variable_wrapper(self.getColumn(what,col, by_buckets))
@@ -132,7 +132,7 @@ class Batch:
         what = 'input'
         ret = {}
         for col in self.sampler.model_columns:
-            if col not in self.xy[what] or self.sampler.stats[col][KEYS.DATA_TYPE] != DATA_TYPES.FULL_TEXT:
+            if col not in self.xy[what] or self.sampler.stats[col][KEYS.DATA_TYPE] != DATA_TYPES.TEXT:
                 continue
 
             ret[col] = [torch.tensor(row, dtype=torch.long).view(-1, 1) for row in self.getColumn(what, col)]

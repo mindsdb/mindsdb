@@ -11,7 +11,7 @@
 
 import random
 import warnings
-#from mindsdb.libs.data_types.mindsdb_logger import log
+from collections import Counter
 
 import numpy as np
 import scipy.stats as st
@@ -52,7 +52,6 @@ class StatsGenerator(BaseModule):
             return False
 
     def _get_text_type(self, data):
-
         """
         Takes in column data and defiens if its categorical or full_text
 
@@ -182,6 +181,18 @@ class StatsGenerator(BaseModule):
         return ret
 
     def value_distribution_score(self, stats, columns, col_name):
+        """
+        Looks at the histogram and transforms it into a proability mapping for each
+        bucket, then generates a quality score (value_distribution_score) based on that
+
+        :param stats: The stats extracted up until this point for all columns
+        :param columns: All the columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            #  A value distribution score from 0 to 1, where 0 is lowest quality and 1 is highest quality.
+            #  A dictioanry of with the probabilities that a value values in a bucket, for each of he buckets in the histogram
+        """
+
         bucket_probabilities = {}
         pair = stats[col_name]['histogram']
         total_vals = sum(pair['y'])
@@ -203,10 +214,26 @@ class StatsGenerator(BaseModule):
 
 
     def duplicates_score(self, stats, columns, col_name):
-        duplicates = len(columns[col_name]) - len(set(columns[col_name]))
+        """
+        Looks at the set of distinct values for all the data and computes a quality
+        socre based on how many of the values are duplicates
+
+        :param stats: The stats extracted up until this point for all columns
+        :param columns: All the columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            #  nr_duplicates, the nr of cells which contain values that are found more than once
+            #  duplicates_percentage, % of the values that are found more than once
+            #  duplicate_score, a quality score based on said percentage
+        """
+
+        occurances = Counter(columns[col_name])
+        values_that_occur_twice_or_more = filter(lambda val: occurances[val] < 2, occurances)
+        nr_of_occurances = map(lambda val: occurances[val], values_that_occur_twice_or_more)
+        nr_duplicates = sum(values_that_occur_twice_or_more)
         data = {
-            'duplicates': duplicates
-            ,'duplicates_percentage': duplicates*100/len(columns[col_name])
+            'nr_duplicates': nr_duplicates
+            ,'duplicates_percentage': nr_duplicates*100/len(columns[col_name])
         }
 
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.CATEGORICAL and stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.DATE:

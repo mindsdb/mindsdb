@@ -35,7 +35,7 @@ class StatsGenerator(BaseModule):
 
     phase_name = PHASE_STATS_GENERATOR
 
-    def is_nr(self, string):
+    def is_number(self, string):
         """ Returns True if string is a number. """
         try:
             cleanfloat(string)
@@ -52,12 +52,15 @@ class StatsGenerator(BaseModule):
             return False
 
     def get_column_data_type(self, data):
-        """ Returns the column datatype based on a random sample of 15 elements """
-        currentGuess = DATA_TYPES.NUMERIC
+        """
+        Provided the column data, define it its numeric, data or class
+        :param data:
+        :return:
+        """
         type_dist = {}
 
         for element in data:
-            if self.is_nr(element):
+            if self.is_number(element):
                 currentGuess = DATA_TYPES.NUMERIC
             elif self.is_date(element):
                 currentGuess = DATA_TYPES.DATE

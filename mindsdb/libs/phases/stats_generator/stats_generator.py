@@ -441,6 +441,9 @@ class StatsGenerator(BaseModule):
         return {'quality_score': quality_score, 'bad_scores': bad_scores}
 
     def _log_interesting_stats(self, stats):
+        """
+        # Provide interesting insights about the data to the user and send them to the logging server in order for it to generate charts
+        """
         for col_name in stats:
             col_stats = stats[col_name]
 
@@ -469,7 +472,11 @@ class StatsGenerator(BaseModule):
                 self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission are: {}'.format(col_name, col_stats['bad_scores']))
 
     def run(self):
-
+        """
+        # Runs the stats generation phase
+        # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
+        # A lot of information about the data distribution and quality will  also be logged to the server in this phase
+        """
         self.train_meta_data = TransactionMetadata()
         self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 

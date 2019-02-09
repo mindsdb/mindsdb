@@ -1,7 +1,4 @@
 import pandas
-import mindsdb.libs.helpers.log as log
-import csv
-import mindsdb.config as CONFIG
 import re
 import urllib3
 from io import BytesIO, StringIO
@@ -12,6 +9,8 @@ import traceback
 
 from mindsdb.libs.data_types.data_source import DataSource
 from pandas.io.json import json_normalize
+from mindsdb.libs.data_types.mindsdb_logger import log
+
 
 class FileDS(DataSource):
 

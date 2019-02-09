@@ -1,14 +1,5 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
-import mindsdb.libs.helpers.log as log
+
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 import torch
 import torch.nn as nn
@@ -20,26 +11,24 @@ from sklearn.metrics import explained_variance_score
 
 import numpy as np
 
-from mindsdb.config import USE_CUDA
+from mindsdb import CONFIG
 from mindsdb.libs.constants.mindsdb import *
-from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import arrayToFloatVariable, variableToArray
-from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import storeTorchObject, getStoredTorchObject, RMSELoss, LogLoss
+from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import array_to_float_variable, variable_to_array
+from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import store_torch_object, get_stored_torch_object, LogLoss
 
 from mindsdb.libs.data_types.trainer_response import TrainerResponse
 from mindsdb.libs.data_types.tester_response import TesterResponse
 from mindsdb.libs.data_types.file_saved_response import FileSavedResponse
-from mindsdb.libs.helpers.norm_denorm_helpers import denorm
 from mindsdb.libs.helpers.train_helpers import getOneColPermutations
 
-import random
 
 class BaseModel(nn.Module):
 
-    variable_wrapper = arrayToFloatVariable
-    variable_unwrapper = variableToArray
-    ignore_types = [DATA_TYPES.FULL_TEXT]
+    variable_wrapper = array_to_float_variable
+    variable_unwrapper = variable_to_array
+    ignore_types = [DATA_TYPES.TEXT]
     use_full_text_input = False
-    if USE_CUDA:
+    if CONFIG.USE_CUDA:
         torch.backends.cudnn.benchmark=True
 
     def __init__(self, sample_batch, **kwargs):
@@ -163,36 +152,36 @@ class BaseModel(nn.Module):
         return loss, batch_size
 
 
-    def saveToDisk(self, file_id = None):
+    def saveToDisk(self, file_id = None, path = CONFIG.MINDSDB_STORAGE_PATH):
         """
 
         :return:
         """
         sample_batch = self.sample_batch
         self.sample_batch = None
-        file_id, path = storeTorchObject(self, file_id)
+        file_id, path = store_torch_object(self, file_id, path)
         self.latest_file_id = file_id
         self.sample_batch = sample_batch
         return [FileSavedResponse(file_id, path)]
 
     @staticmethod
-    def loadFromDisk(file_ids):
+    def load_from_disk(file_ids, path = CONFIG.MINDSDB_STORAGE_PATH):
         """
 
         :param file_ids:
         :return:
         """
-        obj = getStoredTorchObject(file_ids[0])
+        obj = get_stored_torch_object(file_ids[0], path)
         obj.eval()
         return obj
 
 
-    def getLatestFromDisk(self):
+    def getLatestFromDisk(self, path = CONFIG.MINDSDB_STORAGE_PATH):
         """
 
         :return:
         """
-        obj = getStoredTorchObject(self.latest_file_id)
+        obj = get_stored_torch_object(self.latest_file_id, path)
         obj.eval()
         return obj
 

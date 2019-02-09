@@ -1,15 +1,4 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
 
-# import mindsdb.libs.helpers.log as log
 from mindsdb.libs.data_types.mindsdb_logger import log
 
 
@@ -21,7 +10,8 @@ from mindsdb.libs.helpers.norm_denorm_helpers import denorm
 
 from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 from mindsdb.libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
-from mindsdb.libs.data_types.model_data import ModelData
+from mindsdb import CONFIG
+
 
 import importlib
 import json
@@ -29,45 +19,88 @@ import time
 import os
 import copy
 
-class TrainWorker():
+class MetaMlModel():
 
-    def __init__(self, model_name, ml_model_name='pytorch.models.column_based_fcnn', config={}):
+    def _load_metadata(self):
+        """
+        This is a helper function to load all metadata about model and ml_model into the class
+        :return:
         """
 
-        :param data:
-        :type data: ModelData
+        # get basic variables defined
+        self.persistent_model_metadata = PersistentModelMetadata().find_one({'model_name': self.model_name_arg})
+
+        self.ml_model_info = PersistentMlModelInfo()
+
+        search_criteria = {'model_name': self.model_name_arg}
+        if self.ml_model_name_arg:
+            search_criteria['config_serialized'] = self.config_arg_serialized
+            search_criteria['ml_model_name'] = self.ml_model_name_arg
+
+        info = self.persistent_ml_model_info.find(search_criteria, order_by=[('r_squared', -1)], limit=1)
+
+        if info is not None and len(info) > 0:
+            self.ml_model_info = info[0]  # type: PersistentMlModelInfo
+
+        else:
+            # TODO: Make sure we have a model for this
+            info = 'No pre-trained {model_name} model found, creating one, note that must use learn first'.format(
+                model_name=self.model_name_arg)
+            self.log.info(info)
+            self.ml_model_info.model_name = self.model_name_arg
+            self.ml_model_info.ml_model_name = self.ml_model_name_arg
+            self.ml_model_info.config_serialized = self.config_arg_serialized
+            self.ml_model_info.insert()
+
+    def _load_ml_model(self):
+
+
+    def __init__(self, model_name, ml_model_name=None, config={}, logger = None, load_from_file_id = None, ml_model_folder = CONFIG.MINDSDB_STORAGE_PATH, python_ml_model_path ='mindsdb.libs.ml_models.'):
+        """
+
         :param model_name:
         :param ml_model_name:
         :param config:
+        :param logger:
+        :param load_from_file_id:
+        :param python_ml_model_path:
         """
 
+        self.log = log if logger is None else logger
+        self.model_name_arg = model_name
+        self.ml_model_name_arg = ml_model_name
+        self.config_arg = config
+        self.config_arg_serialized = json.dumps(self.config_arg)
+        self.config_arg_hash = hashtext(self.config_arg_serialized)
+        self.load_from_file_id_arg = load_from_file_id
+        self.ml_model_folder_arg = ml_model_folder
+        self.python_ml_models
 
-        self.model_name = model_name
-        self.ml_model_name = ml_model_name
-        self.config = config
-        self.config_serialized = json.dumps(self.config)
-        self.config_hash = hashtext(self.config_serialized)
+        self._load_metadata()
 
-        # get basic variables defined
 
-        self.persistent_model_metadata = PersistentModelMetadata().find_one({'model_name': self.model_name})
-
-        self.ml_model_info = PersistentMlModelInfo()
-        self.ml_model_info.model_name = self.model_name
-        self.ml_model_info.ml_model_name = self.ml_model_name
-        self.ml_model_info.config_serialized = self.config_serialized
-        self.ml_model_info.insert()
-
-        self.framework, self.dummy, self.data_model_name = self.ml_model_name.split('.')
-        self.ml_model_module_path = 'mindsdb.libs.ml_models.' + self.ml_model_name + '.' + self.data_model_name
+        self.framework, self.dummy, self.data_model_name = self.ml_model_name_arg.split('.')
+        self.ml_model_module_path = python_ml_model_path + self.ml_model_name_arg + '.' + self.data_model_name
         self.ml_model_class_name = convert_snake_to_cammelcase_string(self.data_model_name)
 
-        self.ml_model_module = importlib.import_module(self.ml_model_module_path)
-        self.ml_model_class = getattr(self.ml_model_module, self.ml_model_class_name)
+        try:
 
+        self.ml_base_model =
+        try:
+            self.ml_model_module = importlib.import_module(self.ml_model_module_path)
+            self.ml_model_class = getattr(self.ml_model_module, self.ml_model_class_name)
+        except:
+            error = 'No ML model found: {ml_model_name}'.format(ml_model_name)
+            self.log.error(error)
+            raise ValueError(error)
 
+        fs_file_ids = self.persistent_ml_model_info.fs_file_ids if self.persistent_ml_model_info.fs_file_ids else load_from_file_id
 
-
+        if fs_file_ids:
+            try:
+                self.data_model_object = self.ml_model_class.load_from_disk(file_ids=fs_file_ids, path = )
+            except:
+                error = 'Tried to load '
         self.gfs_save_head_time = time.time() # the last time it was saved into GridFS, assume it was now
 
         # empty objects
@@ -77,8 +110,10 @@ class TrainWorker():
 
     def predict(self, data):
 
+
         log.info('Starting model...')
-        self.data_model_object = self.ml_model_class.load_from_disk(file_ids=fs_file_ids)
+
+
 
     def train(self, data):
         """
@@ -95,7 +130,7 @@ class TrainWorker():
         self.test_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
         self.sample_batch = self.train_sampler.getSampleBatch()
 
-        if self.model_name is None:
+        if self.model_name_arg is None:
             log.info('Starting model...')
             self.data_model_object = self.ml_model_class(self.sample_batch)
 
@@ -134,7 +169,7 @@ class TrainWorker():
                         highest_accuracy = test_ret.accuracy
                         log.info('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}, Accuracy: {accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
                         log.debug('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
-                            model_name=self.model_name, data_model=self.ml_model_name, config=self.ml_model_info.config_serialized))
+                            model_name=self.model_name_arg, data_model=self.ml_model_name_arg, config=self.ml_model_info.config_serialized))
 
                         # save model local file
                         local_files = self.saveToDisk(local_files)
@@ -142,7 +177,7 @@ class TrainWorker():
                         # self.saveToGridFs(local_files, throttle=True)
 
                         # save model predicted - real vectors
-                        log.debug('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name, ml_model_name = self.ml_model_name))
+                        log.debug('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name_arg, ml_model_name = self.ml_model_name_arg))
 
                     # check if continue training
                     if self.shouldContinue() == False:
@@ -154,9 +189,9 @@ class TrainWorker():
             # after its done with the first batch group, get the one with the lowest error and keep training
 
             ml_model_info = self.ml_model_info.find_one({
-                'model_name': self.model_name,
-                'ml_model_name': self.ml_model_name,
-                'config_serialized': json.dumps(self.config)
+                'model_name': self.model_name_arg,
+                'ml_model_name': self.ml_model_name_arg,
+                'config_serialized': json.dumps(self.config_arg)
             })
 
 
@@ -317,11 +352,11 @@ class TrainWorker():
         :return:
         """
 
-        model_name = self.model_name
+        model_name = self.model_name_arg
 
         # check if stop training is set in which case we should exit the training
 
-        model_data = self.persistent_model_metadata.find_one({'model_name': self.model_name}) #type: PersistentModelMetadata
+        model_data = self.persistent_model_metadata.find_one({'model_name': self.model_name_arg}) #type: PersistentModelMetadata
 
 
         if model_data is None:
@@ -355,7 +390,7 @@ class TrainWorker():
                 except:
                     log.info('Could not delete file {path}'.format(path=file_response_object.path))
 
-        file_id = '{model_name}.{ml_model_name}.{config_hash}'.format(model_name=self.model_name, ml_model_name=self.ml_model_name, config_hash=self.config_hash)
+        file_id = '{model_name}.{ml_model_name}.{config_hash}'.format(model_name=self.model_name_arg, ml_model_name=self.ml_model_name_arg, config_hash=self.config_arg_hash)
         return_objects =  self.data_model_object.saveToDisk(file_id)
 
         file_ids = [ret.file_id for ret in return_objects]

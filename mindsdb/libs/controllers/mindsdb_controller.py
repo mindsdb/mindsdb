@@ -7,15 +7,14 @@ import _thread
 import uuid
 import traceback
 import urllib
-import pandas as pd
 
-import mindsdb.libs.helpers.log as log
-from mindsdb.libs.helpers.sqlite_helpers import *
+from mindsdb.libs.data_types.mindsdb_logger import MindsdbLogger
+from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.helpers.multi_data_source import getDS
-from mindsdb.config import SQLITE_FILE
-import mindsdb.config as CONFIG
+
+from mindsdb.config import CONFIG
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
-from mindsdb.libs.controllers.session_controller import SessionController
+from mindsdb.libs.data_types.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *
 
 from mindsdb.version import mindsdb_version as MINDSDB_VERSION
@@ -24,30 +23,22 @@ from pathlib import Path
 
 class MindsDBController:
 
-    def __init__(self, log_level=CONFIG.DEFAULT_LOG_LEVEL, log_url='http://localhost:35261', send_logs=False, file=SQLITE_FILE):
-        '''
-        # Initializez the main Mindsdb object, used for training and making predictions
+    def __init__(self, log_level=CONFIG.DEFAULT_LOG_LEVEL, log_url=CONFIG.MINDSDB_SERVER_URL, send_logs=False):
+        """
+        :param file:
+        """
 
-        :param log_level: What logs to display
-        :param log_url: What urls to send logs to
-        :param send_logs: Whether or not to send logs to the remote Mindsdb server
-        :param file: Where to save the trained models
-
-        :return: An instance of Mindsdb
-        '''
-
+        # initialize log
         controller_uuid = str(uuid.uuid1())
-        log.initialize(log_level, log_url, send_logs, controller_uuid)
-        self.setConfigs()
+        log = MindsdbLogger(log_level=log_level, send_logs=send_logs, log_url=log_url, uuid=controller_uuid)
+        self.log = log
 
-        _thread.start_new_thread(MindsDBController.checkForUpdates, ())
-        self.session = SessionController()
-        self.storage_file = file
-        self.conn = sqlite3.connect(file)
-        self.conn.create_aggregate("first_value", 1, FirstValueAgg)
-        self.conn.create_aggregate("array_agg_json", 2, ArrayAggJSON)
+        self._set_configs()
 
-    def setConfigs(self):
+        _thread.start_new_thread(MindsDBController.check_for_updates, ())
+
+
+    def _set_configs(self):
         """
         This sets the config settings for this mindsdb instance
         :return:
@@ -59,13 +50,13 @@ class MindsDBController:
         # if it does not exist try to create it
         if not os.path.exists(CONFIG.MINDSDB_STORAGE_PATH):
             try:
-                log.info('{folder} does not exist, creating it now'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                self.log.info('{folder} does not exist, creating it now'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
                 path = Path(CONFIG.MINDSDB_STORAGE_PATH)
                 path.mkdir(exist_ok=True, parents=True)
             except:
-                log.info(traceback.format_exc())
+                self.log.info(traceback.format_exc())
                 storage_ok = False
-                log.error('MindsDB storage foldler: {folder} does not exist and could not be created'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                self.log.error('MindsDB storage foldler: {folder} does not exist and could not be created'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
         # If storage path is not writable, raise an exception as this can no longer be
         if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK) or storage_ok == False:
@@ -157,7 +148,7 @@ class MindsDBController:
 
         if len(predict_columns) == 0:
             error = 'You need to specify a column to predict'
-            log.error(error)
+            self.log.error(error)
             raise ValueError(error)
 
         # lets turn order by into tuples if not already
@@ -173,7 +164,7 @@ class MindsDBController:
 
             predict_columns = list(predict_columns_map.keys())
         else:
-            log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
+            self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = model_name
@@ -190,8 +181,8 @@ class MindsDBController:
         transaction_metadata.sample_margin_of_error = sample_margin_of_error
         transaction_metadata.sample_confidence_level = sample_confidence_level
 
-        self.startInfoServer()
-        self.session.newTransaction(transaction_metadata, breakpoint)
+
+        Transaction(session=self, transaction_metadata=transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
     def startInfoServer(self):
@@ -233,7 +224,7 @@ class MindsDBController:
         return transaction.output_data
 
     @staticmethod
-    def checkForUpdates():
+    def check_for_updates():
         # tmp files
         uuid_file = CONFIG.MINDSDB_STORAGE_PATH + '/../uuid.mdb_base'
         mdb_file = CONFIG.MINDSDB_STORAGE_PATH + '/start.mdb_base'
@@ -279,7 +270,7 @@ class MindsDBController:
 
             log.warning('could not check for MindsDB updates')
 
-        # zhihua
+    # zhihua
     def read_csv(self, filepath, delimiter=',', header='infer', encoding=None):
         data_df = pd.read_csv(filepath, delimiter=delimiter, encoding=encoding, header=header)
         self._from_data = data_df

@@ -11,7 +11,7 @@
 
 from __future__ import unicode_literals, print_function, division
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from collections import OrderedDict
@@ -44,13 +44,13 @@ class DataEncoder(BaseModule):
 
         self.train_start_time = time.time()
 
-        self.session.logging.info('Training: model {model_name}, epoch 0'.format(model_name=model_name))
+        self.session.log.info('Training: model {model_name}, epoch 0'.format(model_name=model_name))
 
         self.last_time = time.time()
 
         # Train encoders for full_text columns
         for src_col in self.transaction.model_stats:
-            if self.transaction.model_stats[src_col][KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+            if self.transaction.model_stats[src_col][KEYS.DATA_TYPE] == DATA_TYPES.TEXT:
                 target_col = '{src_col}_target'.format(src_col=src_col)
                 submodel_name = 'full_text.{src_col}'.format(src_col=src_col)
                 data_model = 'pytorch.encoders.text_rnn'
@@ -82,7 +82,7 @@ class DataEncoder(BaseModule):
                         data[test_train_key][target_group][src_col]+=self.transaction.model_data[test_train_key][group][src_col]
                     data[test_train_key][target_group][target_col] = data[test_train_key][target_group][src_col]
 
-                self.session.logging.info(
+                self.session.log.info(
                     'Training: model {model_name}, submodel {submodel_name}'.format(
                         model_name=model_name, total_time=total_time, submodel_name=submodel_name))
 
@@ -90,11 +90,11 @@ class DataEncoder(BaseModule):
                 TrainWorker.start(data, model_name=model_name, ml_model=data_model,
                                   config=config, submodel_name=submodel_name)
                 total_time = time.time() - train_start_time
-                self.session.logging.info(
+                self.session.log.info(
                     'Trained: model {model_name}, submodel {submodel_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(
                         model_name=model_name, total_time=total_time, submodel_name=submodel_name))
 
-        self.session.logging.info('Trained: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name = model_name, total_time=total_time))
+        self.session.log.info('Trained: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name = model_name, total_time=total_time))
 
 
 

@@ -11,7 +11,7 @@
 
 from __future__ import unicode_literals, print_function, division
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.workers.train import TrainWorker
@@ -37,17 +37,15 @@ class ModelTrainer(BaseModule):
         :return: None
         """
 
-
         model_name = self.transaction.persistent_model_metadata.model_name
-        self.train_meta_data = TransactionMetadata()
-        self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
+        train_meta_data = self.transaction.train_metadata # type: TransactionMetadata
 
-        group_by = self.train_meta_data.model_group_by
+        is_time_series = train_meta_data.model_is_time_series
 
         # choose which models to try
         # NOTE: On server mode more than one can be used, on serverless, choose only
-        # TODO: On serverless mode bring smarter way to choose
-        if group_by:
+        # TODO: On server mode bring smarter way to choose
+        if is_time_series:
             ml_models = [
                 ('pytorch.models.ensemble_fully_connected_net', {})
                 # ,('pytorch.models.ensemble_conv_net', {})
@@ -62,7 +60,7 @@ class ModelTrainer(BaseModule):
 
         self.train_start_time = time.time()
 
-        self.session.logging.info('Training: model {model_name}, epoch 0'.format(model_name=model_name))
+        self.session.log.info('Training: model {model_name}, epoch 0'.format(model_name=model_name))
 
         self.last_time = time.time()
         # We moved everything to a worker so we can run many of these in parallel
@@ -84,7 +82,7 @@ class ModelTrainer(BaseModule):
             # return
 
         total_time = time.time() - self.train_start_time
-        self.session.logging.info('Trained: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name = model_name, total_time=total_time))
+        self.session.log.info('Trained: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name = model_name, total_time=total_time))
 
 
 

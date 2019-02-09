@@ -1,30 +1,25 @@
 
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.helpers.text_helpers import hashtext
-from mindsdb.external_libs.stats import sampleSize
+from mindsdb.external_libs.stats import calculate_sample_size
 
 
 
 import random
 import traceback
 import pandas
-import numpy as np
-
-
 
 
 class DataExtractor(BaseModule):
 
     phase_name = PHASE_DATA_EXTRACTION
 
-
-
-    def getDataFrameFromWhenConditions(self, train_metadata):
+    def _get_data_frame_from_when_conditions(self, train_metadata):
         """
 
         :param train_metadata:
@@ -49,10 +44,8 @@ class DataExtractor(BaseModule):
 
         return result
 
-
-    def applyWhenConditionsToDF(self, df):
+    def _apply_when_conditions_to_df(self, df):
         """
-
         :param df:
         :return:
         """
@@ -60,8 +53,7 @@ class DataExtractor(BaseModule):
         # TODO: Apply the when conditions
         return df
 
-
-    def applySortConditionsToDF(self, df, train_metadata):
+    def _apply_sort_conditions_to_df(self, df, train_metadata):
         """
 
         :param df:
@@ -87,7 +79,7 @@ class DataExtractor(BaseModule):
         return df
 
 
-    def getPreparedInputDF(self, train_metadata):
+    def _get_prepared_input_df(self, train_metadata):
         """
 
         :param train_metadata:
@@ -107,23 +99,23 @@ class DataExtractor(BaseModule):
             if self.transaction.metadata.model_when_conditions is not None:
                 # if no data frame yet, make one
                 if df is not None:
-                    df = self.getDataFrameFromWhenConditions(train_metadata)
+                    df = self._get_data_frame_from_when_conditions(train_metadata)
                 else:
-                    df = self.applyWhenConditionsToDF(df)
+                    df = self._apply_when_conditions_to_df(df)
 
         # if by now there is no DF, throw an error
         if df is None:
             error = 'Could not create a data frame for transaction'
-            log.error(error)
+            self.log.error(error)
             raise ValueError(error)
             return None
 
-        df = self.applySortConditionsToDF(df,train_metadata)
+        df = self._apply_sort_conditions_to_df(df, train_metadata)
 
         return df
 
 
-    def validateInputDataIntegrity(self):
+    def _validate_input_data_integrity(self):
         """
 
         :return:
@@ -133,7 +125,7 @@ class DataExtractor(BaseModule):
 
         if len(self.transaction.input_data.data_array) <= 0:
             error = 'Input Data has no rows, please verify from_data or when_conditions'
-            log.error(error)
+            self.log.error(error)
             raise ValueError(error)
 
         # make sure that the column we are trying to predict is on the input_data
@@ -144,7 +136,7 @@ class DataExtractor(BaseModule):
             for col_target in self.transaction.metadata.model_predict_columns:
                 if col_target not in self.transaction.input_data.columns:
                     err = 'Trying to predict column {column} but column not in source data'.format(column=col_target)
-                    log.error(err)
+                    self.log.error(err)
                     self.transaction.error = True
                     self.transaction.errorMsg = err
                     raise ValueError(err)
@@ -171,13 +163,16 @@ class DataExtractor(BaseModule):
 
         else:
             # We cannot proceed without train metadata
-            log.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
+            self.log.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
             self.transaction.error = True
             self.transaction.errorMsg = traceback.print_exc(1)
             return
 
+        # populate transaction train_metadata variable
+        self.transaction.train_metadata = train_metadata
+
         # Here you want to organize data, sort, and add/remove columns
-        result = self.getPreparedInputDF(train_metadata)
+        result = self._get_prepared_input_df(train_metadata)
 
 
         columns = list(result.columns.values)
@@ -186,7 +181,7 @@ class DataExtractor(BaseModule):
         self.transaction.input_data.columns = columns
         self.transaction.input_data.data_array = data_array
 
-        self.validateInputDataIntegrity()
+        self._validate_input_data_integrity()
 
         is_time_series = train_metadata.model_is_time_series
         group_by = train_metadata.model_group_by
@@ -218,9 +213,9 @@ class DataExtractor(BaseModule):
 
             if self.transaction.metadata.type == TRANSACTION_LEARN:
 
-                sample_size = int(sampleSize(population_size=length,
-                                             margin_error=self.transaction.metadata.sample_margin_of_error,
-                                             confidence_level=self.transaction.metadata.sample_confidence_level))
+                sample_size = int(calculate_sample_size(population_size=length,
+                                                        margin_error=self.transaction.metadata.sample_margin_of_error,
+                                                        confidence_level=self.transaction.metadata.sample_confidence_level))
 
                 # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
                 should_split_by_group = True if (is_time_series and self.transaction.metadata.window_size > length * CONFIG.TEST_TRAIN_RATIO) else False
@@ -275,23 +270,24 @@ class DataExtractor(BaseModule):
             total_number_of_groupby_groups = len(self.transaction.input_data.all_indexes)
 
             if total_rows_used != total_rows_in_input:
-                log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error))
-                log.info('Using a [Cochran’s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
+                self.log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error))
+                self.log.info('Using a [Cochran\'s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
                 data = {
                     'total': [total_rows_in_input, 'Total number of rows in input'],
-                    'subsets': [[total_rows_used, 'Total number of rows used']]
+                    'subsets': [[total_rows_used, 'Total number of rows used']],
+                    'label': 'Sample size for margin of error of ({sample_margin_of_error}) and a confidence level of ({sample_confidence_level})'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error)
                 }
-                log.infoChart(data, type='pie')
+                self.log.infoChart(data, type='pie')
 
             if total_number_of_groupby_groups > 1:
-                log.info('You are grouping your data by [{group_by}], we found:'.format(group_by=', '.join(group_by)))
+                self.log.info('You are grouping your data by [{group_by}], we found:'.format(group_by=', '.join(group_by)))
                 data = {
                     'Total number of groupby groups': total_number_of_groupby_groups,
-                    'Average number of rows per groupby group': sum(average_number_of_rows_used_per_groupby.values())/len(average_number_of_rows_used_per_groupby)
+                    'Average number of rows per groupby group': int(sum(average_number_of_rows_used_per_groupby.values())/len(average_number_of_rows_used_per_groupby))
                 }
-                log.infoChart(data, type='bars_horizontal')
+                self.log.infoChart(data, type='list')
 
-            log.info('We have split the input data into:')
+            self.log.info('We have split the input data into:')
 
             data = {
                 'subsets': [
@@ -302,7 +298,7 @@ class DataExtractor(BaseModule):
                 'label': 'Number of rows per subset'
             }
 
-            log.infoChart(data, type='pie')
+            self.log.infoChart(data, type='pie')
 
 
 
@@ -318,7 +314,9 @@ def test():
         # the path to the file where we can learn from, (note: can be url)
         predict='rental_price',  # the column we want to learn to predict given all the data in the file
         model_name='home_rentals',  # the name of this model
-        breakpoint = PHASE_DATA_EXTRACTION)
+        breakpoint = PHASE_DATA_EXTRACTION,
+        sample_margin_of_error=0.02
+    )
 
 
 

@@ -1,5 +1,5 @@
 from mindsdb.libs.data_types.object_dict import ObjectDict
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import MODEL_GROUP_BY_DEAFAULT_LIMIT
 
 class TransactionMetadata(ObjectDict):

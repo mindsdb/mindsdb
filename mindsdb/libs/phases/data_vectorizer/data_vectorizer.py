@@ -13,14 +13,14 @@
 import copy
 import numpy as np
 import itertools
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 import traceback
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from collections import OrderedDict
 from mindsdb.libs.helpers.norm_denorm_helpers import norm, norm_buckets
-from mindsdb.libs.helpers.text_helpers import hashtext, cleanfloat, tryCastToNumber
+from mindsdb.libs.helpers.text_helpers import hashtext, clean_float, tryCastToNumber
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 
@@ -54,7 +54,7 @@ class DataVectorizer(BaseModule):
 
                 # append the target values before:
                 for predict_col_name in predict_columns:
-                     row_extra_vector += [cleanfloat(v) for v in ret[predict_col_name][col_row_index + i + 1]]
+                     row_extra_vector += [clean_float(v) for v in ret[predict_col_name][col_row_index + i + 1]]
             except Exception as e:
                 log.error(traceback.format_exc())
                 log.error('something is not right, seems like we got here with np arrays and they should not be!')

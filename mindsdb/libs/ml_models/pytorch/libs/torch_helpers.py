@@ -1,26 +1,15 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
-
 import torch
 import torch.nn as nn
 import uuid
 import os
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from torch.autograd import Variable
 from torch.nn import functional
 from torch.nn import MSELoss
 import numpy as np
 
 
-def arrayToFloatVariable(arr):
+def array_to_float_variable(arr):
     if CONFIG.USE_CUDA:
         ret = Variable(torch.FloatTensor(arr))
         ret = ret.cuda()
@@ -28,32 +17,32 @@ def arrayToFloatVariable(arr):
     else:
         return Variable(torch.FloatTensor(arr))
 
-def variableToArray(var_to_convert):
+def variable_to_array(var_to_convert):
     return np.array(var_to_convert.data.tolist())
 
-def storeTorchObject(object, id = None):
+def store_torch_object(object, id = None, path = CONFIG.MINDSDB_STORAGE_PATH):
 
     if id is None:
         # generate a random uuid
         id = str(uuid.uuid1())
 
     # create if it does not exist
-    if not os.path.exists(CONFIG.MINDSDB_STORAGE_PATH):
-        os.makedirs(CONFIG.MINDSDB_STORAGE_PATH)
+    if not os.path.exists(path):
+        os.makedirs(path)
     # tmp files
-    tmp_file = CONFIG.MINDSDB_STORAGE_PATH + '/{id}.pt'.format(id=id)
+    tmp_file = path + '/{id}.pt'.format(id=id)
 
-    if not os.path.exists(CONFIG.MINDSDB_STORAGE_PATH):
-        os.makedirs(CONFIG.MINDSDB_STORAGE_PATH)
+    if not os.path.exists(path):
+        os.makedirs(path)
 
     torch.save(object, tmp_file)
 
     return id, tmp_file
 
-def getStoredTorchObject(id):
+def get_stored_torch_object(id, path):
 
     # tmp files
-    tmp_file = CONFIG.MINDSDB_STORAGE_PATH + '/{id}.pt'.format(id=id)
+    tmp_file = path + '/{id}.pt'.format(id=id)
 
     obj = torch.load(tmp_file)
 

@@ -30,7 +30,14 @@ def rand_str(length=random.randrange(4,120)):
     return u"".join(random_unicodes)
 
 
-def rand_ascii_str(length=random.randrange(4,120)):
+def rand_ascii_str(length=None, give_nulls=True):
+    if length == None:
+        length = random.randrange(1,120)
+    if length % 4 == 0 and give_nulls==True:
+        return ''
+    #Sometimes we should return a number instead of a string
+    if length % 7 == 0:
+        return str(length)
     return ''.join(random.choice([*string.whitespace, *string.ascii_letters]) for _ in range(length))
 
 
@@ -47,7 +54,7 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
     for t in types:
         columns.append([])
         # This is a header of sorts
-        columns[-1].append(rand_ascii_str(random.randrange(5,20)).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
+        columns[-1].append(rand_ascii_str(random.randrange(5,20),give_nulls=False).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
 
         # Figure out which random generation function to use for this column
         if t == 'str':
@@ -80,7 +87,7 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
 def generate_labels_1(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(5,20)).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
+    labels.append(rand_ascii_str(random.randrange(5,20),give_nulls=False).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
 
     for n in range(1, len(columns[-1])):
         value = 0
@@ -97,7 +104,7 @@ def generate_labels_1(columns, separator=','):
 def generate_labels_2(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(5,20)).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
+    labels.append(rand_ascii_str(random.randrange(5,20),give_nulls=False).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
 
     for n in range(1, len(columns[-1])):
         value = 1
@@ -123,7 +130,7 @@ def generate_labels_2(columns, separator=','):
 def generate_labels_3(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(5,20)).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
+    labels.append(rand_ascii_str(random.randrange(5,20),give_nulls=False).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
 
     col_nr = random.randrange(0,len(columns))
     labels.extend(columns[col_nr][1:])

@@ -1,6 +1,7 @@
 integration_testing/*.csv
 integration_testing/*.tsv
 integration_testing/*.sql
+integration_testing/__*
 test_data.csv
 train_data.csv
 *.ipy*

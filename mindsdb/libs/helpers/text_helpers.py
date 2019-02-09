@@ -15,7 +15,7 @@ import hashlib
 
 import numpy
 
-def cleanfloat(str):
+def clean_float(str):
     if type(str) in [type(int(1)), type(1.0)] :
         return float(str)
 
@@ -25,6 +25,16 @@ def cleanfloat(str):
     str = str.replace(',','.')
     return float(str)
 
+
+def gen_chars(length, character):
+    """
+    # lambda to Generates a string consisting of `length` consiting of repeating `character`
+    :param length:
+    :param character:
+    :return:
+    """
+    return ''.join([character for i in range(length)])
+
 def tryCastToNumber(string):
     """ Returns an integer, float or a string from a string"""
     try:
@@ -33,7 +43,7 @@ def tryCastToNumber(string):
         return int(string)
     except ValueError:
         try:
-            return cleanfloat(string)
+            return clean_float(string)
         except ValueError:
             if string == '':
                 return None
@@ -41,7 +51,7 @@ def tryCastToNumber(string):
                 return string
 
 def splitRecursive(word, tokens):
-    words = [word]
+    words = [str(word)]
     for token in tokens:
         new_split = []
         for word in words:

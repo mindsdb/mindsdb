@@ -1,13 +1,4 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
+
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
@@ -18,17 +9,18 @@ from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import TransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData
 
-import mindsdb.config as CONFIG
-# import mindsdb.libs.helpers.log as log
+from mindsdb.config import CONFIG
+
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 import _thread
 import traceback
 import importlib
 
 
-class TransactionController:
+class Transaction:
 
-    def __init__(self, session, transaction_metadata, breakpoint = PHASE_END):
+    def __init__(self, session, transaction_metadata, logger =  log, breakpoint = PHASE_END):
         """
         A transaction is the interface to start some MindsDB operation within a session
 
@@ -40,11 +32,13 @@ class TransactionController:
         :param breakpoint:
         """
 
-        self.session = session
+
         self.breakpoint = breakpoint
-        self.session.current_transaction = self
+        self.session = session
         self.metadata = transaction_metadata #type: TransactionMetadata
 
+        self.train_metadata = None # type: TransactionMetadata
+        # the metadata generated on train (useful also in predict), this will be populated by the data extractor
 
         # variables to de defined by setup
         self.error = None
@@ -61,12 +55,13 @@ class TransactionController:
         self.persistent_ml_model_info = PersistentMlModelInfo()
         self.persistent_ml_model_info.model_name = self.metadata.model_name
 
+        self.log = logger
 
         self.run()
 
 
 
-    def getPhaseInstance(self, module_name, **kwargs):
+    def _get_phase_instance(self, module_name, **kwargs):
         """
         Loads the module that we want to start for
 
@@ -82,28 +77,30 @@ class TransactionController:
             module = getattr(main_module, module_name)
             return module(self.session, self, **kwargs)
         except:
-            self.session.logging.error('Could not load module {module_name}'.format(module_name=module_name))
-            self.session.logging.error(traceback.format_exc())
+            error = 'Could not load module {module_name}'.format(module_name=module_name)
+            self.log.error('Could not load module {module_name}'.format(module_name=module_name))
+            self.log.error(traceback.format_exc())
+            raise ValueError(error)
             return None
 
 
-    def callPhaseModule(self, module_name):
+    def _call_phase_module(self, module_name):
         """
 
         :param module_name:
         :return:
         """
-        module = self.getPhaseInstance(module_name)
+        module = self._get_phase_instance(module_name)
         return module()
 
 
-    def executeLearn(self):
+    def _execute_learn(self):
         """
 
         :return:
         """
 
-        self.callPhaseModule('DataExtractor')
+        self._call_phase_module('DataExtractor')
         if len(self.input_data.data_array) <= 0 or len(self.input_data.data_array[0]) <=0:
             self.type = TRANSACTION_BAD_QUERY
             self.errorMsg = "No results for this query."
@@ -125,17 +122,17 @@ class TransactionController:
             self.persistent_model_metadata.insert()
 
 
-            self.callPhaseModule('StatsGenerator')
+            self._call_phase_module('StatsGenerator')
             self.persistent_model_metadata.current_phase = MODEL_STATUS_PREPARING
             self.persistent_model_metadata.update()
 
 
-            self.callPhaseModule('DataVectorizer')
+            self._call_phase_module('DataVectorizer')
             self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
             self.persistent_model_metadata.update()
 
             # self.callPhaseModule('DataEncoder')
-            self.callPhaseModule('ModelTrainer')
+            self._call_phase_module('ModelTrainer')
             # TODO: Loop over all stats and when all stats are done, then we can mark model as MODEL_STATUS_TRAINED
 
             return
@@ -144,12 +141,12 @@ class TransactionController:
             self.persistent_model_metadata.current_phase = MODEL_STATUS_ERROR
             self.persistent_model_metadata.error_msg = traceback.print_exc()
             self.persistent_model_metadata.update()
-            self.session.logging.error(self.persistent_model_metadata.error_msg)
-            self.session.logging.error(e)
+            self.log.error(self.persistent_model_metadata.error_msg)
+            self.log.error(e)
             raise e
 
 
-    def executeDropModel(self):
+    def _execute_drop_model(self):
         """
 
         :return:
@@ -165,39 +162,29 @@ class TransactionController:
         return
 
 
-    def executeNormalSelect(self):
+
+    def _execute_predict(self):
         """
 
         :return:
         """
 
-        self.callPhaseModule('DataExtractor')
-        self.output_data = self.input_data
-        return
-
-
-    def executePredict(self):
-        """
-
-        :return:
-        """
-
-        self.callPhaseModule('StatsLoader')
+        self._call_phase_module('StatsLoader')
         if self.persistent_model_metadata is None:
-            self.session.logging.error('No metadata found for this model')
+            self.log.error('No metadata found for this model')
             return
 
         self.metadata.model_predict_columns = self.persistent_model_metadata.predict_columns
         self.metadata.model_columns_map = self.persistent_model_metadata.train_metadata['model_columns_map']
         self.metadata.model_when_conditions = {key if key not in self.metadata.model_columns_map else self.metadata.model_columns_map[key] : self.metadata.model_when_conditions[key] for key in self.metadata.model_when_conditions }
 
-        self.callPhaseModule('DataExtractor')
+        self._call_phase_module('DataExtractor')
         if len(self.input_data.data_array[0])<=0:
             self.output_data = self.input_data
             return
 
-        self.callPhaseModule('DataVectorizer')
-        self.callPhaseModule('ModelPredictor')
+        self._call_phase_module('DataVectorizer')
+        self._call_phase_module('ModelPredictor')
 
         return
 
@@ -209,12 +196,12 @@ class TransactionController:
         """
 
         if self.metadata.type == TRANSACTION_BAD_QUERY:
-            self.session.logging.error(self.errorMsg)
+            self.log.error(self.errorMsg)
             self.error = True
             return
 
         if self.metadata.type == TRANSACTION_DROP_MODEL:
-            self.executeDropModel()
+            self._execute_drop_model()
             return
 
 
@@ -223,12 +210,12 @@ class TransactionController:
             self.output_data.columns = ['Status']
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False:
-                self.executeLearn()
+                self._execute_learn()
             else:
-                _thread.start_new_thread(self.executeLearn, ())
+                _thread.start_new_thread(self._execute_learn, ())
             return
 
         elif self.metadata.type == TRANSACTION_PREDICT:
-            self.executePredict()
+            self._execute_predict()
         elif self.metadata.type == TRANSACTION_NORMAL_SELECT:
-            self.executeNormalSelect()
+            self._execute_normal_select()

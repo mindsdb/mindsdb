@@ -2,7 +2,7 @@ from mindsdb.libs.data_types.data_source import DataSource
 from mindsdb.libs.data_sources.file_ds import FileDS
 from pandas import DataFrame
 
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 def getDS(from_data):

@@ -1,7 +1,7 @@
 from mindsdb.libs.data_types.persistent_object import PersistentObject
 from mindsdb.config import *
 import os
-import mindsdb.libs.helpers.log as log
+from mindsdb.libs.data_types.mindsdb_logger import log
 from pathlib import Path
 
 class PersistentMlModelInfo(PersistentObject):

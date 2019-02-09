@@ -1,8 +1,11 @@
+from sklearn.naive_bayes import MultinomialNB
+import numpy as np
 
 
 class ProbabilisticValidator():
     _smoothing_factor = 1
     _value_bucket_probabilities = {}
+    _probabilistic_model = None
 
     # For contignous values we want to use a bucket in the histogram to get a discrete label
     @staticmethod
@@ -12,6 +15,7 @@ class ProbabilisticValidator():
 
 
     def __init__(self, value_stats):
+        self._probabilistic_model = MultinomialNB()
         for bucket in value_stats['histogram']:
             if value_stats['histogram'][bucket] > 0:
                 self._value_bucket_probabilities[bucket] = {
@@ -28,6 +32,7 @@ class ProbabilisticValidator():
 
         correct_prediction = real_value_b == predicted_value_b
 
+        self._probabilistic_model.partial_fit(np.array(features).reshape(1,-1), np.array([correct_prediction]) ,classes=[0,1])
         """
         # @TODO: In the future just do this once for each value in the histogram
         # That way we also apply the smoothing to all values,
@@ -44,6 +49,7 @@ class ProbabilisticValidator():
 
 
     def evaluate_prediction_accuracy(self, features, predicted_value):
+        print('Probablility of truth based on features %s' % self._probabilistic_model.predict_proba(np.array(features).reshape(1,-1))[0][1])
         predicted_value_b = self._get_value_bucket(predicted_value, None)
 
         try:
@@ -59,8 +65,8 @@ if __name__ == "__main__":
         [1,2,3]
         ,[2,2,3]
         ,[1,2,6]
-        ,[None,3,3]
-        ,[2,None,1]
+        ,[0,3,3]
+        ,[2,0,1]
     ]
 
     values = [2,2,2,3,5]
@@ -81,7 +87,7 @@ if __name__ == "__main__":
     for i in range(len(feature_rows)):
         pbv.register_observation(feature_rows[i],values[i], predictions[i])
 
-    print(pbv.evaluate_prediction_accuracy([], 2))
-    print(pbv.evaluate_prediction_accuracy([], 3))
-    print(pbv.evaluate_prediction_accuracy([], 5))
-    print(pbv.evaluate_prediction_accuracy([], 101))
+    print(pbv.evaluate_prediction_accuracy([1,2,3], 2))
+    print(pbv.evaluate_prediction_accuracy([1,2,3], 3))
+    print(pbv.evaluate_prediction_accuracy([1,2,6], 5))
+    print(pbv.evaluate_prediction_accuracy([22,12,61], 101))

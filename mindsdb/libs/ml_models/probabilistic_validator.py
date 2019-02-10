@@ -10,7 +10,7 @@ functions to work with vectors of features and labels (i.e. multiple rows at onc
 This could increase efficiency
 """
 class ProbabilisticValidator():
-    _smoothing_factor = 1
+    _smoothing_factor = 0.2
     _value_bucket_probabilities = {}
     _probabilistic_model = None
     _use_features = None
@@ -19,7 +19,7 @@ class ProbabilisticValidator():
         self._use_features = use_features
 
         if self._use_features:
-            self._probabilistic_model = MultinomialNB()
+            self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
 
         for bucket in value_stats['histogram']:
             if value_stats['histogram'][bucket] > 0:

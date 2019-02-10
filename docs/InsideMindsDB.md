@@ -41,30 +41,31 @@ There are some transaction such as PREDICT where its assumed that the statistica
 ### DataVectorizer
 
 In this phase the idea is to translate each column into *numpy* tensors that can be ingested by data models. Tensors are made of vector representations of each cell. This involves to understand what transformations are necessary depending on the column type. Currently the following column data types are supported **Note that these can be expanded or updated for various needs**:
-	* **Categorical**:
 
-		![](https://docs.google.com/drawings/d/e/2PACX-1vR7PCdT5QCCuQ8pG6pSRc8RfdmkCPnVVrOZNPAA9QTvqluf8e2EQRdSDXutlXho2ymz_OP3LGxo-GxE/pub?w=359)
+* **Categorical**:
 
-		* **text-tokens**: columns where the values are *TEXT* but the distribution of the text is made of words or combinations of words and the number of uniques does not exceed 10% of the total number of rows.
+	![](https://docs.google.com/drawings/d/e/2PACX-1vR7PCdT5QCCuQ8pG6pSRc8RfdmkCPnVVrOZNPAA9QTvqluf8e2EQRdSDXutlXho2ymz_OP3LGxo-GxE/pub?w=359)
 
-		* **numeric-tokens**: columns where the values are *NUMERIC* but the number of uniques does not exceed 10% of the total number of rows.
+	* **text-tokens**: columns where the values are *TEXT* but the distribution of the text is made of words or combinations of words and the number of uniques does not exceed 10% of the total number of rows.
 
-	* **Continuous**:
+	* **numeric-tokens**: columns where the values are *NUMERIC* but the number of uniques does not exceed 10% of the total number of rows.
 
-		* **numeric**: These are *NUMERIC* values that don't match the criteria of *numeric-tokens* or *date-time*.
+* **Continuous**:
 
-			![](https://docs.google.com/drawings/d/e/2PACX-1vQt9FeMEgBMIoEF23NqQcF3D28Vnk-D2z0pXIIjHy1LCt4l9NdBrbJ_koYLCaecCRd2n7fDhYnLX1MN/pub?w=258&h=100)
+	* **numeric**: These are *NUMERIC* values that don't match the criteria of *numeric-tokens* or *date-time*.
+
+		![](https://docs.google.com/drawings/d/e/2PACX-1vQt9FeMEgBMIoEF23NqQcF3D28Vnk-D2z0pXIIjHy1LCt4l9NdBrbJ_koYLCaecCRd2n7fDhYnLX1MN/pub?w=258&h=100)
 
 
-		* **date-time**: These are values that are in fact timestamps as flagged by the datastore or *TEXT* recognized as a datetime string, and thus can be converted into timestamp.
+	* **date-time**: These are values that are in fact timestamps as flagged by the datastore or *TEXT* recognized as a datetime string, and thus can be converted into timestamp.
 
-			![](https://docs.google.com/drawings/d/e/2PACX-1vR8WPzM6V5KaoSP7A8Zsuw4vcnANRfIUI2dgyZf3J688XOys4JARtZqu9e4wAps8j_KVERMUCDAfxdy/pub?w=600&h=130)
+		![](https://docs.google.com/drawings/d/e/2PACX-1vR8WPzM6V5KaoSP7A8Zsuw4vcnANRfIUI2dgyZf3J688XOys4JARtZqu9e4wAps8j_KVERMUCDAfxdy/pub?w=600&h=130)
 
-	* **Sequential**:
+* **Sequential**:
 
-		These are *TEXT* values where it doesnt fit the *text-tokens* classification. Or lists/arrays of values. Its vector representation is the last hidden state of an encoder (See next section).
+	These are *TEXT* values where it doesnt fit the *text-tokens* classification. Or lists/arrays of values. Its vector representation is the last hidden state of an encoder (See next section).
 
-		![](https://docs.google.com/drawings/d/e/2PACX-1vQGvf3up825nlRlCyEOn0T9hfvup7QQUFRp_55u5aRWVbPE1G75pEa3ZWD7x-NntSbZDgqhIgBEmvTZ/pub?w=416&h=102)
+	![](https://docs.google.com/drawings/d/e/2PACX-1vQGvf3up825nlRlCyEOn0T9hfvup7QQUFRp_55u5aRWVbPE1G75pEa3ZWD7x-NntSbZDgqhIgBEmvTZ/pub?w=416&h=102)
 
 
 

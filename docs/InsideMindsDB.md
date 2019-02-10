@@ -41,7 +41,6 @@ There are some transaction such as PREDICT where its assumed that the statistica
 ### DataVectorizer
 
 In this phase the idea is to translate each column into *numpy* tensors that can be ingested by data models. Tensors are made of vector representations of each cell. This involves to understand what transformations are necessary depending on the column type. Currently the following column data types are supported **Note that these can be expanded or updated for various needs**:
-
 	* **Categorical**:
 
 		![](https://docs.google.com/drawings/d/e/2PACX-1vR7PCdT5QCCuQ8pG6pSRc8RfdmkCPnVVrOZNPAA9QTvqluf8e2EQRdSDXutlXho2ymz_OP3LGxo-GxE/pub?w=359)

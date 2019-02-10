@@ -13,8 +13,23 @@ the Phase Modules in the next section)
 
 * **DataExtractor**: It deals with taking a query and pulling the data from the various data-sources implied in the query, building the joins (if any) and loading the full result into memory. **NOTE**: *That as of now mindsDB requires that the full dataset can be loaded into memory*. To add flexibility right now we support [Apache Drill](https://drill.apache.org/) as a data aggregator.
 
-* **StatsGenerator**: Once the data is pulled and aggregated from the various data sources, MindsDB runs an analysis of each of the columns of the corpus, their distributions and statistical properties, the counts, etc, .. This information is to be used by later phases, the goal here is to run as much analysis on the data as possible so that later phases don't have to repeat calculations and computations over the dataset or sub-dataset they are working on. *One example of this is when we normalize a value ```j``` we want to make ```normalized(j)=(j-mean)/range```, if every single time we run normalized(j) we had to calculate the mean and range of the column that ```j``` belongs to,  it will be too expensive computationally, so calculating and storing those values in the transaction BUS makes things efficient.*
-		![](https://docs.google.com/drawings/d/e/2PACX-1vTAJo6Zll3jRg-QpZTu2RkXOL0TQXl5dgBHOZqpD3jsW4frhlWxIqc0Mv1OnKbOXNc1cYMFYXMlJ96U/pub?w=502&h=252)
+
+* **StatsGenerator**:
+Once the data is pulled and aggregated from the various data sources, MindsDB runs an analysis of each of the columns of the corpus.
+
+The purpose of the stats generator is currently two fold:
+
+	1. To provide various data quality scores in order to determine the overall quality of a column (e.g. variance, some correlation metrics between columns, amount of duplicates).
+
+	2. To provide properties about the columns which have to be used in the following steps and in order to rain the model. (e.g. histogram, data type)
+
+After all stats are computed, we warn the user of any interesting insights we found about his data and (if web logs are enabled), use the
+generated values to plot some interesting information about the data (e.g. data type distribution, outliers, histogram).
+
+![](https://docs.google.com/drawings/d/e/2PACX-1vTAJo6Zll3jRg-QpZTu2RkXOL0TQXl5dgBHOZqpD3jsW4frhlWxIqc0Mv1OnKbOXNc1cYMFYXMlJ96U/pub?w=502&h=252)
+
+Finally, the various stats are passed on as part of the metadata, so that further phases and the model itself can use them.
+
 
 * **StatsLoader**: There are some transaction such as PREDICT where its assumed that the statistical information is already known, all we have to do is make sure we load the right statistics to the transaction BUS.
 

@@ -56,3 +56,10 @@ ENV/
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+
+docs/_build
+docs/_static
+docs/_templates
+docs/index.rst
+docs/make.bat
+docs/Makefile

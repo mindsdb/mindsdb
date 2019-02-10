@@ -1,21 +1,26 @@
 from sklearn.naive_bayes import MultinomialNB
 import numpy as np
 
+"""
+# @TODO: Figure out how to source the histogram and chang the _get_value_bucket
+function and the interface of register_observation observation accordingly
 
+# @TODO Figure out how and if to adapt the register_observation and evaluate_prediction_accuracy
+functions to work with vectors of features and labels (i.e. multiple rows at once)
+This could increase efficiency
+"""
 class ProbabilisticValidator():
     _smoothing_factor = 1
     _value_bucket_probabilities = {}
     _probabilistic_model = None
+    _use_features = None
 
-    # For contignous values we want to use a bucket in the histogram to get a discrete label
-    @staticmethod
-    def _get_value_bucket(value, histogram):
-        # @TODO Not implemented
-        return value
+    def __init__(self, value_stats, use_features=False):
+        self._use_features = use_features
 
+        if self._use_features:
+            self._probabilistic_model = MultinomialNB()
 
-    def __init__(self, value_stats):
-        self._probabilistic_model = MultinomialNB()
         for bucket in value_stats['histogram']:
             if value_stats['histogram'][bucket] > 0:
                 self._value_bucket_probabilities[bucket] = {
@@ -26,38 +31,44 @@ class ProbabilisticValidator():
                     'True': 0 , 'False': 0, 'nr_observations': 0.00001
                 }
 
+    # For contignous values we want to use a bucket in the histogram to get a discrete label
+    @staticmethod
+    def _get_value_bucket(value, histogram):
+        # @TODO Not implemented
+        return value
+
     def register_observation(self, features, real_value, predicted_value):
         real_value_b = self._get_value_bucket(real_value, None)
         predicted_value_b = self._get_value_bucket(predicted_value, None)
 
         correct_prediction = real_value_b == predicted_value_b
 
-        self._probabilistic_model.partial_fit(np.array(features).reshape(1,-1), np.array([correct_prediction]) ,classes=[0,1])
-        """
-        # @TODO: In the future just do this once for each value in the histogram
-        # That way we also apply the smoothing to all values,
-            in order to deal with values that don't occur at all
-        # This will probably happen in the __init__ using the histogram of the values from the training set
-        """
-        if predicted_value_b not in self._value_bucket_probabilities:
-            self._value_bucket_probabilities[predicted_value_b] = {
-                'True': self._smoothing_factor , 'False': self._smoothing_factor, 'nr_observations': self._smoothing_factor
-            }
-
-        self._value_bucket_probabilities[predicted_value_b][str(correct_prediction)] += 1
-        self._value_bucket_probabilities[predicted_value_b]['nr_observations'] += 1
+        if self._use_features:
+            features_b = list(map(lambda x: self._get_value_bucket(x, None), features))
+            features_b.append(predicted_value_b)
+            self._probabilistic_model.partial_fit(np.array(features_b).reshape(1,-1), np.array([correct_prediction]) ,classes=[False, True])
+        else:
+            self._value_bucket_probabilities[predicted_value_b][str(correct_prediction)] += 1
+            self._value_bucket_probabilities[predicted_value_b]['nr_observations'] += 1
 
 
     def evaluate_prediction_accuracy(self, features, predicted_value):
-        print('Probablility of truth based on features %s' % self._probabilistic_model.predict_proba(np.array(features).reshape(1,-1))[0][1])
         predicted_value_b = self._get_value_bucket(predicted_value, None)
 
-        try:
-            chance_of_accuracy = self._value_bucket_probabilities[predicted_value_b]['True'] / self._value_bucket_probabilities[predicted_value_b]['nr_observations']
-        except:
-            chance_of_accuracy = 0
-
-        return chance_of_accuracy
+        if self._use_features:
+            features_b = list(map(lambda x: self._get_value_bucket(x, None), features))
+            features_b.append(predicted_value_b)
+            """
+            # Note: probabilities are rturned for the sorted vector of classes
+            So, in thise case, since True(1) > False(0) the second value in the vecotr
+            is the probability predicted for 'True' (i.e. chance of our prediction being true)
+            """
+            return self._probabilistic_model.predict_proba(np.array(features_b).reshape(1,-1))[0][1]
+        else:
+            try:
+                return self._value_bucket_probabilities[predicted_value_b]['True'] / self._value_bucket_probabilities[predicted_value_b]['nr_observations']
+            except:
+                return 0
 
 
 if __name__ == "__main__":
@@ -82,7 +93,7 @@ if __name__ == "__main__":
         ,7: 0
     }}
 
-    pbv = ProbabilisticValidator(value_col_stats)
+    pbv = ProbabilisticValidator(value_col_stats, use_features=True)
 
     for i in range(len(feature_rows)):
         pbv.register_observation(feature_rows[i],values[i], predictions[i])

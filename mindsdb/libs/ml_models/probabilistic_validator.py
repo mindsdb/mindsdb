@@ -42,9 +42,6 @@ class ProbabilisticValidator():
         X.append(predicted_value_b)
         Y = [correct_prediction]
 
-        print(Y, X)
-        #exit()
-
         self._probabilistic_model.partial_fit(np.array(X).reshape(1,-1), Y, classes=[True, False])
 
 
@@ -55,7 +52,7 @@ class ProbabilisticValidator():
 
         X = feature_existence
         X.append(predicted_value_b)
-        print(X)
+
         return self._probabilistic_model.predict_proba(np.array(X).reshape(1,-1))[0][1]
 
 

@@ -1,4 +1,4 @@
-from sklearn.naive_bayes import GaussianNB, ComplementNB
+from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
 from mindsdb.libs.constants.mindsdb import NULL_VALUES
 import numpy as np
 
@@ -17,9 +17,10 @@ class ProbabilisticValidator():
 
 
     def __init__(self):
+        # <--- Pick one of the 3
         self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         #self._probabilistic_model = GaussianNB()
-
+        #self._probabilistic_model = MultinomialNB()
 
     # For contignous values we want to use a bucket in the histogram to get a discrete label
     @staticmethod
@@ -63,10 +64,15 @@ if __name__ == "__main__":
         ,[1,None,6]
         ,[0,3,None]
         ,[2,0,1]
+        ,[None,2,3]
+        ,[2,2,3]
+        ,[1,None,6]
+        ,[0,3,None]
+        ,[2,0,1]
     ]
 
-    values = [2,2,2,3,5]
-    predictions = [2,2,2,3,2]
+    values = [2,2,2,3,5,2,2,2,3,5]
+    predictions = [2,2,2,3,2,2,2,2,3,2]
 
     pbv = ProbabilisticValidator()
 
@@ -76,4 +82,6 @@ if __name__ == "__main__":
     print(pbv.evaluate_prediction_accuracy([1,2,3], 2))
     print(pbv.evaluate_prediction_accuracy([1,None,3], 3))
     print(pbv.evaluate_prediction_accuracy([None,0,2], 5))
-    print(pbv.evaluate_prediction_accuracy([22,12,None], 101))
+    print(pbv.evaluate_prediction_accuracy([None,2,3], 2))
+    print(pbv.evaluate_prediction_accuracy([None,None,3], 2))
+    print(pbv.evaluate_prediction_accuracy([2,2,None], 2))

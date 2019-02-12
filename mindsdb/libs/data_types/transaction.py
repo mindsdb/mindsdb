@@ -133,6 +133,8 @@ class Transaction:
 
             # self.callPhaseModule('DataEncoder')
             self._call_phase_module('ModelTrainer')
+
+            self._call_phase_module('model_analyzer')
             # TODO: Loop over all stats and when all stats are done, then we can mark model as MODEL_STATUS_TRAINED
 
             return

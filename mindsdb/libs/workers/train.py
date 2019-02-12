@@ -423,7 +423,7 @@ class TrainWorker():
         :param config: this is the hyperparameter config
         """
 
-        return TrainWorker(data, model_name, ml_model, config)
+        return TrainWorker(model_name, ml_model, config)
 
 
 # TODO: Use ray

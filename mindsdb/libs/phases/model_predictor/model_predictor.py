@@ -1,14 +1,3 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
-
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.workers.predict import PredictWorker
@@ -103,4 +92,3 @@ def test():
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     test()
-

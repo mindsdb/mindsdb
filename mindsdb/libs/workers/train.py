@@ -98,7 +98,10 @@ class TrainWorker():
         if self.model_name is None:
             log.info('Starting model...')
             self.data_model_object = self.ml_model_class(self.sample_batch)
+        else:
+            self.data_model_object = self.ml_model_class(self.model_name)
 
+        
         log.info('Training model...')
 
         last_epoch = 0

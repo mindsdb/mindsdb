@@ -116,6 +116,7 @@ MODEL_STATUS_ANALYZING = "Analyzing"
 MODEL_STATUS_ERROR = "Error"
 
 WORD_SEPARATORS = [',', "\t", ' ']
+NULL_VALUES = [None, '']
 
 SAMPLER_FLAT_TENSORS = 'flat_vectors'
 SAMPLER_COLUMN_TENSORS = 'column_tensors'

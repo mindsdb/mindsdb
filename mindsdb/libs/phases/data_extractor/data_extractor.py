@@ -223,7 +223,7 @@ class DataExtractor(BaseModule):
                 start_sample_from_row = 0 if (should_split_by_group and self.transaction.metadata.window_size > sample_size * CONFIG.TEST_TRAIN_RATIO) else length - sample_size
 
 
-                # resize the group bucket bu the start_sample_from_row
+                # resize the group bucket by the start_sample_from_row
                 self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][start_sample_from_row:]
                 # update length
                 length = len(self.transaction.input_data.all_indexes[key])

@@ -3,6 +3,7 @@ import mindsdb
 
 mdb = mindsdb.MindsDB(send_logs=False)
 
+
 mdb.learn(
     from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
     predict='rental_price',

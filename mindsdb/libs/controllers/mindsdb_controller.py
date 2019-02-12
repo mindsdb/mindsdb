@@ -1,51 +1,50 @@
-import sqlite3
-import pandas
-import requests
+
 import os
-import platform
+
 import _thread
 import uuid
 import traceback
-import urllib
+
 
 from mindsdb.libs.data_types.mindsdb_logger import MindsdbLogger
-from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.helpers.multi_data_source import getDS
+from mindsdb.libs.helpers.general_helpers import check_for_updates
 
 from mindsdb.config import CONFIG
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.data_types.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *
 
-from mindsdb.version import mindsdb_version as MINDSDB_VERSION
 
 from pathlib import Path
 
 class MindsDBController:
 
-    def __init__(self, log_level=CONFIG.DEFAULT_LOG_LEVEL, log_url=CONFIG.MINDSDB_SERVER_URL, send_logs=False):
+    def __init__(self, mind_name, mind_root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL, send_logs=CONFIG.SEND_LOGS, log_url=CONFIG.MINDSDB_SERVER_URL):
         """
-        :param file:
+        This controller defines the API to a MindsDB 'mind', a mind is an object that can learn and predict from data
+
+        :param mind_name: the name you want to identify this mind with
+        :param mind_root_folder: the folder where you want to store this mind or load from
+        :param log_level: the desired log level
+        :param send_logs: if you want to stream logs to a given server (default: False)
+        :param log_url: the server you want to stream logs to for visualization (only if send_logs is TRUE)
+
         """
+
+        # initialize variables
+        self.mind_name = mind_name
+        self.mind_root_folder = mind_root_folder
+        self.mind_uuid = str(uuid.uuid1())
 
         # initialize log
-        controller_uuid = str(uuid.uuid1())
-        log = MindsdbLogger(log_level=log_level, send_logs=send_logs, log_url=log_url, uuid=controller_uuid)
-        self.log = log
+        self.log = MindsdbLogger(log_level=log_level, send_logs=send_logs, log_url=log_url, uuid=self.mind_uuid)
 
-        self._set_configs()
-
-        _thread.start_new_thread(MindsDBController.check_for_updates, ())
-
-
-    def _set_configs(self):
-        """
-        This sets the config settings for this mindsdb instance
-        :return:
-        """
+        # check for updates
+        _thread.start_new_thread(check_for_updates, ())
 
         # set the mindsdb storage folder
-        storage_ok = True # default state
+        storage_ok = True  # default state
 
         # if it does not exist try to create it
         if not os.path.exists(CONFIG.MINDSDB_STORAGE_PATH):
@@ -56,7 +55,8 @@ class MindsDBController:
             except:
                 self.log.info(traceback.format_exc())
                 storage_ok = False
-                self.log.error('MindsDB storage foldler: {folder} does not exist and could not be created'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                self.log.error('MindsDB storage foldler: {folder} does not exist and could not be created'.format(
+                    folder=CONFIG.MINDSDB_STORAGE_PATH))
 
         # If storage path is not writable, raise an exception as this can no longer be
         if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK) or storage_ok == False:
@@ -66,17 +66,45 @@ class MindsDBController:
 
 
 
-
-    def learn(self, predict, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = False):
+    def export(self, model_zip_file):
         """
-        This method is the one that defines what to learn and from what, under what contraints
+        If you want to export this mind to a file
+        :param model_zip_file: this is the full_path where you want to store a mind to, it will be a zip file
+
+        :return: bool (True/False) True if mind was exported successfully
+        """
+        pass
+
+
+    def load(self, model_zip_file):
+        """
+        If you want to import a mind from a file
+
+        :param model_zip_file: this is the full_path that contains your mind
+        :return: bool (True/False) True if mind was importerd successfully
+        """
+        pass
+
+    def update(self, from_data):
+        """
+        Use this if you have new data that you want your mind object to learn from
+
+        :param from_data: the data that you want to learn from, this can be either a file, a pandas data frame, or url to a file
+
+        :return:
+        """
+
+        pass
+
+    def learn(self, columns_to_predict, from_data = None,  test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = False):
+        """
+        Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
         Mandatory arguments:
-        :param predict: what column you want to predict
+        :param columns_to_predict: what column or columns you want to predict
         :param from_data: the data that you want to learn from, this can be either a file, a pandas data frame, or url to a file
 
         Optional arguments:
-        :param model_name: the name you want to give to this model
         :param test_from_data: If you would like to test this learning from a different data set
 
         Optional Time series arguments:
@@ -108,7 +136,7 @@ class MindsDBController:
         predict_columns_map = {}
 
         # lets turn into lists: predict, order_by and group by
-        predict_columns = [predict] if type(predict) != type([]) else predict
+        predict_columns = [columns_to_predict] if type(columns_to_predict) != type([]) else columns_to_predict
         group_by = group_by if type(group_by) == type([]) else [group_by] if group_by else []
         order_by = order_by if type(order_by) == type([]) else [order_by] if group_by else []
 
@@ -133,7 +161,7 @@ class MindsDBController:
             self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
         transaction_metadata = TransactionMetadata()
-        transaction_metadata.model_name = model_name
+        transaction_metadata.model_name = self.mind_name
         transaction_metadata.model_predict_columns = predict_columns
         transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
         transaction_metadata.model_group_by = group_by
@@ -147,17 +175,14 @@ class MindsDBController:
         transaction_metadata.sample_margin_of_error = sample_margin_of_error
         transaction_metadata.sample_confidence_level = sample_confidence_level
 
-
         Transaction(session=self, transaction_metadata=transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
-   
-    def predict(self, when={}, from_data = None, model_name='mdsb_model', breakpoint= PHASE_END):
+    def predict(self, when={}, when_data = None, breakpoint= PHASE_END):
         """
 
         :param predict:
         :param when:
-        :param model_name:
         :return:
         """
 
@@ -165,10 +190,10 @@ class MindsDBController:
 
         transaction_type = TRANSACTION_PREDICT
 
-        from_ds = None if from_data is None else getDS(from_data)
+        from_ds = None if when_data is None else getDS(when_data)
 
         transaction_metadata = TransactionMetadata()
-        transaction_metadata.model_name = model_name
+        transaction_metadata.model_name = self.mind_name
 
         # lets turn into lists: when
         when = when if type(when) in [type(None), type({})] else [when]
@@ -187,55 +212,4 @@ class MindsDBController:
 
         return transaction.output_data
 
-    @staticmethod
-    def check_for_updates():
-        # tmp files
-        uuid_file = CONFIG.MINDSDB_STORAGE_PATH + '/../uuid.mdb_base'
-        mdb_file = CONFIG.MINDSDB_STORAGE_PATH + '/start.mdb_base'
 
-        uuid_file_path = Path(uuid_file)
-        if uuid_file_path.is_file():
-            uuid_str = open(uuid_file).read()
-        else:
-            uuid_str = str(uuid.uuid4())
-            try:
-                open(uuid_file, 'w').write(uuid_str)
-            except:
-                log.warning('Cannot store token, Please add write permissions to file:' + uuid_file)
-                uuid_str = uuid_str + '.NO_WRITE'
-
-        file_path = Path(mdb_file)
-        if file_path.is_file():
-            token = open(mdb_file).read()
-        else:
-            token = '{system}|{version}|{uid}'.format(system=platform.system(), version=MINDSDB_VERSION, uid=uuid_str)
-            try:
-                open(mdb_file,'w').write(token)
-            except:
-                log.warning('Cannot store token, Please add write permissions to file:'+mdb_file)
-                token = token+'.NO_WRITE'
-        extra = urllib.parse.quote_plus(token)
-        try:
-            r = requests.get('http://mindsdb.com/updates/check/{extra}'.format(extra=extra), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)})
-        except:
-            log.warning('Could not check for updates')
-            return
-        try:
-            # TODO: Extract version, compare with version in version.py
-            ret = r.json()
-
-            if 'version' in ret and ret['version']!= MINDSDB_VERSION:
-                pass
-                #log.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
-            else:
-                log.debug('MindsDB is up to date!')
-
-        except:
-
-            log.warning('could not check for MindsDB updates')
-
-    # zhihua
-    def read_csv(self, filepath, delimiter=',', header='infer', encoding=None):
-        data_df = pd.read_csv(filepath, delimiter=delimiter, encoding=encoding, header=header)
-        self._from_data = data_df
-        return self

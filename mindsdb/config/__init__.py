@@ -49,5 +49,7 @@ class Config:
     # LOG Config settings
     DEFAULT_LOG_LEVEL = ifEnvElse('DEFAULT_LOG_LEVEL', CONST.INFO_LOG_LEVEL)
 
+    # If logs should be streamed to a server
+    SEND_LOGS = ifEnvElse('SEND_LOGS', False)
 
 CONFIG = Config()

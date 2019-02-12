@@ -34,7 +34,7 @@ def test_timeseries():
     mdb = mindsdb.MindsDB()
     mdb.learn(
         from_data=data_file_name,
-        predict=label_name,
+        columns_to_predict=label_name,
         model_name='test_datetime_timeseries'
 
         # timeseries specific args
@@ -64,7 +64,7 @@ def test_one_label_prediction():
 
     mdb.learn(
         from_data=train_file_name,
-        predict=label_name,
+        columns_to_predict=label_name,
         model_name='test_one_label_prediction'
     )
     print('!-------------  Learning ran successfully  -------------!')
@@ -99,7 +99,7 @@ def test_dual_label_prediction():
     mdb = mindsdb.MindsDB()
     mdb.learn(
         from_data=data_file_name,
-        predict=label_names,
+        columns_to_predict=label_names,
         model_name='test_dual_label_prediction'
         )
 

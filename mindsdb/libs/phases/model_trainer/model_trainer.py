@@ -105,7 +105,7 @@ def test():
         from_file=CONFIG.MINDSDB_STORAGE_PATH+'/position_target_table.csv',
         group_by='id',
         order_by=['max_time_rec'],
-        predict='position',
+        columns_to_predict='position',
         model_name='mdsb_model',
         breakpoint=PHASE_MODEL_TRAINER
     )

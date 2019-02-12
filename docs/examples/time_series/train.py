@@ -3,7 +3,7 @@ from mindsdb import *
 
 
 MindsDB().learn(
-    predict = 'Main_Engine_Fuel_Consumption_MT_day',
+    columns_to_predict='Main_Engine_Fuel_Consumption_MT_day',
     from_data = 'fuel.csv',
     model_name='fuel',
 

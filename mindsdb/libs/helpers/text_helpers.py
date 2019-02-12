@@ -35,7 +35,7 @@ def gen_chars(length, character):
     """
     return ''.join([character for i in range(length)])
 
-def tryCastToNumber(string):
+def cast_string_to_python_type(string):
     """ Returns an integer, float or a string from a string"""
     try:
         if string is None:

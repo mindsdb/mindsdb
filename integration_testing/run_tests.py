@@ -50,7 +50,7 @@ def test_one_label_prediction():
     test_file_name = 'test_data.csv'
     data_len = 200
 
-    columns = generate_value_cols(['int','float','ascii','date'],data_len, separator)
+    columns = generate_value_cols(['int','float'],data_len, separator)
     labels = generate_labels_2(columns, separator)
 
     label_name = labels[0]

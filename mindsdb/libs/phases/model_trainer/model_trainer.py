@@ -74,7 +74,7 @@ class ModelTrainer(BaseModule):
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False or len(ml_models) == 1:
                 train_worker = TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=ml_model, config=config)
-                train_worker.train(self.transaction.model_data)
+                self.transaction.data_model_object = train_worker.train(self.transaction.model_data)
             else:
                 # Todo: use Ray https://github.com/ray-project/tutorial
                 # Before moving to actual workers: MUST FIND A WAY TO SEND model data to the worker in an efficient way first

@@ -216,7 +216,7 @@ class MindsDBController:
 
         transaction_metadata.model_when_conditions = when
         transaction_metadata.type = transaction_type
-        transaction_metadata.storage_file = self.storage_file
+        #transaction_metadata.storage_file = self.storage_file
         transaction_metadata.from_data = from_ds
 
         transaction = self.session.newTransaction(transaction_metadata, breakpoint)

@@ -2,6 +2,7 @@ from mindsdb.libs.data_types.persistent_object import PersistentObject
 from mindsdb.config import *
 import os
 from mindsdb.libs.data_types.mindsdb_logger import log
+from mindsdb.config import CONFIG
 from pathlib import Path
 
 class PersistentMlModelInfo(PersistentObject):
@@ -50,7 +51,7 @@ class PersistentMlModelInfo(PersistentObject):
         if type(files) != type([]):
             files = [files]
         for file in files:
-            filename = '{path}/{filename}.pt'.format(path=MINDSDB_STORAGE_PATH, filename=file)
+            filename = '{path}/{filename}.pt'.format(path=CONFIG.MINDSDB_STORAGE_PATH, filename=file)
             try:
 
 

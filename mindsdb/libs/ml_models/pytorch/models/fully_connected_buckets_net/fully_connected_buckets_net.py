@@ -1,5 +1,6 @@
 from mindsdb.config import *
 from mindsdb.libs.constants.mindsdb import *
+from mindsdb.config import USE_CUDA
 
 import math
 import torch

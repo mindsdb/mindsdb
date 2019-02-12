@@ -38,6 +38,9 @@ class DataVectorizer(BaseModule):
         for i, column_name in enumerate(self.transaction.input_data.columns):
             column_packs_template[column_name] = []
 
+        # Depending on the transaction type, we may need to populate different subsets
+        # we create a list called subsets that contains pointers to the actual subsets
+        # this is so that we can iterate over this subsets list and perform the same operations
         if self.transaction.metadata.type == TRANSACTION_LEARN:
             subsets = [
                 {
@@ -69,25 +72,31 @@ class DataVectorizer(BaseModule):
                 }
             ]
 
-        # iterate over all groups and populate tensors by columns
-
+        # iterate over all subsets and populate tensors by columns
         for subset in subsets:
 
-            subset_pointer = subset['subset_pointer'] # for ease use a pointer
+            subset_pointer = subset['subset_pointer'] # get a pointer to the subset where we will store the tensors per column
 
-            # iterate over all indexes that belong to this subset
+            # iterate over all indexes that belong to this subset (these were populated in data extractor)
             for subset_group_by_hash in subset['indexes']:
 
-                subset_pointer[subset_group_by_hash] = copy.deepcopy(column_packs_template)
+                subset_pointer[subset_group_by_hash] = copy.deepcopy(column_packs_template) # keep an ordered dictionary of the subset, so that column keys are always on the same order
 
+                # iterate over all rows
                 for input_row_index in subset['indexes'][subset_group_by_hash]:
                     row = self.transaction.input_data.data_array[input_row_index]  # extract the row from input data
+
+                    # normalize and store vector representation of each cell value
                     for column_name in subset_pointer[subset_group_by_hash]:
                         column_index = self.transaction.input_data.columns.index(column_name)
                         cell_value = row[column_index]
                         value = cast_string_to_python_type(cell_value)
                         normalized_value = norm(value=value, cell_stats=column_stats[column_name])  # this should return a vector representation already normalized
                         subset_pointer[subset_group_by_hash][column_name] += [normalized_value]
+
+                # now make sure to convert all column tensors into numpy arrays so that they can be worked on in following phases
+                for column_name in subset_pointer[subset_group_by_hash]:
+                    subset_pointer[subset_group_by_hash][column_name] =  np.array(subset_pointer[subset_group_by_hash][column_name])
 
 
         return []

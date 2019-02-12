@@ -67,40 +67,6 @@ class MindsDBController:
 
 
 
-    def setUserEmail(self, email):
-        """
-
-        :param email:
-        :return:
-        """
-        email_file = CONFIG.MINDSDB_STORAGE_PATH + '/../email.mdb_base'
-
-
-        try:
-            open(email_file, 'w').write(email)
-            return True
-        except:
-            log.warning('Cannot store token, Please add write permissions to file:' + email_file)
-            return False
-
-    def getUserEmail(self):
-        """
-
-        :return:
-        """
-        email_file = CONFIG.MINDSDB_STORAGE_PATH + '/../email.mdb_base'
-        email_file_path  = Path(email_file)
-
-        try:
-            if email_file_path.is_file():
-                email = open(email_file, 'r').read()
-                return email
-            else:
-                return None
-        except:
-            log.warning('Cannot read email, Please add write permissions to file:' + email_file)
-            return None
-
     def learn(self, predict, from_data = None, model_name='mdsb_model', test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = False):
         """
         This method is the one that defines what to learn and from what, under what contraints
@@ -185,9 +151,7 @@ class MindsDBController:
         Transaction(session=self, transaction_metadata=transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
-    def startInfoServer(self):
-        pass
-
+   
     def predict(self, when={}, from_data = None, model_name='mdsb_model', breakpoint= PHASE_END):
         """
 

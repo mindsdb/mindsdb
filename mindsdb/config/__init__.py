@@ -27,7 +27,7 @@ class Config:
     TEST_TRAIN_RATIO = ifEnvElse('TEST_TRAIN_RATIO', 0.1)
 
     # If you want to use CUDA
-    USE_CUDA = ifEnvElse('USE_CUDA', False)
+    USE_CUDA = ifEnvElse('CONFIG.USE_CUDA', False)
     if USE_CUDA == 'True' or USE_CUDA == 'true' or USE_CUDA == 1 or USE_CUDA == '1':
         USE_CUDA = True
 

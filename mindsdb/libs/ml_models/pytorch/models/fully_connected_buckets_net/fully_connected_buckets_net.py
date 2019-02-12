@@ -1,6 +1,6 @@
 from mindsdb.config import *
 from mindsdb.libs.constants.mindsdb import *
-from mindsdb.config import USE_CUDA
+from mindsdb.config import CONFIG
 
 import math
 import torch
@@ -45,7 +45,7 @@ class FullyConnectedBucketsNet(BaseModel):
             nn.Linear(output_size, sample_target_by_buckets[col].size()[1])
         ) for col in sample_target_by_buckets }
 
-        if USE_CUDA:
+        if CONFIG.USE_CUDA:
             self.net.cuda()
             for col in self.nets:
                 self.nets[col].cuda()
@@ -78,7 +78,7 @@ class FullyConnectedBucketsNet(BaseModel):
 
 
     def forward(self, input, return_bucket_outputs = False):
-        if USE_CUDA:
+        if CONFIG.USE_CUDA:
             input.cuda()
         """
         In this particular model, we just need to forward the network defined in setup, with our input

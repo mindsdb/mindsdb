@@ -38,7 +38,7 @@ class FullyConnectedNet(BaseModel):
 
 
 
-        if USE_CUDA:
+        if CONFIG.USE_CUDA:
             self.net.cuda()
 
 
@@ -51,7 +51,7 @@ class FullyConnectedNet(BaseModel):
         :return:
         """
 
-        if USE_CUDA:
+        if CONFIG.USE_CUDA:
             input.cuda()
 
         output = self.net(input)

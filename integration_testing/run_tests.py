@@ -50,7 +50,7 @@ def test_one_label_prediction():
     test_file_name = 'test_data.csv'
     data_len = 200
 
-    columns = generate_value_cols(['int','float','ascii','date'],data_len, separator)
+    columns = generate_value_cols(['int','float'],data_len, separator)
     labels = generate_labels_2(columns, separator)
 
     label_name = labels[0]
@@ -61,7 +61,6 @@ def test_one_label_prediction():
     columns_to_file(columns_test, test_file_name, separator)
 
     mdb = mindsdb.MindsDB(log_level=mindsdb.CONST.INFO_LOG_LEVEL, send_logs=False)
-
     mdb.learn(
         from_data=train_file_name,
         columns_to_predict=label_name,

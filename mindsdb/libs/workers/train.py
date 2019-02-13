@@ -149,7 +149,7 @@ class TrainWorker():
 
                     # check if continue training
                     if self.shouldContinue() == False:
-                        return
+                        return self.data_model_object
                     # save/update model loss, error, confusion_matrix
                     self.registerModelData(train_ret, test_ret, is_it_lowest_error_epoch)
 
@@ -166,7 +166,7 @@ class TrainWorker():
             if ml_model_info is None:
                 # TODO: Make sure we have a model for this
                 log.info('No model found in storage')
-                return
+                return self.data_model_object
 
             fs_file_ids = ml_model_info.fs_file_ids
             if fs_file_ids is not None:
@@ -180,7 +180,7 @@ class TrainWorker():
         #   * save best lowest error into GridFS (we only save into GridFS at the end because it takes too long)
         #   * remove local model file
         # self.saveToGridFs(local_files=local_files, throttle=False)
-
+        return self.data_model_object
 
     def registerModelData(self, train_ret, test_ret, lowest_error_epoch = False):
         """
@@ -315,6 +315,7 @@ class TrainWorker():
         return confusion_matrices
 
     def shouldContinue(self):
+        return False
         """
         Check if the training should continue
         :return:

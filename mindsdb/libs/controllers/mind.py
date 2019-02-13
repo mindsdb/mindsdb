@@ -208,7 +208,7 @@ class Mind:
         #transaction_metadata.storage_file = self.storage_file
         transaction_metadata.from_data = from_ds
 
-        transaction = self.session.newTransaction(transaction_metadata, breakpoint)
+        transaction = Transaction(transaction_metadata, breakpoint)
 
         return transaction.output_data
 

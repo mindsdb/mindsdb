@@ -94,7 +94,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.TEXT
 
 
-    def get_column_data_type(self, data):
+    def _get_column_data_type(self, data):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -526,7 +526,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, data_type_dist = self.get_column_data_type(col_data)
+            data_type, data_type_dist = self._get_column_data_type(col_data)
 
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior

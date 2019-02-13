@@ -12,7 +12,7 @@ from mindsdb.libs.helpers.general_helpers import check_for_updates
 
 from mindsdb.config import CONFIG
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
-from mindsdb.libs.data_types.transaction import Transaction
+from mindsdb.libs.controllers.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *
 
 

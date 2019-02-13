@@ -448,6 +448,8 @@ class StatsGenerator(BaseModule):
     def _log_interesting_stats(self, stats):
         """
         # Provide interesting insights about the data to the user and send them to the logging server in order for it to generate charts
+
+        :param stats: The stats extracted up until this point for all columns
         """
         for col_name in stats:
             col_stats = stats[col_name]

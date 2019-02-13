@@ -5,16 +5,13 @@ from mindsdb.libs.data_types.sampler import Sampler
 from mindsdb.libs.ml_models.pytorch.libs import base_model;
 from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
 
+import pandas as pd
 
 class ModelAnalyzer(BaseModule):
 
     phase_name = PHASE_MODEL_ANALYZER
 
     def run(self):
-        #for group in self.transaction.model_data.validation_set:
-        #columns = self.transaction.model_data.validation_set[group]
-        validation_sampler = Sampler(self.transaction.model_data.validation_set,
-        metadata_as_stored=self.transaction.persistent_model_metadata, sampler_mode=SAMPLER_MODES.TRAIN)
 
         '''
         @ <--- field ids is not yet set at this point
@@ -24,18 +21,22 @@ class ModelAnalyzer(BaseModule):
 
         probabilistic_validator = ProbabilisticValidator()
 
-        for batch in validation_sampler:
-            input = batch.getInput(flatten=False)
+        input = self.transaction.model_data.validation_set['ALL_ROWS_NO_GROUP_BY']
 
-            real_values = []
-            for col in self.transaction.metadata.model_predict_columns:
-                print(input.keys())
-                real_values.append(input[col])
 
-            features = input.drop(self.transaction.metadata.model_predict_columns, axis=1)
+        real_values = []
+        for col in self.transaction.metadata.model_predict_columns:
+            real_values.append(input[col])
+            input.pop(col, None)
 
-            results = self.transaction.data_model_object.forward(features)
-            for i in range(results):
-                print(i)
-                result = results[i]
-                features = fe
+        # <--- Remove the pop and use bellow line if this is a pd dataframe instead
+        #features = input.drop(self.transaction.metadata.model_predict_columns, axis=1)
+        features_arr = input
+
+        predictions = self.transaction.data_model_object.forward(features)
+        for col in predictions:
+            for i in range(predictions[col]):
+                predicted = predictions[col][i]
+                real = real_values[i]
+                features = features_arr[i]
+                register_observation(features, real, predicted)

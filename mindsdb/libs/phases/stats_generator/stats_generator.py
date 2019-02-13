@@ -25,7 +25,7 @@ from mindsdb.config import CONFIG
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, tryCastToNumber
+from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, cast_string_to_python_type
 from mindsdb.external_libs.stats import calculate_sample_size
 
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
@@ -511,7 +511,7 @@ class StatsGenerator(BaseModule):
 
             for i, val in enumerate(row):
                 column = header[i]
-                value = tryCastToNumber(val)
+                value = cast_string_to_python_type(val)
                 if not column in empty_count:
                     empty_count[column] = 0
                     column_count[column] = 0

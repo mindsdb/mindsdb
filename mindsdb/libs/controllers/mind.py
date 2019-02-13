@@ -96,7 +96,7 @@ class Mind:
 
         pass
 
-    def learn(self, columns_to_predict, from_data = None,  test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, breakpoint = PHASE_END, ignore_columns = [], rename_strange_columns = False):
+    def learn(self, columns_to_predict, from_data = None,  test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL,  ignore_columns = [], rename_strange_columns = False):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -130,7 +130,7 @@ class Mind:
 
         from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
-
+        breakpoint = CONFIG.DEBUG_BREAK_POINT
         transaction_type = TRANSACTION_LEARN
 
         predict_columns_map = {}
@@ -178,18 +178,17 @@ class Mind:
         Transaction(session=self, transaction_metadata=transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
-    def predict(self, when={}, when_data = None, breakpoint= PHASE_END):
+    def predict(self, when={}, when_data = None):
         """
+        You have a mind trained already and you want to make a prediction
 
-        :param predict:
-        :param when:
-        :return:
+        :param when: use this if you have certain conditions for a single prediction
+        :param when_data: (optional) use this when you have data in either a file, a pandas data frame, or url to a file that you want to predict from
+        :return: TransactionOutputData object
         """
-
-
 
         transaction_type = TRANSACTION_PREDICT
-
+        breakpoint = CONFIG.DEBUG_BREAK_POINT
         from_ds = None if when_data is None else getDS(when_data)
 
         transaction_metadata = TransactionMetadata()
@@ -208,7 +207,7 @@ class Mind:
         #transaction_metadata.storage_file = self.storage_file
         transaction_metadata.from_data = from_ds
 
-        transaction = Transaction(transaction_metadata, breakpoint)
+        transaction = Transaction(session=self, transaction_metadata=transaction_metadata, breakpoint=breakpoint)
 
         return transaction.output_data
 

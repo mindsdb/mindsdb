@@ -13,7 +13,6 @@ class Config:
     # These are the paths for storing data regarding mindsdb models and model info
     MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', getMindsDBStoragePath())
 
-    SQLITE_FILE = ifEnvElse('SQLITE_FILE', '{storage_path}/mindsdb.mdb'.format(storage_path=MINDSDB_STORAGE_PATH))
     LOCALSTORE_PATH_TEMPLATE = '{storage_path}/local_jsondb_store'
     LOCALSTORE_PATH = ifEnvElse('LOCALSTORE_PATH', LOCALSTORE_PATH_TEMPLATE.format(storage_path=MINDSDB_STORAGE_PATH))
 
@@ -51,5 +50,9 @@ class Config:
 
     # If logs should be streamed to a server
     SEND_LOGS = ifEnvElse('SEND_LOGS', False)
+
+    # Debug config variable (Do not change this unless you are developing phases in mindsdb)
+    DEBUG_BREAK_POINT = ifEnvElse('DEBUG_BREAK_POINT', CONST.PHASE_END)
+
 
 CONFIG = Config()

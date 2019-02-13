@@ -245,7 +245,7 @@ class StatsGenerator(BaseModule):
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.CATEGORICAL and stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.DATE:
             data['duplicate_score'] = data['duplicates_percentage']/100
         else:
-            data['duplicate_score'] = 0
+            data['c'] = 0
 
         return data
 
@@ -454,29 +454,33 @@ class StatsGenerator(BaseModule):
         for col_name in stats:
             col_stats = stats[col_name]
 
-            # Data distribution
+            # Overall quality
+            if col_stats['quality_score'] > 0.5:
+                # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
+                self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission are: {}'.format(col_name, col_stats['bad_scores']))
+                if col_stats['duplicates_score'] > 0.5:
+                    self.log.warning(f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.')
+
+
+            # Some scores are meaningful on their own, and the user should be warnned if they fall bellow a certain threshold
+            if col_stats['empty_score'] > 0.2:
+                self.log.warning(f'{empty_percentage}% of the values in column {col_name} are empty, this might indicate your data is of poor quality.')
+
+            if column_stats['data_type_distribution_score'] > 0.2:
+                #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
+                percentage_of_data_not_of_principal_type = column_stats['data_type_distribution_score'] * 100
+                principal_data_type = col_stats[[KEYS.DATA_TYPE]]
+                self.log.warn(f'{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate your data is of poor quality.')
+
+            if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 0.3:
+                percentage_of_outliers = col_stats['z_test_based_outlier_score']*100
+                self.log.info(f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means there might
+                be too much randomness in this column for us to make an accurate prediction based on it.""")
+
+            # We might want to inform the user about a few stats regarding his column regardless of the score, this is done bellow
             self.log.info('Data distribution for column "{}"'.format(col_name))
             self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
-            if stats[col_name]['data_type_distribution_score'] > 0.3:
-                self.log.info('Got a rather varried data type distribution for {}, for column: "{}"'.format(stats[col_name]['data_type_distribution_score'], str(col_name)))
-
-            # Empty/Missing values
-            if col_stats['empty_cells_score'] > 0.5:
-                self.log.info('Column "{}" has {}% of it\'s values missing or null'.format(col_name, round(col_stats['empty_percentage'],2)))
-
-            # Duplicate values
-            if col_stats['duplicate_score'] > 0.5:
-                # Maybe add a chart of frequent duplicate values here
-
-                self.log.info('Column "{}" has {}% of it\'s values duplicated !'.format(col_name, round(col_stats['duplicates_percentage'],2)))
-
-            if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 3:
-                self.log.info('Column "{}" has a very high amount of outliers, as signified by the cummulative z score: {}'.format(col_name, round(col_stats['z_test_based_outlier_score'],2)))
-
-            # Overall quality
-            if col_stats['quality_score'] > 0.5:
-                self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission are: {}'.format(col_name, col_stats['bad_scores']))
 
     def run(self):
         """

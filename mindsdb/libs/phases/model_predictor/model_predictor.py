@@ -92,7 +92,7 @@ class ModelPredictor(BaseModule):
 
 def test():
 
-    from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
+    from mindsdb.libs.controllers.mindsdb_controller import Mind as MindsDB
     from mindsdb.libs.data_types.mindsdb_logger import log
 
     mdb = MindsDB()

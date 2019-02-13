@@ -18,7 +18,7 @@ from mindsdb.libs.constants.mindsdb import *
 
 from pathlib import Path
 
-class MindsDBController:
+class Mind:
 
     def __init__(self, mind_name, mind_root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL, send_logs=CONFIG.SEND_LOGS, log_url=CONFIG.MINDSDB_SERVER_URL):
         """

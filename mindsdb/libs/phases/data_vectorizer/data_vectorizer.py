@@ -103,7 +103,7 @@ class DataVectorizer(BaseModule):
 
 
 def test():
-    from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
+    from mindsdb.libs.controllers.mindsdb_controller import Mind as MindsDB
 
     mdb = MindsDB()
 

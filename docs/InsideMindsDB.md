@@ -13,7 +13,7 @@ the Phase Modules in the next section)
 
 ### DataExtractor
 
-It deals with taking a query and pulling the data from the various data-sources implied in the query, building the joins (if any) and loading the full result into memory. **NOTE**: *That as of now mindsDB requires that the full dataset can be loaded into memory*. To add flexibility right now we support [Apache Drill](https://drill.apache.org/) as a data aggregator.
+It deals with taking a query and pulling the data from the various data-sources implied in the query, building the joins (if any) and loading the full result into memory. **NOTE**: *That as of now mindsDB requires that the full dataset can be loaded into memory*.
 
 
 ### StatsGenerator

@@ -13,7 +13,13 @@ the Phase Modules in the next section)
 
 ### DataExtractor
 
-It deals with taking a query and pulling the data from the various data-sources implied in the query, building the joins (if any) and loading the full result into memory. **NOTE**: *That as of now mindsDB requires that the full dataset can be loaded into memory*.
+It deals with extracting inputs from various data-sources such as files, directories and SQL compatible databases. If input is a query, it builds the joins with all implied tables (if any).
+
+All the data is loaded into memory as columns with their respective db column or {char}sv values as the column names.
+
+At the moment we don't support loading database from {char}svs that don't have headers or have incomplete headers.
+
+**NOTE**: *That as of now mindsDB requires that the full dataset can be loaded into memory, in the future we might look into supporting very large datasets using something like apache drill to query a FS or db for the chunks of data we need in order to train and generate our statistical analysis*.
 
 
 ### StatsGenerator
@@ -36,7 +42,7 @@ Finally, the various stats are passed on as part of the metadata, so that furthe
 
 ### StatsLoader
 
-There are some transaction such as PREDICT where its assumed that the statistical information is already known, all we have to do is make sure we load the right statistics to the transaction BUS.
+There are some transaction such as PREDICT for which the statistical information should be already known from a previous TRAIN. This phase loads the right stats in the transaction metadata.
 
 ### DataVectorizer
 

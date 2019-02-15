@@ -111,9 +111,17 @@ This architecture is an ensemble of each input being connected to a fully connec
 
 ### EnsembleFullyConnectedNet
 
-This architecture is simiar to the *ensemble conv net*, with the exception that it has no convolutional layers from ensemble it goes straight to a fully connected stack. The calculation of the loss is the same as described in *ensemble conv net*.
+This architecture is similar to the *ensemble conv net*, with the exception that it has no convolutional layers from ensemble it goes straight to a fully connected stack. The calculation of the loss is the same as described in *ensemble conv net*.
 
 ![](https://docs.google.com/drawings/d/e/2PACX-1vSVkBw0t28xaIPF_8UiLmf5vGuArsICKrR-KfylzZKJbexQVo60meRWxas0rU_-9njN9t7xTPraySMn/pub?w=859&h=605)
+
+### ModelAnalyzer
+
+The model analyzer phase runs after training is done in order to gather insights about the model and gather insights about the data
+that we can only get post-training.
+
+At the moment, it contains the fitting for a  probabilistic model which is used to determine the accuracy of future prediction, based on the number of missing features and the bucket in which the predicted value falls.
+
 
 ### ModelPredictor
 The model predictor is called when the transaction is a *PREDICT* transaction. It loads the model with the highest $R^2$, the lookup for the models available is the columns in the input and output, it will look for models that match the same order in column names and data types. Once the Predictions are done, it replaces the predicted values in an output tensor (which is a copy of the input tensor).  

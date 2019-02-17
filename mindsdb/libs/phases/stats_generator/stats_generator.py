@@ -127,6 +127,12 @@ class StatsGenerator(BaseModule):
 
         # assume that the type is the one with the most prevelant type_dist
         for data_type in type_dist:
+            # If any of the members are text, use that data type, since otherwise the model will crash when casting
+            if data_type == DATA_TYPES.TEXT:
+                pass
+                curr_data_type = DATA_TYPES.TEXT
+                print(curr_data_type)
+                break
             if type_dist[data_type] > max_data_type:
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
@@ -556,7 +562,9 @@ class StatsGenerator(BaseModule):
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
 
-
+                if col_name == 'Ticket':
+                    print(col_name, data_type, data_type_dist)
+                    exit()
                 col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
 
                 y, x = np.histogram(col_data, 50, density=False)

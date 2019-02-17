@@ -13,7 +13,13 @@ the Phase Modules in the next section)
 
 ### DataExtractor
 
-It deals with taking a query and pulling the data from the various data-sources implied in the query, building the joins (if any) and loading the full result into memory. **NOTE**: *That as of now mindsDB requires that the full dataset can be loaded into memory*. To add flexibility right now we support [Apache Drill](https://drill.apache.org/) as a data aggregator.
+It deals with extracting inputs from various data-sources such as files, directories and SQL compatible databases. If input is a query, it builds the joins with all implied tables (if any).
+
+All the data is loaded into memory as columns with their respective db column or {char}sv values as the column names.
+
+At the moment we don't support loading database from {char}svs that don't have headers or have incomplete headers.
+
+**NOTE**: *That as of now mindsDB requires that the full dataset can be loaded into memory, in the future we might look into supporting very large datasets using something like apache drill to query a FS or db for the chunks of data we need in order to train and generate our statistical analysis*.
 
 
 ### StatsGenerator
@@ -36,7 +42,7 @@ Finally, the various stats are passed on as part of the metadata, so that furthe
 
 ### StatsLoader
 
-There are some transaction such as PREDICT where its assumed that the statistical information is already known, all we have to do is make sure we load the right statistics to the transaction BUS.
+There are some transaction such as PREDICT for which the statistical information should be already known from a previous TRAIN. This phase loads the right stats in the transaction metadata.
 
 ### DataVectorizer
 
@@ -105,9 +111,17 @@ This architecture is an ensemble of each input being connected to a fully connec
 
 ### EnsembleFullyConnectedNet
 
-This architecture is simiar to the *ensemble conv net*, with the exception that it has no convolutional layers from ensemble it goes straight to a fully connected stack. The calculation of the loss is the same as described in *ensemble conv net*.
+This architecture is similar to the *ensemble conv net*, with the exception that it has no convolutional layers from ensemble it goes straight to a fully connected stack. The calculation of the loss is the same as described in *ensemble conv net*.
 
 ![](https://docs.google.com/drawings/d/e/2PACX-1vSVkBw0t28xaIPF_8UiLmf5vGuArsICKrR-KfylzZKJbexQVo60meRWxas0rU_-9njN9t7xTPraySMn/pub?w=859&h=605)
+
+### ModelAnalyzer
+
+The model analyzer phase runs after training is done in order to gather insights about the model and gather insights about the data
+that we can only get post-training.
+
+At the moment, it contains the fitting for a  probabilistic model which is used to determine the accuracy of future prediction, based on the number of missing features and the bucket in which the predicted value falls.
+
 
 ### ModelPredictor
 The model predictor is called when the transaction is a *PREDICT* transaction. It loads the model with the highest $R^2$, the lookup for the models available is the columns in the input and output, it will look for models that match the same order in column names and data types. Once the Predictions are done, it replaces the predicted values in an output tensor (which is a copy of the input tensor).  

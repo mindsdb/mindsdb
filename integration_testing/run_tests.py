@@ -64,7 +64,6 @@ def test_one_label_prediction():
     mdb.learn(
         from_data=train_file_name,
         to_predict=label_name
-
     )
     print('!-------------  Learning ran successfully  -------------!')
 

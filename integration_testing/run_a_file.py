@@ -1,8 +1,8 @@
-import mindsdb
+from mindsdb import Predictor
 
 
-MindsDB().learn(
+mdb = Predictor(name='titanic_model')
+mdb.learn(
     from_data="train.csv",
-    predict='Survived',
-    model_name='titanic_model'
+    to_predict='Survived',
 )

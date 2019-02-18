@@ -204,7 +204,6 @@ class DataExtractor(BaseModule):
             length = len(self.transaction.input_data.all_indexes[key])
 
             if self.transaction.metadata.type == TRANSACTION_LEARN:
-
                 sample_size = int(calculate_sample_size(population_size=length,
                                                         margin_error=self.transaction.metadata.sample_margin_of_error,
                                                         confidence_level=self.transaction.metadata.sample_confidence_level))

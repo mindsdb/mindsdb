@@ -120,7 +120,6 @@ class StatsGenerator(BaseModule):
             if data_type == DATA_TYPES.TEXT:
                 pass
                 curr_data_type = DATA_TYPES.TEXT
-                print(curr_data_type)
                 break
             if type_dist[data_type] > max_data_type:
                 curr_data_type = data_type
@@ -293,7 +292,6 @@ class StatsGenerator(BaseModule):
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
             return {}
 
-        print(col_name, len(columns[col_name]))
         z_scores = list(map(abs,(st.zscore(columns[col_name]))))
         threshold = 3
         z_score_outlier_indexes = [i for i in range(len(z_scores)) if z_scores[i] > threshold]

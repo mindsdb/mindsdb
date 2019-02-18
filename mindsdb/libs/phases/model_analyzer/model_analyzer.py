@@ -4,6 +4,7 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.sampler import Sampler
 from mindsdb.libs.ml_models.pytorch.libs import base_model;
 from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
+from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import array_to_float_variable
 
 import pandas as pd
 
@@ -18,7 +19,7 @@ class ModelAnalyzer(BaseModule):
         validation_sampler = Sampler(self.transaction.model_data.validation_set, metadata_as_stored=self.transaction.persistent_model_metadata,
                                     ignore_types=self.transaction.data_model_object.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
 
-        validation_sampler.variable_wrapper = array_to_float_variable # it should be self.transaction.data_model_object.variable_wrapper but for some reason is passing a bound object method, figure it out, but for now this works
+        validation_sampler.variable_wrapper = array_to_float_variable
         '''
         @ <--- field ids is not yet set at this point
         bm = base_model.BaseModel(validation_sampler.getSampleBatch())
@@ -27,22 +28,39 @@ class ModelAnalyzer(BaseModule):
 
         probabilistic_validator = ProbabilisticValidator()
 
-        input = self.transaction.model_data.validation_set['ALL_ROWS_NO_GROUP_BY']
 
-
-        real_values = []
-        for col in self.transaction.metadata.model_predict_columns:
-            real_values.append(input[col])
-            input.pop(col, None)
-
-        # <--- Remove the pop and use bellow line if this is a pd dataframe instead
-        #features = input.drop(self.transaction.metadata.model_predict_columns, axis=1)
-        features = input
-
-        predictions = self.transaction.data_model_object.forward(features)
+        predictions = self.transaction.data_model_object.testModel(validation_sampler)
+        print(predictions.error)
+        print(predictions.accuracy)
+        print(predictions.predicted_targets)
+        print(predictions.real_targets)
+        exit()
         for col in predictions:
             for i in range(predictions[col]):
                 predicted = predictions[col][i]
                 real = real_values[i]
                 features = features_arr[i]
                 register_observation(features, real, predicted)
+
+
+def test():
+    from mindsdb.libs.controllers.predictor import Predictor
+    from mindsdb import CONFIG
+
+    CONFIG.DEBUG_BREAK_POINT = PHASE_MODEL_ANALYZER
+
+    mdb = Predictor(name='home_rentals')
+
+    mdb.learn(
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02,
+        stop_training_in_x_seconds=3
+    )
+
+
+
+# only run the test if this file is called from debugger
+if __name__ == "__main__":
+    test()

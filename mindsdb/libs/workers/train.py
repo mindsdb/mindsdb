@@ -47,7 +47,7 @@ class TrainWorker():
         self.config = config
         self.config_serialized = json.dumps(self.config)
         self.config_hash = hashtext(self.config_serialized)
-        self.stop_training_in_x_seconds = stop_training_in_x_seconds
+        self.stop_training_in_x_seconds = 1#stop_training_in_x_seconds
 
         # get basic variables defined
 

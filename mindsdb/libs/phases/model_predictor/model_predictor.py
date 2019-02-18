@@ -86,7 +86,7 @@ def test():
     from mindsdb.libs.controllers.predictor import Predictor
 
 
-    mdb = Predictor(name='home_retals')
+    mdb = Predictor(name='home_rentals')
 
     mdb.learn(
         from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",

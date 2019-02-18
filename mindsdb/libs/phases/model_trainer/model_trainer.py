@@ -83,7 +83,7 @@ def test():
 
     CONFIG.DEBUG_BREAK_POINT = PHASE_MODEL_TRAINER
 
-    mdb = Predictor(name='home_retals')
+    mdb = Predictor(name='home_rentals')
 
     mdb.learn(
         from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",

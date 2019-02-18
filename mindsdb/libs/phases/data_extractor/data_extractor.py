@@ -300,7 +300,7 @@ def test():
 
     CONFIG.DEBUG_BREAK_POINT = PHASE_DATA_EXTRACTOR
 
-    mdb = Predictor(name='home_retals')
+    mdb = Predictor(name='home_rentals')
 
 
     mdb.learn(

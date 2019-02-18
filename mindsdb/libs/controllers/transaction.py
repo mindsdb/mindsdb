@@ -178,7 +178,7 @@ class Transaction:
 
         self.metadata.model_predict_columns = self.persistent_model_metadata.predict_columns
         self.metadata.model_columns_map = self.persistent_model_metadata.train_metadata['model_columns_map']
-        self.metadata.model_when_conditions = {key if key not in self.metadata.model_columns_map else self.metadata.model_columns_map[key] : self.metadata.model_when_conditions[key] for key in self.metadata.model_when_conditions }
+        #self.metadata.model_when_conditions = {key if key not in self.metadata.model_columns_map else self.metadata.model_columns_map[key] : self.metadata.model_when_conditions[key] for key in self.metadata.model_when_conditions }
 
         self._call_phase_module('DataExtractor')
         if len(self.input_data.data_array[0])<=0:

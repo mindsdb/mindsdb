@@ -12,7 +12,13 @@ class ModelAnalyzer(BaseModule):
     phase_name = PHASE_MODEL_ANALYZER
 
     def run(self):
+        #for group in self.transaction.model_data.validation_set:
+        #columns = self.transaction.model_data.validation_set[group]
 
+        validation_sampler = Sampler(self.transaction.model_data.validation_set, metadata_as_stored=self.transaction.persistent_model_metadata,
+                                    ignore_types=self.transaction.data_model_object.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
+
+        validation_sampler.variable_wrapper = array_to_float_variable # it should be self.transaction.data_model_object.variable_wrapper but for some reason is passing a bound object method, figure it out, but for now this works
         '''
         @ <--- field ids is not yet set at this point
         bm = base_model.BaseModel(validation_sampler.getSampleBatch())

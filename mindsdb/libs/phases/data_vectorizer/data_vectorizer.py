@@ -14,7 +14,7 @@ from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 class DataVectorizer(BaseModule):
 
-    phase_name = PHASE_DATA_VECTORIZATION
+    phase_name = PHASE_DATA_VECTORIZER
 
 
     def run(self):
@@ -34,19 +34,16 @@ class DataVectorizer(BaseModule):
                 {
                     'name': 'test',
                     'subset_pointer': self.transaction.model_data.test_set,
-                    'map': self.transaction.model_data.test_set_map,
                     'indexes': self.transaction.input_data.test_indexes
                 },
                 {
                     'name': 'train',
                     'subset_pointer': self.transaction.model_data.train_set,
-                    'map': self.transaction.model_data.train_set_map,
                     'indexes': self.transaction.input_data.train_indexes
                 },
                 {
                     'name': 'validation',
                     'subset_pointer': self.transaction.model_data.validation_set,
-                    'map': self.transaction.model_data.validation_set_map,
                     'indexes': self.transaction.input_data.validation_indexes
                 }
             ]
@@ -55,7 +52,6 @@ class DataVectorizer(BaseModule):
                 {
                     'name': 'predict',
                     'subset_pointer': self.transaction.model_data.predict_set,
-                    'map': self.transaction.model_data.predict_set_map,
                     'indexes': self.transaction.input_data.all_indexes
                 }
             ]
@@ -91,7 +87,7 @@ class DataVectorizer(BaseModule):
 
 
 def test():
-    from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
+    from mindsdb.libs.controllers.mindsdb_controller import Mind as MindsDB
 
     mdb = MindsDB()
 
@@ -99,9 +95,9 @@ def test():
     mdb.learn(
         from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
         # the path to the file where we can learn from, (note: can be url)
-        predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
         model_name='home_rentals',  # the name of this model
-        breakpoint=PHASE_DATA_VECTORIZATION
+        breakpoint=PHASE_DATA_VECTORIZER
     )
 
 

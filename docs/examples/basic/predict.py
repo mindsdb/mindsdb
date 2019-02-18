@@ -6,16 +6,10 @@ The example code objective here is to predict the best retail price for a given 
 
 """
 
-from mindsdb import *
+from mindsdb import Predictor
 
-#
-
-
-# First we initiate MindsDB
-mdb = MindsDB()
-
-# Here we use the model to make predictions (NOTE: You need to run train.py first)
-result = mdb.predict(predict='rental_price', when={'number_of_rooms':2, 'sqft': 863, 'days_on_market':10}, model_name='home_rentals')
+# use the model to make predictions
+result = Predictor(name='home_rentals_price').predict(when={'number_of_rooms': 2,'number_of_bathrooms':1, 'sqft': 1190})
 
 # you can now print the results
 print('The predicted price is ${price} with {conf} confidence'.format(price=result.predicted_values[0]['rental_price'], conf=result.predicted_values[0]['prediction_confidence']))

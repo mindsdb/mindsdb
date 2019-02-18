@@ -31,7 +31,7 @@ import copy
 
 class TrainWorker():
 
-    def __init__(self, model_name, ml_model_name='pytorch.models.column_based_fcnn', config={}):
+    def __init__(self, model_name, ml_model_name='pytorch.models.column_based_fcnn', config={}, stop_training_in_x_seconds = None):
         """
 
         :param data:
@@ -47,6 +47,7 @@ class TrainWorker():
         self.config = config
         self.config_serialized = json.dumps(self.config)
         self.config_hash = hashtext(self.config_serialized)
+        self.stop_training_in_x_seconds = stop_training_in_x_seconds
 
         # get basic variables defined
 
@@ -65,7 +66,7 @@ class TrainWorker():
         self.ml_model_module = importlib.import_module(self.ml_model_module_path)
         self.ml_model_class = getattr(self.ml_model_module, self.ml_model_class_name)
 
-
+        self.train_init_time = None
 
 
         self.gfs_save_head_time = time.time() # the last time it was saved into GridFS, assume it was now
@@ -75,16 +76,13 @@ class TrainWorker():
         self.data = None
         self.train_sampler = None
 
-    def predict(self, data):
-
-        log.info('Starting model...')
-        self.data_model_object = self.ml_model_class.load_from_disk(file_ids=fs_file_ids)
 
     def train(self, data):
         """
 
         :return:
         """
+        self.train_init_time = time.time()
         self.data = data
         self.train_sampler = Sampler(self.data.train_set, metadata_as_stored=self.persistent_model_metadata,
                                      ignore_types=self.ml_model_class.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
@@ -140,7 +138,7 @@ class TrainWorker():
                             model_name=self.model_name, data_model=self.ml_model_name, config=self.ml_model_info.config_serialized))
 
                         # save model local file
-                        local_files = self.saveToDisk(local_files)
+                        local_files = self.save_to_disk(local_files)
                         # throttle model saving into GridFS to 10 minutes
                         # self.saveToGridFs(local_files, throttle=True)
 
@@ -148,10 +146,12 @@ class TrainWorker():
                         log.debug('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name, ml_model_name = self.ml_model_name))
 
                     # check if continue training
-                    if self.shouldContinue() == False:
+                    if self.should_continue() == False:
+                        # save model local file
+                        local_files = self.save_to_disk(local_files)
                         return self.data_model_object
                     # save/update model loss, error, confusion_matrix
-                    self.registerModelData(train_ret, test_ret, is_it_lowest_error_epoch)
+                    self.register_model_data(train_ret, test_ret, is_it_lowest_error_epoch)
 
             log.info('Loading model from store for retrain on new learning rate {lr}'.format(lr=self.data_model_object.learning_rates[i][LEARNING_RATE_INDEX]))
             # after its done with the first batch group, get the one with the lowest error and keep training
@@ -182,7 +182,7 @@ class TrainWorker():
         # self.saveToGridFs(local_files=local_files, throttle=False)
         return self.data_model_object
 
-    def registerModelData(self, train_ret, test_ret, lowest_error_epoch = False):
+    def register_model_data(self, train_ret, test_ret, lowest_error_epoch = False):
         """
         This method updates stats about the model, it's called on each epoch
 
@@ -214,7 +214,7 @@ class TrainWorker():
                 real_targets[col] = [denorm(row, self.persistent_model_metadata.column_stats[col]) for row in test_ret.real_targets[col]]
 
 
-            self.ml_model_info.confussion_matrices = self.calculateConfusionMatrices(real_targets, predicted_targets)
+            self.ml_model_info.confussion_matrices = self.calculate_confusion_matrices(real_targets, predicted_targets)
             self.ml_model_info.lowest_error = test_ret.error
             self.ml_model_info.predicted_targets = predicted_targets
             self.ml_model_info.real_targets = real_targets
@@ -229,7 +229,7 @@ class TrainWorker():
         return True
 
 
-    def calculateConfusionMatrices(self, real_targets, predicted_targets):
+    def calculate_confusion_matrices(self, real_targets, predicted_targets):
         """
         This calcilates confusion matrices for the realx_predicted
 
@@ -314,8 +314,8 @@ class TrainWorker():
 
         return confusion_matrices
 
-    def shouldContinue(self):
-        return False
+    def should_continue(self):
+
         """
         Check if the training should continue
         :return:
@@ -324,6 +324,11 @@ class TrainWorker():
         model_name = self.model_name
 
         # check if stop training is set in which case we should exit the training
+
+        if self.stop_training_in_x_seconds:
+            if time.time() - self.train_init_time > self.stop_training_in_x_seconds:
+                log.info('stop_training_in_x_seconds flag was passed and contition was met, thus, we are forcing training to stop now')
+                return False
 
         model_data = self.persistent_model_metadata.find_one({'model_name': self.model_name}) #type: PersistentModelMetadata
 
@@ -345,7 +350,7 @@ class TrainWorker():
 
         return True
 
-    def saveToDisk(self, local_files):
+    def save_to_disk(self, local_files):
         """
         This method persists model into disk, and removes previous stored files of this model
 
@@ -417,7 +422,7 @@ class TrainWorker():
 
 
     @staticmethod
-    def start(data, model_name, ml_model, config={}):
+    def start(data, model_name, ml_model, config={}, stop_training_in_x_seconds = None):
         """
         We use this worker to parallel train different data models and data model configurations
 
@@ -427,7 +432,7 @@ class TrainWorker():
         :param config: this is the hyperparameter config
         """
 
-        return TrainWorker(model_name, ml_model, config)
+        return TrainWorker(model_name, ml_model, config, stop_training_in_x_seconds)
 
 
 # TODO: Use ray

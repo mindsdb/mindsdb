@@ -1,14 +1,3 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
-
 import random
 import warnings
 from collections import Counter
@@ -548,7 +537,7 @@ class StatsGenerator(BaseModule):
 
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
-                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']:
+                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
                         col_data[i] = None
                     else:
                         try:
@@ -564,7 +553,7 @@ class StatsGenerator(BaseModule):
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
 
-                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
+                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
 
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
@@ -710,16 +699,23 @@ class StatsGenerator(BaseModule):
 
 
 def test():
-    from mindsdb import MindsDB
-    mdb = MindsDB()
+    from mindsdb.libs.controllers.predictor import Predictor
+    from mindsdb import CONFIG
 
-    # We tell mindsDB what we want to learn and from what data
+    CONFIG.DEBUG_BREAK_POINT = PHASE_STATS_GENERATOR
+
+    mdb = Predictor(name='home_rentals')
+
     mdb.learn(
         from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
         # the path to the file where we can learn from, (note: can be url)
-        predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        model_name='home_rentals',  # the name of this model
-        breakpoint=PHASE_STATS_GENERATOR)
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02
+    )
+
+
+
+
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

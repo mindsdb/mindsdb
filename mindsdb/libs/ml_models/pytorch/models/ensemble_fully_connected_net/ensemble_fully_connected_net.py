@@ -94,7 +94,7 @@ class EnsembleFullyConnectedNet(BaseModel):
             torch.nn.LeakyReLU()
         )
 
-        if USE_CUDA:
+        if CONFIG.USE_CUDA:
             self.regnet.cuda()
             for col in self.nets:
                 self.nets[col].cuda()
@@ -127,7 +127,7 @@ class EnsembleFullyConnectedNet(BaseModel):
         :param input: a pytorch tensor with the input data of a batch
         :return:
         """
-        if USE_CUDA:
+        if CONFIG.USE_CUDA:
             input.cuda()
 
         inner_outputs = []

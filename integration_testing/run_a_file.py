@@ -1,4 +1,5 @@
-from mindsdb import *
+import mindsdb
+
 
 MindsDB().learn(
     from_data="train.csv",

@@ -13,14 +13,15 @@ First, install mindsdb [installation guide](https://github.com/ZoranPandovski/mi
 ## Train model
 Create a new python file called train.py, and inside create new model:
 ```Python
-from mindsdb import *
+from mindsdb import Predictor
+
 
 # We tell mindsDB what we want to learn and from what data
-MindsDB().learn(
-    from_file='train.csv', # 
-    predict='SalePrice', 
-    model_name='kaggle_house_sale'
+Predictor(name='kaggle_house_prices').learn(
+    columns_to_predict='SalePrice', # the column we want to learn to predict given all the data in the file
+    from_data='train.csv' # the path to the file where we can learn from, (note: can be url)
 )
+
 ```
 * **from_file** shows mindsdb the path to the train.csv dataset
 * **predict** The column we want to learn to predict given all the data in the file. Note this column doesn't exist in train.csv

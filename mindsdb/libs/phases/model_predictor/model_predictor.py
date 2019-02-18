@@ -83,13 +83,21 @@ class ModelPredictor(BaseModule):
         return "{0:.2f}".format(confidence)
 
 def test():
+    from mindsdb.libs.controllers.predictor import Predictor
 
-    from mindsdb.libs.controllers.mindsdb_controller import Mind as MindsDB
-    from mindsdb.libs.data_types.mindsdb_logger import log
 
-    mdb = MindsDB()
-    ret = mdb.predict(predict='position', when={'max_time_rec': 700}, model_name='mdsb_model')
-    log.info(ret)
+    mdb = Predictor(name='home_retals')
+
+    mdb.learn(
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        columns_to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02
+    )
+
+    a = mdb.predict(when={'number_of_rooms': 10})
+
+    print(a.predicted_values)
 
 
 # only run the test if this file is called from debugger

@@ -34,14 +34,13 @@ To **train a model**:
 
 ```python
 
-from mindsdb import *
+from mindsdb import Predictor
 
 
 # We tell mindsDB what we want to learn and from what data
-MindsDB().learn(
-    from_data="home_rentals.csv", # the path to the file where we can learn from, (note: can be url)
-    predict='rental_price', # the column we want to learn to predict given all the data in the file
-    model_name='home_rentals' # the name of this model
+Predictor(name='home_rentals_price').learn(
+    columns_to_predict='rental_price', # the column we want to learn to predict given all the data in the file
+    from_data="home_rentals.csv" # the path to the file where we can learn from, (note: can be url)
 )
 
 ```
@@ -52,10 +51,10 @@ To **use the model**:
 
 ```python
 
-from mindsdb import *
+from mindsdb import Predictor
 
 # use the model to make predictions
-result = MindsDB().predict(predict='rental_price', when={'number_of_rooms': 2,'number_of_bathrooms':1, 'sqft': 1190}, model_name='home_rentals')
+result = Predictor(name='home_rentals_price').predict(when={'number_of_rooms': 2,'number_of_bathrooms':1, 'sqft': 1190})
 
 # you can now print the results
 print('The predicted price is ${price} with {conf} confidence'.format(price=result.predicted_values[0]['rental_price'], conf=result.predicted_values[0]['prediction_confidence']))

@@ -25,7 +25,7 @@ def test():
 
     from mindsdb.libs.test.test_controller import TestController
 
-    module = TestController('CREATE MODEL FROM (SELECT * FROM Uploads.views.tweets2 LIMIT 100) AS tweets4 PREDICT likes', PHASE_DATA_EXTRACTION)
+    module = TestController('CREATE MODEL FROM (SELECT * FROM Uploads.views.tweets2 LIMIT 100) AS tweets4 PREDICT likes', PHASE_DATA_EXTRACTOR)
 
     return
 

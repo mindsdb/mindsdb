@@ -46,9 +46,21 @@ class DataDevectorizer(BaseModule):
 
 
 def test():
-    from mindsdb.libs.test.test_controller import TestController
-    module = TestController('CREATE MODEL FROM (SELECT * FROM Uploads.views.diamonds) AS diamonds PREDICT price', PHASE_DATA_DEVECTORIZATION)
-    return
+    from mindsdb.libs.controllers.predictor import Predictor
+    from mindsdb import CONFIG
+
+    CONFIG.DEBUG_BREAK_POINT = PHASE_DATA_VECTORIZER
+
+    mdb = Predictor(name='home_retals')
+
+    mdb.learn(
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        columns_to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02
+    )
+
+
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

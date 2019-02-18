@@ -78,26 +78,20 @@ class ModelTrainer(BaseModule):
 
 
 def test():
-    from mindsdb.libs.controllers.mindsdb_controller import Mind as MindsDB
+    from mindsdb.libs.controllers.predictor import Predictor
+    from mindsdb import CONFIG
 
-    mdb = MindsDB()
+    CONFIG.DEBUG_BREAK_POINT = PHASE_MODEL_TRAINER
+
+    mdb = Predictor(name='home_retals')
+
     mdb.learn(
-        from_query='''
-            select
-                id,
-                max_time_rec,
-                min_time_rec,
-
-                position
-            from position_target_table
-        ''',
-        from_file=CONFIG.MINDSDB_STORAGE_PATH+'/position_target_table.csv',
-        group_by='id',
-        order_by=['max_time_rec'],
-        columns_to_predict='position',
-        model_name='mdsb_model',
-        breakpoint=PHASE_MODEL_TRAINER
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        columns_to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02
     )
+
 
 
 # only run the test if this file is called from debugger

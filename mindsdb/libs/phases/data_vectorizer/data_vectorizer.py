@@ -14,7 +14,7 @@ from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 class DataVectorizer(BaseModule):
 
-    phase_name = PHASE_DATA_VECTORIZATION
+    phase_name = PHASE_DATA_VECTORIZER
 
 
     def run(self):
@@ -101,7 +101,7 @@ def test():
         # the path to the file where we can learn from, (note: can be url)
         columns_to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
         model_name='home_rentals',  # the name of this model
-        breakpoint=PHASE_DATA_VECTORIZATION
+        breakpoint=PHASE_DATA_VECTORIZER
     )
 
 

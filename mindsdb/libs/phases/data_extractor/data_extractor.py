@@ -15,7 +15,7 @@ import pandas
 
 class DataExtractor(BaseModule):
 
-    phase_name = PHASE_DATA_EXTRACTION
+    phase_name = PHASE_DATA_EXTRACTOR
 
     def _get_data_frame_from_when_conditions(self, train_metadata):
         """
@@ -296,26 +296,22 @@ class DataExtractor(BaseModule):
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor
-
     from mindsdb import CONFIG
 
-    #CONFIG.DEBUG_BREAK_POINT =
+    CONFIG.DEBUG_BREAK_POINT = PHASE_DATA_EXTRACTOR
 
     mdb = Predictor(name='home_retals')
 
-    # We tell mindsDB what we want to learn and from what data
-    # mdb.learn(
-    #     from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
-    #     # the path to the file where we can learn from, (note: can be url)
-    #     columns_to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
-    #
-    #     sample_margin_of_error=0.02
-    # )
+
+    mdb.learn(
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        columns_to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02
+    )
 
 
-    a = mdb.predict(when={'number_of_rooms':10})
 
-    print(a.predicted_values)
 
 
 

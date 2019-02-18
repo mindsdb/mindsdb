@@ -304,6 +304,7 @@ class StatsGenerator(BaseModule):
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
             return {}
 
+        print(col_name, len(columns[col_name]))
         z_scores = list(map(abs,(st.zscore(columns[col_name]))))
         threshold = 3
         z_score_outlier_indexes = [i for i in range(len(z_scores)) if z_scores[i] > threshold]
@@ -527,6 +528,7 @@ class StatsGenerator(BaseModule):
                 column_count[column] += 1
         stats = {}
 
+        col_data_dict = {}
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
@@ -562,9 +564,6 @@ class StatsGenerator(BaseModule):
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
 
-                if col_name == 'Ticket':
-                    print(col_name, data_type, data_type_dist)
-                    exit()
                 col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
 
                 y, x = np.histogram(col_data, 50, density=False)
@@ -677,15 +676,15 @@ class StatsGenerator(BaseModule):
             stats[col_name]['column'] = col_name
             stats[col_name]['empty_cells'] = empty_count[col_name]
             stats[col_name]['empty_percentage'] = empty_count[col_name] * 100 / column_count[col_name]
-
+            col_data_dict[col_name] = col_data
 
         for i, col_name in enumerate(all_sampled_data):
             stats[col_name].update(self._compute_duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_empty_cells_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_data_type_dist_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_z_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_lof_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_z_score(stats, col_data_dict, col_name))
+            stats[col_name].update(self._compute_lof_score(stats, col_data_dict, col_name))
             stats[col_name].update(self._compute_similariy_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_value_distribution_score(stats, all_sampled_data, col_name))
 

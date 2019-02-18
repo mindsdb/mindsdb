@@ -42,14 +42,6 @@ class DataExtractor(BaseModule):
 
         return result
 
-    def _apply_when_conditions_to_df(self, df):
-        """
-        :param df:
-        :return:
-        """
-        when_conditions = self.transaction.metadata.model_when_conditions
-        # TODO: Apply the when conditions
-        return df
 
     def _apply_sort_conditions_to_df(self, df, train_metadata):
         """
@@ -94,12 +86,14 @@ class DataExtractor(BaseModule):
 
         # if this is a predict statement, create use model_when_conditions to shape the dataframe
         if  self.transaction.metadata.type == TRANSACTION_PREDICT:
-            if self.transaction.metadata.model_when_conditions is not None:
+            if self.transaction.metadata.when_data is not None:
+                df = self.transaction.metadata.when_data
+                df = df.where((pandas.notnull(df)), None)
+
+            elif self.transaction.metadata.model_when_conditions is not None:
                 # if no data frame yet, make one
-                if df is None:
-                    df = self._get_data_frame_from_when_conditions(train_metadata)
-                else:
-                    df = self._apply_when_conditions_to_df(df)
+                df = self._get_data_frame_from_when_conditions(train_metadata)
+
 
         # if by now there is no DF, throw an error
         if df is None:
@@ -319,7 +313,9 @@ def test():
     # )
 
 
-    mdb.predict(when={'number_of_rooms':10})
+    a = mdb.predict(when={'number_of_rooms':10})
+
+    print(a.predicted_values)
 
 
 

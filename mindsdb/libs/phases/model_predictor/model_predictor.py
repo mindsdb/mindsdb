@@ -42,20 +42,19 @@ class ModelPredictor(BaseModule):
                     #TODO: This may be calculated just as j+offset
                     if not cell:
                         continue
-                    actual_row = self.transaction.model_data.predict_set_map[group_pointer][j+offset]
-                    if not self.transaction.output_data.data_array[actual_row][col_index] or self.transaction.output_data.data_array[actual_row][col_index] == '':
 
-                        if self.transaction.persistent_model_metadata.column_stats[col][KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
-                            target_val = np.format_float_positional(cell, precision=2)
-                        else:
-                            target_val = cell
-                        self.transaction.output_data.data_array[actual_row][col_index] = target_val
-                        confidence = self.getConfidence(cell,confusion_matrix)
-                        #randConfidence = random.uniform(0.85, 0.93)
-
-                        self.transaction.output_data.data_array[actual_row].insert(col_index + 1, confidence)
+                    actual_row = j + offset
+                    confidence = self.getConfidence(cell, confusion_matrix)
+                    if self.transaction.persistent_model_metadata.column_stats[col][
+                        KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+                        target_val = np.format_float_positional(cell, precision=2)
                     else:
-                        self.transaction.output_data.data_array[actual_row].insert(col_index+1,1.0)
+                        target_val = cell
+
+                    self.transaction.output_data.data_array[actual_row].insert(col_index + 1, confidence)
+                    self.transaction.output_data.data_array[actual_row][col_index] = target_val
+
+
 
 
         total_time = time.time() - self.train_start_time

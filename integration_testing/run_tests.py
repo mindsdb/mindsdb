@@ -60,7 +60,7 @@ def test_one_label_prediction():
     columns_to_file(columns_train, train_file_name, separator)
     columns_to_file(columns_test, test_file_name, separator)
 
-    mdb = mindsdb.Predictor(name='test_one_label_prediction', log_level=mindsdb.CONST.INFO_LOG_LEVEL, send_logs=False)
+    mdb = mindsdb.Predictor(name='test_one_label_prediction', log_level=mindsdb.CONST.INFO_LOG_LEVEL)
     mdb.learn(
         from_data=train_file_name,
         to_predict=label_name

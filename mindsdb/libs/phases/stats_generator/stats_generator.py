@@ -537,7 +537,7 @@ class StatsGenerator(BaseModule):
 
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
-                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']:
+                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
                         col_data[i] = None
                     else:
                         try:
@@ -553,7 +553,7 @@ class StatsGenerator(BaseModule):
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
 
-                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
+                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
 
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0

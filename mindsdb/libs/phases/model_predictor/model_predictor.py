@@ -20,7 +20,11 @@ class ModelPredictor(BaseModule):
         # We moved everything to a worker so we can run many of these in parallel
         # Todo: use Ray https://github.com/ray-project/tutorial
 
-        ret_diffs = PredictWorker.start(model_name=model_name, data=self.transaction.model_data)
+        # cache object
+        if self.transaction.session.predict_worker is None:
+            self.transaction.session.predict_worker = PredictWorker.get_worker_object(model_name=model_name)
+
+        ret_diffs = self.transaction.session.predict_worker.predict(data=self.transaction.model_data)
 
 
         confusion_matrices = self.transaction.persistent_ml_model_info.confussion_matrices

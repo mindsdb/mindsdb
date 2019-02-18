@@ -35,6 +35,7 @@ class Predictor:
         self.name = name
         self.root_folder = root_folder
         self.uuid = str(uuid.uuid1())
+        self.predict_worker = None
 
         # initialize log
         self.log = MindsdbLogger(log_level=log_level, send_logs=False, log_url=log_server, uuid=self.uuid)
@@ -167,12 +168,14 @@ class Predictor:
         Transaction(session=self, transaction_metadata=transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
-    def predict(self, when={}, when_data = None):
+    def predict(self, when={}, when_data = None, update_cached_model = False):
         """
         You have a mind trained already and you want to make a prediction
 
         :param when: use this if you have certain conditions for a single prediction
         :param when_data: (optional) use this when you have data in either a file, a pandas data frame, or url to a file that you want to predict from
+        :param update_cached_model: (optional, default:False) when you run predict for the first time, it loads the latest model in memory, you can force it to do this on this run by flipping it to True
+
         :return: TransactionOutputData object
         """
 
@@ -182,6 +185,9 @@ class Predictor:
 
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = self.name
+
+        if update_cached_model:
+            self.predict_worker = None
 
         # lets turn into lists: when
         when = [when] if type(when) in [type(None), type({})] else when

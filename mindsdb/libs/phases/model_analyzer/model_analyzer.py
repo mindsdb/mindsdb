@@ -31,7 +31,7 @@ class ModelAnalyzer(BaseModule):
 
         # <--- Remove the pop and use bellow line if this is a pd dataframe instead
         #features = input.drop(self.transaction.metadata.model_predict_columns, axis=1)
-        features_arr = input
+        features = input
 
         predictions = self.transaction.data_model_object.forward(features)
         for col in predictions:

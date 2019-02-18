@@ -87,7 +87,6 @@ class FullyConnectedBucketsNet(BaseModel):
         :return:
         """
         output = self.net(input)
-
         if return_bucket_outputs is False:
 
             return output

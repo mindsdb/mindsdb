@@ -8,6 +8,11 @@ from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import array_to_float_var
 
 import pandas as pd
 
+
+#@TODO: Use Histogram in the probabilistic validator
+#@TODO: Pass features to probbabilistic validator
+#@TODO: Define a way to save self.transaction.probabilistic_validator
+#@TODO If ran during a `predict` load the self.transaction.probabilistic_validator and use evaluate_prediction_accuracy
 class ModelAnalyzer(BaseModule):
 
     phase_name = PHASE_MODEL_ANALYZER
@@ -26,7 +31,7 @@ class ModelAnalyzer(BaseModule):
         self.data_model_object = bm.load_from_disk(file_ids=self.transaction.persistent_ml_model_info.fs_file_ids)
         '''
 
-        probabilistic_validator = ProbabilisticValidator()
+        self.transaction.probabilistic_validator = ProbabilisticValidator()
 
 
         predictions = self.transaction.data_model_object.testModel(validation_sampler)
@@ -34,14 +39,12 @@ class ModelAnalyzer(BaseModule):
         print(predictions.accuracy)
         print(predictions.predicted_targets)
         print(predictions.real_targets)
-        exit()
-        for col in predictions:
-            for i in range(predictions[col]):
-                predicted = predictions[col][i]
-                real = real_values[i]
-                features = features_arr[i]
-                register_observation(features, real, predicted)
 
+        for k in predictions.predicted_targets:
+            for i in range(len(predictions.predicted_targets[k])):
+                self.transaction.probabilistic_validator.register_observation(features=[],
+                real_value=predictions.real_targets[k][i][0], predicted_value=predictions.predicted_targets[k][i][0])
+                print(self.transaction.probabilistic_validator.evaluate_prediction_accuracy([],predictions.predicted_targets[k][i][0]))
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

@@ -54,7 +54,7 @@ class ProbabilisticValidator():
         X = feature_existence
         X.append(predicted_value_b)
 
-        return self._probabilistic_model.predict_proba(np.array(X).reshape(1,-1))[0][1]
+        return self._probabilistic_model.predict_proba(np.array(X).reshape(1,-1))[0]#[1]
 
 
 if __name__ == "__main__":

@@ -218,8 +218,6 @@ class BaseModel(nn.Module):
                 log.debug('[EPOCH-BATCH] testing batch: {batch_number}'.format(batch_number=batch_number))
                 # get real and predicted values by running the model with the input of this batch
                 predicted_target = self.forwardWrapper(batch)
-                print(predicted_target)
-                exit()
                 real_target = batch.getTarget(flatten=self.flatTarget)
                 # append to all targets and all real values
                 real_target_all += real_target.data.tolist()

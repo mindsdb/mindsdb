@@ -18,27 +18,26 @@ from mindsdb.libs.constants.mindsdb import *
 
 from pathlib import Path
 
-class Mind:
+class Predictor:
 
-    def __init__(self, mind_name, mind_root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL, send_logs=CONFIG.SEND_LOGS, log_url=CONFIG.MINDSDB_SERVER_URL):
+    def __init__(self, name, root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL, log_server =CONFIG.MINDSDB_SERVER_URL):
         """
         This controller defines the API to a MindsDB 'mind', a mind is an object that can learn and predict from data
 
-        :param mind_name: the name you want to identify this mind with
-        :param mind_root_folder: the folder where you want to store this mind or load from
+        :param name: the namespace you want to identify this mind instance with
+        :param root_folder: the folder where you want to store this mind or load from
         :param log_level: the desired log level
-        :param send_logs: if you want to stream logs to a given server (default: False)
-        :param log_url: the server you want to stream logs to for visualization (only if send_logs is TRUE)
+        :param log_server: the url for a server that can accept log streams
 
         """
 
         # initialize variables
-        self.mind_name = mind_name
-        self.mind_root_folder = mind_root_folder
-        self.mind_uuid = str(uuid.uuid1())
+        self.name = name
+        self.root_folder = root_folder
+        self.uuid = str(uuid.uuid1())
 
         # initialize log
-        self.log = MindsdbLogger(log_level=log_level, send_logs=send_logs, log_url=log_url, uuid=self.mind_uuid)
+        self.log = MindsdbLogger(log_level=log_level, send_logs=False, log_url=log_server, uuid=self.uuid)
 
         # check for updates
         _thread.start_new_thread(check_for_updates, ())
@@ -85,18 +84,8 @@ class Mind:
         """
         pass
 
-    def update(self, from_data):
-        """
-        Use this if you have new data that you want your mind object to learn from
 
-        :param from_data: the data that you want to learn from, this can be either a file, a pandas data frame, or url to a file
-
-        :return:
-        """
-
-        pass
-
-    def learn(self, columns_to_predict, from_data = None,  test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL,  ignore_columns = [], rename_strange_columns = False):
+    def learn(self, columns_to_predict, from_data = None,  test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL,  ignore_columns = [], rename_strange_columns = False, send_logs=CONFIG.SEND_LOGS):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -121,7 +110,7 @@ class Mind:
         :param sample_confidence_level (DEFAULT 0.98): number in the interval (0, 1) If we were to draw a large number of equal-size samples from the population, the true population parameter should lie within this percentage of the intervals (sample_parameter - e, sample_parameter + e) where e is the margin_error.
 
         Optional debug arguments:
-        :param breakpoint: If you want the learn process to stop at a given 'PHASE' checkout libs/phases
+        :param send_logs: If you want to stream these logs to a server
 
 
         :return:
@@ -161,7 +150,7 @@ class Mind:
             self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
         transaction_metadata = TransactionMetadata()
-        transaction_metadata.model_name = self.mind_name
+        transaction_metadata.model_name = self.name
         transaction_metadata.model_predict_columns = predict_columns
         transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
         transaction_metadata.model_group_by = group_by
@@ -192,10 +181,10 @@ class Mind:
         from_ds = None if when_data is None else getDS(when_data)
 
         transaction_metadata = TransactionMetadata()
-        transaction_metadata.model_name = self.mind_name
+        transaction_metadata.model_name = self.name
 
         # lets turn into lists: when
-        when = when if type(when) in [type(None), type({})] else [when]
+        when = [when] if type(when) in [type(None), type({})] else when
 
 
         # This will become irrelevant as if we have trained a model with a predict we just need to pass when or from_data

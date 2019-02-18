@@ -315,7 +315,7 @@ class TrainWorker():
         return confusion_matrices
 
     def shouldContinue(self):
-        return False
+
         """
         Check if the training should continue
         :return:

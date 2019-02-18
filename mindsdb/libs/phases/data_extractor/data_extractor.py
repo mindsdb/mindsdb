@@ -24,7 +24,7 @@ class DataExtractor(BaseModule):
         :return:
         """
 
-        columns = train_metadata.columns
+        columns = self.transaction.persistent_model_metadata.columns
         when_conditions = self.transaction.metadata.model_when_conditions
 
         when_conditions_list = []
@@ -96,7 +96,7 @@ class DataExtractor(BaseModule):
         if  self.transaction.metadata.type == TRANSACTION_PREDICT:
             if self.transaction.metadata.model_when_conditions is not None:
                 # if no data frame yet, make one
-                if df is not None:
+                if df is None:
                     df = self._get_data_frame_from_when_conditions(train_metadata)
                 else:
                     df = self._apply_when_conditions_to_df(df)
@@ -301,20 +301,25 @@ class DataExtractor(BaseModule):
 
 
 def test():
-    from mindsdb.libs.controllers.mindsdb_controller import Mind as MindsDB
+    from mindsdb.libs.controllers.predictor import Predictor
 
+    from mindsdb import CONFIG
 
-    mdb = MindsDB()
+    #CONFIG.DEBUG_BREAK_POINT =
+
+    mdb = Predictor(name='home_retals')
 
     # We tell mindsDB what we want to learn and from what data
-    mdb.learn(
-        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
-        # the path to the file where we can learn from, (note: can be url)
-        columns_to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        model_name='home_rentals',  # the name of this model
-        breakpoint = PHASE_DATA_EXTRACTION,
-        sample_margin_of_error=0.02
-    )
+    # mdb.learn(
+    #     from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+    #     # the path to the file where we can learn from, (note: can be url)
+    #     columns_to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+    #
+    #     sample_margin_of_error=0.02
+    # )
+
+
+    mdb.predict(when={'number_of_rooms':10})
 
 
 

@@ -7,8 +7,8 @@ import mindsdb.libs.constants.mindsdb as CONST
 
 from mindsdb.libs.data_types.data_source import DataSource
 from mindsdb.libs.data_sources import *
-from mindsdb.libs.controllers.mind import Mind
+from mindsdb.libs.controllers.predictor import Predictor
 
 name = "mindsdb"
-MindsDB = Mind
+MindsDB = Predictor
 MDS = DataSource # A Mindsdb Data Source

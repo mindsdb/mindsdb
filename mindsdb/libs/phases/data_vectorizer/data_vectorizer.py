@@ -34,19 +34,16 @@ class DataVectorizer(BaseModule):
                 {
                     'name': 'test',
                     'subset_pointer': self.transaction.model_data.test_set,
-                    'map': self.transaction.model_data.test_set_map,
                     'indexes': self.transaction.input_data.test_indexes
                 },
                 {
                     'name': 'train',
                     'subset_pointer': self.transaction.model_data.train_set,
-                    'map': self.transaction.model_data.train_set_map,
                     'indexes': self.transaction.input_data.train_indexes
                 },
                 {
                     'name': 'validation',
                     'subset_pointer': self.transaction.model_data.validation_set,
-                    'map': self.transaction.model_data.validation_set_map,
                     'indexes': self.transaction.input_data.validation_indexes
                 }
             ]
@@ -55,7 +52,6 @@ class DataVectorizer(BaseModule):
                 {
                     'name': 'predict',
                     'subset_pointer': self.transaction.model_data.predict_set,
-                    'map': self.transaction.model_data.predict_set_map,
                     'indexes': self.transaction.input_data.all_indexes
                 }
             ]

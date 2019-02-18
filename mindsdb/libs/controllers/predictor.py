@@ -86,12 +86,12 @@ class Predictor:
         pass
 
 
-    def learn(self, columns_to_predict, from_data = None,  test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL,  ignore_columns = [], rename_strange_columns = False, send_logs=CONFIG.SEND_LOGS):
+    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, ignore_columns = [], rename_strange_columns = False, send_logs=CONFIG.SEND_LOGS):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
         Mandatory arguments:
-        :param columns_to_predict: what column or columns you want to predict
+        :param to_predict: what column or columns you want to predict
         :param from_data: the data that you want to learn from, this can be either a file, a pandas data frame, or url to a file
 
         Optional arguments:
@@ -126,7 +126,7 @@ class Predictor:
         predict_columns_map = {}
 
         # lets turn into lists: predict, order_by and group by
-        predict_columns = [columns_to_predict] if type(columns_to_predict) != type([]) else columns_to_predict
+        predict_columns = [to_predict] if type(to_predict) != type([]) else to_predict
         group_by = group_by if type(group_by) == type([]) else [group_by] if group_by else []
         order_by = order_by if type(order_by) == type([]) else [order_by] if group_by else []
 

@@ -1,11 +1,9 @@
+from mindsdb import Predictor
 
-from mindsdb import *
 
-
-MindsDB().learn(
-    columns_to_predict='Main_Engine_Fuel_Consumption_MT_day',
+Predictor(name='fuel').learn(
+    to_predict='Main_Engine_Fuel_Consumption_MT_day',
     from_data = 'fuel.csv',
-    model_name='fuel',
 
     # Time series arguments:
 
@@ -13,9 +11,4 @@ MindsDB().learn(
     group_by='id',
     window_size=24, # just 24 hours
 
-    # other arguments
-    ignore_columns = ['Row_Number']
 )
-
-
-

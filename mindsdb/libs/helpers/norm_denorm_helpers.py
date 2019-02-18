@@ -62,7 +62,7 @@ def norm(value, cell_stats):
 
     if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
 
-        if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
+        if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA','null'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
             return [0, 0]
 

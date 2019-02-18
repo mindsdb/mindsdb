@@ -1,4 +1,4 @@
-from .data_generators import *
+from data_generators import *
 import sys
 import os
 import itertools

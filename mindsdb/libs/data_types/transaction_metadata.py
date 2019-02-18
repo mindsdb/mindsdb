@@ -25,6 +25,7 @@ class TransactionMetadata(ObjectDict):
         self.ignore_columns = []
         self.sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR
         self.sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL
+        self.stop_training_in_x_seconds = None
 
 
 

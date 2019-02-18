@@ -86,7 +86,7 @@ class Predictor:
         pass
 
 
-    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL, ignore_columns = [], rename_strange_columns = False, send_logs=CONFIG.SEND_LOGS):
+    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False, stop_training_in_x_seconds = None, send_logs=CONFIG.SEND_LOGS):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -108,11 +108,10 @@ class Predictor:
 
         Optional sampling parameters:
         :param sample_margin_error (DEFAULT 0): Maximum expected difference between the true population parameter, such as the mean, and the sample estimate.
-        :param sample_confidence_level (DEFAULT 0.98): number in the interval (0, 1) If we were to draw a large number of equal-size samples from the population, the true population parameter should lie within this percentage of the intervals (sample_parameter - e, sample_parameter + e) where e is the margin_error.
 
         Optional debug arguments:
         :param send_logs: If you want to stream these logs to a server
-
+        :param stop_training_in_x_seconds: (default None), if set, you want training to finish in a given number of seconds
 
         :return:
         """
@@ -122,7 +121,7 @@ class Predictor:
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
         breakpoint = CONFIG.DEBUG_BREAK_POINT
         transaction_type = TRANSACTION_LEARN
-
+        sample_confidence_level = 1 - sample_margin_of_error
         predict_columns_map = {}
 
         # lets turn into lists: predict, order_by and group by
@@ -164,6 +163,7 @@ class Predictor:
         transaction_metadata.ignore_columns = ignore_columns
         transaction_metadata.sample_margin_of_error = sample_margin_of_error
         transaction_metadata.sample_confidence_level = sample_confidence_level
+        transaction_metadata.stop_training_in_x_seconds = stop_training_in_x_seconds
 
         Transaction(session=self, transaction_metadata=transaction_metadata, logger=self.log, breakpoint=breakpoint)
 

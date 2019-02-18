@@ -62,12 +62,12 @@ class ModelTrainer(BaseModule):
             ml_model = ml_model_data[0]
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False or len(ml_models) == 1:
-                train_worker = TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=ml_model, config=config)
+                train_worker = TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=ml_model, config=config, stop_training_in_x_seconds=self.transaction.metadata.stop_training_in_x_seconds)
                 self.transaction.data_model_object = train_worker.train(self.transaction.model_data)
             else:
                 # Todo: use Ray https://github.com/ray-project/tutorial
                 # Before moving to actual workers: MUST FIND A WAY TO SEND model data to the worker in an efficient way first
-                _thread.start_new_thread(TrainWorker.start, (self.transaction.model_data, model_name, ml_model, config))
+                _thread.start_new_thread(TrainWorker.start, (self.transaction.model_data, model_name, ml_model, config, self.transaction.metadata.stop_training_in_x_seconds))
             # return
 
         total_time = time.time() - self.train_start_time
@@ -89,7 +89,8 @@ def test():
         from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
         # the path to the file where we can learn from, (note: can be url)
         to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        sample_margin_of_error=0.02
+        sample_margin_of_error=0.02,
+        stop_training_in_x_seconds=10
     )
 
 

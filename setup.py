@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 with open('requirements.txt') as req_file:
     requirements = req_file.read().splitlines()
-
+print(mindsdb_version)
 setuptools.setup(
     name="mindsdb",
     version=mindsdb_version,

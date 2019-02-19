@@ -1,4 +1,8 @@
-
+integration_testing/*.csv
+integration_testing/*.tsv
+integration_testing/*.sql
+test_data.csv
+train_data.csv
 *.ipy*
 *.test.*
 .cache*
@@ -34,6 +38,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+share/python-wheels/
 
 # visual studio code
 .DStore
@@ -51,4 +56,3 @@ ENV/
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
-

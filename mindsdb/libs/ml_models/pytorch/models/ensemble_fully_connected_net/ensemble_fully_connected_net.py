@@ -127,6 +127,9 @@ class EnsembleFullyConnectedNet(BaseModel):
         :param input: a pytorch tensor with the input data of a batch
         :return:
         """
+        if USE_CUDA:
+            input.cuda()
+
         inner_outputs = []
 
         for col in self.ordered_cols:
@@ -162,9 +165,3 @@ class EnsembleFullyConnectedNet(BaseModel):
             return output, inner_outputs
         else:
             return output
-
-
-
-
-
-

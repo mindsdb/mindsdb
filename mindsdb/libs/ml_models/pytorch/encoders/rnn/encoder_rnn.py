@@ -1,7 +1,10 @@
+from mindsdb.config import USE_CUDA
+
 import torch.nn as nn
 import torch
 
-device = "cpu" #torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+device = 'cuda' if USE_CUDA else 'cpu'
 
 class EncoderRNN(nn.Module):
     def __init__(self, input_size, hidden_size):
@@ -18,4 +21,4 @@ class EncoderRNN(nn.Module):
         return output, hidden
 
     def initHidden(self):
-        return torch.zeros(1, 1, self.hidden_size)#, device=device)
+        return torch.zeros(1, 1, self.hidden_size, device=device)

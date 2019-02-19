@@ -490,7 +490,6 @@ class StatsGenerator(BaseModule):
 
 
             #Compound scores
-
             if col_stats['consistency_score'] > 0.25:
                 self.log.warning(f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info')
 

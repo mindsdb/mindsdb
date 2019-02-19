@@ -1,10 +1,10 @@
-from mindsdb.config import USE_CUDA
+from mindsdb.config import CONFIG
 
 import torch.nn as nn
 import torch
 
 
-device = 'cuda' if USE_CUDA else 'cpu'
+device = 'cuda' if CONFIG.USE_CUDA else 'cpu'
 
 class EncoderRNN(nn.Module):
     def __init__(self, input_size, hidden_size):

@@ -1,14 +1,3 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
-
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.workers.predict import PredictWorker
@@ -31,7 +20,11 @@ class ModelPredictor(BaseModule):
         # We moved everything to a worker so we can run many of these in parallel
         # Todo: use Ray https://github.com/ray-project/tutorial
 
-        ret_diffs = PredictWorker.start(model_name=model_name, data=self.transaction.model_data)
+        # cache object
+        if self.transaction.session.predict_worker is None:
+            self.transaction.session.predict_worker = PredictWorker.get_worker_object(model_name=model_name)
+
+        ret_diffs = self.transaction.session.predict_worker.predict(data=self.transaction.model_data)
 
 
         confusion_matrices = self.transaction.persistent_ml_model_info.confussion_matrices
@@ -53,20 +46,19 @@ class ModelPredictor(BaseModule):
                     #TODO: This may be calculated just as j+offset
                     if not cell:
                         continue
-                    actual_row = self.transaction.model_data.predict_set_map[group_pointer][j+offset]
-                    if not self.transaction.output_data.data_array[actual_row][col_index] or self.transaction.output_data.data_array[actual_row][col_index] == '':
 
-                        if self.transaction.persistent_model_metadata.column_stats[col][KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
-                            target_val = np.format_float_positional(cell, precision=2)
-                        else:
-                            target_val = cell
-                        self.transaction.output_data.data_array[actual_row][col_index] = target_val
-                        confidence = self.getConfidence(cell,confusion_matrix)
-                        #randConfidence = random.uniform(0.85, 0.93)
-
-                        self.transaction.output_data.data_array[actual_row].insert(col_index + 1, confidence)
+                    actual_row = j + offset
+                    confidence = self.getConfidence(cell, confusion_matrix)
+                    if self.transaction.persistent_model_metadata.column_stats[col][
+                        KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+                        target_val = np.format_float_positional(cell, precision=2)
                     else:
-                        self.transaction.output_data.data_array[actual_row].insert(col_index+1,1.0)
+                        target_val = cell
+
+                    self.transaction.output_data.data_array[actual_row].insert(col_index + 1, confidence)
+                    self.transaction.output_data.data_array[actual_row][col_index] = target_val
+
+
 
 
         total_time = time.time() - self.train_start_time
@@ -91,16 +83,23 @@ class ModelPredictor(BaseModule):
         return "{0:.2f}".format(confidence)
 
 def test():
+    from mindsdb.libs.controllers.predictor import Predictor
 
-    from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
-    from mindsdb.libs.data_types.mindsdb_logger import log
 
-    mdb = MindsDB()
-    ret = mdb.predict(predict='position', when={'max_time_rec': 700}, model_name='mdsb_model')
-    log.info(ret)
+    mdb = Predictor(name='home_rentals')
+
+    mdb.learn(
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02
+    )
+
+    a = mdb.predict(when={'number_of_rooms': 10})
+
+    print(a.predicted_values)
 
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     test()
-

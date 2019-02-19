@@ -61,10 +61,10 @@ class PredictWorker():
         self.data_model_object = self.ml_model_class.load_from_disk(file_ids=fs_file_ids)
 
         if self.data != None:
-            self._load_data(data)
+            self.load_data(data)
 
 
-    def _load_data(self, data):
+    def load_data(self, data):
         """
         Load data
         :param data:
@@ -85,7 +85,7 @@ class PredictWorker():
         """
 
         if data != None:
-            self._load_data(data)
+            self.load_data(data)
 
         self.predict_sampler.variable_wrapper = self.ml_model_class.variable_wrapper
         self.predict_sampler.variable_unwrapper = self.ml_model_class.variable_unwrapper
@@ -142,3 +142,8 @@ class PredictWorker():
         w = PredictWorker(model_name)
         log.info('Inferring from model and data...')
         return w.predict(data)
+
+
+    @staticmethod
+    def get_worker_object(model_name):
+        return PredictWorker(model_name)

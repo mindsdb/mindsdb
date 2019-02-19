@@ -1,14 +1,3 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
-
 from __future__ import unicode_literals, print_function, division
 
 from mindsdb.config import CONFIG
@@ -73,12 +62,12 @@ class ModelTrainer(BaseModule):
             ml_model = ml_model_data[0]
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False or len(ml_models) == 1:
-                TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=ml_model, config=config)
-
+                train_worker = TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=ml_model, config=config, stop_training_in_x_seconds=self.transaction.metadata.stop_training_in_x_seconds)
+                self.transaction.data_model_object = train_worker.train(self.transaction.model_data)
             else:
                 # Todo: use Ray https://github.com/ray-project/tutorial
                 # Before moving to actual workers: MUST FIND A WAY TO SEND model data to the worker in an efficient way first
-                _thread.start_new_thread(TrainWorker.start, (self.transaction.model_data, model_name, ml_model, config))
+                _thread.start_new_thread(TrainWorker.start, (self.transaction.model_data, model_name, ml_model, config, self.transaction.metadata.stop_training_in_x_seconds))
             # return
 
         total_time = time.time() - self.train_start_time
@@ -89,31 +78,23 @@ class ModelTrainer(BaseModule):
 
 
 def test():
-    from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
+    from mindsdb.libs.controllers.predictor import Predictor
+    from mindsdb import CONFIG
 
-    mdb = MindsDB()
+    CONFIG.DEBUG_BREAK_POINT = PHASE_MODEL_TRAINER
+
+    mdb = Predictor(name='home_rentals')
+
     mdb.learn(
-        from_query='''
-            select 
-                id,
-                max_time_rec,
-                min_time_rec,
-                
-                position 
-            from position_target_table
-        ''',
-        from_file=CONFIG.MINDSDB_STORAGE_PATH+'/position_target_table.csv',
-        group_by='id',
-        order_by=['max_time_rec'],
-        predict='position',
-        model_name='mdsb_model',
-        breakpoint=PHASE_MODEL_TRAINER
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02,
+        stop_training_in_x_seconds=10
     )
+
 
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     test()
-
-
-

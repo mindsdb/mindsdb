@@ -1,14 +1,3 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
-
 import random
 import warnings
 from collections import Counter
@@ -127,6 +116,12 @@ class StatsGenerator(BaseModule):
 
         # assume that the type is the one with the most prevelant type_dist
         for data_type in type_dist:
+            # If any of the members are text, use that data type, since otherwise the model will crash when casting
+            if data_type == DATA_TYPES.TEXT:
+                pass
+                curr_data_type = DATA_TYPES.TEXT
+                print(curr_data_type)
+                break
             if type_dist[data_type] > max_data_type:
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
@@ -300,6 +295,7 @@ class StatsGenerator(BaseModule):
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
             return {}
 
+        print(col_name, len(columns[col_name]))
         z_scores = list(map(abs,(st.zscore(columns[col_name]))))
         threshold = 3
         z_score_outlier_indexes = [i for i in range(len(z_scores)) if z_scores[i] > threshold]
@@ -600,6 +596,7 @@ class StatsGenerator(BaseModule):
                 column_count[column] += 1
         stats = {}
 
+        col_data_dict = {}
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
@@ -619,7 +616,7 @@ class StatsGenerator(BaseModule):
 
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
-                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']:
+                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
                         col_data[i] = None
                     else:
                         try:
@@ -635,8 +632,7 @@ class StatsGenerator(BaseModule):
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
 
-
-                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
+                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
 
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
@@ -748,15 +744,15 @@ class StatsGenerator(BaseModule):
             stats[col_name]['column'] = col_name
             stats[col_name]['empty_cells'] = empty_count[col_name]
             stats[col_name]['empty_percentage'] = empty_count[col_name] * 100 / column_count[col_name]
-
+            col_data_dict[col_name] = col_data
 
         for i, col_name in enumerate(all_sampled_data):
             stats[col_name].update(self._compute_duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_empty_cells_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_data_type_dist_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_z_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_lof_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_z_score(stats, col_data_dict, col_name))
+            stats[col_name].update(self._compute_lof_score(stats, col_data_dict, col_name))
             stats[col_name].update(self._compute_similariy_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_value_distribution_score(stats, all_sampled_data, col_name))
 
@@ -786,16 +782,23 @@ class StatsGenerator(BaseModule):
 
 
 def test():
-    from mindsdb import MindsDB
-    mdb = MindsDB()
+    from mindsdb.libs.controllers.predictor import Predictor
+    from mindsdb import CONFIG
 
-    # We tell mindsDB what we want to learn and from what data
+    CONFIG.DEBUG_BREAK_POINT = PHASE_STATS_GENERATOR
+
+    mdb = Predictor(name='home_rentals')
+
     mdb.learn(
         from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
         # the path to the file where we can learn from, (note: can be url)
-        predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        model_name='home_rentals',  # the name of this model
-        breakpoint=PHASE_STATS_GENERATOR)
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02
+    )
+
+
+
+
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

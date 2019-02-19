@@ -37,11 +37,11 @@ So here the important lesson, is the extra arguments.
     window_size=24, # just 24 hours
 
 
-These are tell mindsDB that it should consider the previous 24 rows (ordered by time, and grouped by the vessel id) in order to make a prediction.
+These will tell mindsDB that it should consider the previous 24 rows (ordered by time, and grouped by the vessel id) in order to make a prediction.
 
 #### Predicting
 
-In order ot make a prediction, you can now pass a data frame with the last x hours of readings.
+In order to make a prediction, you can now pass a DataFrame with the last x hours of readings.
 
 For simplicity we use a file.
 
@@ -66,4 +66,4 @@ print(result.predicted_values)
 
 #### About the Learning
 
-Note: that the argument **from_data** can be a pandas data_frame, a path to a file or a URL
+Note: that the argument **from_data** can be a pandas DataFrame, a path to a file or a URL

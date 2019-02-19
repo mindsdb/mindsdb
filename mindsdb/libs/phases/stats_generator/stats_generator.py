@@ -162,19 +162,6 @@ class StatsGenerator(BaseModule):
             }
             return x, histogram
 
-    # @TODO Use or move to scraps.py
-    def _get_params_as_dictionary(self, params):
-        """ Returns a dictionary with the params of the distribution """
-        arg = params[:-2]
-        loc = params[-2]
-        scale = params[-1]
-        ret = {
-            'loc': loc,
-            'scale': scale,
-            'shape': arg
-        }
-        return ret
-
     def _compute_value_distribution_score(self, stats, columns, col_name):
         """
         # Looks at the histogram and transforms it into a proability mapping for each

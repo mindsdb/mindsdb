@@ -74,9 +74,6 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
             # @TODO Maybe escpae the separator rather than replace
             if type(val) == str:
                 val = val.replace(separator,'_').replace('\n','_').replace('\r','_')
-                if '\n' in val or '\r' in val:
-                    print(val)
-                    exit()
             columns[-1].append(val)
 
     return columns

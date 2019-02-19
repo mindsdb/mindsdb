@@ -49,6 +49,7 @@ def calculate_sample_size(
         z = zdict[confidence_level]
     else:
         from scipy.stats import norm
+        alpha = 0.01
         z = norm.ppf(1 - (alpha/2))
     N = population_size
     M = margin_error

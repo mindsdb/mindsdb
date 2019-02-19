@@ -120,7 +120,6 @@ class StatsGenerator(BaseModule):
             if data_type == DATA_TYPES.TEXT:
                 pass
                 curr_data_type = DATA_TYPES.TEXT
-                print(curr_data_type)
                 break
             if type_dist[data_type] > max_data_type:
                 curr_data_type = data_type
@@ -133,11 +132,6 @@ class StatsGenerator(BaseModule):
             return self._get_text_type(data), type_dist
 
         return curr_data_type, type_dist
-
-
-
-
-
 
     def _get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
@@ -295,7 +289,6 @@ class StatsGenerator(BaseModule):
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
             return {}
 
-        print(col_name, len(columns[col_name]))
         z_scores = list(map(abs,(st.zscore(columns[col_name]))))
         threshold = 3
         z_score_outlier_indexes = [i for i in range(len(z_scores)) if z_scores[i] > threshold]
@@ -464,7 +457,7 @@ class StatsGenerator(BaseModule):
             variability_score = (col_stats['z_test_based_outlier_score'] + col_stats['lof_based_outlier_score']
              + col_stats['value_distribution_score'])/3
         else:
-            variability_score = col_stats['value_distribution_score']
+            variability_score = col_stats['value_distribution_score']/2
 
         return {'variability_score': variability_score}
 
@@ -507,6 +500,19 @@ class StatsGenerator(BaseModule):
                 if col_stats['duplicates_score'] > 0.5:
                     duplicates_percentage = col_stats['duplicates_percentage']
                     self.log.warning(f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.')
+
+
+            #Compound scores
+
+            if col_stats['consistency_score'] > 0.25:
+                self.log.warning(f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info')
+
+            if col_stats['redundancy_score'] > 0.45:
+                self.log.warning(f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info')
+
+            if col_stats['variability_score'] > 0.5:
+                self.log.warning(f'The data in the column {col_name} seems to have too contain too much noise/randomness based on the variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.')
+
 
 
             # Some scores are meaningful on their own, and the user should be warnned if they fall bellow a certain threshold

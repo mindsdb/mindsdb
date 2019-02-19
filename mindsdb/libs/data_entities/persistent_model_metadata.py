@@ -26,3 +26,4 @@ class PersistentModelMetadata(PersistentObject):
         self.stop_training = False
         self.kill_training = False
 
+        self.probabilistic_validator = None

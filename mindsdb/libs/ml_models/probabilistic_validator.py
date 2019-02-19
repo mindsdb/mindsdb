@@ -28,30 +28,24 @@ class ProbabilisticValidator():
         # @TODO Not implemented
         return value
 
-    @staticmethod
-    def _features_missing(feature):
-        return int(not (feature in NULL_VALUES))
 
-    def register_observation(self, features, real_value, predicted_value):
+    def register_observation(self, features_existence, real_value, predicted_value):
         real_value_b = self._get_value_bucket(real_value, None)
         predicted_value_b = self._get_value_bucket(predicted_value, None)
 
-        feature_existence = list(map(self._features_missing,features))
         correct_prediction = real_value_b == predicted_value_b
 
-        X = feature_existence
+        X = features_existence
         X.append(predicted_value_b)
         Y = [correct_prediction]
 
         self._probabilistic_model.partial_fit(np.array(X).reshape(1,-1), Y, classes=[True, False])
 
 
-    def evaluate_prediction_accuracy(self, features, predicted_value):
+    def evaluate_prediction_accuracy(self, features_existence, predicted_value):
         predicted_value_b = self._get_value_bucket(predicted_value, None)
 
-        feature_existence = list(map(self._features_missing,features))
-
-        X = feature_existence
+        X = features_existence
         X.append(predicted_value_b)
 
         return self._probabilistic_model.predict_proba(np.array(X).reshape(1,-1))[0]#[1]

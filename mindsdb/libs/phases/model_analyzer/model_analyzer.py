@@ -18,33 +18,32 @@ class ModelAnalyzer(BaseModule):
     phase_name = PHASE_MODEL_ANALYZER
 
     def run(self):
-        #for group in self.transaction.model_data.validation_set:
-        #columns = self.transaction.model_data.validation_set[group]
-
-        validation_sampler = Sampler(self.transaction.model_data.validation_set, metadata_as_stored=self.transaction.persistent_model_metadata,
-                                    ignore_types=self.transaction.data_model_object.ignore_types, sampler_mode=SAMPLER_MODES.LEARN)
-
-        validation_sampler.variable_wrapper = array_to_float_variable
-        '''
-        @ <--- field ids is not yet set at this point
-        bm = base_model.BaseModel(validation_sampler.getSampleBatch())
-        self.data_model_object = bm.load_from_disk(file_ids=self.transaction.persistent_ml_model_info.fs_file_ids)
-        '''
-
         self.transaction.probabilistic_validator = ProbabilisticValidator()
 
+        column_names = self.transaction.model_data.validation_set['ALL_ROWS_NO_GROUP_BY'].keys()
 
-        predictions = self.transaction.data_model_object.testModel(validation_sampler)
-        print(predictions.error)
-        print(predictions.accuracy)
-        print(predictions.predicted_targets)
-        print(predictions.real_targets)
+        for column_name in column_names:
+            ignore_columns = []
+            if column_name not in self.transaction.train_metadata.model_predict_columns:
+                ignore_columns.append(column_name)
 
-        for k in predictions.predicted_targets:
-            for i in range(len(predictions.predicted_targets[k])):
-                self.transaction.probabilistic_validator.register_observation(features=[],
-                real_value=predictions.real_targets[k][i][0], predicted_value=predictions.predicted_targets[k][i][0])
-                print(self.transaction.probabilistic_validator.evaluate_prediction_accuracy([],predictions.predicted_targets[k][i][0]))
+            validation_sampler = Sampler(self.transaction.model_data.validation_set, metadata_as_stored=self.transaction.persistent_model_metadata,
+                                        ignore_types=self.transaction.data_model_object.ignore_types, sampler_mode=SAMPLER_MODES.LEARN,blank_columns=ignore_columns)
+            validation_sampler.variable_wrapper = array_to_float_variable
+
+            predictions = self.transaction.data_model_object.testModel(validation_sampler)
+
+            for k in predictions.predicted_targets:
+                for i in range(len(predictions.predicted_targets[k])):
+                    features_existence = []
+                    for col in column_names:
+                        features_existence.append(validation_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][i][-1])
+
+                    self.transaction.probabilistic_validator.register_observation(features_existence=features_existence,
+                    real_value=predictions.real_targets[k][i][0], predicted_value=predictions.predicted_targets[k][i][0])
+
+                    print(self.transaction.probabilistic_validator.evaluate_prediction_accuracy(
+                    features_existence=features_existence,predicted_value=predictions.predicted_targets[k][i][0]))
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

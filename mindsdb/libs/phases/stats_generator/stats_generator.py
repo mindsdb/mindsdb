@@ -232,7 +232,7 @@ class StatsGenerator(BaseModule):
         :return: Dictioanry containing:
             nr_duplicates: the nr of cells which contain values that are found more than once
             duplicates_percentage: % of the values that are found more than once
-            duplicate_score: a quality based on the duplicate percentage, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            duplicates_score: a quality based on the duplicate percentage, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
         occurances = Counter(columns[col_name])
@@ -245,7 +245,7 @@ class StatsGenerator(BaseModule):
         }
 
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.CATEGORICAL and stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.DATE:
-            data['duplicate_score'] = data['duplicates_percentage']/100
+            data['duplicates_score'] = data['duplicates_percentage']/100
         else:
             data['c'] = 0
 
@@ -422,34 +422,78 @@ class StatsGenerator(BaseModule):
             ,'most_correlated_column': other_feature_names[corr_scores.index(max(corr_scores))]
         }
 
-    def _compute_data_quality_score(self, stats, columns, col_name):
+    def _compute_consistency_score(self, stats, col_name):
+        """
+        # Attempts to determine the consistency of the data in a column
+        by taking into account the ty[e distribution, nr of empty cells and duplicates
+
+        :param stats: The stats extracted up until this point for all columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            consistency_score: The socre, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality
+        """
+        col_stats = stats[col_name]
+        if 'duplicates_score' in col_stats:
+            consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2.5 + col_stats['duplicates_score']/5
+        else:
+            consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2
+        return {'consistency_score': consistency_score}
+
+    def _compute_redundancy_score(self, stats, col_name):
+        """
+        # Attempts to determine the redundancy of the column by taking into account correlation and
+        similarity with other columns
+
+        :param stats: The stats extracted up until this point for all columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            consistency_score: The socre, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality
+        """
+        col_stats = stats[col_name]
+        redundancy_score = (col_stats['similarity_score'] + col_stats['correlation_score'])/2
+        return {'redundancy_score': redundancy_score}
+
+    def _compute_variability_score(self, stats, col_name):
+        """
+        # Attempts to determine the variability/randomness of a column by taking into account
+        the z and lof outlier scores and the value distribution score (histogram biasing towards a few buckets)
+
+        :param stats: The stats extracted up until this point for all columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            consistency_score: The socre, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality
+        """
+        col_stats = stats[col_name]
+        if 'lof_based_outlier_score' in col_stats and 'z_test_based_outlier_score' in col_stats:
+            variability_score = (col_stats['z_test_based_outlier_score'] + col_stats['lof_based_outlier_score']
+             + col_stats['value_distribution_score'])/3
+        else:
+            variability_score = col_stats['value_distribution_score']
+
+        return {'variability_score': variability_score}
+
+
+    def _compute_data_quality_score(self, stats, col_name):
         """
         # Attempts to determine the quality of the column through aggregating all quality score
         we could compute about it
 
         :param stats: The stats extracted up until this point for all columns
-        :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
         :return: Dictioanry containing:
             quality_score: An aggreagted quality socre that attempts to asses the overall quality of the column,
                 , ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
             bad_scores: The socres which lead to use rating this column poorly
         """
-        scores_used = 0
-        scores_total = 0
-        scores = ['correlation_score', 'lof_based_outlier_score', 'z_test_based_outlier_score', 'data_type_distribution_score', 'empty_cells_score', 'duplicate_score', 'similarity_score', 'value_distribution_score']
-        for score in scores:
-            if score in stats[col_name]:
-                scores_used += 1
-                scores_total += stats[col_name][score]
 
-        quality_score = scores_total/scores_used
-        bad_scores = []
+        col_stats = stats[col_name]
+        scores = ['consistency_score', 'redundancy_score', 'variability_score']
+        quality_score = 0
         for score in scores:
-            if score in stats[col_name]:
-                if stats[col_name][score] > quality_score:
-                    bad_scores.append(score)
-        return {'quality_score': quality_score, 'bad_scores': bad_scores}
+            quality_score += col_stats[score]
+        quality_score = quality_score/len(scores)
+
+        return {'quality_score': quality_score}
 
     def _log_interesting_stats(self, stats):
         """
@@ -716,7 +760,11 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self._compute_similariy_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_value_distribution_score(stats, all_sampled_data, col_name))
 
-            stats[col_name].update(self._compute_data_quality_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_consistency_score(stats, col_name))
+            stats[col_name].update(self._compute_redundancy_score(stats, col_name))
+            stats[col_name].update(self._compute_variability_score(stats, col_name))
+
+            stats[col_name].update(self._compute_data_quality_score(stats, col_name))
 
 
         total_rows = len(self.transaction.input_data.data_array)

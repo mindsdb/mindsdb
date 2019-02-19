@@ -511,7 +511,7 @@ class StatsGenerator(BaseModule):
                 self.log.warning(f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info')
 
             if col_stats['variability_score'] > 0.5:
-                self.log.warning(f'The data in the column {col_name} seems to have too contain too much noise/randomness based on the variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.')
+                self.log.warning(f'The data in the column {col_name} seems to have too contain too much noise/randomness based on the value variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.')
 
 
 

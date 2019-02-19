@@ -100,6 +100,18 @@ def getColPermutations(possible_columns, max_num_of_perms = 100):
         return (best_distribution.name, best_params, x.tolist(), y.tolist())
 
 
+def _get_params_as_dictionary(self, params):
+    """ Returns a dictionary with the params of the distribution """
+    arg = params[:-2]
+    loc = params[-2]
+    scale = params[-1]
+    ret = {
+        'loc': loc,
+        'scale': scale,
+        'shape': arg
+    }
+    return ret
+
 # def isFullText(self, data):
 #     """
 #     It determines if the column is full text right

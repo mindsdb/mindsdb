@@ -22,33 +22,38 @@ class ProbabilisticValidator():
         #self._probabilistic_model = GaussianNB()
         #self._probabilistic_model = MultinomialNB()
 
-    # For contignous values we want to use a bucket in the histogram to get a discrete label
     @staticmethod
-    def _get_value_bucket(value, histogram):
+    def closest(arr, value):
+        aux = []
+        for ele in arr:
+            aux.append(abs(value-ele))
+        return aux.index(min(aux))
+
+    # For contignous values we want to use a bucket in the histogram to get a discrete label
+    def _get_value_bucket(self, value, histogram):
         # @TODO Not implemented
-        return value
+        i = self.closest(histogram['x'], value)
+        return histogram['y'][i]
 
 
-    def register_observation(self, features_existence, real_value, predicted_value):
-        real_value_b = self._get_value_bucket(real_value, None)
-        predicted_value_b = self._get_value_bucket(predicted_value, None)
+    def register_observation(self, features_existence, real_value, predicted_value, histogram):
+        real_value_b = self._get_value_bucket(real_value, histogram)
+        predicted_value_b = self._get_value_bucket(predicted_value, histogram)
 
         correct_prediction = real_value_b == predicted_value_b
 
-        X = features_existence
-        X.append(predicted_value_b)
+        X = [predicted_value_b, *features_existence]
         Y = [correct_prediction]
 
         self._probabilistic_model.partial_fit(np.array(X).reshape(1,-1), Y, classes=[True, False])
 
 
-    def evaluate_prediction_accuracy(self, features_existence, predicted_value):
-        predicted_value_b = self._get_value_bucket(predicted_value, None)
+    def evaluate_prediction_accuracy(self, features_existence, predicted_value, histogram):
+        predicted_value_b = self._get_value_bucket(predicted_value, histogram)
 
-        X = features_existence
-        X.append(predicted_value_b)
+        X = [predicted_value_b, *features_existence]
 
-        return self._probabilistic_model.predict_proba(np.array(X).reshape(1,-1))[0]#[1]
+        return self._probabilistic_model.predict_proba(np.array(X).reshape(1,-1))[0][1]
 
 
 if __name__ == "__main__":

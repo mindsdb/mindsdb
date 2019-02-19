@@ -150,22 +150,15 @@ class StatsGenerator(BaseModule):
                 words += splitRecursive(cell, WORD_SEPARATORS)
 
             hist = {i: words.count(i) for i in words}
-            x = list(hist.keys())
-            histogram = {
-                'x': x,
-                'y': list(hist.values())
-            }
-            return x, histogram
-
-
         else:
             hist = {i: data.count(i) for i in data}
-            x = list(hist.keys())
-            histogram = {
-                'x': x,
-                'y': list(hist.values())
-            }
-            return x, histogram
+
+        x = list(hist.keys())
+        histogram = {
+            'x': x,
+            'y': list(hist.values())
+        }
+        return x, histogram
 
     # @TODO Use or move to scraps.py
     def _get_params_as_dictionary(self, params):

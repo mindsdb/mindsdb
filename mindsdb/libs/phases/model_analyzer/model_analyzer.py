@@ -5,20 +5,21 @@ from mindsdb.libs.data_types.sampler import Sampler
 from mindsdb.libs.ml_models.pytorch.libs import base_model;
 from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
 from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import array_to_float_variable
+from mindsdb.libs.helpers.norm_denorm_helpers import denorm
 
 import pandas as pd
 
 
 #@TODO: Use Histogram in the probabilistic validator
 #@TODO: Pass features to probbabilistic validator
-#@TODO: Define a way to save self.transaction.probabilistic_validator
-#@TODO If ran during a `predict` load the self.transaction.probabilistic_validator and use evaluate_prediction_accuracy
+#@TODO: Define a way to save self.transaction.persistent_model_metadata.probabilistic_validator
+#@TODO If ran during a `predict` load the self.transaction.persistent_model_metadata.probabilistic_validator and use evaluate_prediction_accuracy
 class ModelAnalyzer(BaseModule):
 
     phase_name = PHASE_MODEL_ANALYZER
 
     def run(self):
-        self.transaction.probabilistic_validator = ProbabilisticValidator()
+        self.transaction.persistent_model_metadata.probabilistic_validator = ProbabilisticValidator()
 
         column_names = self.transaction.model_data.validation_set['ALL_ROWS_NO_GROUP_BY'].keys()
 
@@ -33,17 +34,21 @@ class ModelAnalyzer(BaseModule):
 
             predictions = self.transaction.data_model_object.testModel(validation_sampler)
 
+
             for k in predictions.predicted_targets:
                 for i in range(len(predictions.predicted_targets[k])):
                     features_existence = []
                     for col in column_names:
                         features_existence.append(validation_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][i][-1])
 
-                    self.transaction.probabilistic_validator.register_observation(features_existence=features_existence,
-                    real_value=predictions.real_targets[k][i][0], predicted_value=predictions.predicted_targets[k][i][0])
+                    predicted_val = denorm(predictions.predicted_targets[k][i], self.transaction.persistent_model_metadata.column_stats[k])
+                    real_val = denorm(predictions.real_targets[k][i], self.transaction.persistent_model_metadata.column_stats[k])
 
-                    print(self.transaction.probabilistic_validator.evaluate_prediction_accuracy(
-                    features_existence=features_existence,predicted_value=predictions.predicted_targets[k][i][0]))
+                    self.transaction.persistent_model_metadata.probabilistic_validator.register_observation(features_existence=features_existence,
+                    real_value=real_val, predicted_value=predicted_val, histogram=self.transaction.persistent_model_metadata.column_stats[k]['histogram'])
+
+                    print(self.transaction.persistent_model_metadata.probabilistic_validator.evaluate_prediction_accuracy(
+                    features_existence=features_existence,predicted_value=predicted_val, histogram=self.transaction.persistent_model_metadata.column_stats[k]['histogram']))
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

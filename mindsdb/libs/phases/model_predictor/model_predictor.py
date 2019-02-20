@@ -50,7 +50,7 @@ class ModelPredictor(BaseModule):
                     denormed_predicted_val = diff['ret_dict'][col][nn]
                     X_values.append(denormed_predicted_val)
 
-                accuracies[col] = []
+                self.accuracies[col] = []
                 for i in range(len(X_values)):
                     accuracy = self.transaction.persistent_model_metadata.probabilistic_validators[col].evaluate_prediction_accuracy(
                     features_existence=X_features_existence[i],predicted_value=X_values[i], histogram=self.transaction.persistent_model_metadata.column_stats[col]['histogram'])
@@ -119,6 +119,8 @@ def test():
         to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
         sample_margin_of_error=0.02
     )
+
+    mdb = Predictor(name='home_rentals')
 
     a = mdb.predict(when={'number_of_rooms': 10})
 

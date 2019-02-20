@@ -47,9 +47,6 @@ class ModelAnalyzer(BaseModule):
                     self.transaction.persistent_model_metadata.probabilistic_validator.register_observation(features_existence=features_existence,
                     real_value=real_val, predicted_value=predicted_val, histogram=self.transaction.persistent_model_metadata.column_stats[k]['histogram'])
 
-                    print(self.transaction.persistent_model_metadata.probabilistic_validator.evaluate_prediction_accuracy(
-                    features_existence=features_existence,predicted_value=predicted_val, histogram=self.transaction.persistent_model_metadata.column_stats[k]['histogram']))
-
 def test():
     from mindsdb.libs.controllers.predictor import Predictor
     from mindsdb import CONFIG

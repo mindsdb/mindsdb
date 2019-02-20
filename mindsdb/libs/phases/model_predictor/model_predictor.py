@@ -34,7 +34,27 @@ class ModelPredictor(BaseModule):
         self.transaction.output_data.data_array = self.transaction.input_data.data_array
         self.transaction.output_data.predicted_columns=self.transaction.metadata.model_predict_columns
         self.transaction.output_data.columns_map =  self.transaction.metadata.model_columns_map
-        for diff in ret_diffs:
+        for n in range(len(ret_diffs)):
+            diff = ret_diffs[n]
+
+            X_values = []
+            X_features_existence = []
+
+            for col in diff['ret_dict']:
+                for nn in range(len(diff['ret_dict'][col])):
+                    if len(X_values) < (nn + 1):
+                        X_values.append([])
+                        X_features_existence.append([])
+                        for col in self.transaction.session.predict_worker.predict_sampler.data['ALL_ROWS_NO_GROUP_BY']:
+                            X_features_existence.append(self.transaction.session.predict_worker.predict_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][nn][-1])
+
+                    X_values[nn].append(diff['ret_dict'][col][nn])
+
+            print(self.transaction.persistent_model_metadata.probabilistic_validator.evaluate_prediction_accuracy(
+            features_existence=X_features_existence[0],predicted_value=X_values[0][0], histogram=self.transaction.persistent_model_metadata.column_stats[diff['ret_dict'].keys()[0]]['histogram']))
+
+            exit()
+
             for col in diff['ret_dict']:
                 confusion_matrix = confusion_matrices[col]
                 col_index = self.transaction.input_data.columns.index(col)

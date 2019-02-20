@@ -52,11 +52,12 @@ class ModelPredictor(BaseModule):
 
                 accuracies[col] = []
                 for i in range(len(X_values)):
-                    accuracy = self.transaction.persistent_model_metadata.probabilistic_validators[col].evaluate_prediction_accuracy(
-                    features_existence=X_features_existence[i],predicted_value=X_values[i], histogram=self.transaction.persistent_model_metadata.column_stats[col]['histogram'])
-                    accuracies[col].append(accuracy)
+                    pass
+                    #accuracy = self.transaction.persistent_model_metadata.probabilistic_validators[col].evaluate_prediction_accuracy(
+                    #features_existence=X_features_existence[i],predicted_value=X_values[i], histogram=self.transaction.persistent_model_metadata.column_stats[col]['histogram'])
+                    #accuracies[col].append(accuracy)
                 print(accuracies)
-            exit()
+            #exit()
 
             for col in diff['ret_dict']:
                 confusion_matrix = confusion_matrices[col]

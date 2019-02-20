@@ -16,7 +16,7 @@ class ModelPredictor(BaseModule):
         self.session.log.info('Predict: model {model_name}, epoch 0'.format(model_name=model_name))
 
         self.last_time = time.time()
-
+        self.accuracies = {}
         # We moved everything to a worker so we can run many of these in parallel
         # Todo: use Ray https://github.com/ray-project/tutorial
 
@@ -37,7 +37,7 @@ class ModelPredictor(BaseModule):
         for n in range(len(ret_diffs)):
             diff = ret_diffs[n]
 
-            accuracies = {}
+
             for col in diff['ret_dict']:
                 X_values = []
                 X_features_existence = []
@@ -52,12 +52,11 @@ class ModelPredictor(BaseModule):
 
                 accuracies[col] = []
                 for i in range(len(X_values)):
-                    pass
-                    #accuracy = self.transaction.persistent_model_metadata.probabilistic_validators[col].evaluate_prediction_accuracy(
-                    #features_existence=X_features_existence[i],predicted_value=X_values[i], histogram=self.transaction.persistent_model_metadata.column_stats[col]['histogram'])
-                    #accuracies[col].append(accuracy)
-                print(accuracies)
-            #exit()
+                    accuracy = self.transaction.persistent_model_metadata.probabilistic_validators[col].evaluate_prediction_accuracy(
+                    features_existence=X_features_existence[i],predicted_value=X_values[i], histogram=self.transaction.persistent_model_metadata.column_stats[col]['histogram'])
+                    self.accuracies[col].append(accuracy)
+                print(self.accuracies)
+            exit()
 
             for col in diff['ret_dict']:
                 confusion_matrix = confusion_matrices[col]
@@ -72,7 +71,9 @@ class ModelPredictor(BaseModule):
                         continue
 
                     actual_row = j + offset
-                    confidence = self.getConfidence(cell, confusion_matrix)
+                    # @TODO: Do we scrap this ?
+                    #confidence = self.getConfidence(cell, confusion_matrix)
+                    confidence = self.accuracies[col][j]
                     if self.transaction.persistent_model_metadata.column_stats[col][
                         KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
                         target_val = np.format_float_positional(cell, precision=2)

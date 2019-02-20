@@ -9,11 +9,7 @@ from mindsdb.libs.helpers.norm_denorm_helpers import denorm
 
 import pandas as pd
 
-
-#@TODO: Use Histogram in the probabilistic validator
-#@TODO: Pass features to probbabilistic validator
 #@TODO: Define a way to save self.transaction.persistent_model_metadata.probabilistic_validator
-#@TODO If ran during a `predict` load the self.transaction.persistent_model_metadata.probabilistic_validator and use evaluate_prediction_accuracy
 class ModelAnalyzer(BaseModule):
 
     phase_name = PHASE_MODEL_ANALYZER

@@ -37,22 +37,25 @@ class ModelPredictor(BaseModule):
         for n in range(len(ret_diffs)):
             diff = ret_diffs[n]
 
-            X_values = []
-            X_features_existence = []
-
+            accuracies = {}
             for col in diff['ret_dict']:
+                X_values = []
+                X_features_existence = []
                 for nn in range(len(diff['ret_dict'][col])):
-                    if len(X_values) < (nn + 1):
-                        X_values.append([])
-                        X_features_existence.append([])
-                        for col in self.transaction.session.predict_worker.predict_sampler.data['ALL_ROWS_NO_GROUP_BY']:
-                            X_features_existence.append(self.transaction.session.predict_worker.predict_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][nn][-1])
+                    X_features_existence.append([])
 
-                    X_values[nn].append(diff['ret_dict'][col][nn])
+                    for col in self.transaction.session.predict_worker.predict_sampler.data['ALL_ROWS_NO_GROUP_BY']:
+                        X_features_existence[nn].append(self.transaction.session.predict_worker.predict_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][nn][-1])
 
-            print(self.transaction.persistent_model_metadata.probabilistic_validator.evaluate_prediction_accuracy(
-            features_existence=X_features_existence[0],predicted_value=X_values[0][0], histogram=self.transaction.persistent_model_metadata.column_stats[diff['ret_dict'].keys()[0]]['histogram']))
+                    denormed_predicted_val = diff['ret_dict'][col][nn]
+                    X_values.append(denormed_predicted_val)
 
+                accuracies[col] = []
+                for i in range(len(X_values)):
+                    accuracy = self.transaction.persistent_model_metadata.probabilistic_validators[col].evaluate_prediction_accuracy(
+                    features_existence=X_features_existence[i],predicted_value=X_values[i], histogram=self.transaction.persistent_model_metadata.column_stats[col]['histogram'])
+                    accuracies[col].append(accuracy)
+                print(accuracies)
             exit()
 
             for col in diff['ret_dict']:

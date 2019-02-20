@@ -19,9 +19,11 @@ class ModelAnalyzer(BaseModule):
     phase_name = PHASE_MODEL_ANALYZER
 
     def run(self):
-        self.transaction.persistent_model_metadata.probabilistic_validator = ProbabilisticValidator()
-
         column_names = self.transaction.model_data.validation_set['ALL_ROWS_NO_GROUP_BY'].keys()
+
+        self.transaction.persistent_model_metadata.probabilistic_validators = {}
+        for col in column_names:
+            self.transaction.persistent_model_metadata.probabilistic_validators[col] = ProbabilisticValidator()
 
         for column_name in column_names:
             ignore_columns = []
@@ -35,17 +37,17 @@ class ModelAnalyzer(BaseModule):
             predictions = self.transaction.data_model_object.testModel(validation_sampler)
 
 
-            for k in predictions.predicted_targets:
-                for i in range(len(predictions.predicted_targets[k])):
+            for pcol in predictions.predicted_targets:
+                for i in range(len(predictions.predicted_targets[pcol])):
                     features_existence = []
                     for col in column_names:
                         features_existence.append(validation_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][i][-1])
 
-                    predicted_val = denorm(predictions.predicted_targets[k][i], self.transaction.persistent_model_metadata.column_stats[k])
-                    real_val = denorm(predictions.real_targets[k][i], self.transaction.persistent_model_metadata.column_stats[k])
+                    predicted_val = denorm(predictions.predicted_targets[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
+                    real_val = denorm(predictions.real_targets[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
 
-                    self.transaction.persistent_model_metadata.probabilistic_validator.register_observation(features_existence=features_existence,
-                    real_value=real_val, predicted_value=predicted_val, histogram=self.transaction.persistent_model_metadata.column_stats[k]['histogram'])
+                    self.transaction.persistent_model_metadata.probabilistic_validators[pcol].register_observation(features_existence=features_existence,
+                    real_value=real_val, predicted_value=predicted_val, histogram=self.transaction.persistent_model_metadata.column_stats[pcol]['histogram'])
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

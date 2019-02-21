@@ -16,10 +16,10 @@ class ModelAnalyzer(BaseModule):
 
     def run(self):
         column_names = self.transaction.model_data.validation_set['ALL_ROWS_NO_GROUP_BY'].keys()
+        probabilistic_validators = {}
 
-        self.transaction.persistent_model_metadata.probabilistic_validators = {}
         for col in column_names:
-            self.transaction.persistent_model_metadata.probabilistic_validators[col] = ProbabilisticValidator()
+            probabilistic_validators[col] = ProbabilisticValidator()
 
         for column_name in column_names:
             ignore_columns = []
@@ -42,8 +42,14 @@ class ModelAnalyzer(BaseModule):
                     predicted_val = denorm(predictions.predicted_targets[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
                     real_val = denorm(predictions.real_targets[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
 
-                    self.transaction.persistent_model_metadata.probabilistic_validators[pcol].register_observation(features_existence=features_existence,
+                    probabilistic_validators[pcol].register_observation(features_existence=features_existence,
                     real_value=real_val, predicted_value=predicted_val, histogram=self.transaction.persistent_model_metadata.column_stats[pcol]['histogram'])
+
+        # Pickle for later use
+        self.transaction.persistent_model_metadata.probabilistic_validators = {}
+        for col in probabilistic_validators:
+            self.transaction.persistent_model_metadata.probabilistic_validators[col] = probabilistic_validators[col].pickle().decode(encoding='latin1')
+
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

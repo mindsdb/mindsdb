@@ -135,6 +135,7 @@ class Transaction:
             self._call_phase_module('ModelTrainer')
 
             self._call_phase_module('ModelAnalyzer')
+            self.persistent_model_metadata.update()
             # TODO: Loop over all stats and when all stats are done, then we can mark model as MODEL_STATUS_TRAINED
 
             return

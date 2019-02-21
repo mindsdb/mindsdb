@@ -1,6 +1,7 @@
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.workers.predict import PredictWorker
+from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
 import numpy as np
 import time
 
@@ -34,10 +35,16 @@ class ModelPredictor(BaseModule):
         self.transaction.output_data.data_array = self.transaction.input_data.data_array
         self.transaction.output_data.predicted_columns=self.transaction.metadata.model_predict_columns
         self.transaction.output_data.columns_map =  self.transaction.metadata.model_columns_map
+
+        self.transaction.probabilistic_validators = {}
         for n in range(len(ret_diffs)):
             diff = ret_diffs[n]
 
             for col in diff['ret_dict']:
+
+                for col in self.transaction.persistent_model_metadata.probabilistic_validators:
+                    self.transaction.probabilistic_validators[col] = ProbabilisticValidator.unpickle(self.transaction.persistent_model_metadata.probabilistic_validators[col])
+
                 X_values = []
                 X_features_existence = []
                 for nn in range(len(diff['ret_dict'][col])):
@@ -51,11 +58,9 @@ class ModelPredictor(BaseModule):
 
                 self.accuracies[col] = []
                 for i in range(len(X_values)):
-                    accuracy = self.transaction.persistent_model_metadata.probabilistic_validators[col].evaluate_prediction_accuracy(
+                    accuracy = self.transaction.probabilistic_validators[col].evaluate_prediction_accuracy(
                     features_existence=X_features_existence[i],predicted_value=X_values[i], histogram=self.transaction.persistent_model_metadata.column_stats[col]['histogram'])
                     self.accuracies[col].append(accuracy)
-                print(self.accuracies)
-            exit()
 
             for col in diff['ret_dict']:
                 confusion_matrix = confusion_matrices[col]
@@ -79,7 +84,7 @@ class ModelPredictor(BaseModule):
                     else:
                         target_val = cell
 
-                    self.transaction.output_data.data_array[actual_row].insert(col_index + 1, confidence)
+                    self.transaction.output_data.data_array[actual_row].insert(col_index + 1, "{}%".format(round(100*confidence,2)))
                     self.transaction.output_data.data_array[actual_row][col_index] = target_val
 
 
@@ -123,6 +128,7 @@ def test():
 
     a = mdb.predict(when={'number_of_rooms': 10})
 
+    print('-------Preidiction output------------')
     print(a.predicted_values)
 
 

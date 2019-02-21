@@ -1,6 +1,7 @@
 from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
 from mindsdb.libs.constants.mindsdb import NULL_VALUES
 import numpy as np
+import pickle
 
 """
 # @TODO: Figure out how to source the histogram and chang the _get_value_bucket
@@ -21,6 +22,13 @@ class ProbabilisticValidator():
         self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         #self._probabilistic_model = GaussianNB()
         #self._probabilistic_model = MultinomialNB()
+
+    def pickle(self):
+        return pickle.dumps(self)
+
+    @staticmethod
+    def unpickle(binary):
+        return pickle.loads(binary.encode(encoding='latin1'))
 
     @staticmethod
     def closest(arr, value):

@@ -18,6 +18,7 @@ class ModelAnalyzer(BaseModule):
         column_names = self.transaction.model_data.validation_set['ALL_ROWS_NO_GROUP_BY'].keys()
 
         self.transaction.persistent_model_metadata.probabilistic_validators = {}
+        self.transaction.persistent_model_metadata.test_pickled_validator = 'Test String'
         for col in column_names:
             self.transaction.persistent_model_metadata.probabilistic_validators[col] = ProbabilisticValidator()
 

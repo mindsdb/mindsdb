@@ -37,8 +37,6 @@ class ModelPredictor(BaseModule):
         for n in range(len(ret_diffs)):
             diff = ret_diffs[n]
 
-            print(self.transaction.persistent_model_metadata.test_pickled_validator)
-            exit()
             for col in diff['ret_dict']:
                 X_values = []
                 X_features_existence = []

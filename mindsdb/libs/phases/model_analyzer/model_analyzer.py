@@ -37,7 +37,13 @@ class ModelAnalyzer(BaseModule):
                 for i in range(len(predictions.predicted_targets[pcol])):
                     features_existence = []
                     for col in column_names:
-                        features_existence.append(validation_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][i][-1])
+                        if len(validation_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][i]) > 2:
+                            if len([x for x in validation_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][i] if x > 0]) == 0:
+                                features_existence.append(0)
+                            else:
+                                features_existence.append(1)
+                        else:
+                            features_existence.append(validation_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][i][-1])
 
                     predicted_val = denorm(predictions.predicted_targets[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
                     real_val = denorm(predictions.real_targets[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])

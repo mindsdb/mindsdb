@@ -13,12 +13,17 @@ class ModelAnalyzer(BaseModule):
     phase_name = PHASE_MODEL_ANALYZER
 
     def run(self):
+        """
+        # Runs the model on the validation set in order to fit a probabilistic model that will evaluate the accuracy of future predictions
+        """
+
         column_names = self.transaction.model_data.validation_set['ALL_ROWS_NO_GROUP_BY'].keys()
         probabilistic_validators = {}
 
         for col in column_names:
             probabilistic_validators[col] = ProbabilisticValidator()
 
+        # Run on the validation set multiple times, each time with one of the column blanked out
         for column_name in column_names:
             ignore_columns = []
             if column_name not in self.transaction.train_metadata.model_predict_columns:
@@ -30,7 +35,7 @@ class ModelAnalyzer(BaseModule):
 
             predictions = self.transaction.data_model_object.testModel(validation_sampler)
 
-
+            # A separate probabilistic model is trained for each predicted column, we may want to change this in the future, @TODO
             for pcol in predictions.predicted_targets:
                 for i in range(len(predictions.predicted_targets[pcol])):
                     features_existence = []
@@ -55,7 +60,7 @@ class ModelAnalyzer(BaseModule):
         # Pickle for later use
         self.transaction.persistent_model_metadata.probabilistic_validators = {}
         for col in probabilistic_validators:
-            self.transaction.persistent_model_metadata.probabilistic_validators[col] = probabilistic_validators[col].pickle().decode(encoding='latin1')
+            self.transaction.persistent_model_metadata.probabilistic_validators[col] = probabilistic_validators[col].pickle()
 
         self.persistent_model_metadata.update()
 

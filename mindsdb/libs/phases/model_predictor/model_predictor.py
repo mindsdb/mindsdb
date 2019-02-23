@@ -75,8 +75,6 @@ class ModelPredictor(BaseModule):
                         continue
 
                     actual_row = j + offset
-                    # @TODO: Do we scrap this ?
-                    #confidence = self.getConfidence(cell, confusion_matrix)
                     confidence = self.accuracies[col][j]
                     if self.transaction.persistent_model_metadata.column_stats[col][
                         KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
@@ -95,21 +93,6 @@ class ModelPredictor(BaseModule):
             'Predict: model {model_name} [OK], TOTAL TIME: {total_time:.2f} seconds'.format(model_name=model_name,
                                                                                             total_time=total_time))
 
-        pass
-
-    def getConfidence(self,value,confusion_matrix):
-        labels = confusion_matrix['labels']
-        index = 0
-        for i,label in enumerate(labels):
-            if value < label:
-                index = i
-                break
-
-        transposed = np.transpose(confusion_matrix['real_x_predicted'])
-        confidence = transposed[index][index]
-        if confidence >=1:
-            confidence = 0.99
-        return "{0:.2f}".format(confidence)
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

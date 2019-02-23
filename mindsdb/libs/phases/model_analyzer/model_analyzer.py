@@ -59,6 +59,7 @@ class ModelAnalyzer(BaseModule):
         for col in probabilistic_validators:
             self.transaction.persistent_model_metadata.probabilistic_validators[col] = probabilistic_validators[col].pickle().decode(encoding='latin1')
 
+        self.persistent_model_metadata.update()
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

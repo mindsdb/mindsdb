@@ -46,7 +46,7 @@ In order to make a prediction, you can now pass a DataFrame with the last x hour
 
 For simplicity we use a file.
 
-Here you will find a file [fuel_predict.csv](https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/time_series/fuel.csv), containing the last 24hrs and the asking for the subsequent hours.
+Here you will find a file [fuel_predict.csv](https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/time_series/fuel_predict.csv), containing the last 24hrs and the asking for the subsequent hours.
 
 
 ```python

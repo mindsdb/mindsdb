@@ -2,14 +2,12 @@ from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_str
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.sampler import Sampler
-from mindsdb.libs.ml_models.pytorch.libs import base_model;
 from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
 from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import array_to_float_variable
 from mindsdb.libs.helpers.norm_denorm_helpers import denorm
 
 import pandas as pd
 
-#@TODO: Define a way to save self.transaction.persistent_model_metadata.probabilistic_validator
 class ModelAnalyzer(BaseModule):
 
     phase_name = PHASE_MODEL_ANALYZER

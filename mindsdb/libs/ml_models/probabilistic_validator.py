@@ -10,7 +10,7 @@ class ProbabilisticValidator():
     of our main model
     # It is fit to the results our model gets on the validation set
     """
-    _smoothing_factor = 2.1
+    _smoothing_factor = 1
     _value_bucket_probabilities = {}
     _probabilistic_model = None
     X_buff = None
@@ -36,7 +36,7 @@ class ProbabilisticValidator():
 
         :return: The data of a ProbabilisticValidator serialized via pickle and decoded as a latin1 string
         """
-        
+
         return pickle.dumps(self).decode(encoding='latin1')
 
     @staticmethod

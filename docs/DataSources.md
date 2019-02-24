@@ -6,6 +6,7 @@ Our goal is to make it very simple to ingest and prepare data that we can feed i
 
 MindsDB.learn **from_data** argument can be any of the follows:
  * **file**: can be a path in the localsystem, stringio object or a url to a file, supported types are (csv, json, xlsx, xls).
+  * **data frame**: A [pandas DataFrame](), pandas is one of the most use data preparation libraries out there, so it makes sense that we support this.
  * **MindsDB data source**: MindsDB has a special class for datasources which lends itself for simple data ingestion and preparation, as well as to combine various datasources to learn from. 
 
 

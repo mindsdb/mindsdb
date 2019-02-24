@@ -13,6 +13,8 @@ class ProbabilisticValidator():
     _smoothing_factor = 1
     _value_bucket_probabilities = {}
     _probabilistic_model = None
+    X_buff = None
+    Y_buff = None
 
 
     def __init__(self):
@@ -22,8 +24,11 @@ class ProbabilisticValidator():
         """
         # <--- Pick one of the 3
         self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
+        #, class_prior=[0.5,0.5]
         #self._probabilistic_model = GaussianNB()
-        #self._probabilistic_model = MultinomialNB()
+        #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
+        self.X_buff = []
+        self.Y_buff = []
 
     def pickle(self):
         """
@@ -31,6 +36,7 @@ class ProbabilisticValidator():
 
         :return: The data of a ProbabilisticValidator serialized via pickle and decoded as a latin1 string
         """
+
         return pickle.dumps(self).decode(encoding='latin1')
 
     @staticmethod
@@ -63,7 +69,7 @@ class ProbabilisticValidator():
 
     def register_observation(self, features_existence, real_value, predicted_value, histogram):
         """
-        # Fit the probabilistic validator on an observation
+        # Register an observation in the validator's internal buffers
 
         :param features_existence: A vector of 0 and 1 representing the existence of all the features (0 == not exists, 1 == exists)
         :param real_value: The real value/label for this prediction
@@ -78,8 +84,17 @@ class ProbabilisticValidator():
         X = [predicted_value_b, *features_existence]
         Y = [correct_prediction]
 
-        self._probabilistic_model.partial_fit(np.array(X).reshape(1,-1), Y, classes=[True, False])
+        self.X_buff.append(X)
+        self.Y_buff.append(Y)
 
+    def partial_fit(self):
+        """
+        # Fit the probabilistic validator on all observations recorder that haven't been taken into account yet
+        """
+
+        self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=[True, False])
+        self.X_buff= []
+        self.Y_buff= []
 
     def evaluate_prediction_accuracy(self, features_existence, predicted_value, histogram):
         """

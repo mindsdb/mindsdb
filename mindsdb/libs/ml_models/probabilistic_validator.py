@@ -1,58 +1,98 @@
 from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
 from mindsdb.libs.constants.mindsdb import NULL_VALUES
 import numpy as np
+import pickle
 
-"""
-# @TODO: Figure out how to source the histogram and chang the _get_value_bucket
-function and the interface of register_observation observation accordingly
 
-# @TODO Figure out how and if to adapt the register_observation and evaluate_prediction_accuracy
-functions to work with vectors of features and labels (i.e. multiple rows at once)
-This could increase efficiency
-"""
 class ProbabilisticValidator():
+    """
+    # The probabilistic validator is a quick to train model used for validating the predictions
+    of our main model
+    # It is fit to the results our model gets on the validation set
+    """
     _smoothing_factor = 1
     _value_bucket_probabilities = {}
     _probabilistic_model = None
 
 
     def __init__(self):
+        """
+        Chose the algorithm to use for the rest of the model
+        As of right now we go with ComplementNB
+        """
         # <--- Pick one of the 3
         self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         #self._probabilistic_model = GaussianNB()
         #self._probabilistic_model = MultinomialNB()
 
+    def pickle(self):
+        """
+        Returns a version of self that can be serialized into mongodb or tinydb
+
+        :return: The data of a ProbabilisticValidator serialized via pickle and decoded as a latin1 string
+        """
+        return pickle.dumps(self).decode(encoding='latin1')
+
+    @staticmethod
+    def unpickle(pickle_string):
+        """
+        :param pickle_string: A latin1 encoded python str containing the pickle data
+        :return: Returns a ProbabilisticValidator object generated from the pickle string
+        """
+        return pickle.loads(pickle_string.encode(encoding='latin1'))
+
+    @staticmethod
+    def _closest(arr, value):
+        """
+        :return: The index of the member of `arr` which is closest to `value`
+        """
+        aux = []
+        for ele in arr:
+            aux.append(abs(value-ele))
+        return aux.index(min(aux))
+
     # For contignous values we want to use a bucket in the histogram to get a discrete label
-    @staticmethod
-    def _get_value_bucket(value, histogram):
+    def _get_value_bucket(self, value, histogram):
+        """
+        :return: The bucket in the `histogram` in which our `value` falls
+        """
         # @TODO Not implemented
-        return value
+        i = self._closest(histogram['x'], value)
+        return histogram['y'][i]
 
-    @staticmethod
-    def _features_missing(feature):
-        return int(not (feature in NULL_VALUES))
 
-    def register_observation(self, features, real_value, predicted_value):
-        real_value_b = self._get_value_bucket(real_value, None)
-        predicted_value_b = self._get_value_bucket(predicted_value, None)
+    def register_observation(self, features_existence, real_value, predicted_value, histogram):
+        """
+        # Fit the probabilistic validator on an observation
 
-        feature_existence = list(map(self._features_missing,features))
+        :param features_existence: A vector of 0 and 1 representing the existence of all the features (0 == not exists, 1 == exists)
+        :param real_value: The real value/label for this prediction
+        :param predicted_value: The predicted value/label
+        :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value` and `real_value`
+        """
+        real_value_b = self._get_value_bucket(real_value, histogram)
+        predicted_value_b = self._get_value_bucket(predicted_value, histogram)
+
         correct_prediction = real_value_b == predicted_value_b
 
-        X = feature_existence
-        X.append(predicted_value_b)
+        X = [predicted_value_b, *features_existence]
         Y = [correct_prediction]
 
         self._probabilistic_model.partial_fit(np.array(X).reshape(1,-1), Y, classes=[True, False])
 
 
-    def evaluate_prediction_accuracy(self, features, predicted_value):
-        predicted_value_b = self._get_value_bucket(predicted_value, None)
+    def evaluate_prediction_accuracy(self, features_existence, predicted_value, histogram):
+        """
+        # Fit the probabilistic validator on an observation
 
-        feature_existence = list(map(self._features_missing,features))
+        :param features_existence: A vector of 0 and 1 representing the existence of all the features (0 == not exists, 1 == exists)
+        :param predicted_value: The predicted value/label
+        :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value`
+        :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
+        """
+        predicted_value_b = self._get_value_bucket(predicted_value, histogram)
 
-        X = feature_existence
-        X.append(predicted_value_b)
+        X = [predicted_value_b, *features_existence]
 
         return self._probabilistic_model.predict_proba(np.array(X).reshape(1,-1))[0][1]
 

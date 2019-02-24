@@ -102,7 +102,7 @@ class EnsembleConvNet(BaseModel):
         """
         if CONFIG.USE_CUDA:
             input.cuda()
-        
+
         inner_outputs = [self.nets[col](input[col]) for col in self.ordered_cols]
 
 

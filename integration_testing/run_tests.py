@@ -48,7 +48,7 @@ def test_one_label_prediction():
     separator = ','
     train_file_name = 'train_data.csv'
     test_file_name = 'test_data.csv'
-    data_len = 200
+    data_len = 800
 
     columns = generate_value_cols(['int','float'],data_len, separator)
     labels = generate_labels_2(columns, separator)
@@ -64,7 +64,6 @@ def test_one_label_prediction():
     mdb.learn(
         from_data=train_file_name,
         to_predict=label_name
-
     )
     print('!-------------  Learning ran successfully  -------------!')
 

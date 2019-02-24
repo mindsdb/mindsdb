@@ -16,7 +16,7 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 import traceback
 
 class Batch:
-    def __init__(self, sampler, data_dict, mirror = False, group=None, column=None, start=None, end=None):
+    def __init__(self, sampler, data_dict, mirror = False, group=None, column=None, start=None, end=None, blank_columns=[]):
         """
 
         :param sampler: The object generating batches
@@ -28,7 +28,7 @@ class Batch:
         self.sampler = sampler
         self.mirror = mirror
         self.number_of_rows = None
-        self.blank_columns = []
+        self.blank_columns = blank_columns
 
         # these are pointers to trace it back to the original data
         self.group_pointer = group

@@ -38,7 +38,6 @@ class PersistentMlModelInfo(PersistentObject):
         self.stop_training = False
         self.kill_training = False
 
-
     def deleteFiles(self):
         """
         This deletes the model files from storage

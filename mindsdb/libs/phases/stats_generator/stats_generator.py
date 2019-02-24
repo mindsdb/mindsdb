@@ -145,22 +145,15 @@ class StatsGenerator(BaseModule):
                 words += splitRecursive(cell, WORD_SEPARATORS)
 
             hist = {i: words.count(i) for i in words}
-            x = list(hist.keys())
-            histogram = {
-                'x': x,
-                'y': list(hist.values())
-            }
-            return x, histogram
-
-
         else:
             hist = {i: data.count(i) for i in data}
-            x = list(hist.keys())
-            histogram = {
-                'x': x,
-                'y': list(hist.values())
-            }
-            return x, histogram
+
+        x = list(hist.keys())
+        histogram = {
+            'x': x,
+            'y': list(hist.values())
+        }
+        return x, histogram
 
     def _compute_value_distribution_score(self, stats, columns, col_name):
         """

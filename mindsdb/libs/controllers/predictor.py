@@ -20,7 +20,7 @@ from pathlib import Path
 
 class Predictor:
 
-    def __init__(self, name, root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL, log_server =CONFIG.MINDSDB_SERVER_URL):
+    def __init__(self, name, root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL, log_server=CONFIG.MINDSDB_SERVER_URL):
         """
         This controller defines the API to a MindsDB 'mind', a mind is an object that can learn and predict from data
 
@@ -204,5 +204,3 @@ class Predictor:
         transaction = Transaction(session=self, transaction_metadata=transaction_metadata, breakpoint=breakpoint)
 
         return transaction.output_data
-
-

@@ -1,4 +1,6 @@
 # Cochran’s sample size calculator
+from scipy.stats import norm
+
 
 def calculate_sample_size(
     population_size,
@@ -48,7 +50,9 @@ def calculate_sample_size(
     if confidence_level in zdict:
         z = zdict[confidence_level]
     else:
-        from scipy.stats import norm
+        #Inf fix
+        if alpha == 0.0:
+            alpha += 0.001
         z = norm.ppf(1 - (alpha/2))
     N = population_size
     M = margin_error

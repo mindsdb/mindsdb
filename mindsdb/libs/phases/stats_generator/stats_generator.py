@@ -1,14 +1,3 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
-
 import random
 import warnings
 from collections import Counter
@@ -94,7 +83,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.TEXT
 
 
-    def get_column_data_type(self, data):
+    def _get_column_data_type(self, data):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -127,6 +116,11 @@ class StatsGenerator(BaseModule):
 
         # assume that the type is the one with the most prevelant type_dist
         for data_type in type_dist:
+            # If any of the members are text, use that data type, since otherwise the model will crash when casting
+            if data_type == DATA_TYPES.TEXT:
+                pass
+                curr_data_type = DATA_TYPES.TEXT
+                break
             if type_dist[data_type] > max_data_type:
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
@@ -138,11 +132,6 @@ class StatsGenerator(BaseModule):
             return self._get_text_type(data), type_dist
 
         return curr_data_type, type_dist
-
-
-
-
-
 
     def _get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
@@ -156,35 +145,15 @@ class StatsGenerator(BaseModule):
                 words += splitRecursive(cell, WORD_SEPARATORS)
 
             hist = {i: words.count(i) for i in words}
-            x = list(hist.keys())
-            histogram = {
-                'x': x,
-                'y': list(hist.values())
-            }
-            return x, histogram
-
-
         else:
             hist = {i: data.count(i) for i in data}
-            x = list(hist.keys())
-            histogram = {
-                'x': x,
-                'y': list(hist.values())
-            }
-            return x, histogram
 
-    # @TODO Use or move to scraps.py
-    def _get_params_as_dictionary(self, params):
-        """ Returns a dictionary with the params of the distribution """
-        arg = params[:-2]
-        loc = params[-2]
-        scale = params[-1]
-        ret = {
-            'loc': loc,
-            'scale': scale,
-            'shape': arg
+        x = list(hist.keys())
+        histogram = {
+            'x': x,
+            'y': list(hist.values())
         }
-        return ret
+        return x, histogram
 
     def _compute_value_distribution_score(self, stats, columns, col_name):
         """
@@ -206,14 +175,16 @@ class StatsGenerator(BaseModule):
             bucket_probabilities[pair['x'][i]] = pair['y'][i]/total_vals
 
         probabilities = list(bucket_probabilities.values())
-        mean_max_distribution_diff = 1 - np.mean(probabilities)/max(probabilities)
-        max_probability = max(probabilities)
 
-        value_distribution_score =  (mean_max_distribution_diff - max_probability)/100
+        max_probability = max(probabilities)
+        max_probability_key = max(bucket_probabilities, key=lambda k: bucket_probabilities[k])
+
+        value_distribution_score = 1 - np.mean(probabilities)/max_probability
 
         data = {
             'bucket_probabilities': bucket_probabilities
             ,'value_distribution_score': value_distribution_score
+            ,'max_probability_key': max_probability_key
         }
 
         return data
@@ -230,7 +201,7 @@ class StatsGenerator(BaseModule):
         :return: Dictioanry containing:
             nr_duplicates: the nr of cells which contain values that are found more than once
             duplicates_percentage: % of the values that are found more than once
-            duplicate_score: a quality based on the duplicate percentage, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
+            duplicates_score: a quality based on the duplicate percentage, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
         occurances = Counter(columns[col_name])
@@ -243,9 +214,9 @@ class StatsGenerator(BaseModule):
         }
 
         if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.CATEGORICAL and stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.DATE:
-            data['duplicate_score'] = data['duplicates_percentage']/100
+            data['duplicates_score'] = data['duplicates_percentage']/100
         else:
-            data['duplicate_score'] = 0
+            data['c'] = 0
 
         return data
 
@@ -334,6 +305,7 @@ class StatsGenerator(BaseModule):
         return {
             'lof_outliers': outlier_indexes
             ,'lof_based_outlier_score': len(outlier_indexes)/len(columns[col_name])
+            ,'percentage_of_log_based_outliers': (len(outlier_indexes)/len(columns[col_name])) * 100
         }
 
 
@@ -358,9 +330,12 @@ class StatsGenerator(BaseModule):
                 similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
                 similarities.append((other_col_name,similarity))
 
+        max_similarity = max(map(lambda x: x[1], similarities))
+
         return {
             'similarities': similarities
-            ,'similarity_score': max(map(lambda x: x[1], similarities))
+            ,'similarity_score': max_similarity
+            ,'most_similar_column_name': list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
         }
 
 
@@ -416,65 +391,150 @@ class StatsGenerator(BaseModule):
             ,'most_correlated_column': other_feature_names[corr_scores.index(max(corr_scores))]
         }
 
-    def _compute_data_quality_score(self, stats, columns, col_name):
+    def _compute_consistency_score(self, stats, col_name):
+        """
+        # Attempts to determine the consistency of the data in a column
+        by taking into account the ty[e distribution, nr of empty cells and duplicates
+
+        :param stats: The stats extracted up until this point for all columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            consistency_score: The socre, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality
+        """
+        col_stats = stats[col_name]
+        if 'duplicates_score' in col_stats:
+            consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2.5 + col_stats['duplicates_score']/5
+        else:
+            consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2
+        return {'consistency_score': consistency_score}
+
+    def _compute_redundancy_score(self, stats, col_name):
+        """
+        # Attempts to determine the redundancy of the column by taking into account correlation and
+        similarity with other columns
+
+        :param stats: The stats extracted up until this point for all columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            consistency_score: The socre, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality
+        """
+        col_stats = stats[col_name]
+        redundancy_score = (col_stats['similarity_score'] + col_stats['correlation_score'])/2
+        return {'redundancy_score': redundancy_score}
+
+    def _compute_variability_score(self, stats, col_name):
+        """
+        # Attempts to determine the variability/randomness of a column by taking into account
+        the z and lof outlier scores and the value distribution score (histogram biasing towards a few buckets)
+
+        :param stats: The stats extracted up until this point for all columns
+        :param col_name: The name of the column we should compute the new stats for
+        :return: Dictioanry containing:
+            consistency_score: The socre, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality
+        """
+        col_stats = stats[col_name]
+        if 'lof_based_outlier_score' in col_stats and 'z_test_based_outlier_score' in col_stats:
+            variability_score = (col_stats['z_test_based_outlier_score'] + col_stats['lof_based_outlier_score']
+             + col_stats['value_distribution_score'])/3
+        else:
+            variability_score = col_stats['value_distribution_score']/2
+
+        return {'variability_score': variability_score}
+
+
+    def _compute_data_quality_score(self, stats, col_name):
         """
         # Attempts to determine the quality of the column through aggregating all quality score
         we could compute about it
 
         :param stats: The stats extracted up until this point for all columns
-        :param columns: All the columns
         :param col_name: The name of the column we should compute the new stats for
         :return: Dictioanry containing:
             quality_score: An aggreagted quality socre that attempts to asses the overall quality of the column,
                 , ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
             bad_scores: The socres which lead to use rating this column poorly
         """
-        scores_used = 0
-        scores_total = 0
-        scores = ['correlation_score', 'lof_based_outlier_score', 'z_test_based_outlier_score', 'data_type_distribution_score', 'empty_cells_score', 'duplicate_score', 'similarity_score', 'value_distribution_score']
-        for score in scores:
-            if score in stats[col_name]:
-                scores_used += 1
-                scores_total += stats[col_name][score]
 
-        quality_score = scores_total/scores_used
-        bad_scores = []
+        col_stats = stats[col_name]
+        scores = ['consistency_score', 'redundancy_score', 'variability_score']
+        quality_score = 0
         for score in scores:
-            if score in stats[col_name]:
-                if stats[col_name][score] > quality_score:
-                    bad_scores.append(score)
-        return {'quality_score': quality_score, 'bad_scores': bad_scores}
+            quality_score += col_stats[score]
+        quality_score = quality_score/len(scores)
+
+        return {'quality_score': quality_score}
 
     def _log_interesting_stats(self, stats):
         """
         # Provide interesting insights about the data to the user and send them to the logging server in order for it to generate charts
+
+        :param stats: The stats extracted up until this point for all columns
         """
         for col_name in stats:
             col_stats = stats[col_name]
 
-            # Data distribution
+            # Overall quality
+            if col_stats['quality_score'] > 0.5:
+                # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
+                self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission are: {}'.format(col_name, col_stats['bad_scores']))
+                if col_stats['duplicates_score'] > 0.5:
+                    duplicates_percentage = col_stats['duplicates_percentage']
+                    self.log.warning(f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.')
+
+
+            #Compound scores
+            if col_stats['consistency_score'] > 0.25:
+                self.log.warning(f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info')
+
+            if col_stats['redundancy_score'] > 0.45:
+                self.log.warning(f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info')
+
+            if col_stats['variability_score'] > 0.5:
+                self.log.warning(f'The data in the column {col_name} seems to have too contain too much noise/randomness based on the value variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.')
+
+
+
+            # Some scores are meaningful on their own, and the user should be warnned if they fall bellow a certain threshold
+            if col_stats['empty_cells_score'] > 0.2:
+                empty_cells_percentage = col_stats['empty_percentage']
+                self.log.warning(f'{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate your data is of poor quality.')
+
+            if col_stats['data_type_distribution_score'] > 0.2:
+                #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
+                percentage_of_data_not_of_principal_type = col_stats['data_type_distribution_score'] * 100
+                principal_data_type = col_stats[KEYS.DATA_TYPE]
+                self.log.warning(f'{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate your data is of poor quality.')
+
+            if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 0.3:
+                percentage_of_outliers = col_stats['z_test_based_outlier_score']*100
+                self.log.warning(f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means there might
+                be too much randomness in this column for us to make an accurate prediction based on it.""")
+
+            if 'lof_based_outlier_score' in col_stats and col_stats['lof_based_outlier_score'] > 0.3:
+                percentage_of_outliers = col_stats['percentage_of_log_based_outliers']
+                self.log.warning(f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data doesn't fit closely in any cluster using the KNN algorithm (20n) to cluster your data, this means there might
+                be too much randomness in this column for us to make an accurate prediction based on it.""")
+
+            if col_stats['value_distribution_score'] > 0.8:
+                max_probability_key = col_stats['max_probability_key']
+                self.log.warning(f"""Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !""")
+
+            if col_stats['similarity_score'] > 0.5:
+                similar_percentage = col_stats['similarity_score'] * 100
+                similar_col_name = col_stats['most_similar_column_name']
+                self.log.warning(f'Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !')
+
+            if col_stats['correlation_score'] > 0.4:
+                not_quite_correlation_percentage = col_stats['correlation_score'] * 100
+                most_correlated_column = col_stats['most_correlated_column']
+                self.log.warning(f"""Using a statistical predictor we\'v discovered a correlation of roughly {not_quite_correlation_percentage}% between column
+                {col_name} and column {most_correlated_column}""")
+
+
+            # We might want to inform the user about a few stats regarding his column regardless of the score, this is done bellow
             self.log.info('Data distribution for column "{}"'.format(col_name))
             self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
-            if stats[col_name]['data_type_distribution_score'] > 0.3:
-                self.log.info('Got a rather varried data type distribution for {}, for column: "{}"'.format(stats[col_name]['data_type_distribution_score'], str(col_name)))
-
-            # Empty/Missing values
-            if col_stats['empty_cells_score'] > 0.5:
-                self.log.info('Column "{}" has {}% of it\'s values missing or null'.format(col_name, round(col_stats['empty_percentage'],2)))
-
-            # Duplicate values
-            if col_stats['duplicate_score'] > 0.5:
-                # Maybe add a chart of frequent duplicate values here
-
-                self.log.info('Column "{}" has {}% of it\'s values duplicated !'.format(col_name, round(col_stats['duplicates_percentage'],2)))
-
-            if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 3:
-                self.log.info('Column "{}" has a very high amount of outliers, as signified by the cummulative z score: {}'.format(col_name, round(col_stats['z_test_based_outlier_score'],2)))
-
-            # Overall quality
-            if col_stats['quality_score'] > 0.5:
-                self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission are: {}'.format(col_name, col_stats['bad_scores']))
 
     def run(self):
         """
@@ -521,10 +581,11 @@ class StatsGenerator(BaseModule):
                 column_count[column] += 1
         stats = {}
 
+        col_data_dict = {}
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, data_type_dist = self.get_column_data_type(col_data)
+            data_type, data_type_dist = self._get_column_data_type(col_data)
 
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
@@ -540,7 +601,7 @@ class StatsGenerator(BaseModule):
 
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
-                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']:
+                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
                         col_data[i] = None
                     else:
                         try:
@@ -556,8 +617,7 @@ class StatsGenerator(BaseModule):
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
 
-
-                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA']]
+                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
 
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
@@ -669,19 +729,23 @@ class StatsGenerator(BaseModule):
             stats[col_name]['column'] = col_name
             stats[col_name]['empty_cells'] = empty_count[col_name]
             stats[col_name]['empty_percentage'] = empty_count[col_name] * 100 / column_count[col_name]
-
+            col_data_dict[col_name] = col_data
 
         for i, col_name in enumerate(all_sampled_data):
             stats[col_name].update(self._compute_duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_empty_cells_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_data_type_dist_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_z_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_lof_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_z_score(stats, col_data_dict, col_name))
+            stats[col_name].update(self._compute_lof_score(stats, col_data_dict, col_name))
             stats[col_name].update(self._compute_similariy_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_value_distribution_score(stats, all_sampled_data, col_name))
 
-            stats[col_name].update(self._compute_data_quality_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(self._compute_consistency_score(stats, col_name))
+            stats[col_name].update(self._compute_redundancy_score(stats, col_name))
+            stats[col_name].update(self._compute_variability_score(stats, col_name))
+
+            stats[col_name].update(self._compute_data_quality_score(stats, col_name))
 
 
         total_rows = len(self.transaction.input_data.data_array)
@@ -703,16 +767,23 @@ class StatsGenerator(BaseModule):
 
 
 def test():
-    from mindsdb import MindsDB
-    mdb = MindsDB()
+    from mindsdb.libs.controllers.predictor import Predictor
+    from mindsdb import CONFIG
 
-    # We tell mindsDB what we want to learn and from what data
+    CONFIG.DEBUG_BREAK_POINT = PHASE_STATS_GENERATOR
+
+    mdb = Predictor(name='home_rentals')
+
     mdb.learn(
         from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
         # the path to the file where we can learn from, (note: can be url)
-        predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        model_name='home_rentals',  # the name of this model
-        breakpoint=PHASE_STATS_GENERATOR)
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02
+    )
+
+
+
+
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

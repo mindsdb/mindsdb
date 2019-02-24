@@ -11,13 +11,12 @@ The goal is to be able to predict the fuel consumption of a vessel, given the pa
 
 ```python
 
-from mindsdb import *
+from mindsdb import Predictor
 
 
-MindsDB().learn(
-    predict = 'Main_Engine_Fuel_Consumption_MT_day',
+Predictor(name='fuel').learn(
+    to_predict = 'Main_Engine_Fuel_Consumption_MT_day',
     from_data = 'fuel.csv',
-    model_name='fuel',
 
     # Time series arguments:
 
@@ -38,11 +37,11 @@ So here the important lesson, is the extra arguments.
     window_size=24, # just 24 hours
 
 
-These are tell mindsDB that it should consider the previous 24 rows (ordered by time, and grouped by the vessel id) in order to make a prediction.
+These will tell mindsDB that it should consider the previous 24 rows (ordered by time, and grouped by the vessel id) in order to make a prediction.
 
 #### Predicting
 
-In order ot make a prediction, you can now pass a data frame with the last x hours of readings.
+In order to make a prediction, you can now pass a DataFrame with the last x hours of readings.
 
 For simplicity we use a file.
 
@@ -51,10 +50,10 @@ Here you will find a file [fuel_predict.csv](https://raw.githubusercontent.com/m
 
 ```python
 
-from mindsdb import *
+from mindsdb import Predictor
 
 # Here we use the model to make predictions (NOTE: You need to run train.py first)
-result = MindsDB().predict(predict='Main_Engine_Fuel_Consumption_MT_day', model_name='fuel', from_data = 'fuel_predict.csv')
+result = Predictor(name='fuel').predict(when_data = 'fuel_predict.csv')
 
 # you can now print the results
 print('The predicted main engine fuel consumption')
@@ -67,4 +66,4 @@ print(result.predicted_values)
 
 #### About the Learning
 
-Note: that the argument **from_data** can be a pandas data_frame, a path to a file or a URL
+Note: that the argument **from_data** can be a pandas DataFrame, a path to a file or a URL

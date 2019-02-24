@@ -1,5 +1,3 @@
-
-
 from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
@@ -17,7 +15,7 @@ import pandas
 
 class DataExtractor(BaseModule):
 
-    phase_name = PHASE_DATA_EXTRACTION
+    phase_name = PHASE_DATA_EXTRACTOR
 
     def _get_data_frame_from_when_conditions(self, train_metadata):
         """
@@ -26,7 +24,7 @@ class DataExtractor(BaseModule):
         :return:
         """
 
-        columns = train_metadata.columns
+        columns = self.transaction.persistent_model_metadata.columns
         when_conditions = self.transaction.metadata.model_when_conditions
 
         when_conditions_list = []
@@ -44,14 +42,6 @@ class DataExtractor(BaseModule):
 
         return result
 
-    def _apply_when_conditions_to_df(self, df):
-        """
-        :param df:
-        :return:
-        """
-        when_conditions = self.transaction.metadata.model_when_conditions
-        # TODO: Apply the when conditions
-        return df
 
     def _apply_sort_conditions_to_df(self, df, train_metadata):
         """
@@ -96,12 +86,14 @@ class DataExtractor(BaseModule):
 
         # if this is a predict statement, create use model_when_conditions to shape the dataframe
         if  self.transaction.metadata.type == TRANSACTION_PREDICT:
-            if self.transaction.metadata.model_when_conditions is not None:
+            if self.transaction.metadata.when_data is not None:
+                df = self.transaction.metadata.when_data
+                df = df.where((pandas.notnull(df)), None)
+
+            elif self.transaction.metadata.model_when_conditions is not None:
                 # if no data frame yet, make one
-                if df is not None:
-                    df = self._get_data_frame_from_when_conditions(train_metadata)
-                else:
-                    df = self._apply_when_conditions_to_df(df)
+                df = self._get_data_frame_from_when_conditions(train_metadata)
+
 
         # if by now there is no DF, throw an error
         if df is None:
@@ -212,7 +204,6 @@ class DataExtractor(BaseModule):
             length = len(self.transaction.input_data.all_indexes[key])
 
             if self.transaction.metadata.type == TRANSACTION_LEARN:
-
                 sample_size = int(calculate_sample_size(population_size=length,
                                                         margin_error=self.transaction.metadata.sample_margin_of_error,
                                                         confidence_level=self.transaction.metadata.sample_confidence_level))
@@ -303,20 +294,23 @@ class DataExtractor(BaseModule):
 
 
 def test():
-    from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
+    from mindsdb.libs.controllers.predictor import Predictor
+    from mindsdb import CONFIG
+
+    CONFIG.DEBUG_BREAK_POINT = PHASE_DATA_EXTRACTOR
+
+    mdb = Predictor(name='home_rentals')
 
 
-    mdb = MindsDB()
-
-    # We tell mindsDB what we want to learn and from what data
     mdb.learn(
         from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
         # the path to the file where we can learn from, (note: can be url)
-        predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        model_name='home_rentals',  # the name of this model
-        breakpoint = PHASE_DATA_EXTRACTION,
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
         sample_margin_of_error=0.02
     )
+
+
+
 
 
 

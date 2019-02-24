@@ -31,26 +31,26 @@ def test_timeseries():
     columns.append(labels)
 
     columns_to_file(columns, data_file_name, separator)
-    mdb = mindsdb.MindsDB()
+    mdb = mindsdb.Predictor(name='test_datetime_timeseries')
     mdb.learn(
         from_data=data_file_name,
-        predict=label_name,
-        model_name='test_datetime_timeseries'
+        to_predict=label_name
+
 
         # timeseries specific args
 
         ,order_by = columns[2][0]
         ,window_size=ts_hours*(data_len/10)
         #,group_by = columns[0][0]
-        )
+    )
 
 def test_one_label_prediction():
     separator = ','
     train_file_name = 'train_data.csv'
     test_file_name = 'test_data.csv'
-    data_len = 200
+    data_len = 800
 
-    columns = generate_value_cols(['int','float','ascii','date'],data_len, separator)
+    columns = generate_value_cols(['int','float'],data_len, separator)
     labels = generate_labels_2(columns, separator)
 
     label_name = labels[0]
@@ -60,17 +60,15 @@ def test_one_label_prediction():
     columns_to_file(columns_train, train_file_name, separator)
     columns_to_file(columns_test, test_file_name, separator)
 
-    mdb = mindsdb.MindsDB(log_level=mindsdb.CONST.INFO_LOG_LEVEL, send_logs=False)
-
+    mdb = mindsdb.Predictor(name='test_one_label_prediction', log_level=mindsdb.CONST.INFO_LOG_LEVEL)
     mdb.learn(
         from_data=train_file_name,
-        predict=label_name,
-        model_name='test_one_label_prediction'
+        to_predict=label_name
     )
     print('!-------------  Learning ran successfully  -------------!')
 
     mdb = mindsdb.MindsDB()
-    results = mdb.predict(when_data=test_file_name, model_name='test_one_label_prediction')
+    results = mdb.predict(when_data=test_file_name)
     print('!-------------  Prediction from file ran successfully  -------------!')
 
     '''
@@ -96,12 +94,11 @@ def test_dual_label_prediction():
     columns.append(labels2)
     columns_to_file(columns, data_file_name, separator)
 
-    mdb = mindsdb.MindsDB()
+    mdb = mindsdb.Predictor(name='test_dual_label_prediction')
     mdb.learn(
         from_data=data_file_name,
-        predict=label_names,
-        model_name='test_dual_label_prediction'
-        )
+        to_predict=label_names
+    )
 
 
 def run_all_test():

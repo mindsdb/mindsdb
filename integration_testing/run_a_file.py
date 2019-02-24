@@ -1,18 +1,8 @@
-import mindsdb
+from mindsdb import Predictor
 
 
-mdb = mindsdb.MindsDB(send_logs=False)
-
+mdb = Predictor(name='titanic_model')
 mdb.learn(
-        from_data='marvel_wiki.csv',
-    predict='FIRST_APPEARANCE',
-    model_name='run_a_file'
+    from_data="train.csv",
+    to_predict='Survived',
 )
-print('!-------------  Learning ran successfully  -------------!')
-
-''':
-features = {}
-result = mdb.predict(when=features, model_name='run_a_file')
-print(result)
-'''
-print('!-------------  Prediction from file ran successfully  -------------!')

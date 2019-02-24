@@ -56,49 +56,62 @@ def getColPermutations(possible_columns, max_num_of_perms = 100):
 
 
 
-    def getBestFitDistribution(self, data, bins=40):
-        """Model data by finding best fit distribution to data"""
-        # Get histogram of original data
 
-        y, x = np.histogram(data, bins=bins, density=False)
-        x = (x + np.roll(x, -1))[:-1] / 2.0
-        # Distributions to check
-        DISTRIBUTIONS = [
-            st.bernoulli, st.beta,  st.cauchy, st.expon,  st.gamma, st.halfcauchy, st.lognorm,
-            st.norm, st.uniform, st.poisson
-        ]
+def getBestFitDistribution(self, data, bins=40):
+    """Model data by finding best fit distribution to data"""
+    # Get histogram of original data
 
-        # Best holders
-        best_distribution = st.norm
-        best_params = (0.0, 1.0)
-        best_sse = np.inf
-        # Estimate distribution parameters from data
-        for i, distribution in enumerate(DISTRIBUTIONS):
-            try:
-                # Ignore warnings from data that can't be fit
-                with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore')
-                    # fit dist to data
-                    params = distribution.fit(data)
-                    # Separate parts of parameters
-                    arg = params[:-2]
-                    loc = params[-2]
-                    scale = params[-1]
+    y, x = np.histogram(data, bins=bins, density=False)
+    x = (x + np.roll(x, -1))[:-1] / 2.0
+    # Distributions to check
+    DISTRIBUTIONS = [
+        st.bernoulli, st.beta,  st.cauchy, st.expon,  st.gamma, st.halfcauchy, st.lognorm,
+        st.norm, st.uniform, st.poisson
+    ]
 
-                    # Calculate fitted PDF and error with fit in distribution
-                    pdf = distribution.pdf(x, loc=loc, scale=scale, *arg)
-                    sse = np.sum(np.power(y - pdf, 2.0))
-                    # identify if this distribution is better
-                    if best_sse > sse > 0:
-                        best_distribution = distribution
-                        best_params = params
-                        best_sse = sse
+    # Best holders
+    best_distribution = st.norm
+    best_params = (0.0, 1.0)
+    best_sse = np.inf
+    # Estimate distribution parameters from data
+    for i, distribution in enumerate(DISTRIBUTIONS):
+        try:
+            # Ignore warnings from data that can't be fit
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore')
+                # fit dist to data
+                params = distribution.fit(data)
+                # Separate parts of parameters
+                arg = params[:-2]
+                loc = params[-2]
+                scale = params[-1]
 
-            except Exception:
-                pass
+                # Calculate fitted PDF and error with fit in distribution
+                pdf = distribution.pdf(x, loc=loc, scale=scale, *arg)
+                sse = np.sum(np.power(y - pdf, 2.0))
+                # identify if this distribution is better
+                if best_sse > sse > 0:
+                    best_distribution = distribution
+                    best_params = params
+                    best_sse = sse
 
-        return (best_distribution.name, best_params, x.tolist(), y.tolist())
+        except Exception:
+            pass
 
+    return (best_distribution.name, best_params, x.tolist(), y.tolist())
+
+
+def _get_params_as_dictionary(self, params):
+    """ Returns a dictionary with the params of the distribution """
+    arg = params[:-2]
+    loc = params[-2]
+    scale = params[-1]
+    ret = {
+        'loc': loc,
+        'scale': scale,
+        'shape': arg
+    }
+    return ret
 
 # def isFullText(self, data):
 #     """
@@ -118,3 +131,4 @@ def getColPermutations(possible_columns, max_num_of_perms = 100):
 #                                       exc_traceback)
 #             return False
 #     return False
+

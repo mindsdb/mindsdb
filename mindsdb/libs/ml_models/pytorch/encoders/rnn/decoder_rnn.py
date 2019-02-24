@@ -1,11 +1,11 @@
-from mindsdb.config import USE_CUDA
+from mindsdb.config import CONFIG
 
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
 
 
-device = 'cuda' if USE_CUDA else 'cpu'
+device = 'cuda' if CONFIG.USE_CUDA else 'cpu'
 
 class AttnDecoderRNN(nn.Module):
     def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=200):

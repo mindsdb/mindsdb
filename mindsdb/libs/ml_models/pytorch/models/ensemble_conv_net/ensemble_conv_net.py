@@ -67,7 +67,7 @@ class EnsembleConvNet(BaseModel):
             nn.Linear(self.view_size, output_size)
         )
 
-        if USE_CUDA:
+        if CONFIG.USE_CUDA:
             self.net.cuda()
             for col in self.nets:
                 self.nets[col].cuda()
@@ -100,9 +100,9 @@ class EnsembleConvNet(BaseModel):
         :param input: a pytorch tensor with the input data of a batch
         :return:
         """
-        if USE_CUDA:
+        if CONFIG.USE_CUDA:
             input.cuda()
-        
+
         inner_outputs = [self.nets[col](input[col]) for col in self.ordered_cols]
 
 

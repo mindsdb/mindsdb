@@ -25,7 +25,7 @@ from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModel
 
 class Sampler:
 
-    def __init__(self, data, metadata_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = [],  sampler_mode = SAMPLER_MODES.DEFAULT):
+    def __init__(self, data, metadata_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = [],  sampler_mode = SAMPLER_MODES.DEFAULT, blank_columns=[]):
         """
 
         :param data:
@@ -45,8 +45,7 @@ class Sampler:
         self.batch_size = batch_size
         self.variable_wrapper = None
         self.variable_unwrapper = None
-
-
+        self.blank_columns = blank_columns
 
     def getSampleBatch(self):
         """
@@ -98,7 +97,7 @@ class Sampler:
 
                 log.debug('Generated: [ALL_COLUMNS] in batch [OK], {time_delta:.2f} seconds'.format(time_delta=(time.time() - allcols_time)))
 
-                yield Batch(self, ret, group=group, column=column, start=group_pointer, end=limit )
+                yield Batch(self, ret, group=group, column=column, start=group_pointer, end=limit, blank_columns=self.blank_columns)
 
                 ret = {}
                 group_pointer = limit

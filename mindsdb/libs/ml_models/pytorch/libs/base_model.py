@@ -273,8 +273,6 @@ class BaseModel(nn.Module):
         :yield: TrainerResponse
         """
 
-
-
         model_object = self
         response = TrainerResponse(model_object)
 

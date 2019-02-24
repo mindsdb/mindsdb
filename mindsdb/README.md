@@ -17,11 +17,11 @@
     * ```data_sources```: MindsDB allows to use various forms of datasets and also to mix them.
     * ```data_entities```: MindsDB stores training data in an object database and these are the entities that we access these through.
 
-        
+
 
 # How does it work?
 
-You tell mindsDB what you want to predict and from what data it should 
+You tell mindsDB what you want to predict and from what data it should
 learn this prediction. Such as:
 
 ```sql
@@ -32,10 +32,9 @@ After that; MindsDB figures out how to:
 
 * Build a custom set of neural networks that can possibly best achieve the prediction you want.
 * Prepare the data so it can be fed into the proposed neural networks
-* Train, test and compare the the accuracy and complexity of each neural network.
-* Deploy the best suited model to a production environment that can  be used and updated with tools that are very familiar to any developer (see the proxy section).
+* Train, test and compare the accuracy and complexity of each neural network.
+* Deploy the best suited model to a production environment that can be used and updated with tools that are very familiar to any developer (see the proxy section).
 
-On top of all this it provides you with a step by step explanation of what is doing to obtain such predictions and what finds to be important within your data. 
+On top of all this it provides you with a step by step explanation of what it's doing to obtain such predictions and what it finds to be important within your data. 
 
 Currently MindsDB works with relational data sources. What this means, is data lives in tables in: excel spreadsheets, CSV files or tables in any of the following database servers (oracle, mysql, postgres,  mariadb, redshift, aurora, oracle, TyDB)
-

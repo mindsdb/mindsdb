@@ -123,20 +123,23 @@ class TrainWorker():
                     last_epoch = train_ret.epoch
                     log.debug('New epoch:{epoch}, testing and calculating error'.format(epoch=last_epoch))
                     test_ret = self.data_model_object.testModel(self.test_sampler)
-                    log.info('Test Error:{error}, Accuracy:{accuracy} | Best Accuracy so far: {best_accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy, best_accuracy=highest_accuracy))
+                    log.debug('Test Error:{error}, Accuracy:{accuracy} | Best Accuracy so far: {best_accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy, best_accuracy=highest_accuracy))
                     is_it_lowest_error_epoch = False
+                    
                     # if lowest error save model
                     if lowest_error in [None]:
                         lowest_error = test_ret.error
                         highest_accuracy = test_ret.accuracy
+                        log.info(f'Got best accuracy so far: {highest_accuracy}')
 
                     if lowest_error > test_ret.error and test_ret.accuracy > 0:
                         is_it_lowest_error_epoch = True
                         lowest_error = test_ret.error
                         highest_accuracy = test_ret.accuracy
-                        log.info('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}, Accuracy: {accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
+                        log.debug('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}, Accuracy: {accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
                         log.debug('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
                             model_name=self.model_name, data_model=self.ml_model_name, config=self.ml_model_info.config_serialized))
+                        log.info(f'Got best accuracy so far: {highest_accuracy}')
 
                         # save model local file
                         local_files = self.save_to_disk(local_files)

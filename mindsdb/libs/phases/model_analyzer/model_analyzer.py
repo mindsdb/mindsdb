@@ -56,22 +56,14 @@ class ModelAnalyzer(BaseModule):
 
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence,
                     real_value=real_val, predicted_value=predicted_val, histogram=self.transaction.persistent_model_metadata.column_stats[pcol]['histogram'])
-<<<<<<< HEAD
                 probabilistic_validators[pcol].partial_fit()
-                
-=======
 
->>>>>>> v.1.0
         # Pickle for later use
         self.transaction.persistent_model_metadata.probabilistic_validators = {}
         for col in probabilistic_validators:
             self.transaction.persistent_model_metadata.probabilistic_validators[col] = probabilistic_validators[col].pickle()
 
-<<<<<<< HEAD
         self.transaction.persistent_model_metadata.update()
-=======
-        self.persistent_model_metadata.update()
->>>>>>> v.1.0
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

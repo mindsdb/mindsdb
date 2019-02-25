@@ -113,6 +113,7 @@ class Transaction:
 
             model_backend = LudwigBackend(self)
             model_backend.train()
+            self.persistent_model_metadata.update()
 
             # self._call_phase_module('DataVectorizer')
             # self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
@@ -172,8 +173,10 @@ class Transaction:
             self.output_data = self.input_data
             return
 
-        self._call_phase_module('DataVectorizer')
-        self._call_phase_module('ModelPredictor')
+        #self._call_phase_module('DataVectorizer')
+        #self._call_phase_module('ModelPredictor')
+        model_backend = LudwigBackend(self)
+        model_backend.predict()
 
         return
 

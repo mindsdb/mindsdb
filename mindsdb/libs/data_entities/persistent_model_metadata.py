@@ -27,4 +27,5 @@ class PersistentModelMetadata(PersistentObject):
         self.kill_training = False
 
         self.probabilistic_validators = None
-        self.test_pickled_validator = None
+
+        self.ludwig_save_path = None

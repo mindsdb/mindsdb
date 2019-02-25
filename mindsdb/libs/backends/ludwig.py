@@ -49,11 +49,13 @@ class LudwigBackend():
 
 
         training_dataframe = pd.DataFrame(data=training_data)
-        print(training_dataframe)
-        print(model_definition)
         model = LudwigModel(model_definition)
+
         train_stats = model.train(training_dataframe, model_name=self.transaction.metadata.model_name)
 
+        self.transaction.persistent_ml_model_info.ludwig_save_path = model.model.weights_save_path.rstrip('/model_weights_progress')
+
+
     def predict(self):
-        model = LudwigModel.load('results/' + self.transaction.metadata.model_name)
+        model = LudwigModel.load(self.transaction.persistent_ml_model_info.ludwig_save_path)
         pass

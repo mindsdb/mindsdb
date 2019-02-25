@@ -129,21 +129,37 @@ class Transaction:
 
             # INSERT ML BACKEND HERE
 
-            self._call_phase_module('DataVectorizer')
+            #Use self.transaction.input_data.columns for the data for now
 
             from ludwig import LudwigModel
 
             model_definition = {'input_features': [], 'output_features': []}
+            training_dataframe = {}
+            for col_ind, col in enumerate(self.persistent_model_metadata.columns):
+                training_dataframe[col] = self.input_data.data_array[col_ind]
+                col_stats = self.persistent_model_metadata.column_stats[col]
+                data_type = col_stats[KEYS.DATA_TYPE]
 
-            for col in self.persistent_model_metadata.columns:
+                ludwig_dtype = 'bag'
+
+                if data_type == DATA_TYPES.NUMERIC:
+                    ludwig_dtype = 'numerical'
+
+                if data_type == DATA_TYPES.TEXT:
+                    ludwig_dtype = 'bag'
+
+                if data_type == DATA_TYPES.DATE:
+                    ludwig_dtype = 'bag'
+
+                if data_type == DATA_TYPES.CATEGORICAL:
+                    ludwig_dtype = 'category'
+
                 if col not in self.persistent_model_metadata.predict_columns:
-                    ludwig_dtype = None
                     model_definition['input_features'].append({
                         'name': col
                         ,'type': ludwig_dtype
                     })
                 else:
-                    ludwig_dtype = None
                     model_definition['output_features'].append({
                         'name': col
                         ,'type': ludwig_dtype

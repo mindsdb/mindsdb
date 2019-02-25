@@ -49,6 +49,7 @@ share/python-wheels/
 # virtualenv
 .venv
 venv/
+venv3.6
 ENV/
 
 # pyenv

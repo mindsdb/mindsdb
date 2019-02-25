@@ -127,14 +127,44 @@ class Transaction:
             self.persistent_model_metadata.update()
 
 
+            # INSERT ML BACKEND HERE
+
             self._call_phase_module('DataVectorizer')
-            self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
-            self.persistent_model_metadata.update()
+
+            from ludwig import LudwigModel
+
+            model_definition = {'input_features': [], 'output_features': []}
+
+            for col in self.persistent_model_metadata.columns:
+                if col not in self.persistent_model_metadata.predict_columns:
+                    ludwig_dtype = None
+                    model_definition['input_features'].append({
+                        'name': col
+                        ,'type': ludwig_dtype
+                    })
+                else:
+                    ludwig_dtype = None
+                    model_definition['output_features'].append({
+                        'name': col
+                        ,'type': ludwig_dtype
+                    })
+
+
+            model = LudwigModel(model_definition)
+            train_stats = model.train(training_dataframe)
+
+            # INSERT ML BACKEND HERE
+
+
+
+            # self._call_phase_module('DataVectorizer')
+            # self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
+            # self.persistent_model_metadata.update()
 
             # self.callPhaseModule('DataEncoder')
-            self._call_phase_module('ModelTrainer')
+            # self._call_phase_module('ModelTrainer')
 
-            self._call_phase_module('ModelAnalyzer')
+            # self._call_phase_module('ModelAnalyzer')
             # TODO: Loop over all stats and when all stats are done, then we can mark model as MODEL_STATUS_TRAINED
 
             return

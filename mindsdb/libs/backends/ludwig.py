@@ -66,7 +66,7 @@ class LudwigBackend():
 
 
     def predict(self):
-        predict_dataframe = self._create_ludwig_dataframe('predict')
+        predict_dataframe, model_definition = self._create_ludwig_dataframe('predict')
         model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
         predictions = model.predict(data_df=predict_dataframe)
         print(predictions)

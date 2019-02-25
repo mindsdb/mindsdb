@@ -7,6 +7,7 @@ from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import TransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData
 from mindsdb.libs.data_types.mindsdb_logger import log
+from mindsdb.libs.backends.ludwig import LudwigBackend
 from mindsdb.config import CONFIG
 
 import pandas as pd
@@ -63,7 +64,6 @@ class Transaction:
         Loads the module and runs it
 
         :param module_name:
-        :param kwargs:
         :return:
         """
 
@@ -72,7 +72,7 @@ class Transaction:
         try:
             main_module = importlib.import_module(module_full_path)
             module = getattr(main_module, module_name)
-            return module(self.session, self, **kwargs)
+            return module(self.session, self)
         except:
             error = 'Could not load module {module_name}'.format(module_name=module_name)
             self.log.error('Could not load module {module_name}'.format(module_name=module_name))
@@ -116,60 +116,8 @@ class Transaction:
             self.persistent_model_metadata.current_phase = MODEL_STATUS_PREPARING
             self.persistent_model_metadata.update()
 
-
-            # INSERT ML BACKEND HERE
-
-            #Use self.transaction.input_data.columns for the data for now
-
-            from ludwig import LudwigModel
-
-            model_definition = {'input_features': [], 'output_features': []}
-            training_data = {}
-
-            for col_ind, col in enumerate(self.persistent_model_metadata.columns):
-                training_data[col] = []
-                for row_ind in self.input_data.train_indexes['ALL_ROWS_NO_GROUP_BY']:
-                    training_data[col].append(self.input_data.data_array[row_ind][col_ind])
-
-                col_stats = self.persistent_model_metadata.column_stats[col]
-                data_type = col_stats[KEYS.DATA_TYPE]
-
-                ludwig_dtype = 'bag'
-
-                if data_type == DATA_TYPES.NUMERIC:
-                    ludwig_dtype = 'numerical'
-
-                if data_type == DATA_TYPES.TEXT:
-                    ludwig_dtype = 'bag'
-
-                if data_type == DATA_TYPES.DATE:
-                    ludwig_dtype = 'bag'
-
-                if data_type == DATA_TYPES.CATEGORICAL:
-                    ludwig_dtype = 'category'
-
-                if col not in self.persistent_model_metadata.predict_columns:
-                    model_definition['input_features'].append({
-                        'name': col
-                        ,'type': ludwig_dtype
-                    })
-                else:
-                    model_definition['output_features'].append({
-                        'name': col
-                        ,'type': ludwig_dtype
-                    })
-
-
-            training_dataframe = pd.DataFrame(data=training_data)
-            print(training_dataframe)
-            print(model_definition)
-            model = LudwigModel(model_definition)
-            train_stats = model.train(training_dataframe, model_name=self.metadata.model_name)
-            print('---------------------------------------------------')
-            print(train_stats)
-            # INSERT ML BACKEND HERE
-
-
+            model_backend = LudwigBackend(self)
+            model_backend.train()
 
             # self._call_phase_module('DataVectorizer')
             # self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING

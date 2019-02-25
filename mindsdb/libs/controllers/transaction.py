@@ -58,10 +58,9 @@ class Transaction:
         self.run()
 
 
-
-    def _get_phase_instance(self, module_name, **kwargs):
+    def _call_phase_module(self, module_name):
         """
-        Loads the module that we want to start for
+        Loads the module and runs it
 
         :param module_name:
         :param kwargs:
@@ -81,13 +80,6 @@ class Transaction:
             raise ValueError(error)
             return None
 
-
-    def _call_phase_module(self, module_name):
-        """
-
-        :param module_name:
-        :return:
-        """
         module = self._get_phase_instance(module_name)
         return module()
 

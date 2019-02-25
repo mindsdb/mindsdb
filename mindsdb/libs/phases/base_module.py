@@ -46,9 +46,6 @@ class BaseModule():
         self.setup(**kwargs)
         self.log = self.transaction.log
 
-    def loadPhaseModule(self, module_name):
-        return self.transaction._get_phase_instance(module_name)
-
     def run(self):
         pass
 

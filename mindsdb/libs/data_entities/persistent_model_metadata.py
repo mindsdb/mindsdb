@@ -28,4 +28,4 @@ class PersistentModelMetadata(PersistentObject):
 
         self.probabilistic_validators = None
 
-        self.ludwig_save_path = None
+        self.ludwig_data = None

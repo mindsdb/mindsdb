@@ -1,5 +1,3 @@
-
-
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
@@ -8,10 +6,10 @@ from mindsdb.libs.data_entities.persistent_ml_model_info import PersistentMlMode
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import TransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData
-
+from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.config import CONFIG
 
-from mindsdb.libs.data_types.mindsdb_logger import log
+import pandas as pd
 
 import _thread
 import traceback
@@ -134,9 +132,13 @@ class Transaction:
             from ludwig import LudwigModel
 
             model_definition = {'input_features': [], 'output_features': []}
-            training_dataframe = {}
+            training_data = {}
+
             for col_ind, col in enumerate(self.persistent_model_metadata.columns):
-                training_dataframe[col] = self.input_data.data_array[col_ind]
+                training_data[col] = []
+                for row_ind in self.input_data.train_indexes['ALL_ROWS_NO_GROUP_BY']:
+                    training_data[col].append(self.input_data.data_array[row_ind][col_ind])
+
                 col_stats = self.persistent_model_metadata.column_stats[col]
                 data_type = col_stats[KEYS.DATA_TYPE]
 
@@ -166,9 +168,13 @@ class Transaction:
                     })
 
 
+            training_dataframe = pd.DataFrame(data=training_data)
+            print(training_dataframe)
+            print(model_definition)
             model = LudwigModel(model_definition)
-            train_stats = model.train(training_dataframe)
-
+            train_stats = model.train(training_dataframe, model_name=self.metadata.model_name)
+            print('---------------------------------------------------')
+            print(train_stats)
             # INSERT ML BACKEND HERE
 
 

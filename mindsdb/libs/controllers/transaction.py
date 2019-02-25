@@ -10,8 +10,6 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.backends.ludwig import LudwigBackend
 from mindsdb.config import CONFIG
 
-import pandas as pd
-
 import _thread
 import traceback
 import importlib
@@ -72,16 +70,13 @@ class Transaction:
         try:
             main_module = importlib.import_module(module_full_path)
             module = getattr(main_module, module_name)
-            return module(self.session, self)
+            return module(self.session, self)()
         except:
             error = 'Could not load module {module_name}'.format(module_name=module_name)
             self.log.error('Could not load module {module_name}'.format(module_name=module_name))
             self.log.error(traceback.format_exc())
             raise ValueError(error)
             return None
-
-        module = self._get_phase_instance(module_name)
-        return module()
 
 
     def _execute_learn(self):

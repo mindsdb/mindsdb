@@ -6,7 +6,7 @@ class TransactionOutputData():
 
     def __init__(self, predicted_columns=[], columns_map = {}):
         self.data_array = []
-        self.columns = []
+        self.columns = predicted_columns
         self.predicted_columns = predicted_columns
         self.columns_map = columns_map
 

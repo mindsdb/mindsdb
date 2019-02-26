@@ -42,7 +42,6 @@ class Transaction:
         self.errorMsg = None
 
         self.input_data = TransactionData()
-        self.output_data = TransactionOutputData(predicted_columns=self.metadata.model_predict_columns)
 
         self.model_data = ModelData()
 
@@ -51,6 +50,7 @@ class Transaction:
         self.persistent_model_metadata.model_name = self.metadata.model_name
         self.persistent_ml_model_info = PersistentMlModelInfo()
         self.persistent_ml_model_info.model_name = self.metadata.model_name
+
 
         self.log = logger
 
@@ -172,6 +172,7 @@ class Transaction:
             self.output_data = self.input_data
             return
 
+        self.output_data = TransactionOutputData(predicted_columns=self.persistent_model_metadata.predict_columns)
         #self._call_phase_module('DataVectorizer')
         #self._call_phase_module('ModelPredictor')
         model_backend = LudwigBackend(self)

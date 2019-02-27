@@ -111,8 +111,8 @@ class Transaction:
             self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
             self.persistent_model_metadata.update()
 
-            self.transaction.model_backend = LudwigBackend(self)
-            self.transaction.model_backend.train()
+            self.model_backend = LudwigBackend(self)
+            self.model_backend.train()
             self.persistent_model_metadata.update()
 
             self._call_phase_module('ModelAnalyzer')
@@ -169,8 +169,8 @@ class Transaction:
         self.output_data = PredictTransactionOutputData(predicted_columns=self.persistent_model_metadata.predict_columns,
         data_array=self.input_data.data_array,columns=self.input_data.columns)
 
-        self.transaction.model_backend = LudwigBackend(self)
-        predictions = self.transaction.model_backend.predict()
+        self.model_backend = LudwigBackend(self)
+        predictions = self.model_backend.predict()
 
         for predicted_col in self.persistent_model_metadata.predict_columns:
             values = predictions[f'{predicted_col}_predictions']

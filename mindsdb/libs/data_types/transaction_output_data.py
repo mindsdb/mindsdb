@@ -63,6 +63,7 @@ class TransactionOutputData():
 
                 if as_list:
                     ret_row += [row[pred_col_index]]
+                    ret_row += [row[pred_col_confidence_index]]
                 else:
                     ret_row[self._getOrigColum(pred_col)] = row[pred_col_index]
                     ret_row[confidence_col] = row[pred_col_confidence_index]
@@ -72,7 +73,12 @@ class TransactionOutputData():
 
         # if add_header and as_list True, add the header to the result
         if as_list and add_header:
-            header = [self._getOrigColum(col) for col in self.predicted_columns] + [KEY_CONFIDENCE]
+            header = []
+            for i in range(len(self.predicted_columns)):
+                pred_col = self.predicted_columns[i]
+                confidence_col = self.confidence_columns[i]
+                header.append(pred_col)
+                header.append(confidence_col)
             ret = [header] + ret
 
         return ret

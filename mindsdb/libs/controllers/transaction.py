@@ -183,7 +183,7 @@ class Transaction:
         predictions = model_backend.predict()
 
 
-        predicted_columns = copy.deepcopy(self.transaction.persistent_model_metadata.predict_columns)
+        predicted_columns = copy.deepcopy(self.persistent_model_metadata.predict_columns)
         for predicted_col in predicted_columns:
             values = predictions[f'{predicted_col}_predictions']
 

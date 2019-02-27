@@ -10,4 +10,5 @@ print('------------------------------------------------------------Done training
 #mdb = Predictor(name='titanic_model')
 predicted = mdb.predict(when_data="integration_testing/train.csv")
 print('------------------------------------------------------------Preidiction output------------------------------------------------------------')
-print(predicted.predicted_values)
+for val in predicted:
+    print(val)

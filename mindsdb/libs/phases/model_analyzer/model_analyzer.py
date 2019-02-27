@@ -33,7 +33,7 @@ class ModelAnalyzer(BaseModule):
                                         ignore_types=self.transaction.data_model_object.ignore_types, sampler_mode=SAMPLER_MODES.LEARN,blank_columns=ignore_columns)
             validation_sampler.variable_wrapper = array_to_float_variable
 
-            predictions = self.transaction.data_model_object.testModel(validation_sampler)
+            predictions = self.transaction.model_backend.predict(validation_sampler)
 
             # A separate probabilistic model is trained for each predicted column, we may want to change this in the future, @TODO
             for pcol in predictions.predicted_targets:

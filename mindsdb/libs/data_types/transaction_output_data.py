@@ -2,7 +2,13 @@ from mindsdb.libs.constants.mindsdb import *
 
 from mindsdb.libs.data_types.mindsdb_logger import log
 
-class TransactionOutputData():
+class TrainTransactionOutputData():
+    def __init__(self):
+        self.data_array = None
+        self.columns = None
+
+
+class PredictTransactionOutputData():
 
     def __init__(self, predicted_columns, data_array, columns, columns_map = {}):
         self.data_array = data_array

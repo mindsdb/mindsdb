@@ -4,7 +4,7 @@ from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 from mindsdb.libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
 from mindsdb.libs.data_types.transaction_data import TransactionData
-from mindsdb.libs.data_types.transaction_output_data import TransactionOutputData
+from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.backends.ludwig import LudwigBackend
@@ -43,7 +43,7 @@ class Transaction:
         self.errorMsg = None
 
         self.input_data = TransactionData()
-
+        self.output_data = TrainTransactionOutputData()
         self.model_data = ModelData()
 
         # variables that can be persisted
@@ -107,16 +107,15 @@ class Transaction:
             self.persistent_model_metadata.predict_columns = self.metadata.model_predict_columns
             self.persistent_model_metadata.insert()
 
-
             self._call_phase_module('StatsGenerator')
             self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
             self.persistent_model_metadata.update()
 
-            model_backend = LudwigBackend(self)
-            model_backend.train()
+            self.transaction.model_backend = LudwigBackend(self)
+            self.transaction.model_backend.train()
             self.persistent_model_metadata.update()
 
-            # self._call_phase_module('ModelAnalyzer')
+            self._call_phase_module('ModelAnalyzer')
 
             return
         except Exception as e:
@@ -131,11 +130,11 @@ class Transaction:
 
     def _execute_drop_model(self):
         """
+        Make sure that we remove all previous data about this model
 
         :return:
         """
 
-        # make sure that we remove all previous data about this model
         self.persistent_model_metadata.delete()
         self.persistent_model_stats.delete()
 
@@ -167,11 +166,11 @@ class Transaction:
             self.output_data = self.input_data
             return
 
-        self.output_data = TransactionOutputData(predicted_columns=self.persistent_model_metadata.predict_columns,
+        self.output_data = PredictTransactionOutputData(predicted_columns=self.persistent_model_metadata.predict_columns,
         data_array=self.input_data.data_array,columns=self.input_data.columns)
 
-        model_backend = LudwigBackend(self)
-        predictions = model_backend.predict()
+        self.transaction.model_backend = LudwigBackend(self)
+        predictions = self.transaction.model_backend.predict()
 
         for predicted_col in self.persistent_model_metadata.predict_columns:
             values = predictions[f'{predicted_col}_predictions']

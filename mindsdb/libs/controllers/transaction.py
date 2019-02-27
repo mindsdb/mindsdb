@@ -188,13 +188,13 @@ class Transaction:
             values = predictions[f'{predicted_col}_predictions']
 
 
-            predicted_col_index = self.transaction.input_data.columns.index(predicted_col)
+            predicted_col_index = self.input_data.columns.index(predicted_col)
             predicted_col_confidence_index = predicted_col_index + 1
-            self.transaction.output_data.columns.insert(predicted_col_confidence_index, predicted_col + '_confidence')
+            self.output_data.columns.insert(predicted_col_confidence_index, predicted_col + '_confidence')
 
             for i, val in enumerate(values):
-                self.transaction.output_data.data_array[i][predicted_col_index] = val
-                self.transaction.output_data.data_array[i][predicted_col_confidence_index] = 0.54
+                self.output_data.data_array[i][predicted_col_index] = val
+                self.output_data.data_array[i][predicted_col_confidence_index] = 0.54
 
         return
 

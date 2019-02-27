@@ -173,7 +173,7 @@ class Transaction:
         predictions = self.model_backend.predict()
 
         for predicted_col in self.persistent_model_metadata.predict_columns:
-            values = predictions[f'{predicted_col}_predictions']
+            values = predictions[predicted_col]
 
             predicted_col_index = self.input_data.columns.index(predicted_col)
             predicted_col_confidence_index = predicted_col_index + 1

@@ -54,7 +54,7 @@ class ProbabilisticValidator():
         """
         aux = []
         for ele in arr:
-            aux.append(abs(value-ele))
+            aux.append(abs(value - ele))
         return aux.index(min(aux))
 
     # For contignous values we want to use a bucket in the histogram to get a discrete label
@@ -63,8 +63,11 @@ class ProbabilisticValidator():
         :return: The bucket in the `histogram` in which our `value` falls
         """
         # @TODO Not implemented
-        i = self._closest(histogram['x'], value)
-        return histogram['y'][i]
+        try:
+            i = self._closest(histogram['x'], value)
+            return histogram['y'][i]
+        except:
+            return value
 
 
     def register_observation(self, features_existence, real_value, predicted_value, histogram):

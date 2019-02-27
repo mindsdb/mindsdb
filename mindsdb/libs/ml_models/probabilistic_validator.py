@@ -17,7 +17,7 @@ class ProbabilisticValidator():
     Y_buff = None
 
 
-    def __init__(self):
+    def __init__(self, histogram ):
         """
         Chose the algorithm to use for the rest of the model
         As of right now we go with ComplementNB
@@ -29,6 +29,8 @@ class ProbabilisticValidator():
         #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
+        self.bucket_keys = [1] + [i+2 for i in range(len(histogram))]
+        self.buckets = histogram
 
     def pickle(self):
         """
@@ -52,22 +54,31 @@ class ProbabilisticValidator():
         """
         :return: The index of the member of `arr` which is closest to `value`
         """
-        aux = []
-        for ele in arr:
-            aux.append(abs(value-ele))
-        return aux.index(min(aux))
+
+        for i,ele in enumerate(arr):
+            if ele > value:
+                return i - 1
+
+        return len(arr)
 
     # For contignous values we want to use a bucket in the histogram to get a discrete label
-    def _get_value_bucket(self, value, histogram):
+    def _get_value_bucket(self, value):
         """
         :return: The bucket in the `histogram` in which our `value` falls
         """
-        # @TODO Not implemented
-        i = self._closest(histogram['x'], value)
-        return histogram['y'][i]
+        # @TODO maybe use stats type in constructor
+        # Support for non numeric values
+        if type(value) == type(''):
+            if value in self.buckets:
+                i = self.buckets.index(value) + 2
+            else:
+                i = 1 # todo make sure that there is an index for values not in list
+        else:
+            i = self._closest(self.buckets, value) + 2
+        return i
 
 
-    def register_observation(self, features_existence, real_value, predicted_value, histogram):
+    def register_observation(self, features_existence, real_value, predicted_value):
         """
         # Register an observation in the validator's internal buffers
 
@@ -76,13 +87,11 @@ class ProbabilisticValidator():
         :param predicted_value: The predicted value/label
         :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value` and `real_value`
         """
-        real_value_b = self._get_value_bucket(real_value, histogram)
-        predicted_value_b = self._get_value_bucket(predicted_value, histogram)
 
-        correct_prediction = real_value_b == predicted_value_b
+        real_value_b = self._get_value_bucket(real_value)
 
-        X = [predicted_value_b, *features_existence]
-        Y = [correct_prediction]
+        X = [predicted_value, *features_existence]
+        Y = [real_value_b]
 
         self.X_buff.append(X)
         self.Y_buff.append(Y)
@@ -92,11 +101,11 @@ class ProbabilisticValidator():
         # Fit the probabilistic validator on all observations recorder that haven't been taken into account yet
         """
 
-        self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=[True, False])
+        self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=self.bucket_keys)
         self.X_buff= []
         self.Y_buff= []
 
-    def evaluate_prediction_accuracy(self, features_existence, predicted_value, histogram):
+    def evaluate_prediction_accuracy(self, features_existence, predicted_value):
         """
         # Fit the probabilistic validator on an observation
 
@@ -105,11 +114,10 @@ class ProbabilisticValidator():
         :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value`
         :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
         """
-        predicted_value_b = self._get_value_bucket(predicted_value, histogram)
 
-        X = [predicted_value_b, *features_existence]
+        X = [[predicted_value, *features_existence]]
 
-        return self._probabilistic_model.predict_proba(np.array(X).reshape(1,-1))[0][1]
+        return self._probabilistic_model.predict_proba(np.array(X))[0][1]
 
 
 if __name__ == "__main__":

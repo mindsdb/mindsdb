@@ -3,7 +3,6 @@ from mindsdb.libs.constants.mindsdb import *
 from ludwig import LudwigModel
 import pandas as pd
 
-
 # @TODO: Define generci interface, similar to 'base_module' in the phases
 class LudwigBackend():
 
@@ -69,16 +68,4 @@ class LudwigBackend():
         predict_dataframe, model_definition = self._create_ludwig_dataframe('predict')
         model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
         predictions = model.predict(data_df=predict_dataframe)
-        print(predictions['Pclass_predictions'][11])
-
-        for predicted_col in self.transaction.persistent_model_metadata.predict_columns:
-            values = predictions[f'{predicted_col}_predictions']
-
-            #Create the correct shape for the output data array
-            #@TODO maybe move out of here ?
-            if len(self.transaction.output_data.data_array) == 0:
-                self.transaction.output_data.data_array = [[]] * len(values)
-
-            #predicted_col_index = self.transaction.input_data.columns.index(predicted_col)
-            for i, val in enumerate(values):
-                self.transaction.output_data.data_array[i].append(val)
+        return predictions

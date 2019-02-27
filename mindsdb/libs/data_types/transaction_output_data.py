@@ -18,6 +18,18 @@ class TransactionOutputData():
 
         return col
 
+    def __iter__(self):
+        self.iter_col_n = 0
+        return self
+
+    def __next__(self):
+        if self.iter_col_n < len(self.data_array[0]):
+            predictions_map = {}
+            for col in self.predicted_columns:
+                predictions_map[col] = self.data_array(self.columns.index(col))[self.iter_col_n]
+            self.iter_col_n += 1
+            return predictions_map
+
     @property
     def predicted_values(self, as_list=False, add_header = False):
         """
@@ -42,21 +54,6 @@ class TransactionOutputData():
                     ret_row += [row[col_index]]
                 else:
                     ret_row[self._getOrigColum(col)] = row[col_index]
-
-
-            # append confidence
-            col_index = self.columns.index(KEY_CONFIDENCE)
-            if as_list: # add confidence if its a dictionary
-                ret_row += row[col_index]
-            else:
-                if len(row) < col_index:
-                    log.warning('Output is smaller than expected, see transaction_output_data.py')
-                    ret_row[KEY_CONFIDENCE] = 0
-                else:
-                    try:
-                        ret_row[KEY_CONFIDENCE] = row[col_index]
-                    except:
-                        ret_row[KEY_CONFIDENCE] = 0
 
             # append row to result
             ret += [ret_row]

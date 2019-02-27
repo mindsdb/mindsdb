@@ -13,6 +13,7 @@ from mindsdb.config import CONFIG
 import _thread
 import traceback
 import importlib
+import copy
 
 
 class Transaction:
@@ -168,15 +169,32 @@ class Transaction:
         #self.metadata.model_when_conditions = {key if key not in self.metadata.model_columns_map else self.metadata.model_columns_map[key] : self.metadata.model_when_conditions[key] for key in self.metadata.model_when_conditions }
 
         self._call_phase_module('DataExtractor')
-        if len(self.input_data.data_array[0])<=0:
+
+        if len(self.input_data.data_array[0]) <= 0:
             self.output_data = self.input_data
             return
+        else:
+            self.output_data = TransactionOutputData(predicted_columns=self.persistent_model_metadata.predict_columns)
+            self.output_data.data_array = self.input_data.data_array
 
-        self.output_data = TransactionOutputData(predicted_columns=self.persistent_model_metadata.predict_columns)
         #self._call_phase_module('DataVectorizer')
         #self._call_phase_module('ModelPredictor')
         model_backend = LudwigBackend(self)
-        model_backend.predict()
+        predictions = model_backend.predict()
+
+
+        predicted_columns = copy.deepcopy(self.transaction.persistent_model_metadata.predict_columns)
+        for predicted_col in predicted_columns:
+            values = predictions[f'{predicted_col}_predictions']
+
+
+            predicted_col_index = self.transaction.input_data.columns.index(predicted_col)
+            predicted_col_confidence_index = predicted_col_index + 1
+            self.transaction.output_data.columns.insert(predicted_col_confidence_index, predicted_col + '_confidence')
+
+            for i, val in enumerate(values):
+                self.transaction.output_data.data_array[i][predicted_col_index] = val
+                self.transaction.output_data.data_array[i][predicted_col_confidence_index] = 0.54
 
         return
 

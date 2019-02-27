@@ -30,10 +30,11 @@ class ModelAnalyzer(BaseModule):
                 validation_data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
         ###
 
-
-        # Run on the validation set multiple times, each time with one of the column blanked out
         for column_name in self.transaction.persistent_model_metadata.predict_columns:
             probabilistic_validators[column_name] = ProbabilisticValidator()
+            
+        # Run on the validation set multiple times, each time with one of the column blanked out
+        for column_name in self.transaction.persistent_model_metadata.predict_columns:
             ignore_columns = []
             if column_name not in self.transaction.persistent_model_metadata.predict_columns:
                 ignore_columns.append(column_name)

@@ -109,21 +109,14 @@ class Transaction:
 
 
             self._call_phase_module('StatsGenerator')
-            self.persistent_model_metadata.current_phase = MODEL_STATUS_PREPARING
+            self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
             self.persistent_model_metadata.update()
 
             model_backend = LudwigBackend(self)
             model_backend.train()
             self.persistent_model_metadata.update()
-            # self._call_phase_module('DataVectorizer')
-            # self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
-            # self.persistent_model_metadata.update()
-
-            # self.callPhaseModule('DataEncoder')
-            # self._call_phase_module('ModelTrainer')
 
             # self._call_phase_module('ModelAnalyzer')
-            # TODO: Loop over all stats and when all stats are done, then we can mark model as MODEL_STATUS_TRAINED
 
             return
         except Exception as e:
@@ -173,25 +166,20 @@ class Transaction:
         if len(self.input_data.data_array[0]) <= 0:
             self.output_data = self.input_data
             return
-        else:
-            self.output_data = TransactionOutputData(predicted_columns=self.persistent_model_metadata.predict_columns)
-            self.output_data.data_array = self.input_data.data_array
 
-        #self._call_phase_module('DataVectorizer')
-        #self._call_phase_module('ModelPredictor')
+        self.output_data = TransactionOutputData(predicted_columns=self.persistent_model_metadata.predict_columns,
+        data_array=self.input_data.data_array,columns=self.input_data.columns)
+
         model_backend = LudwigBackend(self)
         predictions = model_backend.predict()
 
-
-        predicted_columns = copy.deepcopy(self.persistent_model_metadata.predict_columns)
-        for predicted_col in predicted_columns:
+        for predicted_col in self.persistent_model_metadata.predict_columns:
             values = predictions[f'{predicted_col}_predictions']
-
 
             predicted_col_index = self.input_data.columns.index(predicted_col)
             predicted_col_confidence_index = predicted_col_index + 1
             self.output_data.columns.insert(predicted_col_confidence_index, predicted_col + '_confidence')
-
+            self.output_data.confidence_columns.insert(predicted_col_confidence_index, predicted_col + '_confidence')
             for i, val in enumerate(values):
                 self.output_data.data_array[i][predicted_col_index] = val
                 self.output_data.data_array[i][predicted_col_confidence_index] = 0.54

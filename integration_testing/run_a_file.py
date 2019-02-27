@@ -12,3 +12,5 @@ predicted = mdb.predict(when_data="integration_testing/train.csv")
 print('------------------------------------------------------------Preidiction output------------------------------------------------------------')
 for val in predicted:
     print(val)
+exit()
+print(predicted.predicted_values)

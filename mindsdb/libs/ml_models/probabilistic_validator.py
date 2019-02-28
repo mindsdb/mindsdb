@@ -53,6 +53,7 @@ class ProbabilisticValidator():
         :return: The index of the member of `arr` which is closest to `value`
         """
         aux = []
+        value = 0 if value is None else value
         for ele in arr:
             aux.append(abs(value-ele))
         return aux.index(min(aux))

@@ -92,7 +92,7 @@ class ProbabilisticValidator():
         real_value_b = self._get_value_bucket(real_value)
 
         X = [predicted_value_b, *features_existence]
-        Y = [real_value_b]
+        Y = real_value_b
 
         self.X_buff.append(X)
         self.Y_buff.append(Y)
@@ -101,8 +101,10 @@ class ProbabilisticValidator():
         """
         # Fit the probabilistic validator on all observations recorder that haven't been taken into account yet
         """
-
+        log_types = np.seterr()
+        np.seterr(divide='ignore')
         self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=self.bucket_keys)
+
         self.X_buff= []
         self.Y_buff= []
 
@@ -119,13 +121,18 @@ class ProbabilisticValidator():
         predicted_value_b = self._get_value_bucket(predicted_value)
 
         X = [[predicted_value_b, *features_existence]]
-
-        return self._probabilistic_model.predict_proba(np.array(X))
+        log_types = np.seterr()
+        np.seterr(divide='ignore')
+        ret = self._probabilistic_model.predict_proba(np.array(X))
+        np.seterr(divide=log_types['divide'])
+        return ret
 
 
 if __name__ == "__main__":
 
     import random
+
+
 
     values = [2,2,2,3,5,2,2,2,3,5]
     predictions = [2,2,2,3,2,2,2,2,3,2]

@@ -130,7 +130,7 @@ class TrainWorker():
                     if lowest_error in [None]:
                         lowest_error = test_ret.error
                         highest_accuracy = test_ret.accuracy
-                        log.info(f'Got best accuracy so far: {highest_accuracy}')
+                        log.info('Got best accuracy so far: {}'.format(highest_accuracy))
 
                     if lowest_error > test_ret.error and test_ret.accuracy > 0:
                         is_it_lowest_error_epoch = True
@@ -139,7 +139,7 @@ class TrainWorker():
                         log.debug('[SAVING MODEL] Lowest ERROR so far! - Test Error: {error}, Accuracy: {accuracy}'.format(error=test_ret.error, accuracy=test_ret.accuracy))
                         log.debug('Lowest ERROR so far! Saving: model {model_name}, {data_model} config:{config}'.format(
                             model_name=self.model_name, data_model=self.ml_model_name, config=self.ml_model_info.config_serialized))
-                        log.info(f'Got best accuracy so far: {highest_accuracy}')
+                        log.info('Got best accuracy so far: {}'.format(highest_accuracy))
 
                         # save model local file
                         local_files = self.save_to_disk(local_files)

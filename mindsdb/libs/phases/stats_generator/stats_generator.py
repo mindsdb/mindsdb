@@ -479,56 +479,57 @@ class StatsGenerator(BaseModule):
                 self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission are: {}'.format(col_name, col_stats['bad_scores']))
                 if col_stats['duplicates_score'] > 0.5:
                     duplicates_percentage = col_stats['duplicates_percentage']
-                    self.log.warning(f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.')
+                    self.log.warning('{duplicates_percentage}% of the values in column {col_name} seem to be '
+                                     'repeated, this might indicate your data is of poor quality.'.format(duplicates_percentage=duplicates_percentage, col_name=col_name))
 
 
             #Compound scores
             if col_stats['consistency_score'] > 0.25:
-                self.log.warning(f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info')
+                self.log.warning('The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info'.format(col_name=col_name))
 
             if col_stats['redundancy_score'] > 0.45:
-                self.log.warning(f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info')
+                self.log.warning('The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info'.format(col_name=col_name))
 
             if col_stats['variability_score'] > 0.5:
-                self.log.warning(f'The data in the column {col_name} seems to have too contain too much noise/randomness based on the value variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.')
+                self.log.warning('The data in the column {col_name} seems to have too contain too much noise/randomness based on the value variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.'.format(col_name=col_name))
 
 
 
             # Some scores are meaningful on their own, and the user should be warnned if they fall bellow a certain threshold
             if col_stats['empty_cells_score'] > 0.2:
                 empty_cells_percentage = col_stats['empty_percentage']
-                self.log.warning(f'{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate your data is of poor quality.')
+                self.log.warning('{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate your data is of poor quality.'.format(empty_cells_percentage=empty_cells_percentage, col_name=col_name))
 
             if col_stats['data_type_distribution_score'] > 0.2:
                 #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
                 percentage_of_data_not_of_principal_type = col_stats['data_type_distribution_score'] * 100
                 principal_data_type = col_stats[KEYS.DATA_TYPE]
-                self.log.warning(f'{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate your data is of poor quality.')
+                self.log.warning('{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate your data is of poor quality.'.format(percentage_of_data_not_of_principal_type=percentage_of_data_not_of_principal_type, principal_data_type=principal_data_type, col_name=col_name))
 
             if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 0.3:
                 percentage_of_outliers = col_stats['z_test_based_outlier_score']*100
-                self.log.warning(f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means there might
-                be too much randomness in this column for us to make an accurate prediction based on it.""")
+                self.log.warning("""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means there might
+                be too much randomness in this column for us to make an accurate prediction based on it.""".format(col_name=col_name, percentage_of_outliers=percentage_of_outliers))
 
             if 'lof_based_outlier_score' in col_stats and col_stats['lof_based_outlier_score'] > 0.3:
                 percentage_of_outliers = col_stats['percentage_of_log_based_outliers']
-                self.log.warning(f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data doesn't fit closely in any cluster using the KNN algorithm (20n) to cluster your data, this means there might
-                be too much randomness in this column for us to make an accurate prediction based on it.""")
+                self.log.warning("""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data doesn't fit closely in any cluster using the KNN algorithm (20n) to cluster your data, this means there might
+                be too much randomness in this column for us to make an accurate prediction based on it.""".format(col_name=col_name, percentage_of_outliers=percentage_of_outliers))
 
             if col_stats['value_distribution_score'] > 0.8:
                 max_probability_key = col_stats['max_probability_key']
-                self.log.warning(f"""Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !""")
+                self.log.warning('Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !'.format(col_name=col_name, max_probability_key=max_probability_key))
 
             if col_stats['similarity_score'] > 0.5:
                 similar_percentage = col_stats['similarity_score'] * 100
                 similar_col_name = col_stats['most_similar_column_name']
-                self.log.warning(f'Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !')
+                self.log.warning('Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !'.format(col_name=col_name, similar_col_name=similar_col_name, similar_percentage=similar_percentage))
 
             if col_stats['correlation_score'] > 0.4:
                 not_quite_correlation_percentage = col_stats['correlation_score'] * 100
                 most_correlated_column = col_stats['most_correlated_column']
-                self.log.warning(f"""Using a statistical predictor we\'v discovered a correlation of roughly {not_quite_correlation_percentage}% between column
-                {col_name} and column {most_correlated_column}""")
+                self.log.warning("""Using a statistical predictor we\'v discovered a correlation of roughly {not_quite_correlation_percentage}% between column
+                {col_name} and column {most_correlated_column}""".format(not_quite_correlation_percentage=not_quite_correlation_percentage, col_name=col_name, most_correlated_column=most_correlated_column))
 
 
             # We might want to inform the user about a few stats regarding his column regardless of the score, this is done bellow

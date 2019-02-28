@@ -27,7 +27,10 @@ class ModelAnalyzer(BaseModule):
                 buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'])
 
         # create a list of columns to ignore starting with none, and then one experiment per column
-        ignore_column_options = [[]] + [[col] for col in non_predict_columns]
+        ignore_none = [[]]
+        ignore_just_one = [[col] for col in non_predict_columns]
+        ignore_all_but_one = [[coli for coli in non_predict_columns if coli!=col] for col in non_predict_columns]
+        ignore_column_options = ignore_none + ignore_just_one + ignore_all_but_one
 
         # Run on the validation set multiple times, each time with one of the column blanked out
         for ignore_columns in ignore_column_options:
@@ -68,25 +71,25 @@ def test():
     #mdb = Predictor(name='home_rentals')
     mdb = Predictor(name='home_rentals')
 
-    mdb.learn(
-        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
-        # the path to the file where we can learn from, (note: can be url)
-        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        sample_margin_of_error=0.02,
-        stop_training_in_x_seconds=6
-    )
+    # mdb.learn(
+    #     from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+    #     # the path to the file where we can learn from, (note: can be url)
+    #     to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+    #     #sample_margin_of_error=0.02,
+    #     #stop_training_in_x_seconds=6
+    # )
 
-    # use the model to make predictions
+    #use the model to make predictions
     result = mdb.predict(
-        when={'number_of_rooms': 2, 'number_of_bathrooms': 2, 'sqft': 1190})
+        when={'number_of_rooms': 2,  'sqft': 1190})
 
-    print(result.predicted_values)
+    print(result)
 
     # use the model to make predictions
     result = mdb.predict(
         when={'number_of_rooms': 2, 'sqft': 1190})
 
-    print(result.predicted_values)
+    print(result)
 
 
 # only run the test if this file is called from debugger

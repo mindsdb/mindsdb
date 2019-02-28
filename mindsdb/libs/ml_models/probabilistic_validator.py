@@ -4,6 +4,7 @@ import numpy as np
 import pickle
 
 
+
 class ProbabilisticValidator():
     """
     # The probabilistic validator is a quick to train model used for validating the predictions
@@ -17,7 +18,7 @@ class ProbabilisticValidator():
     Y_buff = None
 
 
-    def __init__(self, histogram ):
+    def __init__(self, buckets):
         """
         Chose the algorithm to use for the rest of the model
         As of right now we go with ComplementNB
@@ -29,8 +30,8 @@ class ProbabilisticValidator():
         #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
-        self.bucket_keys = [1] + [i+2 for i in range(len(histogram))]
-        self.buckets = histogram
+        self.bucket_keys = [1] + [i + 2 for i in range(len(buckets))]
+        self.buckets = buckets
 
     def pickle(self):
         """
@@ -59,7 +60,7 @@ class ProbabilisticValidator():
             if ele > value:
                 return i - 1
 
-        return len(arr)
+        return len(arr)-1
 
     # For contignous values we want to use a bucket in the histogram to get a discrete label
     def _get_value_bucket(self, value):
@@ -119,34 +120,46 @@ class ProbabilisticValidator():
 
         X = [[predicted_value_b, *features_existence]]
 
-        return self._probabilistic_model.predict_proba(np.array(X))[0][1]
+        return self._probabilistic_model.predict_proba(np.array(X))
 
 
 if __name__ == "__main__":
-    feature_rows = [
-        [None,2,3]
-        ,[2,2,3]
-        ,[1,None,6]
-        ,[0,3,None]
-        ,[2,0,1]
-        ,[None,2,3]
-        ,[2,2,3]
-        ,[1,None,6]
-        ,[0,3,None]
-        ,[2,0,1]
-        ]
+
+    import random
 
     values = [2,2,2,3,5,2,2,2,3,5]
     predictions = [2,2,2,3,2,2,2,2,3,2]
 
-    pbv = ProbabilisticValidator()
+    feature_rows = [
+        [bool(random.getrandbits(1)), bool(random.getrandbits(1)), bool(random.getrandbits(1))]
+        for i in values
+    ]
+
+    print(feature_rows)
+
+    pbv = ProbabilisticValidator(buckets=[1,2,3,4,5])
 
     for i in range(len(feature_rows)):
         pbv.register_observation(feature_rows[i],values[i], predictions[i])
 
-    print(pbv.evaluate_prediction_accuracy([1,2,3], 2))
-    print(pbv.evaluate_prediction_accuracy([1,None,3], 3))
-    print(pbv.evaluate_prediction_accuracy([None,0,2], 5))
-    print(pbv.evaluate_prediction_accuracy([None,2,3], 2))
-    print(pbv.evaluate_prediction_accuracy([None,None,3], 2))
-    print(pbv.evaluate_prediction_accuracy([2,2,None], 2))
+    pbv.partial_fit()
+    print(pbv.evaluate_prediction_accuracy([True,True,True], 2))
+
+    # Now test text tokens
+    values = ['2', '2', '2', '3', '5', '2', '2', '2', '3', '5']
+    predictions = ['2', '2', '2', '3', '2', '2', '2', '2', '3', '2']
+
+    feature_rows = [
+        [bool(random.getrandbits(1)), bool(random.getrandbits(1)), bool(random.getrandbits(1))]
+        for i in values
+    ]
+
+    print(feature_rows)
+
+    pbv = ProbabilisticValidator(buckets=['1', '2', '3', '4', '5'])
+
+    for i in range(len(feature_rows)):
+        pbv.register_observation(feature_rows[i], values[i], predictions[i])
+
+    pbv.partial_fit()
+    print(pbv.evaluate_prediction_accuracy([True, True, True], '2'))

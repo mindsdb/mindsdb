@@ -23,9 +23,9 @@ class ProbabilisticValidator():
         As of right now we go with ComplementNB
         """
         # <--- Pick one of the 3
-        self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
+        #self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         #, class_prior=[0.5,0.5]
-        #self._probabilistic_model = GaussianNB()
+        self._probabilistic_model = GaussianNB(var_smoothing=1)
         #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
@@ -87,10 +87,10 @@ class ProbabilisticValidator():
         :param predicted_value: The predicted value/label
         :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value` and `real_value`
         """
-
+        predicted_value_b = self._get_value_bucket(predicted_value)
         real_value_b = self._get_value_bucket(real_value)
 
-        X = [predicted_value, *features_existence]
+        X = [predicted_value_b, *features_existence]
         Y = [real_value_b]
 
         self.X_buff.append(X)
@@ -115,7 +115,9 @@ class ProbabilisticValidator():
         :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
         """
 
-        X = [[predicted_value, *features_existence]]
+        predicted_value_b = self._get_value_bucket(predicted_value)
+
+        X = [[predicted_value_b, *features_existence]]
 
         return self._probabilistic_model.predict_proba(np.array(X))[0][1]
 

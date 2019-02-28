@@ -23,9 +23,9 @@ MindsDB's goal is to make it very simple for developers to use the power of arti
 - [Learning from Examples](docs/examples/basic/README.md)
 - [Frequently Asked Questions](docs/FAQ.md)
 - [Provide feedback to improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
-- [How to Contribute](##Contributing)
-- [Report Issues](##Report-Issues)
-- [Lincense](##License)
+- [How to Contribute](#Contributing)
+- [Report Issues](#Report-Issues)
+- [Lincense](#License)
 
 ## Quick Overview
 

@@ -18,3 +18,12 @@ class TransactionOutputRow:
         for pred_col in self.transaction_output.evaluations:
 
             self.transaction_output.evaluations[pred_col][self.row_key].explain()
+
+    def __str__(self):
+
+        return str(self.as_dict())
+
+    def as_list(self):
+        #Note that here we will not output the confidence columns
+
+        return [self.transaction_output.evaluations[col][self.row_key] for col in self.transaction_output.columns]

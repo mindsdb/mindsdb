@@ -83,7 +83,7 @@ def test():
     result = mdb.predict(
         when={'number_of_rooms': 2,  'sqft': 1190})
 
-    print(result)
+    print(result.predicted_values)
 
     # use the model to make predictions
     result = mdb.predict(

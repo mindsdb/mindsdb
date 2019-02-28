@@ -23,7 +23,8 @@ class ModelAnalyzer(BaseModule):
         probabilistic_validators = {}
 
         for col in predict_column_names:
-            probabilistic_validators[col] = ProbabilisticValidator(histogram=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'])
+            probabilistic_validators[col] = ProbabilisticValidator(
+                buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'])
 
         # create a list of columns to ignore starting with none, and then one experiment per column
         ignore_column_options = [[]] + [[col] for col in non_predict_columns]

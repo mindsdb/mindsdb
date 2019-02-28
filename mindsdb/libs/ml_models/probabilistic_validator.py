@@ -1,5 +1,7 @@
 from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
+
 from mindsdb.libs.constants.mindsdb import NULL_VALUES
+from mindsdb.libs.data_types.probability_evaluation import ProbabilityEvaluation
 import numpy as np
 import pickle
 
@@ -26,11 +28,11 @@ class ProbabilisticValidator():
         # <--- Pick one of the 3
         #self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         #, class_prior=[0.5,0.5]
-        self._probabilistic_model = GaussianNB(var_smoothing=1)
-        #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
+        #self._probabilistic_model = GaussianNB()
+        self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
-        self.bucket_keys = [1] + [i + 2 for i in range(len(buckets))]
+        self.bucket_keys = [i for i in range(len(buckets))]
         self.buckets = buckets
 
     def pickle(self):
@@ -71,11 +73,11 @@ class ProbabilisticValidator():
         # Support for non numeric values
         if type(value) == type(''):
             if value in self.buckets:
-                i = self.buckets.index(value) + 2
+                i = self.buckets.index(value)
             else:
                 i = 1 # todo make sure that there is an index for values not in list
         else:
-            i = self._closest(self.buckets, value) + 2
+            i = self._closest(self.buckets, value)
         return i
 
 
@@ -123,9 +125,11 @@ class ProbabilisticValidator():
         X = [[predicted_value_b, *features_existence]]
         log_types = np.seterr()
         np.seterr(divide='ignore')
-        ret = self._probabilistic_model.predict_proba(np.array(X))
+        distribution = self._probabilistic_model.predict_proba(np.array(X))
         np.seterr(divide=log_types['divide'])
-        return ret
+
+        evaluation = ProbabilityEvaluation(self.buckets, distribution[0].tolist())
+        return evaluation
 
 
 if __name__ == "__main__":

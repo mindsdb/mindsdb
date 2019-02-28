@@ -56,7 +56,8 @@ def test_one_label_prediction():
     label_name = labels[0]
     columns.append(labels)
     columns_train = list(map(lambda col: col[0:int(len(col)*3/4)], columns))
-    columns_test = list(map(lambda col: col[int(len(col)*3/4):], columns))
+    columns_test = list(map(lambda col: col[0:int(len(col)*3/4):], columns))
+
     columns_to_file(columns_train, train_file_name, separator)
     columns_to_file(columns_test, test_file_name, separator)
 

@@ -86,7 +86,7 @@ class Predictor:
         pass
 
 
-    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False, stop_training_in_x_seconds = None, send_logs=CONFIG.SEND_LOGS):
+    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False, stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -164,6 +164,7 @@ class Predictor:
         transaction_metadata.sample_margin_of_error = sample_margin_of_error
         transaction_metadata.sample_confidence_level = sample_confidence_level
         transaction_metadata.stop_training_in_x_seconds = stop_training_in_x_seconds
+        transaction_metadata.stop_training_in_accuracy = stop_training_in_accuracy
 
         Transaction(session=self, transaction_metadata=transaction_metadata, logger=self.log, breakpoint=breakpoint)
 

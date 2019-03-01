@@ -3,7 +3,7 @@ from mindsdb import Predictor
 
 mdb = Predictor(name='titanic_model')
 
-#mdb.learn(from_data="integration_testing/train.csv", to_predict=['Survived','Pclass'])
+mdb.learn(from_data="integration_testing/train.csv", to_predict=['Survived','Pclass'])
 
 print('------------------------------------------------------------Done training------------------------------------------------------------')
 

@@ -26,6 +26,7 @@ class TransactionMetadata(ObjectDict):
         self.sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR
         self.sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL
         self.stop_training_in_x_seconds = None
+        self.stop_training_in_accuracy = None
 
 
 

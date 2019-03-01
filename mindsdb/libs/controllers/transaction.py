@@ -43,7 +43,7 @@ class Transaction:
         self.errorMsg = None
 
         self.input_data = TransactionData()
-        self.output_data = TrainTransactionOutputData()
+        self.output_data = TrainTransactionOutputData(transaction=self)
         self.model_data = ModelData()
 
         # variables that can be persisted

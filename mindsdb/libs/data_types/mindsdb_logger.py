@@ -125,6 +125,28 @@ class MindsdbLogger():
                 if 'total' in message:
                     label = '{label} ({count})'.format(label=message['total'][1], count=message['total'][0])
                     self.info(' {label}'.format(label=label))
+
+            if type in ['histogram']:
+
+                total = sum(message['y'])
+                max_len = max([len(str(i)) for i in message['x']])
+                len_format = " {: >" + str(max_len) + "}: "
+                max_val = max(message['y'])
+
+                if 'label' in message:
+                    label = message['label']
+                    self.info('{label}'.format(label=label))
+
+                for i,v in enumerate(message['y']):
+                    p = 100.0 * v / max_val
+                    prob = 100.0 *v /total
+                    l = int(p / 5)
+                    info_str = len_format.format(message['x'][i]) + "[{: <20}".format(
+                        gen_chars(l, '#')) + '  ({p}% likely)'.format(label=message['x'][i], p=format(prob, '.2f'))
+                    self.info(info_str)
+
+
+
             elif type in ['list']:
                 max_len = max([len(i) for i in message.keys()])
                 len_format = " {: >" + str(max_len) + "}: "

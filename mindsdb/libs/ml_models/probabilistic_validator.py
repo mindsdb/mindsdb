@@ -1,7 +1,11 @@
 from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
-from mindsdb.libs.constants.mindsdb import NULL_VALUES
+
+
+from mindsdb.libs.constants.mindsdb import *
+from mindsdb.libs.data_types.probability_evaluation import ProbabilityEvaluation
 import numpy as np
 import pickle
+
 
 
 class ProbabilisticValidator():
@@ -10,14 +14,14 @@ class ProbabilisticValidator():
     of our main model
     # It is fit to the results our model gets on the validation set
     """
-    _smoothing_factor = 1
+    _smoothing_factor = 0.5 # TODO: Autodetermine smotthing factor depending on the info we know about the dataset
     _value_bucket_probabilities = {}
     _probabilistic_model = None
     X_buff = None
     Y_buff = None
 
 
-    def __init__(self):
+    def __init__(self, buckets, data_type=None):
         """
         Chose the algorithm to use for the rest of the model
         As of right now we go with ComplementNB
@@ -25,10 +29,13 @@ class ProbabilisticValidator():
         # <--- Pick one of the 3
         self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         #, class_prior=[0.5,0.5]
-        #self._probabilistic_model = GaussianNB()
+        #self._probabilistic_model = GaussianNB(var_smoothing=1)
         #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
+        self.bucket_keys = [i for i in range(len(buckets))]
+        self.buckets = buckets
+        self.data_type = data_type
 
     def pickle(self):
         """
@@ -52,23 +59,31 @@ class ProbabilisticValidator():
         """
         :return: The index of the member of `arr` which is closest to `value`
         """
-        aux = []
-        value = 0 if value is None else value
-        for ele in arr:
-            aux.append(abs(value-ele))
-        return aux.index(min(aux))
+
+        for i,ele in enumerate(arr):
+            if ele > value:
+                return i - 1
+
+        return len(arr)-1
 
     # For contignous values we want to use a bucket in the histogram to get a discrete label
-    def _get_value_bucket(self, value, histogram):
+    def _get_value_bucket(self, value):
         """
         :return: The bucket in the `histogram` in which our `value` falls
         """
-        # @TODO Not implemented
-        i = self._closest(histogram['x'], value)
-        return histogram['y'][i]
+        # @TODO maybe use stats type in constructor
+        # Support for non numeric values
+        if type(value) == type(''):
+            if value in self.buckets:
+                i = self.buckets.index(value)
+            else:
+                i = 1 # todo make sure that there is an index for values not in list
+        else:
+            i = self._closest(self.buckets, value)
+        return i
 
 
-    def register_observation(self, features_existence, real_value, predicted_value, histogram):
+    def register_observation(self, features_existence, real_value, predicted_value):
         """
         # Register an observation in the validator's internal buffers
 
@@ -77,13 +92,14 @@ class ProbabilisticValidator():
         :param predicted_value: The predicted value/label
         :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value` and `real_value`
         """
-        real_value_b = self._get_value_bucket(real_value, histogram)
-        predicted_value_b = self._get_value_bucket(predicted_value, histogram)
-
-        correct_prediction = real_value_b == predicted_value_b
-
-        X = [predicted_value_b, *features_existence]
-        Y = [correct_prediction]
+        predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
+        predicted_value_b = self._get_value_bucket(predicted_value)
+        real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(real_value)
+        real_value_b = self._get_value_bucket(real_value)
+        X = [False] * len(self.buckets)
+        X[predicted_value_b] = True
+        X = X + features_existence
+        Y = real_value_b
 
         self.X_buff.append(X)
         self.Y_buff.append(Y)
@@ -92,12 +108,27 @@ class ProbabilisticValidator():
         """
         # Fit the probabilistic validator on all observations recorder that haven't been taken into account yet
         """
+        log_types = np.seterr()
+        np.seterr(divide='ignore')
+        self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=self.bucket_keys)
+        np.seterr(divide=log_types['divide'])
 
-        self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=[True, False])
         self.X_buff= []
         self.Y_buff= []
 
-    def evaluate_prediction_accuracy(self, features_existence, predicted_value, histogram):
+    def fit(self):
+        """
+        # Fit the probabilistic validator on all observations recorder that haven't been taken into account yet
+        """
+        log_types = np.seterr()
+        np.seterr(divide='ignore')
+        self._probabilistic_model.fit(self.X_buff, self.Y_buff)
+        np.seterr(divide=log_types['divide'])
+
+        self.X_buff= []
+        self.Y_buff= []
+
+    def evaluate_prediction_accuracy(self, features_existence, predicted_value):
         """
         # Fit the probabilistic validator on an observation
 
@@ -106,38 +137,61 @@ class ProbabilisticValidator():
         :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value`
         :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
         """
-        predicted_value_b = self._get_value_bucket(predicted_value, histogram)
 
-        X = [predicted_value_b, *features_existence]
+        value_to_pass = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
+        predicted_value_b = self._get_value_bucket(value_to_pass)
+        X = [False] * len(self.buckets)
+        X[predicted_value_b] = True
+        X = [X + features_existence]
+        #X = [[predicted_value_b, *features_existence]]
+        log_types = np.seterr()
+        np.seterr(divide='ignore')
+        distribution = self._probabilistic_model.predict_proba(np.array(X))
+        np.seterr(divide=log_types['divide'])
 
-        return self._probabilistic_model.predict_proba(np.array(X).reshape(1,-1))[0][1]
+        evaluation = ProbabilityEvaluation(self.buckets, distribution[0].tolist(), predicted_value)
+        return evaluation
 
 
 if __name__ == "__main__":
-    feature_rows = [
-        [None,2,3]
-        ,[2,2,3]
-        ,[1,None,6]
-        ,[0,3,None]
-        ,[2,0,1]
-        ,[None,2,3]
-        ,[2,2,3]
-        ,[1,None,6]
-        ,[0,3,None]
-        ,[2,0,1]
-        ]
+
+    import random
+
+
 
     values = [2,2,2,3,5,2,2,2,3,5]
     predictions = [2,2,2,3,2,2,2,2,3,2]
 
-    pbv = ProbabilisticValidator()
+    feature_rows = [
+        [bool(random.getrandbits(1)), bool(random.getrandbits(1)), bool(random.getrandbits(1))]
+        for i in values
+    ]
+
+    print(feature_rows)
+
+    pbv = ProbabilisticValidator(buckets=[1,2,3,4,5])
 
     for i in range(len(feature_rows)):
         pbv.register_observation(feature_rows[i],values[i], predictions[i])
 
-    print(pbv.evaluate_prediction_accuracy([1,2,3], 2))
-    print(pbv.evaluate_prediction_accuracy([1,None,3], 3))
-    print(pbv.evaluate_prediction_accuracy([None,0,2], 5))
-    print(pbv.evaluate_prediction_accuracy([None,2,3], 2))
-    print(pbv.evaluate_prediction_accuracy([None,None,3], 2))
-    print(pbv.evaluate_prediction_accuracy([2,2,None], 2))
+    pbv.partial_fit()
+    print(pbv.evaluate_prediction_accuracy([True,True,True], 2))
+
+    # Now test text tokens
+    values = ['2', '2', '2', '3', '5', '2', '2', '2', '3', '5']
+    predictions = ['2', '2', '2', '3', '2', '2', '2', '2', '3', '2']
+
+    feature_rows = [
+        [bool(random.getrandbits(1)), bool(random.getrandbits(1)), bool(random.getrandbits(1))]
+        for i in values
+    ]
+
+    print(feature_rows)
+
+    pbv = ProbabilisticValidator(buckets=['1', '2', '3', '4', '5'], data_type=DATA_TYPES.CATEGORICAL)
+
+    for i in range(len(feature_rows)):
+        pbv.register_observation(feature_rows[i], values[i], predictions[i])
+
+    pbv.partial_fit()
+    print(pbv.evaluate_prediction_accuracy([True, True, True], '2'))

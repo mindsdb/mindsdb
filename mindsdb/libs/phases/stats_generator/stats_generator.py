@@ -637,7 +637,7 @@ class StatsGenerator(BaseModule):
                     kurtosis = st.kurtosis(col_data)
 
 
-                    inc_rate = 0.05
+                    inc_rate = 0.1
                     initial_step_size = abs(max_value-min_value)/100
 
                     xp += [min_value]

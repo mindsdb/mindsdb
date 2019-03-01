@@ -31,7 +31,7 @@ import copy
 
 class TrainWorker():
 
-    def __init__(self, model_name, ml_model_name='pytorch.models.column_based_fcnn', config={}, stop_training_in_x_seconds = None):
+    def __init__(self, model_name, ml_model_name='pytorch.models.column_based_fcnn', config={}, stop_training_in_x_seconds = None, stop_training_in_accuracy = None):
         """
 
         :param data:
@@ -49,6 +49,7 @@ class TrainWorker():
         self.config_hash = hashtext(self.config_serialized)
         #@TODO: Remove debugging line
         self.stop_training_in_x_seconds = stop_training_in_x_seconds
+        self.stop_training_in_accuracy = stop_training_in_accuracy
 
         # get basic variables defined
 
@@ -150,7 +151,7 @@ class TrainWorker():
                         log.debug('Saved: model {model_name}:{ml_model_name} state vars into db [OK]'.format(model_name=self.model_name, ml_model_name = self.ml_model_name))
 
                     # check if continue training
-                    if self.should_continue() == False:
+                    if self.should_continue(highest_accuracy) == False:
                         # save model local file
                         local_files = self.save_to_disk(local_files)
                         return self.data_model_object
@@ -318,7 +319,7 @@ class TrainWorker():
 
         return confusion_matrices
 
-    def should_continue(self):
+    def should_continue(self, highest_accuracy=None):
 
         """
         Check if the training should continue
@@ -333,6 +334,10 @@ class TrainWorker():
             if time.time() - self.train_init_time > self.stop_training_in_x_seconds:
                 log.info('stop_training_in_x_seconds flag was passed and contition was met, thus, we are forcing training to stop now')
                 return False
+
+        if self.stop_training_in_accuracy is not None and  highest_accuracy >= self.stop_training_in_accuracy:
+            log.info('stop_training_in_accuracy flag was passed and contition was met, thus, we are forcing training to stop now')
+            return False
 
         model_data = self.persistent_model_metadata.find_one({'model_name': self.model_name}) #type: PersistentModelMetadata
 
@@ -426,7 +431,7 @@ class TrainWorker():
 
 
     @staticmethod
-    def start(data, model_name, ml_model, config={}, stop_training_in_x_seconds = None):
+    def start(data, model_name, ml_model, config={}, stop_training_in_x_seconds = None, stop_training_in_accuracy = None):
         """
         We use this worker to parallel train different data models and data model configurations
 
@@ -436,7 +441,7 @@ class TrainWorker():
         :param config: this is the hyperparameter config
         """
 
-        return TrainWorker(model_name, ml_model, config, stop_training_in_x_seconds)
+        return TrainWorker(model_name, ml_model, config, stop_training_in_x_seconds, stop_training_in_accuracy)
 
 
 # TODO: Use ray

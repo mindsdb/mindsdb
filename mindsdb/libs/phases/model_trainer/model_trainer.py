@@ -62,12 +62,12 @@ class ModelTrainer(BaseModule):
             ml_model = ml_model_data[0]
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False or len(ml_models) == 1:
-                train_worker = TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=ml_model, config=config, stop_training_in_x_seconds=self.transaction.metadata.stop_training_in_x_seconds)
+                train_worker = TrainWorker.start(self.transaction.model_data, model_name=model_name, ml_model=ml_model, config=config, stop_training_in_x_seconds=self.transaction.metadata.stop_training_in_x_seconds, stop_training_in_accuracy = self.transaction.metadata.stop_training_in_accuracy)
                 self.transaction.data_model_object = train_worker.train(self.transaction.model_data)
             else:
                 # Todo: use Ray https://github.com/ray-project/tutorial
                 # Before moving to actual workers: MUST FIND A WAY TO SEND model data to the worker in an efficient way first
-                _thread.start_new_thread(TrainWorker.start, (self.transaction.model_data, model_name, ml_model, config, self.transaction.metadata.stop_training_in_x_seconds))
+                _thread.start_new_thread(TrainWorker.start, (self.transaction.model_data, model_name, ml_model, config, self.transaction.metadata.stop_training_in_x_seconds, self.transaction.metadata.stop_training_in_accuracy))
             # return
 
         total_time = time.time() - self.train_start_time

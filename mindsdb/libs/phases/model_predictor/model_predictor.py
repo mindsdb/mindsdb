@@ -3,6 +3,7 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.workers.predict import PredictWorker
 from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
 import numpy as np
+import pandas as pd
 import time
 
 
@@ -30,60 +31,69 @@ class ModelPredictor(BaseModule):
 
         confusion_matrices = self.transaction.persistent_ml_model_info.confussion_matrices
 
-        self.transaction.output_data.columns = self.transaction.input_data.columns
-        # TODO: This may be inneficient, try to work on same pointer
-        self.transaction.output_data.data_array = self.transaction.input_data.data_array
-        self.transaction.output_data.predicted_columns=self.transaction.metadata.model_predict_columns
-        self.transaction.output_data.columns_map =  self.transaction.metadata.model_columns_map
 
-        self.transaction.probabilistic_validators = {}
+
+
+        # This is to deal with the predicted values and the extra info more accurately
+        columns = self.transaction.input_data.columns
+        columns_to_predict = self.transaction.persistent_model_metadata.predict_columns
+        input_columns = [col for col in columns if col not in columns_to_predict]
+
+        # transform input data into ordered by columns structure
+        self.transaction.output_data.data = {col: [] for i, col in enumerate(columns)}
+        output_data = self.transaction.output_data.data # pointer
+
+        for row in self.transaction.input_data.data_array:
+            for index, cell in enumerate(row):
+                col = columns[index]
+                output_data[col].append(cell)
+
+
+        # populate predictions in output_data
         for n in range(len(ret_diffs)):
             diff = ret_diffs[n]
-
             for col in diff['ret_dict']:
 
-                for col in self.transaction.persistent_model_metadata.probabilistic_validators:
-                    self.transaction.probabilistic_validators[col] = ProbabilisticValidator.unpickle(self.transaction.persistent_model_metadata.probabilistic_validators[col])
-
-                X_values = []
-                X_features_existence = []
-                for nn in range(len(diff['ret_dict'][col])):
-                    X_features_existence.append([])
-
-                    for col in self.transaction.session.predict_worker.predict_sampler.data['ALL_ROWS_NO_GROUP_BY']:
-                        X_features_existence[nn].append(self.transaction.session.predict_worker.predict_sampler.data['ALL_ROWS_NO_GROUP_BY'][col][nn][-1])
-
-                    denormed_predicted_val = diff['ret_dict'][col][nn]
-                    X_values.append(denormed_predicted_val)
-
-                self.accuracies[col] = []
-                for i in range(len(X_values)):
-                    accuracy = self.transaction.probabilistic_validators[col].evaluate_prediction_accuracy(
-                    features_existence=X_features_existence[i],predicted_value=X_values[i], histogram=self.transaction.persistent_model_metadata.column_stats[col]['histogram'])
-                    self.accuracies[col].append(accuracy)
-
-            for col in diff['ret_dict']:
-                confusion_matrix = confusion_matrices[col]
-                col_index = self.transaction.input_data.columns.index(col)
-                self.transaction.output_data.columns.insert(col_index+1,KEY_CONFIDENCE)
                 offset = diff['start_pointer']
-                group_pointer = diff['group_pointer']
-                column_pointer = diff['column_pointer']
+
                 for j, cell in enumerate(diff['ret_dict'][col]):
-                    #TODO: This may be calculated just as j+offset
+
                     if not cell:
                         continue
 
                     actual_row = j + offset
-                    confidence = self.accuracies[col][j]
+
                     if self.transaction.persistent_model_metadata.column_stats[col][
                         KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
                         target_val = np.format_float_positional(cell, precision=2)
                     else:
                         target_val = cell
 
-                    self.transaction.output_data.data_array[actual_row].insert(col_index + 1, "{}%".format(round(100*confidence,2)))
-                    self.transaction.output_data.data_array[actual_row][col_index] = target_val
+                    output_data[col][actual_row] = target_val
+
+        # now populate the most likely value and confidence info
+        probabilistic_validators = {}
+
+        self.transaction.output_data.evaluations = {col:[None]*len(output_data[col]) for col in columns_to_predict}
+        output_data_evaluations = self.transaction.output_data.evaluations
+
+        for col in columns_to_predict:
+            probabilistic_validators[col] = ProbabilisticValidator.unpickle(self.transaction.persistent_model_metadata.probabilistic_validators[col])
+            confidence_column_name = "_{col}_confidence".format(col=col)
+            output_data[confidence_column_name] = [None]*len(output_data[col])
+
+            for row_number, predicted_value in enumerate(output_data[col]):
+
+                features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns]
+                prediction_evaluation = probabilistic_validators[col].evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
+                prediction_evaluation.logger = self.log
+                # replace predicted value, with most likely value for this prediction
+                output_data[col][row_number] = prediction_evaluation.most_likely_value
+                output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
+                output_data_evaluations[col][row_number] = prediction_evaluation
+
+
+        # since output_data_evaluations and output_data are pointers we dont need to update self.transaction.output_data
 
 
 

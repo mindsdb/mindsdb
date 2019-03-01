@@ -6,8 +6,8 @@
 Different transactions PREDICT, CREATE MODEL etc, require different
 steps/phases, however they may share some of these phases,
 in order to make this process modular we keep the variables in the Transaction
-controller (the data bus) as they communication interface, as such,
-the implementation of a given phase can change, so long the expected
+controller (the data bus) as the communication interface, as such,
+the implementation of a given phase can change, so long as the expected
 variables in the bus prevail. (We will describe in more detail some of
 the Phase Modules in the next section)
 
@@ -15,7 +15,7 @@ the Phase Modules in the next section)
 
 It deals with extracting inputs from various data-sources such as files, directories and SQL compatible databases. If input is a query, it builds the joins with all implied tables (if any).
 
-All the data is loaded into memory as columns with their respective db column or {char}sv values as the column names.
+* **StatsLoader**: There are some transaction such as PREDICT where it's assumed that the statistical information is already known, all we have to do is make sure we load the right statistics to the transaction BUS.
 
 At the moment we don't support loading database from {char}svs that don't have headers or have incomplete headers.
 
@@ -93,7 +93,7 @@ This tries to reduce the dimensionality of the input using a two fully connected
 
 ### ModelTrainer
 
-The Model Trainer uses the tensor representations of the columns and instanciates Train and Test Samplers (A Sampler allows to fetch data from the Column Tensor by batches and it can be lopped by epochs, it provides an abstraction that is independent from the ML Framework).
+* **ModelTrainer**: The Model Trainer uses the tensor representations of the columns and instantiates Train and Test Samplers (A Sampler allows to fetch data from the Column Tensor by batches and it can be lopped by epochs, it provides an abstraction that is independent from the ML Framework). It also instantiates, trains and validates various model constructs (essentially the way that models are coded in MindsDB is as Meta-models, MindsDB ships with some general meta-models, however, advanced users can add any meta-model they want so long is coded in either pytorch or tensorflow. The structure of the resulting  meta-models are dependent on the Sampler Input and Output structures) and each also has a flexible number of configurations/hyper-parameters.
 
 It also instanciates, trains and validates various model constructs (essentially the way that models are coded in MindsDB is as Meta-models, MindsDB ships with some general meta-models, however, advanced users can add any meta-model they want so long is coded in either pytorch or tensorflow. The structure of the resulting  meta-models are dependant on the Sampler Input and Output structures) and each also has a flexible number of configurations/hyper-parameters.
 
@@ -109,6 +109,7 @@ This architecture is an ensemble of each input being connected to a fully connec
 
 		![](https://docs.google.com/drawings/d/e/2PACX-1vT3nWCGidpxgbidLyzopKqYbCVdbP6kphUl4Pa8SxvrnZJJQp_Ots_FD1sxyEvo_ADi_wzT1X8wojpa/pub?w=859&h=605)
 
+<<<<<<< HEAD
 ### EnsembleFullyConnectedNet
 
 This architecture is similar to the *ensemble conv net*, with the exception that it has no convolutional layers from ensemble it goes straight to a fully connected stack. The calculation of the loss is the same as described in *ensemble conv net*.
@@ -128,3 +129,12 @@ The model predictor is called when the transaction is a *PREDICT* transaction. I
 
 ### DataDeVectorizer
 Once the output data is ready and updated with the predictions, it proceeds to denomalize each vector that corresponds to a cell and produces a list of lists that contains the out, which will be taken by the proxy and returned to the client as if the data excited in the data store. Unless specified, it also adds a column for confidence, which is pulled from the training stats of the model, in which it can determine $P(O_{predicted}=O_{real})$ and we produce as the confidence of the individual prediction.
+=======
+	* **EnsembleFullyConnectedNet**: This architecture is similar to the *ensemble conv net*, with the exception that it has no convolutional layers from ensemble it goes straight to a fully connected stack. The calculation of the loss is the same as described in *ensemble conv net*.
+
+		![](https://docs.google.com/drawings/d/e/2PACX-1vSVkBw0t28xaIPF_8UiLmf5vGuArsICKrR-KfylzZKJbexQVo60meRWxas0rU_-9njN9t7xTPraySMn/pub?w=859&h=605)
+
+* **ModelPredictor**: The model predictor is called when the transaction is a *PREDICT* transaction. It loads the model with the highest $R^2$, the lookup for the models available is the columns in the input and output, it will look for models that match the same order in column names and data types. Once the predictions are done, it replaces the predicted values in an output tensor (which is a copy of the input tensor).  
+
+* **DataDeVectorizer**: Once the output data is ready and updated with the predictions, it proceeds to denormalize each vector that corresponds to a cell and produces a list of lists that contains the output, which will be taken by the proxy and returned to the client as if the data excited in the data store. Unless specified, it also adds a column for confidence, which is pulled from the training stats of the model, in which it can determine $P(O_{predicted}=O_{real})$ and we produce as the confidence of the individual prediction.
+>>>>>>> origin

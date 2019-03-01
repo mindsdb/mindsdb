@@ -2,16 +2,17 @@
 
 class ProbabilityEvaluation:
 
-    def __init__(self, buckets, evaluation_distribution = None, logger = None):
+    def __init__(self, buckets, evaluation_distribution = None, predicted_value = None, logger = None):
 
         self.distribution = evaluation_distribution
+        self.predicted_value = predicted_value
         self.buckets = buckets
         self.most_likely_value = None
         self.most_likely_probability = None
         self.logger = logger
 
         if evaluation_distribution is not None:
-            self.update(evaluation_distribution)
+            self.update(evaluation_distribution, predicted_value)
 
     def explain(self):
 
@@ -25,12 +26,13 @@ class ProbabilityEvaluation:
 
 
 
-    def update(self, distribution):
+    def update(self, distribution, predicted_value):
         """
         For a given distribution, update the most_likely_values and probability
         :param distribution: the distribution values
         :return:
         """
+        self.predicted_value = predicted_value
         self.distribution = distribution
 
 

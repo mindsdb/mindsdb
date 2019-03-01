@@ -24,7 +24,7 @@ class ModelAnalyzer(BaseModule):
 
         for col in predict_column_names:
             probabilistic_validators[col] = ProbabilisticValidator(
-                buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'])
+                buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'], data_type=self.transaction.persistent_model_metadata.column_stats[col][KEYS.DATA_TYPE])
 
         # create a list of columns to ignore starting with none, and then one experiment per column
         ignore_none = [[]]
@@ -36,7 +36,7 @@ class ModelAnalyzer(BaseModule):
         for ignore_columns in ignore_column_options:
 
 
-            validation_sampler = Sampler(self.transaction.model_data.validation_set, metadata_as_stored=self.transaction.persistent_model_metadata,
+            validation_sampler = Sampler(self.transaction.model_data.test_set, metadata_as_stored=self.transaction.persistent_model_metadata,
                                         ignore_types=self.transaction.data_model_object.ignore_types, sampler_mode=SAMPLER_MODES.LEARN,blank_columns=ignore_columns)
             validation_sampler.variable_wrapper = array_to_float_variable
 
@@ -53,7 +53,9 @@ class ModelAnalyzer(BaseModule):
                     real_val = denorm(predictions.real_targets[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
 
-                probabilistic_validators[pcol].partial_fit()
+
+        for pcol in predict_column_names:
+            probabilistic_validators[pcol].partial_fit()
 
         # Pickle for later use
         self.transaction.persistent_model_metadata.probabilistic_validators = {}
@@ -71,25 +73,27 @@ def test():
     #mdb = Predictor(name='home_rentals')
     mdb = Predictor(name='home_rentals')
 
-    # mdb.learn(
-    #     from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
-    #     # the path to the file where we can learn from, (note: can be url)
-    #     to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
-    #     #sample_margin_of_error=0.02,
-    #     #stop_training_in_x_seconds=6
-    # )
+    mdb.learn(
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        #sample_margin_of_error=0.02,
+        stop_training_in_x_seconds=6
+    )
 
     #use the model to make predictions
     result = mdb.predict(
-        when={'number_of_rooms': 2,  'sqft': 1190})
+        when={"number_of_rooms": 2, "sqft": 1384})
 
-    print(result.predicted_values)
+    result[0].explain()
+
+    when = {"number_of_rooms": 1,"sqft": 384}
 
     # use the model to make predictions
     result = mdb.predict(
-        when={'number_of_rooms': 2, 'sqft': 1190})
+        when=when)
 
-    print(result)
+    result[0].explain()
 
 
 # only run the test if this file is called from debugger

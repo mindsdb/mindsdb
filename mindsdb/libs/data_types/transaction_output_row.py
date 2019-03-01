@@ -27,3 +27,7 @@ class TransactionOutputRow:
         #Note that here we will not output the confidence columns
 
         return [self.transaction_output.evaluations[col][self.row_key] for col in self.transaction_output.columns]
+
+    @property
+    def _predicted_values(self):
+        return {pred_col:self.transaction_output.evaluations[pred_col][self.row_key].predicted_value for pred_col in self.transaction_output.evaluations}

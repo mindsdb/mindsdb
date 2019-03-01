@@ -173,6 +173,7 @@ class Transaction:
 
         for predicted_col in self.persistent_model_metadata.predict_columns:
             values = predictions[predicted_col]
+            confidences = [0.5] * len(predictions[predicted_col])
 
             predicted_col_index = self.input_data.columns.index(predicted_col)
             predicted_col_confidence_index = predicted_col_index + 1
@@ -180,7 +181,8 @@ class Transaction:
             self.output_data.confidence_columns.insert(predicted_col_confidence_index, predicted_col + '_confidence')
             for i, val in enumerate(values):
                 self.output_data.data_array[i][predicted_col_index] = val
-                self.output_data.data_array[i][predicted_col_confidence_index] = 0.54
+                # Use the probabilistic validator here
+                self.output_data.data_array[i][predicted_col_confidence_index] = 0.5
 
         return
 

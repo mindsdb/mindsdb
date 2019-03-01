@@ -69,10 +69,10 @@ class LudwigBackend():
     def predict(self, mode='predict', ignore_columns=[]):
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
         model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
-        for ignore_col in ignore_columns:
-            predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
-            print(predict_dataframe[ignore_col])
-            exit()
+        #for ignore_col in ignore_columns:
+        #    predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
+        #    print(predict_dataframe[ignore_col])
+        #    exit()
 
         predictions = model.predict(data_df=predict_dataframe)
         for col_name in predictions:

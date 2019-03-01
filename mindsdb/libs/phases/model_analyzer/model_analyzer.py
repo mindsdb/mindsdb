@@ -56,8 +56,8 @@ class ModelAnalyzer(BaseModule):
             for pcol in predict_column_names:
                 for i in range(len(predictions[pcol])):
 
-                    predicted_val = denorm(predictions[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
-                    real_val = denorm(predictions[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
+                    predicted_val = predictions[pcol][i]
+                    real_val = predictions[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
 
 

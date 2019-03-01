@@ -22,7 +22,6 @@ class PredictTransactionOutputData():
         first_col = self.columns[0]
 
         for i, cell in enumerate(self.data[first_col]):
-
             yield TransactionOutputRow(self, i)
 
     def __getitem__(self, item):

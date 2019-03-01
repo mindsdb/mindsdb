@@ -2,7 +2,6 @@
 class TransactionOutputRow:
 
     def __init__(self, transaction_output, row_key):
-
         self.transaction_output = transaction_output
         self.row_key = row_key
 

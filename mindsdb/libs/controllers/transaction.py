@@ -8,6 +8,7 @@ from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOu
 from mindsdb.libs.data_types.model_data import ModelData
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.backends.ludwig import LudwigBackend
+from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
 
 import _thread
@@ -170,13 +171,14 @@ class Transaction:
 
         self.model_backend = LudwigBackend(self)
         predictions = self.model_backend.predict()
-        
+
         # self.transaction.persistent_model_metadata.predict_columns
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
+        input_columns = [col for col in self.input_data.columns if col not in self.persistent_model_metadata.predict_columns]
 
         for row in self.input_data.data_array:
             for index, cell in enumerate(row):
-                col = columns[index]
+                col = self.input_data.columns[index]
                 self.output_data.data[col].append(cell)
 
         for predicted_col in self.persistent_model_metadata.predict_columns:
@@ -186,13 +188,14 @@ class Transaction:
             self.output_data.data[predicted_col] = predicted_values
             confidence_column_name = "_{col}_confidence".format(col=predicted_col)
             self.output_data.data[confidence_column_name] = [None] * len(predicted_values)
+            self.output_data.evaluations[predicted_col] = [None] * len(predicted_values)
 
             for row_number, predicted_value in enumerate(predicted_values):
                 features_existance_vector = [False if self.output_data.data[col][row_number] is None else True for col in input_columns]
                 prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
-                self.output_data.data[confidence_column_name] = prediction_evaluation.most_likely_probability
+                self.output_data.data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
                 #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong
-                #output_data_evaluations[col][row_number] = prediction_evaluation Do we want to expose this to the user ?
+                self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
 
         return
 

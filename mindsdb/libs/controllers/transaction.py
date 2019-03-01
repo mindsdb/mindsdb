@@ -170,47 +170,27 @@ class Transaction:
 
         self.model_backend = LudwigBackend(self)
         predictions = self.model_backend.predict()
-
-        '''
-        for row in self.transaction.input_data.data_array:
-            for index, cell in enumerate(row):
-                col = columns[index]
-                output_data[col].append(cell)
-
-        for predicted_col in self.persistent_model_metadata.predict_columns:
-            values = predictions[predicted_col]
-            confidences = [0.5] * len(predictions[predicted_col])
-
-            predicted_col_index = self.input_data.columns.index(predicted_col)
-            predicted_col_confidence_index = predicted_col_index + 1
-            self.output_data.columns.insert(predicted_col_confidence_index, predicted_col + '_confidence')
-            self.output_data.confidence_columns.insert(predicted_col_confidence_index, predicted_col + '_confidence')
-            for i, val in enumerate(values):
-                self.output_data.data_array[i][predicted_col_index] = val
-                # Use the probabilistic validator here
-                self.output_data.data_array[i][predicted_col_confidence_index] = 0.5
-        '''
-
+        
         # self.transaction.persistent_model_metadata.predict_columns
-        self.output_data.data = {col: [] for i, col in enumerate(self.transaction.input_data.columns)}
+        self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
 
-        for row in self.transaction.input_data.data_array:
+        for row in self.input_data.data_array:
             for index, cell in enumerate(row):
                 col = columns[index]
-                self.transaction.output_data.data[col].append(cell)
+                self.output_data.data[col].append(cell)
 
         for predicted_col in self.persistent_model_metadata.predict_columns:
-            probabilistic_validator = ProbabilisticValidator.unpickle(self.transaction.persistent_model_metadata.probabilistic_validators[predicted_col])
+            probabilistic_validator = ProbabilisticValidator.unpickle(self.persistent_model_metadata.probabilistic_validators[predicted_col])
 
             predicted_values = predictions[predicted_col]
-            self.transaction.output_data.data[predicted_col] = predicted_values
+            self.output_data.data[predicted_col] = predicted_values
             confidence_column_name = "_{col}_confidence".format(col=predicted_col)
-            self.transaction.output_data.data[confidence_column_name] = [None] * len(predicted_values)
+            self.output_data.data[confidence_column_name] = [None] * len(predicted_values)
 
             for row_number, predicted_value in enumerate(predicted_values):
-                features_existance_vector = [False if self.transaction.output_data.data[col][row_number] is None else True for col in input_columns]
+                features_existance_vector = [False if self.output_data.data[col][row_number] is None else True for col in input_columns]
                 prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
-                self.transaction.output_data.data[confidence_column_name] = prediction_evaluation.most_likely_probability
+                self.output_data.data[confidence_column_name] = prediction_evaluation.most_likely_probability
                 #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong
                 #output_data_evaluations[col][row_number] = prediction_evaluation Do we want to expose this to the user ?
 

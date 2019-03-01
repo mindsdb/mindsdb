@@ -13,7 +13,7 @@ notifications:
 cache: pip
 # install dependencies
 install:
-  - pip install -r requirements.txt --quiet
+  - travis_wait pip install -r requirements.txt --quiet
   - python setup.py install
 before_script: cd integration_testing
 # run tests

@@ -17,6 +17,43 @@ class PredictTransactionOutputData():
         self.evaluations = evaluations
         self.transaction = transaction
 
+    def __iter__(self):
+        self.columns = self.transaction.persistent_model_metadata.columns
+        first_col = self.columns[0]
+
+        for i, cell in enumerate(self.data[first_col]):
+
+            yield TransactionOutputRow(self, i)
+
+    def __getitem__(self, item):
+
+        return TransactionOutputRow(self, item)
+
+
+    def __str__(self):
+
+        return str(self.data)
+
+    @property
+    def predicted_values(self):
+        """
+        Legacy method, we should remove but for now so that things work
+        :return:
+        """
+        self.transaction.log.error('predict_values method will be removed from Predictor.predict response, just make sure you use the outout as an iterator')
+        self.columns = self.transaction.persistent_model_metadata.columns
+        first_column = self.columns[0]
+
+        ret = []
+        for row, v in enumerate(self.data[first_column]):
+            ret_arr = {col: self.data[col][row] for col in self.evaluations}
+            ret_arr['prediction_confidence'] = 0 # we no longer support
+            ret += [ret_arr]
+        return ret
+
+
+"""
+
     def _getOrigColum(self, col):
         for orig_col in self.columns_map:
             if self.columns_map[orig_col] == col:
@@ -44,48 +81,6 @@ class PredictTransactionOutputData():
         else:
             raise StopIteration
 
-    @property
-    def predicted_values(self, as_list=False, add_header = False):
-        """
-        Get an array of dictionaries (unless as_list=True) for predicted values
-        :return: predicted_values
-        """
-        ret = []
-
-            yield TransactionOutputRow(self, i)
-
-    def __getitem__(self, item):
-
-            # append predicted values and confidences
-            for i in range(len(self.predicted_columns)):
-                pred_col = self.predicted_columns[i]
-                confidence_col = self.confidence_columns[i]
-
-                pred_col_index = self.columns.index(pred_col)
-                pred_col_confidence_index = self.columns.index(confidence_col)
-
-    def __str__(self):
-        return str(self.data)
-
-    @property
-    def predicted_values(self):
-        """
-        Legacy method, we should remove but for now so that things work
-        :return:
-        """
-        self.transaction.log.error('predict_values method will be removed from Predictor.predict response, just make sure you use the outout as an iterator')
-        self.columns = self.transaction.persistent_model_metadata.columns
-        first_column = self.columns[0]
-
-        ret = []
-        for row, v in enumerate(self.data[first_column]):
-            ret_arr = {col: self.data[col][row] for col in self.evaluations}
-            ret_arr['prediction_confidence'] = 0 # we no longer support
-            ret += [ret_arr]
-        return ret
-
-
-"""
     def __iter__(self):
         self.iter_col_n = 0
         return self

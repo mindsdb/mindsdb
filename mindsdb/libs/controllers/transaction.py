@@ -43,7 +43,7 @@ class Transaction:
         self.errorMsg = None
 
         self.input_data = TransactionData()
-        self.output_data = TrainTransactionOutputData(transaction=self)
+        self.output_data = TrainTransactionOutputData()
         self.model_data = ModelData()
 
         # variables that can be persisted
@@ -166,8 +166,7 @@ class Transaction:
             self.output_data = self.input_data
             return
 
-        self.output_data = PredictTransactionOutputData(predicted_columns=self.persistent_model_metadata.predict_columns,
-        data_array=self.input_data.data_array,columns=self.input_data.columns)
+        self.output_data = PredictTransactionOutputData(transaction=self)
 
         self.model_backend = LudwigBackend(self)
         predictions = self.model_backend.predict()

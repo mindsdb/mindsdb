@@ -68,3 +68,6 @@ docs/index.rst
 docs/make.bat
 docs/Makefile
 docs/source
+integration_testing/video.py
+integration_testing/canvas.py
+

@@ -280,7 +280,7 @@ class StatsGenerator(BaseModule):
             ,'duplicates_percentage': nr_duplicates*100/len(columns[col_name])
         }
 
-        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.CATEGORICAL and stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.DATE:
+        if stats[col_name]['data_type'] != DATA_TYPES.CATEGORICAL and stats[col_name]['data_type'] != DATA_TYPES.DATE:
             data['duplicates_score'] = data['duplicates_percentage']/100
         else:
             data['c'] = 0
@@ -333,7 +333,7 @@ class StatsGenerator(BaseModule):
             mean_z_score: The mean z score for the column
             z_test_based_outlier_score: A quality score based on the nr of outliers as determined by their z score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
-        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
+        if stats[col_name]['data_type'] != DATA_TYPES.NUMERIC:
             return {}
 
         z_scores = list(map(abs,(st.zscore(columns[col_name]))))
@@ -361,7 +361,7 @@ class StatsGenerator(BaseModule):
             lof_based_outlier_score: A quality score based on the nr of outliers as determined by their LOF score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
-        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
+        if stats[col_name]['data_type'] != DATA_TYPES.NUMERIC:
             return {}
 
         np_col_data = np.array(columns[col_name]).reshape(-1, 1)
@@ -569,7 +569,7 @@ class StatsGenerator(BaseModule):
             if col_stats['data_type_distribution_score'] > 0.2:
                 #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
                 percentage_of_data_not_of_principal_type = col_stats['data_type_distribution_score'] * 100
-                principal_data_type = col_stats[KEYS.DATA_TYPE]
+                principal_data_type = col_stats['data_type']
                 self.log.warning(f'{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate your data is of poor quality.')
 
             if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 0.3:
@@ -714,26 +714,6 @@ class StatsGenerator(BaseModule):
                         xp += [i]
                         i_inc = abs(i-min_value)*inc_rate
                         i = i + i_inc
-
-
-                    # TODO: Solve inc_rate for N
-                    #    min*inx_rate + (min+min*inc_rate)*inc_rate + (min+(min+min*inc_rate)*inc_rate)*inc_rate ....
-                    #
-                    #      x_0 = 0
-                    #      x_i = (min+x_(i-1)) * inc_rate = min*inc_rate + x_(i-1)*inc_rate
-                    #
-                    #      sum of x_i_{i=1}^n (x_i) = max_value = inc_rate ( n * min + sum(x_(i-1)) )
-                    #
-                    #      mx_value/inc_rate = n*min + inc_rate ( n * min + sum(x_(i-2)) )
-                    #
-                    #     mx_value = n*min*in_rate + inc_rate^2*n*min + inc_rate^2*sum(x_(i-2))
-                    #              = n*min(inc_rate+inc_rate^2) + inc_rate^2*sum(x_(i-2))
-                    #              = n*min(inc_rate+inc_rate^2) + inc_rate^2*(inc_rate ( n * min + sum(x_(i-3)) ))
-                    #              = n*min(sum_(i=1)^(i=n)(inc_rate^i))
-                    #    =>  sum_(i=1)^(i=n)(inc_rate^i)) = max_value/(n*min(sum_(i=1)^(i=n))
-                    #
-                    # # i + i*x
-
                 else:
                     max_value = 0
                     min_value = 0
@@ -749,7 +729,8 @@ class StatsGenerator(BaseModule):
 
 
                 col_stats = {
-                    KEYS.DATA_TYPE: data_type,
+                    'data_type': data_type,
+                    'data_subtype': curr_data_subtype,
                     "mean": mean,
                     "median": median,
                     "variance": var,
@@ -766,6 +747,7 @@ class StatsGenerator(BaseModule):
                 }
                 stats[col_name] = col_stats
             # else if its text
+            # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word
                 is_full_text = True if data_type == DATA_TYPES.SEQUENTIAL else False
@@ -785,7 +767,8 @@ class StatsGenerator(BaseModule):
                         dictionary = []
                         dictionary_available = False
                 col_stats = {
-                    KEYS.DATA_TYPE: DATA_TYPES.SEQUENTIAL if is_full_text else data_type,
+                    'data_type': DATA_TYPES.SEQUENTIAL if is_full_text else data_type,
+                    'data_subtype': curr_data_subtype,
                     "dictionary": dictionary,
                     "dictionaryAvailable": dictionary_available,
                     "dictionaryLenghtPercentage": dictionary_lenght_percentage,

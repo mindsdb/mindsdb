@@ -29,7 +29,7 @@ def norm_buckets(value, cell_stats):
     :return: a list
     '''
 
-    if cell_stats[KEYS.DATA_TYPE] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE]:
+    if cell_stats['data_type'] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE]:
         ret = [0]*(len(cell_stats['percentage_buckets'])+2)
         # if noen return empty list
         if value == None:
@@ -60,7 +60,7 @@ def norm_buckets(value, cell_stats):
 def norm(value, cell_stats):
 
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+    if cell_stats['data_type'] == DATA_TYPES.NUMERIC:
 
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA','null'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
@@ -86,7 +86,7 @@ def norm(value, cell_stats):
 
         return [normalizedValue, 1.0]
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:
+    if cell_stats['data_type'] == DATA_TYPES.DATE:
         #[ timestamp, year, month, day, minute, second, is null]
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
@@ -133,7 +133,7 @@ def norm(value, cell_stats):
 
         return norm_vals
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.CATEGORICAL:
+    if cell_stats['data_type'] == DATA_TYPES.CATEGORICAL:
         # is it a word
         if cell_stats['dictionaryAvailable']:
             # all the words in the dictionary +2 (one for rare words and one for null)
@@ -159,7 +159,7 @@ def norm(value, cell_stats):
 
             return []
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.SEQUENTIAL:
+    if cell_stats['data_type'] == DATA_TYPES.SEQUENTIAL:
 
         if (str(value) in [str(''), str(' '), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA'] or (
                 value == None or value == '' or value == '\n' or value == '\r')):
@@ -200,15 +200,15 @@ def norm(value, cell_stats):
 def denorm(value, cell_stats, return_nones = True):
 
     # TODO: Get a format for dates
-    if round(abs(value[-1])) <= 0 and cell_stats[KEYS.DATA_TYPE] != DATA_TYPES.CATEGORICAL:
+    if round(abs(value[-1])) <= 0 and cell_stats['data_type'] != DATA_TYPES.CATEGORICAL:
         if return_nones:
             return None
-        elif cell_stats[KEYS.DATA_TYPE] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE]:
+        elif cell_stats['data_type'] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE]:
             return 0
         else:
             return ''
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+    if cell_stats['data_type'] == DATA_TYPES.NUMERIC:
 
         value = value[0]
 
@@ -222,7 +222,7 @@ def denorm(value, cell_stats, return_nones = True):
 
         return denormalized
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.DATE:
+    if cell_stats['data_type'] == DATA_TYPES.DATE:
         value = value[0]
         if cell_stats['max'] - cell_stats['min'] != 0:
             denormalized = value * (cell_stats['max'] - cell_stats['min']) + cell_stats['min']
@@ -231,7 +231,7 @@ def denorm(value, cell_stats, return_nones = True):
         # this should return a valid timestamp
         return denormalized
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.CATEGORICAL:
+    if cell_stats['data_type'] == DATA_TYPES.CATEGORICAL:
         if cell_stats['dictionaryAvailable']:
             not_null = True if value[-1] >= 0.5 else False
             other = True if value[-2] >= 0.5 else False
@@ -255,7 +255,7 @@ def denorm(value, cell_stats, return_nones = True):
         else:
             return ''
 
-    if cell_stats[KEYS.DATA_TYPE] == DATA_TYPES.SEQUENTIAL:
+    if cell_stats['data_type'] == DATA_TYPES.SEQUENTIAL:
         # is it a full text
         text = []
         vector_length = len(cell_stats['dictionary']) + FULL_TEXT_ENCODING_EXTRA_LENGTH

@@ -48,9 +48,9 @@ class EnsembleFullyConnectedNet(BaseModel):
 
         for col in input_cols:
 
-            is_text = True if sample_batch.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.SEQUENTIAL else False
+            is_text = True if sample_batch.sampler.stats[col]['data_type'] == DATA_TYPES.SEQUENTIAL else False
 
-            is_numeric_or_date = True if sample_batch.sampler.stats[col][KEYS.DATA_TYPE] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] else False
+            is_numeric_or_date = True if sample_batch.sampler.stats[col]['data_type'] in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] else False
 
             if is_text: # also create an encoder
                 lang_len = len(sample_batch.sampler.stats[col]['dictionary']) + FULL_TEXT_ENCODING_EXTRA_LENGTH

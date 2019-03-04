@@ -37,7 +37,7 @@ class DataEncoder(BaseModule):
 
         # Train encoders for full_text columns
         for src_col in self.transaction.model_stats:
-            if self.transaction.model_stats[src_col][KEYS.DATA_TYPE] == DATA_TYPES.SEQUENTIAL:
+            if self.transaction.model_stats[src_col]['data_type'] == DATA_TYPES.SEQUENTIAL:
                 target_col = '{src_col}_target'.format(src_col=src_col)
                 submodel_name = 'full_text.{src_col}'.format(src_col=src_col)
                 data_model = 'pytorch.encoders.text_rnn'

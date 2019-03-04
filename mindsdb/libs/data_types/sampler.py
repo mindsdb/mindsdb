@@ -38,7 +38,7 @@ class Sampler:
 
         self.meta_data = metadata_as_stored
         self.stats = metadata_as_stored.column_stats
-        self.model_columns = [col for col in metadata_as_stored.columns if self.stats[col][KEYS.DATA_TYPE] not in ignore_types]
+        self.model_columns = [col for col in metadata_as_stored.columns if self.stats[col]['data_type'] not in ignore_types]
         self.ignore_columns_with_type = ignore_types
         self.sampler_mode = sampler_mode
 
@@ -81,9 +81,9 @@ class Sampler:
 
                 for column in self.model_columns:
 
-                    # log.debug('Generating: pytorch variables, batch: {column}-[{group_pointer}:{limit}]-{column_type}'.format(column=column, group_pointer=group_pointer, limit=limit, column_type=self.stats[column][KEYS.DATA_TYPE]))
+                    # log.debug('Generating: pytorch variables, batch: {column}-[{group_pointer}:{limit}]-{column_type}'.format(column=column, group_pointer=group_pointer, limit=limit, column_type=self.stats[column]['data_type']))
                     # col_start_time = time.time()
-                    #if self.stats[column][KEYS.DATA_TYPE] != DATA_TYPES.FULL_TEXT:
+                    #if self.stats[column]['data_type'] != DATA_TYPES.FULL_TEXT:
                     ret[column] = self.data[group][column][group_pointer:limit]
 
                     ext_col_name = EXTENSION_COLUMNS_TEMPLATE.format(column_name=column)

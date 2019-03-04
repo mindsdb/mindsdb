@@ -111,7 +111,6 @@ class KEYS:
     ALL_SET = 'all'
     X ='x'
     Y ='y'
-    DATA_TYPE = 'DataType'
     TS_ENCODED_ROW = 'TS_ENCODED_ROW'
     TS_FLAT_ROW = 'TS_FLAT_ROW'
 

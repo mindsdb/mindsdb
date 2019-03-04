@@ -27,7 +27,7 @@ class LudwigBackend():
                 data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
             col_stats = self.transaction.persistent_model_metadata.column_stats[col]
-            data_type = col_stats[KEYS.DATA_TYPE]
+            data_type = col_stats['data_type']
 
             ludwig_dtype = 'bag'
 

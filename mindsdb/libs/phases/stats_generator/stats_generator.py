@@ -171,7 +171,7 @@ class StatsGenerator(BaseModule):
                 subtype_dist[current_subtype_guess] = 1
             else:
                 subtype_dist[current_subtype_guess] += 1
-                
+
         curr_data_type = 'Unknown'
         curr_data_subtype = 'Unknown'
         max_data_type = 0

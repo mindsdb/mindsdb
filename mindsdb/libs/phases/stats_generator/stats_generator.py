@@ -30,11 +30,10 @@ class StatsGenerator(BaseModule):
 
     phase_name = PHASE_STATS_GENERATOR
 
-    _common_filepath_chars = ['/', '\\', ':\\']
     def _is_file_of_type(self, potential_path):
         could_be_fp = False
-        for char in _common_filepath_chars:
-            if chat in potential_path:
+        for char in ('/', '\\', ':\\'):
+            if char in potential_path:
                 could_be_fp = True
 
         if not could_be_fp:
@@ -61,8 +60,9 @@ class StatsGenerator(BaseModule):
     def _is_number(self, string):
         """ Returns True if string is a number. """
         try:
-            clean_float(string)
-            if '.' or ',' in string:
+            # Should crash if not number
+            clean_float(str(string))
+            if '.' in str(string) or ',' in str(string):
                 return DATA_SUBTYPES.FLOAT
             else:
                 return DATA_SUBTYPES.INT
@@ -134,38 +134,40 @@ class StatsGenerator(BaseModule):
         type_dist = {}
         subtype_dist = {}
 
-        current_subtype_guess = None
-        current_type_guess = None
+        current_subtype_guess = 'Unknown'
+        current_type_guess = 'Unknown'
 
         # calculate type_dist
         for element in data:
             # Maybe use list of functions in the future
 
             # Check if Nr
-            if current_subtype_guess is None or current_type_guess is None:
+            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
                 subtype = self._is_number(element)
                 if subtype is not False:
+                    if 'W./C.' in str(element):
+                        print('\n\n\n-----------------------\n\n\n')
+                        print(subtype)
+                        print('\n\n\n-----------------------\n\n\n')
+                        exit()
                     current_type_guess = DATA_TYPES.NUMERIC
                     current_subtype_guess = subtype
 
             # Check if date
-            if current_subtype_guess is None or current_type_guess is None:
+            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
                 subtype = self._get_date_type(element)
                 if subtype is not False:
                     current_type_guess = DATA_TYPES.DATE
                     current_subtype_guess = subtype
 
             # Check if file
-            if current_subtype_guess is None or current_type_guess is None:
+            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
                 subtype = self._get_date_type(element)
                 if subtype is not False:
                     current_type_guess = DATA_TYPES.FILE_PATH
                     current_subtype_guess = subtype
 
-            # If nothing works, assume it's categorical or sequential and determine type later (based on all the data)
-            if current_subtype_guess is None or current_type_guess is None:
-                current_type_guess = 'Unknown'
-                current_subtype_guess = 'Unknown'
+            # If nothing works, assume it's categorical or sequential and determine type later (based on all the data in the column)
 
             if current_type_guess not in type_dist:
                 type_dist[current_type_guess] = 1
@@ -201,7 +203,7 @@ class StatsGenerator(BaseModule):
         if curr_data_type == 'Unknown':
             curr_data_type, curr_data_subtype = self._get_text_type(data)
 
-        return curr_data_type, curr_data_subtype, type_dist
+        return curr_data_type, curr_data_subtype, type_dist, subtype_dist
 
     def _get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
@@ -603,7 +605,7 @@ class StatsGenerator(BaseModule):
 
             # We might want to inform the user about a few stats regarding his column regardless of the score, this is done bellow
             self.log.info('Data distribution for column "{}"'.format(col_name))
-            self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
+            self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
 
     def run(self):
@@ -655,7 +657,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist = self._get_column_data_type(col_data)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist = self._get_column_data_type(col_data)
 
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
@@ -686,6 +688,7 @@ class StatsGenerator(BaseModule):
                 for value in col_data:
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
+
 
                 col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
 
@@ -779,6 +782,7 @@ class StatsGenerator(BaseModule):
                 }
             stats[col_name] = col_stats
             stats[col_name]['data_type_dist'] = data_type_dist
+            stats[col_name]['data_subtype_dist'] = data_subtype_dist
             stats[col_name]['column'] = col_name
             stats[col_name]['empty_cells'] = empty_count[col_name]
             stats[col_name]['empty_percentage'] = empty_count[col_name] * 100 / column_count[col_name]

@@ -90,7 +90,7 @@ class MindsdbLogger():
         if self.send:
             self.sio.disconnect()
 
-    def infoChart(self, message,type, uid=None):
+    def infoChart(self, message, type, uid=None):
         """
         It will add the specific markdown plus tags or format it for stdout logs
 

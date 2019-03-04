@@ -113,11 +113,11 @@ class StatsGenerator(BaseModule):
                 max_number_of_words += words
 
         if max_number_of_words == 1:
-            return DATA_TYPES.CATEGORICAL
+            return DATA_TYPE.CATEGORICAL, DATA_SUBTYPES.SINGLE
         if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
-            return DATA_TYPES.CATEGORICAL
+            return DATA_TYPE.CATEGORICAL, DATA_SUBTYPES.MULTIPLE
         else:
-            return DATA_TYPES.SEQUENTIAL
+            return DATA_TYPE.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
     def _get_column_data_type(self, data):
@@ -130,10 +130,9 @@ class StatsGenerator(BaseModule):
         NOTE: type distribution is the count that this column has for belonging cells to each DATA_TYPE
         """
 
-        current_type_guess = None
-        current_subtype_guess = None
 
         type_dist = {}
+        subtype_dist = {}
 
         # calculate type_dist
         for element in data:
@@ -160,37 +159,46 @@ class StatsGenerator(BaseModule):
                     current_type_guess = DATA_TYPES.FILE_PATH
                     current_subtype_guess = subtype
 
-            # If nothing works, assume sequential
+            # If nothing works, assume it's categorical or sequential and determine type later (based on all the data)
             if current_subtype_guess is None or current_type_guess is None:
-                current_type_guess = DATA_TYPES.SEQUENTIAL
-                current_subtype_guess DATA_SUBTYPES.TEXT
+                current_type_guess = 'Unknown'
+                current_subtype_guess = 'Unknown'
 
             if current_type_guess not in type_dist:
                 type_dist[current_type_guess] = 1
+                subtype_dist[current_subtype_guess] = 1
             else:
                 type_dist[current_type_guess] += 1
+                subtype_dist[current_subtype_guess] += 1
 
-        curr_data_type = DATA_TYPES.SEQUENTIAL
+        curr_data_type = 'Unknown'
+        curr_data_subtype = 'Unknown'
         max_data_type = 0
 
         # assume that the type is the one with the most prevelant type_dist
         for data_type in type_dist:
-            # If any of the members are text, use that data type, since otherwise the model will crash when casting
-            if data_type == DATA_TYPES.SEQUENTIAL:
-                pass
-                curr_data_type = DATA_TYPES.SEQUENTIAL
+            # If any of the members are Unknown, use that data type (later to be turned into CATEGORICAL or SEQUENTIAL), since otherwise the model will crash when casting
+            # @TODO consider removing rows where data type is unknown in the future, might just be corrupt data... a bit hard to impl currently
+            if data_type == 'Unknown':
+                curr_data_type = 'Unknown'
                 break
             if type_dist[data_type] > max_data_type:
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
 
-        #TODO: If there are cell values that dont match the prevelant type, we should log this information
+        # Set subtype
+        max_sub_type = 0
+        if curr_data_type != 'Unknown':
+            for subtype in subtype_dist:
+                if subtype_dist[data_type] > max_sub_type and subtype in curr_data_type:
+                    curr_data_subtype = subtype
+                    max_sub_type = type_dist[subtype]
 
         # If it finds that the type is categorical it should determine if its categorical or actual text
-        if curr_data_type == DATA_TYPES.SEQUENTIAL:
-            return self._get_text_type(data), type_dist
+        if curr_data_type == 'Unknown':
+            curr_data_type, curr_data_subtype = self._get_text_type(data)
 
-        return curr_data_type, type_dist
+        return curr_data_type, curr_data_subtype, type_dist
 
     def _get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
@@ -644,7 +652,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, data_type_dist = self._get_column_data_type(col_data)
+            data_type, curr_data_subtype, data_type_dist = self._get_column_data_type(col_data)
 
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior

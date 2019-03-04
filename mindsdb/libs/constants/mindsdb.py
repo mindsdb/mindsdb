@@ -57,14 +57,6 @@ TEXT_ENCODING_EXTRA_LENGTH = 2 #(len)[unfrequent_word, is_null]
 
 ALL_INDEXES_LIST = ['*']
 
-class DATA_TYPES:
-    NUMERIC = 'Numeric'
-    DATE = 'Date'
-    CATEGORICAL = 'Class'
-    FILE_PATH = 'File Path'
-    URL = 'Url'
-    SEQUENTIAL = 'Sequential'
-
 class DATA_SUBTYPES:
     # Numeric
     INT = 'Int'
@@ -75,7 +67,7 @@ class DATA_SUBTYPES:
     DATE = 'Date' # YYYY-MM-DD
     TIMESTAMP = 'Timestamp' # YYYY-MM-DD hh:mm:ss or 1852362464
 
-    # CATEGORY
+    # CATEGORICAL
     SINGLE = 'Single'
     MULTIPLE = 'Multiple' # Kind of unclear on the implementation
 
@@ -90,6 +82,14 @@ class DATA_SUBTYPES:
     # SEQUENTIAL
     TEXT = 'Text'
     ARRAY = 'Array' # Do we even want to support arrays / structs / nested ... etc ?
+
+class DATA_TYPES:
+    NUMERIC = [DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT, DATA_SUBTYPES.BINARY]
+    DATE = [DATA_SUBTYPES.DATE, DATA_SUBTYPES.TIMESTAMP]
+    CATEGORICAL = [DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE]
+    FILE_PATH = [DATA_SUBTYPES.IMAGE, DATA_SUBTYPES.VIDEO, DATA_SUBTYPES.AUDIO]
+    URL = []
+    SEQUENTIAL = [DATA_SUBTYPES.TEXT, DATA_SUBTYPES.ARRAY]
 
 
 

@@ -132,12 +132,12 @@ class StatsGenerator(BaseModule):
         type_dist = {}
         subtype_dist = {}
 
-        current_subtype_guess = 'Unknown'
-        current_type_guess = 'Unknown'
-
         # calculate type_dist
         for element in data:
             # Maybe use list of functions in the future
+
+            current_subtype_guess = 'Unknown'
+            current_type_guess = 'Unknown'
 
             # Check if Nr
             if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':

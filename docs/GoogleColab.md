@@ -2,10 +2,10 @@
 # Using MindsDB with Google Colab
 
 [Google Colab](https://colab.research.google.com) is a free cloud service that supports free GPU! 
-You can use MindsDB there, here its how: [Demo](https://colab.research.google.com/gist/JohannesFerner/88773019cd385fe6ba0a9377a4779f40/mindsdb.ipynb)
+You can use MindsDB there, here's how: [Demo](https://colab.research.google.com/gist/JohannesFerner/88773019cd385fe6ba0a9377a4779f40/mindsdb.ipynb)
 
 Fortunately, this is really easy.
-Inside Google Colab, start a new python 3 notebook and in a cell, insert the following
+Inside Google Colab, start a new python 3 notebook and in a cell, insert the following:
 ```
 !pip install mindsdb
 ```
@@ -37,7 +37,7 @@ file = "./drive/My Drive/Datasets/StudentsPerformance.csv"
 ## Training
 
 Now let's create a MindsDB object and initialize it with our data from the file. We'll be prediciting the reading_score and we'll call our model 'reading_predictor'.
-Remember that depending on your dataset, these variables might change. Just remember that `predict` is the column you want to make your prediction on and that mindsdb will automatically rename all your collums to snake case.
+Remember that depending on your dataset, these variables might change. Just remember that `predict` is the column you want to make your prediction on and that mindsdb will automatically rename all your columns to snake case.
 ```Python
 mdb = MindsDB()
 

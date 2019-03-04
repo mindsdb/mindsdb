@@ -66,7 +66,8 @@ def test_one_label_prediction():
         to_predict=label_name
     )
     print('!-------------  Learning ran successfully  -------------!')
-
+    exit(0)
+    
     mdb = mindsdb.MindsDB()
     results = mdb.predict(when_data=test_file_name)
     print('!-------------  Prediction from file ran successfully  -------------!')

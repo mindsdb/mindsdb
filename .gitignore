@@ -1,3 +1,5 @@
+metadata.json
+results
 integration_testing/*.csv
 integration_testing/*.tsv
 integration_testing/*.sql
@@ -49,6 +51,7 @@ share/python-wheels/
 # virtualenv
 .venv
 venv/
+venv3.6
 ENV/
 
 # pyenv

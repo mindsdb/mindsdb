@@ -1,5 +1,5 @@
 
-![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/mindsdb/proxies/web/static/img/logo1gw.png "MindsDB") 
+![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/mindsdb/proxies/web/static/img/logo1gw.png "MindsDB")
 #
 
 [![Build Status](https://travis-ci.org/mindsdb/mindsdb.svg?branch=master)](https://travis-ci.org/mindsdb/mindsdb)
@@ -17,7 +17,7 @@ MindsDB's goal is to make it very simple for developers to use the power of arti
 
 You can get started in your own computer/cloud or you can also try it via your browser using [Google Colab](docs/GoogleColab.md).
 
-It's very simple to setup 
+It's very simple to set up 
 
 ```bash
  pip3 install mindsdb --user

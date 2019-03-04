@@ -37,8 +37,8 @@ pip install mindsdb --no-dependencies
 
 # Build and run your docker container
 
-Alternatively, You can also run MindsDB in a docker container. Assuming that you have [docker](https://docs.docker.com/install/) installed in your computer.
-on your terminal, you can do the following:
+Alternatively, you can also run MindsDB in a docker container. Assuming that you have [docker](https://docs.docker.com/install/) installed in your computer.
+On your terminal, you can do the following:
 
 ```
 sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/build-docker.sh)"
@@ -51,4 +51,4 @@ We also have prebuilt images in [DockerHub](https://cloud.docker.com/repository/
 # Hardware
 
 Due to the fact that pytorch only supports certain instruction sets, mindsdb can only use certain types of GPUs.
-Currently, on AWS, `g3` and `p3` instance types should be fine, but `p2` and `g2` instances are not supproted
+Currently, on AWS, `g3` and `p3` instance types should be fine, but `p2` and `g2` instances are not supported

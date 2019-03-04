@@ -1,18 +1,18 @@
 import random
 import warnings
 import imghdr
+import sndhdr
 from collections import Counter
 
 import numpy as np
 import scipy.stats as st
-from dateutil.parser import parse as parseDate
+from dateutil.parser import parse as parse_datetime
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import matthews_corrcoef
 
 from mindsdb.config import CONFIG
-
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, cast_string_to_python_type
@@ -31,7 +31,7 @@ class StatsGenerator(BaseModule):
     phase_name = PHASE_STATS_GENERATOR
 
     _common_filepath_chars = ['/', '\\', ':\\']
-    def _is_file_path(self, potential_path):
+    def _is_file_of_type(self, potential_path):
         could_be_fp = False
         for char in _common_filepath_chars:
             if chat in potential_path:
@@ -40,28 +40,45 @@ class StatsGenerator(BaseModule):
         if not could_be_fp:
             return False
 
-        is_img = False
         try:
             is_img = imghdr.what(potential_path)
             if is_img is None:
-                is_img = False
+                return False
+            else:
+                return DATA_SUBTYPES.IMAGE
         except:
             # Not a file or file doesn't exist
-            return Flase
+            return False
+
+        # @TODO: CURRENTLY DOESN'T DIFFERENTIATE BETWEEN AUDIO AND VIDEO
+        is_audio = sndhdr.what(potential_path)
+        if is_audio is None:
+            return False
+        else:
+            return DATA_SUBTYPES.AUDIO
+
 
     def _is_number(self, string):
         """ Returns True if string is a number. """
         try:
             clean_float(string)
-            return True
+            if '.' or ',' in string:
+                return DATA_SUBTYPES.FLOAT
+            else:
+                return DATA_SUBTYPES.INT
         except ValueError:
             return False
 
-    def _is_date(self, string):
+    def _get_date_type(self, string):
         """ Returns True if string is a valid date format """
         try:
-            parseDate(string)
-            return True
+            dt = parse_datetime(string)
+
+            # Not accurate 100% for a single datetime str, but should work in aggregate
+            if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and len(string) <= 16:
+                return DATA_SUBTYPES.DATE
+            else
+                return DATA_SUBTYPES.TIMESTAMP
         except ValueError:
             return False
 
@@ -113,23 +130,45 @@ class StatsGenerator(BaseModule):
         NOTE: type distribution is the count that this column has for belonging cells to each DATA_TYPE
         """
 
-        currentGuess = None
+        current_type_guess = None
+        current_subtype_guess = None
 
         type_dist = {}
 
         # calculate type_dist
         for element in data:
-            if self._is_number(element):
-                currentGuess = DATA_TYPES.NUMERIC
-            elif self._is_date(element):
-                currentGuess = DATA_TYPES.DATE
-            else:
-                currentGuess = DATA_TYPES.SEQUENTIAL
+            # Maybe use list of functions in the future
 
-            if currentGuess not in type_dist:
-                type_dist[currentGuess] = 1
+            # Check if Nr
+            if current_subtype_guess is None or current_type_guess is None:
+                subtype = self._is_number(element)
+                if subtype is not False:
+                    current_type_guess = DATA_TYPES.NUMERIC
+                    current_subtype_guess = subtype
+
+            # Check if date
+            if current_subtype_guess is None or current_type_guess is None:
+                subtype = self._get_date_type(element)
+                if subtype is not False:
+                    current_type_guess = DATA_TYPES.DATE
+                    current_subtype_guess = subtype
+
+            # Check if file
+            if current_subtype_guess is None or current_type_guess is None:
+                subtype = self._get_date_type(element)
+                if subtype is not False:
+                    current_type_guess = DATA_TYPES.FILE_PATH
+                    current_subtype_guess = subtype
+
+            # If nothing works, assume sequential
+            if current_subtype_guess is None or current_type_guess is None:
+                current_type_guess = DATA_TYPES.SEQUENTIAL
+                current_subtype_guess DATA_SUBTYPES.TEXT
+
+            if current_type_guess not in type_dist:
+                type_dist[current_type_guess] = 1
             else:
-                type_dist[currentGuess] += 1
+                type_dist[current_type_guess] += 1
 
         curr_data_type = DATA_TYPES.SEQUENTIAL
         max_data_type = 0
@@ -625,7 +664,7 @@ class StatsGenerator(BaseModule):
                         col_data[i] = None
                     else:
                         try:
-                            col_data[i] = int(parseDate(element).timestamp())
+                            col_data[i] = int(parse_datetime(element).timestamp())
                         except:
                             self.log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
                             col_data[i] = None

@@ -65,7 +65,7 @@ class DATA_TYPES:
     URL = 'Url'
     SEQUENTIAL = 'Sequential'
 
-class DATA_SUBTYPE:
+class DATA_SUBTYPES:
     # Numeric
     INT = 'Int'
     FLOAT = 'Float'

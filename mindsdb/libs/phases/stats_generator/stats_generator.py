@@ -164,11 +164,14 @@ class StatsGenerator(BaseModule):
 
             if current_type_guess not in type_dist:
                 type_dist[current_type_guess] = 1
-                subtype_dist[current_subtype_guess] = 1
             else:
                 type_dist[current_type_guess] += 1
-                subtype_dist[current_subtype_guess] += 1
 
+            if current_subtype_guess not in subtype_dist:
+                subtype_dist[current_subtype_guess] = 1
+            else:
+                subtype_dist[current_subtype_guess] += 1
+                
         curr_data_type = 'Unknown'
         curr_data_subtype = 'Unknown'
         max_data_type = 0

@@ -60,9 +60,10 @@ ALL_INDEXES_LIST = ['*']
 class DATA_TYPES:
     NUMERIC = 'Numeric'
     DATE = 'Date'
-    SEQUENTIAL = 'Sequential'
     CATEGORICAL = 'Class'
     FILE_PATH = 'File Path'
+    URL = 'Url'
+    SEQUENTIAL = 'Sequential'
 
 class DATA_SUBTYPE:
     # Numeric
@@ -82,6 +83,9 @@ class DATA_SUBTYPE:
     IMAGE = 'Image'
     VIDEO = 'Video'
     AUDIO = 'Audio'
+
+    # URL
+    # How do we detect the tpye here... maybe setup async download for random sample an stats ?
 
     # SEQUENTIAL
     TEXT = 'Text'

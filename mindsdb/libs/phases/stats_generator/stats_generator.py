@@ -1,5 +1,6 @@
 import random
 import warnings
+import imghdr
 from collections import Counter
 
 import numpy as np
@@ -28,6 +29,25 @@ class StatsGenerator(BaseModule):
     """
 
     phase_name = PHASE_STATS_GENERATOR
+
+    _common_filepath_chars = ['/', '\\', ':\\']
+    def _is_file_path(self, potential_path):
+        could_be_fp = False
+        for char in _common_filepath_chars:
+            if chat in potential_path:
+                could_be_fp = True
+
+        if not could_be_fp:
+            return False
+
+        is_img = False
+        try:
+            is_img = imghdr.what(potential_path)
+            if is_img is None:
+                is_img = False
+        except:
+            # Not a file or file doesn't exist
+            return Flase
 
     def _is_number(self, string):
         """ Returns True if string is a number. """

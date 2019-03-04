@@ -60,8 +60,34 @@ ALL_INDEXES_LIST = ['*']
 class DATA_TYPES:
     NUMERIC = 'Numeric'
     DATE = 'Date'
-    TEXT = 'Text'
+    SEQUENTIAL = 'Sequential'
     CATEGORICAL = 'Class'
+    FILE_PATH = 'File Path'
+
+class DATA_SUBTYPE:
+    # Numeric
+    INT = 'Int'
+    FLOAT = 'Float'
+    BINARY = 'Binary' # Should we have this ?
+
+    # DATETIME
+    DATE = 'Date' # YYYY-MM-DD
+    TIMESTAMP = 'Timestamp' # YYYY-MM-DD hh:mm:ss or 1852362464
+
+    # CATEGORY
+    SINGLE = 'Single'
+    MULTIPLE = 'Multiple' # Kind of unclear on the implementation
+
+    # FILE_PATH
+    IMAGE = 'Image'
+    VIDEO = 'Video'
+    AUDIO = 'Audio'
+
+    # SEQUENTIAL
+    TEXT = 'Text'
+    ARRAY = 'Array' # Do we even want to support arrays / structs / nested ... etc ?
+
+
 
 class SAMPLE_TYPES:
     TEST_SET = 'test'

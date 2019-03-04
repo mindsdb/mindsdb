@@ -34,7 +34,7 @@ class LudwigBackend():
             if data_type == DATA_TYPES.NUMERIC:
                 ludwig_dtype = 'numerical'
 
-            if data_type == DATA_TYPES.TEXT:
+            if data_type == DATA_TYPES.SEQUENTIAL:
                 ludwig_dtype = 'bag'
 
             if data_type == DATA_TYPES.DATE:

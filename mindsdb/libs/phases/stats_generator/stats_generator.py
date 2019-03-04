@@ -80,7 +80,7 @@ class StatsGenerator(BaseModule):
         if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
             return DATA_TYPES.CATEGORICAL
         else:
-            return DATA_TYPES.TEXT
+            return DATA_TYPES.SEQUENTIAL
 
 
     def _get_column_data_type(self, data):
@@ -104,22 +104,22 @@ class StatsGenerator(BaseModule):
             elif self._is_date(element):
                 currentGuess = DATA_TYPES.DATE
             else:
-                currentGuess = DATA_TYPES.TEXT
+                currentGuess = DATA_TYPES.SEQUENTIAL
 
             if currentGuess not in type_dist:
                 type_dist[currentGuess] = 1
             else:
                 type_dist[currentGuess] += 1
 
-        curr_data_type = DATA_TYPES.TEXT
+        curr_data_type = DATA_TYPES.SEQUENTIAL
         max_data_type = 0
 
         # assume that the type is the one with the most prevelant type_dist
         for data_type in type_dist:
             # If any of the members are text, use that data type, since otherwise the model will crash when casting
-            if data_type == DATA_TYPES.TEXT:
+            if data_type == DATA_TYPES.SEQUENTIAL:
                 pass
-                curr_data_type = DATA_TYPES.TEXT
+                curr_data_type = DATA_TYPES.SEQUENTIAL
                 break
             if type_dist[data_type] > max_data_type:
                 curr_data_type = data_type
@@ -128,7 +128,7 @@ class StatsGenerator(BaseModule):
         #TODO: If there are cell values that dont match the prevelant type, we should log this information
 
         # If it finds that the type is categorical it should determine if its categorical or actual text
-        if curr_data_type == DATA_TYPES.TEXT:
+        if curr_data_type == DATA_TYPES.SEQUENTIAL:
             return self._get_text_type(data), type_dist
 
         return curr_data_type, type_dist
@@ -701,7 +701,7 @@ class StatsGenerator(BaseModule):
             # else if its text
             else:
                 # see if its a sentence or a word
-                is_full_text = True if data_type == DATA_TYPES.TEXT else False
+                is_full_text = True if data_type == DATA_TYPES.SEQUENTIAL else False
                 dictionary, histogram = self._get_words_dictionary(col_data, is_full_text)
 
                 # if no words, then no dictionary
@@ -718,7 +718,7 @@ class StatsGenerator(BaseModule):
                         dictionary = []
                         dictionary_available = False
                 col_stats = {
-                    KEYS.DATA_TYPE: DATA_TYPES.TEXT if is_full_text else data_type,
+                    KEYS.DATA_TYPE: DATA_TYPES.SEQUENTIAL if is_full_text else data_type,
                     "dictionary": dictionary,
                     "dictionaryAvailable": dictionary_available,
                     "dictionaryLenghtPercentage": dictionary_lenght_percentage,

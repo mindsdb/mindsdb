@@ -143,11 +143,6 @@ class StatsGenerator(BaseModule):
             if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
                 subtype = self._is_number(element)
                 if subtype is not False:
-                    if 'W./C.' in str(element):
-                        print('\n\n\n-----------------------\n\n\n')
-                        print(subtype)
-                        print('\n\n\n-----------------------\n\n\n')
-                        exit()
                     current_type_guess = DATA_TYPES.NUMERIC
                     current_subtype_guess = subtype
 

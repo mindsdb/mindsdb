@@ -41,9 +41,7 @@ class StatsGenerator(BaseModule):
 
         try:
             is_img = imghdr.what(potential_path)
-            if is_img is None:
-                return False
-            else:
+            if is_img is not None:
                 return DATA_SUBTYPES.IMAGE
         except:
             # Not a file or file doesn't exist
@@ -51,10 +49,10 @@ class StatsGenerator(BaseModule):
 
         # @TODO: CURRENTLY DOESN'T DIFFERENTIATE BETWEEN AUDIO AND VIDEO
         is_audio = sndhdr.what(potential_path)
-        if is_audio is None:
-            return False
-        else:
+        if is_audio is not None:
             return DATA_SUBTYPES.AUDIO
+
+        return False
 
 
     def _is_number(self, string):

@@ -30,7 +30,7 @@ class StatsGenerator(BaseModule):
 
     phase_name = PHASE_STATS_GENERATOR
 
-    def _is_file_of_type(self, potential_path):
+    def _get_file_type(self, potential_path):
         could_be_fp = False
         for char in ('/', '\\', ':\\'):
             if char in potential_path:
@@ -155,7 +155,7 @@ class StatsGenerator(BaseModule):
 
             # Check if file
             if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
-                subtype = self._get_date_type(element)
+                subtype = self._get_file_type(element)
                 if subtype is not False:
                     current_type_guess = DATA_TYPES.FILE_PATH
                     current_subtype_guess = subtype

@@ -33,6 +33,7 @@ class LudwigBackend():
             data_subtype = col_stats['data_subtype']
 
             ludwig_dtype = None
+            encoder = None
 
             if data_subtype in (DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
                 ludwig_dtype = 'numerical'
@@ -48,6 +49,7 @@ class LudwigBackend():
 
             elif data_subtype in (DATA_SUBTYPES.IMAGE):
                 ludwig_dtype = 'image'
+                encoder = 'stacked_cnn'
 
             elif data_subtype in (DATA_SUBTYPES.TEXT):
                 ludwig_dtype = 'text'
@@ -58,15 +60,19 @@ class LudwigBackend():
                 raise Exception(f'Data type "{data_subtype}" no supported by Ludwig model backend')
 
             if col not in self.transaction.persistent_model_metadata.predict_columns:
-                model_definition['input_features'].append({
+                input_def = {
                     'name': col
                     ,'type': ludwig_dtype
-                })
+                }
+                if encoder is not None:
+                    input_def['encoder'] = encoder
+                model_definition['input_features'].append(input_def)
             else:
-                model_definition['output_features'].append({
+                output_def = {
                     'name': col
                     ,'type': ludwig_dtype
-                })
+                }
+                model_definition['output_features'].append(output_def)
 
         return pd.DataFrame(data=data), model_definition
 

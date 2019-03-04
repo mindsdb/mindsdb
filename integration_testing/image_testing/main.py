@@ -1,9 +1,9 @@
 from mindsdb import Predictor
 
 
-mdb = Predictor(name='photo_score_model2')
+mdb = Predictor(name='photo_score_model12')
 
-#mdb.learn(from_data="train.csv", to_predict=['Score'])
+mdb.learn(from_data="train.csv", to_predict=['Score'])
 print('------------------------------------------------------------Done training------------------------------------------------------------')
 
 predicted = mdb.predict(when_data="predict.csv")

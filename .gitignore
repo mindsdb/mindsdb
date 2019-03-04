@@ -4,6 +4,7 @@ integration_testing/*.csv
 integration_testing/*.tsv
 integration_testing/*.sql
 integration_testing/__*
+!integration_testing/wine*.tsv
 test_data.csv
 train_data.csv
 *.ipy*
@@ -70,4 +71,3 @@ docs/Makefile
 docs/source
 integration_testing/video.py
 integration_testing/canvas.py
-

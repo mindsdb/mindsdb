@@ -77,7 +77,7 @@ class StatsGenerator(BaseModule):
             # Not accurate 100% for a single datetime str, but should work in aggregate
             if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and len(string) <= 16:
                 return DATA_SUBTYPES.DATE
-            else
+            else:
                 return DATA_SUBTYPES.TIMESTAMP
         except ValueError:
             return False
@@ -113,11 +113,11 @@ class StatsGenerator(BaseModule):
                 max_number_of_words += words
 
         if max_number_of_words == 1:
-            return DATA_TYPE.CATEGORICAL, DATA_SUBTYPES.SINGLE
+            return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.SINGLE
         if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
-            return DATA_TYPE.CATEGORICAL, DATA_SUBTYPES.MULTIPLE
+            return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.MULTIPLE
         else:
-            return DATA_TYPE.SEQUENTIAL, DATA_SUBTYPES.TEXT
+            return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
     def _get_column_data_type(self, data):
@@ -133,6 +133,9 @@ class StatsGenerator(BaseModule):
 
         type_dist = {}
         subtype_dist = {}
+
+        current_subtype_guess = None
+        current_type_guess = None
 
         # calculate type_dist
         for element in data:
@@ -187,12 +190,12 @@ class StatsGenerator(BaseModule):
                 max_data_type = type_dist[data_type]
 
         # Set subtype
-        max_sub_type = 0
+        max_data_subtype = 0
         if curr_data_type != 'Unknown':
-            for subtype in subtype_dist:
-                if subtype_dist[data_type] > max_sub_type and subtype in curr_data_type:
-                    curr_data_subtype = subtype
-                    max_sub_type = type_dist[subtype]
+            for data_subtype in subtype_dist:
+                if subtype_dist[data_subtype] > max_data_subtype and data_subtype in curr_data_type:
+                    curr_data_subtype = data_subtype
+                    max_data_subtype = subtype_dist[data_subtype]
 
         # If it finds that the type is categorical it should determine if its categorical or actual text
         if curr_data_type == 'Unknown':

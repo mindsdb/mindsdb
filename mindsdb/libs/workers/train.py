@@ -262,7 +262,7 @@ class TrainWorker():
         for col in real_targets:
             reduced_buckets = []
             stats = self.persistent_model_metadata.column_stats[col]
-            if stats[KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+            if stats['data_type'] == DATA_TYPES.NUMERIC:
 
                 labels = confusion_matrices[col]['labels']
                 for i, label in enumerate(labels):

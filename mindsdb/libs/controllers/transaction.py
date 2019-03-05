@@ -1,21 +1,20 @@
-
-
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 from mindsdb.libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
 from mindsdb.libs.data_types.transaction_data import TransactionData
-from mindsdb.libs.data_types.transaction_output_data import TransactionOutputData
+from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData
-
-from mindsdb.config import CONFIG
-
 from mindsdb.libs.data_types.mindsdb_logger import log
+from mindsdb.libs.backends.ludwig import LudwigBackend
+from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
+from mindsdb.config import CONFIG
 
 import _thread
 import traceback
 import importlib
+import copy
 
 
 class Transaction:
@@ -45,8 +44,7 @@ class Transaction:
         self.errorMsg = None
 
         self.input_data = TransactionData()
-        self.output_data = TransactionOutputData(transaction=self)
-
+        self.output_data = TrainTransactionOutputData()
         self.model_data = ModelData()
 
         # variables that can be persisted
@@ -55,18 +53,17 @@ class Transaction:
         self.persistent_ml_model_info = PersistentMlModelInfo()
         self.persistent_ml_model_info.model_name = self.metadata.model_name
 
+
         self.log = logger
 
         self.run()
 
 
-
-    def _get_phase_instance(self, module_name, **kwargs):
+    def _call_phase_module(self, module_name):
         """
-        Loads the module that we want to start for
+        Loads the module and runs it
 
         :param module_name:
-        :param kwargs:
         :return:
         """
 
@@ -75,23 +72,13 @@ class Transaction:
         try:
             main_module = importlib.import_module(module_full_path)
             module = getattr(main_module, module_name)
-            return module(self.session, self, **kwargs)
+            return module(self.session, self)()
         except:
             error = 'Could not load module {module_name}'.format(module_name=module_name)
             self.log.error('Could not load module {module_name}'.format(module_name=module_name))
             self.log.error(traceback.format_exc())
             raise ValueError(error)
             return None
-
-
-    def _call_phase_module(self, module_name):
-        """
-
-        :param module_name:
-        :return:
-        """
-        module = self._get_phase_instance(module_name)
-        return module()
 
 
     def _execute_learn(self):
@@ -121,21 +108,15 @@ class Transaction:
             self.persistent_model_metadata.predict_columns = self.metadata.model_predict_columns
             self.persistent_model_metadata.insert()
 
-
             self._call_phase_module('StatsGenerator')
-            self.persistent_model_metadata.current_phase = MODEL_STATUS_PREPARING
-            self.persistent_model_metadata.update()
-
-
-            self._call_phase_module('DataVectorizer')
             self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
             self.persistent_model_metadata.update()
 
-            # self.callPhaseModule('DataEncoder')
-            self._call_phase_module('ModelTrainer')
+            self.model_backend = LudwigBackend(self)
+            self.model_backend.train()
+            self.persistent_model_metadata.update()
 
             self._call_phase_module('ModelAnalyzer')
-            # TODO: Loop over all stats and when all stats are done, then we can mark model as MODEL_STATUS_TRAINED
 
             return
         except Exception as e:
@@ -150,11 +131,11 @@ class Transaction:
 
     def _execute_drop_model(self):
         """
+        Make sure that we remove all previous data about this model
 
         :return:
         """
 
-        # make sure that we remove all previous data about this model
         self.persistent_model_metadata.delete()
         self.persistent_model_stats.delete()
 
@@ -181,12 +162,40 @@ class Transaction:
         #self.metadata.model_when_conditions = {key if key not in self.metadata.model_columns_map else self.metadata.model_columns_map[key] : self.metadata.model_when_conditions[key] for key in self.metadata.model_when_conditions }
 
         self._call_phase_module('DataExtractor')
-        if len(self.input_data.data_array[0])<=0:
+
+        if len(self.input_data.data_array[0]) <= 0:
             self.output_data = self.input_data
             return
 
-        self._call_phase_module('DataVectorizer')
-        self._call_phase_module('ModelPredictor')
+        self.output_data = PredictTransactionOutputData(transaction=self)
+
+        self.model_backend = LudwigBackend(self)
+        predictions = self.model_backend.predict()
+
+        # self.transaction.persistent_model_metadata.predict_columns
+        self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
+        input_columns = [col for col in self.input_data.columns if col not in self.persistent_model_metadata.predict_columns]
+
+        for row in self.input_data.data_array:
+            for index, cell in enumerate(row):
+                col = self.input_data.columns[index]
+                self.output_data.data[col].append(cell)
+
+        for predicted_col in self.persistent_model_metadata.predict_columns:
+            probabilistic_validator = ProbabilisticValidator.unpickle(self.persistent_model_metadata.probabilistic_validators[predicted_col])
+
+            predicted_values = predictions[predicted_col]
+            self.output_data.data[predicted_col] = predicted_values
+            confidence_column_name = "_{col}_confidence".format(col=predicted_col)
+            self.output_data.data[confidence_column_name] = [None] * len(predicted_values)
+            self.output_data.evaluations[predicted_col] = [None] * len(predicted_values)
+
+            for row_number, predicted_value in enumerate(predicted_values):
+                features_existance_vector = [False if self.output_data.data[col][row_number] is None else True for col in input_columns]
+                prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
+                self.output_data.data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
+                #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong
+                self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
 
         return
 

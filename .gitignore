@@ -1,7 +1,10 @@
+metadata.json
+results
 integration_testing/*.csv
 integration_testing/*.tsv
 integration_testing/*.sql
 integration_testing/__*
+!integration_testing/wine*.tsv
 test_data.csv
 train_data.csv
 *.ipy*
@@ -49,6 +52,7 @@ share/python-wheels/
 # virtualenv
 .venv
 venv/
+venv3.6
 ENV/
 
 # pyenv
@@ -65,3 +69,5 @@ docs/index.rst
 docs/make.bat
 docs/Makefile
 docs/source
+integration_testing/video.py
+integration_testing/canvas.py

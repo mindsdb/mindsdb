@@ -26,7 +26,7 @@ class BaseModel(nn.Module):
 
     variable_wrapper = array_to_float_variable
     variable_unwrapper = variable_to_array
-    ignore_types = [DATA_TYPES.TEXT]
+    ignore_types = [DATA_TYPES.SEQUENTIAL]
     use_full_text_input = False
     if CONFIG.USE_CUDA:
         torch.backends.cudnn.benchmark=True

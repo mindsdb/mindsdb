@@ -4,9 +4,9 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.sampler import Sampler
 from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
 from mindsdb.libs.ml_models.pytorch.libs.torch_helpers import array_to_float_variable
-from mindsdb.libs.helpers.norm_denorm_helpers import denorm
 
 import pandas as pd
+import numpy as np
 
 class ModelAnalyzer(BaseModule):
 
@@ -24,7 +24,7 @@ class ModelAnalyzer(BaseModule):
 
         for col in predict_column_names:
             probabilistic_validators[col] = ProbabilisticValidator(
-                buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'], data_type=self.transaction.persistent_model_metadata.column_stats[col][KEYS.DATA_TYPE])
+                buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'], data_type=self.transaction.persistent_model_metadata.column_stats[col]['data_type'])
 
         # create a list of columns to ignore starting with none, and then one experiment per column
         ignore_none = [[]]
@@ -32,25 +32,32 @@ class ModelAnalyzer(BaseModule):
         ignore_all_but_one = [[coli for coli in non_predict_columns if coli!=col] for col in non_predict_columns]
         ignore_column_options = ignore_none + ignore_just_one + ignore_all_but_one
 
+        ### Create the real values for the created columns (maybe move to a new 'validate' method of the mode backend ?)
+        validation_data = {}
+
+        indexes = self.transaction.input_data.validation_indexes['ALL_ROWS_NO_GROUP_BY']
+        for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns):
+            validation_data[col] = []
+            for row_ind in indexes:
+                validation_data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
+
         # Run on the validation set multiple times, each time with one of the column blanked out
-        for ignore_columns in ignore_column_options:
+        for column_name in self.transaction.persistent_model_metadata.predict_columns:
+            ignore_columns = []
+            if column_name not in self.transaction.persistent_model_metadata.predict_columns:
+                ignore_columns.append(column_name)
 
-
-            validation_sampler = Sampler(self.transaction.model_data.test_set, metadata_as_stored=self.transaction.persistent_model_metadata,
-                                        ignore_types=self.transaction.data_model_object.ignore_types, sampler_mode=SAMPLER_MODES.LEARN,blank_columns=ignore_columns)
-            validation_sampler.variable_wrapper = array_to_float_variable
-
-            predictions = self.transaction.data_model_object.testModel(validation_sampler)
+            predictions = self.transaction.model_backend.predict('validate',ignore_columns)
 
             # create a vector that has True for each feature that was passed to the model tester and False if it was blanked
             features_existence = [True if np_col not in ignore_columns else False for np_col in non_predict_columns]
 
             # A separate probabilistic model is trained for each predicted column, we may want to change this in the future, @TODO
             for pcol in predict_column_names:
-                for i in range(len(predictions.predicted_targets[pcol])):
+                for i in range(len(predictions[pcol])):
 
-                    predicted_val = denorm(predictions.predicted_targets[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
-                    real_val = denorm(predictions.real_targets[pcol][i], self.transaction.persistent_model_metadata.column_stats[pcol])
+                    predicted_val = predictions[pcol][i]
+                    real_val = predictions[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
 
 

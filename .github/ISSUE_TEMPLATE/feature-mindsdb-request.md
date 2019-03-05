@@ -1,5 +1,5 @@
 ---
-name: Feature mindsb request
+name: Feature mindsdb request
 about: Suggest an idea for this project
 labels: 
 

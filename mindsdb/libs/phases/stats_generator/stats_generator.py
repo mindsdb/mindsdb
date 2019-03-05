@@ -1,17 +1,18 @@
 import random
 import warnings
+import imghdr
+import sndhdr
 from collections import Counter
 
 import numpy as np
 import scipy.stats as st
-from dateutil.parser import parse as parseDate
+from dateutil.parser import parse as parse_datetime
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import matthews_corrcoef
 
 from mindsdb.config import CONFIG
-
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, cast_string_to_python_type
@@ -29,19 +30,53 @@ class StatsGenerator(BaseModule):
 
     phase_name = PHASE_STATS_GENERATOR
 
+    def _get_file_type(self, potential_path):
+        could_be_fp = False
+        for char in ('/', '\\', ':\\'):
+            if char in potential_path:
+                could_be_fp = True
+
+        if not could_be_fp:
+            return False
+
+        try:
+            is_img = imghdr.what(potential_path)
+            if is_img is not None:
+                return DATA_SUBTYPES.IMAGE
+        except:
+            # Not a file or file doesn't exist
+            return False
+
+        # @TODO: CURRENTLY DOESN'T DIFFERENTIATE BETWEEN AUDIO AND VIDEO
+        is_audio = sndhdr.what(potential_path)
+        if is_audio is not None:
+            return DATA_SUBTYPES.AUDIO
+
+        return False
+
+
     def _is_number(self, string):
         """ Returns True if string is a number. """
         try:
-            clean_float(string)
-            return True
+            # Should crash if not number
+            clean_float(str(string))
+            if '.' in str(string) or ',' in str(string):
+                return DATA_SUBTYPES.FLOAT
+            else:
+                return DATA_SUBTYPES.INT
         except ValueError:
             return False
 
-    def _is_date(self, string):
+    def _get_date_type(self, string):
         """ Returns True if string is a valid date format """
         try:
-            parseDate(string)
-            return True
+            dt = parse_datetime(string)
+
+            # Not accurate 100% for a single datetime str, but should work in aggregate
+            if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and len(string) <= 16:
+                return DATA_SUBTYPES.DATE
+            else:
+                return DATA_SUBTYPES.TIMESTAMP
         except ValueError:
             return False
 
@@ -76,11 +111,11 @@ class StatsGenerator(BaseModule):
                 max_number_of_words += words
 
         if max_number_of_words == 1:
-            return DATA_TYPES.CATEGORICAL
+            return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.SINGLE
         if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
-            return DATA_TYPES.CATEGORICAL
+            return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.MULTIPLE
         else:
-            return DATA_TYPES.TEXT
+            return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
     def _get_column_data_type(self, data):
@@ -93,45 +128,78 @@ class StatsGenerator(BaseModule):
         NOTE: type distribution is the count that this column has for belonging cells to each DATA_TYPE
         """
 
-        currentGuess = None
 
         type_dist = {}
+        subtype_dist = {}
 
         # calculate type_dist
         for element in data:
-            if self._is_number(element):
-                currentGuess = DATA_TYPES.NUMERIC
-            elif self._is_date(element):
-                currentGuess = DATA_TYPES.DATE
-            else:
-                currentGuess = DATA_TYPES.TEXT
+            # Maybe use list of functions in the future
 
-            if currentGuess not in type_dist:
-                type_dist[currentGuess] = 1
-            else:
-                type_dist[currentGuess] += 1
+            current_subtype_guess = 'Unknown'
+            current_type_guess = 'Unknown'
 
-        curr_data_type = DATA_TYPES.TEXT
+            # Check if Nr
+            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
+                subtype = self._is_number(element)
+                if subtype is not False:
+                    current_type_guess = DATA_TYPES.NUMERIC
+                    current_subtype_guess = subtype
+
+            # Check if date
+            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
+                subtype = self._get_date_type(element)
+                if subtype is not False:
+                    current_type_guess = DATA_TYPES.DATE
+                    current_subtype_guess = subtype
+
+            # Check if file
+            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
+                subtype = self._get_file_type(element)
+                if subtype is not False:
+                    current_type_guess = DATA_TYPES.FILE_PATH
+                    current_subtype_guess = subtype
+
+            # If nothing works, assume it's categorical or sequential and determine type later (based on all the data in the column)
+
+            if current_type_guess not in type_dist:
+                type_dist[current_type_guess] = 1
+            else:
+                type_dist[current_type_guess] += 1
+
+            if current_subtype_guess not in subtype_dist:
+                subtype_dist[current_subtype_guess] = 1
+            else:
+                subtype_dist[current_subtype_guess] += 1
+
+        curr_data_type = 'Unknown'
+        curr_data_subtype = 'Unknown'
         max_data_type = 0
 
         # assume that the type is the one with the most prevelant type_dist
         for data_type in type_dist:
-            # If any of the members are text, use that data type, since otherwise the model will crash when casting
-            if data_type == DATA_TYPES.TEXT:
-                pass
-                curr_data_type = DATA_TYPES.TEXT
+            # If any of the members are Unknown, use that data type (later to be turned into CATEGORICAL or SEQUENTIAL), since otherwise the model will crash when casting
+            # @TODO consider removing rows where data type is unknown in the future, might just be corrupt data... a bit hard to impl currently
+            if data_type == 'Unknown':
+                curr_data_type = 'Unknown'
                 break
             if type_dist[data_type] > max_data_type:
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
 
-        #TODO: If there are cell values that dont match the prevelant type, we should log this information
+        # Set subtype
+        max_data_subtype = 0
+        if curr_data_type != 'Unknown':
+            for data_subtype in subtype_dist:
+                if subtype_dist[data_subtype] > max_data_subtype and data_subtype in curr_data_type:
+                    curr_data_subtype = data_subtype
+                    max_data_subtype = subtype_dist[data_subtype]
 
         # If it finds that the type is categorical it should determine if its categorical or actual text
-        if curr_data_type == DATA_TYPES.TEXT:
-            return self._get_text_type(data), type_dist
+        if curr_data_type == 'Unknown':
+            curr_data_type, curr_data_subtype = self._get_text_type(data)
 
-        return curr_data_type, type_dist
+        return curr_data_type, curr_data_subtype, type_dist, subtype_dist
 
     def _get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
@@ -213,7 +281,7 @@ class StatsGenerator(BaseModule):
             ,'duplicates_percentage': nr_duplicates*100/len(columns[col_name])
         }
 
-        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.CATEGORICAL and stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.DATE:
+        if stats[col_name]['data_type'] != DATA_TYPES.CATEGORICAL and stats[col_name]['data_type'] != DATA_TYPES.DATE:
             data['duplicates_score'] = data['duplicates_percentage']/100
         else:
             data['c'] = 0
@@ -266,7 +334,7 @@ class StatsGenerator(BaseModule):
             mean_z_score: The mean z score for the column
             z_test_based_outlier_score: A quality score based on the nr of outliers as determined by their z score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
-        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
+        if stats[col_name]['data_type'] != DATA_TYPES.NUMERIC:
             return {}
 
         z_scores = list(map(abs,(st.zscore(columns[col_name]))))
@@ -294,7 +362,7 @@ class StatsGenerator(BaseModule):
             lof_based_outlier_score: A quality score based on the nr of outliers as determined by their LOF score, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
-        if stats[col_name][KEYS.DATA_TYPE] != DATA_TYPES.NUMERIC:
+        if stats[col_name]['data_type'] != DATA_TYPES.NUMERIC:
             return {}
 
         np_col_data = np.array(columns[col_name]).reshape(-1, 1)
@@ -503,7 +571,8 @@ class StatsGenerator(BaseModule):
             if col_stats['data_type_distribution_score'] > 0.2:
                 #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
                 percentage_of_data_not_of_principal_type = col_stats['data_type_distribution_score'] * 100
-                principal_data_type = col_stats[KEYS.DATA_TYPE]
+
+                principal_data_type = col_stats['data_type']
                 self.log.warning('{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate your data is of poor quality.'.format(percentage_of_data_not_of_principal_type=percentage_of_data_not_of_principal_type, principal_data_type=principal_data_type, col_name=col_name))
 
             if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 0.3:
@@ -534,7 +603,7 @@ class StatsGenerator(BaseModule):
 
             # We might want to inform the user about a few stats regarding his column regardless of the score, this is done bellow
             self.log.info('Data distribution for column "{}"'.format(col_name))
-            self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
+            self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
 
     def run(self):
@@ -586,7 +655,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, data_type_dist = self._get_column_data_type(col_data)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist = self._get_column_data_type(col_data)
 
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
@@ -606,7 +675,7 @@ class StatsGenerator(BaseModule):
                         col_data[i] = None
                     else:
                         try:
-                            col_data[i] = int(parseDate(element).timestamp())
+                            col_data[i] = int(parse_datetime(element).timestamp())
                         except:
                             self.log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
                             col_data[i] = None
@@ -617,6 +686,7 @@ class StatsGenerator(BaseModule):
                 for value in col_data:
                     if value != '' and value != '\r' and value != '\n':
                         newData.append(value)
+
 
                 col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
 
@@ -648,26 +718,6 @@ class StatsGenerator(BaseModule):
                         xp += [i]
                         i_inc = abs(i-min_value)*inc_rate
                         i = i + i_inc
-
-
-                    # TODO: Solve inc_rate for N
-                    #    min*inx_rate + (min+min*inc_rate)*inc_rate + (min+(min+min*inc_rate)*inc_rate)*inc_rate ....
-                    #
-                    #      x_0 = 0
-                    #      x_i = (min+x_(i-1)) * inc_rate = min*inc_rate + x_(i-1)*inc_rate
-                    #
-                    #      sum of x_i_{i=1}^n (x_i) = max_value = inc_rate ( n * min + sum(x_(i-1)) )
-                    #
-                    #      mx_value/inc_rate = n*min + inc_rate ( n * min + sum(x_(i-2)) )
-                    #
-                    #     mx_value = n*min*in_rate + inc_rate^2*n*min + inc_rate^2*sum(x_(i-2))
-                    #              = n*min(inc_rate+inc_rate^2) + inc_rate^2*sum(x_(i-2))
-                    #              = n*min(inc_rate+inc_rate^2) + inc_rate^2*(inc_rate ( n * min + sum(x_(i-3)) ))
-                    #              = n*min(sum_(i=1)^(i=n)(inc_rate^i))
-                    #    =>  sum_(i=1)^(i=n)(inc_rate^i)) = max_value/(n*min(sum_(i=1)^(i=n))
-                    #
-                    # # i + i*x
-
                 else:
                     max_value = 0
                     min_value = 0
@@ -683,7 +733,8 @@ class StatsGenerator(BaseModule):
 
 
                 col_stats = {
-                    KEYS.DATA_TYPE: data_type,
+                    'data_type': data_type,
+                    'data_subtype': curr_data_subtype,
                     "mean": mean,
                     "median": median,
                     "variance": var,
@@ -700,9 +751,10 @@ class StatsGenerator(BaseModule):
                 }
                 stats[col_name] = col_stats
             # else if its text
+            # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word
-                is_full_text = True if data_type == DATA_TYPES.TEXT else False
+                is_full_text = True if data_type == DATA_TYPES.SEQUENTIAL else False
                 dictionary, histogram = self._get_words_dictionary(col_data, is_full_text)
 
                 # if no words, then no dictionary
@@ -719,7 +771,8 @@ class StatsGenerator(BaseModule):
                         dictionary = []
                         dictionary_available = False
                 col_stats = {
-                    KEYS.DATA_TYPE: DATA_TYPES.TEXT if is_full_text else data_type,
+                    'data_type': DATA_TYPES.SEQUENTIAL if is_full_text else data_type,
+                    'data_subtype': curr_data_subtype,
                     "dictionary": dictionary,
                     "dictionaryAvailable": dictionary_available,
                     "dictionaryLenghtPercentage": dictionary_lenght_percentage,
@@ -727,6 +780,7 @@ class StatsGenerator(BaseModule):
                 }
             stats[col_name] = col_stats
             stats[col_name]['data_type_dist'] = data_type_dist
+            stats[col_name]['data_subtype_dist'] = data_subtype_dist
             stats[col_name]['column'] = col_name
             stats[col_name]['empty_cells'] = empty_count[col_name]
             stats[col_name]['empty_percentage'] = empty_count[col_name] * 100 / column_count[col_name]

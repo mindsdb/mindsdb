@@ -1,16 +1,12 @@
 from mindsdb import Predictor
 
 
-mdb = Predictor(name='titanic_model')
+mdb = Predictor(name='photo_score_model12')
 
-#mdb.learn(from_data="integration_testing/train.csv", to_predict=['Survived','Pclass'])
-
+mdb.learn(from_data="train.csv", to_predict=['Score'])
 print('------------------------------------------------------------Done training------------------------------------------------------------')
 
-#mdb = Predictor(name='titanic_model')
-predicted = mdb.predict(when_data="integration_testing/train.csv")
+predicted = mdb.predict(when_data="predict.csv")
 print('------------------------------------------------------------Preidiction output------------------------------------------------------------')
 for val in predicted:
     print(val)
-exit()
-print(predicted.predicted_values)

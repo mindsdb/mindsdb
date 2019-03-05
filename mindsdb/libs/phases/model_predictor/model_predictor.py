@@ -64,7 +64,7 @@ class ModelPredictor(BaseModule):
                     actual_row = j + offset
 
                     if self.transaction.persistent_model_metadata.column_stats[col][
-                        KEYS.DATA_TYPE] == DATA_TYPES.NUMERIC:
+                        'data_type'] == DATA_TYPES.NUMERIC:
                         target_val = np.format_float_positional(cell, precision=2)
                     else:
                         target_val = cell

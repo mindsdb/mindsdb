@@ -12,47 +12,67 @@ class LudwigBackend():
     def _create_ludwig_dataframe(self, mode):
         if mode == 'train':
             indexes = self.transaction.input_data.train_indexes['ALL_ROWS_NO_GROUP_BY']
+            columns = self.transaction.persistent_model_metadata.columns
         elif mode == 'predict':
             indexes = self.transaction.input_data.all_indexes['ALL_ROWS_NO_GROUP_BY']
+            columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'validate':
             indexes = self.transaction.input_data.validation_indexes['ALL_ROWS_NO_GROUP_BY']
+            columns = self.transaction.persistent_model_metadata.columns
         else:
             raise Exception(f'Unknown mode specified: "{mode}"')
         model_definition = {'input_features': [], 'output_features': []}
         data = {}
 
-        for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns):
+        for col_ind, col in enumerate(columns):
             data[col] = []
             for row_ind in indexes:
                 data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
             col_stats = self.transaction.persistent_model_metadata.column_stats[col]
-            data_type = col_stats[KEYS.DATA_TYPE]
+            data_subtype = col_stats['data_subtype']
 
-            ludwig_dtype = 'bag'
+            ludwig_dtype = None
+            encoder = None
 
-            if data_type == DATA_TYPES.NUMERIC:
+            if data_subtype in (DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
                 ludwig_dtype = 'numerical'
 
-            if data_type == DATA_TYPES.TEXT:
+            elif data_subtype in (DATA_SUBTYPES.BINARY):
+                ludwig_dtype = 'binary'
+
+            elif data_subtype in (DATA_SUBTYPES.DATE, DATA_SUBTYPES.TIMESTAMP):
                 ludwig_dtype = 'bag'
 
-            if data_type == DATA_TYPES.DATE:
-                ludwig_dtype = 'bag'
-
-            if data_type == DATA_TYPES.CATEGORICAL:
+            elif data_subtype in (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE):
                 ludwig_dtype = 'category'
 
-            if col not in self.transaction.persistent_model_metadata.predict_columns:
-                model_definition['input_features'].append({
-                    'name': col
-                    ,'type': ludwig_dtype
-                })
+            elif data_subtype in (DATA_SUBTYPES.IMAGE):
+                ludwig_dtype = 'image'
+                encoder = 'stacked_cnn'
+
+            elif data_subtype in (DATA_SUBTYPES.TEXT):
+                ludwig_dtype = 'text'
+
             else:
-                model_definition['output_features'].append({
+                # @TODO Maybe regress to some other similar subtype or use the principal data type for certain values
+                self.transaction.log.error(f'The Ludwig backend doesn\'t support the "{data_subtype}" data type !')
+                raise Exception(f'Data type "{data_subtype}" no supported by Ludwig model backend')
+
+            if col not in self.transaction.persistent_model_metadata.predict_columns:
+                input_def = {
                     'name': col
                     ,'type': ludwig_dtype
-                })
+                }
+                if encoder is not None:
+                    input_def['encoder'] = encoder
+                model_definition['input_features'].append(input_def)
+            else:
+                output_def = {
+                    'name': col
+                    ,'type': ludwig_dtype
+                }
+                model_definition['output_features'].append(output_def)
 
         return pd.DataFrame(data=data), model_definition
 
@@ -69,10 +89,9 @@ class LudwigBackend():
     def predict(self, mode='predict', ignore_columns=[]):
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
         model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
-        #for ignore_col in ignore_columns:
-        #    predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
-        #    print(predict_dataframe[ignore_col])
-        #    exit()
+
+        for ignore_col in ignore_columns:
+            predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
 
         predictions = model.predict(data_df=predict_dataframe)
         for col_name in predictions:

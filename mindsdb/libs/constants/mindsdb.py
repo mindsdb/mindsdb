@@ -57,11 +57,41 @@ TEXT_ENCODING_EXTRA_LENGTH = 2 #(len)[unfrequent_word, is_null]
 
 ALL_INDEXES_LIST = ['*']
 
-class DATA_TYPES:
-    NUMERIC = 'Numeric'
-    DATE = 'Date'
+class DATA_SUBTYPES:
+    # Numeric
+    INT = 'Int'
+    FLOAT = 'Float'
+    BINARY = 'Binary' # Should we have this ?
+
+    # DATETIME
+    DATE = 'Date' # YYYY-MM-DD
+    TIMESTAMP = 'Timestamp' # YYYY-MM-DD hh:mm:ss or 1852362464
+
+    # CATEGORICAL
+    SINGLE = 'Single'
+    MULTIPLE = 'Multiple' # Kind of unclear on the implementation
+
+    # FILE_PATH
+    IMAGE = 'Image'
+    VIDEO = 'Video'
+    AUDIO = 'Audio'
+
+    # URL
+    # How do we detect the tpye here... maybe setup async download for random sample an stats ?
+
+    # SEQUENTIAL
     TEXT = 'Text'
-    CATEGORICAL = 'Class'
+    ARRAY = 'Array' # Do we even want to support arrays / structs / nested ... etc ?
+
+class DATA_TYPES:
+    NUMERIC = (DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT, DATA_SUBTYPES.BINARY)
+    DATE = (DATA_SUBTYPES.DATE, DATA_SUBTYPES.TIMESTAMP)
+    CATEGORICAL = (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE)
+    FILE_PATH = (DATA_SUBTYPES.IMAGE, DATA_SUBTYPES.VIDEO, DATA_SUBTYPES.AUDIO)
+    URL = ()
+    SEQUENTIAL = (DATA_SUBTYPES.TEXT, DATA_SUBTYPES.ARRAY)
+
+
 
 class SAMPLE_TYPES:
     TEST_SET = 'test'
@@ -81,7 +111,6 @@ class KEYS:
     ALL_SET = 'all'
     X ='x'
     Y ='y'
-    DATA_TYPE = 'DataType'
     TS_ENCODED_ROW = 'TS_ENCODED_ROW'
     TS_FLAT_ROW = 'TS_FLAT_ROW'
 

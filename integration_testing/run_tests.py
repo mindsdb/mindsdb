@@ -44,6 +44,10 @@ def test_timeseries():
         #,group_by = columns[0][0]
     )
 
+# Keep whilst testing timeseries speicifc stuff, comment or remove in production builds
+test_timeseries()
+exit()
+
 def test_one_label_prediction():
     separator = ','
     train_file_name = 'train_data.csv'
@@ -67,7 +71,7 @@ def test_one_label_prediction():
     )
     print('!-------------  Learning ran successfully  -------------!')
     exit(0)
-    
+
     mdb = mindsdb.MindsDB()
     results = mdb.predict(when_data=test_file_name)
     print('!-------------  Prediction from file ran successfully  -------------!')

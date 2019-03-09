@@ -40,7 +40,7 @@ def test_timeseries():
         # timeseries specific argsw
         ,order_by = columns[0][0]
         ,window_size=ts_hours*(data_len/20)
-        ,group_by = columns[0][0]
+        #,group_by = columns[0][0]
     )
 
 # Keep whilst testing timeseries speicifc stuff, comment or remove in production builds

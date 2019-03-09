@@ -198,7 +198,6 @@ class DataExtractor(BaseModule):
 
 
         # move indexes to corresponding train, test, validation, etc and trim input data accordingly
-
         for key in self.transaction.input_data.all_indexes:
 
             length = len(self.transaction.input_data.all_indexes[key])
@@ -209,7 +208,7 @@ class DataExtractor(BaseModule):
                                                         confidence_level=self.transaction.metadata.sample_confidence_level))
 
                 # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
-                should_split_by_group = True if (is_time_series and self.transaction.metadata.window_size > length * CONFIG.TEST_TRAIN_RATIO) else False
+                should_split_by_group = True if (type(group_by) == list and len(group_by) > 0 and self.transaction.metadata.window_size > length * CONFIG.TEST_TRAIN_RATIO) else False
                 # only start sample from row > 0 if there is enough data for train, test, validation subsets, which is that the test subset has to be greater than the window size
                 start_sample_from_row = 0 if (should_split_by_group and self.transaction.metadata.window_size > sample_size * CONFIG.TEST_TRAIN_RATIO) else length - sample_size
 

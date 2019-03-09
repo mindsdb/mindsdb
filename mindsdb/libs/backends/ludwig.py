@@ -10,14 +10,18 @@ class LudwigBackend():
         self.transaction = transaction
 
     def _create_ludwig_dataframe(self, mode):
+        print( self.transaction.input_data.__dict__.keys())
+        print(self.transaction.train_metadata.model_order_by)
+        print(self.transaction.train_metadata.model_group_by)
+        exit()
         if mode == 'train':
-            indexes = self.transaction.input_data.train_indexes['ALL_ROWS_NO_GROUP_BY']
+            indexes = self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]
             columns = self.transaction.persistent_model_metadata.columns
         elif mode == 'predict':
-            indexes = self.transaction.input_data.all_indexes['ALL_ROWS_NO_GROUP_BY']
+            indexes = self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY]
             columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'validate':
-            indexes = self.transaction.input_data.validation_indexes['ALL_ROWS_NO_GROUP_BY']
+            indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
             columns = self.transaction.persistent_model_metadata.columns
         else:
             raise Exception(f'Unknown mode specified: "{mode}"')

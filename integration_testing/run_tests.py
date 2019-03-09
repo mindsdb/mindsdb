@@ -14,14 +14,13 @@ from mindsdb import CONST
 types_that_fail = ['str','ascii']
 types_that_work = ['int','float','date','datetime','timestamp']
 
-'''
-for i in range(1,len(types_that_work)+1):
-    for combination in itertools.combinations(types_that_work, i)
-'''
+
 def test_timeseries():
-    ts_hours = 36
+    ts_hours = 360
     separator = ','
-    data_len = 601
+    data_len = 4200
+    train_file_name = 'train_data.csv'
+    test_file_name = 'test_data.csv'
 
     columns = generate_value_cols(['date','int','float','date'],data_len, separator, ts_hours * 3600)
     labels = generate_labels_1(columns, separator)
@@ -29,18 +28,18 @@ def test_timeseries():
     data_file_name = 'test_data.csv'
     label_name = labels[0]
     columns.append(labels)
+    columns_train = list(map(lambda col: col[0:int(len(col)*3/4)], columns))
+    columns_test = list(map(lambda col: col[int(len(col)*3/4):], columns))
 
-    columns_to_file(columns, data_file_name, separator)
+    columns_to_file(columns_train, train_file_name, separator)
+    columns_to_file(columns_test, test_file_name, separator)
     mdb = mindsdb.Predictor(name='test_datetime_timeseries')
     mdb.learn(
-        from_data=data_file_name,
+        from_data=train_file_name,
         to_predict=label_name
-
-
-        # timeseries specific args
-
-        ,order_by = columns[2][0]
-        ,window_size=ts_hours*(data_len/10)
+        # timeseries specific argsw
+        ,order_by = columns[0][0]
+        ,window_size=ts_hours*(data_len/20)
         #,group_by = columns[0][0]
     )
 

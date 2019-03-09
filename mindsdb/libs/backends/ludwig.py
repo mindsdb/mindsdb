@@ -11,8 +11,8 @@ class LudwigBackend():
 
     def _create_ludwig_dataframe(self, mode):
         print( self.transaction.input_data.__dict__.keys())
-        print(self.transaction.train_metadata.model_order_by)
-        print(self.transaction.train_metadata.model_group_by)
+        print(self.transaction.persistent_model_metadata.model_order_by)
+        print(self.transaction.persistent_model_metadata.model_group_by)
         exit()
         if mode == 'train':
             indexes = self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]

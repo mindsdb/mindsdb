@@ -99,7 +99,8 @@ class LudwigBackend():
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
-
+        print(model_definition)
+        exit()
         model = LudwigModel(model_definition)
 
         train_stats = model.train(training_dataframe, model_name=self.transaction.metadata.model_name)

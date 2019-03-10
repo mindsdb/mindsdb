@@ -239,8 +239,7 @@ class DataExtractor(BaseModule):
             else:
                 # if its a predict transaction, we should trim so it only has as many as the window size
                 if is_time_series:
-                    print(train_metadata.window_size)
-                    self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][-train_metadata.window_size:]
+                    self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][int(-train_metadata.window_size):]
 
         # log some stats
         if self.transaction.metadata.type == TRANSACTION_LEARN:

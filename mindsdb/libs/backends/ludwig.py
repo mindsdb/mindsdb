@@ -49,7 +49,8 @@ class LudwigBackend():
                 ludwig_dtype = 'binary'
 
             elif data_subtype in (DATA_SUBTYPES.DATE, DATA_SUBTYPES.TIMESTAMP):
-                ludwig_dtype = 'bag'
+                ludwig_dtype = 'category'
+                encoder = 'stacked_cnn'
 
             elif data_subtype in (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE):
                 ludwig_dtype = 'category'
@@ -101,8 +102,7 @@ class LudwigBackend():
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
 
         print(model_definition)
-        exit()
-        
+
         model = LudwigModel(model_definition)
 
         # Figure out how to pass `model_load_path`

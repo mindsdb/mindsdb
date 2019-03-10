@@ -188,7 +188,7 @@ class Transaction:
 
             predicted_values = predictions[predicted_col]
             self.output_data.data[predicted_col] = predicted_values
-            confidence_column_name = "_{col}_confidence".format(col=predicted_col)
+            confidence_column_name = "{col}_confidence".format(col=predicted_col)
             self.output_data.data[confidence_column_name] = [None] * len(predicted_values)
             self.output_data.evaluations[predicted_col] = [None] * len(predicted_values)
 

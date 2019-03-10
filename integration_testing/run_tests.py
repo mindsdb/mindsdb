@@ -69,7 +69,7 @@ def test_timeseries():
     except:
         print(traceback.format_exc())
         logger.error(f'Failed to generate datasets !')
-        exit()
+        exit(1)
 
     # Train
     try:
@@ -77,7 +77,7 @@ def test_timeseries():
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         logger.error(f'Failed to create mindsdb Predictor')
-        exit()
+        exit(1)
 
 
     try:
@@ -93,7 +93,7 @@ def test_timeseries():
     except:
         print(traceback.format_exc())
         logger.error(f'Failed during the training !')
-        exit()
+        exit(1)
 
     # Predict
     try:
@@ -102,7 +102,7 @@ def test_timeseries():
     except:
         print(traceback.format_exc())
         logger.error(f'Failed to create mindsdb Predictor')
-        exit()
+        exit(1)
 
     try:
         results = mdb.predict(when_data=test_file_name)
@@ -111,13 +111,13 @@ def test_timeseries():
             for col in expect_columns:
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
-                    exit()
+                    exit(1)
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
     except:
         print(traceback.format_exc())
         logger.error(f'Failed whilst predicting')
-        exit()
+        exit(1)
 
     logger.info('Timeseries test ran succesfully !')
 
@@ -151,7 +151,7 @@ def test_one_label_prediction():
     except:
         print(traceback.format_exc())
         logger.error(f'Failed to generate datasets !')
-        exit()
+        exit(1)
 
     # Train
     try:
@@ -159,7 +159,7 @@ def test_one_label_prediction():
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         logger.error(f'Failed to create mindsdb Predictor')
-        exit()
+        exit(1)
 
 
     try:
@@ -168,7 +168,7 @@ def test_one_label_prediction():
     except:
         print(traceback.format_exc())
         logger.error(f'Failed during the training !')
-        exit()
+        exit(1)
 
     # Predict
     try:
@@ -177,7 +177,7 @@ def test_one_label_prediction():
     except:
         print(traceback.format_exc())
         logger.error(f'Failed to create mindsdb Predictor')
-        exit()
+        exit(1)
 
     try:
         results = mdb.predict(when_data=test_file_name)
@@ -186,13 +186,13 @@ def test_one_label_prediction():
             for col in expect_columns:
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
-                    exit()
+                    exit(1)
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
     except:
         print(traceback.format_exc())
         logger.error(f'Failed whilst predicting')
-        exit()
+        exit(1)
 
     logger.info('Timeseries test ran succesfully !')
 

@@ -1,4 +1,5 @@
 from mindsdb.libs.constants.mindsdb import *
+from dateutil.parser import parse as parse_datetime
 
 from ludwig import LudwigModel
 import pandas as pd
@@ -10,8 +11,6 @@ class LudwigBackend():
         self.transaction = transaction
 
     def _create_ludwig_dataframe(self, mode):
-        print(self.transaction.persistent_model_metadata.model_order_by)
-        
         if mode == 'train':
             indexes = self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]
             columns = self.transaction.persistent_model_metadata.columns
@@ -26,10 +25,13 @@ class LudwigBackend():
         model_definition = {'input_features': [], 'output_features': []}
         data = {}
 
+        if self.transaction.persistent_model_metadata.model_order_by is None:
+            timeseries_cols = []
+        else:
+            timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
+
         for col_ind, col in enumerate(columns):
             data[col] = []
-            for row_ind in indexes:
-                data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
             col_stats = self.transaction.persistent_model_metadata.column_stats[col]
             data_subtype = col_stats['data_subtype']
@@ -37,7 +39,10 @@ class LudwigBackend():
             ludwig_dtype = None
             encoder = None
 
-            if data_subtype in (DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
+            if col in timeseries_cols:
+                ludwig_dtype = 'timeseries'
+
+            elif data_subtype in (DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
                 ludwig_dtype = 'numerical'
 
             elif data_subtype in (DATA_SUBTYPES.BINARY):
@@ -61,6 +66,17 @@ class LudwigBackend():
                 self.transaction.log.error(f'The Ludwig backend doesn\'t support the "{data_subtype}" data type !')
                 raise Exception(f'Data type "{data_subtype}" no supported by Ludwig model backend')
 
+            for row_ind in indexes:
+                if ludwig_dtype == 'timeseries':
+                    ts_data_point = self.transaction.input_data.data_array[row_ind][col_ind]
+                    try:
+                        ts_data_point = float(ts_data_point)
+                    except:
+                        ts_data_point = parse_datetime(ts_data_point).timestamp()
+                    data[col].append(ts_data_point)
+                else:
+                    data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
+
             if col not in self.transaction.persistent_model_metadata.predict_columns:
                 input_def = {
                     'name': col
@@ -76,7 +92,10 @@ class LudwigBackend():
                 }
                 model_definition['output_features'].append(output_def)
 
-        return pd.DataFrame(data=data), model_definition
+        df = pd.DataFrame(data=data)
+        if len(timeseries_cols) > 0:
+            df.sort_values(timeseries_cols)
+        return df, model_definition
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')

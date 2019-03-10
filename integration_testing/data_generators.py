@@ -4,7 +4,7 @@ import datetime
 from math import log
 
 
-def generate_timeseries(length, bounds=(548934404,1648934404), _type='timestamp',period=24*3600, swing=0, separator=','):
+def generate_timeseries(length, bounds=(0,1852255420), _type='timestamp',period=24*3600, swing=0, separator=','):
     column = []
 
     for n in range(*bounds,period):
@@ -34,7 +34,7 @@ def rand_ascii_str(length=None, give_nulls=True, only_letters=False):
     if only_letters:
         charlist = [*string.ascii_letters]
     else:
-        charlist = [*string.whitespace, *string.ascii_letters]
+        charlist = [*[' ', '_', '-', '?', '.', '<', '>', ')', '('], *string.ascii_letters]
     if length == None:
         length = random.randrange(1,120)
     if length % 4 == 0 and give_nulls==True:

@@ -487,7 +487,7 @@ class StatsGenerator(BaseModule):
             consistency_score: The socre, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality
         """
         col_stats = stats[col_name]
-        redundancy_score = (col_stats['similarity_score'] + col_stats['correlation_score'])/2
+        redundancy_score = (col_stats['similarity_score'])/1
         return {'redundancy_score': redundancy_score}
 
     def _compute_variability_score(self, stats, col_name):
@@ -592,12 +592,13 @@ class StatsGenerator(BaseModule):
                 similar_col_name = col_stats['most_similar_column_name']
                 self.log.warning(f'Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !')
 
+            '''
             if col_stats['correlation_score'] > 0.4:
                 not_quite_correlation_percentage = col_stats['correlation_score'] * 100
                 most_correlated_column = col_stats['most_correlated_column']
                 self.log.warning(f"""Using a statistical predictor we\'v discovered a correlation of roughly {not_quite_correlation_percentage}% between column
                 {col_name} and column {most_correlated_column}""")
-
+            '''
 
             # We might want to inform the user about a few stats regarding his column regardless of the score, this is done bellow
             self.log.info('Data distribution for column "{}"'.format(col_name))
@@ -787,7 +788,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(all_sampled_data):
             stats[col_name].update(self._compute_duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_empty_cells_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
+            #stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_data_type_dist_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_z_score(stats, col_data_dict, col_name))
             stats[col_name].update(self._compute_lof_score(stats, col_data_dict, col_name))

@@ -99,13 +99,18 @@ class LudwigBackend():
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
-        print(model_definition)
-        exit()
+
         model = LudwigModel(model_definition)
 
+        # Figure out how to pass `model_load_path`
         train_stats = model.train(training_dataframe, model_name=self.transaction.metadata.model_name)
 
-        self.transaction.persistent_model_metadata.ludwig_data = {'ludwig_save_path': model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'}
+        ludwig_model_savepath = model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
+
+        model.save(ludwig_model_savepath)
+        model.close()
+        
+        self.transaction.persistent_model_metadata.ludwig_data = {'ludwig_save_path': ludwig_model_savepath}
 
 
     def predict(self, mode='predict', ignore_columns=[]):

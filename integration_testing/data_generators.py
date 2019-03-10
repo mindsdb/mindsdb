@@ -139,11 +139,13 @@ def generate_labels_3(columns, separator=','):
     return labels
 
 
-def columns_to_file(columns, filename, separator=','):
+def columns_to_file(columns, filename, separator=',', headers=None):
     with open(filename, 'w', encoding='utf-8') as fp:
         fp.write('')
 
     with open(filename, 'a', encoding='utf-8') as fp:
+        if headers is not None:
+            fp.write(separator.join(headers) + '\r\n')
         for i in range(len(columns[-1])):
             row = ''
             for col in columns:

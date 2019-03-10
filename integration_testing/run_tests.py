@@ -25,23 +25,33 @@ def test_timeseries():
     columns = generate_value_cols(['date','int','float','date'],data_len, separator, ts_hours * 3600)
     labels = generate_labels_1(columns, separator)
 
-    data_file_name = 'test_data.csv'
     label_name = labels[0]
     columns.append(labels)
-    columns_train = list(map(lambda col: col[0:int(len(col)*3/4)], columns))
+    headers = list(map(lambda col: col[0], columns))
+    columns_train = list(map(lambda col: col[1:int(len(col)*3/4)], columns))
     columns_test = list(map(lambda col: col[int(len(col)*3/4):], columns))
 
-    columns_to_file(columns_train, train_file_name, separator)
-    columns_to_file(columns_test, test_file_name, separator)
+    columns_to_file(columns_train, train_file_name, separator, headers=headers)
+    columns_to_file(columns_test, test_file_name, separator, headers=headers)
+
     mdb = mindsdb.Predictor(name='test_datetime_timeseries')
+
     mdb.learn(
         from_data=train_file_name,
         to_predict=label_name
         # timeseries specific argsw
-        ,order_by = columns[0][0]
-        ,window_size=ts_hours*(data_len/20)
+        ,order_by=columns[0][0]
+        ,window_size=ts_hours*(data_len/100)
         #,group_by = columns[0][0]
     )
+
+    print('!-------------  Learning ran successfully  -------------!')
+
+    mdb = mindsdb.Predictor(name='test_datetime_timeseries')
+    results = mdb.predict(when_data=test_file_name)
+    print('!-------------  Prediction from file ran successfully  -------------!')
+    for p in results:
+        print(p)
 
 # Keep whilst testing timeseries speicifc stuff, comment or remove in production builds
 test_timeseries()

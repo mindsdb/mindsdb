@@ -60,7 +60,6 @@ class DataExtractor(BaseModule):
                 sort_by = train_metadata.model_group_by + sort_by
                 asc_values = [True for i in train_metadata.model_group_by] + asc_values
 
-            print(sort_by)
             df = df.sort_values(sort_by, ascending=asc_values)
 
         elif self.transaction.metadata.type == TRANSACTION_LEARN:
@@ -240,6 +239,7 @@ class DataExtractor(BaseModule):
             else:
                 # if its a predict transaction, we should trim so it only has as many as the window size
                 if is_time_series:
+                    print(train_metadata.window_size)
                     self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][-train_metadata.window_size:]
 
         # log some stats

@@ -100,6 +100,9 @@ class LudwigBackend():
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
 
+        print(model_definition)
+        exit()
+        
         model = LudwigModel(model_definition)
 
         # Figure out how to pass `model_load_path`
@@ -109,7 +112,7 @@ class LudwigBackend():
 
         model.save(ludwig_model_savepath)
         model.close()
-        
+
         self.transaction.persistent_model_metadata.ludwig_data = {'ludwig_save_path': ludwig_model_savepath}
 
 

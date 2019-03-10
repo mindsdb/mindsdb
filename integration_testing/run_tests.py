@@ -34,6 +34,7 @@ def setup_testing_logger():
     )
 
     logger = logging.getLogger('mindsdb_integration_testing')
+    logger.handlers = []
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)

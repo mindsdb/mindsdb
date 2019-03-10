@@ -100,9 +100,6 @@ class LudwigBackend():
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
-
-        print(model_definition)
-
         model = LudwigModel(model_definition)
 
         # Figure out how to pass `model_load_path`

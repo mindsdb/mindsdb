@@ -155,7 +155,7 @@ def test_one_label_prediction():
 
     # Train
     try:
-        mdb = mindsdb.Predictor(name='test_datetime_timeseries', log_level=mindsdb.CONST.INFO_LOG_LEVEL)
+        mdb = mindsdb.Predictor(name='test_one_label_prediction', log_level=mindsdb.CONST.INFO_LOG_LEVEL)
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         logger.error(f'Failed to create mindsdb Predictor')
@@ -172,7 +172,7 @@ def test_one_label_prediction():
 
     # Predict
     try:
-        mdb = mindsdb.Predictor(name='test_datetime_timeseries')
+        mdb = mindsdb.Predictor(name='test_one_label_prediction')
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         print(traceback.format_exc())
@@ -219,4 +219,5 @@ def test_dual_label_prediction():
 
 setup_testing_logger()
 test_one_label_prediction()
+exit()
 test_timeseries()

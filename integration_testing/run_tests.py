@@ -219,6 +219,5 @@ def test_dual_label_prediction():
 
 
 setup_testing_logger()
-test_one_label_prediction()
-exit()
+#test_one_label_prediction()
 test_timeseries()

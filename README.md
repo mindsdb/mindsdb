@@ -4,13 +4,8 @@
 
 #
 
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/mindsdb/mindsdb/issues)
 [![Build Status](https://travis-ci.org/mindsdb/mindsdb.svg?branch=master)](https://travis-ci.org/mindsdb/mindsdb)
 [![PyPI version](https://badge.fury.io/py/mindsdb.svg)](https://badge.fury.io/py/mindsdb)
-[![Feature Requests](https://img.shields.io/github/issues/mindsdb/mindsdb/enhancement.svg)](https://github.com/mindsdb/mindsdb/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement+sort%3Areactions-%2B1-desc)
-[![Bugs](https://img.shields.io/github/issues/mindsdb/mindsdb/bug.svg)](https://github.com/mindsdb/mindsdb/issues?utf8=✓&q=is%3Aissue+is%3Aopen+label%3Abug)
-[![contributors](https://img.shields.io/github/contributors/mindsdb/mindsdb.svg)](https://github.com/webpack/webpack/graphs/contributors)
-[![The MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](http://opensource.org/licenses/MIT)
 
 MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 

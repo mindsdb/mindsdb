@@ -544,7 +544,7 @@ class StatsGenerator(BaseModule):
             # Overall quality
             if col_stats['quality_score'] > 0.5:
                 # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
-                self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission are: {}'.format(col_name, col_stats['bad_scores']))
+                self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission will be listed bellow')
                 if col_stats['duplicates_score'] > 0.5:
                     duplicates_percentage = col_stats['duplicates_percentage']
                     self.log.warning(f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.')

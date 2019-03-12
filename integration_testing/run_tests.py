@@ -267,7 +267,6 @@ def test_multilabel_prediction():
             for col in expect_columns:
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
-                    exit(1)
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
     except:
@@ -275,7 +274,7 @@ def test_multilabel_prediction():
         logger.error(f'Failed whilst predicting')
         exit(1)
 
-    logger.info('Timeseries test ran succesfully !')
+    logger.info('Multilabel predict test ran succesfully !')
 
     separator = ','
     data_file_name = 'test_data.csv'
@@ -284,6 +283,5 @@ def test_multilabel_prediction():
 
 setup_testing_logger()
 test_multilabel_prediction()
-exit()
 test_one_label_prediction()
 test_timeseries()

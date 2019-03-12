@@ -6,8 +6,8 @@ class TransactionOutputRow:
         self.row_key = row_key
 
     def __getitem__(self, item):
-
-        return self.transaction_output.data[item][self.row_key]
+        #return self.transaction_output.data[item][self.row_key]
+        return {key:self.transaction_output.data[key][item] for key in self.transaction_output.data}
 
     def as_dict(self):
         return {key:self.transaction_output.data[key][self.row_key] for key in self.transaction_output.data}
@@ -19,7 +19,6 @@ class TransactionOutputRow:
             self.transaction_output.evaluations[pred_col][self.row_key].explain()
 
     def __str__(self):
-
         return str(self.as_dict())
 
     def as_list(self):

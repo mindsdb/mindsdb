@@ -1,4 +1,5 @@
 from mindsdb.libs.constants.mindsdb import *
+from mindsdb.config import *
 from dateutil.parser import parse as parse_datetime
 
 from ludwig import LudwigModel
@@ -105,7 +106,8 @@ class LudwigBackend():
         # Figure out how to pass `model_load_path`
         train_stats = model.train(training_dataframe, model_name=self.transaction.metadata.model_name)
 
-        ludwig_model_savepath = model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
+        #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
+        ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.metadata.model_name
 
         model.save(ludwig_model_savepath)
         model.close()

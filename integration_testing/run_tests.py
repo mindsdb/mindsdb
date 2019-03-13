@@ -114,6 +114,7 @@ def test_timeseries():
             for col in expect_columns:
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
+                    logger.debug('Got row: {}'.format(row))
                     exit(1)
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
@@ -190,6 +191,7 @@ def test_one_label_prediction():
             for col in expect_columns:
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
+                    logger.debug('Got row: {}'.format(row))
                     exit(1)
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
@@ -267,6 +269,8 @@ def test_multilabel_prediction():
             for col in expect_columns:
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
+                    logger.debug('Got row: {}'.format(row))
+                    exit(1)
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
     except:
@@ -283,5 +287,5 @@ def test_multilabel_prediction():
 
 setup_testing_logger()
 test_multilabel_prediction()
-test_one_label_prediction()
 test_timeseries()
+test_one_label_prediction()

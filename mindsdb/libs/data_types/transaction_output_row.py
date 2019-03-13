@@ -6,8 +6,7 @@ class TransactionOutputRow:
         self.row_key = row_key
 
     def __getitem__(self, item):
-        #return self.transaction_output.data[item][self.row_key]
-        return {key:self.transaction_output.data[key][item] for key in self.transaction_output.data}
+        return self.transaction_output.data[item][self.row_key]
 
     def as_dict(self):
         return {key:self.transaction_output.data[key][self.row_key] for key in self.transaction_output.data}

@@ -106,6 +106,8 @@ class Transaction:
             self.persistent_model_metadata.current_phase = MODEL_STATUS_ANALYZING
             self.persistent_model_metadata.columns = self.input_data.columns # this is populated by data extractor
             self.persistent_model_metadata.predict_columns = self.metadata.model_predict_columns
+            self.persistent_model_metadata.model_order_by = self.metadata.model_order_by
+            self.persistent_model_metadata.model_group_by = self.metadata.model_group_by
             self.persistent_model_metadata.insert()
 
             self._call_phase_module('StatsGenerator')
@@ -186,7 +188,7 @@ class Transaction:
 
             predicted_values = predictions[predicted_col]
             self.output_data.data[predicted_col] = predicted_values
-            confidence_column_name = "_{col}_confidence".format(col=predicted_col)
+            confidence_column_name = "{col}_confidence".format(col=predicted_col)
             self.output_data.data[confidence_column_name] = [None] * len(predicted_values)
             self.output_data.evaluations[predicted_col] = [None] * len(predicted_values)
 

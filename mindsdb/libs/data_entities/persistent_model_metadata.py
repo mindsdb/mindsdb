@@ -23,6 +23,9 @@ class PersistentModelMetadata(PersistentObject):
         self.train_row_count= None
         self.validation_row_count = None
 
+        self.model_order_by = None
+        self.model_group_by = None
+
         self.stop_training = False
         self.kill_training = False
 

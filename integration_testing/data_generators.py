@@ -4,7 +4,7 @@ import datetime
 from math import log
 
 
-def generate_timeseries(length, bounds=(548934404,1648934404), _type='timestamp',period=24*3600, swing=0, separator=','):
+def generate_timeseries(length, bounds=(0,1852255420), _type='timestamp',period=24*3600, swing=0, separator=','):
     column = []
 
     for n in range(*bounds,period):
@@ -30,7 +30,11 @@ def rand_str(length=random.randrange(4,120)):
     return u"".join(random_unicodes)
 
 
-def rand_ascii_str(length=None, give_nulls=True):
+def rand_ascii_str(length=None, give_nulls=True, only_letters=False):
+    if only_letters:
+        charlist = [*string.ascii_letters]
+    else:
+        charlist = [*[' ', '_', '-', '?', '.', '<', '>', ')', '('], *string.ascii_letters]
     if length == None:
         length = random.randrange(1,120)
     if length % 4 == 0 and give_nulls==True:
@@ -38,7 +42,7 @@ def rand_ascii_str(length=None, give_nulls=True):
     #Sometimes we should return a number instead of a string
     if length % 7 == 0:
         return str(length)
-    return ''.join(random.choice([*string.whitespace, *string.ascii_letters]) for _ in range(length))
+    return ''.join(random.choice(charlist) for _ in range(length))
 
 
 def rand_int():
@@ -54,7 +58,7 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
     for t in types:
         columns.append([])
         # This is a header of sorts
-        columns[-1].append(rand_ascii_str(random.randrange(5,20),give_nulls=False).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
+        columns[-1].append(rand_ascii_str(random.randrange(4,8),give_nulls=False,only_letters=True))
 
         # Figure out which random generation function to use for this column
         if t == 'str':
@@ -84,7 +88,7 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
 def generate_labels_1(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(5,20),give_nulls=False).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
+    labels.append(rand_ascii_str(random.randrange(4,8),give_nulls=False,only_letters=True))
 
     for n in range(1, len(columns[-1])):
         value = 0
@@ -101,7 +105,7 @@ def generate_labels_1(columns, separator=','):
 def generate_labels_2(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(5,20),give_nulls=False).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
+    labels.append(rand_ascii_str(random.randrange(4,8),give_nulls=False,only_letters=True))
 
     for n in range(1, len(columns[-1])):
         value = 1
@@ -127,7 +131,7 @@ def generate_labels_2(columns, separator=','):
 def generate_labels_3(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(5,20),give_nulls=False).replace(separator,'_').replace('\n','_').replace('\r','_').replace(' ','_'))
+    labels.append(rand_ascii_str(random.randrange(4,8),give_nulls=False,only_letters=True))
 
     col_nr = random.randrange(0,len(columns))
     labels.extend(columns[col_nr][1:])
@@ -135,11 +139,13 @@ def generate_labels_3(columns, separator=','):
     return labels
 
 
-def columns_to_file(columns, filename, separator=','):
+def columns_to_file(columns, filename, separator=',', headers=None):
     with open(filename, 'w', encoding='utf-8') as fp:
         fp.write('')
 
     with open(filename, 'a', encoding='utf-8') as fp:
+        if headers is not None:
+            fp.write(separator.join(headers) + '\r\n')
         for i in range(len(columns[-1])):
             row = ''
             for col in columns:

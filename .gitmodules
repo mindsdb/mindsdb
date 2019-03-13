@@ -1,3 +1,0 @@
-[submodule "ludwig"]
-	path = ludwig
-	url = git@github.com:uber/ludwig.git

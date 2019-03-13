@@ -22,15 +22,13 @@ class PredictTransactionOutputData():
         first_col = self.columns[0]
 
         for i, cell in enumerate(self.data[first_col]):
-            yield TransactionOutputRow(self, i)
+            yield TransactionOutputRow(self, i).as_dict()
 
     def __getitem__(self, item):
-
         return TransactionOutputRow(self, item)
 
 
     def __str__(self):
-
         return str(self.data)
 
     @property

@@ -1,8 +1,11 @@
 from data_generators import *
+import traceback
 import sys
 import os
 import itertools
 import logging
+from colorlog import ColoredFormatter
+import time
 
 # Not working for some reason, we need mindsdb in PYPATH for now
 #sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + '/../mindsdb/__init__.py')
@@ -14,100 +17,275 @@ from mindsdb import CONST
 types_that_fail = ['str','ascii']
 types_that_work = ['int','float','date','datetime','timestamp']
 
-'''
-for i in range(1,len(types_that_work)+1):
-    for combination in itertools.combinations(types_that_work, i)
-'''
-def test_timeseries():
-    ts_hours = 36
-    separator = ','
-    data_len = 601
+logger = None
 
-    columns = generate_value_cols(['date','int','float','date'],data_len, separator, ts_hours * 3600)
-    labels = generate_labels_1(columns, separator)
-
-    data_file_name = 'test_data.csv'
-    label_name = labels[0]
-    columns.append(labels)
-
-    columns_to_file(columns, data_file_name, separator)
-    mdb = mindsdb.Predictor(name='test_datetime_timeseries')
-    mdb.learn(
-        from_data=data_file_name,
-        to_predict=label_name
-
-
-        # timeseries specific args
-
-        ,order_by = columns[2][0]
-        ,window_size=ts_hours*(data_len/10)
-        #,group_by = columns[0][0]
+def setup_testing_logger():
+    global logger
+    formatter = ColoredFormatter(
+        "%(log_color)s%(message)s",
+        datefmt=None,
+        reset=True,
+        log_colors={
+            'DEBUG':    'black,bg_white',
+            'INFO':     'blue,bg_white',
+            'WARNING':  'orange,bg_white',
+            'ERROR':    'red,bg_white',
+            'CRITICAL': 'red,bg_white',
+        }
     )
 
+    logger = logging.getLogger('mindsdb_integration_testing')
+    logger.handlers = []
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+def test_timeseries():
+    logger.info('Starting timeseries test !')
+    ts_hours = 12
+    separator = ','
+    data_len = 4200
+    train_file_name = 'train_data.csv'
+    test_file_name = 'test_data.csv'
+
+    # Create the full dataset
+    logger.debug(f'Creating timeseries test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
+
+    try:
+        features = generate_value_cols(['date','int','float'],data_len, separator, ts_hours * 3600)
+        labels = [generate_labels_1(features, separator)]
+
+        feature_headers = list(map(lambda col: col[0], features))
+        label_headers = list(map(lambda col: col[0], labels))
+
+        # Create the training dataset and save it to a file
+        columns_train = list(map(lambda col: col[1:int(len(col)*3/4)], features))
+        columns_train.extend(list(map(lambda col: col[1:int(len(col)*3/4)], labels)))
+        columns_to_file(columns_train, train_file_name, separator, headers=[*label_headers,*feature_headers])
+
+        # Create the testing dataset and save it to a file
+        columns_test = list(map(lambda col: col[int(len(col)*3/4):], features))
+        columns_to_file(columns_test, test_file_name, separator, headers=feature_headers)
+        logger.debug(f'Datasets generate and saved to files successfully')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed to generate datasets !')
+        exit(1)
+
+    # Train
+    mdb = None
+    try:
+        mdb = mindsdb.Predictor(name='test_date_timeseries')
+        logger.debug(f'Succesfully create mindsdb Predictor')
+    except:
+        logger.error(f'Failed to create mindsdb Predictor')
+        exit(1)
+
+
+    try:
+        mdb.learn(
+            from_data=train_file_name,
+            to_predict=label_headers
+            # timeseries specific argsw
+            ,order_by=feature_headers[0]
+            ,window_size=ts_hours*(data_len/100)
+            #,group_by = columns[0][0]
+        )
+        logger.info(f'--------------- Learning ran succesfully ---------------')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed during the training !')
+        exit(1)
+
+    # Predict
+    try:
+        mdb = mindsdb.Predictor(name='test_date_timeseries')
+        logger.debug(f'Succesfully create mindsdb Predictor')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed to create mindsdb Predictor')
+        exit(1)
+
+    try:
+        results = mdb.predict(when_data=test_file_name)
+        for row in results:
+            expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
+            for col in expect_columns:
+                if col not in row:
+                    logger.error(f'Prediction failed to return expected column: {col}')
+                    logger.debug('Got row: {}'.format(row))
+                    exit(1)
+
+        logger.info(f'--------------- Predicting ran succesfully ---------------')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed whilst predicting')
+        exit(1)
+
+    logger.info('Timeseries test ran succesfully !')
+
+
 def test_one_label_prediction():
+    logger.info('Starting one-label test')
     separator = ','
     train_file_name = 'train_data.csv'
     test_file_name = 'test_data.csv'
-    data_len = 800
+    data_len = 8000
 
-    columns = generate_value_cols(['int','float'],data_len, separator)
-    labels = generate_labels_2(columns, separator)
+    # Create the full dataset
+    logger.debug(f'Creating one-labe test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
 
-    label_name = labels[0]
-    columns.append(labels)
-    columns_train = list(map(lambda col: col[0:int(len(col)*3/4)], columns))
-    columns_test = list(map(lambda col: col[int(len(col)*3/4):], columns))
-    columns_to_file(columns_train, train_file_name, separator)
-    columns_to_file(columns_test, test_file_name, separator)
+    try:
+        features = generate_value_cols(['int','float','ascii','ascii'],data_len, separator)
+        labels = [generate_labels_2(features, separator)]
 
-    mdb = mindsdb.Predictor(name='test_one_label_prediction', log_level=mindsdb.CONST.INFO_LOG_LEVEL)
-    mdb.learn(
-        from_data=train_file_name,
-        to_predict=label_name
-    )
-    print('!-------------  Learning ran successfully  -------------!')
-    exit(0)
-    
-    mdb = mindsdb.MindsDB()
-    results = mdb.predict(when_data=test_file_name)
-    print('!-------------  Prediction from file ran successfully  -------------!')
+        feature_headers = list(map(lambda col: col[0], features))
+        label_headers = list(map(lambda col: col[0], labels))
 
-    '''
-    for i in range(len(columns_test[0])):
-        features = {}
-        for n in range(len(columns_test)):
-            features[columns[n][0]] = columns_test[n][i]
-        result = mdb.predict(when=features, model_name='test_one_label_prediction')
-    '''
+        # Create the training dataset and save it to a file
+        columns_train = list(map(lambda col: col[1:int(len(col)*3/4)], features))
+        columns_train.extend(list(map(lambda col: col[1:int(len(col)*3/4)], labels)))
+        columns_to_file(columns_train, train_file_name, separator, headers=[*label_headers,*feature_headers])
+
+        # Create the testing dataset and save it to a file
+        columns_test = list(map(lambda col: col[int(len(col)*3/4):], features))
+        columns_to_file(columns_test, test_file_name, separator, headers=feature_headers)
+        logger.debug(f'Datasets generate and saved to files successfully')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed to generate datasets !')
+        exit(1)
+
+    # Train
+    mdb = None
+    try:
+        mdb = mindsdb.Predictor(name='test_one_label_prediction')
+        logger.debug(f'Succesfully create mindsdb Predictor')
+    except:
+        logger.error(f'Failed to create mindsdb Predictor')
+        exit(1)
 
 
-def test_dual_label_prediction():
+    try:
+        mdb.learn(from_data=train_file_name, to_predict=label_headers)
+        logger.info(f'--------------- Learning ran succesfully ---------------')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed during the training !')
+        exit(1)
+
+    # Predict
+    try:
+        mdb = mindsdb.Predictor(name='test_one_label_prediction')
+        logger.debug(f'Succesfully create mindsdb Predictor')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed to create mindsdb Predictor')
+        exit(1)
+
+    try:
+        results = mdb.predict(when_data=test_file_name)
+        for row in results:
+            expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
+            for col in expect_columns:
+                if col not in row:
+                    logger.error(f'Prediction failed to return expected column: {col}')
+                    logger.debug('Got row: {}'.format(row))
+                    exit(1)
+
+        logger.info(f'--------------- Predicting ran succesfully ---------------')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed whilst predicting')
+        exit(1)
+
+    logger.info('One-label prediction test ran succesfully !')
+
+def test_multilabel_prediction():
+    logger.info('Starting multilabel prediction test')
+    separator = ','
+    train_file_name = 'train_data.csv'
+    test_file_name = 'test_data.csv'
+    data_len = 600
+
+    # Create the full dataset
+    logger.debug(f'Creating multilabel test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
+
+    try:
+        features = generate_value_cols(['int','float','int','float'],data_len, separator)
+        labels = []
+        labels.append(generate_labels_2(features, separator))
+        labels.append(generate_labels_2(features, separator))
+
+        feature_headers = list(map(lambda col: col[0], features))
+        label_headers = list(map(lambda col: col[0], labels))
+
+        # Create the training dataset and save it to a file
+        columns_train = list(map(lambda col: col[1:int(len(col)*3/4)], features))
+        columns_train.extend(list(map(lambda col: col[1:int(len(col)*3/4)], labels)))
+        columns_to_file(columns_train, train_file_name, separator, headers=[*label_headers,*feature_headers])
+
+        # Create the testing dataset and save it to a file
+        columns_test = list(map(lambda col: col[int(len(col)*3/4):], features))
+        columns_to_file(columns_test, test_file_name, separator, headers=feature_headers)
+        logger.debug(f'Multilabel datasets generate and saved to files successfully')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed to generate datasets !')
+        exit(1)
+
+    # Train
+    mdb = None
+    try:
+        mdb = mindsdb.Predictor(name='test_multilabel_prediction')
+        logger.debug(f'Succesfully create mindsdb Predictor')
+    except:
+        logger.error(f'Failed to create mindsdb Predictor')
+        exit(1)
+
+
+    try:
+        mdb.learn(from_data=train_file_name, to_predict=label_headers)
+        logger.info(f'--------------- Learning ran succesfully ---------------')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed during the training !')
+        exit(1)
+
+    # Predict
+    try:
+        mdb = mindsdb.Predictor(name='test_multilabel_prediction')
+        logger.debug(f'Succesfully create mindsdb Predictor')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed to create mindsdb Predictor')
+        exit(1)
+
+    try:
+        results = mdb.predict(when_data=test_file_name)
+        for row in results:
+            expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
+            for col in expect_columns:
+                if col not in row:
+                    logger.error(f'Prediction failed to return expected column: {col}')
+                    logger.debug('Got row: {}'.format(row))
+                    exit(1)
+
+        logger.info(f'--------------- Predicting ran succesfully ---------------')
+    except:
+        print(traceback.format_exc())
+        logger.error(f'Failed whilst predicting')
+        exit(1)
+
+    logger.info('Multilabel predict test ran succesfully !')
+
     separator = ','
     data_file_name = 'test_data.csv'
-    data_len = 1000
-
-    columns = generate_value_cols(['int','float','int','int','float'],data_len, separator)
-    labels1 = generate_labels_2(columns, separator)
-    labels2 = generate_labels_2(columns, separator)
-
-    label_names = [labels1[0],labels2[0]]
-    columns.append(labels1)
-    columns.append(labels2)
-    columns_to_file(columns, data_file_name, separator)
-
-    mdb = mindsdb.Predictor(name='test_dual_label_prediction')
-    mdb.learn(
-        from_data=data_file_name,
-        to_predict=label_names
-    )
+    data_len = 10000
 
 
-def run_all_test():
-    test_dual_label_prediction()
-    test_one_label_prediction()
-
-def run_all_test_that_should_work():
-    test_one_label_prediction()
-
-#run_all_test()
-run_all_test_that_should_work()
+setup_testing_logger()
+test_multilabel_prediction()
+test_timeseries()
+test_one_label_prediction()

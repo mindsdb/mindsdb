@@ -127,7 +127,7 @@ class Predictor:
         # lets turn into lists: predict, order_by and group by
         predict_columns = [to_predict] if type(to_predict) != type([]) else to_predict
         group_by = group_by if type(group_by) == type([]) else [group_by] if group_by else []
-        order_by = order_by if type(order_by) == type([]) else [order_by] if group_by else []
+        order_by = order_by if type(order_by) == type([]) else [order_by] if order_by else []
 
         if len(predict_columns) == 0:
             error = 'You need to specify a column to predict'

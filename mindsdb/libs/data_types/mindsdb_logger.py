@@ -53,7 +53,6 @@ class MindsdbLogger():
         self.internal_logger.handlers = []
         self.internal_logger.propagate = False
 
-        self.internal_logger
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(colorlog.ColoredFormatter('%(log_color)s%(levelname)s:%(name)s:%(message)s'))
         self.internal_logger.addHandler(stream_handler)

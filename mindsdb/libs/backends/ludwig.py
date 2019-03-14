@@ -18,10 +18,10 @@ class LudwigBackend():
         timeseries_col = []
 
         for feature_def in input_features:
-            feature_def['type'] == 'timeseries':
+            if feature_def['type'] == 'timeseries':
                 timeseries_col_name = feature_def['name']
 
-        wdinow_size = self.transaction.persistent_model_metadata.window_size
+        window_size = self.transaction.persistent_model_metadata.window_size
         current_window = 0
         nr_ele = len(df[timeseries_col_name])
 
@@ -134,12 +134,12 @@ class LudwigBackend():
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
 
         is_timeseries = False
-        for def in model_definition['input_features']:
-            if def['type'] == 'timeseries':
+        for deff in model_definition['input_features']:
+            if deff['type'] == 'timeseries':
                 is_timeseries = True
 
         training_dataframe =  self._translate_df_to_timeseries_format(training_dataframe, model_definition)
-        print(training_dataframe)
+        #print(training_dataframe)
         model = LudwigModel(model_definition)
 
         # Figure out how to pass `model_load_path`

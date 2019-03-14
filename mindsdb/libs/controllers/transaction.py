@@ -108,6 +108,7 @@ class Transaction:
             self.persistent_model_metadata.predict_columns = self.metadata.model_predict_columns
             self.persistent_model_metadata.model_order_by = self.metadata.model_order_by
             self.persistent_model_metadata.model_group_by = self.metadata.model_group_by
+            self.persistent_model_metadata.window_size = self.metadata.window_size
             self.persistent_model_metadata.insert()
 
             self._call_phase_module('StatsGenerator')

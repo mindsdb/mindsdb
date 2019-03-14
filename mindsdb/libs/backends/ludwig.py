@@ -1,6 +1,7 @@
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.config import *
 from dateutil.parser import parse as parse_datetime
+from scipy.misc import imread
 
 from ludwig import LudwigModel
 import pandas as pd
@@ -10,6 +11,32 @@ class LudwigBackend():
 
     def __init__(self, transaction):
         self.transaction = transaction
+
+    def _translate_df_to_timeseries_format(self, df, model_definition):
+        input_features = model_definition['input_features']
+
+        timeseries_col = []
+
+        for feature_def in input_features:
+            feature_def['type'] == 'timeseries':
+                timeseries_col_name = feature_def['name']
+
+        wdinow_size = self.transaction.persistent_model_metadata.window_size
+        current_window = 0
+        pick_back = 0
+        nr_ele = len(df[timeseries_col_name])
+        for i in range(nr_ele):
+            for ii in range(pick_back):
+                timeseries_col.append(df[timeseries_col_name][ii])
+
+            timeseries_col.append(df[timeseries_col_name][i])
+
+            if i + 1 >= nr_ele:
+                pick_back -= 1
+
+            wdinow_size
+
+        pass
 
     def _create_ludwig_dataframe(self, mode):
         if mode == 'train':
@@ -51,7 +78,7 @@ class LudwigBackend():
 
             elif data_subtype in (DATA_SUBTYPES.DATE, DATA_SUBTYPES.TIMESTAMP):
                 ludwig_dtype = 'category'
-                encoder = 'stacked_cnn'
+                #encoder = 'stacked_cnn'
 
             elif data_subtype in (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE):
                 ludwig_dtype = 'category'
@@ -76,6 +103,10 @@ class LudwigBackend():
                     except:
                         ts_data_point = parse_datetime(ts_data_point).timestamp()
                     data[col].append(ts_data_point)
+                elif ludwig_dtype == 'image':
+                    img_path = self.transaction.input_data.data_array[row_ind][col_ind]
+                    img_data = imread(img_path, flatten=True)[0]
+                    data[col].append(img_data)
                 else:
                     data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
@@ -101,6 +132,13 @@ class LudwigBackend():
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
+
+        is_timeseries = False
+        for def in model_definition['input_features']:
+            if def['type'] == 'timeseries':
+                is_timeseries = True
+
+        training_dataframe =  self._translate_df_to_timeseries_format(training_dataframe, model_definition)
         model = LudwigModel(model_definition)
 
         # Figure out how to pass `model_load_path`

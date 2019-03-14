@@ -155,8 +155,8 @@ class Predictor:
         transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
         transaction_metadata.model_group_by = group_by
         transaction_metadata.model_order_by = order_by
-        transaction_metadata.model_is_time_series = is_time_series
         transaction_metadata.window_size = window_size
+        transaction_metadata.model_is_time_series = is_time_series
         transaction_metadata.type = transaction_type
         transaction_metadata.from_data = from_ds
         transaction_metadata.test_from_data = test_from_ds

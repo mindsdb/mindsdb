@@ -23,21 +23,20 @@ class LudwigBackend():
 
         wdinow_size = self.transaction.persistent_model_metadata.window_size
         current_window = 0
-        pick_back = 0
         nr_ele = len(df[timeseries_col_name])
+
         for i in range(nr_ele):
-            for ii in range(pick_back):
-                timeseries_col.append(df[timeseries_col_name][ii])
+            timeseries_row = [df[timeseries_col_name][i]]
+            for ii in range(i):
+                current_window += timeseries_row[-1] - df[timeseries_col_name][ii]
+                if current_window > window_size:
+                    current_window -= window_size
+                else:
+                    timeseries_row.append(df[timeseries_col_name][ii])
+            timeseries_col.append(timeseries_row)
 
-            timeseries_col.append(df[timeseries_col_name][i])
-
-            if i + 1 >= nr_ele:
-                pick_back -= 1
-
-            
-            wdinow_size
-
-        pass
+        df[timeseries_col_name] = timeseries_col
+        return df
 
     def _create_ludwig_dataframe(self, mode):
         if mode == 'train':
@@ -140,6 +139,7 @@ class LudwigBackend():
                 is_timeseries = True
 
         training_dataframe =  self._translate_df_to_timeseries_format(training_dataframe, model_definition)
+        print(training_dataframe)
         model = LudwigModel(model_definition)
 
         # Figure out how to pass `model_load_path`

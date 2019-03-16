@@ -1,3 +1,6 @@
+video_docs/video_and_audio
+video_docs/results
+video_docs/metadata.json
 metadata.json
 results
 integration_testing/*.csv

@@ -113,7 +113,8 @@ class StatsGenerator(BaseModule):
         if max_number_of_words == 1:
             return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.SINGLE
         if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
-            return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.MULTIPLE
+            # @TODO This used to be multiple... but, makes no sense for cateogry, should be discussed
+            return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.SINGLE
         else:
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
@@ -198,6 +199,8 @@ class StatsGenerator(BaseModule):
         # If it finds that the type is categorical it should determine if its categorical or actual text
         if curr_data_type == 'Unknown':
             curr_data_type, curr_data_subtype = self._get_text_type(data)
+            type_dist[curr_data_type] = type_dist.pop('Unknown')
+            subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist
 

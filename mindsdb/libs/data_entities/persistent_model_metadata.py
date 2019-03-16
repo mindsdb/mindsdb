@@ -25,6 +25,7 @@ class PersistentModelMetadata(PersistentObject):
 
         self.model_order_by = None
         self.model_group_by = None
+        self.window_size = None
 
         self.stop_training = False
         self.kill_training = False

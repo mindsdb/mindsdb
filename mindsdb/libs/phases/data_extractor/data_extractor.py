@@ -59,7 +59,6 @@ class DataExtractor(BaseModule):
             if train_metadata.model_group_by:
                 sort_by = train_metadata.model_group_by + sort_by
                 asc_values = [True for i in train_metadata.model_group_by] + asc_values
-
             df = df.sort_values(sort_by, ascending=asc_values)
 
         elif self.transaction.metadata.type == TRANSACTION_LEARN:

@@ -45,7 +45,7 @@ def test_timeseries():
     logger.info('Starting timeseries test !')
     ts_hours = 12
     separator = ','
-    data_len = 4200
+    data_len = 70
     train_file_name = 'train_data.csv'
     test_file_name = 'test_data.csv'
 
@@ -53,7 +53,7 @@ def test_timeseries():
     logger.debug(f'Creating timeseries test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
 
     try:
-        features = generate_value_cols(['date','int','float'],data_len, separator, ts_hours * 3600)
+        features = generate_value_cols(['datetime','int','float','ascii'],data_len, separator, ts_hours * 3600)
         labels = [generate_labels_1(features, separator)]
 
         feature_headers = list(map(lambda col: col[0], features))
@@ -62,7 +62,7 @@ def test_timeseries():
         # Create the training dataset and save it to a file
         columns_train = list(map(lambda col: col[1:int(len(col)*3/4)], features))
         columns_train.extend(list(map(lambda col: col[1:int(len(col)*3/4)], labels)))
-        columns_to_file(columns_train, train_file_name, separator, headers=[*label_headers,*feature_headers])
+        columns_to_file(columns_train, train_file_name, separator, headers=[*feature_headers,*label_headers])
 
         # Create the testing dataset and save it to a file
         columns_test = list(map(lambda col: col[int(len(col)*3/4):], features))
@@ -74,6 +74,7 @@ def test_timeseries():
         exit(1)
 
     # Train
+
     mdb = None
     try:
         mdb = mindsdb.Predictor(name='test_date_timeseries')
@@ -89,7 +90,7 @@ def test_timeseries():
             to_predict=label_headers
             # timeseries specific argsw
             ,order_by=feature_headers[0]
-            ,window_size=ts_hours*(data_len/100)
+            ,window_size=ts_hours* 3600 * 2
             #,group_by = columns[0][0]
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
@@ -146,7 +147,7 @@ def test_one_label_prediction():
         # Create the training dataset and save it to a file
         columns_train = list(map(lambda col: col[1:int(len(col)*3/4)], features))
         columns_train.extend(list(map(lambda col: col[1:int(len(col)*3/4)], labels)))
-        columns_to_file(columns_train, train_file_name, separator, headers=[*label_headers,*feature_headers])
+        columns_to_file(columns_train, train_file_name, separator, headers=[*feature_headers,*label_headers])
 
         # Create the testing dataset and save it to a file
         columns_test = list(map(lambda col: col[int(len(col)*3/4):], features))
@@ -224,7 +225,7 @@ def test_multilabel_prediction():
         # Create the training dataset and save it to a file
         columns_train = list(map(lambda col: col[1:int(len(col)*3/4)], features))
         columns_train.extend(list(map(lambda col: col[1:int(len(col)*3/4)], labels)))
-        columns_to_file(columns_train, train_file_name, separator, headers=[*label_headers,*feature_headers])
+        columns_to_file(columns_train, train_file_name, separator, headers=[*feature_headers,*label_headers])
 
         # Create the testing dataset and save it to a file
         columns_test = list(map(lambda col: col[int(len(col)*3/4):], features))

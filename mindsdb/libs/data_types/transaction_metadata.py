@@ -14,6 +14,7 @@ class TransactionMetadata(ObjectDict):
         self.model_when_conditions = None
         self.model_group_by = None
         self.model_order_by = []
+        self.window_size = None
         self.model_is_time_series = False
         self.from_data_dropout = 0
         self.window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT

@@ -103,17 +103,16 @@ class ProbabilisticValidator():
             predicted_value_b = self._get_value_bucket(predicted_value)
             real_value_b = self._get_value_bucket(real_value)
 
-        if self.buckets != None:
+        if self.buckets is not None:
             X = [False] * len(self.buckets)
             X[predicted_value_b] = True
             X = X + features_existence
-            Y = real_value_b
 
             self.X_buff.append(X)
             self.Y_buff.append(real_value_b)
         else:
-            X = features_existence
-            Y = real_value_b == predicted_value_b
+            self.X_buff.append(features_existence)
+            self.Y_buff.append(real_value_b == predicted_value_b)
 
     def partial_fit(self):
         """

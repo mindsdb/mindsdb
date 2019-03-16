@@ -164,7 +164,7 @@ class ProbabilisticValidator():
         np.seterr(divide=log_types['divide'])
 
         if self.buckets is not None:
-            return ProbabilityEvaluation(self.buckets, distribution[0].tolist(), predicted_value)
+            return ProbabilityEvaluation(self.buckets, distribution[0].tolist(), predicted_value).most_likely_probability
         else:
             return distribution[0][1]
 

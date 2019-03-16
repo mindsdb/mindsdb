@@ -96,21 +96,17 @@ class ProbabilisticValidator():
         predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
         real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(real_value)
 
-        if self.buckets is None:
-            predicted_value_b = predicted_value
-            real_value_b = real_value
-        else:
+        if self.buckets is not None:
             predicted_value_b = self._get_value_bucket(predicted_value)
             real_value_b = self._get_value_bucket(real_value)
-
-        if self.buckets is not None:
             X = [False] * len(self.buckets)
             X[predicted_value_b] = True
             X = X + features_existence
-
             self.X_buff.append(X)
             self.Y_buff.append(real_value_b)
         else:
+            predicted_value_b = predicted_value
+            real_value_b = real_value
             self.X_buff.append(features_existence)
             self.Y_buff.append(real_value_b == predicted_value_b)
 
@@ -153,19 +149,25 @@ class ProbabilisticValidator():
         :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
         """
 
-        value_to_pass = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
-        predicted_value_b = self._get_value_bucket(value_to_pass)
-        X = [False] * len(self.buckets)
-        X[predicted_value_b] = True
-        X = [X + features_existence]
+        if self.buckets is not None:
+            predicted_value_b = self._get_value_bucket(predicted_value)
+            X = [False] * len(self.buckets)
+            X[predicted_value_b] = True
+            X = [X + features_existence]
+        else:
+            X = [features_existence]
+
         #X = [[predicted_value_b, *features_existence]]
         log_types = np.seterr()
         np.seterr(divide='ignore')
         distribution = self._probabilistic_model.predict_proba(np.array(X))
         np.seterr(divide=log_types['divide'])
 
-        evaluation = ProbabilityEvaluation(self.buckets, distribution[0].tolist(), predicted_value)
-        return evaluation
+        if self.buckets is not None:
+            return ProbabilityEvaluation(self.buckets, distribution[0].tolist(), predicted_value)
+        else:
+            return distribution[0][1]
+
 
 
 if __name__ == "__main__":

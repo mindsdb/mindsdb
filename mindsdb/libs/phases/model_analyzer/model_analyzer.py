@@ -23,8 +23,12 @@ class ModelAnalyzer(BaseModule):
         probabilistic_validators = {}
 
         for col in predict_column_names:
-            probabilistic_validators[col] = ProbabilisticValidator(
-                buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'], data_type=self.transaction.persistent_model_metadata.column_stats[col]['data_type'])
+            if 'percentage_buckets' in self.transaction.persistent_model_metadata.column_stats[col]:
+                probabilistic_validators[col] = ProbabilisticValidator(
+                    buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'], data_type=self.transaction.persistent_model_metadata.column_stats[col]['data_type'])
+            else:
+                probabilistic_validators[col] = ProbabilisticValidator(
+                    buckets=None, data_type=self.transaction.persistent_model_metadata.column_stats[col]['data_type'])
 
         # create a list of columns to ignore starting with none, and then one experiment per column
         ignore_none = [[]]

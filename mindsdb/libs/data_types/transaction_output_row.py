@@ -9,9 +9,6 @@ class TransactionOutputRow:
         return self.transaction_output.data[item][self.row_key]
 
     def as_dict(self):
-        for k in self.transaction_output.data:
-            print(k, len(self.transaction_output.data[k]))
-            
         return {key:self.transaction_output.data[key][self.row_key] for key in self.transaction_output.data}
 
     def explain(self):

@@ -86,7 +86,7 @@ class Predictor:
         pass
 
 
-    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = 1, window_size_seconds = MODEL_GROUP_BY_DEAFAULT_LIMIT,
+    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,
     stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS, backend='ludwig'):
         """

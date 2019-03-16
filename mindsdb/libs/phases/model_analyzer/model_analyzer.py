@@ -34,6 +34,7 @@ class ModelAnalyzer(BaseModule):
 
         ### Create the real values for the created columns (maybe move to a new 'validate' method of the mode backend ?)
         validation_data = {}
+
         indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
         for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns):
             validation_data[col] = []

@@ -11,11 +11,7 @@ class TransactionOutputRow:
     def as_dict(self):
         for k in self.transaction_output.data:
             print(k, len(self.transaction_output.data[k]))
-        print('\n\n\n-------------------------------------\n\n\n')
-        print(self.row_key, self.transaction_output.data.keys())
-        print('\n\n\n-------------------------------------\n\n\n')
-        print(self.transaction_output.data)
-        print('\n\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n')
+            
         return {key:self.transaction_output.data[key][self.row_key] for key in self.transaction_output.data}
 
     def explain(self):

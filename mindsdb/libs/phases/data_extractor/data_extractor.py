@@ -184,12 +184,13 @@ class DataExtractor(BaseModule):
         # create all indexes by group by, that is all the rows that belong to each group by
         for i, row in enumerate(self.transaction.input_data.data_array):
 
-            if len(group_by)>0:
-                group_by_value = hashtext(':'.join([row[group_by_index] for group_by_index in group_by_col_indexes]))
-            else:
-                group_by_value = KEY_NO_GROUP_BY
+            #if len(group_by)>0:
+            #    group_by_value = hashtext(':'.join([row[group_by_index] for group_by_index in group_by_col_indexes]))
+            #else:
+            #    group_by_value = KEY_NO_GROUP_BY
 
             # create the list if it doesnt exist yet for this group_by_value
+            group_by_value = KEY_NO_GROUP_BY
             if group_by_value not in  self.transaction.input_data.all_indexes:
                 self.transaction.input_data.all_indexes[group_by_value] = []
 

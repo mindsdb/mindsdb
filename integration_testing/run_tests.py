@@ -53,7 +53,7 @@ def test_timeseries():
     logger.debug(f'Creating timeseries test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
 
     try:
-        features = generate_value_cols(['datetime','int','float','ascii'],data_len, separator, ts_hours * 3600)
+        features = generate_value_cols(['datetime','int','float','ascii','ascii'],data_len, separator, ts_hours * 3600)
         labels = [generate_labels_1(features, separator)]
 
         feature_headers = list(map(lambda col: col[0], features))
@@ -91,7 +91,7 @@ def test_timeseries():
             # timeseries specific argsw
             ,order_by=feature_headers[0]
             ,window_size=ts_hours* 3600 * 2
-            #,group_by = columns[0][0]
+            ,group_by = feature_headers[3]
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:

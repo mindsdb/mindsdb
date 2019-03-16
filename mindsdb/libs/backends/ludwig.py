@@ -28,39 +28,58 @@ class LudwigBackend():
         for col in [*other_col_names,timeseries_col_name]:
             new_cols[col] = []
 
-        window_size = self.transaction.persistent_model_metadata.window_size
         nr_ele = len(df[timeseries_col_name])
 
+        if self.transaction.persistent_model_metadata.window_size_seconds is not None:
+            window_size_seconds = self.transaction.persistent_model_metadata.window_size_seconds
+            for i in range(nr_ele):
+                current_window = 0
+                new_row = {}
 
-        for i in range(nr_ele):
-            current_window = 0
-            new_row = {}
+                timeseries_row = [df[timeseries_col_name][i]]
 
-            timeseries_row = [df[timeseries_col_name][i]]
+                for col in other_col_names:
+                    new_row[col] = [df[col][i]]
 
-            for col in other_col_names:
-                new_row[col] = [df[col][i]]
-
-            inverted_index_range = list(range(i))
-            inverted_index_range.reverse()
-            for ii in inverted_index_range:
-                if window_size < current_window + (timeseries_row[-1] - df[timeseries_col_name][ii]):
-                    break
-                else:
+                inverted_index_range = list(range(i))
+                inverted_index_range.reverse()
+                for ii in inverted_index_range:
+                    if window_size_seconds < current_window + (timeseries_row[-1] - df[timeseries_col_name][ii]):
+                        break
                     current_window += (timeseries_row[-1] - df[timeseries_col_name][ii])
                     timeseries_row.append(df[timeseries_col_name][ii])
                     for col in other_col_names:
                         new_row[col].append(df[col][ii])
 
-            # Samll issue if timeseries is non-periodical... but it's annoying fixing, so nvm for now
-            #if len(inverted_index_range) > 0:
-            #    current_window = current_window - window_size
+                new_row[timeseries_col_name] = timeseries_row
 
-            new_row[timeseries_col_name] = timeseries_row
+                for col in new_row:
+                    new_row[col].reverse()
+                    new_cols[col].append(new_row[col])
+        else:
+            window_size_samples = self.transaction.persistent_model_metadata.window_size_samples
+            for i in range(nr_ele):
+                new_row = {}
 
-            for col in new_row:
-                new_row[col].reverse()
-                new_cols[col].append(new_row[col])
+                timeseries_row = [df[timeseries_col_name][i]]
+
+                for col in other_col_names:
+                    new_row[col] = [df[col][i]]
+
+                inverted_index_range = list(range(i))
+                inverted_index_range.reverse()
+                for ii in inverted_index_range:
+                    if (i - ii) > window_size_samples:
+                        break
+                    timeseries_row.append(df[timeseries_col_name][ii])
+                    for col in other_col_names:
+                        new_row[col].append(df[col][ii])
+
+                new_row[timeseries_col_name] = timeseries_row
+
+                for col in new_row:
+                    new_row[col].reverse()
+                    new_cols[col].append(new_row[col])
 
 
         for col in new_cols:
@@ -207,6 +226,7 @@ class LudwigBackend():
             predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
 
         predictions = model.predict(data_df=predict_dataframe)
+
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')
             predictions = predictions.rename(columns = {col_name: col_name_normalized})

@@ -102,22 +102,25 @@ class Transaction:
             self.persistent_ml_model_info.delete()
 
             # start populating data
+            self.persistent_model_metadata.model_backend = self.metadata.model_backend
             self.persistent_model_metadata.train_metadata = self.metadata.getAsDict()
             self.persistent_model_metadata.current_phase = MODEL_STATUS_ANALYZING
             self.persistent_model_metadata.columns = self.input_data.columns # this is populated by data extractor
             self.persistent_model_metadata.predict_columns = self.metadata.model_predict_columns
             self.persistent_model_metadata.model_order_by = self.metadata.model_order_by
             self.persistent_model_metadata.model_group_by = self.metadata.model_group_by
-            self.persistent_model_metadata.window_size = self.metadata.window_size
+            self.persistent_model_metadata.window_size_seconds = self.metadata.window_size_seconds
+            self.persistent_model_metadata.window_size_samples = self.metadata.window_size_samples
             self.persistent_model_metadata.insert()
 
             self._call_phase_module('StatsGenerator')
             self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
             self.persistent_model_metadata.update()
 
-            self.model_backend = LudwigBackend(self)
-            self.model_backend.train()
-            self.persistent_model_metadata.update()
+            if self.persistent_model_metadata.model_backend == 'ludwig':
+                self.model_backend = LudwigBackend(self)
+                self.model_backend.train()
+                self.persistent_model_metadata.update()
 
             self._call_phase_module('ModelAnalyzer')
 
@@ -172,8 +175,9 @@ class Transaction:
 
         self.output_data = PredictTransactionOutputData(transaction=self)
 
-        self.model_backend = LudwigBackend(self)
-        predictions = self.model_backend.predict()
+        if self.persistent_model_metadata.model_backend == 'ludwig':
+            self.model_backend = LudwigBackend(self)
+            predictions = self.model_backend.predict()
 
         # self.transaction.persistent_model_metadata.predict_columns
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}

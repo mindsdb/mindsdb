@@ -8,7 +8,7 @@ from mindsdb.libs.data_types.data_source import DataSource
 
 class WindowDS(DataSource):
 
-    def _setup(self, df, col_max, col_min, window_size=300, step_size=30, min_size = 100):
+    def _setup(self, df, col_max, col_min, window_size_samples=300, step_size=30, min_size = 100):
 
         header = list(df.columns.values)
         data = df.values.tolist()
@@ -23,7 +23,7 @@ class WindowDS(DataSource):
             min = row[min_index]
 
             new_max = max
-            new_min = max - window_size
+            new_min = max - window_size_samples
 
             while new_max-min > min_size:
 
@@ -33,6 +33,6 @@ class WindowDS(DataSource):
                 ret += [row.copy()]
 
                 new_max = new_max - step_size
-                new_min = new_max - window_size if new_max - window_size > min else min
+                new_min = new_max - window_size_samples if new_max - window_size_samples > min else min
 
         self.setDF(pandas.DataFrame(ret, columns=header))

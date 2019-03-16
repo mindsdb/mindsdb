@@ -210,8 +210,10 @@ class DataExtractor(BaseModule):
                 # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
                 should_split_by_group = False #True if (type(group_by) == list and len(group_by) > 0 and self.transaction.metadata.window_size > length * CONFIG.TEST_TRAIN_RATIO) else False
                 # only start sample from row > 0 if there is enough data for train, test, validation subsets, which is that the test subset has to be greater than the window size
-                start_sample_from_row = 0 if (should_split_by_group and self.transaction.metadata.window_size > sample_size * CONFIG.TEST_TRAIN_RATIO) else length - sample_size
-
+                if self.transaction.metadata.window_size_samples is not None:
+                    start_sample_from_row = 0 if (should_split_by_group and self.transaction.metadata.window_size_samples > sample_size * CONFIG.TEST_TRAIN_RATIO) else length - sample_size
+                else:
+                    start_sample_from_row = 0
 
                 # resize the group bucket by the start_sample_from_row
                 self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][start_sample_from_row:]
@@ -238,8 +240,8 @@ class DataExtractor(BaseModule):
 
             else:
                 # if its a predict transaction, we should trim so it only has as many as the window size
-                if is_time_series:
-                    self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][int(-train_metadata.window_size):]
+                if is_time_series and train_metadata.window_size_samples is not None:
+                    self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][int(-train_metadata.window_size_samples):]
 
         # log some stats
         if self.transaction.metadata.type == TRANSACTION_LEARN:

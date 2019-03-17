@@ -68,8 +68,8 @@ class DATA_SUBTYPES:
     TIMESTAMP = 'Timestamp' # YYYY-MM-DD hh:mm:ss or 1852362464
 
     # CATEGORICAL
-    SINGLE = 'Single Category'
-    MULTIPLE = 'Multiple Categories' # Kind of unclear on the implementation
+    SINGLE = 'Simple Category'
+    MULTIPLE = 'Complex Category' # Kind of unclear on the implementation
 
     # FILE_PATH
     IMAGE = 'Image'

@@ -59,7 +59,6 @@ class DataExtractor(BaseModule):
             if train_metadata.model_group_by:
                 sort_by = train_metadata.model_group_by + sort_by
                 asc_values = [True for i in train_metadata.model_group_by] + asc_values
-
             df = df.sort_values(sort_by, ascending=asc_values)
 
         elif self.transaction.metadata.type == TRANSACTION_LEARN:
@@ -185,13 +184,14 @@ class DataExtractor(BaseModule):
         # create all indexes by group by, that is all the rows that belong to each group by
         for i, row in enumerate(self.transaction.input_data.data_array):
 
-            if len(group_by)>0:
-                group_by_value = hashtext(':'.join([row[group_by_index] for group_by_index in group_by_col_indexes]))
-            else:
-                group_by_value = KEY_NO_GROUP_BY
+            #if len(group_by)>0:
+            #    group_by_value = hashtext(':'.join([row[group_by_index] for group_by_index in group_by_col_indexes]))
+            #else:
+            #    group_by_value = KEY_NO_GROUP_BY
 
             # create the list if it doesnt exist yet for this group_by_value
-            if group_by_value not in  self.transaction.input_data.all_indexes:
+            group_by_value = KEY_NO_GROUP_BY
+            if group_by_value not in self.transaction.input_data.all_indexes:
                 self.transaction.input_data.all_indexes[group_by_value] = []
 
             self.transaction.input_data.all_indexes[group_by_value] += [i]
@@ -208,10 +208,12 @@ class DataExtractor(BaseModule):
                                                         confidence_level=self.transaction.metadata.sample_confidence_level))
 
                 # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
-                should_split_by_group = True if (type(group_by) == list and len(group_by) > 0 and self.transaction.metadata.window_size > length * CONFIG.TEST_TRAIN_RATIO) else False
+                should_split_by_group = False #True if (type(group_by) == list and len(group_by) > 0 and self.transaction.metadata.window_size > length * CONFIG.TEST_TRAIN_RATIO) else False
                 # only start sample from row > 0 if there is enough data for train, test, validation subsets, which is that the test subset has to be greater than the window size
-                start_sample_from_row = 0 if (should_split_by_group and self.transaction.metadata.window_size > sample_size * CONFIG.TEST_TRAIN_RATIO) else length - sample_size
-
+                if self.transaction.metadata.window_size_samples is not None:
+                    start_sample_from_row = 0 if (should_split_by_group and self.transaction.metadata.window_size_samples > sample_size * CONFIG.TEST_TRAIN_RATIO) else length - sample_size
+                else:
+                    start_sample_from_row = 0
 
                 # resize the group bucket by the start_sample_from_row
                 self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][start_sample_from_row:]
@@ -238,8 +240,8 @@ class DataExtractor(BaseModule):
 
             else:
                 # if its a predict transaction, we should trim so it only has as many as the window size
-                if is_time_series:
-                    self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][int(-train_metadata.window_size):]
+                if is_time_series and train_metadata.window_size_samples is not None:
+                    self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][int(-train_metadata.window_size_samples):]
 
         # log some stats
         if self.transaction.metadata.type == TRANSACTION_LEARN:
@@ -252,7 +254,7 @@ class DataExtractor(BaseModule):
                 pointer = getattr(self.transaction.input_data, group_key+'_indexes')
                 total_rows_used_by_subset[group_key] = sum([len(pointer[key_i]) for key_i in pointer])
                 number_of_groups_per_subset[group_key] = len(pointer)
-                average_number_of_rows_used_per_groupby[group_key] = total_rows_used_by_subset[group_key] / number_of_groups_per_subset[group_key]
+                #average_number_of_rows_used_per_groupby[group_key] = total_rows_used_by_subset[group_key] / number_of_groups_per_subset[group_key]
 
 
             total_rows_used = sum(total_rows_used_by_subset.values())
@@ -269,6 +271,7 @@ class DataExtractor(BaseModule):
                 }
                 self.log.infoChart(data, type='pie')
 
+            '''
             if total_number_of_groupby_groups > 1:
                 self.log.info('You are grouping your data by [{group_by}], we found:'.format(group_by=', '.join(group_by)))
                 data = {
@@ -276,6 +279,7 @@ class DataExtractor(BaseModule):
                     'Average number of rows per groupby group': int(sum(average_number_of_rows_used_per_groupby.values())/len(average_number_of_rows_used_per_groupby))
                 }
                 self.log.infoChart(data, type='list')
+            '''
 
             self.log.info('We have split the input data into:')
 

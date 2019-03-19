@@ -152,9 +152,11 @@ class FileDS(DataSource):
             for line in data:
                 i += 1
                 first_few_lines.append(line)
-                if i > 500:
+                if i > 0:
                     break
-            dialect = csv.Sniffer().sniff(''.join(first_few_lines))
+
+            accepted_delimiters = [',','\t']
+            dialect = csv.Sniffer().sniff(''.join(first_few_lines[0]), delimiters=accepted_delimiters)
             data.seek(0)
             # if csv dialect identified then return csv
             if dialect:
@@ -192,11 +194,9 @@ class FileDS(DataSource):
             header, file_data = custom_parser(data, format)
 
         elif format == 'csv':
-
             csv_reader = list(csv.reader(data, dialect))
             header = csv_reader[0]
             file_data =  csv_reader[1:]
-
 
         elif format in ['xlsx', 'xls']:
             data.seek(0)

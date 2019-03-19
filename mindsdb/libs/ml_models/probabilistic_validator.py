@@ -33,8 +33,11 @@ class ProbabilisticValidator():
         #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
-        self.bucket_keys = [i for i in range(len(buckets))]
+
         self.buckets = buckets
+        if self.buckets is not None:
+            self.bucket_keys = [i for i in range(len(self.buckets))]
+
         self.data_type = data_type
 
     def pickle(self):
@@ -71,8 +74,6 @@ class ProbabilisticValidator():
         """
         :return: The bucket in the `histogram` in which our `value` falls
         """
-        # @TODO maybe use stats type in constructor
-        # Support for non numeric values
         if type(value) == type(''):
             if value in self.buckets:
                 i = self.buckets.index(value)
@@ -93,16 +94,21 @@ class ProbabilisticValidator():
         :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value` and `real_value`
         """
         predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
-        predicted_value_b = self._get_value_bucket(predicted_value)
         real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(real_value)
-        real_value_b = self._get_value_bucket(real_value)
-        X = [False] * len(self.buckets)
-        X[predicted_value_b] = True
-        X = X + features_existence
-        Y = real_value_b
 
-        self.X_buff.append(X)
-        self.Y_buff.append(Y)
+        if self.buckets is not None:
+            predicted_value_b = self._get_value_bucket(predicted_value)
+            real_value_b = self._get_value_bucket(real_value)
+            X = [False] * len(self.buckets)
+            X[predicted_value_b] = True
+            X = X + features_existence
+            self.X_buff.append(X)
+            self.Y_buff.append(real_value_b)
+        else:
+            predicted_value_b = predicted_value
+            real_value_b = real_value
+            self.X_buff.append(features_existence)
+            self.Y_buff.append(real_value_b == predicted_value_b)
 
     def partial_fit(self):
         """
@@ -110,7 +116,12 @@ class ProbabilisticValidator():
         """
         log_types = np.seterr()
         np.seterr(divide='ignore')
-        self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=self.bucket_keys)
+
+        if self.buckets is not None:
+            self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=self.bucket_keys)
+        else:
+            self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=[True, False])
+
         np.seterr(divide=log_types['divide'])
 
         self.X_buff= []
@@ -138,19 +149,25 @@ class ProbabilisticValidator():
         :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
         """
 
-        value_to_pass = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
-        predicted_value_b = self._get_value_bucket(value_to_pass)
-        X = [False] * len(self.buckets)
-        X[predicted_value_b] = True
-        X = [X + features_existence]
+        if self.buckets is not None:
+            predicted_value_b = self._get_value_bucket(predicted_value)
+            X = [False] * len(self.buckets)
+            X[predicted_value_b] = True
+            X = [X + features_existence]
+        else:
+            X = [features_existence]
+
         #X = [[predicted_value_b, *features_existence]]
         log_types = np.seterr()
         np.seterr(divide='ignore')
         distribution = self._probabilistic_model.predict_proba(np.array(X))
         np.seterr(divide=log_types['divide'])
 
-        evaluation = ProbabilityEvaluation(self.buckets, distribution[0].tolist(), predicted_value)
-        return evaluation
+        if self.buckets is not None:
+            return ProbabilityEvaluation(self.buckets, distribution[0].tolist(), predicted_value).most_likely_probability
+        else:
+            return distribution[0][1]
+
 
 
 if __name__ == "__main__":

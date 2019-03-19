@@ -13,14 +13,11 @@ def generate_timeseries(length, bounds=(0,1852255420), _type='timestamp',period=
         column.append(n)
 
     if _type == 'timestamp':
-        pass
+        return column
     elif _type == 'datetime':
-        column = list(map(str, map(datetime.datetime.fromtimestamp ,column)))
+        return list(map(str, map(datetime.datetime.fromtimestamp ,column)))
     elif _type == 'date':
-        column = list(map(str, map(lambda x: datetime.datetime.fromtimestamp(x).date() ,column)))
-
-    return column
-
+        return list(map(str, map(lambda x: datetime.datetime.fromtimestamp(x).date() ,column)))
 
 
 def rand_str(length=random.randrange(4,120)):
@@ -34,14 +31,16 @@ def rand_ascii_str(length=None, give_nulls=True, only_letters=False):
     if only_letters:
         charlist = [*string.ascii_letters]
     else:
-        charlist = [*[' ', '_', '-', '?', '.', '<', '>', ')', '('], *string.ascii_letters]
+        #other = [' ', '_', '-', '?', '.', '<', '>', ')', '(']
+        other = []
+        charlist = [*other, *string.ascii_letters]
     if length == None:
         length = random.randrange(1,120)
     if length % 4 == 0 and give_nulls==True:
         return ''
     #Sometimes we should return a number instead of a string
-    if length % 7 == 0:
-        return str(length)
+    #if length % 7 == 0:
+    #    return str(length)
     return ''.join(random.choice(charlist) for _ in range(length))
 
 
@@ -58,7 +57,7 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
     for t in types:
         columns.append([])
         # This is a header of sorts
-        columns[-1].append(rand_ascii_str(random.randrange(4,8),give_nulls=False,only_letters=True))
+        columns[-1].append(rand_ascii_str(random.randrange(8,10),give_nulls=False,only_letters=True))
 
         # Figure out which random generation function to use for this column
         if t == 'str':
@@ -88,7 +87,7 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
 def generate_labels_1(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(4,8),give_nulls=False,only_letters=True))
+    labels.append(rand_ascii_str(random.randrange(14,28),give_nulls=False,only_letters=True))
 
     for n in range(1, len(columns[-1])):
         value = 0
@@ -105,7 +104,7 @@ def generate_labels_1(columns, separator=','):
 def generate_labels_2(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(4,8),give_nulls=False,only_letters=True))
+    labels.append(rand_ascii_str(random.randrange(5,11),give_nulls=False,only_letters=True))
 
     for n in range(1, len(columns[-1])):
         value = 1
@@ -131,7 +130,7 @@ def generate_labels_2(columns, separator=','):
 def generate_labels_3(columns, separator=','):
     labels = []
     # This is a header of sorts
-    labels.append(rand_ascii_str(random.randrange(4,8),give_nulls=False,only_letters=True))
+    labels.append(rand_ascii_str(random.randrange(14,18),give_nulls=False,only_letters=True))
 
     col_nr = random.randrange(0,len(columns))
     labels.extend(columns[col_nr][1:])

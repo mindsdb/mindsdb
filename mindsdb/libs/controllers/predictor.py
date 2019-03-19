@@ -86,7 +86,9 @@ class Predictor:
         pass
 
 
-    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False, stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS):
+    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
+    window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,
+    stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS, backend='ludwig'):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -116,6 +118,10 @@ class Predictor:
         :return:
         """
 
+        # Backwards compatibility of interface
+        if window_size is not None:
+            window_size_samples = window_size
+        #
 
         from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
@@ -151,12 +157,14 @@ class Predictor:
 
         transaction_metadata = TransactionMetadata()
         transaction_metadata.model_name = self.name
+        transaction_metadata.model_backend = backend
         transaction_metadata.model_predict_columns = predict_columns
         transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
         transaction_metadata.model_group_by = group_by
         transaction_metadata.model_order_by = order_by
+        transaction_metadata.window_size_samples = window_size_samples
+        transaction_metadata.window_size_seconds = window_size_seconds
         transaction_metadata.model_is_time_series = is_time_series
-        transaction_metadata.window_size = window_size
         transaction_metadata.type = transaction_type
         transaction_metadata.from_data = from_ds
         transaction_metadata.test_from_data = test_from_ds

@@ -1,0 +1,14 @@
+
+$white: #ffffff;
+$bg-light: #f5f5f5;
+$spacer: 10rem;
+
+@import "mixin.scss";
+@import "content.scss";
+@font-face {
+    font-family: 'Open Sans';
+    font-srtyle: normal;
+    font-weight: 300;
+    src: local('Open Sans Light'), local('OpenSans-Light'), url(http://fonts.gstatic.com/s/opensans/v15/mem5YaGs126MiZpBA-UN_r8OX-hpOqc.woff2) format('woff2');
+    unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+  }

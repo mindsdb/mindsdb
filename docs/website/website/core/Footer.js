@@ -47,6 +47,9 @@ class Footer extends React.Component {
             <a href={this.docUrl('FAQ', this.props.language)}>
               Frequently Asked Questions
             </a>
+            <a href={this.docUrl('InsideMindsDB', this.props.language)}>
+            Inside MindsDB
+            </a>
           </div>
           <div>
             <h5>Community</h5>

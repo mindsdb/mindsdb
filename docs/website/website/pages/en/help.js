@@ -17,7 +17,7 @@ function Help(props) {
   const {baseUrl, docsUrl} = siteConfig;
   const docsPart = `${docsUrl ? `${docsUrl}/` : ''}`;
   const langPart = `${language ? `${language}/` : ''}`;
-  const docUrl = doc => `${baseUrl}${docsPart}${doc}`;  // Go back to ${baseUrl}${docsPart}${langPart}${doc} once docs are server properly (with en in the path)
+  const docUrl = doc => `${baseUrl}${docsPart}${doc}`;  // @TODO go back to ${baseUrl}${docsPart}${langPart}${doc} once docs are server properly (with en in the path)
 
   const supportLinks = [
     {

@@ -25,20 +25,20 @@ MindsDB has 3 simple goals.
 
 ### What is the roadmap?
 
-MindsDB roadmap is amied to be aligned with our goals:
- 
-* **versions  > 0.9** was focused on goal 1 *(December 2018)*. 
-* **versions 1.0** and greater will focus on for goal 2 *(January 2019)*
+MindsDB roadmap is aimed to be aligned with our goals:
+
+* **versions 1.0** and greater will focus on for goal 2 *(Early April 2019)*
     * What to expect:
         * MindsDB UI where one can visualize explainability goals.
-* **versions 2.0** and greater will focus on goal 3 *(March 2019)*.
+        * Support for images, audio both as input and output and complex text (e.g. translation) as output.
+
+* **versions 2.0** and greater will focus on goal 3 *(?)*.
     * What to expect:
         * Simpler modularization of meta-model building for ML/Experts to contribute.
 
 ### What type of data can MindsDB learn and predict from?   
 
-Currently we support tabular data, this is CSV, excel, json files or relational data stores.
-You can learn more about how to prepare data in MindsDB [(here)](DataSources.md)
+Currently we support tabular data, this is CSV, excel, json files and urls or relational data stores.
 
 ### How does it work? ###
 
@@ -57,19 +57,19 @@ in very simple terms, midnsdb follows the following steps:
     * load most fit model
     * run input tensor into model
     * transform output tensor into readable output
-    
-You can learn a more detailed description [here](InsideMindsDB.md)
+
+You can learn more about the internals of mindsdb [here](/docs/InsideMindsDB.md)
 
 ### How can I help?
 
 You can help in the following ways:
 
  * Trying MindsDB and [reporting issues](https://github.com/mindsdb/mindsdb/issues/new/choose).
- * If you know python, you can also help us debug open issues. 
+ * If you know python, you can also help us debug open issues. Issues labels with the `good first issue` tag should be [the easiest to start with](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
  * You can help us with documentation and examples.
  * Tell your friends, write a blog post about MindsDB.
- * Join our team.
- 
+ * Join our team, we are growing fast so[we should have a few open positions](https://angel.co/mindsdb).
+
 ### Why is it called MindsDB?
 
 Well, as most names, we needed one, we like science fiction and the [culture series](https://en.wikipedia.org/wiki/The_Culture_(series)), where there are these AI super smart entities called Minds.

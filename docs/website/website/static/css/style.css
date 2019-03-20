@@ -22,7 +22,7 @@ body {
   background-color: #ffffff;
   padding: 3rem 3.33333rem;
   box-shadow: 0px 0px 50px -5px rgba(0, 0, 0, 0.15);
-  background-size: 35px; 
+  background-size: 35px;
 }
   @media (max-width: 768px) {
     .wrapper .gridBlock .fourByGridBlock {
@@ -76,6 +76,10 @@ h2
 
 .toc .toggleNav ul li a {
   font-size: inherit; }
+
+a {
+    color: #4a148c;
+}
 
 .section-title {
   color: #4a148c;

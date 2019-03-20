@@ -41,12 +41,27 @@ class Footer extends React.Component {
             <a href={this.docUrl('Installing', this.props.language)}>
               Installing MindsDB
             </a>
+
             <a href={this.docUrl('BasicExample', this.props.language)}>
               Learning from Examples
             </a>
+
+            <a href={this.docUrl('AdvancedExamples', this.props.language)}>
+              Examples of advanced usecases
+            </a>
+
+            <a href={this.docUrl('Config', this.props.language)}>
+              Configuring Mindsdb
+            </a>
+
             <a href={this.docUrl('FAQ', this.props.language)}>
               Frequently Asked Questions
             </a>
+
+            <a href={this.docUrl('FAQ', this.props.language)}>
+              Frequently Asked Questions
+            </a>
+
             <a href={this.docUrl('InsideMindsDB', this.props.language)}>
             Inside MindsDB
             </a>

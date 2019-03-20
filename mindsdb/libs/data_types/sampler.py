@@ -25,7 +25,7 @@ from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModel
 
 class Sampler:
 
-    def __init__(self, data, metadata_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = [],  sampler_mode = SAMPLER_MODES.DEFAULT, blank_columns=[]):
+    def __init__(self, data, metadata_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = [],  blank_columns=[]):
         """
 
         :param data:
@@ -40,7 +40,6 @@ class Sampler:
         self.stats = metadata_as_stored.column_stats
         self.model_columns = [col for col in metadata_as_stored.columns if self.stats[col]['data_type'] not in ignore_types]
         self.ignore_columns_with_type = ignore_types
-        self.sampler_mode = sampler_mode
 
         self.batch_size = batch_size
         self.variable_wrapper = None

@@ -18,7 +18,7 @@ const siteConfig = {
   baseUrl: "/" /* base url for your project */,
   projectName: "mindsdb",
   organizationName: "Mindsdb",
-  twitter: true,
+  twitter: false,
   twitterUsername: "Mindsdb",
   cname: "www.mindsdb.com",
   //gaTrackingId: '',

@@ -9,7 +9,7 @@ const React = require('react');
 
 const CompLibrary = require('../../core/CompLibrary.js');
 
-const MarkdownBlock = CompLibrary.MarkdownBlock; 
+const MarkdownBlock = CompLibrary.MarkdownBlock;
 const Container = CompLibrary.Container;
 const GridBlock = CompLibrary.GridBlock;
 
@@ -26,7 +26,7 @@ class HomeSplash extends React.Component {
     const {baseUrl, docsUrl} = siteConfig;
     const docsPart = `${docsUrl ? `${docsUrl}/` : ''}`;
     const langPart = `${language ? `${language}/` : ''}`;
-    const docUrl = doc => `${baseUrl}${docsPart}${langPart}${doc}`;
+    const docUrl = doc => `${baseUrl}${docsPart}${doc}`; // @TODO go back to ${baseUrl}${docsPart}${langPart}${doc} once docs are server properly (with en in the path)
 
     const SplashContainer = props => (
       <div className="homeContainer">
@@ -56,7 +56,7 @@ class HomeSplash extends React.Component {
         <div className="inner">
           <ProjectTitle siteConfig={siteConfig} />
           <PromoSection>
-           
+
           </PromoSection>
         </div>
       </SplashContainer>
@@ -76,7 +76,7 @@ class Index extends React.Component {
         </div>
       </div>
     );
-    
+
     const Button = props => (
       <div className="pluginWrapper buttonWrapper">
         <a className="button" href={props.href} target={props.target}>
@@ -84,7 +84,7 @@ class Index extends React.Component {
         </a>
       </div>
     );
-    
+
     const Block = props => (
       <Container
         padding={['bottom', 'top']}
@@ -96,7 +96,7 @@ class Index extends React.Component {
           layout={props.layout}
         />
       </Container>
-    );   
+    );
 
     const Features = props => (
       <Block layout="fourColumn">
@@ -132,7 +132,7 @@ class Index extends React.Component {
         ]}
       </Block>
     );
-    
+
     const GetMindsdb = props => (
       <div
         className="productShowcaseSection paddingBottom downloadSection"

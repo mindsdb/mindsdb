@@ -205,9 +205,9 @@ class DataExtractor(BaseModule):
                 should_split_by_group = type(group_by) == list and len(group_by) > 0
 
                 if should_split_by_group:
-                    self.transaction.input_data.train_indexes[key] = self.transaction.input_data.all_indexes[key][0:round(length - length*TEST_TRAIN_RATIO)]
-                    self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][round(length - length*TEST_TRAIN_RATIO):int(round(length - length*TEST_TRAIN_RATIO) + round(length*TEST_TRAIN_RATIO/2))]
-                    self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][(round(length - length*TEST_TRAIN_RATIO) + round(length*TEST_TRAIN_RATIO/2)):]
+                    self.transaction.input_data.train_indexes[key] = self.transaction.input_data.all_indexes[key][0:round(length - length*CONFIG.TEST_TRAIN_RATIO)]
+                    self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][round(length - length*CONFIG.TEST_TRAIN_RATIO):int(round(length - length*CONFIG.TEST_TRAIN_RATIO) + round(length*CONFIG.TEST_TRAIN_RATIO/2))]
+                    self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][(round(length - length*CONFIG.TEST_TRAIN_RATIO) + round(length*CONFIG.TEST_TRAIN_RATIO/2)):]
 
                 else:
                     # make sure that the last in the time series are also the subset used for test

@@ -225,12 +225,7 @@ class DataExtractor(BaseModule):
                     test_window = (validation_window[1],length)
                     self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][test_window[0]:test_window[1]]
                     self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][validation_window[0]:validation_window[1]]
-
-            else:
-                # if its a predict transaction, we should trim so it only has as many as the window size
-                if is_time_series and train_metadata.window_size_samples is not None:
-                    self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][int(-train_metadata.window_size_samples):]
-
+                    
         # log some stats
         if self.transaction.metadata.type == TRANSACTION_LEARN:
 

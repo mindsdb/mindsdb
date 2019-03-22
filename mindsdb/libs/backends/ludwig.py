@@ -155,7 +155,7 @@ class LudwigBackend():
                     except:
                         ts_data_point = parse_datetime(ts_data_point).timestamp()
                     data[col].append(ts_data_point)
-                elif ludwig_dtype == 'image':
+                elif ludwig_dtype == 'no image':
                     img_path = self.transaction.input_data.data_array[row_ind][col_ind]
                     img_data = imread(img_path, flatten=True)[0]
                     data[col].append(img_data)

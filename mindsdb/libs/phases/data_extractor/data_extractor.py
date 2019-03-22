@@ -178,6 +178,9 @@ class DataExtractor(BaseModule):
 
         # create all indexes by group by, that is all the rows that belong to each group by
         self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY] = []
+        self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] = []
+        self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY] = []
+        self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY] = []
         for i, row in enumerate(self.transaction.input_data.data_array):
 
             if len(group_by) > 0:
@@ -206,8 +209,13 @@ class DataExtractor(BaseModule):
 
                 if should_split_by_group:
                     self.transaction.input_data.train_indexes[key] = self.transaction.input_data.all_indexes[key][0:round(length - length*CONFIG.TEST_TRAIN_RATIO)]
+                    self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].extend(self.transaction.input_data.train_indexes[key])
+
                     self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][round(length - length*CONFIG.TEST_TRAIN_RATIO):int(round(length - length*CONFIG.TEST_TRAIN_RATIO) + round(length*CONFIG.TEST_TRAIN_RATIO/2))]
+                    self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].extend(self.transaction.input_data.test_indexes[key])
+
                     self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][(round(length - length*CONFIG.TEST_TRAIN_RATIO) + round(length*CONFIG.TEST_TRAIN_RATIO/2)):]
+                    self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].extend(self.transaction.input_data.validation_indexes[key])
 
                 else:
                     # make sure that the last in the time series are also the subset used for test

@@ -157,18 +157,14 @@ class StatsGenerator(BaseModule):
                 for char in [',','\t','|',' ']:
                     try:
                         all_nr = True
-                        all_date = True
                         eles = element.rstrip(']').lstrip('[').split(char)
                         for ele in eles:
                             if not _is_number(ele):
                                 all_nr = False
-                            if not _get_date_type(ele):
-                                all_date = False
                     except:
                         all_nr = False
-                        all_date = False
                         pass
-                    if all_nr is True or all_date is True:
+                    if all_nr is True:
                         current_type_guess = DATA_TYPES.SEQUENTIAL
                         current_subtype_guess = DATA_SUBTYPES.ARRAY
                         break

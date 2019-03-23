@@ -12,17 +12,16 @@ class LudwigBackend():
     def __init__(self, transaction):
         self.transaction = transaction
 
-    def _translate_df_to_timeseries_format(self, df, model_definition):
+    def _translate_df_to_timeseries_format(self, df, model_definition, timeseries_cols):
         input_features = model_definition['input_features']
 
-
         other_col_names = []
+        timeseries_col_name = timeseries_cols[0]
         for feature_def in input_features:
-            if feature_def['type'] == 'sequence':
-                timeseries_col_name = feature_def['name']
-            elif feature_def['name'] not in self.transaction.persistent_model_metadata.model_group_by:
+            if feature_def['name'] not in self.transaction.persistent_model_metadata.model_group_by:
                 feature_def['type'] = 'sequence'
-                other_col_names.append(feature_def['name'])
+                if feature_def['name'] not in timeseries_cols:
+                    other_col_names.append(feature_def['name'])
 
         new_cols = {}
         for col in [*other_col_names,timeseries_col_name]:
@@ -120,9 +119,11 @@ class LudwigBackend():
             width = None
 
             if col in timeseries_cols:
-                ludwig_dtype = 'sequence'
                 encoder = 'rnn'
                 cell_type = 'gru_cudnn'
+
+            if col in timeseries_cols and data_subtype in DATA_SUBTYPES.ARRAY:
+                ludwig_dtype = 'sequence'
 
             elif data_subtype in (DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
                 ludwig_dtype = 'numerical'
@@ -211,13 +212,13 @@ class LudwigBackend():
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
 
-        is_timeseries = False
-        for deff in model_definition['input_features']:
-            if deff['type'] == 'sequence':
-                is_timeseries = True
+        if self.transaction.persistent_model_metadata.model_order_by is None:
+            timeseries_cols = []
+        else:
+            timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
 
-        if is_timeseries:
-            training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition)
+        if len(timeseries_cols) > 0 and model_definition['input_features'][timeseries_cols]['type'] != 'sequence':
+            predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)
 
         model = LudwigModel(model_definition)
 
@@ -237,13 +238,13 @@ class LudwigBackend():
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
         model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
 
-        is_timeseries = False
-        for deff in model_definition['input_features']:
-            if deff['type'] == 'sequence':
-                is_timeseries = True
+        if self.transaction.persistent_model_metadata.model_order_by is None:
+            timeseries_cols = []
+        else:
+            timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
 
-        if is_timeseries:
-            predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition)
+        if len(timeseries_cols) > 0 and model_definition['input_features'][timeseries_cols]['type'] != 'sequence':
+            predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)
 
         for ignore_col in ignore_columns:
             predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])

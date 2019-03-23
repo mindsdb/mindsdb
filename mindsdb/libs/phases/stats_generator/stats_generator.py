@@ -54,7 +54,6 @@ class StatsGenerator(BaseModule):
 
         return False
 
-
     def _is_number(self, string):
         """ Returns True if string is a number. """
         try:
@@ -129,7 +128,6 @@ class StatsGenerator(BaseModule):
         NOTE: type distribution is the count that this column has for belonging cells to each DATA_TYPE
         """
 
-
         type_dist = {}
         subtype_dist = {}
 
@@ -153,6 +151,27 @@ class StatsGenerator(BaseModule):
                 if subtype is not False:
                     current_type_guess = DATA_TYPES.DATE
                     current_subtype_guess = subtype
+
+            # Check if sequence
+            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
+                for char in [',','\t','|',' ']:
+                    try:
+                        all_nr = True
+                        all_date = True
+                        eles = element.rstrip(']').lstrip('[').split(char)
+                        for ele in eles:
+                            if not _is_number(ele):
+                                all_nr = False
+                            if not _get_date_type(ele):
+                                all_date = False
+                    except:
+                        all_nr = False
+                        all_date = False
+                        pass
+                    if all_nr is True or all_date is True:
+                        current_type_guess = DATA_TYPES.SEQUENTIAL
+                        current_subtype_guess = DATA_SUBTYPES.ARRAY
+                        break
 
             # Check if file
             if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':

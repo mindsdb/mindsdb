@@ -115,6 +115,9 @@ class LudwigBackend():
             ludwig_dtype = None
             encoder = None
             cell_type = None
+            in_memory = None
+            height = None
+            width = None
 
             if col in timeseries_cols:
                 ludwig_dtype = 'sequence'
@@ -137,6 +140,9 @@ class LudwigBackend():
             elif data_subtype in (DATA_SUBTYPES.IMAGE):
                 ludwig_dtype = 'image'
                 encoder = 'stacked_cnn'
+                in_memory = True
+                height = 256
+                width = 256
 
             elif data_subtype in (DATA_SUBTYPES.TEXT):
                 ludwig_dtype = 'text'
@@ -155,7 +161,7 @@ class LudwigBackend():
                     except:
                         ts_data_point = parse_datetime(ts_data_point).timestamp()
                     data[col].append(ts_data_point)
-                elif ludwig_dtype == 'image':
+                elif ludwig_dtype == 'no image':
                     img_path = self.transaction.input_data.data_array[row_ind][col_ind]
                     img_data = imread(img_path, flatten=True)[0]
                     data[col].append(img_data)
@@ -171,6 +177,23 @@ class LudwigBackend():
                     input_def['encoder'] = encoder
                 if cell_type is not None:
                     input_def['cell_type'] = cell_type
+                if in_memory is not None:
+                    input_def['in_memory'] = in_memory
+
+                if height is not None and width is not None:
+                    input_def['height'] = height
+                    input_def['width'] = width
+                    input_def['resize_image'] = True
+                    input_def['resize_method'] = 'crop_or_pad'
+                    model_definition['preprocessing'] = {
+                        'image': {
+                            'height': height
+                            ,'width': width
+                            ,'resize_image': True
+                            ,'resize_method': 'crop_or_pad'
+                        }
+                    }
+
                 model_definition['input_features'].append(input_def)
             else:
                 output_def = {
@@ -199,7 +222,7 @@ class LudwigBackend():
         model = LudwigModel(model_definition)
 
         # Figure out how to pass `model_load_path`
-        train_stats = model.train(training_dataframe, model_name=self.transaction.metadata.model_name)
+        train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.metadata.model_name)
 
         #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
         ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.metadata.model_name

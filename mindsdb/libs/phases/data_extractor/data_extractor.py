@@ -135,12 +135,7 @@ class DataExtractor(BaseModule):
 
 
     def run(self):
-
-        # Handle transactions differently depending on the type of query
-        # For now we only support LEARN and PREDICT
-
-        # Train metadata is the metadata that was used when training the model,
-        # note: that we need this train metadata even if we are predicting, so we can understand about the model
+        # note: that we need this train metadata even if we are predicting, since it contains information about the model model
         train_metadata = None
 
         if self.transaction.metadata.type == TRANSACTION_PREDICT:
@@ -182,52 +177,45 @@ class DataExtractor(BaseModule):
             group_by_col_indexes = [columns.index(group_by_column) for group_by_column in group_by]
 
         # create all indexes by group by, that is all the rows that belong to each group by
+        self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY] = []
+        self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] = []
+        self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY] = []
+        self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY] = []
         for i, row in enumerate(self.transaction.input_data.data_array):
 
-            #if len(group_by)>0:
-            #    group_by_value = hashtext(':'.join([row[group_by_index] for group_by_index in group_by_col_indexes]))
-            #else:
-            #    group_by_value = KEY_NO_GROUP_BY
+            if len(group_by) > 0:
+                group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in group_by_col_indexes])
 
-            # create the list if it doesnt exist yet for this group_by_value
-            group_by_value = KEY_NO_GROUP_BY
-            if group_by_value not in self.transaction.input_data.all_indexes:
-                self.transaction.input_data.all_indexes[group_by_value] = []
+                if group_by_value not in self.transaction.input_data.all_indexes:
+                    self.transaction.input_data.all_indexes[group_by_value] = []
 
-            self.transaction.input_data.all_indexes[group_by_value] += [i]
+                self.transaction.input_data.all_indexes[group_by_value] += [i]
 
+            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY] += [i]
 
         # move indexes to corresponding train, test, validation, etc and trim input data accordingly
         for key in self.transaction.input_data.all_indexes:
+            if len(self.transaction.input_data.all_indexes) > 1 and key == KEY_NO_GROUP_BY:
+                continue
 
             length = len(self.transaction.input_data.all_indexes[key])
-
             if self.transaction.metadata.type == TRANSACTION_LEARN:
                 sample_size = int(calculate_sample_size(population_size=length,
                                                         margin_error=self.transaction.metadata.sample_margin_of_error,
                                                         confidence_level=self.transaction.metadata.sample_confidence_level))
 
                 # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
-                should_split_by_group = False #True if (type(group_by) == list and len(group_by) > 0 and self.transaction.metadata.window_size > length * CONFIG.TEST_TRAIN_RATIO) else False
-                # only start sample from row > 0 if there is enough data for train, test, validation subsets, which is that the test subset has to be greater than the window size
-                if self.transaction.metadata.window_size_samples is not None:
-                    start_sample_from_row = 0 if (should_split_by_group and self.transaction.metadata.window_size_samples > sample_size * CONFIG.TEST_TRAIN_RATIO) else length - sample_size
-                else:
-                    start_sample_from_row = 0
-
-                # resize the group bucket by the start_sample_from_row
-                self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][start_sample_from_row:]
-                # update length
-                length = len(self.transaction.input_data.all_indexes[key])
+                should_split_by_group = type(group_by) == list and len(group_by) > 0
 
                 if should_split_by_group:
+                    self.transaction.input_data.train_indexes[key] = self.transaction.input_data.all_indexes[key][0:round(length - length*CONFIG.TEST_TRAIN_RATIO)]
+                    self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].extend(self.transaction.input_data.train_indexes[key])
 
-                    if float(random.random()) <= (1-2*CONFIG.TEST_TRAIN_RATIO):
-                        self.transaction.input_data.train_indexes[key] = self.transaction.input_data.all_indexes[key]
-                    elif float(random.random()) <= 0.5:
-                        self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key]
-                    else:
-                        self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key]
+                    self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][round(length - length*CONFIG.TEST_TRAIN_RATIO):int(round(length - length*CONFIG.TEST_TRAIN_RATIO) + round(length*CONFIG.TEST_TRAIN_RATIO/2))]
+                    self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].extend(self.transaction.input_data.test_indexes[key])
+
+                    self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][(round(length - length*CONFIG.TEST_TRAIN_RATIO) + round(length*CONFIG.TEST_TRAIN_RATIO/2)):]
+                    self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].extend(self.transaction.input_data.validation_indexes[key])
 
                 else:
                     # make sure that the last in the time series are also the subset used for test
@@ -237,12 +225,7 @@ class DataExtractor(BaseModule):
                     test_window = (validation_window[1],length)
                     self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][test_window[0]:test_window[1]]
                     self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][validation_window[0]:validation_window[1]]
-
-            else:
-                # if its a predict transaction, we should trim so it only has as many as the window size
-                if is_time_series and train_metadata.window_size_samples is not None:
-                    self.transaction.input_data.all_indexes[key] = self.transaction.input_data.all_indexes[key][int(-train_metadata.window_size_samples):]
-
+                    
         # log some stats
         if self.transaction.metadata.type == TRANSACTION_LEARN:
 

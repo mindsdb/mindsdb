@@ -1,14 +1,15 @@
 
-import re
-import requests
 import platform
-import uuid
+import re
 import urllib
-
-from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.version import mindsdb_version as MINDSDB_VERSION
-from mindsdb.config import CONFIG
+import uuid
 from pathlib import Path
+
+import requests
+
+from mindsdb.__about__ import __version__
+from mindsdb.config import CONFIG
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 def get_key_for_val(key, dict_map):
@@ -99,7 +100,7 @@ def check_for_updates():
     if file_path.is_file():
         token = open(mdb_file).read()
     else:
-        token = '{system}|{version}|{uid}'.format(system=platform.system(), version=MINDSDB_VERSION, uid=uuid_str)
+        token = '{system}|{version}|{uid}'.format(system=platform.system(), version=__version, uid=uuid_str)
         try:
             open(mdb_file,'w').write(token)
         except:
@@ -115,7 +116,7 @@ def check_for_updates():
         # TODO: Extract version, compare with version in version.py
         ret = r.json()
 
-        if 'version' in ret and ret['version']!= MINDSDB_VERSION:
+        if 'version' in ret and ret['version']!= __version__:
             pass
             #log.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
         else:

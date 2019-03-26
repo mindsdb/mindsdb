@@ -774,7 +774,7 @@ class StatsGenerator(BaseModule):
             # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word
-                is_full_text = True if data_subtype == DATA_SUBTYPES.TEXT else False
+                is_full_text = True if curr_data_subtype == DATA_SUBTYPES.TEXT else False
                 dictionary, histogram = self._get_words_dictionary(col_data, is_full_text)
 
                 # if no words, then no dictionary

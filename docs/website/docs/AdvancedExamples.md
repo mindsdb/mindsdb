@@ -36,5 +36,6 @@ For any sort of media files, simple provide the full path to the file in the col
 
 Please provide the full path to a file on your local machine, not a url or the binary data from an image loaded up in a dataframe.
 
+Currently the timeline on supporting multimedia output is still undecided, if you need that feature or want to implement, feel free to contact us. That being said, image outputs might actually work, we just haven't tested anything yet.
 
 ## Timeseries predictions

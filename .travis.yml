@@ -13,7 +13,7 @@ notifications:
 cache: pip
 # install dependencies
 install:
-  - travis_wait pip install mindsdb
+  - travis_wait pip install -e .
 before_script: cd integration_testing
 # run tests
 script:

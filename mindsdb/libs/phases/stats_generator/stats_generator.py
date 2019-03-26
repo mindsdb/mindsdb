@@ -159,7 +159,7 @@ class StatsGenerator(BaseModule):
                         all_nr = True
                         eles = element.rstrip(']').lstrip('[').split(char)
                         for ele in eles:
-                            if not _is_number(ele):
+                            if not self._is_number(ele):
                                 all_nr = False
                     except:
                         all_nr = False
@@ -646,7 +646,8 @@ class StatsGenerator(BaseModule):
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
         population_size = len(self.transaction.input_data.data_array)
         sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
-
+        if sample_size > 800:
+            sample_size = 800
         # get the indexes of randomly selected rows given the population size
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))

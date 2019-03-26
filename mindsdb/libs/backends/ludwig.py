@@ -121,8 +121,11 @@ class LudwigBackend():
             if col in timeseries_cols:
                 encoder = 'rnn'
                 cell_type = 'gru_cudnn'
+                ludwig_dtype = 'order_by_col'
 
-            if col in timeseries_cols and data_subtype in DATA_SUBTYPES.ARRAY:
+            if data_subtype in DATA_SUBTYPES.ARRAY:
+                encoder = 'rnn'
+                cell_type = 'gru_cudnn'
                 ludwig_dtype = 'sequence'
 
             elif data_subtype in (DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
@@ -151,10 +154,10 @@ class LudwigBackend():
             else:
                 # @TODO Maybe regress to some other similar subtype or use the principal data type for certain values
                 self.transaction.log.error(f'The Ludwig backend doesn\'t support the "{data_subtype}" data type !')
-                raise Exception(f'Data type "{data_subtype}" no supported by Ludwig model backend')
+                raise Exception('Data type "{}" no supported by Ludwig model backend'.format(data_subtype))
 
             for row_ind in indexes:
-                if ludwig_dtype == 'sequence':
+                if ludwig_dtype == 'order_by_col':
                     ts_data_point = self.transaction.input_data.data_array[row_ind][col_ind]
 
                     try:
@@ -162,10 +165,10 @@ class LudwigBackend():
                     except:
                         ts_data_point = parse_datetime(ts_data_point).timestamp()
                     data[col].append(ts_data_point)
-                elif ludwig_dtype == 'no image':
-                    img_path = self.transaction.input_data.data_array[row_ind][col_ind]
-                    img_data = imread(img_path, flatten=True)[0]
-                    data[col].append(img_data)
+                elif ludwig_dtype == 'sequence':
+                    arr_str = self.transaction.input_data.data_array[row_ind][col_ind]
+                    arr = list(map(float,arr_str.split(' ')))
+                    data[col].append(arr)
                 else:
                     data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
@@ -217,8 +220,8 @@ class LudwigBackend():
         else:
             timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
 
-        if len(timeseries_cols) > 0 and model_definition['input_features'][timeseries_cols]['type'] != 'sequence':
-            predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)
+        if len(timeseries_cols) > 0 and model_definition['input_features'][timeseries_cols[0]]['type'] != 'sequence':
+            training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols)
 
         model = LudwigModel(model_definition)
 

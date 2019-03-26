@@ -130,6 +130,7 @@ class StatsGenerator(BaseModule):
 
         type_dist = {}
         subtype_dist = {}
+        additional_info = {}
 
         # calculate type_dist
         for element in data:
@@ -165,6 +166,7 @@ class StatsGenerator(BaseModule):
                         all_nr = False
                         pass
                     if all_nr is True:
+                        additional_info['separator'] = char
                         current_type_guess = DATA_TYPES.SEQUENTIAL
                         current_subtype_guess = DATA_SUBTYPES.ARRAY
                         break
@@ -217,7 +219,7 @@ class StatsGenerator(BaseModule):
             type_dist[curr_data_type] = type_dist.pop('Unknown')
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
-        return curr_data_type, curr_data_subtype, type_dist, subtype_dist
+        return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info
 
     def _get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
@@ -673,7 +675,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist = self._get_column_data_type(col_data)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data)
 
             # NOTE: Enable this if you want to assume that some numeric values can be text
             # We noticed that by default this should not be the behavior
@@ -772,7 +774,7 @@ class StatsGenerator(BaseModule):
             # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word
-                is_full_text = True if data_type == DATA_TYPES.SEQUENTIAL else False
+                is_full_text = True if data_subtype == DATA_SUBTYPES.TEXT else False
                 dictionary, histogram = self._get_words_dictionary(col_data, is_full_text)
 
                 # if no words, then no dictionary
@@ -789,7 +791,7 @@ class StatsGenerator(BaseModule):
                         dictionary = []
                         dictionary_available = False
                 col_stats = {
-                    'data_type': DATA_TYPES.SEQUENTIAL if is_full_text else data_type,
+                    'data_type': data_type,
                     'data_subtype': curr_data_subtype,
                     "dictionary": dictionary,
                     "dictionaryAvailable": dictionary_available,
@@ -802,6 +804,8 @@ class StatsGenerator(BaseModule):
             stats[col_name]['column'] = col_name
             stats[col_name]['empty_cells'] = empty_count[col_name]
             stats[col_name]['empty_percentage'] = empty_count[col_name] * 100 / column_count[col_name]
+            if 'separator' in additional_info:
+                stats[col_name]['separator'] = additional_info['separator']
             col_data_dict[col_name] = col_data
 
         for i, col_name in enumerate(all_sampled_data):

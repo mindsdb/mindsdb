@@ -134,9 +134,11 @@ class LudwigBackend():
             elif data_subtype in (DATA_SUBTYPES.BINARY):
                 ludwig_dtype = 'binary'
 
-            elif data_subtype in (DATA_SUBTYPES.DATE, DATA_SUBTYPES.TIMESTAMP):
+            elif data_subtype in (DATA_SUBTYPES.DATE):
                 ludwig_dtype = 'category'
-                #encoder = 'stacked_cnn'
+
+            elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
+                ludwig_dtype = 'numerical'
 
             elif data_subtype in (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE):
                 ludwig_dtype = 'category'
@@ -165,10 +167,16 @@ class LudwigBackend():
                     except:
                         ts_data_point = parse_datetime(ts_data_point).timestamp()
                     data[col].append(ts_data_point)
+
                 elif ludwig_dtype == 'sequence':
                     arr_str = self.transaction.input_data.data_array[row_ind][col_ind]
                     arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.persistent_model_metadata.column_stats[col]['separator'])))
                     data[col].append(arr)
+
+                elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
+                    unix_ts = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind]).timestamp()
+                    data[col].append(unix_ts)
+                    
                 else:
                     data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 

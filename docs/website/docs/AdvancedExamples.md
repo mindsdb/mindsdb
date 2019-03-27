@@ -74,7 +74,7 @@ mdb.learn(
 results = mdb.predict(when_data='assembly_machines_data.tsv')
 ```
 
-### Other approaches to timeseries predictions
+### Other approaches to timeseries data
 
 Another way of approaching a timeseries prediction, if you don't want to use mindsdb's interface, is to simply include array's for the non-group-by values in your rows.
 

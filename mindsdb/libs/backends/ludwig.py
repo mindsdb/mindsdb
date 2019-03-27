@@ -167,7 +167,7 @@ class LudwigBackend():
                     data[col].append(ts_data_point)
                 elif ludwig_dtype == 'sequence':
                     arr_str = self.transaction.input_data.data_array[row_ind][col_ind]
-                    arr = list(map(float,arr_str.split(self.transaction.persistent_model_metadata.column_stats[col]['separator'])))
+                    arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.persistent_model_metadata.column_stats[col]['separator'])))
                     data[col].append(arr)
                 else:
                     data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])

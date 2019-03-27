@@ -73,3 +73,24 @@ mdb.learn(
 
 results = mdb.predict(when_data='assembly_machines_data.tsv')
 ```
+
+### Other approaches to timeseries predictions
+
+Another way of approaching a timeseries prediction, if you don't want to use mindsdb's interface, is to simply include array's for the non-group-by values in your rows.
+
+For example, to train, you could use the following csv:
+
+```python
+X vlas,previous Y vlas, Y now
+[1 2 3 4],[1 4 9],16
+[2,3,4,5],[4,9,16],25
+[3,4,5,6],[9,16,25],36
+```
+
+And your model would be fit to predict the `Y now` column for this csv:
+
+```python
+X vlas,previous Y vlas
+[7,8,9,10][49,64,81]
+[33,34,35,36][1089,1156,1225]
+```

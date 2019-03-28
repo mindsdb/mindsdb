@@ -44,3 +44,6 @@ Werkzeug>=0.14.1
 zope.interface>=4.5.0
 PyHamcrest>=1.9.0
 colorlog>=4.0.2
+tensorflow>=1.13.1
+tensorflow-estimator>=1.13.0
+ludwig>=0.1.0

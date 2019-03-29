@@ -1,4 +1,5 @@
 import setuptools
+import subprocess
 
 about = {}
 with open("mindsdb/__about__.py") as fp:
@@ -27,5 +28,10 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ),
-    python_requires=">=3.3"
+    python_requires=">=3.6"
 )
+
+try:
+    subprocess.call(['python3','-m','spacy','download','en'])
+except:
+    subprocess.call(['python','-m','spacy','download','en'])

@@ -11,6 +11,7 @@ from mindsdb.libs.backends.ludwig import LudwigBackend
 from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
 
+import time
 import _thread
 import traceback
 import importlib
@@ -111,27 +112,24 @@ class Transaction:
             self.persistent_model_metadata.model_group_by = self.metadata.model_group_by
             self.persistent_model_metadata.window_size_seconds = self.metadata.window_size_seconds
             self.persistent_model_metadata.window_size_samples = self.metadata.window_size_samples
-            self.persistent_model_metadata.insert()
 
             self._call_phase_module('StatsGenerator')
             self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
-            self.persistent_model_metadata.update()
 
             if self.persistent_model_metadata.model_backend == 'ludwig':
                 self.model_backend = LudwigBackend(self)
                 self.model_backend.train()
-                self.persistent_model_metadata.update()
 
             self._call_phase_module('ModelAnalyzer')
 
+            self.persistent_model_metadata.insert()
+            self.persistent_model_metadata.update()
+            
             return
         except Exception as e:
-
             self.persistent_model_metadata.current_phase = MODEL_STATUS_ERROR
             self.persistent_model_metadata.error_msg = traceback.print_exc()
-            self.persistent_model_metadata.update()
-            self.log.error(self.persistent_model_metadata.error_msg)
-            self.log.error(e)
+            self.log.error(str(e))
             raise e
 
 

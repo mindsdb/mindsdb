@@ -156,7 +156,8 @@ class LudwigBackend():
             else:
                 # @TODO Maybe regress to some other similar subtype or use the principal data type for certain values
                 self.transaction.log.error(f'The Ludwig backend doesn\'t support the "{data_subtype}" data type !')
-                raise Exception('Data type "{}" no supported by Ludwig model backend'.format(data_subtype))
+                estr = f'Data subtype "{data_subtype}" no supported by Ludwig model backend'
+                raise Exception(estr)
 
             for row_ind in indexes:
                 if ludwig_dtype == 'order_by_col':

@@ -209,7 +209,7 @@ class StatsGenerator(BaseModule):
         max_data_subtype = 0
         if curr_data_type != 'Unknown':
             for data_subtype in subtype_dist:
-                if subtype_dist[data_subtype] > max_data_subtype and data_subtype in curr_data_type:
+                if subtype_dist[data_subtype] > max_data_subtype and data_subtype in DATA_TYPES_SUBTYPES.subtypes[curr_data_type]:
                     curr_data_subtype = data_subtype
                     max_data_subtype = subtype_dist[data_subtype]
 

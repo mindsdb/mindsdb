@@ -96,4 +96,3 @@ class PersistentObjectMongo(ObjectDict):
             ret.append(class_object)
 
         return ret
-

@@ -35,7 +35,7 @@ class ModelAnalyzer(BaseModule):
         ignore_all_but_one = [[coli for coli in non_predict_columns if coli!=col] for col in non_predict_columns]
         ignore_column_options = ignore_none + ignore_just_one + ignore_all_but_one
 
-        ### Create the real values for the created columns (maybe move to a new 'validate' method of the mode backend ?)
+        # Create the real values for the created columns (maybe move to a new 'validate' method of the mode backend ?)
         validation_data = {}
 
         indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]

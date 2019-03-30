@@ -12,7 +12,7 @@ import  mindsdb.libs.constants.mindsdb as CONST
 class Config:
     # These are the paths for storing data regarding mindsdb models and model info
     MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', getMindsDBStoragePath())
-
+    
     LOCALSTORE_PATH_TEMPLATE = '{storage_path}/local_jsondb_store'
     LOCALSTORE_PATH = ifEnvElse('LOCALSTORE_PATH', LOCALSTORE_PATH_TEMPLATE.format(storage_path=MINDSDB_STORAGE_PATH))
 

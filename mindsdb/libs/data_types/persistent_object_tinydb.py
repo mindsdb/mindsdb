@@ -12,7 +12,6 @@ class PersistentObjectTinydb(PersistentObjectMongo):
     _pkey = []
 
     def __init__(self):
-
         self._mongo = TinyMongoClient(CONFIG.LOCALSTORE_PATH)
         try:
             self._collection =  self._mongo.mindsdb[self._entity_name]

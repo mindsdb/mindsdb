@@ -16,9 +16,7 @@ class StatsLoader(BaseModule):
 
         if info is not None and len(info)>0:
             self.transaction.persistent_ml_model_info = info[0]
-
         else:
-
             self.log.error('No model found for this statement, please check if model_name {model_name} was trained'.format(model_name=self.transaction.metadata.model_name))
 
 def test():

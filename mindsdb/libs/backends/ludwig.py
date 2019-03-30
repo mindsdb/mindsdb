@@ -156,7 +156,8 @@ class LudwigBackend():
             else:
                 # @TODO Maybe regress to some other similar subtype or use the principal data type for certain values
                 self.transaction.log.error(f'The Ludwig backend doesn\'t support the "{data_subtype}" data type !')
-                raise Exception('Data type "{}" no supported by Ludwig model backend'.format(data_subtype))
+                estr = f'Data subtype "{data_subtype}" no supported by Ludwig model backend'
+                raise Exception(estr)
 
             for row_ind in indexes:
                 if ludwig_dtype == 'order_by_col':
@@ -176,7 +177,7 @@ class LudwigBackend():
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
                     unix_ts = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind]).timestamp()
                     data[col].append(unix_ts)
-                    
+
                 else:
                     data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
@@ -228,7 +229,7 @@ class LudwigBackend():
         else:
             timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
 
-        if len(timeseries_cols) > 0 and model_definition['input_features'][timeseries_cols[0]]['type'] != 'sequence':
+        if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols)
 
         model = LudwigModel(model_definition)
@@ -254,7 +255,7 @@ class LudwigBackend():
         else:
             timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
 
-        if len(timeseries_cols) > 0 and model_definition['input_features'][timeseries_cols]['type'] != 'sequence':
+        if len(timeseries_cols) > 0:
             predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)
 
         for ignore_col in ignore_columns:

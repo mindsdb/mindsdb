@@ -1,4 +1,4 @@
-from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_string
+from mindsdb.libs.helpers.general_helpers import pickle_obj, unpickle_obj
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.sampler import Sampler
@@ -17,16 +17,23 @@ class ModelAnalyzer(BaseModule):
         # Runs the model on the validation set in order to fit a probabilistic model that will evaluate the accuracy of future predictions
         """
 
-        output_columns = output_columns
-        input_columns = [col for col in self.transaction.persistent_model_metadata.column if col not in output_columns ]
+        output_columns = self.transaction.persistent_model_metadata.predict_columns
+        input_columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in output_columns]
+        validation_dataset = {}
+
+        for row_ind in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
+            for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns):
+                if col not in validation_dataset:
+                    validation_dataset[col] = []
+                validation_dataset[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
         # Test some hypotheses about our columns
         column_evaluator = ColumnEvaluator()
-        column_importances = column_evaluator.run(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
-        full_dataset=self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY], stats=self.transaction.persistent_model_metadata.column_stats)
-        print(column_importances)
+        column_importances = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
+        full_dataset=validation_dataset, stats=self.transaction.persistent_model_metadata.column_stats)
 
-        exit()
+        print(column_importances)
+        self.transaction.persistent_model_metadata.column_importances = column_importances
 
         # Create the probabilistic validators for each of the predict column
         probabilistic_validators = {}
@@ -52,7 +59,7 @@ class ModelAnalyzer(BaseModule):
             for pcol in output_columns:
                 for i in range(len(predictions[pcol])):
                     predicted_val = predictions[pcol][i]
-                    real_val = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY][pcol][i]
+                    real_val = validation_dataset[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
 
 
@@ -62,7 +69,7 @@ class ModelAnalyzer(BaseModule):
         # Pickle for later use
         self.transaction.persistent_model_metadata.probabilistic_validators = {}
         for col in probabilistic_validators:
-            self.transaction.persistent_model_metadata.probabilistic_validators[col] = probabilistic_validators[col].pickle()
+            self.transaction.persistent_model_metadata.probabilistic_validators[col] = pickle_obj(probabilistic_validators[col])
 
         self.transaction.persistent_model_metadata.update()
 

@@ -125,19 +125,32 @@ def check_for_updates():
     except:
         log.warning('could not check for MindsDB updates')
 
-def pickle(object):
+def pickle_obj(object_to_pickle):
     """
     Returns a version of self that can be serialized into mongodb or tinydb
-
-    :return: The data of a ProbabilisticValidator serialized via pickle and decoded as a latin1 string
+    :return: The data of an object serialized via pickle and decoded as a latin1 string
     """
 
-    return pickle.dumps(object).decode(encoding='latin1')
+    return pickle.dumps(object_to_pickle).decode(encoding='latin1')
 
 
-def unpickle(pickle_string):
+def unpickle_obj(pickle_string):
     """
     :param pickle_string: A latin1 encoded python str containing the pickle data
-    :return: Returns a ProbabilisticValidator object generated from the pickle string
+    :return: Returns an object generated from the pickle string
     """
     return pickle.loads(pickle_string.encode(encoding='latin1'))
+
+def evaluate_accuracy(predictions, real_values, col_stats, output_columns):
+    score = 0
+    for output_column in output_columns:
+        cummulative_scores = 0
+        for i in range(len(real_values[output_column])):
+            if predictions[output_column][i] == real_values[output_column][i]:
+                cummulative_scores += 1
+
+        score += cummulative_scores/len(predictions[output_column])
+    score = score/len(output_columns)
+    if score == 0:
+        score = 0.00000001
+    return score

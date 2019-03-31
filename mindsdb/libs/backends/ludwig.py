@@ -269,5 +269,5 @@ class LudwigBackend():
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')
             predictions = predictions.rename(columns = {col_name: col_name_normalized})
-
+            
         return predictions

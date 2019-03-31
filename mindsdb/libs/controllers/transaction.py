@@ -10,6 +10,7 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.backends.ludwig import LudwigBackend
 from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
+from mindsdb.libs.helpers.general_helpers import unpickle_obj
 
 import time
 import _thread
@@ -156,7 +157,8 @@ class Transaction:
         :return:
         """
 
-        self._call_phase_module('StatsLoader')
+        self.transaction.persistent_model_metadata = self.transaction.persistent_model_metadata.find_one(self.transaction.persistent_model_metadata.getPkey())
+        
         if self.persistent_model_metadata is None:
             self.log.error('No metadata found for this model')
             return
@@ -187,7 +189,7 @@ class Transaction:
                 self.output_data.data[col].append(cell)
 
         for predicted_col in self.persistent_model_metadata.predict_columns:
-            probabilistic_validator = ProbabilisticValidator.unpickle(self.persistent_model_metadata.probabilistic_validators[predicted_col])
+            probabilistic_validator = unpickle_obj(self.persistent_model_metadata.probabilistic_validators[predicted_col])
 
             predicted_values = predictions[predicted_col]
             self.output_data.data[predicted_col] = predicted_values

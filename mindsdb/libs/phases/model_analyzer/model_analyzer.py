@@ -18,12 +18,13 @@ class ModelAnalyzer(BaseModule):
         """
 
         output_columns = output_columns
-        input_columns = [col if col not in output_columns for col in self.transaction.persistent_model_metadata.column]
+        input_columns = [col for col in self.transaction.persistent_model_metadata.column if col not in output_columns ]
 
         # Test some hypotheses about our columns
-        hypothesis_executor = ColumnEvaluator()
-        column_importance = hypothesis_executor.run(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
+        column_evaluator = ColumnEvaluator()
+        column_importances = column_evaluator.run(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
         full_dataset=self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY], stats=self.transaction.persistent_model_metadata.column_stats)
+        print(column_importances)
 
         exit()
 

@@ -4,7 +4,6 @@ from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.data_types.probability_evaluation import ProbabilityEvaluation
 import numpy as np
-import pickle
 
 
 class ProbabilisticValidator():
@@ -37,23 +36,6 @@ class ProbabilisticValidator():
             self.bucket_keys = [i for i in range(len(self.buckets))]
 
         self.data_type = data_type
-
-    def pickle(self):
-        """
-        Returns a version of self that can be serialized into mongodb or tinydb
-
-        :return: The data of a ProbabilisticValidator serialized via pickle and decoded as a latin1 string
-        """
-
-        return pickle.dumps(self).decode(encoding='latin1')
-
-    @staticmethod
-    def unpickle(pickle_string):
-        """
-        :param pickle_string: A latin1 encoded python str containing the pickle data
-        :return: Returns a ProbabilisticValidator object generated from the pickle string
-        """
-        return pickle.loads(pickle_string.encode(encoding='latin1'))
 
     @staticmethod
     def _closest(arr, value):

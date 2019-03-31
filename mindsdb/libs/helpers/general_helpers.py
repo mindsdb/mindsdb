@@ -1,9 +1,9 @@
-
 import platform
 import re
 import urllib
 import uuid
 from pathlib import Path
+import pickle
 
 import requests
 
@@ -124,3 +124,20 @@ def check_for_updates():
 
     except:
         log.warning('could not check for MindsDB updates')
+
+def pickle(object):
+    """
+    Returns a version of self that can be serialized into mongodb or tinydb
+
+    :return: The data of a ProbabilisticValidator serialized via pickle and decoded as a latin1 string
+    """
+
+    return pickle.dumps(object).decode(encoding='latin1')
+
+
+def unpickle(pickle_string):
+    """
+    :param pickle_string: A latin1 encoded python str containing the pickle data
+    :return: Returns a ProbabilisticValidator object generated from the pickle string
+    """
+    return pickle.loads(pickle_string.encode(encoding='latin1'))

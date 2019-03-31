@@ -8,7 +8,7 @@ from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOu
 from mindsdb.libs.data_types.model_data import ModelData
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.backends.ludwig import LudwigBackend
-from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
+from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
 
 import time
@@ -124,7 +124,7 @@ class Transaction:
 
             self.persistent_model_metadata.insert()
             self.persistent_model_metadata.update()
-            
+
             return
         except Exception as e:
             self.persistent_model_metadata.current_phase = MODEL_STATUS_ERROR

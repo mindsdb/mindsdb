@@ -177,7 +177,11 @@ def evaluate_accuracy(predictions, real_values, col_stats, output_columns):
     for output_column in output_columns:
         cummulative_scores = 0
         for i in range(len(real_values[output_column])):
-            if predictions[output_column][i] == real_values[output_column][i]:
+            pred_val_bucket = get_value_bucket(predictions[output_column][i])
+            if pred_val_bucket == -1:
+                if predictions[output_column][i] == real_values[output_column][i]:
+                    cummulative_scores += 1
+            elif pred_val_bucket == get_value_bucket(real_values[output_column][i]):
                 cummulative_scores += 1
 
         score += cummulative_scores/len(predictions[output_column])

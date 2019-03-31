@@ -266,9 +266,11 @@ def test_multilabel_prediction():
 
     try:
         results = mdb.predict(when_data=test_file_name)
-        for row in results:
+        for i in range(len(results)):
+            row = results[i]
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
             for col in expect_columns:
+                print(row[col])
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
                     logger.debug('Got row: {}'.format(row))

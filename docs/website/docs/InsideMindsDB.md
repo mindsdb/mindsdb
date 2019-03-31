@@ -39,10 +39,6 @@ generated values to plot some interesting information about the data (e.g. data 
 Finally, the various stats are passed on as part of the metadata, so that further phases and the model itself can use them.
 
 
-## StatsLoader
-
-There are some transaction such as PREDICT for which the statistical information should be already known from a previous TRAIN. This phase loads the right stats in the transaction metadata.
-
 ## Model Backend
 
 * **ModelTrainer**: The model backend will feed the data to a machine learning framework which does the training and predicting. Currently the two learning backends we are working

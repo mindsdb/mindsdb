@@ -157,8 +157,8 @@ class Transaction:
         :return:
         """
 
-        self.transaction.persistent_model_metadata = self.transaction.persistent_model_metadata.find_one(self.transaction.persistent_model_metadata.getPkey())
-        
+        self.persistent_model_metadata = self.persistent_model_metadata.find_one(self.persistent_model_metadata.getPkey())
+
         if self.persistent_model_metadata is None:
             self.log.error('No metadata found for this model')
             return

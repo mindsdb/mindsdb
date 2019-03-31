@@ -250,6 +250,7 @@ def test_multilabel_prediction():
     try:
         mdb.learn(from_data=train_file_name, to_predict=label_headers)
         logger.info(f'--------------- Learning ran succesfully ---------------')
+        mdb.export()
     except:
         print(traceback.format_exc())
         logger.error(f'Failed during the training !')

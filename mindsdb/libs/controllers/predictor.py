@@ -1,6 +1,5 @@
-
+import shutil
 import os
-
 import _thread
 import uuid
 import traceback
@@ -63,17 +62,18 @@ class Predictor:
             error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
             raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
-
-
-
-    def export(self, model_zip_file):
+    def export(self, model_zip_file='mindsdb_storage.zip'):
         """
         If you want to export this mind to a file
         :param model_zip_file: this is the full_path where you want to store a mind to, it will be a zip file
 
         :return: bool (True/False) True if mind was exported successfully
         """
-        pass
+        try:
+            shutil.make_archive(model_zip_file, 'zip', CONFIG.MINDSDB_STORAGE_PATH)
+            ret
+        except:
+            return False
 
 
     def load(self, model_zip_file):
@@ -84,7 +84,6 @@ class Predictor:
         :return: bool (True/False) True if mind was importerd successfully
         """
         pass
-
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,

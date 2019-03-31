@@ -7,7 +7,7 @@ class TransactionOutputRow:
         return self.transaction_output.data[item][self.row_index]
 
     def __contains__(self, item):
-        return item in self.transaction_output.columns
+        return item in self.transaction_output.data.keys()
 
     def as_dict(self):
         return {key:self.transaction_output.data[key][self.row_index] for key in self.transaction_output.data}
@@ -21,7 +21,7 @@ class TransactionOutputRow:
 
     def as_list(self):
         #Note that here we will not output the confidence columns
-        return [self.transaction_output.evaluations[col][self.row_index] for col in self.transaction_output.columns]
+        return [self.transaction_output.evaluations[col][self.row_index] for col in self.transaction_output.transaction.persistent_model_metadata.columns]
 
     @property
     def _predicted_values(self):

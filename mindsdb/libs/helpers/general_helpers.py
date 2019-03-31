@@ -148,6 +148,7 @@ def closest(arr, value):
     """
 
     for i,ele in enumerate(arr):
+        value = float(value)
         if ele > value:
             return i - 1
 
@@ -164,10 +165,10 @@ def get_value_bucket(value, buckets, col_stats):
         else:
             bucket = -1 #Index for values no in the list
 
-    elif col_stats['data_subtype'] in (DATA_SUBTYPES.DATE, DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
+    elif col_stats['data_subtype'] in (DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
         bucket = closest(buckets, value)
     else:
-        bucket = -1
+        bucket = None
 
     return bucket
 
@@ -176,12 +177,17 @@ def evaluate_accuracy(predictions, real_values, col_stats, output_columns):
     score = 0
     for output_column in output_columns:
         cummulative_scores = 0
+        if 'percentage_buckets' in col_stats[output_column]:
+            bucket = col_stats[output_column]['percentage_buckets']
+        else:
+            bucket = None
+
         for i in range(len(real_values[output_column])):
-            pred_val_bucket = get_value_bucket(predictions[output_column][i])
-            if pred_val_bucket == -1:
+            pred_val_bucket = get_value_bucket(predictions[output_column][i], bucket, col_stats[output_column])
+            if pred_val_bucket is None:
                 if predictions[output_column][i] == real_values[output_column][i]:
                     cummulative_scores += 1
-            elif pred_val_bucket == get_value_bucket(real_values[output_column][i]):
+            elif pred_val_bucket == get_value_bucket(real_values[output_column][i], bucket, col_stats[output_column]):
                 cummulative_scores += 1
 
         score += cummulative_scores/len(predictions[output_column])

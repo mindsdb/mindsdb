@@ -1,7 +1,7 @@
 import pickle
 
 
-class HypothesisExecutor():
+class ColumnEvaluator():
     """
     # The Hypothesis Executor is responsible for testing out various scenarios
     regarding the model, in order to determine things such as the importance of

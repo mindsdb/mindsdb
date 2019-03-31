@@ -2,7 +2,8 @@ from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_str
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.sampler import Sampler
-from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator, HypothesisExecutor
+from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
+from mindsdb.libs.model_examination.column_evaluator import ColumnEvaluator
 
 import pandas as pd
 import numpy as np
@@ -20,7 +21,7 @@ class ModelAnalyzer(BaseModule):
         input_columns = [col if col not in output_columns for col in self.transaction.persistent_model_metadata.column]
 
         # Test some hypotheses about our columns
-        hypothesis_executor = HypothesisExecutor()
+        hypothesis_executor = ColumnEvaluator()
         column_importance = hypothesis_executor.run(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
         full_dataset=self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY], stats=self.transaction.persistent_model_metadata.column_stats)
 

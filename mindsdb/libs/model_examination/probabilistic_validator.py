@@ -7,11 +7,9 @@ import numpy as np
 import pickle
 
 
-
 class ProbabilisticValidator():
     """
-    # The probabilistic validator is a quick to train model used for validating the predictions
-    of our main model
+    # The probabilistic validator is a quick to train model used for validating the predictions of our main model
     # It is fit to the results our model gets on the validation set
     """
     _smoothing_factor = 0.5 # TODO: Autodetermine smotthing factor depending on the info we know about the dataset

@@ -2,7 +2,7 @@ from mindsdb.libs.helpers.general_helpers import convert_snake_to_cammelcase_str
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.sampler import Sampler
-from mindsdb.libs.ml_models.probabilistic_validator import ProbabilisticValidator
+from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator, HypothesisExecutor
 
 import pandas as pd
 import numpy as np
@@ -16,12 +16,19 @@ class ModelAnalyzer(BaseModule):
         # Runs the model on the validation set in order to fit a probabilistic model that will evaluate the accuracy of future predictions
         """
 
-        predict_column_names = self.transaction.train_metadata.model_predict_columns
-        non_predict_columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in predict_column_names]
+        output_columns = output_columns
+        input_columns = [col if col not in output_columns for col in self.transaction.persistent_model_metadata.column]
 
+        # Test some hypotheses about our columns
+        hypothesis_executor = HypothesisExecutor()
+        column_importance = hypothesis_executor.run(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
+        full_dataset=self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY], stats=self.transaction.persistent_model_metadata.column_stats)
+
+        exit()
+
+        # Create the probabilistic validators for each of the predict column
         probabilistic_validators = {}
-
-        for col in predict_column_names:
+        for col in output_columns:
             if 'percentage_buckets' in self.transaction.persistent_model_metadata.column_stats[col]:
                 probabilistic_validators[col] = ProbabilisticValidator(
                     buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'], data_type=self.transaction.persistent_model_metadata.column_stats[col]['data_type'])
@@ -29,42 +36,25 @@ class ModelAnalyzer(BaseModule):
                 probabilistic_validators[col] = ProbabilisticValidator(
                     buckets=None, data_type=self.transaction.persistent_model_metadata.column_stats[col]['data_type'])
 
-        # create a list of columns to ignore starting with none, and then one experiment per column
-        ignore_none = [[]]
-        ignore_just_one = [[col] for col in non_predict_columns]
-        ignore_all_but_one = [[coli for coli in non_predict_columns if coli!=col] for col in non_predict_columns]
-        ignore_column_options = ignore_none + ignore_just_one + ignore_all_but_one
-
-        # Create the real values for the created columns (maybe move to a new 'validate' method of the mode backend ?)
-        validation_data = {}
-
-        indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
-        for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns):
-            validation_data[col] = []
-            for row_ind in indexes:
-                validation_data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
-
         # Run on the validation set multiple times, each time with one of the column blanked out
-        for column_name in self.transaction.persistent_model_metadata.predict_columns:
+        for column_name in input_columns:
             ignore_columns = []
-            if column_name not in self.transaction.persistent_model_metadata.predict_columns:
-                ignore_columns.append(column_name)
+            ignore_columns.append(column_name)
 
-            predictions = self.transaction.model_backend.predict('validate',ignore_columns)
+            predictions = self.transaction.model_backend.predict('validate', ignore_columns)
 
             # create a vector that has True for each feature that was passed to the model tester and False if it was blanked
-            features_existence = [True if np_col not in ignore_columns else False for np_col in non_predict_columns]
+            features_existence = [True if np_col not in ignore_columns else False for np_col in input_columns]
 
             # A separate probabilistic model is trained for each predicted column, we may want to change this in the future, @TODO
-            for pcol in predict_column_names:
+            for pcol in output_columns:
                 for i in range(len(predictions[pcol])):
-
                     predicted_val = predictions[pcol][i]
-                    real_val = predictions[pcol][i]
+                    real_val = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY][pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
 
 
-        for pcol in predict_column_names:
+        for pcol in output_columns:
             probabilistic_validators[pcol].partial_fit()
 
         # Pickle for later use
@@ -78,9 +68,6 @@ def test():
     from mindsdb.libs.controllers.predictor import Predictor
     from mindsdb import CONFIG
 
-    #CONFIG.DEBUG_BREAK_POINT = PHASE_MODEL_ANALYZER
-
-    #mdb = Predictor(name='home_rentals')
     mdb = Predictor(name='home_rentals')
 
     mdb.learn(

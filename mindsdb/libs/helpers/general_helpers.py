@@ -4,12 +4,12 @@ import urllib
 import uuid
 from pathlib import Path
 import pickle
-
 import requests
 
 from mindsdb.__about__ import __version__
 from mindsdb.config import CONFIG
 from mindsdb.libs.data_types.mindsdb_logger import log
+from mindsdb.libs.constants.mindsdb import *
 
 
 def get_key_for_val(key, dict_map):
@@ -140,6 +140,37 @@ def unpickle_obj(pickle_string):
     :return: Returns an object generated from the pickle string
     """
     return pickle.loads(pickle_string.encode(encoding='latin1'))
+
+
+def closest(arr, value):
+    """
+    :return: The index of the member of `arr` which is closest to `value`
+    """
+
+    for i,ele in enumerate(arr):
+        if ele > value:
+            return i - 1
+
+    return len(arr)-1
+
+
+def get_value_bucket(value, buckets, col_stats):
+    """
+    :return: The bucket in the `histogram` in which our `value` falls
+    """
+    if col_stats['data_subtype'] in (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE):
+        if value in buckets:
+            bucket = buckets.index(value)
+        else:
+            bucket = -1 #Index for values no in the list
+
+    elif col_stats['data_subtype'] in (DATA_SUBTYPES.DATE, DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
+        bucket = closest(buckets, value)
+    else:
+        bucket = -1
+
+    return bucket
+
 
 def evaluate_accuracy(predictions, real_values, col_stats, output_columns):
     score = 0

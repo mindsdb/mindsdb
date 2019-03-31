@@ -40,10 +40,10 @@ class ModelAnalyzer(BaseModule):
         for col in output_columns:
             if 'percentage_buckets' in self.transaction.persistent_model_metadata.column_stats[col]:
                 probabilistic_validators[col] = ProbabilisticValidator(
-                    buckets=self.transaction.persistent_model_metadata.column_stats[col]['percentage_buckets'], data_type=self.transaction.persistent_model_metadata.column_stats[col]['data_type'])
+                    col_stats=self.transaction.persistent_model_metadata.column_stats[col])
             else:
                 probabilistic_validators[col] = ProbabilisticValidator(
-                    buckets=None, data_type=self.transaction.persistent_model_metadata.column_stats[col]['data_type'])
+                    col_stats=self.transaction.persistent_model_metadata.column_stats[col])
 
         # Run on the validation set multiple times, each time with one of the column blanked out
         for column_name in input_columns:

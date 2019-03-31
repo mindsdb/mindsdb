@@ -1,8 +1,8 @@
-from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
-
-
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.data_types.probability_evaluation import ProbabilityEvaluation
+from mindsdb.libs.helpers.general_helpers import get_value_bucket
+
+from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
 import numpy as np
 
 
@@ -18,7 +18,7 @@ class ProbabilisticValidator():
     Y_buff = None
 
 
-    def __init__(self, buckets, data_type=None):
+    def __init__(self, col_stats, data_type=None):
         """
         Chose the algorithm to use for the rest of the model
         As of right now we go with ComplementNB
@@ -31,37 +31,15 @@ class ProbabilisticValidator():
         self.X_buff = []
         self.Y_buff = []
 
-        self.buckets = buckets
-        if self.buckets is not None:
+        self.col_stats = col_stats
+
+        if 'percentage_buckets' in col_stats:
+            self.buckets = col_stats['percentage_buckets']
             self.bucket_keys = [i for i in range(len(self.buckets))]
-
-        self.data_type = data_type
-
-    @staticmethod
-    def _closest(arr, value):
-        """
-        :return: The index of the member of `arr` which is closest to `value`
-        """
-
-        for i,ele in enumerate(arr):
-            if ele > value:
-                return i - 1
-
-        return len(arr)-1
-
-    # For contignous values we want to use a bucket in the histogram to get a discrete label
-    def _get_value_bucket(self, value):
-        """
-        :return: The bucket in the `histogram` in which our `value` falls
-        """
-        if type(value) == type(''):
-            if value in self.buckets:
-                i = self.buckets.index(value)
-            else:
-                i = 1 # todo make sure that there is an index for values not in list
         else:
-            i = self._closest(self.buckets, value)
-        return i
+            self.buckets = None
+
+        self.data_type = col_stats['data_type']
 
 
     def register_observation(self, features_existence, real_value, predicted_value):
@@ -77,8 +55,8 @@ class ProbabilisticValidator():
         real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(real_value)
 
         if self.buckets is not None:
-            predicted_value_b = self._get_value_bucket(predicted_value)
-            real_value_b = self._get_value_bucket(real_value)
+            predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
+            real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats)
             X = [False] * len(self.buckets)
             X[predicted_value_b] = True
             X = X + features_existence
@@ -121,16 +99,14 @@ class ProbabilisticValidator():
 
     def evaluate_prediction_accuracy(self, features_existence, predicted_value):
         """
-        # Fit the probabilistic validator on an observation
-
+        # Fit the probabilistic validator on an observation    def evaluate_prediction_accuracy(self, features_existence, predicted_value):
         :param features_existence: A vector of 0 and 1 representing the existence of all the features (0 == not exists, 1 == exists)
         :param predicted_value: The predicted value/label
-        :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value`
         :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
         """
 
         if self.buckets is not None:
-            predicted_value_b = self._get_value_bucket(predicted_value)
+            predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
             X = [False] * len(self.buckets)
             X[predicted_value_b] = True
             X = [X + features_existence]
@@ -151,10 +127,7 @@ class ProbabilisticValidator():
 
 
 if __name__ == "__main__":
-
     import random
-
-
 
     values = [2,2,2,3,5,2,2,2,3,5]
     predictions = [2,2,2,3,2,2,2,2,3,2]

@@ -1,15 +1,15 @@
-
 import platform
 import re
 import urllib
 import uuid
 from pathlib import Path
-
+import pickle
 import requests
 
 from mindsdb.__about__ import __version__
 from mindsdb.config import CONFIG
 from mindsdb.libs.data_types.mindsdb_logger import log
+from mindsdb.libs.constants.mindsdb import *
 
 
 def get_key_for_val(key, dict_map):
@@ -124,3 +124,74 @@ def check_for_updates():
 
     except:
         log.warning('could not check for MindsDB updates')
+
+def pickle_obj(object_to_pickle):
+    """
+    Returns a version of self that can be serialized into mongodb or tinydb
+    :return: The data of an object serialized via pickle and decoded as a latin1 string
+    """
+
+    return pickle.dumps(object_to_pickle).decode(encoding='latin1')
+
+
+def unpickle_obj(pickle_string):
+    """
+    :param pickle_string: A latin1 encoded python str containing the pickle data
+    :return: Returns an object generated from the pickle string
+    """
+    return pickle.loads(pickle_string.encode(encoding='latin1'))
+
+
+def closest(arr, value):
+    """
+    :return: The index of the member of `arr` which is closest to `value`
+    """
+
+    for i,ele in enumerate(arr):
+        value = float(value)
+        if ele > value:
+            return i - 1
+
+    return len(arr)-1
+
+
+def get_value_bucket(value, buckets, col_stats):
+    """
+    :return: The bucket in the `histogram` in which our `value` falls
+    """
+    if col_stats['data_subtype'] in (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE):
+        if value in buckets:
+            bucket = buckets.index(value)
+        else:
+            bucket = -1 #Index for values no in the list
+
+    elif col_stats['data_subtype'] in (DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
+        bucket = closest(buckets, value)
+    else:
+        bucket = None
+
+    return bucket
+
+
+def evaluate_accuracy(predictions, real_values, col_stats, output_columns):
+    score = 0
+    for output_column in output_columns:
+        cummulative_scores = 0
+        if 'percentage_buckets' in col_stats[output_column]:
+            bucket = col_stats[output_column]['percentage_buckets']
+        else:
+            bucket = None
+
+        for i in range(len(real_values[output_column])):
+            pred_val_bucket = get_value_bucket(predictions[output_column][i], bucket, col_stats[output_column])
+            if pred_val_bucket is None:
+                if predictions[output_column][i] == real_values[output_column][i]:
+                    cummulative_scores += 1
+            elif pred_val_bucket == get_value_bucket(real_values[output_column][i], bucket, col_stats[output_column]):
+                cummulative_scores += 1
+
+        score += cummulative_scores/len(predictions[output_column])
+    score = score/len(output_columns)
+    if score == 0:
+        score = 0.00000001
+    return score

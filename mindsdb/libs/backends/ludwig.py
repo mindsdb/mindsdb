@@ -95,6 +95,9 @@ class LudwigBackend():
         elif mode == 'validate':
             indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
             columns = self.transaction.persistent_model_metadata.columns
+        elif mode == 'test':
+            indexes = self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]
+            columns = self.transaction.persistent_model_metadata.columns
         else:
             raise Exception(f'Unknown mode specified: "{mode}"')
         model_definition = {'input_features': [], 'output_features': []}
@@ -278,5 +281,5 @@ class LudwigBackend():
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')
             predictions = predictions.rename(columns = {col_name: col_name_normalized})
-
+            
         return predictions

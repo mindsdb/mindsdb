@@ -35,3 +35,5 @@ class PersistentModelMetadata(PersistentObject):
         self.probabilistic_validators = None
 
         self.ludwig_data = None
+
+        self.column_importances = None

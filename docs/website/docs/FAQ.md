@@ -1,7 +1,7 @@
 ### Why MindsDB?
 
 We are building MindsDB, because we want to *Democratize Machine Learning*.
-If you want to learn more about why this is important and how we aim to do this, you can checkout our presentation [here](https://docs.google.com/presentation/d/e/2PACX-1vTfmQfc4rV2OjepzAMsCRAK3Z0h-IbOLMx66Ao_tFAvNX6yjNv4f1AkRK31mCLmKm8DbWwz-2F0NeBQ/pub?start=false&loop=false&delayms=3000).
+If you want to learn more about why this is important and how we aim to do this, you can check out our presentation [here](https://docs.google.com/presentation/d/e/2PACX-1vTfmQfc4rV2OjepzAMsCRAK3Z0h-IbOLMx66Ao_tFAvNX6yjNv4f1AkRK31mCLmKm8DbWwz-2F0NeBQ/pub?start=false&loop=false&delayms=3000).
 
 ### Who are we building MindsDB for?
 
@@ -27,7 +27,12 @@ MindsDB has 3 simple goals.
 
 MindsDB roadmap is aimed to be aligned with our goals:
 
+<<<<<<< HEAD:docs/website/docs/FAQ.md
 * **versions 1.0** and greater will focus on for goal 2 *(Early April 2019)*
+=======
+* **versions  > 0.9** was focused on goal 1 *(December 2018)*.
+* **versions 1.0** and greater will focus on for goal 2 *(January 2019)*
+>>>>>>> origin/master:docs/FAQ.md
     * What to expect:
         * MindsDB UI where one can visualize explainability goals.
         * Support for images, audio both as input and output and complex text (e.g. translation) as output.
@@ -42,7 +47,7 @@ Currently we support tabular data, this is CSV, excel, json files and urls or re
 
 ### How does it work? ###
 
-in very simple terms, midnsdb follows the following steps:
+in very simple terms, MindsDB follows the following steps:
 
  * **to learn**:
     * break data source intro train, test, validate
@@ -77,4 +82,4 @@ Well, as most names, we needed one, we like science fiction and the [culture ser
 How about the DB part?. Although in the future we will support all kinds of data, currently our objective is to add intelligence to existing data stores/databases, hence the term DB.
 As to becoming a **Mind** to your **DB**.
 
-Why the bear? Who *don't* like beers! anyway, a bear for UCBerkeley where this all was initially coded.
+Why the bear? Who *doesn't* like bears! Anyway, a bear for UC Berkeley where this all was initially coded.

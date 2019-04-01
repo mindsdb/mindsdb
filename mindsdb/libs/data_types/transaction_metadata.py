@@ -1,5 +1,5 @@
 from mindsdb.libs.data_types.object_dict import ObjectDict
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import MODEL_GROUP_BY_DEAFAULT_LIMIT
 
 class TransactionMetadata(ObjectDict):
@@ -9,19 +9,26 @@ class TransactionMetadata(ObjectDict):
         self._ignore_keys = ['test_from_data', 'from_data']
 
         self.model_name = None
+        self.model_backend = None
         self.model_predict_columns = None
         self.model_columns_map = {}
         self.model_when_conditions = None
         self.model_group_by = None
         self.model_order_by = []
-        self.model_order_by_type = []
-        self.window_size = MODEL_GROUP_BY_DEAFAULT_LIMIT
+        self.window_size_seconds = None
+        self.window_size_samples = None
+        self.model_is_time_series = False
+        self.from_data_dropout = 0
         self.model_ignore_null_targets = True
-        self.storage_file = CONFIG.SQLITE_FILE
         self.from_data = None
+        self.when_data = None
         self.test_from_data = None
         self.type = None
         self.ignore_columns = []
+        self.sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR
+        self.sample_confidence_level = CONFIG.DEFAULT_CONFIDENCE_LEVEL
+        self.stop_training_in_x_seconds = None
+        self.stop_training_in_accuracy = None
 
 
 

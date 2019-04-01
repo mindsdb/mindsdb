@@ -1,7 +1,4 @@
 import pandas
-import logging
-import csv
-import mindsdb.config as CONFIG
 import re
 import urllib3
 from io import BytesIO, StringIO
@@ -12,6 +9,8 @@ import traceback
 
 from mindsdb.libs.data_types.data_source import DataSource
 from pandas.io.json import json_normalize
+from mindsdb.libs.data_types.mindsdb_logger import log
+
 
 class FileDS(DataSource):
 
@@ -34,14 +33,14 @@ class FileDS(DataSource):
                 col = col+'_'+str(col_count[col])
 
             if orig_col != col:
-                logging.debug('[Column renamed] {orig_col} to {col}'.format(orig_col=orig_col, col=col))
+                log.debug('[Column renamed] {orig_col} to {col}'.format(orig_col=orig_col, col=col))
 
             self._col_map[orig_col] = col
             clean_header.append(col)
 
         if clean_header != header:
             string = """\n    {cols} \n""".format(cols=",\n    ".join(clean_header))
-            logging.debug('The Columns have changed, here are the renamed columns: \n {string}'.format(string=string))
+            log.debug('The Columns have changed, here are the renamed columns: \n {string}'.format(string=string))
 
 
         return  clean_header
@@ -84,7 +83,7 @@ class FileDS(DataSource):
                 data = open(file, 'rb')
             except Exception as e:
                 error = 'Could not load file, possible exception : {exception}'.format(exception = e)
-                logging.error(error)
+                log.error(error)
                 raise ValueError(error)
 
 
@@ -125,8 +124,8 @@ class FileDS(DataSource):
         try:
             data = StringIO(byte_str.decode('UTF-8'))
         except:
-            logging.error(traceback.format_exc())
-            logging.error('Could not load into string')
+            log.error(traceback.format_exc())
+            log.error('Could not load into string')
 
         # see if its JSON
         buffer = data.read(100)
@@ -153,9 +152,11 @@ class FileDS(DataSource):
             for line in data:
                 i += 1
                 first_few_lines.append(line)
-                if i > 500:
+                if i > 0:
                     break
-            dialect = csv.Sniffer().sniff(''.join(first_few_lines))
+
+            accepted_delimiters = [',','\t']
+            dialect = csv.Sniffer().sniff(''.join(first_few_lines[0]), delimiters=accepted_delimiters)
             data.seek(0)
             # if csv dialect identified then return csv
             if dialect:
@@ -164,8 +165,8 @@ class FileDS(DataSource):
                 return data, None, dialect
         except:
             data.seek(0)
-            logging.error('Could not detect format for this file')
-            logging.error(traceback.format_exc())
+            log.error('Could not detect format for this file')
+            log.error(traceback.format_exc())
             # No file type identified
             return data, None, dialect
 
@@ -187,17 +188,15 @@ class FileDS(DataSource):
         data.seek(0) # make sure we are at 0 in file pointer
 
         if format is None:
-            logging.error('Could not laod file into any format, supported formats are csv, json, xls, xslx')
+            log.error('Could not laod file into any format, supported formats are csv, json, xls, xslx')
 
         if custom_parser:
             header, file_data = custom_parser(data, format)
 
         elif format == 'csv':
-
             csv_reader = list(csv.reader(data, dialect))
             header = csv_reader[0]
             file_data =  csv_reader[1:]
-
 
         elif format in ['xlsx', 'xls']:
             data.seek(0)

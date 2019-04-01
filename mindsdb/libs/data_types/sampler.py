@@ -10,17 +10,14 @@
 """
 
 import time
-import itertools
-import numpy as np
 
-# import logging
-from mindsdb.libs.helpers.logging import logging
+from mindsdb.libs.data_types.mindsdb_logger import log
 
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.data_types.batch import Batch
 from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
-from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
+
 
 # this implements sampling without replacement and encodes sequential data using encoders
 # as described here, its best to sample without replacement:
@@ -28,7 +25,7 @@ from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 class Sampler:
 
-    def __init__(self, data, metadata_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = [],  sampler_mode = SAMPLER_MODES.DEFAULT):
+    def __init__(self, data, metadata_as_stored, batch_size = CONFIG.SAMPLER_MAX_BATCH_SIZE, ignore_types = [],  blank_columns=[]):
         """
 
         :param data:
@@ -41,15 +38,13 @@ class Sampler:
 
         self.meta_data = metadata_as_stored
         self.stats = metadata_as_stored.column_stats
-        self.model_columns = [col for col in metadata_as_stored.columns if self.stats[col][KEYS.DATA_TYPE] not in ignore_types]
+        self.model_columns = [col for col in metadata_as_stored.columns if self.stats[col]['data_type'] not in ignore_types]
         self.ignore_columns_with_type = ignore_types
-        self.sampler_mode = sampler_mode
 
         self.batch_size = batch_size
         self.variable_wrapper = None
         self.variable_unwrapper = None
-
-
+        self.blank_columns = blank_columns
 
     def getSampleBatch(self):
         """
@@ -75,7 +70,7 @@ class Sampler:
             group_pointer = 0
             first_column = next(iter(self.data[group]))
             total_length = len(self.data[group][first_column])
-            logging.debug('Iterator on group {group}/{total_groups}, total rows: {total_rows}'.format(group=group, total_groups=total_groups, total_rows=total_length))
+            log.debug('Iterator on group {group}/{total_groups}, total rows: {total_rows}'.format(group=group, total_groups=total_groups, total_rows=total_length))
 
             while group_pointer < total_length:
                 limit = group_pointer + self.batch_size
@@ -85,9 +80,9 @@ class Sampler:
 
                 for column in self.model_columns:
 
-                    # logging.debug('Generating: pytorch variables, batch: {column}-[{group_pointer}:{limit}]-{column_type}'.format(column=column, group_pointer=group_pointer, limit=limit, column_type=self.stats[column][KEYS.DATA_TYPE]))
+                    # log.debug('Generating: pytorch variables, batch: {column}-[{group_pointer}:{limit}]-{column_type}'.format(column=column, group_pointer=group_pointer, limit=limit, column_type=self.stats[column]['data_type']))
                     # col_start_time = time.time()
-                    #if self.stats[column][KEYS.DATA_TYPE] != DATA_TYPES.FULL_TEXT:
+                    #if self.stats[column]['data_type'] != DATA_TYPES.FULL_TEXT:
                     ret[column] = self.data[group][column][group_pointer:limit]
 
                     ext_col_name = EXTENSION_COLUMNS_TEMPLATE.format(column_name=column)
@@ -97,14 +92,11 @@ class Sampler:
                     #     # Todo: figure out how to deal with full text features here
                     #     ret[column] =[0]*(limit-group_pointer)
 
-                    # logging.debug('Generated: {column} [OK] in {time_delta:.2f} seconds'.format(column=column, time_delta=(time.time()-col_start_time)))
+                    # log.debug('Generated: {column} [OK] in {time_delta:.2f} seconds'.format(column=column, time_delta=(time.time()-col_start_time)))
 
-                logging.debug('Generated: [ALL_COLUMNS] in batch [OK], {time_delta:.2f} seconds'.format(time_delta=(time.time() - allcols_time)))
+                log.debug('Generated: [ALL_COLUMNS] in batch [OK], {time_delta:.2f} seconds'.format(time_delta=(time.time() - allcols_time)))
 
-                yield Batch(self, ret, group=group, column=column, start=group_pointer, end=limit )
+                yield Batch(self, ret, group=group, column=column, start=group_pointer, end=limit, blank_columns=self.blank_columns)
 
                 ret = {}
                 group_pointer = limit
-
-
-

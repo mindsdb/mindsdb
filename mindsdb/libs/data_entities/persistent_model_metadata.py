@@ -8,6 +8,7 @@ class PersistentModelMetadata(PersistentObject):
     def setup(self):
 
         self.model_name = None
+        self.model_backend = None
         self.train_metadata = None
         self.predict_columns = None
 
@@ -23,6 +24,16 @@ class PersistentModelMetadata(PersistentObject):
         self.train_row_count= None
         self.validation_row_count = None
 
+        self.model_order_by = None
+        self.model_group_by = None
+        self.window_size_samples = None
+        self.window_size_seconds = None
+
         self.stop_training = False
         self.kill_training = False
 
+        self.probabilistic_validators = None
+
+        self.ludwig_data = None
+
+        self.column_importances = None

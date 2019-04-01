@@ -12,11 +12,11 @@
 from mindsdb.libs.constants.mindsdb import *
 import numpy as np
 import torch
-import logging
+from mindsdb.libs.data_types.mindsdb_logger import log
 import traceback
 
 class Batch:
-    def __init__(self, sampler, data_dict, mirror = False, group=None, column=None, start=None, end=None):
+    def __init__(self, sampler, data_dict, mirror = False, group=None, column=None, start=None, end=None, blank_columns=[]):
         """
 
         :param sampler: The object generating batches
@@ -28,7 +28,7 @@ class Batch:
         self.sampler = sampler
         self.mirror = mirror
         self.number_of_rows = None
-        self.blank_columns = []
+        self.blank_columns = blank_columns
 
         # these are pointers to trace it back to the original data
         self.group_pointer = group
@@ -73,19 +73,18 @@ class Batch:
         return
 
     def getColumn(self, what, col, by_buckets = False):
-
-        if by_buckets and self.sampler.stats[col][KEYS.DATA_TYPE]==DATA_TYPES.NUMERIC:
-            col_name = EXTENSION_COLUMNS_TEMPLATE.format(column_name=col)
+        if by_buckets and self.sampler.stats[col]['data_type']==DATA_TYPES.NUMERIC:
+            #col_name = EXTENSION_COLUMNS_TEMPLATE.format(column_name=col)
+            col_name = col
             if col_name in self.data_dict:
-                ret = self.data_dict[col_name]
+                return self.data_dict[col_name]
             else:
                 raise Exception('No extension column {col}'.format(col=col_name))
-            return ret
+
         else:
-            ret = self.xy[what][col]
+            return self.xy[what][col]
         if col in self.blank_columns:
             return np.zeros_like(ret)
-        return ret
 
     def get(self, what, flatten = True, by_buckets = False):
         ret = None
@@ -96,7 +95,7 @@ class Batch:
                     continue
 
                 # do not include full text as its a variable length tensor, which we cannot wrap
-                if self.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+                if self.sampler.stats[col]['data_type'] == DATA_TYPES.SEQUENTIAL:
                     continue
 
                 # make sure that this is always in the same order, use a list or make xw[what] an ordered dictionary
@@ -113,13 +112,13 @@ class Batch:
         if self.sampler.variable_wrapper is not None:
             ret = {}
             for col in self.xy[what]:
-                if self.sampler.stats[col][KEYS.DATA_TYPE] == DATA_TYPES.FULL_TEXT:
+                if self.sampler.stats[col]['data_type'] == DATA_TYPES.SEQUENTIAL:
                     continue
-                try:
-                    ret[col] = self.sampler.variable_wrapper(self.getColumn(what,col, by_buckets))
-                except:
-                    logging.error(traceback.format_exc())
-                    raise ValueError('Could not decode column {what}:{col}'.format(what=what, col=col))
+                #try:
+                ret[col] = self.sampler.variable_wrapper(self.getColumn(what,col, by_buckets))
+                #except:
+                #    log.error(traceback.format_exc())
+                #    raise ValueError('Could not decode column {what}:{col}'.format(what=what, col=col))
             return ret
         else:
             return self.xy[what]
@@ -132,7 +131,7 @@ class Batch:
         what = 'input'
         ret = {}
         for col in self.sampler.model_columns:
-            if col not in self.xy[what] or self.sampler.stats[col][KEYS.DATA_TYPE] != DATA_TYPES.FULL_TEXT:
+            if col not in self.xy[what] or self.sampler.stats[col]['data_type'] != DATA_TYPES.SEQUENTIAL:
                 continue
 
             ret[col] = [torch.tensor(row, dtype=torch.long).view(-1, 1) for row in self.getColumn(what, col)]
@@ -185,10 +184,3 @@ class Batch:
 
     def size(self):
         return self.number_of_rows
-
-
-
-
-
-
-

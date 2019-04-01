@@ -15,7 +15,7 @@ import hashlib
 
 import numpy
 
-def cleanfloat(str):
+def clean_float(str):
     if type(str) in [type(int(1)), type(1.0)] :
         return float(str)
 
@@ -25,7 +25,17 @@ def cleanfloat(str):
     str = str.replace(',','.')
     return float(str)
 
-def tryCastToNumber(string):
+
+def gen_chars(length, character):
+    """
+    # lambda to Generates a string consisting of `length` consiting of repeating `character`
+    :param length:
+    :param character:
+    :return:
+    """
+    return ''.join([character for i in range(length)])
+
+def cast_string_to_python_type(string):
     """ Returns an integer, float or a string from a string"""
     try:
         if string is None:
@@ -33,7 +43,7 @@ def tryCastToNumber(string):
         return int(string)
     except ValueError:
         try:
-            return cleanfloat(string)
+            return clean_float(string)
         except ValueError:
             if string == '':
                 return None
@@ -41,7 +51,7 @@ def tryCastToNumber(string):
                 return string
 
 def splitRecursive(word, tokens):
-    words = [word]
+    words = [str(word)]
     for token in tokens:
         new_split = []
         for word in words:
@@ -56,7 +66,7 @@ def hashtext(cell):
     return hash
 
 def test():
-    print(splitRecursive('ABC.C HELLO, one:123.45 67', WORD_SEPARATORS))
+    log.info(splitRecursive('ABC.C HELLO, one:123.45 67', WORD_SEPARATORS))
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":

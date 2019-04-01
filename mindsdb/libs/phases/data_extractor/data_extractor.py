@@ -1,56 +1,36 @@
-"""
-*******************************************************
- * Copyright (C) 2017 MindsDB Inc. <copyright@mindsdb.com>
- *
- * This file is part of MindsDB Server.
- *
- * MindsDB Server can not be copied and/or distributed without the express
- * permission of MindsDB Inc
- *******************************************************
-"""
-
-import mindsdb.config as CONFIG
+from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.helpers.logging import logging
+from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
+from mindsdb.libs.helpers.text_helpers import hashtext
+from mindsdb.external_libs.stats import calculate_sample_size
 
-from collections import OrderedDict
 
-import sys
-import json
+
 import random
 import traceback
-import sqlite3
 import pandas
-import json
-
 
 
 class DataExtractor(BaseModule):
 
-    phase_name = PHASE_DATA_EXTRACTION
+    phase_name = PHASE_DATA_EXTRACTOR
 
-    def populatePredictQuery(self):
+    def _get_data_frame_from_when_conditions(self, train_metadata):
+        """
 
-        # If its a predict function
-        # Create a query statement where data can be pulled from
-        # for now we can just populate the when statement in a select queryt
-        # TODO: combine WHEN and WHERE
+        :param train_metadata:
+        :return:
+        """
 
-        # make when_conditions a list of dictionaries
-        if type(self.transaction.metadata.model_when_conditions) != type([]):
-            when_conditions = [self.transaction.metadata.model_when_conditions]
-        else:
-            when_conditions = self.transaction.metadata.model_when_conditions
-
-        # these are the columns in the model, pulled from persistent_data
-        columns = self.transaction.persistent_model_metadata.columns  # type: list
+        columns = self.transaction.persistent_model_metadata.columns
+        when_conditions = self.transaction.metadata.model_when_conditions
 
         when_conditions_list = []
         # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
         for when_condition in when_conditions:
-            cond_list = ["NULL"] * len(columns)  # empty list with blanks for values
+            cond_list = [None] * len(columns)  # empty list with blanks for values
 
             for condition_col in when_condition:
                 col_index = columns.index(condition_col)
@@ -58,134 +38,104 @@ class DataExtractor(BaseModule):
 
             when_conditions_list.append(cond_list)
 
-        # create the strings to be populated in the query as follows
-        values_string = ",\n ".join(
-            ["({val_string})".format(val_string=", ".join([str(val) for val in when_condition])) for when_condition in
-             when_conditions_list])
-        fields_string = ', '.join(
-            ['column{i} as {col_name}'.format(i=i + 1, col_name=col_name) for i, col_name in enumerate(columns)])
+        result = pandas.DataFrame(when_conditions_list, columns=columns)
 
-        query = '''
-                    select
-                        {fields_string}
-
-                    from (
-                        values
-                            {values_string}
-                    ) 
-
-                    '''.format(fields_string=fields_string, values_string=values_string)
-
-        self.session.logging.info('Making PREDICT from query: {query}'.format(query=query))
-        self.transaction.metadata.model_query = query
-
-    def prepareFullQuery(self, train_metadata):
-
-        if train_metadata.model_order_by:
-            order_by_fields = train_metadata.model_order_by if train_metadata.model_group_by is None else [train_metadata.model_group_by] + train_metadata.model_order_by
-        else:
-            order_by_fields = []
+        return result
 
 
-        order_by_string = ", ".join(["{oby} {type}".format(oby=oby, type=DEFAULT_ORDER_BY_TYPE) for oby in order_by_fields])
+    def _apply_sort_conditions_to_df(self, df, train_metadata):
+        """
 
-        where_not_null_string = ''
-        if train_metadata.model_ignore_null_targets and self.transaction.metadata.type != TRANSACTION_PREDICT:
-            not_null_conditions = " AND ".join([" {col} IS NOT NULL ".format(col=t_col) for t_col in self.transaction.metadata.model_predict_columns])
-            where_not_null_string = 'WHERE {not_null_conditions} '.format(not_null_conditions=not_null_conditions)
+        :param df:
+        :param train_metadata:
+        :return:
+        """
 
-        if len(order_by_fields):
-            query_wrapper = '''select * from ({orig_query}) orgi {where_not_null_string} order by {order_by_string}'''
-        else:
-            query_wrapper = '''select * from ({orig_query}) orgi {where_not_null_string} '''
+        # apply order by (group_by, order_by)
+        if train_metadata.model_is_time_series:
+            asc_values = [order_tuple[ORDER_BY_KEYS.ASCENDING_VALUE] for order_tuple in train_metadata.model_order_by]
+            sort_by = [order_tuple[ORDER_BY_KEYS.COLUMN] for order_tuple in train_metadata.model_order_by]
 
-        query = query_wrapper.format(orig_query=train_metadata.model_query, order_by_string=order_by_string,
-                                     where_not_null_string=where_not_null_string)
+            if train_metadata.model_group_by:
+                sort_by = train_metadata.model_group_by + sort_by
+                asc_values = [True for i in train_metadata.model_group_by] + asc_values
+            df = df.sort_values(sort_by, ascending=asc_values)
 
-        return query
+        elif self.transaction.metadata.type == TRANSACTION_LEARN:
+            # if its not a time series, randomize the input data and we are learning
+            df = df.sample(frac=1)
+
+        return df
 
 
-    def getPreparedInputDF(self, train_metadata):
+    def _get_prepared_input_df(self, train_metadata):
         """
 
         :param train_metadata:
         :type train_metadata: TransactionMetadata
         :return:
         """
-        if self.transaction.metadata.type == TRANSACTION_PREDICT:
+        df = None
 
-            # these are the columns in the model, pulled from persistent_data
-            columns = self.transaction.persistent_model_metadata.columns  # type: list
+        # if transaction metadata comes with some data as from_data create the data frame
+        if self.transaction.metadata.from_data is not None:
+            # make sure we build a dataframe that has all the columns we need
+            df = self.transaction.metadata.from_data
+            df = df.where((pandas.notnull(df)), None)
 
-            # if the predict statement comes with some data as from_date use it
-            if self.transaction.metadata.from_data is not None:
-
-                # make sure we build a dataframe that has all the columns we need
-                df = self.transaction.metadata.from_data
+        # if this is a predict statement, create use model_when_conditions to shape the dataframe
+        if  self.transaction.metadata.type == TRANSACTION_PREDICT:
+            if self.transaction.metadata.when_data is not None:
+                df = self.transaction.metadata.when_data
                 df = df.where((pandas.notnull(df)), None)
 
-                from_data_columns = df.columns
-
-                # remove the ones that dont exist in the train data
-                for col in from_data_columns:
-                    if col not in columns:
-                        logging.debug('Removing column "{col}" from data as it did not exist in training'.format(col=col))
-                        df.drop(columns=[col])
-
-                # add the ones that dont exist in
-                for col in columns:
-                    if col not in from_data_columns:
-                        df[col] = None
-
-                # amke sure it has the same order
-                result = df[columns]
+            elif self.transaction.metadata.model_when_conditions is not None:
+                # if no data frame yet, make one
+                df = self._get_data_frame_from_when_conditions(train_metadata)
 
 
-            else:
+        # if by now there is no DF, throw an error
+        if df is None:
+            error = 'Could not create a data frame for transaction'
+            self.log.error(error)
+            raise ValueError(error)
+            return None
 
-                if type(self.transaction.metadata.model_when_conditions) != type([]):
-                    when_conditions = [self.transaction.metadata.model_when_conditions]
-                else:
-                    when_conditions = self.transaction.metadata.model_when_conditions
+        df = self._apply_sort_conditions_to_df(df, train_metadata)
 
-
-
-                when_conditions_list = []
-                # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
-                for when_condition in when_conditions:
-                    cond_list = [None] * len(columns)  # empty list with blanks for values
-
-                    for condition_col in when_condition:
-                        col_index = columns.index(condition_col)
-                        cond_list[col_index] = when_condition[condition_col]
-
-                    when_conditions_list.append(cond_list)
-
-                result = pandas.DataFrame(when_conditions_list, columns = columns)
-        else:
-
-            df = train_metadata.from_data
-            result = df.where((pandas.notnull(df)), None)
+        return df
 
 
-        # apply order by (group_by, order_by)
-        if train_metadata.model_order_by:
-            if train_metadata.model_group_by:
-                sort_by = [train_metadata.model_group_by] + train_metadata.model_order_by
-                result = result.sort_values(sort_by, ascending=[True, True])
-            else:
-                sort_by = [train_metadata.model_order_by]
-                result = result.sort_values(sort_by, ascending=[True])
+    def _validate_input_data_integrity(self):
+        """
 
-        return result
+        :return:
+        """
+
+
+
+        if len(self.transaction.input_data.data_array) <= 0:
+            error = 'Input Data has no rows, please verify from_data or when_conditions'
+            self.log.error(error)
+            raise ValueError(error)
+
+        # make sure that the column we are trying to predict is on the input_data
+        # else fail, because we cannot predict data we dont have
+
+        if self.transaction.metadata.model_is_time_series or self.transaction.metadata.type == TRANSACTION_LEARN:
+
+            for col_target in self.transaction.metadata.model_predict_columns:
+                if col_target not in self.transaction.input_data.columns:
+                    err = 'Trying to predict column {column} but column not in source data'.format(column=col_target)
+                    self.log.error(err)
+                    self.transaction.error = True
+                    self.transaction.errorMsg = err
+                    raise ValueError(err)
+                    return
+
 
     def run(self):
-
-        # Handle transactions differently depending on the type of query
-        # For now we only support LEARN and PREDICT
-
-        # Train metadata is the metadata that was used when training the model,
-        # note: that we need this train metadata even if we are predicting, so we can understand about the model
+        # note: that we need this train metadata even if we are predicting, since it contains information about the model model
         train_metadata = None
 
         if self.transaction.metadata.type == TRANSACTION_PREDICT:
@@ -199,162 +149,157 @@ class DataExtractor(BaseModule):
 
         else:
             # We cannot proceed without train metadata
-            self.session.logging.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
+            self.log.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
             self.transaction.error = True
             self.transaction.errorMsg = traceback.print_exc(1)
             return
 
-        result = self.getPreparedInputDF(train_metadata)
+        # populate transaction train_metadata variable
+        self.transaction.train_metadata = train_metadata
+
+        # Here you want to organize data, sort, and add/remove columns
+        result = self._get_prepared_input_df(train_metadata)
 
 
         columns = list(result.columns.values)
         data_array = list(result.values.tolist())
 
         self.transaction.input_data.columns = columns
-
-        # make sure that the column we are trying to predict is on the input_data
-        # else fail, because we cannot predict data we dont have
-        # TODO: Revise this, I may pass a source data that doesnt have the column I want to predict and that may still be ok if we are making a prediction that is not time series
-        if len(data_array[0])>0 and  self.transaction.metadata.model_predict_columns:
-            for col_target in self.transaction.metadata.model_predict_columns:
-                if col_target not in self.transaction.input_data.columns:
-                    err = 'Trying to predict column {column} but column not in source data'.format(column=col_target)
-                    self.session.logging.error(err)
-                    self.transaction.error = True
-                    self.transaction.errorMsg = err
-                    return
-
         self.transaction.input_data.data_array = data_array
 
-        # extract test data if this is a learn transaction and there is a test query
+        self._validate_input_data_integrity()
+
+        is_time_series = train_metadata.model_is_time_series
+        group_by = train_metadata.model_group_by
+
+        # create a list of the column numbers (indexes) that make the group by, this is so that we can greate group by hashes for each row
+        if len(group_by)>0:
+            group_by_col_indexes = [columns.index(group_by_column) for group_by_column in group_by]
+
+        # create all indexes by group by, that is all the rows that belong to each group by
+        self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY] = []
+        self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] = []
+        self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY] = []
+        self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY] = []
+        for i, row in enumerate(self.transaction.input_data.data_array):
+
+            if len(group_by) > 0:
+                group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in group_by_col_indexes])
+
+                if group_by_value not in self.transaction.input_data.all_indexes:
+                    self.transaction.input_data.all_indexes[group_by_value] = []
+
+                self.transaction.input_data.all_indexes[group_by_value] += [i]
+
+            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY] += [i]
+
+        # move indexes to corresponding train, test, validation, etc and trim input data accordingly
+        for key in self.transaction.input_data.all_indexes:
+            if len(self.transaction.input_data.all_indexes) > 1 and key == KEY_NO_GROUP_BY:
+                continue
+
+            length = len(self.transaction.input_data.all_indexes[key])
+            if self.transaction.metadata.type == TRANSACTION_LEARN:
+                sample_size = int(calculate_sample_size(population_size=length,
+                                                        margin_error=self.transaction.metadata.sample_margin_of_error,
+                                                        confidence_level=self.transaction.metadata.sample_confidence_level))
+
+                # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
+                should_split_by_group = type(group_by) == list and len(group_by) > 0
+
+                if should_split_by_group:
+                    self.transaction.input_data.train_indexes[key] = self.transaction.input_data.all_indexes[key][0:round(length - length*CONFIG.TEST_TRAIN_RATIO)]
+                    self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].extend(self.transaction.input_data.train_indexes[key])
+
+                    self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][round(length - length*CONFIG.TEST_TRAIN_RATIO):int(round(length - length*CONFIG.TEST_TRAIN_RATIO) + round(length*CONFIG.TEST_TRAIN_RATIO/2))]
+                    self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].extend(self.transaction.input_data.test_indexes[key])
+
+                    self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][(round(length - length*CONFIG.TEST_TRAIN_RATIO) + round(length*CONFIG.TEST_TRAIN_RATIO/2)):]
+                    self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].extend(self.transaction.input_data.validation_indexes[key])
+
+                else:
+                    # make sure that the last in the time series are also the subset used for test
+                    train_window = (0,int(length*(1-2*CONFIG.TEST_TRAIN_RATIO)))
+                    self.transaction.input_data.train_indexes[key] = self.transaction.input_data.all_indexes[key][train_window[0]:train_window[1]]
+                    validation_window = (train_window[1],train_window[1] + int(length*CONFIG.TEST_TRAIN_RATIO))
+                    test_window = (validation_window[1],length)
+                    self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][test_window[0]:test_window[1]]
+                    self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][validation_window[0]:validation_window[1]]
+                    
+        # log some stats
         if self.transaction.metadata.type == TRANSACTION_LEARN:
 
-            # if a test_data set was given use it
-            if self.transaction.metadata.test_from_data:
-                df = self.transaction.metadata.test_from_data.df
-                test_result = df.where((pandas.notnull(df)), None)
+            total_rows_used_by_subset = {'train': 0, 'test': 0, 'validation': 0}
+            average_number_of_rows_used_per_groupby = {'train': 0, 'test': 0, 'validation': 0}
+            number_of_groups_per_subset = {'train': 0, 'test': 0, 'validation': 0}
 
-                columns = list(test_result.columns.values)
-                data_array = test_result.values.tolist()
+            for group_key in total_rows_used_by_subset:
+                pointer = getattr(self.transaction.input_data, group_key+'_indexes')
+                total_rows_used_by_subset[group_key] = sum([len(pointer[key_i]) for key_i in pointer])
+                number_of_groups_per_subset[group_key] = len(pointer)
+                #average_number_of_rows_used_per_groupby[group_key] = total_rows_used_by_subset[group_key] / number_of_groups_per_subset[group_key]
 
-                # Make sure that test adn train sets match column wise
-                if columns != self.transaction.input_data.columns:
-                    err = 'Trying to get data for test but columns in train set and test set dont match'
-                    self.session.logging.error(err)
-                    self.transaction.error = True
-                    self.transaction.errorMsg = err
-                    return
-                total_data_array = len(self.transaction.input_data.data_array)
-                total_test_array =  len(data_array)
-                test_indexes = [i for i in range(total_data_array, total_data_array+total_test_array)]
 
-                self.transaction.input_data.test_indexes = test_indexes
-                # make the input data relevant
-                self.transaction.input_data.data_array += data_array
+            total_rows_used = sum(total_rows_used_by_subset.values())
+            total_rows_in_input = len(self.transaction.input_data.data_array)
+            total_number_of_groupby_groups = len(self.transaction.input_data.all_indexes)
 
-                # we later use this to either regenerate or not
-                test_prob = 0
+            if total_rows_used != total_rows_in_input:
+                self.log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error))
+                self.log.info('Using a [Cochran\'s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
+                data = {
+                    'total': [total_rows_in_input, 'Total number of rows in input'],
+                    'subsets': [[total_rows_used, 'Total number of rows used']],
+                    'label': 'Sample size for margin of error of ({sample_margin_of_error}) and a confidence level of ({sample_confidence_level})'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error)
+                }
+                self.log.infoChart(data, type='pie')
 
-            else:
-                test_prob = CONFIG.TEST_TRAIN_RATIO
+            '''
+            if total_number_of_groupby_groups > 1:
+                self.log.info('You are grouping your data by [{group_by}], we found:'.format(group_by=', '.join(group_by)))
+                data = {
+                    'Total number of groupby groups': total_number_of_groupby_groups,
+                    'Average number of rows per groupby group': int(sum(average_number_of_rows_used_per_groupby.values())/len(average_number_of_rows_used_per_groupby))
+                }
+                self.log.infoChart(data, type='list')
+            '''
 
-            validation_prob = CONFIG.TEST_TRAIN_RATIO / (1-test_prob)
+            self.log.info('We have split the input data into:')
 
-            group_by = self.transaction.metadata.model_group_by
+            data = {
+                'subsets': [
+                    [total_rows_used_by_subset['train'], 'Train'],
+                    [total_rows_used_by_subset['test'], 'Test'],
+                    [total_rows_used_by_subset['validation'], 'Validation']
+                ],
+                'label': 'Number of rows per subset'
+            }
 
-            if group_by:
-                try:
-                    group_by_index = self.transaction.input_data.columns.index(group_by)
-                except:
-                    group_by_index = None
-                    err = 'Trying to group by, {column} but column not in source data'.format(column=group_by)
-                    self.session.logging.error(err)
-                    self.transaction.error = True
-                    self.transaction.errorMsg = err
-                    return
+            self.log.infoChart(data, type='pie')
 
-                # get unique group by values
-                #all_group_by_items_query = ''' select {group_by_column} as grp, count(1) as total from ( {query} ) sub group by {group_by_column}'''.format(group_by_column=group_by, query=self.transaction.metadata.model_query)
-                #self.transaction.session.logging.debug('About to pull GROUP BY query {query}'.format(query=all_group_by_items_query))
 
-                uniques = result.groupby([group_by]).size()
-                all_group_by_values = uniques.index.tolist()
-                uniques_counts = uniques.values.tolist()
-
-                # create a list of values in group by, this is because result is array of array we want just array
-
-                all_group_by_counts = {value:uniques_counts[i] for i, value in enumerate(all_group_by_values)}
-
-                max_group_by = max(list(all_group_by_counts.values()))
-
-                self.transaction.persistent_model_metadata.max_group_by_count = max_group_by
-
-                # we will fill these depending on the test_prob and validation_prob
-                test_group_by_values = []
-                validation_group_by_values = []
-                train_group_by_values = []
-
-                # split the data into test, validation, train by group by data
-                for group_by_value in all_group_by_values:
-
-                    # depending on a random number if less than x_prob belongs to such group
-                    # remember that test_prob can be 0 or the config value depending on if the test test was passed as a query
-                    if float(random.random()) < test_prob and len(train_group_by_values) > 0:
-                        test_group_by_values += [group_by_value]
-                    # elif float(random.random()) < validation_prob:
-                    #     validation_group_by_values += [group_by_value]
-                    else:
-                        train_group_by_values += [group_by_value]
-
-            for i, row in enumerate(self.transaction.input_data.data_array):
-
-                in_test = True if i in self.transaction.input_data.test_indexes else False
-                if not in_test:
-                    if group_by:
-
-                        group_by_value = row[group_by_index]
-                        if group_by_value in test_group_by_values :
-                            self.transaction.input_data.test_indexes += [i]
-                        elif group_by_value in train_group_by_values :
-                            self.transaction.input_data.train_indexes += [i]
-                        elif group_by_value in validation_group_by_values :
-                            self.transaction.input_data.validation_indexes += [i]
-
-                    else:
-                        # remember that test_prob can be 0 or the config value depending on if the test test was passed as a query
-                        if float(random.random()) <= test_prob or len(self.transaction.input_data.test_indexes) == 0:
-                            self.transaction.input_data.test_indexes += [i]
-                        elif float(random.random()) <= validation_prob or len(self.transaction.input_data.validation_indexes)==0:
-                            self.transaction.input_data.validation_indexes += [i]
-                        else:
-                            self.transaction.input_data.train_indexes += [i]
-
-            if len(self.transaction.input_data.test_indexes) == 0:
-                logging.debug('Size of test set is zero, last split')
-                ratio = CONFIG.TEST_TRAIN_RATIO
-                if group_by and len(self.transaction.input_data.train_indexes) > 2000:
-                    # it seems to be a good practice to not overfit, to double the ratio, as time series data tends to be abundant
-                    ratio = ratio*2
-                test_size = int(len(self.transaction.input_data.train_indexes) * ratio)
-                self.transaction.input_data.test_indexes = self.transaction.input_data.train_indexes[-test_size:]
-                self.transaction.input_data.train_indexes = self.transaction.input_data.train_indexes[:-test_size]
-
-            test_len = len(self.transaction.input_data.test_indexes)
-            train_len = len(self.transaction.input_data.train_indexes)
-            validation_len = len(self.transaction.input_data.validation_indexes)
-            total_len = test_len + train_len + validation_len
-            logging.info('- Train: {size} rows'.format(size=train_len))
-            logging.info('- Test: {size} rows'.format(size=test_len))
-            logging.info('- Validation: {size} rows'.format(size=validation_len))
-            logging.info('-- Total: {size} rows'.format(size=total_len))
 
 def test():
-    from mindsdb.libs.controllers.mindsdb_controller import MindsDBController as MindsDB
+    from mindsdb.libs.controllers.predictor import Predictor
+    from mindsdb import CONFIG
 
-    mdb = MindsDB()
-    mdb.learn(from_query='select * from position_target_table', group_by = 'id', order_by=['max_time_rec'], predict='position', model_name='mdsb_model', test_query=None, breakpoint = PHASE_DATA_EXTRACTION)
+    CONFIG.DEBUG_BREAK_POINT = PHASE_DATA_EXTRACTOR
+
+    mdb = Predictor(name='home_rentals')
+
+
+    mdb.learn(
+        from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv",
+        # the path to the file where we can learn from, (note: can be url)
+        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
+        sample_margin_of_error=0.02
+    )
+
+
+
+
+
 
 # only run the test if this file is called from debugger
 if __name__ == "__main__":
     test()
-

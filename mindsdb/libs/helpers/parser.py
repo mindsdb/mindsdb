@@ -131,7 +131,7 @@ def parse(str):
     str = cleanStr(str)
 
 
-    print(str)
+    log.info(str)
 
 
 '''

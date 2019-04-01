@@ -27,12 +27,7 @@ MindsDB has 3 simple goals.
 
 MindsDB roadmap is aimed to be aligned with our goals:
 
-<<<<<<< HEAD:docs/website/docs/FAQ.md
 * **versions 1.0** and greater will focus on for goal 2 *(Early April 2019)*
-=======
-* **versions  > 0.9** was focused on goal 1 *(December 2018)*.
-* **versions 1.0** and greater will focus on for goal 2 *(January 2019)*
->>>>>>> origin/master:docs/FAQ.md
     * What to expect:
         * MindsDB UI where one can visualize explainability goals.
         * Support for images, audio both as input and output and complex text (e.g. translation) as output.

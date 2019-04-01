@@ -1,5 +1,5 @@
 
-![MindsDB](https://s3.amazonaws.com/poly-screenshots.angel.co/Project/97/872276/a27b73f6706f1926eccef19aa78173a5-original.png "MindsDB")
+![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/fix_multilabel_prediction/docs/website/website/static/img/logo2_small.png "MindsDB")
 #
 
 [![Build Status](https://travis-ci.org/mindsdb/mindsdb.svg?branch=master)](https://travis-ci.org/mindsdb/mindsdb)

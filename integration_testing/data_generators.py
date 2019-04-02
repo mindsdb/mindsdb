@@ -45,11 +45,11 @@ def rand_ascii_str(length=None, give_nulls=True, only_letters=False):
 
 
 def rand_int():
-    return int(random.randrange(-pow(2,33), pow(2,33)))
+    return int(random.randrange(-pow(2,11), pow(2,11)))
 
 
 def rand_float():
-    return random.randrange(-pow(2,22), pow(2,22)) * random.random()
+    return random.randrange(-pow(2,12), pow(2,12)) * random.random()
 
 
 def generate_value_cols(types, length, separator=',', ts_period=48*3600):

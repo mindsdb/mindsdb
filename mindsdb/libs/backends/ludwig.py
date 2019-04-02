@@ -135,10 +135,13 @@ class LudwigBackend():
                 ludwig_dtype = 'numerical'
 
             elif data_subtype in (DATA_SUBTYPES.BINARY):
-                ludwig_dtype = 'binary'
+                ludwig_dtype = 'category'
 
             elif data_subtype in (DATA_SUBTYPES.DATE):
-                ludwig_dtype = 'category'
+                if col not in self.transaction.persistent_model_metadata.predict_columns:
+                    ludwig_dtype = 'date'
+                else:
+                    ludwig_dtype = 'category'
 
             elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
                 ludwig_dtype = 'numerical'
@@ -162,6 +165,8 @@ class LudwigBackend():
                 estr = f'Data subtype "{data_subtype}" no supported by Ludwig model backend'
                 raise Exception(estr)
 
+            custom_logic_continue = False
+
             for row_ind in indexes:
                 if ludwig_dtype == 'order_by_col':
                     ts_data_point = self.transaction.input_data.data_array[row_ind][col_ind]
@@ -176,6 +181,35 @@ class LudwigBackend():
                     arr_str = self.transaction.input_data.data_array[row_ind][col_ind]
                     arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.persistent_model_metadata.column_stats[col]['separator'])))
                     data[col].append(arr)
+
+                # Date isn't supported yet, so we hack around it
+                elif ludwig_dtype == 'date':
+                    if col in data:
+                        data.pop(col)
+                        data[col + '_year'] = []
+                        data[col + '_month'] = []
+                        data[col + '_day'] = []
+
+                        model_definition['input_features'].append({
+                            'name': col + '_year'
+                            ,'type': 'numerical'
+                        })
+                        model_definition['input_features'].append({
+                            'name': col + '_month'
+                            ,'type': 'numerical'
+                        })
+                        model_definition['input_features'].append({
+                            'name': col + '_day'
+                            ,'type': 'numerical'
+                        })
+
+                    date = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind])
+
+                    data[col + '_year'].append(date.year)
+                    data[col + '_month'].append(date.month)
+                    data[col + '_day'].append(date.day)
+
+                    custom_logic_continue = True
 
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
                     unix_ts = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind]).timestamp()
@@ -195,6 +229,9 @@ class LudwigBackend():
 
                 else:
                     data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
+
+            if custom_logic_continue:
+                continue
 
             if col not in self.transaction.persistent_model_metadata.predict_columns:
                 input_def = {
@@ -238,8 +275,6 @@ class LudwigBackend():
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
-        print(model_definition)
-        exit()
         if self.transaction.persistent_model_metadata.model_order_by is None:
             timeseries_cols = []
         else:
@@ -278,7 +313,8 @@ class LudwigBackend():
             predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
 
         predictions = model.predict(data_df=predict_dataframe)
-
+        print(predictions)
+        exit()
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')
             predictions = predictions.rename(columns = {col_name: col_name_normalized})

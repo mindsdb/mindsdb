@@ -295,6 +295,7 @@ def test_multilabel_prediction():
         labels = []
         labels.append(generate_labels_3(features, separator))
         labels.append(generate_labels_2(features, separator))
+        labels.append(generate_labels_1(features, separator))
 
         feature_headers = list(map(lambda col: col[0], features))
         label_headers = list(map(lambda col: col[0], labels))

@@ -1,7 +1,6 @@
 body {
-  font-family: 'Open Sans';
-  font-style: normal;
-  font-weight: 300;
+  font-family: FreightSans, Helvetica Neue, Helvetica, Arial, sans-serif;
+  font-weight: 400;
  }
 
 @media (max-width: 1200px) {
@@ -107,4 +106,4 @@ a {
 a:hover,
 a:focus,
 a:visited {
-  background-color: #208C58 !important; }
+  text-decoration: underline  !important; }

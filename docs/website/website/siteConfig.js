@@ -25,11 +25,9 @@ const siteConfig = {
   //ogImage: '',
   headerLinks: [
     {
-      doc: "Installing",
+      doc: "installing-mindsdb",
       label: "Docs"
     },
-    { page: "help", label: "Support" },
-    { page: "about", label: "About" },
     {
       href: "https://github.com/mindsdb/mindsdb/releases",
       label: "Download"

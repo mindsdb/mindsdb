@@ -1,6 +1,6 @@
 ---
 id: config
-title: CONFIG Settings
+title: Configuration Settings
 ---
 
 MindsDB has config variables that can be set by as environment variables or on script.

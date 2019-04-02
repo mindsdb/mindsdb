@@ -313,8 +313,7 @@ class LudwigBackend():
             predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
 
         predictions = model.predict(data_df=predict_dataframe)
-        print(predictions)
-        exit()
+
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')
             predictions = predictions.rename(columns = {col_name: col_name_normalized})

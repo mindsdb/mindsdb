@@ -32,7 +32,6 @@ class ModelAnalyzer(BaseModule):
         column_importances = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
         full_dataset=validation_dataset, stats=self.transaction.persistent_model_metadata.column_stats)
 
-        print(column_importances)
         self.transaction.persistent_model_metadata.column_importances = column_importances
 
         # Create the probabilistic validators for each of the predict column

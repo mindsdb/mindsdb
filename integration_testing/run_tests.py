@@ -291,9 +291,9 @@ def test_multilabel_prediction():
     logger.debug(f'Creating multilabel test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
 
     try:
-        features = generate_value_cols(['int','float','int','float'],data_len, separator)
+        features = generate_value_cols(['int','float','int','float'], data_len, separator)
         labels = []
-        labels.append(generate_labels_2(features, separator))
+        labels.append(generate_labels_3(features, separator))
         labels.append(generate_labels_2(features, separator))
 
         feature_headers = list(map(lambda col: col[0], features))

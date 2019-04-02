@@ -94,10 +94,10 @@ class LudwigBackend():
             columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'validate':
             indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
-            columns = self.transaction.persistent_model_metadata.columns
+            columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'test':
             indexes = self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]
-            columns = self.transaction.persistent_model_metadata.columns
+            columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in self.transaction.persistent_model_metadata.predict_columns]
         else:
             raise Exception(f'Unknown mode specified: "{mode}"')
         model_definition = {'input_features': [], 'output_features': []}
@@ -238,7 +238,8 @@ class LudwigBackend():
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
-
+        print(model_definition)
+        exit()
         if self.transaction.persistent_model_metadata.model_order_by is None:
             timeseries_cols = []
         else:
@@ -281,5 +282,5 @@ class LudwigBackend():
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')
             predictions = predictions.rename(columns = {col_name: col_name_normalized})
-            
+
         return predictions

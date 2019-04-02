@@ -174,7 +174,7 @@ class LudwigBackend():
                     try:
                         ts_data_point = float(ts_data_point)
                     except:
-                        ts_data_point = parse_datetime(ts_data_point).timestamp()
+                        ts_data_point = parse_datetime(str(ts_data_point)).timestamp()
                     data[col].append(ts_data_point)
 
                 elif ludwig_dtype == 'sequence':
@@ -203,7 +203,7 @@ class LudwigBackend():
                             ,'type': 'numerical'
                         })
 
-                    date = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind])
+                    date = parse_datetime(str(self.transaction.input_data.data_array[row_ind][col_ind]))
 
                     data[col + '_year'].append(date.year)
                     data[col + '_month'].append(date.month)
@@ -212,7 +212,7 @@ class LudwigBackend():
                     custom_logic_continue = True
 
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
-                    unix_ts = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind]).timestamp()
+                    unix_ts = parse_datetime(str(self.transaction.input_data.data_array[row_ind][col_ind])).timestamp()
                     data[col].append(unix_ts)
 
                 elif data_subtype in (DATA_SUBTYPES.FLOAT):

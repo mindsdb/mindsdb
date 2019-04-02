@@ -3,7 +3,7 @@ from mindsdb import Predictor
 
 mdb = Predictor(name='marvel')
 
-mdb.learn(from_data="marvel_wiki.xlsx", to_predict='FIRST_APPEARANCE')
+mdb.learn(from_data="marvel-wikia.xlsx", to_predict='FIRST_APPEARANCE')
 
 print('------------------------------------------------------------Done training------------------------------------------------------------')
 """

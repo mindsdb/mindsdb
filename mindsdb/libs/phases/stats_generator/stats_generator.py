@@ -76,7 +76,7 @@ class StatsGenerator(BaseModule):
                 return DATA_SUBTYPES.DATE
             else:
                 return DATA_SUBTYPES.TIMESTAMP
-        except ValueError:
+        except:
             return False
 
     def _get_text_type(self, data):
@@ -135,7 +135,7 @@ class StatsGenerator(BaseModule):
         # calculate type_dist
         for element in data:
             # Maybe use list of functions in the future
-
+            element = str(element)
             current_subtype_guess = 'Unknown'
             current_type_guess = 'Unknown'
 
@@ -695,7 +695,7 @@ class StatsGenerator(BaseModule):
                         col_data[i] = None
                     else:
                         try:
-                            col_data[i] = int(parse_datetime(element).timestamp())
+                            col_data[i] = int(parse_datetime(str(element)).timestamp())
                         except:
                             self.log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
                             col_data[i] = None
@@ -748,9 +748,7 @@ class StatsGenerator(BaseModule):
                     kurtosis = 0
                     xp = []
 
-
                 is_float = True if max([1 if int(i) != i else 0 for i in col_data]) == 1 else False
-
 
                 col_stats = {
                     'data_type': data_type,

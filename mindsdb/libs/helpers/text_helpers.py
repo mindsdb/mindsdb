@@ -41,7 +41,7 @@ def cast_string_to_python_type(string):
         if string is None:
             return None
         return int(string)
-    except ValueError:
+    except:
         try:
             return clean_float(string)
         except ValueError:

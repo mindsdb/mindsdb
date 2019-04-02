@@ -88,16 +88,16 @@ class LudwigBackend():
     def _create_ludwig_dataframe(self, mode):
         if mode == 'train':
             indexes = self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]
-            columns = self.transaction.persistent_model_metadata.columns
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns)]
         elif mode == 'predict':
             indexes = self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY]
-            columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'validate':
             indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
-            columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'test':
             indexes = self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]
-            columns = [col for col in self.transaction.persistent_model_metadata.columns if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
         else:
             raise Exception(f'Unknown mode specified: "{mode}"')
         model_definition = {'input_features': [], 'output_features': []}
@@ -108,7 +108,9 @@ class LudwigBackend():
         else:
             timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
 
-        for col_ind, col in enumerate(columns):
+        for ele in columns:
+            col = ele[0]
+            col_ind = ele[1]
             data[col] = []
 
             col_stats = self.transaction.persistent_model_metadata.column_stats[col]
@@ -275,6 +277,7 @@ class LudwigBackend():
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
+
         if self.transaction.persistent_model_metadata.model_order_by is None:
             timeseries_cols = []
         else:
@@ -299,6 +302,7 @@ class LudwigBackend():
 
     def predict(self, mode='predict', ignore_columns=[]):
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
+
         model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
 
         if self.transaction.persistent_model_metadata.model_order_by is None:

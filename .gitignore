@@ -6,6 +6,7 @@ metadata.json
 results
 integration_testing/rr_ts_test
 integration_testing/*.csv
+integration_testing/*.xlsx
 integration_testing/*.tsv
 integration_testing/*.sql
 integration_testing/__*

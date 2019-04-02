@@ -1,12 +1,12 @@
 from mindsdb import Predictor
 
 
-mdb = Predictor(name='co_pollutant')
+mdb = Predictor(name='marvel')
 
-mdb.learn(from_data="AirQualityUCI.csv", to_predict='CO_GT')
+mdb.learn(from_data="marvel_wiki.xlsx", to_predict='FIRST_APPEARANCE')
 
 print('------------------------------------------------------------Done training------------------------------------------------------------')
-
+"""
 predicted = mdb.predict(when={
     'Date':'11/03/2020',
     'Time':'18.00.00',
@@ -17,3 +17,4 @@ print('------------------------------------------------------------Preidiction o
 for val in predicted:
     print(val['CO_GT'])
     print(val['CO_GT_confidence'])
+"""

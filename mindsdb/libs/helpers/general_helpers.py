@@ -148,7 +148,9 @@ def closest(arr, value):
     """
 
     for i,ele in enumerate(arr):
-        value = float(value)
+        if value == None:
+            return -1
+        value = float(str(value).replace(',','.'))
         if ele > value:
             return i - 1
 

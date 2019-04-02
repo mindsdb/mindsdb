@@ -52,8 +52,11 @@ class ProbabilisticValidator():
         :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value` and `real_value`
         """
         predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
-        real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(real_value)
-
+        try:
+            real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(str(real_value).replace(',','.'))
+        except:
+            real_value = None
+            
         if self.buckets is not None:
             predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
             real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats)

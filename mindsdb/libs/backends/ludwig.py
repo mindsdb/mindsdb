@@ -310,7 +310,11 @@ class LudwigBackend():
             predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)
 
         for ignore_col in ignore_columns:
-            predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
+            try:
+                predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
+            except:
+                for date_appendage in ['_year', '_month','_day']:
+                    predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
         predictions = model.predict(data_df=predict_dataframe)
         for col_name in predictions:

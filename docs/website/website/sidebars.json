@@ -1,20 +1,21 @@
 {
 	"docs": {
-		"Get Started": [
-      "installing-mindsdb",
-      "inside-mindsdb"
+		"Getting started": [
+      "installing-mindsdb"
     ],
     "Tutorials": [
-      "basic-mindsdb"
+      "basic-mindsdb",
+      "advanced-mindsdb",
+      "inside-mindsdb"
     ],
 		"Configuration": [
       "config"
 		],
 		"Features": [
-      "DataSources"
+      "data-sources"
     ],
     "Contributing": [
-      "FAQ"
+      "faq"
 		]
 	}
 }

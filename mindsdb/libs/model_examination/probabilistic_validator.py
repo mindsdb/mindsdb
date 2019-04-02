@@ -60,7 +60,7 @@ class ProbabilisticValidator():
         if self.buckets is not None:
             predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
             real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats)
-            X = [False] * len(self.buckets)
+            X = [False] * (len(self.buckets) + 1)
             X[predicted_value_b] = True
             X = X + features_existence
             self.X_buff.append(X)
@@ -110,7 +110,7 @@ class ProbabilisticValidator():
 
         if self.buckets is not None:
             predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
-            X = [False] * len(self.buckets)
+            X = [False] * (len(self.buckets) + 1)
             X[predicted_value_b] = True
             X = [X + features_existence]
         else:

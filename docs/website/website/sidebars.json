@@ -1,10 +1,21 @@
 {
-  "docs": {
-    "Docusaurus": ["doc1"],
-    "First Category": ["doc2"],
-    "Second Category": ["doc3"]
-  },
-  "docs-other": {
-    "First Category": ["doc4", "doc5"]
-  }
+	"docs": {
+		"Getting started": [
+      "installing-mindsdb"
+    ],
+    "Tutorials": [
+      "basic-mindsdb",
+      "advanced-mindsdb",
+      "inside-mindsdb"
+    ],
+		"Configuration": [
+      "config"
+		],
+		"Features": [
+      "data-sources"
+    ],
+    "Contributing": [
+      "faq"
+		]
+	}
 }

@@ -1,3 +1,7 @@
+---
+id: faq
+title: FAQ
+---
 ### Why MindsDB?
 
 We are building MindsDB, because we want to *Democratize Machine Learning*.

@@ -1,5 +1,7 @@
-# Data Sources
-
+---
+id: data-sources
+title: Data sources
+---
 Our goal is to make it very simple to ingest and prepare data that we can feed into MindsDB we call these **DataSources**, here are the basics:
 
 MindsDB.learn **from_data** argument can be any of the follows:

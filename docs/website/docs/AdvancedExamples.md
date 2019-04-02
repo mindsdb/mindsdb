@@ -1,4 +1,7 @@
-# Examples of advanced usecases
+---
+id: advanced-mindsdb
+title: Examples of Advanced Usecases
+---
 
 ## Multiple column predictions
 

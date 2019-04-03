@@ -11,6 +11,7 @@ from mindsdb.external_libs.stats import calculate_sample_size
 import random
 import traceback
 import pandas
+import numpy as np
 
 
 class DataExtractor(BaseModule):
@@ -102,7 +103,11 @@ class DataExtractor(BaseModule):
             return None
 
         df = self._apply_sort_conditions_to_df(df, train_metadata)
+        g = df.columns.to_series().groupby(df.dtypes).groups
 
+        if np.dtype('<M8[ns]') in g:
+            for colname in g[np.dtype('<M8[ns]')]:
+                df[colname] = df[colname].astype(str)
         return df
 
 
@@ -225,7 +230,7 @@ class DataExtractor(BaseModule):
                     test_window = (validation_window[1],length)
                     self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][test_window[0]:test_window[1]]
                     self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][validation_window[0]:validation_window[1]]
-                    
+
         # log some stats
         if self.transaction.metadata.type == TRANSACTION_LEARN:
 

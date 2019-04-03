@@ -148,7 +148,9 @@ def closest(arr, value):
     """
 
     for i,ele in enumerate(arr):
-        value = float(value)
+        if value == None:
+            return -1
+        value = float(value.replace(',','.'))
         if ele > value:
             return i - 1
 
@@ -163,12 +165,12 @@ def get_value_bucket(value, buckets, col_stats):
         if value in buckets:
             bucket = buckets.index(value)
         else:
-            bucket = -1 #Index for values no in the list
+            bucket = len(buckets) # for null values
 
     elif col_stats['data_subtype'] in (DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
         bucket = closest(buckets, value)
     else:
-        bucket = None
+        bucket = len(buckets) # for null values
 
     return bucket
 

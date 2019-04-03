@@ -1,16 +1,20 @@
 from mindsdb import Predictor
 
 
-mdb = Predictor(name='titanic_model')
+mdb = Predictor(name='marvel')
 
-#mdb.learn(from_data="integration_testing/train.csv", to_predict=['Survived','Pclass'])
+mdb.learn(from_data="marvel-wikia.xlsx", to_predict='FIRST_APPEARANCE')
 
 print('------------------------------------------------------------Done training------------------------------------------------------------')
-
-#mdb = Predictor(name='titanic_model')
-predicted = mdb.predict(when_data="integration_testing/train.csv")
+"""
+predicted = mdb.predict(when={
+    'Date':'11/03/2020',
+    'Time':'18.00.00',
+    'NMHC_GT': 1360.0,
+    'AH': 0.655
+})
 print('------------------------------------------------------------Preidiction output------------------------------------------------------------')
 for val in predicted:
-    print(val)
-exit()
-print(predicted.predicted_values)
+    print(val['CO_GT'])
+    print(val['CO_GT_confidence'])
+"""

@@ -1,4 +1,7 @@
-# MindsDB Basics
+---
+id: basic-mindsdb
+title: Learning from Examples
+---
 
 These are basic examples of mindsdb usage in predicting real estate prices for an area.
 

@@ -277,7 +277,6 @@ class LudwigBackend():
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
-
         if self.transaction.persistent_model_metadata.model_order_by is None:
             timeseries_cols = []
         else:

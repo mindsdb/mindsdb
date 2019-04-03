@@ -1,4 +1,7 @@
-# Installing MindsDB
+---
+id: installing-mindsdb
+title: Installing MindsDB
+---
 
 ## Prerequisites
 

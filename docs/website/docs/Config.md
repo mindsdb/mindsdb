@@ -3,7 +3,7 @@ id: config
 title: Configuration Settings
 ---
 
-MindsDB has config variables that can be set by as environment variables or on script.
+MindsDB has config variables that can be set by as environment variables or on a script.
 
 Here are some of the variables of general interest:
 

@@ -42,7 +42,7 @@ MindsDB roadmap is aimed to be aligned with our goals:
 
 ### What type of data can MindsDB learn and predict from?   
 
-Currently we support tabular data, this is CSV, excel, json files and urls or relational data stores. For more information please see the [data sources documentation](/docs/DataSources)
+Currently, we support tabular data, this is CSV, excel, json files and urls or relational data stores. For more information please see the [data sources documentation](/docs/DataSources)
 
 ### How does it work? ###
 
@@ -55,7 +55,7 @@ in very simple terms, MindsDB follows the following steps:
     * produce a neural network based model that can take in the input tensor and produce the target tensor
     * break train data into batches and try learning a model that can fit the target
       * test and validate until model convergence
-    * store metadata about most fit model
+    * store metadata about the most fit model
  * **to predict**:
     * transform question data into input tensor
     * load most fit model

@@ -1,5 +1,5 @@
 
-![MindsDB](https://mindsdb.github.io/mindsdb/img/mindsdb_logo_white.png "MindsDB")
+![MindsDB](https://mindsdb.github.io/mindsdb/img/mindsdb_gh.png "MindsDB")
 #
 
 [![Build Status](https://travis-ci.org/mindsdb/mindsdb.svg?branch=master)](https://travis-ci.org/mindsdb/mindsdb)

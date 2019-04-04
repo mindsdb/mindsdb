@@ -53,8 +53,9 @@ def test_timeseries():
     logger.debug(f'Creating timeseries test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
 
     try:
-        features = generate_value_cols(['datetime','int','float','ascii','ascii'],data_len, separator, ts_hours * 3600)
-        features[3] = list(map(lambda x: str(x[0]) if len(x) > 0 else 'Nrmm', features[3]))
+        # add ,'ascii' in the features list to re-implement the group by
+        features = generate_value_cols(['datetime','int','float'],data_len, separator, ts_hours * 3600)
+        #features[3] = list(map(lambda x: str(x[0]) if len(x) > 0 else 'Nrmm', features[3]))
         labels = [generate_labels_1(features, separator)]
 
         feature_headers = list(map(lambda col: col[0], features))
@@ -91,8 +92,9 @@ def test_timeseries():
             to_predict=label_headers
             # timeseries specific argsw
             ,order_by=feature_headers[0]
-            ,window_size_seconds=ts_hours* 3600 * 1.5
-            ,group_by = feature_headers[3]
+            #,window_size_seconds=ts_hours* 3600 * 1.5
+            ,window_size=6
+            #,group_by = feature_headers[3]
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:
@@ -114,6 +116,7 @@ def test_timeseries():
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
             for col in expect_columns:
+                print(col, row[col])
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
                     logger.debug('Got row: {}'.format(row))

@@ -156,10 +156,10 @@ class LudwigBackend():
             columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'validate':
             indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns)]  #if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'test':
             indexes = self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns)] #if col not in self.transaction.persistent_model_metadata.predict_columns]
         else:
             raise Exception(f'Unknown mode specified: "{mode}"')
         model_definition = {'input_features': [], 'output_features': []}

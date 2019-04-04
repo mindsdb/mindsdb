@@ -92,8 +92,8 @@ def test_timeseries():
             to_predict=label_headers
             # timeseries specific argsw
             ,order_by=feature_headers[0]
-            #,window_size_seconds=ts_hours* 3600 * 1.5
-            ,window_size=6
+            ,window_size_seconds=ts_hours* 3600 * 1.5
+            #,window_size=6
             #,group_by = feature_headers[3]
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')

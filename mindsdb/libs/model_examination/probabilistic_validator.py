@@ -53,7 +53,7 @@ class ProbabilisticValidator():
         """
         predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
         try:
-            real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(real_value.replace(',','.'))
+            real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(str(real_value).replace(',','.'))
         except:
             real_value = None
 

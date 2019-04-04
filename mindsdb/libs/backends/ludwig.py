@@ -219,13 +219,13 @@ class LudwigBackend():
 
                 elif data_subtype in (DATA_SUBTYPES.FLOAT):
                     if type(self.transaction.input_data.data_array[row_ind][col_ind]) == str:
-                        data[col].append(float(self.transaction.input_data.data_array[row_ind][col_ind].replace(',','.')))
+                        data[col].append(float(str(self.transaction.input_data.data_array[row_ind][col_ind]).replace(',','.')))
                     else:
                         data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
                 elif data_subtype in (DATA_SUBTYPES.INT):
                     if type(self.transaction.input_data.data_array[row_ind][col_ind]) == str:
-                        data[col].append(round(float(self.transaction.input_data.data_array[row_ind][col_ind].replace(',','.'))))
+                        data[col].append(round(float(str(self.transaction.input_data.data_array[row_ind][col_ind]).replace(',','.'))))
                     else:
                         data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 

@@ -16,4 +16,4 @@ install:
 before_script: cd integration_testing
 # run tests
 script:
-  - python3 run_tests.py
+  - python3 run_trvis_tests.py

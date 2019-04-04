@@ -54,8 +54,8 @@ def test_timeseries():
 
     try:
         # add ,'ascii' in the features list to re-implement the group by
-        features = generate_value_cols(['datetime','int','float'],data_len, separator, ts_hours * 3600)
-        #features[3] = list(map(lambda x: str(x[0]) if len(x) > 0 else 'Nrmm', features[3]))
+        features = generate_value_cols(['datetime','int','float', 'ascii'],data_len, separator, ts_hours * 3600)
+        features[3] = list(map(lambda x: str(x[0]) if len(x) > 0 else 'Nrmm', features[3]))
         labels = [generate_labels_1(features, separator)]
 
         feature_headers = list(map(lambda col: col[0], features))
@@ -94,7 +94,7 @@ def test_timeseries():
             ,order_by=feature_headers[0]
             ,window_size_seconds=ts_hours* 3600 * 1.5
             #,window_size=6
-            #,group_by = feature_headers[3]
+            ,group_by = feature_headers[3]
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:
@@ -370,7 +370,7 @@ def test_multilabel_prediction():
 
 
 setup_testing_logger()
-#test_one_label_prediction_wo_strings()
+test_one_label_prediction_wo_strings()
 test_timeseries()
-#test_multilabel_prediction()
-#test_one_label_prediction()
+test_multilabel_prediction()
+test_one_label_prediction()

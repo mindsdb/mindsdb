@@ -66,9 +66,9 @@ class LudwigBackend():
 
                 inverted_index_range = list(range(i))
                 inverted_index_range.reverse()
+                ii = 0
                 for ii in inverted_index_range:
                     if window_size_seconds < current_window + (timeseries_row[-1] - df[timeseries_col_name][ii]):
-                        i = max(i + 1, (i + (i - ii)))
                         break
                     current_window += (timeseries_row[-1] - df[timeseries_col_name][ii])
                     timeseries_row.append(df[timeseries_col_name][ii])
@@ -76,7 +76,15 @@ class LudwigBackend():
                     for col in other_col_names:
                         new_row[col].append(df[col][ii])
                     for col in previous_predict_col_names:
-                        new_row[col].append(df[col.replace('previous_', '')][ii])
+                        try:
+                            new_row[col].append(df[col.replace('previous_', '')][ii])
+                        except:
+                            self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
+
+                if mode == 'train':
+                    i = max(i + 1, (i + round((i - ii)/2)))
+                else:
+                    i = i + 1
 
                 new_row[timeseries_col_name] = timeseries_row
 
@@ -120,6 +128,7 @@ class LudwigBackend():
                     i = max(i + 1, (i + round((i - ii)/2)))
                 else:
                     i = i + 1
+
                 new_row[timeseries_col_name] = timeseries_row
 
                 for col in new_row:

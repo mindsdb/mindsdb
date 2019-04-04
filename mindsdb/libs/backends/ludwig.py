@@ -116,8 +116,10 @@ class LudwigBackend():
                         except:
                             self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
 
-                #i = max(i + 1, (i + round((i - ii)/2))) <--- issues with model analyzer
-                i = i + 1
+                if mode == 'train':
+                    i = max(i + 1, (i + round((i - ii)/2)))
+                else:
+                    i = i + 1
                 new_row[timeseries_col_name] = timeseries_row
 
                 for col in new_row:

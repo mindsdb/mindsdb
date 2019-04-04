@@ -63,6 +63,12 @@ class LudwigBackend():
 
                 for col in other_col_names:
                     new_row[col] = [df[col][i]]
+                for col in previous_predict_col_names:
+                    new_row[col] = []
+                for col in predict_col_names:
+                    new_row[col] = df[col][i]
+                for col in self.transaction.persistent_model_metadata.model_group_by:
+                    new_row[col] = df[col][i]
 
                 inverted_index_range = list(range(i))
                 inverted_index_range.reverse()
@@ -89,7 +95,8 @@ class LudwigBackend():
                 new_row[timeseries_col_name] = timeseries_row
 
                 for col in new_row:
-                    new_row[col].reverse()
+                    if col not in predict_col_names and col not in self.transaction.persistent_model_metadata.model_group_by:
+                        new_row[col].reverse()
                     new_cols[col].append(new_row[col])
         else:
             window_size_samples = self.transaction.persistent_model_metadata.window_size_samples

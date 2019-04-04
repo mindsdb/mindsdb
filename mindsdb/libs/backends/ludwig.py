@@ -85,7 +85,10 @@ class LudwigBackend():
                         try:
                             new_row[col].append(df[col.replace('previous_', '')][ii])
                         except:
-                            self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
+                            try:
+                                new_row[col].append(df[col][ii])
+                            except:
+                                self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
 
                 if mode == 'train':
                     i = max(i + 1, (i + round((i - ii)/2)))
@@ -129,7 +132,10 @@ class LudwigBackend():
                         try:
                             new_row[col].append(df[col.replace('previous_', '')][ii])
                         except:
-                            self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
+                            try:
+                                new_row[col].append(df[col][ii])
+                            except:
+                                self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
 
                 if mode == 'train':
                     i = max(i + 1, (i + round((i - ii)/2)))

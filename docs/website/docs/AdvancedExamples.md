@@ -8,9 +8,9 @@ title: Examples of Advanced Usecases
 ### What is a multiple column prediction ?
 In some cases, you might want to predict more than one column of your data.
 
-In order for mindsdb to predict multiple column, you simple need to change the `to_predict` argument from a string (denoting the name of the column) to an array containing the names of the columns you want to predict.
+In order for mindsdb to predict multiple columns, you simply need to change the `to_predict` argument from a string (denoting the name of the column) to an array containing the names of the columns you want to predict.
 
-In the following example we've altered the real estate model to predict the `location` and `neighborhood` both, instead of the `rental_price`.
+In the following example, we've altered the real estate model to predict the `location` and `neighborhood` both, instead of the `rental_price`.
 
 ### Code example
 ```python
@@ -26,9 +26,9 @@ mdb.learn(
 
 ## Multimedia inputs (images, audio and video)
 
-Currently we only support images as inputs into models. We are working on support audio, you can check [this issue](https://github.com/mindsdb/mindsdb/issues/124) to track the progress. Video input support is not yet planned.
+Currently, we only support images as inputs into models. We are working on support audio, you can check [this issue](https://github.com/mindsdb/mindsdb/issues/124) to track the progress. Video input support is not yet planned.
 
-For any sort of media files, simple provide the full path to the file in the column. For example:
+For any sort of media files, simply provide the full path to the file in the column. For example:
 
 ```python
 [
@@ -43,7 +43,7 @@ For any sort of media files, simple provide the full path to the file in the col
 
 Please provide the full path to a file on your local machine, not a url or the binary data from an image loaded up in a dataframe.
 
-Currently the timeline on supporting multimedia output is still undecided, if you need that feature or want to implement, feel free to contact us. That being said, image outputs might actually work, we just haven't tested anything yet.
+Currently, the timeline on supporting multimedia output is still undecided, if you need that feature or want to implement, feel free to contact us. That being said, image outputs might actually work, we just haven't tested anything yet.
 
 
 ## Timeseries predictions
@@ -55,10 +55,10 @@ To build a timeseries model you need to call `learn` with timeseries specific ar
 
 ### Mandatory arguments
 * order_by  -- The column on which to order the rows being feed into the model (e.g. a timestamp)
-* window_size -- The number of rows to "look back" into when making a prediction, after the rows are ordered by the order_by column and split into groups. This is an alias for `window_size_samples`, they are interchagable. You can use `window_size_seconds` instead if you want to use a number of seconds passing on the order by column, rather than a fixed number (please note, this approach assumes the order by column is or can be converted internally into a unix timestamp)
+* window_size -- The number of rows to "look back" into when making a prediction, after the rows are ordered by the order_by column and split into groups. This is an alias for `window_size_samples`, they are interchangeable. You can use `window_size_seconds` instead if you want to use a number of seconds passing on the order by column, rather than a fixed number (please note, this approach assumes the order by column is or can be converted internally into a unix timestamp)
 
 ### Optional arguments
-* group_by -- The column based on which to group multiple unrelated entities peresent in your timeseries data. If your data is comming from multiple sources, this argument can be a differentiator between those sources (e.g a uuid for the source).
+* group_by -- The column based on which to group multiple unrelated entities present in your timeseries data. If your data is coming from multiple sources, this argument can be a differentiator between those sources (e.g a uuid for the source).
 
 ### Code example
 ```python

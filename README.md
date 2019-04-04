@@ -1,5 +1,5 @@
 
-![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/fix_multilabel_prediction/docs/website/website/static/img/logo2_small.png "MindsDB")
+![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/assets/logo_gh.png "MindsDB")
 #
 
 [![Build Status](https://travis-ci.org/mindsdb/mindsdb.svg?branch=master)](https://travis-ci.org/mindsdb/mindsdb)
@@ -7,9 +7,9 @@
 
 MindsDB's goal is to give developers easy access to the power of artificial neural networks for their projects.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
-* [Installing MindsDB](docs/website/docs/Installing.md)
-* [Learning from Examples](docs/website/docs/BasicExample.md)
-* [Frequently Asked Questions](docs/website/docs/FAQ.md)
+* [Installing MindsDB](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
+* [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
+* [Frequently Asked Questions](https://mindsdb.github.io/mindsdb/docs/faq)
 * [Provide Feedback to Improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
 
 
@@ -25,7 +25,7 @@ Set up is simple, just use:
  pip3 install mindsdb --user
 ```
 
-Having issues? [Learn More](docs/Installing.md)
+Having issues? [Learn More](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 
 Once you have MindsDB installed, you can use it as follows:
 

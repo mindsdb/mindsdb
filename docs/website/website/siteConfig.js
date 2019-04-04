@@ -14,13 +14,13 @@ const users = [];
 const siteConfig = {
   title: "Mindsdb" /* title for your website */,
   tagline: "Create AI based apps in a few lines of code",
-  url: "http://mindsdb.com/" /* your website url */,
-  baseUrl: "/" /* base url for your project */,
+  url: "https://mindsdb.github.io" /* your website url */,
+  baseUrl: "/mindsdb/" /* base url for your project */,
   projectName: "mindsdb",
-  organizationName: "Mindsdb",
+  organizationName: "mindsdb",
   twitter: false,
   twitterUsername: "Mindsdb",
-  cname: "www.mindsdb.com",
+  cname: "mindsdb.github.io",
   //gaTrackingId: '',
   //ogImage: '',
   headerLinks: [
@@ -38,8 +38,8 @@ const siteConfig = {
   users,
 
   /* path to images for header/footer */
-  headerIcon: 'img/logo.png',
-  footerIcon: 'img/logo.png',
+  headerIcon: 'img/mindsdb_logo_white.png',
+  footerIcon: 'img/logo_bear.png',
   favicon: 'img/favicon.png',
 
   /* Colors for website */

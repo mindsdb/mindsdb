@@ -17,7 +17,7 @@ the Phase Modules in the next section)
 
 It deals with extracting inputs from various data-sources such as files, directories and SQL compatible databases. If input is a query, it builds the joins with all implied tables (if any).
 
-* **StatsLoader**: There are some transaction such as PREDICT where it's assumed that the statistical information is already known, all we have to do is make sure we load the right statistics to the transaction BUS.
+* **StatsLoader**: There is some transaction such as PREDICT where it's assumed that the statistical information is already known, all we have to do is make sure we load the right statistics to the transaction BUS.
 
 At the moment we don't support loading database from {char}svs that don't have headers or have incomplete headers.
 
@@ -45,7 +45,7 @@ Finally, the various stats are passed on as part of the metadata, so that furthe
 ## Model Backend
 
 * **ModelTrainer**: The model backend will feed the data to a machine learning framework which does the training and predicting. Currently the two learning backends we are working
-on supporting is Ludwig (maintained mainly by Uber, fully supported) and Lightwood (created by us, based on the pre 1.0 version of mindsdb, work in progress).
+on supporting are Ludwig (maintained mainly by Uber, fully supported) and Lightwood (created by us, based on the pre 1.0 version of mindsdb, work in progress).
 
 ## ModelAnalyzer
 

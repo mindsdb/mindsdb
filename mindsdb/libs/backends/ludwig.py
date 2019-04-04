@@ -57,7 +57,8 @@ class LudwigBackend():
                     new_cols[col].append(new_row[col])
         else:
             window_size_samples = self.transaction.persistent_model_metadata.window_size_samples
-            for i in range(nr_ele):
+            i = 0
+            while i < nr_ele:
                 new_row = {}
 
                 timeseries_row = [df[timeseries_col_name][i]]
@@ -69,6 +70,7 @@ class LudwigBackend():
                 inverted_index_range.reverse()
                 for ii in inverted_index_range:
                     if (i - ii) > window_size_samples:
+                        i = max(i + 1, (i + ii)/2)
                         break
                     timeseries_row.append(df[timeseries_col_name][ii])
                     for col in other_col_names:

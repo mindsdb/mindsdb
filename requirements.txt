@@ -1,3 +1,4 @@
+scikit-image==0.14.2
 cython>=0.29.2
 setuptools>=21.2.1
 wheel>=0.32.2

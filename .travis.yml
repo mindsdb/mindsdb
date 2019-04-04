@@ -1,10 +1,10 @@
 language: python
 matrix:
   include:
-    - python: 3.6
+    #- python: 3.6
     - python: 3.7
       dist: xenial
-      sudo: true 
+      sudo: true
 notifications:
   # send notifications only on master failure
   email:

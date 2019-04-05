@@ -14,8 +14,8 @@ import time
 import mindsdb
 from mindsdb import CONST
 
-types_that_fail = ['str','ascii']
-types_that_work = ['int','float','date','datetime','timestamp']
+types_that_fail = ['str']
+types_that_work = ['int','float','date','datetime','timestamp','ascii']
 
 logger = None
 
@@ -53,7 +53,8 @@ def test_timeseries():
     logger.debug(f'Creating timeseries test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
 
     try:
-        features = generate_value_cols(['datetime','int','float','ascii','ascii'],data_len, separator, ts_hours * 3600)
+        # add ,'ascii' in the features list to re-implement the group by
+        features = generate_value_cols(['datetime','int','float', 'ascii'],data_len, separator, ts_hours * 3600)
         features[3] = list(map(lambda x: str(x[0]) if len(x) > 0 else 'Nrmm', features[3]))
         labels = [generate_labels_1(features, separator)]
 
@@ -92,6 +93,7 @@ def test_timeseries():
             # timeseries specific argsw
             ,order_by=feature_headers[0]
             ,window_size_seconds=ts_hours* 3600 * 1.5
+            #,window_size=6
             ,group_by = feature_headers[3]
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
@@ -114,6 +116,7 @@ def test_timeseries():
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
             for col in expect_columns:
+                print(col, row[col])
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
                     logger.debug('Got row: {}'.format(row))
@@ -367,7 +370,7 @@ def test_multilabel_prediction():
 
 
 setup_testing_logger()
-#test_one_label_prediction_wo_strings()
-#test_timeseries()
-#test_multilabel_prediction()
+test_one_label_prediction_wo_strings()
+test_timeseries()
+test_multilabel_prediction()
 test_one_label_prediction()

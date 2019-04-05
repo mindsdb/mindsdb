@@ -100,7 +100,7 @@ def check_for_updates():
     if file_path.is_file():
         token = open(mdb_file).read()
     else:
-        token = '{system}|{version}|{uid}'.format(system=platform.system(), version=__version, uid=uuid_str)
+        token = '{system}|{version}|{uid}'.format(system=platform.system(), version=__version__, uid=uuid_str)
         try:
             open(mdb_file,'w').write(token)
         except:

@@ -12,26 +12,50 @@ class LudwigBackend():
     def __init__(self, transaction):
         self.transaction = transaction
 
-    def _translate_df_to_timeseries_format(self, df, model_definition, timeseries_cols):
-        input_features = model_definition['input_features']
+    def _translate_df_to_timeseries_format(self, df, model_definition, timeseries_cols, mode='predict'):
+        timeseries_col_name = timeseries_cols[0]
+
+        previous_predict_col_names = []
+        predict_col_names = []
+        for feature_def in model_definition['output_features']:
+            if mode == 'train':
+                predict_col_names.append(feature_def['name'])
+            else:
+                predict_col_names = []
+            previous_predict_col_name = 'previous_' + feature_def['name']
+
+            previous_predict_col_already_in = False
+
+            for definition in model_definition['input_features']:
+                if definition['name'] == previous_predict_col_name:
+                     previous_predict_col_already_in = True
+
+            if not previous_predict_col_already_in:
+                model_definition['input_features'].append({
+                    'name': previous_predict_col_name
+                    ,'type': 'sequence'
+                })
 
         other_col_names = []
-        timeseries_col_name = timeseries_cols[0]
-        for feature_def in input_features:
-            if feature_def['name'] not in self.transaction.persistent_model_metadata.model_group_by:
+        for feature_def in model_definition['input_features']:
+            if feature_def['name'] not in self.transaction.persistent_model_metadata.model_group_by and feature_def['name'] not in previous_predict_col_names:
                 feature_def['type'] = 'sequence'
                 if feature_def['name'] not in timeseries_cols:
                     other_col_names.append(feature_def['name'])
 
+
+            previous_predict_col_names.append(previous_predict_col_name)
+
         new_cols = {}
-        for col in [*other_col_names,timeseries_col_name]:
+        for col in [*other_col_names,*previous_predict_col_names,timeseries_col_name,*predict_col_names,*self.transaction.persistent_model_metadata.model_group_by]:
             new_cols[col] = []
 
         nr_ele = len(df[timeseries_col_name])
 
         if self.transaction.persistent_model_metadata.window_size_seconds is not None:
             window_size_seconds = self.transaction.persistent_model_metadata.window_size_seconds
-            for i in range(nr_ele):
+            i = 0
+            while i < nr_ele:
                 current_window = 0
                 new_row = {}
 
@@ -39,50 +63,94 @@ class LudwigBackend():
 
                 for col in other_col_names:
                     new_row[col] = [df[col][i]]
+                for col in previous_predict_col_names:
+                    new_row[col] = []
+                for col in predict_col_names:
+                    new_row[col] = df[col][i]
+                for col in self.transaction.persistent_model_metadata.model_group_by:
+                    new_row[col] = df[col][i]
 
                 inverted_index_range = list(range(i))
                 inverted_index_range.reverse()
+                ii = 0
                 for ii in inverted_index_range:
                     if window_size_seconds < current_window + (timeseries_row[-1] - df[timeseries_col_name][ii]):
                         break
                     current_window += (timeseries_row[-1] - df[timeseries_col_name][ii])
                     timeseries_row.append(df[timeseries_col_name][ii])
+
                     for col in other_col_names:
                         new_row[col].append(df[col][ii])
+                    for col in previous_predict_col_names:
+                        try:
+                            new_row[col].append(df[col.replace('previous_', '')][ii])
+                        except:
+                            try:
+                                new_row[col].append(df[col][ii])
+                            except:
+                                self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
+
+                if mode == 'train':
+                    i = max(i + 1, (i + round((i - ii)/2)))
+                else:
+                    i = i + 1
 
                 new_row[timeseries_col_name] = timeseries_row
 
                 for col in new_row:
-                    new_row[col].reverse()
+                    if col not in predict_col_names and col not in self.transaction.persistent_model_metadata.model_group_by:
+                        new_row[col].reverse()
                     new_cols[col].append(new_row[col])
         else:
             window_size_samples = self.transaction.persistent_model_metadata.window_size_samples
-            for i in range(nr_ele):
+            i = 0
+            while i < nr_ele:
                 new_row = {}
 
                 timeseries_row = [df[timeseries_col_name][i]]
 
                 for col in other_col_names:
                     new_row[col] = [df[col][i]]
+                for col in previous_predict_col_names:
+                    new_row[col] = []
+                for col in predict_col_names:
+                    new_row[col] = df[col][i]
+                for col in self.transaction.persistent_model_metadata.model_group_by:
+                    new_row[col] = df[col][i]
 
                 inverted_index_range = list(range(i))
                 inverted_index_range.reverse()
+                ii = 0
                 for ii in inverted_index_range:
                     if (i - ii) > window_size_samples:
                         break
                     timeseries_row.append(df[timeseries_col_name][ii])
+
                     for col in other_col_names:
                         new_row[col].append(df[col][ii])
+                    for col in previous_predict_col_names:
+                        try:
+                            new_row[col].append(df[col.replace('previous_', '')][ii])
+                        except:
+                            try:
+                                new_row[col].append(df[col][ii])
+                            except:
+                                self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
+
+                if mode == 'train':
+                    i = max(i + 1, (i + round((i - ii)/2)))
+                else:
+                    i = i + 1
 
                 new_row[timeseries_col_name] = timeseries_row
 
                 for col in new_row:
-                    new_row[col].reverse()
+                    if col not in predict_col_names and col not in self.transaction.persistent_model_metadata.model_group_by:
+                        new_row[col].reverse()
                     new_cols[col].append(new_row[col])
 
-
-        for col in new_cols:
-            df[col] = new_cols[col]
+        new_df = pd.DataFrame(data=new_cols)
+        df = new_df
         return df, model_definition
 
     def _create_ludwig_dataframe(self, mode):
@@ -94,10 +162,10 @@ class LudwigBackend():
             columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'validate':
             indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns)]  #if col not in self.transaction.persistent_model_metadata.predict_columns]
         elif mode == 'test':
             indexes = self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns)] #if col not in self.transaction.persistent_model_metadata.predict_columns]
         else:
             raise Exception(f'Unknown mode specified: "{mode}"')
         model_definition = {'input_features': [], 'output_features': []}
@@ -283,7 +351,7 @@ class LudwigBackend():
             timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
 
         if len(timeseries_cols) > 0:
-            training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols)
+            training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
         model = LudwigModel(model_definition)
 
@@ -301,6 +369,7 @@ class LudwigBackend():
 
     def predict(self, mode='predict', ignore_columns=[]):
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
+        model_definition = self.transaction.persistent_model_metadata.ludwig_data['model_definition']
 
         model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
 
@@ -320,6 +389,7 @@ class LudwigBackend():
                     predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
         predictions = model.predict(data_df=predict_dataframe)
+
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')
             predictions = predictions.rename(columns = {col_name: col_name_normalized})

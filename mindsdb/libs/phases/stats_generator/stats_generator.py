@@ -118,7 +118,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
-    def _get_column_data_type(self, data, col_name):
+    def _get_column_data_type(self, data, col_index):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -220,18 +220,24 @@ class StatsGenerator(BaseModule):
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
         all_values = []
-        for i in self.transaction.input_data.data_array:
-            all_values.append(self.transaction.input_data.data_array[i][col_name])
+        for row in self.transaction.input_data.data_array:
+            all_values.append(row[col_index])
 
         all_distinct_vals = set(all_values)
+        
         # Let's chose so random number
-        if all_distinct_vals < len(all_values)/200 or (all_distinct_vals < 120 and all_distinct_vals < len(all_values)/6):
+        if (len(all_distinct_vals) < len(all_values)/200) or ( (len(all_distinct_vals) < 120) and (len(all_distinct_vals) < len(all_values)/6) ):
             curr_data_type = DATA_TYPES.CATEGORICAL
             if len(all_distinct_vals) < 3:
-                curr_data_subtype = DATA_TYPES_SUBTYPES.SINGLE
+                curr_data_subtype = DATA_SUBTYPES.SINGLE
             else:
-                curr_data_subtype = DATA_TYPES_SUBTYPES.MULTIPLE
-                
+                curr_data_subtype = DATA_SUBTYPES.MULTIPLE
+            type_dist = {}
+            subtype_dist = {}
+
+            type_dist[curr_data_type] = len(data)
+            subtype_dist[curr_data_subtype] = len(data)
+
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info
 
     def _get_words_dictionary(self, data, full_text = False):
@@ -688,7 +694,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data, col_name)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data, i)
 
 
             if data_type == DATA_TYPES.DATE:
@@ -771,8 +777,8 @@ class StatsGenerator(BaseModule):
                 }
             elif data_type == DATA_TYPES.CATEGORICAL:
                 all_values = []
-                for i in self.transaction.input_data.data_array:
-                    all_values.append(self.transaction.input_data.data_array[i][col_name])
+                for row in self.transaction.input_data.data_array:
+                    all_values.append(row[i])
 
                 histogram = Counter(all_values)
                 all_possible_values = histogram.keys()
@@ -781,10 +787,10 @@ class StatsGenerator(BaseModule):
                     'data_type': data_type,
                     'data_subtype': curr_data_subtype,
                     "histogram": {
-                        "x": histogram.keys(),
-                        "y": histogram.values()
+                        "x": list(histogram.keys()),
+                        "y": list(histogram.values())
                     },
-                    "percentage_buckets": histogram.keys()
+                    "percentage_buckets": list(histogram.keys())
                 }
 
             # @TODO This is probably wrong, look into it a bit later

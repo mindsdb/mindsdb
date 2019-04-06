@@ -224,7 +224,7 @@ class StatsGenerator(BaseModule):
             all_values.append(row[col_index])
 
         all_distinct_vals = set(all_values)
-        
+
         # Let's chose so random number
         if (len(all_distinct_vals) < len(all_values)/200) or ( (len(all_distinct_vals) < 120) and (len(all_distinct_vals) < len(all_values)/6) ):
             curr_data_type = DATA_TYPES.CATEGORICAL
@@ -789,8 +789,8 @@ class StatsGenerator(BaseModule):
                     "histogram": {
                         "x": list(histogram.keys()),
                         "y": list(histogram.values())
-                    },
-                    "percentage_buckets": list(histogram.keys())
+                    }
+                    #"percentage_buckets": list(histogram.keys())
                 }
 
             # @TODO This is probably wrong, look into it a bit later

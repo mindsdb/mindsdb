@@ -118,7 +118,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
-    def _get_column_data_type(self, data):
+    def _get_column_data_type(self, data, col_index):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -218,6 +218,25 @@ class StatsGenerator(BaseModule):
             curr_data_type, curr_data_subtype = self._get_text_type(data)
             type_dist[curr_data_type] = type_dist.pop('Unknown')
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
+
+        all_values = []
+        for row in self.transaction.input_data.data_array:
+            all_values.append(row[col_index])
+
+        all_distinct_vals = set(all_values)
+
+        # Let's chose so random number
+        if (len(all_distinct_vals) < len(all_values)/200) or ( (len(all_distinct_vals) < 120) and (len(all_distinct_vals) < len(all_values)/6) ):
+            curr_data_type = DATA_TYPES.CATEGORICAL
+            if len(all_distinct_vals) < 3:
+                curr_data_subtype = DATA_SUBTYPES.SINGLE
+            else:
+                curr_data_subtype = DATA_SUBTYPES.MULTIPLE
+            type_dist = {}
+            subtype_dist = {}
+
+            type_dist[curr_data_type] = len(data)
+            subtype_dist[curr_data_subtype] = len(data)
 
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info
 
@@ -648,8 +667,8 @@ class StatsGenerator(BaseModule):
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
         population_size = len(self.transaction.input_data.data_array)
         sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
-        if sample_size > 800:
-            sample_size = 800
+        if sample_size > 3000 and sample_size > population_size/8:
+            sample_size = min(round(population_size/8),3000)
         # get the indexes of randomly selected rows given the population size
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
@@ -675,18 +694,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data)
-
-            # NOTE: Enable this if you want to assume that some numeric values can be text
-            # We noticed that by default this should not be the behavior
-            # TODO: Evaluate if we want to specify the problem type on predict statement as regression or classification
-            #
-            # if col_name in self.train_meta_data.model_predict_columns and data_type == DATA_TYPES.NUMERIC:
-            #     unique_count = len(set(col_data))
-            #     if unique_count <= CONFIG.ASSUME_NUMERIC_AS_TEXT_WHEN_UNIQUES_IS_LESS_THAN:
-            #         data_type = DATA_TYPES.CLASS
-
-            # Generic stats that can be generated for any data type
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data, i)
 
 
             if data_type == DATA_TYPES.DATE:
@@ -767,8 +775,24 @@ class StatsGenerator(BaseModule):
                     },
                     "percentage_buckets": xp
                 }
-                stats[col_name] = col_stats
-            # else if its text
+            elif data_type == DATA_TYPES.CATEGORICAL:
+                all_values = []
+                for row in self.transaction.input_data.data_array:
+                    all_values.append(row[i])
+
+                histogram = Counter(all_values)
+                all_possible_values = histogram.keys()
+
+                col_stats = {
+                    'data_type': data_type,
+                    'data_subtype': curr_data_subtype,
+                    "histogram": {
+                        "x": list(histogram.keys()),
+                        "y": list(histogram.values())
+                    }
+                    #"percentage_buckets": list(histogram.keys())
+                }
+
             # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word

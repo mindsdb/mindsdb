@@ -47,6 +47,9 @@ def rand_ascii_str(length=None, give_nulls=True, only_letters=False):
 def rand_int():
     return int(random.randrange(-pow(2,18), pow(2,18)))
 
+def rand_numerical_cat():
+    return int(random.randrange(-pow(2,3), pow(2,3)))
+
 
 def rand_float():
     return random.randrange(-pow(2,18), pow(2,18)) * random.random()
@@ -66,6 +69,8 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
             gen_fun = rand_ascii_str
         elif t == 'int':
             gen_fun = rand_int
+        elif t == 'nr_category':
+            gen_fun = rand_numerical_cat
         elif t == 'float':
             gen_fun = rand_float
         else:

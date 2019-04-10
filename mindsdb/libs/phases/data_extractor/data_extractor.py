@@ -2,7 +2,7 @@ from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
+from mindsdb.libs.data_types.transaction_metadata import PersistentModelMetadata
 from mindsdb.libs.helpers.text_helpers import hashtext
 from mindsdb.external_libs.stats import calculate_sample_size
 
@@ -73,7 +73,7 @@ class DataExtractor(BaseModule):
         """
 
         :param train_metadata:
-        :type train_metadata: TransactionMetadata
+        :type train_metadata: PersistentModelMetadata
         :return:
         """
         df = None
@@ -140,32 +140,6 @@ class DataExtractor(BaseModule):
 
 
     def run(self):
-        # note: that we need this train metadata even if we are predicting, since it contains information about the model model
-        train_metadata = None
-
-        if self.transaction.metadata.type == TRANSACTION_PREDICT:
-            # extract this from the persistent_model_metadata
-            train_metadata = TransactionMetadata()
-            train_metadata.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
-
-        elif self.transaction.metadata.type == TRANSACTION_LEARN:
-            # Pull this straight from the the current transaction
-            train_metadata = self.transaction.metadata
-
-        else:
-            # We cannot proceed without train metadata
-            self.log.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
-            self.transaction.error = True
-            self.transaction.errorMsg = traceback.print_exc(1)
-            return
-
-        # populate transaction train_metadata variable
-        self.transaction.train_metadata = train_metadata
-
-        # Here you want to organize data, sort, and add/remove columns
-        result = self._get_prepared_input_df(train_metadata)
-
-
         columns = list(result.columns.values)
         data_array = list(result.values.tolist())
 
@@ -174,8 +148,8 @@ class DataExtractor(BaseModule):
 
         self._validate_input_data_integrity()
 
-        is_time_series = train_metadata.model_is_time_series
-        group_by = train_metadata.model_group_by
+        is_time_series = self.transaction.persistent_model_metadata.model_is_time_series
+        group_by = self.transaction.persistent_model_metadata.model_group_by
 
         # create a list of the column numbers (indexes) that make the group by, this is so that we can greate group by hashes for each row
         if len(group_by)>0:

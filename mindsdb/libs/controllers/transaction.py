@@ -1,6 +1,5 @@
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
-from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
@@ -28,17 +27,14 @@ class Transaction:
         :type session: utils.controllers.session_controller.SessionController
         :param transaction_type:
         :param transaction_metadata:
-        :type transaction_metadata: TransactionMetadata
+        :type transaction_metadata: PersistentModelMetadata
         :param breakpoint:
         """
 
 
         self.breakpoint = breakpoint
         self.session = session
-        self.persistent_model_metadata = transaction_metadata #type: TransactionMetadata
-
-        self.train_metadata = None # type: TransactionMetadata
-        # the metadata generated on train (useful also in predict), this will be populated by the data extractor
+        self.persistent_model_metadata = transaction_metadata #type: PersistentModelMetadata
 
         # variables to de defined by setup
         self.error = None

@@ -102,6 +102,10 @@ class Transaction:
 
             self._call_phase_module('ModelAnalyzer')
 
+            # @STARTFIX Null out some non jsonable columns, temporary
+            self.persistent_model_metadata.from_data = None
+            self.persistent_model_metadata.test_from_data = None
+            # @ENDFIX
             self.persistent_model_metadata.insert()
             self.persistent_model_metadata.update()
 

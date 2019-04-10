@@ -9,7 +9,6 @@ class PersistentModelMetadata(PersistentObject):
 
         self.model_name = None
         self.model_backend = None
-        self.train_metadata = None
         self.predict_columns = None
 
         self.columns = None
@@ -37,3 +36,10 @@ class PersistentModelMetadata(PersistentObject):
         self.ludwig_data = None
 
         self.column_importances = None
+
+        # From transaction meadata
+        self.from_data = None
+        self.test_from_data = None
+        self.type = None
+        self.when_data = None
+        self.model_is_time_series = None

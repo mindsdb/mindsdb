@@ -1,8 +1,6 @@
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
-from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
-from mindsdb.libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData
@@ -29,17 +27,14 @@ class Transaction:
         :type session: utils.controllers.session_controller.SessionController
         :param transaction_type:
         :param transaction_metadata:
-        :type transaction_metadata: TransactionMetadata
+        :type transaction_metadata: PersistentModelMetadata
         :param breakpoint:
         """
 
 
         self.breakpoint = breakpoint
         self.session = session
-        self.metadata = transaction_metadata #type: TransactionMetadata
-
-        self.train_metadata = None # type: TransactionMetadata
-        # the metadata generated on train (useful also in predict), this will be populated by the data extractor
+        self.persistent_model_metadata = transaction_metadata #type: PersistentModelMetadata
 
         # variables to de defined by setup
         self.error = None
@@ -50,10 +45,6 @@ class Transaction:
         self.model_data = ModelData()
 
         # variables that can be persisted
-        self.persistent_model_metadata = PersistentModelMetadata()
-        self.persistent_model_metadata.model_name = self.metadata.model_name
-        self.persistent_ml_model_info = PersistentMlModelInfo()
-        self.persistent_ml_model_info.model_name = self.metadata.model_name
 
 
         self.log = logger
@@ -96,23 +87,11 @@ class Transaction:
             return
 
         try:
-            # make sure that we remove all previous data about this model
-            info = self.persistent_ml_model_info.find_one(self.persistent_model_metadata.getPkey())
-            if info is not None:
-                info.deleteFiles()
             self.persistent_model_metadata.delete()
-            self.persistent_ml_model_info.delete()
 
             # start populating data
-            self.persistent_model_metadata.model_backend = self.metadata.model_backend
-            self.persistent_model_metadata.train_metadata = self.metadata.getAsDict()
             self.persistent_model_metadata.current_phase = MODEL_STATUS_ANALYZING
             self.persistent_model_metadata.columns = self.input_data.columns # this is populated by data extractor
-            self.persistent_model_metadata.predict_columns = self.metadata.model_predict_columns
-            self.persistent_model_metadata.model_order_by = self.metadata.model_order_by
-            self.persistent_model_metadata.model_group_by = self.metadata.model_group_by
-            self.persistent_model_metadata.window_size_seconds = self.metadata.window_size_seconds
-            self.persistent_model_metadata.window_size_samples = self.metadata.window_size_samples
 
             self._call_phase_module('StatsGenerator')
             self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
@@ -123,6 +102,10 @@ class Transaction:
 
             self._call_phase_module('ModelAnalyzer')
 
+            # @STARTFIX Null out some non jsonable columns, temporary
+            self.persistent_model_metadata.from_data = None
+            self.persistent_model_metadata.test_from_data = None
+            # @ENDFIX
             self.persistent_model_metadata.insert()
             self.persistent_model_metadata.update()
 
@@ -144,7 +127,7 @@ class Transaction:
         self.persistent_model_metadata.delete()
         self.persistent_model_stats.delete()
 
-        self.output_data.data_array = [['Model '+self.metadata.model_name+' deleted.']]
+        self.output_data.data_array = [['Model '+self.persistent_model_metadata.model_name+' deleted.']]
         self.output_data.columns = ['Status']
 
         return
@@ -156,16 +139,18 @@ class Transaction:
 
         :return:
         """
+        old_pmd = {}
+        for k in self.persistent_model_metadata.__dict__.keys():
+            old_pmd[k] = self.persistent_model_metadata.__dict__[k]
 
         self.persistent_model_metadata = self.persistent_model_metadata.find_one(self.persistent_model_metadata.getPkey())
+        for k in old_pmd:
+            if old_pmd[k] is not None:
+                self.persistent_model_metadata.__dict__[k] = old_pmd[k]
 
         if self.persistent_model_metadata is None:
             self.log.error('No metadata found for this model')
             return
-
-        self.metadata.model_predict_columns = self.persistent_model_metadata.predict_columns
-        self.metadata.model_columns_map = self.persistent_model_metadata.train_metadata['model_columns_map']
-        #self.metadata.model_when_conditions = {key if key not in self.metadata.model_columns_map else self.metadata.model_columns_map[key] : self.metadata.model_when_conditions[key] for key in self.metadata.model_when_conditions }
 
         self._call_phase_module('DataExtractor')
 
@@ -213,18 +198,18 @@ class Transaction:
         :return:
         """
 
-        if self.metadata.type == TRANSACTION_BAD_QUERY:
+        if self.persistent_model_metadata.type == TRANSACTION_BAD_QUERY:
             self.log.error(self.errorMsg)
             self.error = True
             return
 
-        if self.metadata.type == TRANSACTION_DROP_MODEL:
+        if self.persistent_model_metadata.type == TRANSACTION_DROP_MODEL:
             self._execute_drop_model()
             return
 
 
-        if self.metadata.type == TRANSACTION_LEARN:
-            self.output_data.data_array = [['Model ' + self.metadata.model_name + ' training.']]
+        if self.persistent_model_metadata.type == TRANSACTION_LEARN:
+            self.output_data.data_array = [['Model ' + self.persistent_model_metadata.model_name + ' training.']]
             self.output_data.columns = ['Status']
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False:
@@ -233,7 +218,7 @@ class Transaction:
                 _thread.start_new_thread(self._execute_learn, ())
             return
 
-        elif self.metadata.type == TRANSACTION_PREDICT:
+        elif self.persistent_model_metadata.type == TRANSACTION_PREDICT:
             self._execute_predict()
-        elif self.metadata.type == TRANSACTION_NORMAL_SELECT:
+        elif self.persistent_model_metadata.type == TRANSACTION_NORMAL_SELECT:
             self._execute_normal_select()

@@ -2,7 +2,7 @@ from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
+from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 from mindsdb.libs.helpers.text_helpers import hashtext
 from mindsdb.external_libs.stats import calculate_sample_size
 
@@ -26,7 +26,7 @@ class DataExtractor(BaseModule):
         """
 
         columns = self.transaction.persistent_model_metadata.columns
-        when_conditions = self.transaction.metadata.model_when_conditions
+        when_conditions = self.transaction.persistent_model_metadata.model_when_conditions
 
         when_conditions_list = []
         # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
@@ -62,7 +62,7 @@ class DataExtractor(BaseModule):
                 asc_values = [True for i in train_metadata.model_group_by] + asc_values
             df = df.sort_values(sort_by, ascending=asc_values)
 
-        elif self.transaction.metadata.type == TRANSACTION_LEARN:
+        elif self.transaction.persistent_model_metadata.type == TRANSACTION_LEARN:
             # if its not a time series, randomize the input data and we are learning
             df = df.sample(frac=1)
 
@@ -73,24 +73,24 @@ class DataExtractor(BaseModule):
         """
 
         :param train_metadata:
-        :type train_metadata: TransactionMetadata
+        :type train_metadata: PersistentModelMetadata
         :return:
         """
         df = None
 
         # if transaction metadata comes with some data as from_data create the data frame
-        if self.transaction.metadata.from_data is not None:
+        if self.transaction.persistent_model_metadata.from_data is not None:
             # make sure we build a dataframe that has all the columns we need
-            df = self.transaction.metadata.from_data
+            df = self.transaction.persistent_model_metadata.from_data
             df = df.where((pandas.notnull(df)), None)
 
         # if this is a predict statement, create use model_when_conditions to shape the dataframe
-        if  self.transaction.metadata.type == TRANSACTION_PREDICT:
-            if self.transaction.metadata.when_data is not None:
-                df = self.transaction.metadata.when_data
+        if  self.transaction.persistent_model_metadata.type == TRANSACTION_PREDICT:
+            if self.transaction.persistent_model_metadata.when_data is not None:
+                df = self.transaction.persistent_model_metadata.when_data
                 df = df.where((pandas.notnull(df)), None)
 
-            elif self.transaction.metadata.model_when_conditions is not None:
+            elif self.transaction.persistent_model_metadata.model_when_conditions is not None:
                 # if no data frame yet, make one
                 df = self._get_data_frame_from_when_conditions(train_metadata)
 
@@ -127,9 +127,9 @@ class DataExtractor(BaseModule):
         # make sure that the column we are trying to predict is on the input_data
         # else fail, because we cannot predict data we dont have
 
-        if self.transaction.metadata.model_is_time_series or self.transaction.metadata.type == TRANSACTION_LEARN:
+        if self.transaction.persistent_model_metadata.model_is_time_series or self.transaction.persistent_model_metadata.type == TRANSACTION_LEARN:
 
-            for col_target in self.transaction.metadata.model_predict_columns:
+            for col_target in self.transaction.persistent_model_metadata.predict_columns:
                 if col_target not in self.transaction.input_data.columns:
                     err = 'Trying to predict column {column} but column not in source data'.format(column=col_target)
                     self.log.error(err)
@@ -140,31 +140,7 @@ class DataExtractor(BaseModule):
 
 
     def run(self):
-        # note: that we need this train metadata even if we are predicting, since it contains information about the model model
-        train_metadata = None
-
-        if self.transaction.metadata.type == TRANSACTION_PREDICT:
-            # extract this from the persistent_model_metadata
-            train_metadata = TransactionMetadata()
-            train_metadata.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
-
-        elif self.transaction.metadata.type == TRANSACTION_LEARN:
-            # Pull this straight from the the current transaction
-            train_metadata = self.transaction.metadata
-
-        else:
-            # We cannot proceed without train metadata
-            self.log.error('Do not support transaction {type}'.format(type=self.transaction.metadata.type))
-            self.transaction.error = True
-            self.transaction.errorMsg = traceback.print_exc(1)
-            return
-
-        # populate transaction train_metadata variable
-        self.transaction.train_metadata = train_metadata
-
-        # Here you want to organize data, sort, and add/remove columns
-        result = self._get_prepared_input_df(train_metadata)
-
+        result = self._get_prepared_input_df(self.transaction.persistent_model_metadata)
 
         columns = list(result.columns.values)
         data_array = list(result.values.tolist())
@@ -174,8 +150,8 @@ class DataExtractor(BaseModule):
 
         self._validate_input_data_integrity()
 
-        is_time_series = train_metadata.model_is_time_series
-        group_by = train_metadata.model_group_by
+        is_time_series = self.transaction.persistent_model_metadata.model_is_time_series
+        group_by = self.transaction.persistent_model_metadata.model_group_by
 
         # create a list of the column numbers (indexes) that make the group by, this is so that we can greate group by hashes for each row
         if len(group_by)>0:
@@ -204,10 +180,10 @@ class DataExtractor(BaseModule):
                 continue
 
             length = len(self.transaction.input_data.all_indexes[key])
-            if self.transaction.metadata.type == TRANSACTION_LEARN:
+            if self.transaction.persistent_model_metadata.type == TRANSACTION_LEARN:
                 sample_size = int(calculate_sample_size(population_size=length,
-                                                        margin_error=self.transaction.metadata.sample_margin_of_error,
-                                                        confidence_level=self.transaction.metadata.sample_confidence_level))
+                                                        margin_error=self.transaction.persistent_model_metadata.sample_margin_of_error,
+                                                        confidence_level=self.transaction.persistent_model_metadata.sample_confidence_level))
 
                 # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
                 should_split_by_group = type(group_by) == list and len(group_by) > 0
@@ -232,7 +208,7 @@ class DataExtractor(BaseModule):
                     self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][validation_window[0]:validation_window[1]]
 
         # log some stats
-        if self.transaction.metadata.type == TRANSACTION_LEARN:
+        if self.transaction.persistent_model_metadata.type == TRANSACTION_LEARN:
 
             total_rows_used_by_subset = {'train': 0, 'test': 0, 'validation': 0}
             average_number_of_rows_used_per_groupby = {'train': 0, 'test': 0, 'validation': 0}
@@ -250,12 +226,12 @@ class DataExtractor(BaseModule):
             total_number_of_groupby_groups = len(self.transaction.input_data.all_indexes)
 
             if total_rows_used != total_rows_in_input:
-                self.log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error))
+                self.log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.persistent_model_metadata.sample_confidence_level, sample_margin_of_error= self.transaction.persistent_model_metadata.sample_margin_of_error))
                 self.log.info('Using a [Cochran\'s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
                 data = {
                     'total': [total_rows_in_input, 'Total number of rows in input'],
                     'subsets': [[total_rows_used, 'Total number of rows used']],
-                    'label': 'Sample size for margin of error of ({sample_margin_of_error}) and a confidence level of ({sample_confidence_level})'.format(sample_confidence_level=self.transaction.metadata.sample_confidence_level, sample_margin_of_error= self.transaction.metadata.sample_margin_of_error)
+                    'label': 'Sample size for margin of error of ({sample_margin_of_error}) and a confidence level of ({sample_confidence_level})'.format(sample_confidence_level=self.transaction.persistent_model_metadata.sample_confidence_level, sample_margin_of_error= self.transaction.persistent_model_metadata.sample_margin_of_error)
                 }
                 self.log.infoChart(data, type='pie')
 

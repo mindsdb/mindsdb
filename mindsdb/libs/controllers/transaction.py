@@ -36,7 +36,7 @@ class Transaction:
 
         self.breakpoint = breakpoint
         self.session = session
-        self.metadata = transaction_metadata #type: TransactionMetadata
+        self.persistent_model_metadata = transaction_metadata #type: TransactionMetadata
 
         self.train_metadata = None # type: TransactionMetadata
         # the metadata generated on train (useful also in predict), this will be populated by the data extractor

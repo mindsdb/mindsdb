@@ -10,7 +10,7 @@ from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.libs.helpers.general_helpers import check_for_updates
 
 from mindsdb.config import CONFIG
-from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
+from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
 from mindsdb.libs.controllers.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *
 
@@ -154,7 +154,7 @@ class Predictor:
         else:
             self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
-        transaction_metadata = TransactionMetadata()
+        transaction_metadata = PersistentModelMetadata()
         transaction_metadata.model_name = self.name
         transaction_metadata.model_backend = backend
         transaction_metadata.model_predict_columns = predict_columns
@@ -191,7 +191,7 @@ class Predictor:
         breakpoint = CONFIG.DEBUG_BREAK_POINT
         when_ds = None if when_data is None else getDS(when_data)
 
-        transaction_metadata = TransactionMetadata()
+        transaction_metadata = PersistentModelMetadata()
         transaction_metadata.model_name = self.name
 
         if update_cached_model:

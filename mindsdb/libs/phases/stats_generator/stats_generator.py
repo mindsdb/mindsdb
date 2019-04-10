@@ -18,7 +18,6 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, cast_string_to_python_type
 from mindsdb.external_libs.stats import calculate_sample_size
 
-from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 
 
 class StatsGenerator(BaseModule):
@@ -650,8 +649,6 @@ class StatsGenerator(BaseModule):
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
-        self.train_meta_data = TransactionMetadata()
-        self.train_meta_data.setFromDict(self.transaction.persistent_model_metadata.train_metadata)
 
         header = self.transaction.input_data.columns
         non_null_data = {}

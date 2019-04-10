@@ -2,7 +2,6 @@ from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.transaction_metadata import TransactionMetadata
 from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
-from mindsdb.libs.data_entities.persistent_ml_model_info import PersistentMlModelInfo
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData
@@ -50,10 +49,6 @@ class Transaction:
         self.model_data = ModelData()
 
         # variables that can be persisted
-        self.persistent_model_metadata = PersistentModelMetadata()
-        self.persistent_model_metadata.model_name = self.metadata.model_name
-        self.persistent_ml_model_info = PersistentMlModelInfo()
-        self.persistent_ml_model_info.model_name = self.metadata.model_name
 
 
         self.log = logger
@@ -96,12 +91,7 @@ class Transaction:
             return
 
         try:
-            # make sure that we remove all previous data about this model
-            info = self.persistent_ml_model_info.find_one(self.persistent_model_metadata.getPkey())
-            if info is not None:
-                info.deleteFiles()
             self.persistent_model_metadata.delete()
-            self.persistent_ml_model_info.delete()
 
             # start populating data
             self.persistent_model_metadata.model_backend = self.metadata.model_backend

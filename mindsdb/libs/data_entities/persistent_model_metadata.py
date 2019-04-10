@@ -9,7 +9,6 @@ class PersistentModelMetadata(PersistentObject):
 
         self.model_name = None
         self.model_backend = None
-        self.train_metadata = None
         self.predict_columns = None
 
         self.columns = None

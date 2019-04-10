@@ -139,8 +139,14 @@ class Transaction:
 
         :return:
         """
+        old_pmd = {}
+        for k in self.persistent_model_metadata.__dict__.keys():
+            old_pmd[k] = self.persistent_model_metadata.__dict__[k]
 
         self.persistent_model_metadata = self.persistent_model_metadata.find_one(self.persistent_model_metadata.getPkey())
+        for k in old_pmd:
+            if old_pmd[k] is not None:
+                self.persistent_model_metadata.__dict__[k] = old_pmd[k]
 
         if self.persistent_model_metadata is None:
             self.log.error('No metadata found for this model')

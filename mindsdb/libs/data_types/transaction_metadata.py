@@ -10,7 +10,7 @@ class TransactionMetadata(ObjectDict):
 
         self.model_name = None
         self.model_backend = None
-        self.model_predict_columns = None
+        self.predict_columns = None
         self.model_columns_map = {}
         self.model_when_conditions = None
         self.model_group_by = None

@@ -129,7 +129,7 @@ class DataExtractor(BaseModule):
 
         if self.transaction.persistent_model_metadata.model_is_time_series or self.transaction.persistent_model_metadata.type == TRANSACTION_LEARN:
 
-            for col_target in self.transaction.persistent_model_metadata.model_predict_columns:
+            for col_target in self.transaction.persistent_model_metadata.predict_columns:
                 if col_target not in self.transaction.input_data.columns:
                     err = 'Trying to predict column {column} but column not in source data'.format(column=col_target)
                     self.log.error(err)

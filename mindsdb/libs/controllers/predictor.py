@@ -157,7 +157,7 @@ class Predictor:
         transaction_metadata = PersistentModelMetadata()
         transaction_metadata.model_name = self.name
         transaction_metadata.model_backend = backend
-        transaction_metadata.model_predict_columns = predict_columns
+        transaction_metadata.predict_columns = predict_columns
         transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
         transaction_metadata.model_group_by = group_by
         transaction_metadata.model_order_by = order_by
@@ -199,11 +199,6 @@ class Predictor:
 
         # lets turn into lists: when
         when = [when] if type(when) in [type(None), type({})] else when
-
-
-        # This will become irrelevant as if we have trained a model with a predict we just need to pass when or from_data
-        # predict_columns = [predict] if type(predict) != type([]) else predict
-        # transaction_metadata.model_predict_columns = predict_columns
 
         transaction_metadata.model_when_conditions = when
         transaction_metadata.type = transaction_type

@@ -16,7 +16,7 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.data_types.batch import Batch
-from mindsdb.libs.data_entities.lmd import PersistentModelMetadata
+from mindsdb.libs.data_tpyes.light_model_metadata
 
 
 # this implements sampling without replacement and encodes sequential data using encoders

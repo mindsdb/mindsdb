@@ -109,6 +109,8 @@ class Transaction:
             # @ENDFIX
             self.lmd.insert()
             self.lmd.update()
+            self.hmd.insert()
+            self.hmd.update()
 
             return
         except Exception as e:

@@ -158,6 +158,7 @@ class Predictor:
         transaction_metadata = LightModelMetadata()
         heavy_transaction_metadata = HeavyModelMetadata()
         transaction_metadata.model_name = self.name
+        heavy_transaction_metadata.model_name = self.name
         transaction_metadata.model_backend = backend
         transaction_metadata.predict_columns = predict_columns
         transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
@@ -196,6 +197,7 @@ class Predictor:
         transaction_metadata = LightModelMetadata()
         heavy_transaction_metadata = HeavyModelMetadata()
         transaction_metadata.model_name = self.name
+        heavy_transaction_metadata.model_name = self.name
 
         if update_cached_model:
             self.predict_worker = None

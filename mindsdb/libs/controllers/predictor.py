@@ -10,7 +10,7 @@ from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.libs.helpers.general_helpers import check_for_updates
 
 from mindsdb.config import CONFIG
-from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
+from mindsdb.libs.data_entities.lmd import PersistentModelMetadata
 from mindsdb.libs.controllers.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *
 

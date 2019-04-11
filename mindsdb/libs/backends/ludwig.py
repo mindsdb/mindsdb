@@ -38,7 +38,7 @@ class LudwigBackend():
 
         other_col_names = []
         for feature_def in model_definition['input_features']:
-            if feature_def['name'] not in self.transaction.persistent_model_metadata.model_group_by and feature_def['name'] not in previous_predict_col_names:
+            if feature_def['name'] not in self.transaction.lmd.model_group_by and feature_def['name'] not in previous_predict_col_names:
                 feature_def['type'] = 'sequence'
                 if feature_def['name'] not in timeseries_cols:
                     other_col_names.append(feature_def['name'])
@@ -47,13 +47,13 @@ class LudwigBackend():
             previous_predict_col_names.append(previous_predict_col_name)
 
         new_cols = {}
-        for col in [*other_col_names,*previous_predict_col_names,timeseries_col_name,*predict_col_names,*self.transaction.persistent_model_metadata.model_group_by]:
+        for col in [*other_col_names,*previous_predict_col_names,timeseries_col_name,*predict_col_names,*self.transaction.lmd.model_group_by]:
             new_cols[col] = []
 
         nr_ele = len(df[timeseries_col_name])
 
-        if self.transaction.persistent_model_metadata.window_size_seconds is not None:
-            window_size_seconds = self.transaction.persistent_model_metadata.window_size_seconds
+        if self.transaction.lmd.window_size_seconds is not None:
+            window_size_seconds = self.transaction.lmd.window_size_seconds
             i = 0
             while i < nr_ele:
                 current_window = 0
@@ -67,7 +67,7 @@ class LudwigBackend():
                     new_row[col] = []
                 for col in predict_col_names:
                     new_row[col] = df[col][i]
-                for col in self.transaction.persistent_model_metadata.model_group_by:
+                for col in self.transaction.lmd.model_group_by:
                     new_row[col] = df[col][i]
 
                 inverted_index_range = list(range(i))
@@ -98,11 +98,11 @@ class LudwigBackend():
                 new_row[timeseries_col_name] = timeseries_row
 
                 for col in new_row:
-                    if col not in predict_col_names and col not in self.transaction.persistent_model_metadata.model_group_by:
+                    if col not in predict_col_names and col not in self.transaction.lmd.model_group_by:
                         new_row[col].reverse()
                     new_cols[col].append(new_row[col])
         else:
-            window_size_samples = self.transaction.persistent_model_metadata.window_size_samples
+            window_size_samples = self.transaction.lmd.window_size_samples
             i = 0
             while i < nr_ele:
                 new_row = {}
@@ -115,7 +115,7 @@ class LudwigBackend():
                     new_row[col] = []
                 for col in predict_col_names:
                     new_row[col] = df[col][i]
-                for col in self.transaction.persistent_model_metadata.model_group_by:
+                for col in self.transaction.lmd.model_group_by:
                     new_row[col] = df[col][i]
 
                 inverted_index_range = list(range(i))
@@ -145,7 +145,7 @@ class LudwigBackend():
                 new_row[timeseries_col_name] = timeseries_row
 
                 for col in new_row:
-                    if col not in predict_col_names and col not in self.transaction.persistent_model_metadata.model_group_by:
+                    if col not in predict_col_names and col not in self.transaction.lmd.model_group_by:
                         new_row[col].reverse()
                     new_cols[col].append(new_row[col])
 
@@ -156,32 +156,32 @@ class LudwigBackend():
     def _create_ludwig_dataframe(self, mode):
         if mode == 'train':
             indexes = self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns)]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd.columns)]
         elif mode == 'predict':
             indexes = self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns) if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd.columns) if col not in self.transaction.lmd.predict_columns]
         elif mode == 'validate':
             indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns)]  #if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd.columns)]  #if col not in self.transaction.lmd.predict_columns]
         elif mode == 'test':
             indexes = self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.persistent_model_metadata.columns)] #if col not in self.transaction.persistent_model_metadata.predict_columns]
+            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd.columns)] #if col not in self.transaction.lmd.predict_columns]
         else:
             raise Exception(f'Unknown mode specified: "{mode}"')
         model_definition = {'input_features': [], 'output_features': []}
         data = {}
 
-        if self.transaction.persistent_model_metadata.model_order_by is None:
+        if self.transaction.lmd.model_order_by is None:
             timeseries_cols = []
         else:
-            timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
+            timeseries_cols = list(map(lambda x: x[0], self.transaction.lmd.model_order_by))
 
         for ele in columns:
             col = ele[0]
             col_ind = ele[1]
             data[col] = []
 
-            col_stats = self.transaction.persistent_model_metadata.column_stats[col]
+            col_stats = self.transaction.lmd.column_stats[col]
             data_subtype = col_stats['data_subtype']
 
             ludwig_dtype = None
@@ -208,7 +208,7 @@ class LudwigBackend():
                 ludwig_dtype = 'category'
 
             elif data_subtype in (DATA_SUBTYPES.DATE):
-                if col not in self.transaction.persistent_model_metadata.predict_columns:
+                if col not in self.transaction.lmd.predict_columns:
                     ludwig_dtype = 'date'
                 else:
                     ludwig_dtype = 'category'
@@ -249,7 +249,7 @@ class LudwigBackend():
 
                 elif ludwig_dtype == 'sequence':
                     arr_str = self.transaction.input_data.data_array[row_ind][col_ind]
-                    arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.persistent_model_metadata.column_stats[col]['separator'])))
+                    arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.lmd.column_stats[col]['separator'])))
                     data[col].append(arr)
 
                 # Date isn't supported yet, so we hack around it
@@ -303,7 +303,7 @@ class LudwigBackend():
             if custom_logic_continue:
                 continue
 
-            if col not in self.transaction.persistent_model_metadata.predict_columns:
+            if col not in self.transaction.lmd.predict_columns:
                 input_def = {
                     'name': col
                     ,'type': ludwig_dtype
@@ -345,10 +345,10 @@ class LudwigBackend():
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
-        if self.transaction.persistent_model_metadata.model_order_by is None:
+        if self.transaction.lmd.model_order_by is None:
             timeseries_cols = []
         else:
-            timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
+            timeseries_cols = list(map(lambda x: x[0], self.transaction.lmd.model_order_by))
 
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
@@ -356,27 +356,27 @@ class LudwigBackend():
         model = LudwigModel(model_definition)
 
         # Figure out how to pass `model_load_path`
-        train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.persistent_model_metadata.model_name)
+        train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd.model_name)
 
         #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
-        ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.persistent_model_metadata.model_name
+        ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.lmd.model_name
 
         model.save(ludwig_model_savepath)
         model.close()
 
-        self.transaction.persistent_model_metadata.ludwig_data = {'ludwig_save_path': ludwig_model_savepath, 'model_definition': model_definition}
+        self.transaction.lmd.ludwig_data = {'ludwig_save_path': ludwig_model_savepath, 'model_definition': model_definition}
 
 
     def predict(self, mode='predict', ignore_columns=[]):
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
-        model_definition = self.transaction.persistent_model_metadata.ludwig_data['model_definition']
+        model_definition = self.transaction.lmd.ludwig_data['model_definition']
 
-        model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
+        model = LudwigModel.load(self.transaction.lmd.ludwig_data['ludwig_save_path'])
 
-        if self.transaction.persistent_model_metadata.model_order_by is None:
+        if self.transaction.lmd.model_order_by is None:
             timeseries_cols = []
         else:
-            timeseries_cols = list(map(lambda x: x[0], self.transaction.persistent_model_metadata.model_order_by))
+            timeseries_cols = list(map(lambda x: x[0], self.transaction.lmd.model_order_by))
 
         if len(timeseries_cols) > 0:
             predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)

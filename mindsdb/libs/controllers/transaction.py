@@ -128,7 +128,7 @@ class Transaction:
         """
 
         self.lmd.delete()
-        self.persistent_model_stats.delete()
+        self.hmd.delete()
 
         self.output_data.data_array = [['Model '+self.lmd.model_name+' deleted.']]
         self.output_data.columns = ['Status']

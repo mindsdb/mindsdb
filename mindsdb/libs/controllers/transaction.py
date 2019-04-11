@@ -19,7 +19,7 @@ import copy
 
 class Transaction:
 
-    def __init__(self, session, transaction_metadata, logger =  log, breakpoint = PHASE_END):
+    def __init__(self, session, transaction_metadata, heavy_transaction_metadata, logger =  log, breakpoint = PHASE_END):
         """
         A transaction is the interface to start some MindsDB operation within a session
 
@@ -35,6 +35,7 @@ class Transaction:
         self.breakpoint = breakpoint
         self.session = session
         self.lmd = transaction_metadata #type: LightModelMetadata
+        self.hmd = heavy_transaction_metadata
 
         # variables to de defined by setup
         self.error = None
@@ -139,14 +140,26 @@ class Transaction:
 
         :return:
         """
-        old_pmd = {}
+        old_lmd = {}
         for k in self.lmd.__dict__.keys():
-            old_pmd[k] = self.lmd.__dict__[k]
+            old_lmd[k] = self.lmd.__dict__[k]
+
+        old_hmd = {}
+        for k in old_hmd:
+            if old_hmd[k] is not None:
+                self.hmd.__dict__[k] = old_hmd[k]
+
 
         self.lmd = self.lmd.find_one(self.lmd.getPkey())
-        for k in old_pmd:
-            if old_pmd[k] is not None:
-                self.lmd.__dict__[k] = old_pmd[k]
+        self.hmd = self.hmd.fine_one(self.hmd.getPkey())
+
+        for k in old_lmd:
+            if old_lmd[k] is not None:
+                self.lmd.__dict__[k] = old_lmd[k]
+
+        for k in old_hmd:
+            if old_hmd[k] is not None:
+                self.hmd.__dict__[k] = old_hmd[k]
 
         if self.lmd is None:
             self.log.error('No metadata found for this model')
@@ -174,7 +187,7 @@ class Transaction:
                 self.output_data.data[col].append(cell)
 
         for predicted_col in self.lmd.predict_columns:
-            probabilistic_validator = unpickle_obj(self.lmd.probabilistic_validators[predicted_col])
+            probabilistic_validator = unpickle_obj(self.hmd.probabilistic_validators[predicted_col])
 
             predicted_values = predictions[predicted_col]
             self.output_data.data[predicted_col] = predicted_values

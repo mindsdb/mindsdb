@@ -1,6 +1,6 @@
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
-from mindsdb.libs.data_tpyes.light_model_metadata
+from mindsdb.libs.data_tpyes.light_model_metadata import LightModelMetadata
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.model_data import ModelData

@@ -27,14 +27,14 @@ class Transaction:
         :type session: utils.controllers.session_controller.SessionController
         :param transaction_type:
         :param transaction_metadata:
-        :type transaction_metadata: PersistentModelMetadata
+        :type transaction_metadata: LightModelMetadata
         :param breakpoint:
         """
 
 
         self.breakpoint = breakpoint
         self.session = session
-        self.lmd = transaction_metadata #type: PersistentModelMetadata
+        self.lmd = transaction_metadata #type: LightModelMetadata
 
         # variables to de defined by setup
         self.error = None

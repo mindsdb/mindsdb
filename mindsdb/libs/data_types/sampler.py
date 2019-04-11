@@ -30,7 +30,7 @@ class Sampler:
 
         :param data:
         :param metadata_as_stored:
-        :type metadata_as_stored: PersistentModelMetadata
+        :type metadata_as_stored: LightModelMetadata
         :param batch_size:
         :param ignore_types:
         """

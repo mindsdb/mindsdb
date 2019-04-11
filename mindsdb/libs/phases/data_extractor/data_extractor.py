@@ -73,7 +73,7 @@ class DataExtractor(BaseModule):
         """
 
         :param train_metadata:
-        :type train_metadata: PersistentModelMetadata
+        :type train_metadata: LightModelMetadata
         :return:
         """
         df = None

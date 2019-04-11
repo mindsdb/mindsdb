@@ -71,6 +71,7 @@ class ModelAnalyzer(BaseModule):
             self.transaction.hmd.probabilistic_validators[col] = pickle_obj(probabilistic_validators[col])
 
         self.transaction.lmd.update()
+        #self.transaction.hmd.update()
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

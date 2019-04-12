@@ -153,7 +153,7 @@ class Transaction:
 
 
         self.lmd = self.lmd.find_one(self.lmd.getPkey())
-        self.hmd = self.hmd.fine_one(self.hmd.getPkey())
+        self.hmd = self.hmd.find_one(self.hmd.getPkey())
 
         for k in old_lmd:
             if old_lmd[k] is not None:

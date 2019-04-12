@@ -1,12 +1,8 @@
-![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/mindsdb/proxies/web/static/img/logo1gw.png "MindsDB")
-#
 
 
 
 
-MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects. 
-
-* [Installing MindsDB](Installing.md)
-* [Learning from Examples](examples/basic/README.md)
-* [Frequently Asked Questions](FAQ.md)
-
+* [Installing MindsDB](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
+* [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
+* [Frequently Asked Questions](https://mindsdb.github.io/mindsdb/docs/faq)
+* [Provide Feedback to Improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)

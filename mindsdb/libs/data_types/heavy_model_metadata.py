@@ -1,5 +1,3 @@
-from mindsdb.libs.data_types.persistent_object import PersistentObject
-
 class HeavyModelMetadata():
 
     _entity_name = 'heavy_model_metadata'

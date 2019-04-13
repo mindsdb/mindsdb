@@ -1,5 +1,3 @@
-from mindsdb.libs.data_types.persistent_object import PersistentObject
-
 class LightModelMetadata():
 
     _entity_name = 'model_metadata'

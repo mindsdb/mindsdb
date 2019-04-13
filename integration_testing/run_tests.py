@@ -370,7 +370,7 @@ def test_multilabel_prediction():
 
 
 setup_testing_logger()
-test_one_label_prediction_wo_strings()
-test_timeseries()
-test_multilabel_prediction()
+#test_one_label_prediction_wo_strings()
+#test_timeseries()
+#test_multilabel_prediction()
 test_one_label_prediction()

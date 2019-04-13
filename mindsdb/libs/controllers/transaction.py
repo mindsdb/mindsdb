@@ -4,7 +4,6 @@ from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.light_model_metadata import LightModelMetadata
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
-from mindsdb.libs.data_types.model_data import ModelData
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.backends.ludwig import LudwigBackend
 from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
@@ -43,7 +42,6 @@ class Transaction:
 
         self.input_data = TransactionData()
         self.output_data = TrainTransactionOutputData()
-        self.model_data = ModelData()
 
         # variables that can be persisted
 

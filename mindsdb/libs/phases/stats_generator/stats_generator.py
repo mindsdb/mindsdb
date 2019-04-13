@@ -855,9 +855,6 @@ class StatsGenerator(BaseModule):
         self.transaction.lmd.train_row_count = train_rows
         self.transaction.lmd.validation_row_count = validation_rows
 
-        self.transaction.lmd.update()
-        #self.transaction.hmd.update()
-
         self._log_interesting_stats(stats)
         return stats
 

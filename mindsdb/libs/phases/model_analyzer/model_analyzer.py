@@ -1,4 +1,4 @@
-from mindsdb.libs.helpers.general_helpers import pickle_obj, unpickle_obj
+from mindsdb.libs.helpers.general_helpers import pickle_obj
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.sampler import Sampler
@@ -69,9 +69,6 @@ class ModelAnalyzer(BaseModule):
         self.transaction.hmd.probabilistic_validators = {}
         for col in probabilistic_validators:
             self.transaction.hmd.probabilistic_validators[col] = pickle_obj(probabilistic_validators[col])
-
-        self.transaction.lmd.update()
-        self.transaction.hmd.update()
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

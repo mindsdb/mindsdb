@@ -1,3 +1,4 @@
+from mindsdb.libs.helpers.general_helpers import pickle_obj, unpickle_obj
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.light_model_metadata import LightModelMetadata
@@ -8,14 +9,13 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.backends.ludwig import LudwigBackend
 from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
-from mindsdb.libs.helpers.general_helpers import unpickle_obj
 
 import time
 import _thread
 import traceback
 import importlib
 import copy
-
+import pickle
 
 class Transaction:
 
@@ -88,8 +88,6 @@ class Transaction:
             return
 
         try:
-            self.lmd.delete()
-
             # start populating data
             self.lmd.current_phase = MODEL_STATUS_ANALYZING
             self.lmd.columns = self.input_data.columns # this is populated by data extractor
@@ -107,12 +105,15 @@ class Transaction:
             self.lmd.from_data = None
             self.lmd.test_from_data = None
             # @ENDFIX
-            self.lmd.insert()
-            self.lmd.update()
-            self.hmd.insert()
-            self.hmd.update()
+
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_light_model_metadata.pickle', 'wb') as fp:
+                pickle.dump(self.lmd, fp)
+
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_heavy_model_metadata.pickle', 'wb') as fp:
+                pickle.dump(self.hmd, fp)
 
             return
+
         except Exception as e:
             self.lmd.current_phase = MODEL_STATUS_ERROR
             self.lmd.error_msg = traceback.print_exc()
@@ -127,8 +128,6 @@ class Transaction:
         :return:
         """
 
-        self.lmd.delete()
-        self.hmd.delete()
 
         self.output_data.data_array = [['Model '+self.lmd.model_name+' deleted.']]
         self.output_data.columns = ['Status']
@@ -151,9 +150,11 @@ class Transaction:
             if old_hmd[k] is not None:
                 self.hmd.__dict__[k] = old_hmd[k]
 
+        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_light_model_metadata.pickle', 'rb') as fp:
+            self.lmd = pickle.load(fp)
 
-        self.lmd = self.lmd.find_one(self.lmd.getPkey())
-        self.hmd = self.hmd.find_one(self.hmd.getPkey())
+        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_heavy_model_metadata.pickle', 'rb') as fp:
+            self.hmd = pickle.load(fp)
 
         for k in old_lmd:
             if old_lmd[k] is not None:

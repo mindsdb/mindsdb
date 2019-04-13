@@ -1,7 +1,6 @@
 from mindsdb.libs.helpers.general_helpers import pickle_obj
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.data_types.sampler import Sampler
 from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
 from mindsdb.libs.model_examination.column_evaluator import ColumnEvaluator
 

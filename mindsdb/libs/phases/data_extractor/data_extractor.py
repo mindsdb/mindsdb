@@ -5,8 +5,6 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.helpers.text_helpers import hashtext
 from mindsdb.external_libs.stats import calculate_sample_size
 
-
-
 import random
 import traceback
 import pandas
@@ -126,8 +124,10 @@ class DataExtractor(BaseModule):
         # make sure that the column we are trying to predict is on the input_data
         # else fail, because we cannot predict data we dont have
 
-        if self.transaction.lmd.model_is_time_series or self.transaction.lmd.type == TRANSACTION_LEARN:
+        #if self.transaction.lmd.model_is_time_series or self.transaction.lmd.type == TRANSACTION_LEARN:
+        # ^ How did this even make sense before ? Why did it not crash tests ? Pressumably because the predict col was loaded into `input_data` as an empty col
 
+        if self.transaction.lmd.type == TRANSACTION_LEARN:
             for col_target in self.transaction.lmd.predict_columns:
                 if col_target not in self.transaction.input_data.columns:
                     err = 'Trying to predict column {column} but column not in source data'.format(column=col_target)

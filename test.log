@@ -1,6 +1,0 @@
-/home/george/mindsdb/venv/lib/python3.7/site-packages/ludwig/features/numerical_feature.py:63: FutureWarning: Method .as_matrix will be removed in a future version. Use .values instead.
-  np.float32).as_matrix()
-INFO:mindsdb_integration_testing:--------------- Learning ran succesfully ---------------
-DEBUG:mindsdb_integration_testing:Succesfully create mindsdb Predictor
-INFO:mindsdb_integration_testing:--------------- Predicting ran succesfully ---------------
-INFO:mindsdb_integration_testing:Travis CLI Tests ran succesfully !

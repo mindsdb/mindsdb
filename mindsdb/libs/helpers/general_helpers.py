@@ -5,6 +5,12 @@ import uuid
 from pathlib import Path
 import pickle
 import requests
+from contextlib import contextmanager
+import ctypes
+import io
+import os, sys
+import tempfile
+
 
 from mindsdb.__about__ import __version__
 from mindsdb.config import CONFIG
@@ -197,3 +203,40 @@ def evaluate_accuracy(predictions, real_values, col_stats, output_columns):
     if score == 0:
         score = 0.00000001
     return score
+
+
+class suppress_stdout_stderr(object):
+    def __init__(self):
+        # Open a pair of null files
+        self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
+        # Save the actual stdout (1) and stderr (2) file descriptors.
+        self.c_stdout = sys.stdout.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stdout'))
+        self.c_stderr = sys.stderr.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stderr'))
+
+        self.save_fds = [os.dup(self.c_stdout), os.dup(self.c_stderr)]
+
+    def __enter__(self):
+        # Assign the null pointers to stdout and stderr.
+        os.dup2(self.null_fds[0],self.c_stdout)
+        os.dup2(self.null_fds[1],self.c_stderr)
+
+    def __exit__(self, *_):
+        # Re-assign the real stdout/stderr back to (1) and (2)
+        os.dup2(self.save_fds[0],self.c_stdout)
+        os.dup2(self.save_fds[1],self.c_stderr)
+        # Close all file descriptors
+        for fd in self.null_fds + self.save_fds:
+            os.close(fd)
+
+@contextmanager
+def disable_ludwig_output():
+    try:
+        try:
+            old_tf_loglevel = os.environ['TF_CPP_MIN_LOG_LEVEL']
+        except:
+            old_tf_loglevel = '2'
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+        with suppress_stdout_stderr():
+            yield
+    finally:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = old_tf_loglevel

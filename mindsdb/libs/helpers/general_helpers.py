@@ -5,6 +5,9 @@ import uuid
 from pathlib import Path
 import pickle
 import requests
+from contextlib import contextmanager
+import sys
+import os
 
 from mindsdb.__about__ import __version__
 from mindsdb.config import CONFIG
@@ -197,3 +200,17 @@ def evaluate_accuracy(predictions, real_values, col_stats, output_columns):
     if score == 0:
         score = 0.00000001
     return score
+
+
+@contextmanager
+def suppress_out():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = devnull
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr

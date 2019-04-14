@@ -1,7 +1,10 @@
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.config import *
+
 from dateutil.parser import parse as parse_datetime
 from scipy.misc import imread
+import os
+import sys
 
 from ludwig import LudwigModel
 import pandas as pd
@@ -353,16 +356,26 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
-        model = LudwigModel(model_definition)
+        with open(os.devnull, "w") as devnull:
+            old_stdout = sys.stdout
+            old_stderr = sys.stderr
+            sys.stdout = devnull
+            sys.stderr = devnull
 
-        # Figure out how to pass `model_load_path`
-        train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.persistent_model_metadata.model_name)
+        try:
+            model = LudwigModel(model_definition)
 
-        #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
-        ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.persistent_model_metadata.model_name
+            # Figure out how to pass `model_load_path`
+            train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.persistent_model_metadata.model_name)
 
-        model.save(ludwig_model_savepath)
-        model.close()
+            #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
+            ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.persistent_model_metadata.model_name
+
+            model.save(ludwig_model_savepath)
+            model.close()
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
 
         self.transaction.persistent_model_metadata.ludwig_data = {'ludwig_save_path': ludwig_model_savepath, 'model_definition': model_definition}
 

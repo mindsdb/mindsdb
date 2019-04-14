@@ -362,20 +362,20 @@ class LudwigBackend():
             sys.stdout = devnull
             sys.stderr = devnull
 
-        try:
-            model = LudwigModel(model_definition)
+            try:
+                model = LudwigModel(model_definition)
 
-            # Figure out how to pass `model_load_path`
-            train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.persistent_model_metadata.model_name)
+                # Figure out how to pass `model_load_path`
+                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.persistent_model_metadata.model_name)
 
-            #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
-            ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.persistent_model_metadata.model_name
+                #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
+                ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.persistent_model_metadata.model_name
 
-            model.save(ludwig_model_savepath)
-            model.close()
-        finally:
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
+                model.save(ludwig_model_savepath)
+                model.close()
+            finally:
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
 
         self.transaction.persistent_model_metadata.ludwig_data = {'ludwig_save_path': ludwig_model_savepath, 'model_definition': model_definition}
 

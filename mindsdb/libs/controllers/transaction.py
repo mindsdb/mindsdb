@@ -34,7 +34,6 @@ class Transaction:
         self.breakpoint = breakpoint
         self.session = session
         self.lmd = transaction_metadata #type: LightModelMetadata
-        self.hmd = heavy_transaction_metadata
 
         # variables to de defined by setup
         self.error = None
@@ -144,9 +143,7 @@ class Transaction:
             old_lmd[k] = self.lmd.__dict__[k]
 
         old_hmd = {}
-        for k in old_hmd:
-            if old_hmd[k] is not None:
-                self.hmd.__dict__[k] = old_hmd[k]
+        for k in self.hmd: old_hmd[k] = self.hmd[k]
 
         with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_light_model_metadata.pickle', 'rb') as fp:
             self.lmd = pickle.load(fp)
@@ -159,8 +156,7 @@ class Transaction:
                 self.lmd.__dict__[k] = old_lmd[k]
 
         for k in old_hmd:
-            if old_hmd[k] is not None:
-                self.hmd.__dict__[k] = old_hmd[k]
+            if old_hmd[k] is not None: self.hmd[k] = old_hmd[k]
 
         if self.lmd is None:
             self.log.error('No metadata found for this model')
@@ -188,7 +184,7 @@ class Transaction:
                 self.output_data.data[col].append(cell)
 
         for predicted_col in self.lmd.predict_columns:
-            probabilistic_validator = unpickle_obj(self.hmd.probabilistic_validators[predicted_col])
+            probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
 
             predicted_values = predictions[predicted_col]
             self.output_data.data[predicted_col] = predicted_values

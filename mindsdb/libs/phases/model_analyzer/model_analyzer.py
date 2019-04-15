@@ -65,9 +65,9 @@ class ModelAnalyzer(BaseModule):
             probabilistic_validators[pcol].partial_fit()
 
         # Pickle for later use
-        self.transaction.hmd.probabilistic_validators = {}
+        self.transaction.hmd['probabilistic_validators'] = {}
         for col in probabilistic_validators:
-            self.transaction.hmd.probabilistic_validators[col] = pickle_obj(probabilistic_validators[col])
+            self.transaction.hmd['probabilistic_validators'][col] = pickle_obj(probabilistic_validators[col])
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

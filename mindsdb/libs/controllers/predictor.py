@@ -11,7 +11,6 @@ from mindsdb.libs.helpers.general_helpers import check_for_updates
 
 from mindsdb.config import CONFIG
 from mindsdb.libs.data_types.light_model_metadata import LightModelMetadata
-from mindsdb.libs.data_types.heavy_model_metadata import HeavyModelMetadata
 from mindsdb.libs.controllers.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *
 
@@ -156,9 +155,10 @@ class Predictor:
             self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
         transaction_metadata = LightModelMetadata()
-        heavy_transaction_metadata = HeavyModelMetadata()
+        heavy_transaction_metadata = {}
+        heavy_transaction_metadata['model_name'] = self.name
+
         transaction_metadata.model_name = self.name
-        heavy_transaction_metadata.model_name = self.name
         transaction_metadata.model_backend = backend
         transaction_metadata.predict_columns = predict_columns
         transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
@@ -195,7 +195,7 @@ class Predictor:
         when_ds = None if when_data is None else getDS(when_data)
 
         transaction_metadata = LightModelMetadata()
-        heavy_transaction_metadata = HeavyModelMetadata()
+        heavy_transaction_metadata = {}
         transaction_metadata.model_name = self.name
         heavy_transaction_metadata.model_name = self.name
 

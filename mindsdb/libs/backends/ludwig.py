@@ -393,7 +393,7 @@ class LudwigBackend():
                     predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
         with disable_ludwig_output():
-            model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
+            model = LudwigModel.load(self.transaction.lmd.ludwig_data['ludwig_save_path'])
             predictions = model.predict(data_df=predict_dataframe)
 
         for col_name in predictions:

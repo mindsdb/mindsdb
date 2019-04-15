@@ -359,14 +359,14 @@ class LudwigBackend():
         with disable_ludwig_output():
             model = LudwigModel(model_definition)
 
-        # Figure out how to pass `model_load_path`
-        train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd.model_name)
+            # Figure out how to pass `model_load_path`
+            train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd.model_name)
 
         #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
         ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.lmd.model_name
 
-            model.save(ludwig_model_savepath)
-            model.close()
+        model.save(ludwig_model_savepath)
+        model.close()
 
         self.transaction.lmd.ludwig_data = {'ludwig_save_path': ludwig_model_savepath, 'model_definition': model_definition}
 
@@ -393,7 +393,7 @@ class LudwigBackend():
                     predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
         with disable_ludwig_output():
-            model = LudwigModel.load(self.transaction.persistent_model_metadata.ludwig_data['ludwig_save_path'])
+            model = LudwigModel.load(self.transaction.lmd.ludwig_data['ludwig_save_path'])
             predictions = model.predict(data_df=predict_dataframe)
 
         for col_name in predictions:

@@ -1,4 +1,4 @@
-from mindsdb.libs.helpers.general_helpers import pickle_obj, unpickle_obj
+from mindsdb.libs.helpers.general_helpers import unpickle_obj
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.transaction_data import TransactionData
@@ -106,7 +106,7 @@ class Transaction:
             with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_light_model_metadata.pickle', 'wb') as fp:
                 pickle.dump(self.lmd, fp)
 
-            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_heavy_model_metadata.pickle', 'wb') as fp:
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['model_name'] + '_heavy_model_metadata.pickle', 'wb') as fp:
                 pickle.dump(self.hmd, fp)
 
             return
@@ -148,7 +148,7 @@ class Transaction:
         with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_light_model_metadata.pickle', 'rb') as fp:
             self.lmd = pickle.load(fp)
 
-        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_heavy_model_metadata.pickle', 'rb') as fp:
+        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['model_name'] + '_heavy_model_metadata.pickle', 'rb') as fp:
             self.hmd = pickle.load(fp)
 
         for k in old_lmd:

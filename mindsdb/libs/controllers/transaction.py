@@ -1,7 +1,6 @@
 from mindsdb.libs.helpers.general_helpers import pickle_obj, unpickle_obj
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
-from mindsdb.libs.data_types.light_model_metadata import LightModelMetadata
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.mindsdb_logger import log
@@ -26,14 +25,15 @@ class Transaction:
         :type session: utils.controllers.session_controller.SessionController
         :param transaction_type:
         :param transaction_metadata:
-        :type transaction_metadata: LightModelMetadata
+        :type transaction_metadata: dict
+        :type heavy_transaction_metadata: dict
         :param breakpoint:
         """
 
 
         self.breakpoint = breakpoint
         self.session = session
-        self.lmd = transaction_metadata #type: LightModelMetadata
+        self.lmd = transaction_metadata
 
         # variables to de defined by setup
         self.error = None

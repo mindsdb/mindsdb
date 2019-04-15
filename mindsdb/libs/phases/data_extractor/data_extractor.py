@@ -70,7 +70,7 @@ class DataExtractor(BaseModule):
         """
 
         :param train_metadata:
-        :type train_metadata: LightModelMetadata
+        :type train_metadata: dict
         :return:
         """
         df = None

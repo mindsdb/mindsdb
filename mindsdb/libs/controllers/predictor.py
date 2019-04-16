@@ -3,7 +3,7 @@ import os
 import _thread
 import uuid
 import traceback
-
+import pickle
 
 from mindsdb.libs.data_types.mindsdb_logger import MindsdbLogger
 from mindsdb.libs.helpers.multi_data_source import getDS
@@ -76,11 +76,33 @@ class Predictor:
             return False
 
     def get_models(self):
-        model_names = []
+        models = []
         for fn in os.listdir(CONFIG.MINDSDB_STORAGE_PATH):
             if '_light_model_metadata.pickle' in fn:
-                model_names.append(fn.replace('_light_model_metadata.pickle',''))
-        return model_names
+                model_name = fn.replace('_light_model_metadata.pickle','')
+                lmd = self.get_model_data(model_name)
+                for column in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
+                'status', 'train_end_at', 'updated_at', 'created_at']:
+                    model = {}
+                    for k in lmd:
+                        if k == 'predict':
+                            model[k] = lmd['predict_columns']
+                        elif k in lmd:
+                            model[k] = lmd[k]
+                        else:
+                            model[k] = None
+                            print(f'Key {k} not found in the light model metadata !')
+                    models.append(model)
+        return models
+
+    def get_model_data(self, model_name):
+        with open(CONFIG.MINDSDB_STORAGE_PATH + f'/{model_name}_light_model_metadata.pickle', 'rb') as fp:
+            light_metadata = pickle.load(fp)
+        # ADAPTOR CODE
+        adapted_light_metadata = {}
+        # ADAPTOR CODE
+        adapted_light_metadata = light_metadata #temporary
+        return adapted_light_metadata
 
     def load(self, model_zip_file='mindsdb_storage.zip'):
         """

@@ -160,7 +160,7 @@ class Predictor:
         heavy_transaction_metadata['test_from_data'] = test_from_ds
 
         light_transaction_metadata = {}
-        light_transaction_metadata['version'] = __version__
+        light_transaction_metadata['version'] = str(__version__)
         light_transaction_metadata['name'] = self.name
         light_transaction_metadata['model_backend'] = backend
         light_transaction_metadata['predict_columns'] = predict_columns
@@ -206,10 +206,11 @@ class Predictor:
 
         # lets turn into lists: when
         when = [when] if type(when) in [type(None), type({})] else when
-
+        heavy_transaction_metadata['when_data'] = when_ds
+        
         light_transaction_metadata['model_when_conditions'] = when
         light_transaction_metadata['type'] = transaction_type
-        light_transaction_metadata['when_data'] = when_ds
+
 
         transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
 

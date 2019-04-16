@@ -78,8 +78,8 @@ class DataExtractor(BaseModule):
 
         # if this is a predict statement, create use model_when_conditions to shape the dataframe
         if  self.transaction.lmd['type'] == TRANSACTION_PREDICT:
-            if self.transaction.lmd['when_data'] is not None:
-                df = self.transaction.lmd['when_data']
+            if self.transaction.hmd['when_data'] is not None:
+                df = self.transaction.hmd['when_data']
                 df = df.where((pandas.notnull(df)), None)
 
             elif self.transaction.lmd['model_when_conditions'] is not None:

@@ -1,4 +1,4 @@
-light_metadata = api.schema_model({
+light_metadata = {
   "name": {
     "type": "string"
     },
@@ -27,11 +27,43 @@ light_metadata = api.schema_model({
             "type": "number"
         }
     }
+  },
+  "data_analysis": {
+    "type": "object",
+    "properties": {
+        "target_columns_metadata": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "column_name": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
   }
-})
+}
 
+scores = ['duplicates_score','empty_cells_score','data_type_distribution_score',
+'similarity_score','z_test_based_outlier_score','value_distribution_score'
+,'variability_score','redundancy_score','consistency_score','consistency_score','quality_score']
 
-
+def gen_score(score_name):
+    return [
+        score_name: {
+            "type": "object",
+            "properties": {
+                "score": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                }
+            }
+        }
+    ]
 
 
 

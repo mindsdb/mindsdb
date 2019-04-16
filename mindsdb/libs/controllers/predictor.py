@@ -75,6 +75,9 @@ class Predictor:
         except:
             return False
 
+    def get_models(self):
+
+
 
     def load(self, model_zip_file='mindsdb_storage.zip'):
         """
@@ -209,7 +212,7 @@ class Predictor:
         heavy_transaction_metadata['when_data'] = when_ds
 
         light_transaction_metadata = {}
-        
+
         light_transaction_metadata['name'] = self.name
         light_transaction_metadata['model_when_conditions'] = when
         light_transaction_metadata['type'] = transaction_type

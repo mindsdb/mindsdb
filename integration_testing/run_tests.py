@@ -342,7 +342,7 @@ def test_multilabel_prediction():
     except:
         print(traceback.format_exc())
         logger.error(f'Failed to create mindsdb Predictor')
-        exit(1)0
+        exit(1)
 
     try:
         results = mdb.predict(when_data=test_file_name)

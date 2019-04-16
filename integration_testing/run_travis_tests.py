@@ -105,6 +105,9 @@ def run_tests():
                     exit(1)
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
+
+        models = mdb.get_models()
+        print(models)
     except:
         print(traceback.format_exc())
         logger.error(f'Failed whilst predicting')

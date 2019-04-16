@@ -76,8 +76,11 @@ class Predictor:
             return False
 
     def get_models(self):
-
-
+        model_names = []
+        for fn in os.listdir(CONFIG.MINDSDB_STORAGE_PATH):
+            if '_light_model_metadata.pickle' in fn:
+                model_names.append(fn.replace('_light_model_metadata.pickle',''))
+        return model_names
 
     def load(self, model_zip_file='mindsdb_storage.zip'):
         """

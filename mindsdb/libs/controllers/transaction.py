@@ -59,6 +59,7 @@ class Transaction:
         :return:
         """
 
+        self.lmd['is_active'] = True
         module_path = convert_cammelcase_to_snake_string(module_name)
         module_full_path = 'mindsdb.libs.phases.{module_path}.{module_path}'.format(module_path=module_path)
         try:
@@ -71,6 +72,8 @@ class Transaction:
             self.log.error(traceback.format_exc())
             raise ValueError(error)
             return None
+        finally:
+            self.lmd['is_active'] = False
 
 
     def _execute_learn(self):

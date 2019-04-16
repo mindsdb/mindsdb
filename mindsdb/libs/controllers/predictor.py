@@ -155,13 +155,13 @@ class Predictor:
             self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
         heavy_transaction_metadata = {}
-        heavy_transaction_metadata['model_name'] = self.name
+        heavy_transaction_metadata['name'] = self.name
         heavy_transaction_metadata['from_data'] = from_ds
         heavy_transaction_metadata['test_from_data'] = test_from_ds
 
         light_transaction_metadata = {}
         light_transaction_metadata['version'] = __version__
-        light_transaction_metadata['model_name'] = self.name
+        light_transaction_metadata['name'] = self.name
         light_transaction_metadata['model_backend'] = backend
         light_transaction_metadata['predict_columns'] = predict_columns
         light_transaction_metadata['model_columns_map'] = {} if rename_strange_columns else from_ds._col_map
@@ -170,7 +170,7 @@ class Predictor:
         light_transaction_metadata['window_size_samples'] = window_size_samples
         light_transaction_metadata['window_size_seconds'] = window_size_seconds
         light_transaction_metadata['model_is_time_series'] = is_time_series
-        light_transaction_metadata['from_data'] = from_data
+        light_transaction_metadata['data_source'] = from_data
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['ignore_columns'] = ignore_columns
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
@@ -196,10 +196,10 @@ class Predictor:
         breakpoint = CONFIG.DEBUG_BREAK_POINT
         when_ds = None if when_data is None else getDS(when_data)
 
-        transaction_metadata = {}
+        light_transaction_metadata = {}
         heavy_transaction_metadata = {}
-        light_transaction_metadata['model_name'] = self.name
-        heavy_transaction_metadata['model_name'] = self.name
+        light_transaction_metadata['name'] = self.name
+        heavy_transaction_metadata['name'] = self.name
 
         if update_cached_model:
             self.predict_worker = None
@@ -211,6 +211,6 @@ class Predictor:
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['when_data'] = when_ds
 
-        transaction = Transaction(session=self, transaction_metadata=transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
+        transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
 
         return transaction.output_data

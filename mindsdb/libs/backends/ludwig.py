@@ -360,10 +360,10 @@ class LudwigBackend():
             model = LudwigModel(model_definition)
 
             # Figure out how to pass `model_load_path`
-            train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['model_name'])
+            train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'])
 
         #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
-        ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.lmd['model_name']
+        ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.lmd['name']
 
         model.save(ludwig_model_savepath)
         model.close()

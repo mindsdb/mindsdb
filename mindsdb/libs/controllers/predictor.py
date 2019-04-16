@@ -3,15 +3,14 @@ import os
 import _thread
 import uuid
 import traceback
-
+import pickle
 
 from mindsdb.libs.data_types.mindsdb_logger import MindsdbLogger
 from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.libs.helpers.general_helpers import check_for_updates
+from mindsdb.__about__ import __version__
 
 from mindsdb.config import CONFIG
-from mindsdb.libs.data_types.light_model_metadata import LightModelMetadata
-from mindsdb.libs.data_types.heavy_model_metadata import HeavyModelMetadata
 from mindsdb.libs.controllers.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *
 
@@ -76,6 +75,33 @@ class Predictor:
         except:
             return False
 
+    def get_models(self):
+        models = []
+        for fn in os.listdir(CONFIG.MINDSDB_STORAGE_PATH):
+            if '_light_model_metadata.pickle' in fn:
+                model_name = fn.replace('_light_model_metadata.pickle','')
+                lmd = self.get_model_data(model_name)
+                for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
+                'status', 'train_end_at', 'updated_at', 'created_at']:
+                    model = {}
+                    if k == 'predict':
+                        model[k] = lmd['predict_columns']
+                    elif k in lmd:
+                        model[k] = lmd[k]
+                    else:
+                        model[k] = None
+                        print(f'Key {k} not found in the light model metadata !')
+                    models.append(model)
+        return models
+
+    def get_model_data(self, model_name):
+        with open(CONFIG.MINDSDB_STORAGE_PATH + f'/{model_name}_light_model_metadata.pickle', 'rb') as fp:
+            light_metadata = pickle.load(fp)
+        # ADAPTOR CODE
+        adapted_light_metadata = {}
+        # ADAPTOR CODE
+        adapted_light_metadata = light_metadata #temporary
+        return adapted_light_metadata
 
     def load(self, model_zip_file='mindsdb_storage.zip'):
         """
@@ -155,28 +181,32 @@ class Predictor:
         else:
             self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
-        transaction_metadata = LightModelMetadata()
-        heavy_transaction_metadata = HeavyModelMetadata()
-        transaction_metadata.model_name = self.name
-        heavy_transaction_metadata.model_name = self.name
-        transaction_metadata.model_backend = backend
-        transaction_metadata.predict_columns = predict_columns
-        transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
-        transaction_metadata.model_group_by = group_by
-        transaction_metadata.model_order_by = order_by
-        transaction_metadata.window_size_samples = window_size_samples
-        transaction_metadata.window_size_seconds = window_size_seconds
-        transaction_metadata.model_is_time_series = is_time_series
-        transaction_metadata.type = transaction_type
-        transaction_metadata.from_data = from_ds
-        transaction_metadata.test_from_data = test_from_ds
-        transaction_metadata.ignore_columns = ignore_columns
-        transaction_metadata.sample_margin_of_error = sample_margin_of_error
-        transaction_metadata.sample_confidence_level = sample_confidence_level
-        transaction_metadata.stop_training_in_x_seconds = stop_training_in_x_seconds
-        transaction_metadata.stop_training_in_accuracy = stop_training_in_accuracy
+        heavy_transaction_metadata = {}
+        heavy_transaction_metadata['name'] = self.name
+        heavy_transaction_metadata['from_data'] = from_ds
+        heavy_transaction_metadata['test_from_data'] = test_from_ds
 
-        Transaction(session=self, transaction_metadata=transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
+        light_transaction_metadata = {}
+        light_transaction_metadata['version'] = str(__version__)
+        light_transaction_metadata['name'] = self.name
+        light_transaction_metadata['data_preparation'] = {}
+        light_transaction_metadata['model_backend'] = backend
+        light_transaction_metadata['predict_columns'] = predict_columns
+        light_transaction_metadata['model_columns_map'] = {} if rename_strange_columns else from_ds._col_map
+        light_transaction_metadata['model_group_by'] = group_by
+        light_transaction_metadata['model_order_by'] = order_by
+        light_transaction_metadata['window_size_samples'] = window_size_samples
+        light_transaction_metadata['window_size_seconds'] = window_size_seconds
+        light_transaction_metadata['model_is_time_series'] = is_time_series
+        light_transaction_metadata['data_source'] = from_data
+        light_transaction_metadata['type'] = transaction_type
+        light_transaction_metadata['ignore_columns'] = ignore_columns
+        light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
+        light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
+        light_transaction_metadata['stop_training_in_x_seconds'] = stop_training_in_x_seconds
+        light_transaction_metadata['stop_training_in_accuracy'] = stop_training_in_accuracy
+
+        Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
     def predict(self, when={}, when_data = None, update_cached_model = False):
@@ -194,21 +224,24 @@ class Predictor:
         breakpoint = CONFIG.DEBUG_BREAK_POINT
         when_ds = None if when_data is None else getDS(when_data)
 
-        transaction_metadata = LightModelMetadata()
-        heavy_transaction_metadata = HeavyModelMetadata()
-        transaction_metadata.model_name = self.name
-        heavy_transaction_metadata.model_name = self.name
+        heavy_transaction_metadata = {}
+
+        heavy_transaction_metadata['name'] = self.name
 
         if update_cached_model:
             self.predict_worker = None
 
         # lets turn into lists: when
         when = [when] if type(when) in [type(None), type({})] else when
+        heavy_transaction_metadata['when_data'] = when_ds
 
-        transaction_metadata.model_when_conditions = when
-        transaction_metadata.type = transaction_type
-        transaction_metadata.when_data = when_ds
+        light_transaction_metadata = {}
 
-        transaction = Transaction(session=self, transaction_metadata=transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
+        light_transaction_metadata['name'] = self.name
+        light_transaction_metadata['model_when_conditions'] = when
+        light_transaction_metadata['type'] = transaction_type
+        light_transaction_metadata['data_preparation'] = {}
+
+        transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
 
         return transaction.output_data

@@ -849,11 +849,11 @@ class StatsGenerator(BaseModule):
         validation_rows = len(self.transaction.input_data.validation_indexes)
         train_rows = len(self.transaction.input_data.train_indexes)
 
-        self.transaction.lmd.column_stats = stats
-        self.transaction.lmd.total_row_count = total_rows
-        self.transaction.lmd.test_row_count = test_rows
-        self.transaction.lmd.train_row_count = train_rows
-        self.transaction.lmd.validation_row_count = validation_rows
+        self.transaction.lmd['column_stats'] = stats
+        self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
+        self.transaction.lmd['data_preparation']['test_row_count'] = test_rows
+        self.transaction.lmd['data_preparation']['train_row_count'] = train_rows
+        self.transaction.lmd['data_preparation']['validation_row_count'] = validation_rows
 
         self._log_interesting_stats(stats)
         return stats

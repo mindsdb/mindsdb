@@ -8,6 +8,7 @@ import traceback
 from mindsdb.libs.data_types.mindsdb_logger import MindsdbLogger
 from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.libs.helpers.general_helpers import check_for_updates
+from mindsdb.__about__ import __version__
 
 from mindsdb.config import CONFIG
 from mindsdb.libs.controllers.transaction import Transaction
@@ -157,6 +158,7 @@ class Predictor:
         heavy_transaction_metadata['model_name'] = self.name
 
         transaction_metadata = {}
+        transaction_metadata['version'] = __version__
         transaction_metadata['model_name'] = self.name
         transaction_metadata['model_backend'] = backend
         transaction_metadata['predict_columns'] = predict_columns

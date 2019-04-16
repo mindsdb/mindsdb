@@ -162,6 +162,7 @@ class Predictor:
         light_transaction_metadata = {}
         light_transaction_metadata['version'] = str(__version__)
         light_transaction_metadata['name'] = self.name
+        light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['model_backend'] = backend
         light_transaction_metadata['predict_columns'] = predict_columns
         light_transaction_metadata['model_columns_map'] = {} if rename_strange_columns else from_ds._col_map
@@ -196,9 +197,8 @@ class Predictor:
         breakpoint = CONFIG.DEBUG_BREAK_POINT
         when_ds = None if when_data is None else getDS(when_data)
 
-        light_transaction_metadata = {}
         heavy_transaction_metadata = {}
-        light_transaction_metadata['name'] = self.name
+
         heavy_transaction_metadata['name'] = self.name
 
         if update_cached_model:
@@ -207,10 +207,13 @@ class Predictor:
         # lets turn into lists: when
         when = [when] if type(when) in [type(None), type({})] else when
         heavy_transaction_metadata['when_data'] = when_ds
+
+        light_transaction_metadata = {}
         
+        light_transaction_metadata['name'] = self.name
         light_transaction_metadata['model_when_conditions'] = when
         light_transaction_metadata['type'] = transaction_type
-
+        light_transaction_metadata['data_preparation'] = {}
 
         transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
 

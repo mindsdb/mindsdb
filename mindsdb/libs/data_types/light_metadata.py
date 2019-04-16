@@ -1,14 +1,40 @@
-{
-  "name": "string",
-  "version": "string",
+light_metadata = api.schema_model({
+  "name": {
+    "type": "string"
+    },
+  "version": {
+    "type": "string"
+    },
   "data_preparation": {
-    "accepted_margin_of_error": 0,
-    "total_row_count": 0,
-    "used_row_count": 0,
-    "test_row_count": 0,
-    "train_row_count": 0,
-    "validation_row_count": 0
+    "type": "object",
+    "properties": {
+        "accepted_margin_of_error": {
+          "type": "number"
+        },
+        "total_row_count": {
+            "type": "number"
+        },
+        "used_row_count": {
+            "type": "number"
+        },
+        "test_row_count": {
+            "type": "number"
+        },
+        "train_row_count": {
+            "type": "number"
+        },
+        "validation_row_count": {
+            "type": "number"
+        }
+    }
   },
+})
+
+
+
+
+
+
   "data_analysis": {
     "target_columns_metadata": [
       {
@@ -260,4 +286,4 @@
       }
     }
   ]
-}
+})

@@ -17,7 +17,7 @@ import pickle
 
 class Transaction:
 
-    def __init__(self, session, transaction_metadata, heavy_transaction_metadata, logger =  log, breakpoint = PHASE_END):
+    def __init__(self, session, light_transaction_metadata, heavy_transaction_metadata, logger =  log, breakpoint = PHASE_END):
         """
         A transaction is the interface to start some MindsDB operation within a session
 
@@ -33,7 +33,7 @@ class Transaction:
 
         self.breakpoint = breakpoint
         self.session = session
-        self.lmd = transaction_metadata
+        self.lmd = light_transaction_metadata
         self.hmd = heavy_transaction_metadata
 
         # variables to de defined by setup

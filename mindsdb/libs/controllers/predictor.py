@@ -155,29 +155,29 @@ class Predictor:
             self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
         heavy_transaction_metadata = {}
-        heavy_transaction_metadata['model_name'] = self.name
+        heavy_light_transaction_metadata['model_name'] = self.name
 
-        transaction_metadata = {}
-        transaction_metadata['version'] = __version__
-        transaction_metadata['model_name'] = self.name
-        transaction_metadata['model_backend'] = backend
-        transaction_metadata['predict_columns'] = predict_columns
-        transaction_metadata['model_columns_map'] = {} if rename_strange_columns else from_ds._col_map
-        transaction_metadata['model_group_by'] = group_by
-        transaction_metadata['model_order_by'] = order_by
-        transaction_metadata['window_size_samples'] = window_size_samples
-        transaction_metadata['window_size_seconds'] = window_size_seconds
-        transaction_metadata['model_is_time_series'] = is_time_series
-        transaction_metadata['type'] = transaction_type
-        transaction_metadata['from_data'] = from_ds
-        transaction_metadata['test_from_data'] = test_from_ds
-        transaction_metadata['ignore_columns'] = ignore_columns
-        transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
-        transaction_metadata['sample_confidence_level'] = sample_confidence_level
-        transaction_metadata['stop_training_in_x_seconds'] = stop_training_in_x_seconds
-        transaction_metadata['stop_training_in_accuracy'] = stop_training_in_accuracy
+        light_transaction_metadata = {}
+        light_light_transaction_metadata['version'] = __version__
+        light_light_transaction_metadata['model_name'] = self.name
+        light_transaction_metadata['model_backend'] = backend
+        light_transaction_metadata['predict_columns'] = predict_columns
+        light_transaction_metadata['model_columns_map'] = {} if rename_strange_columns else from_ds._col_map
+        light_transaction_metadata['model_group_by'] = group_by
+        light_transaction_metadata['model_order_by'] = order_by
+        light_transaction_metadata['window_size_samples'] = window_size_samples
+        light_transaction_metadata['window_size_seconds'] = window_size_seconds
+        light_transaction_metadata['model_is_time_series'] = is_time_series
+        light_transaction_metadata['type'] = transaction_type
+        light_transaction_metadata['from_data'] = from_ds
+        light_transaction_metadata['test_from_data'] = test_from_ds
+        light_transaction_metadata['ignore_columns'] = ignore_columns
+        light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
+        light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
+        light_transaction_metadata['stop_training_in_x_seconds'] = stop_training_in_x_seconds
+        light_transaction_metadata['stop_training_in_accuracy'] = stop_training_in_accuracy
 
-        Transaction(session=self, transaction_metadata=transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
+        Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
     def predict(self, when={}, when_data = None, update_cached_model = False):
@@ -197,8 +197,8 @@ class Predictor:
 
         transaction_metadata = {}
         heavy_transaction_metadata = {}
-        transaction_metadata['model_name'] = self.name
-        heavy_transaction_metadata['model_name'] = self.name
+        light_transaction_metadata['model_name'] = self.name
+        heavy_light_transaction_metadata['model_name'] = self.name
 
         if update_cached_model:
             self.predict_worker = None
@@ -206,9 +206,9 @@ class Predictor:
         # lets turn into lists: when
         when = [when] if type(when) in [type(None), type({})] else when
 
-        transaction_metadata['model_when_conditions'] = when
-        transaction_metadata['type'] = transaction_type
-        transaction_metadata['when_data'] = when_ds
+        light_transaction_metadata['model_when_conditions'] = when
+        light_transaction_metadata['type'] = transaction_type
+        light_transaction_metadata['when_data'] = when_ds
 
         transaction = Transaction(session=self, transaction_metadata=transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
 

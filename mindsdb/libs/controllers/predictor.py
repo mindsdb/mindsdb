@@ -156,6 +156,8 @@ class Predictor:
 
         heavy_transaction_metadata = {}
         heavy_transaction_metadata['model_name'] = self.name
+        heavy_transaction_metadata['from_data'] = from_ds
+        heavy_transaction_metadata['test_from_data'] = test_from_ds
 
         light_transaction_metadata = {}
         light_transaction_metadata['version'] = __version__
@@ -168,6 +170,7 @@ class Predictor:
         light_transaction_metadata['window_size_samples'] = window_size_samples
         light_transaction_metadata['window_size_seconds'] = window_size_seconds
         light_transaction_metadata['model_is_time_series'] = is_time_series
+        light_transaction_metadata['from_data'] = from_data
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['ignore_columns'] = ignore_columns
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error

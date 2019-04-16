@@ -35,7 +35,7 @@ class Transaction:
         self.breakpoint = breakpoint
         self.session = session
         self.lmd = light_transaction_metadata
-        lmd['created_at'] = datetime.datetime.now()
+        self.lmd['created_at'] = datetime.datetime.now()
         self.hmd = heavy_transaction_metadata
 
         # variables to de defined by setup
@@ -110,7 +110,7 @@ class Transaction:
             self._call_phase_module('ModelAnalyzer')
 
             with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['model_name'] + '_light_model_metadata.pickle', 'wb') as fp:
-                lmd['updated_at'] = datetime.datetime.now()
+                self.lmd['updated_at'] = datetime.datetime.now()
                 pickle.dump(self.lmd, fp)
 
             with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['model_name'] + '_heavy_model_metadata.pickle', 'wb') as fp:
@@ -206,7 +206,7 @@ class Transaction:
                 self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
 
         with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['model_name'] + '_light_model_metadata.pickle', 'wb') as fp:
-            lmd['updated_at'] = datetime.datetime.now()
+            self.lmd['updated_at'] = datetime.datetime.now()
             pickle.dump(self.lmd, fp)
 
         with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['model_name'] + '_heavy_model_metadata.pickle', 'wb') as fp:

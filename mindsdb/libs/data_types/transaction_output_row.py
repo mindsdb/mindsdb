@@ -21,7 +21,7 @@ class TransactionOutputRow:
 
     def as_list(self):
         #Note that here we will not output the confidence columns
-        return [self.transaction_output.evaluations[col][self.row_index] for col in self.transaction_output.transaction.lmd.columns]
+        return [self.transaction_output.evaluations[col][self.row_index] for col in self.transaction_output.transaction.lmd['columns']]
 
     @property
     def _predicted_values(self):

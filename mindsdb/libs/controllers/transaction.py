@@ -34,6 +34,7 @@ class Transaction:
         self.breakpoint = breakpoint
         self.session = session
         self.lmd = transaction_metadata
+        self.hmd = heavy_transaction_metadata
 
         # variables to de defined by setup
         self.error = None
@@ -86,24 +87,24 @@ class Transaction:
 
         try:
             # start populating data
-            self.lmd.current_phase = MODEL_STATUS_ANALYZING
-            self.lmd.columns = self.input_data.columns # this is populated by data extractor
+            self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
+            self.lmd['columns'] = self.input_data.columns # this is populated by data extractor
 
             self._call_phase_module('StatsGenerator')
-            self.lmd.current_phase = MODEL_STATUS_TRAINING
+            self.lmd['current_phase'] = MODEL_STATUS_TRAINING
 
-            if self.lmd.model_backend == 'ludwig':
+            if self.lmd['model_backend'] == 'ludwig':
                 self.model_backend = LudwigBackend(self)
                 self.model_backend.train()
 
             self._call_phase_module('ModelAnalyzer')
 
             # @STARTFIX Null out some non jsonable columns, temporary
-            self.lmd.from_data = None
-            self.lmd.test_from_data = None
+            self.lmd['from_data'] = None
+            self.lmd['test_from_data'] = None
             # @ENDFIX
 
-            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_light_model_metadata.pickle', 'wb') as fp:
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['model_name'] + '_light_model_metadata.pickle', 'wb') as fp:
                 pickle.dump(self.lmd, fp)
 
             with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['model_name'] + '_heavy_model_metadata.pickle', 'wb') as fp:
@@ -112,8 +113,8 @@ class Transaction:
             return
 
         except Exception as e:
-            self.lmd.current_phase = MODEL_STATUS_ERROR
-            self.lmd.error_msg = traceback.print_exc()
+            self.lmd['current_phase'] = MODEL_STATUS_ERROR
+            self.lmd['error_msg'] = traceback.print_exc()
             self.log.error(str(e))
             raise e
 
@@ -126,7 +127,7 @@ class Transaction:
         """
 
 
-        self.output_data.data_array = [['Model '+self.lmd.model_name+' deleted.']]
+        self.output_data.data_array = [['Model '+self.lmd['model_name']+' deleted.']]
         self.output_data.columns = ['Status']
 
         return
@@ -139,21 +140,19 @@ class Transaction:
         :return:
         """
         old_lmd = {}
-        for k in self.lmd.__dict__.keys():
-            old_lmd[k] = self.lmd.__dict__[k]
+        for k in self.lmd: old_lmd[k] = self.lmd[k]
 
         old_hmd = {}
         for k in self.hmd: old_hmd[k] = self.hmd[k]
 
-        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_light_model_metadata.pickle', 'rb') as fp:
+        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['model_name'] + '_light_model_metadata.pickle', 'rb') as fp:
             self.lmd = pickle.load(fp)
 
         with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['model_name'] + '_heavy_model_metadata.pickle', 'rb') as fp:
             self.hmd = pickle.load(fp)
 
         for k in old_lmd:
-            if old_lmd[k] is not None:
-                self.lmd.__dict__[k] = old_lmd[k]
+            if old_lmd[k] is not None: self.lmd[k] = old_lmd[k]
 
         for k in old_hmd:
             if old_hmd[k] is not None: self.hmd[k] = old_hmd[k]
@@ -170,20 +169,20 @@ class Transaction:
 
         self.output_data = PredictTransactionOutputData(transaction=self)
 
-        if self.lmd.model_backend == 'ludwig':
+        if self.lmd['model_backend'] == 'ludwig':
             self.model_backend = LudwigBackend(self)
             predictions = self.model_backend.predict()
 
-        # self.transaction.lmd.predict_columns
+        # self.transaction.lmd['predict_columns']
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
-        input_columns = [col for col in self.input_data.columns if col not in self.lmd.predict_columns]
+        input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
 
         for row in self.input_data.data_array:
             for index, cell in enumerate(row):
                 col = self.input_data.columns[index]
                 self.output_data.data[col].append(cell)
 
-        for predicted_col in self.lmd.predict_columns:
+        for predicted_col in self.lmd['predict_columns']:
             probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
 
             predicted_values = predictions[predicted_col]
@@ -208,18 +207,18 @@ class Transaction:
         :return:
         """
 
-        if self.lmd.type == TRANSACTION_BAD_QUERY:
+        if self.lmd['type'] == TRANSACTION_BAD_QUERY:
             self.log.error(self.errorMsg)
             self.error = True
             return
 
-        if self.lmd.type == TRANSACTION_DROP_MODEL:
+        if self.lmd['type'] == TRANSACTION_DROP_MODEL:
             self._execute_drop_model()
             return
 
 
-        if self.lmd.type == TRANSACTION_LEARN:
-            self.output_data.data_array = [['Model ' + self.lmd.model_name + ' training.']]
+        if self.lmd['type'] == TRANSACTION_LEARN:
+            self.output_data.data_array = [['Model ' + self.lmd['model_name'] + ' training.']]
             self.output_data.columns = ['Status']
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False:
@@ -228,7 +227,7 @@ class Transaction:
                 _thread.start_new_thread(self._execute_learn, ())
             return
 
-        elif self.lmd.type == TRANSACTION_PREDICT:
+        elif self.lmd['type'] == TRANSACTION_PREDICT:
             self._execute_predict()
-        elif self.lmd.type == TRANSACTION_NORMAL_SELECT:
+        elif self.lmd['type'] == TRANSACTION_NORMAL_SELECT:
             self._execute_normal_select()

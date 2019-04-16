@@ -16,12 +16,12 @@ class ModelAnalyzer(BaseModule):
         # Runs the model on the validation set in order to fit a probabilistic model that will evaluate the accuracy of future predictions
         """
 
-        output_columns = self.transaction.lmd.predict_columns
-        input_columns = [col for col in self.transaction.lmd.columns if col not in output_columns]
+        output_columns = self.transaction.lmd['predict_columns']
+        input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns]
         validation_dataset = {}
 
         for row_ind in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
-            for col_ind, col in enumerate(self.transaction.lmd.columns):
+            for col_ind, col in enumerate(self.transaction.lmd['columns']):
                 if col not in validation_dataset:
                     validation_dataset[col] = []
                 validation_dataset[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
@@ -29,19 +29,19 @@ class ModelAnalyzer(BaseModule):
         # Test some hypotheses about our columns
         column_evaluator = ColumnEvaluator()
         column_importances = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
-        full_dataset=validation_dataset, stats=self.transaction.lmd.column_stats)
+        full_dataset=validation_dataset, stats=self.transaction.lmd['column_stats'])
 
-        self.transaction.lmd.column_importances = column_importances
+        self.transaction.lmd['column_importances'] = column_importances
 
         # Create the probabilistic validators for each of the predict column
         probabilistic_validators = {}
         for col in output_columns:
-            if 'percentage_buckets' in self.transaction.lmd.column_stats[col]:
+            if 'percentage_buckets' in self.transaction.lmd['column_stats'][col]:
                 probabilistic_validators[col] = ProbabilisticValidator(
-                    col_stats=self.transaction.lmd.column_stats[col])
+                    col_stats=self.transaction.lmd['column_stats'][col])
             else:
                 probabilistic_validators[col] = ProbabilisticValidator(
-                    col_stats=self.transaction.lmd.column_stats[col])
+                    col_stats=self.transaction.lmd['column_stats'][col])
 
         # Run on the validation set multiple times, each time with one of the column blanked out
         for column_name in input_columns:

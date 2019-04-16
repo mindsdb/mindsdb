@@ -16,7 +16,7 @@ class PredictTransactionOutputData():
         self.transaction = transaction
 
     def __iter__(self):
-        for i, cell in enumerate(self.data[self.transaction.lmd.columns[0]]):
+        for i, cell in enumerate(self.data[self.transaction.lmd['columns'][0]]):
             yield TransactionOutputRow(self, i).as_dict()
 
     def __getitem__(self, item):
@@ -26,4 +26,4 @@ class PredictTransactionOutputData():
         return str(self.data)
 
     def __len__(self):
-        return len(self.data[self.transaction.lmd.columns[0]])
+        return len(self.data[self.transaction.lmd['columns'][0]])

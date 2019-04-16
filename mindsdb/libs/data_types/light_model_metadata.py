@@ -1,6 +1,4 @@
-from mindsdb.libs.data_types.persistent_object import PersistentObject
-
-class PersistentModelMetadata(PersistentObject):
+class LightModelMetadata():
 
     _entity_name = 'model_metadata'
     _pkey = ['model_name']
@@ -30,8 +28,6 @@ class PersistentModelMetadata(PersistentObject):
 
         self.stop_training = False
         self.kill_training = False
-
-        self.probabilistic_validators = None
 
         self.ludwig_data = None
 

@@ -1,25 +1,24 @@
+from mindsdb.libs.helpers.general_helpers import pickle_obj, unpickle_obj
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
-from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
+from mindsdb.libs.data_types.light_model_metadata import LightModelMetadata
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
-from mindsdb.libs.data_types.model_data import ModelData
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.backends.ludwig import LudwigBackend
 from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
-from mindsdb.libs.helpers.general_helpers import unpickle_obj
 
 import time
 import _thread
 import traceback
 import importlib
 import copy
-
+import pickle
 
 class Transaction:
 
-    def __init__(self, session, transaction_metadata, logger =  log, breakpoint = PHASE_END):
+    def __init__(self, session, transaction_metadata, heavy_transaction_metadata, logger =  log, breakpoint = PHASE_END):
         """
         A transaction is the interface to start some MindsDB operation within a session
 
@@ -27,14 +26,15 @@ class Transaction:
         :type session: utils.controllers.session_controller.SessionController
         :param transaction_type:
         :param transaction_metadata:
-        :type transaction_metadata: PersistentModelMetadata
+        :type transaction_metadata: LightModelMetadata
         :param breakpoint:
         """
 
 
         self.breakpoint = breakpoint
         self.session = session
-        self.persistent_model_metadata = transaction_metadata #type: PersistentModelMetadata
+        self.lmd = transaction_metadata #type: LightModelMetadata
+        self.hmd = heavy_transaction_metadata
 
         # variables to de defined by setup
         self.error = None
@@ -42,7 +42,6 @@ class Transaction:
 
         self.input_data = TransactionData()
         self.output_data = TrainTransactionOutputData()
-        self.model_data = ModelData()
 
         # variables that can be persisted
 
@@ -87,32 +86,35 @@ class Transaction:
             return
 
         try:
-            self.persistent_model_metadata.delete()
-
             # start populating data
-            self.persistent_model_metadata.current_phase = MODEL_STATUS_ANALYZING
-            self.persistent_model_metadata.columns = self.input_data.columns # this is populated by data extractor
+            self.lmd.current_phase = MODEL_STATUS_ANALYZING
+            self.lmd.columns = self.input_data.columns # this is populated by data extractor
 
             self._call_phase_module('StatsGenerator')
-            self.persistent_model_metadata.current_phase = MODEL_STATUS_TRAINING
+            self.lmd.current_phase = MODEL_STATUS_TRAINING
 
-            if self.persistent_model_metadata.model_backend == 'ludwig':
+            if self.lmd.model_backend == 'ludwig':
                 self.model_backend = LudwigBackend(self)
                 self.model_backend.train()
 
             self._call_phase_module('ModelAnalyzer')
 
             # @STARTFIX Null out some non jsonable columns, temporary
-            self.persistent_model_metadata.from_data = None
-            self.persistent_model_metadata.test_from_data = None
+            self.lmd.from_data = None
+            self.lmd.test_from_data = None
             # @ENDFIX
-            self.persistent_model_metadata.insert()
-            self.persistent_model_metadata.update()
+
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_light_model_metadata.pickle', 'wb') as fp:
+                pickle.dump(self.lmd, fp)
+
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_heavy_model_metadata.pickle', 'wb') as fp:
+                pickle.dump(self.hmd, fp)
 
             return
+
         except Exception as e:
-            self.persistent_model_metadata.current_phase = MODEL_STATUS_ERROR
-            self.persistent_model_metadata.error_msg = traceback.print_exc()
+            self.lmd.current_phase = MODEL_STATUS_ERROR
+            self.lmd.error_msg = traceback.print_exc()
             self.log.error(str(e))
             raise e
 
@@ -124,10 +126,8 @@ class Transaction:
         :return:
         """
 
-        self.persistent_model_metadata.delete()
-        self.persistent_model_stats.delete()
 
-        self.output_data.data_array = [['Model '+self.persistent_model_metadata.model_name+' deleted.']]
+        self.output_data.data_array = [['Model '+self.lmd.model_name+' deleted.']]
         self.output_data.columns = ['Status']
 
         return
@@ -139,16 +139,30 @@ class Transaction:
 
         :return:
         """
-        old_pmd = {}
-        for k in self.persistent_model_metadata.__dict__.keys():
-            old_pmd[k] = self.persistent_model_metadata.__dict__[k]
+        old_lmd = {}
+        for k in self.lmd.__dict__.keys():
+            old_lmd[k] = self.lmd.__dict__[k]
 
-        self.persistent_model_metadata = self.persistent_model_metadata.find_one(self.persistent_model_metadata.getPkey())
-        for k in old_pmd:
-            if old_pmd[k] is not None:
-                self.persistent_model_metadata.__dict__[k] = old_pmd[k]
+        old_hmd = {}
+        for k in old_hmd:
+            if old_hmd[k] is not None:
+                self.hmd.__dict__[k] = old_hmd[k]
 
-        if self.persistent_model_metadata is None:
+        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_light_model_metadata.pickle', 'rb') as fp:
+            self.lmd = pickle.load(fp)
+
+        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd.model_name + '_heavy_model_metadata.pickle', 'rb') as fp:
+            self.hmd = pickle.load(fp)
+
+        for k in old_lmd:
+            if old_lmd[k] is not None:
+                self.lmd.__dict__[k] = old_lmd[k]
+
+        for k in old_hmd:
+            if old_hmd[k] is not None:
+                self.hmd.__dict__[k] = old_hmd[k]
+
+        if self.lmd is None:
             self.log.error('No metadata found for this model')
             return
 
@@ -160,21 +174,21 @@ class Transaction:
 
         self.output_data = PredictTransactionOutputData(transaction=self)
 
-        if self.persistent_model_metadata.model_backend == 'ludwig':
+        if self.lmd.model_backend == 'ludwig':
             self.model_backend = LudwigBackend(self)
             predictions = self.model_backend.predict()
 
-        # self.transaction.persistent_model_metadata.predict_columns
+        # self.transaction.lmd.predict_columns
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
-        input_columns = [col for col in self.input_data.columns if col not in self.persistent_model_metadata.predict_columns]
+        input_columns = [col for col in self.input_data.columns if col not in self.lmd.predict_columns]
 
         for row in self.input_data.data_array:
             for index, cell in enumerate(row):
                 col = self.input_data.columns[index]
                 self.output_data.data[col].append(cell)
 
-        for predicted_col in self.persistent_model_metadata.predict_columns:
-            probabilistic_validator = unpickle_obj(self.persistent_model_metadata.probabilistic_validators[predicted_col])
+        for predicted_col in self.lmd.predict_columns:
+            probabilistic_validator = unpickle_obj(self.hmd.probabilistic_validators[predicted_col])
 
             predicted_values = predictions[predicted_col]
             self.output_data.data[predicted_col] = predicted_values
@@ -198,18 +212,18 @@ class Transaction:
         :return:
         """
 
-        if self.persistent_model_metadata.type == TRANSACTION_BAD_QUERY:
+        if self.lmd.type == TRANSACTION_BAD_QUERY:
             self.log.error(self.errorMsg)
             self.error = True
             return
 
-        if self.persistent_model_metadata.type == TRANSACTION_DROP_MODEL:
+        if self.lmd.type == TRANSACTION_DROP_MODEL:
             self._execute_drop_model()
             return
 
 
-        if self.persistent_model_metadata.type == TRANSACTION_LEARN:
-            self.output_data.data_array = [['Model ' + self.persistent_model_metadata.model_name + ' training.']]
+        if self.lmd.type == TRANSACTION_LEARN:
+            self.output_data.data_array = [['Model ' + self.lmd.model_name + ' training.']]
             self.output_data.columns = ['Status']
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False:
@@ -218,7 +232,7 @@ class Transaction:
                 _thread.start_new_thread(self._execute_learn, ())
             return
 
-        elif self.persistent_model_metadata.type == TRANSACTION_PREDICT:
+        elif self.lmd.type == TRANSACTION_PREDICT:
             self._execute_predict()
-        elif self.persistent_model_metadata.type == TRANSACTION_NORMAL_SELECT:
+        elif self.lmd.type == TRANSACTION_NORMAL_SELECT:
             self._execute_normal_select()

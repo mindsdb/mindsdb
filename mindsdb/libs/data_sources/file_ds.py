@@ -57,7 +57,6 @@ class FileDS(DataSource):
     def _getDataIo(self, file):
         """
         This gets a file either url or local file and defiens what the format is as well as dialect
-
         :param file: file path or url
         :return: data_io, format, dialect
         """
@@ -180,7 +179,6 @@ class FileDS(DataSource):
         :param clean_header: if you want to clean header column names
         :param clean_rows:  if you want to clean rows for strange null values
         :param custom_parser: if you want to parse the file with some custom parser
-
         """
 
         # get file data io, format and dialect

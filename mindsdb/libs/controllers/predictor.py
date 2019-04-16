@@ -10,7 +10,8 @@ from mindsdb.libs.helpers.multi_data_source import getDS
 from mindsdb.libs.helpers.general_helpers import check_for_updates
 
 from mindsdb.config import CONFIG
-from mindsdb.libs.data_entities.persistent_model_metadata import PersistentModelMetadata
+from mindsdb.libs.data_types.light_model_metadata import LightModelMetadata
+from mindsdb.libs.data_types.heavy_model_metadata import HeavyModelMetadata
 from mindsdb.libs.controllers.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *
 
@@ -154,8 +155,10 @@ class Predictor:
         else:
             self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
 
-        transaction_metadata = PersistentModelMetadata()
+        transaction_metadata = LightModelMetadata()
+        heavy_transaction_metadata = HeavyModelMetadata()
         transaction_metadata.model_name = self.name
+        heavy_transaction_metadata.model_name = self.name
         transaction_metadata.model_backend = backend
         transaction_metadata.predict_columns = predict_columns
         transaction_metadata.model_columns_map = {} if rename_strange_columns else from_ds._col_map
@@ -173,7 +176,7 @@ class Predictor:
         transaction_metadata.stop_training_in_x_seconds = stop_training_in_x_seconds
         transaction_metadata.stop_training_in_accuracy = stop_training_in_accuracy
 
-        Transaction(session=self, transaction_metadata=transaction_metadata, logger=self.log, breakpoint=breakpoint)
+        Transaction(session=self, transaction_metadata=transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
     def predict(self, when={}, when_data = None, update_cached_model = False):
@@ -191,8 +194,10 @@ class Predictor:
         breakpoint = CONFIG.DEBUG_BREAK_POINT
         when_ds = None if when_data is None else getDS(when_data)
 
-        transaction_metadata = PersistentModelMetadata()
+        transaction_metadata = LightModelMetadata()
+        heavy_transaction_metadata = HeavyModelMetadata()
         transaction_metadata.model_name = self.name
+        heavy_transaction_metadata.model_name = self.name
 
         if update_cached_model:
             self.predict_worker = None
@@ -204,6 +209,6 @@ class Predictor:
         transaction_metadata.type = transaction_type
         transaction_metadata.when_data = when_ds
 
-        transaction = Transaction(session=self, transaction_metadata=transaction_metadata, breakpoint=breakpoint)
+        transaction = Transaction(session=self, transaction_metadata=transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
 
         return transaction.output_data

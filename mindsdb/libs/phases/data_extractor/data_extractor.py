@@ -70,12 +70,6 @@ class DataExtractor(BaseModule):
         """
         df = None
 
-        # if transaction metadata comes with some data as from_data create the data frame
-        if self.transaction.lmd['from_data'] is not None:
-            # make sure we build a dataframe that has all the columns we need
-            df = self.transaction.lmd['from_data']
-            df = df.where((pandas.notnull(df)), None)
-
         # if this is a predict statement, create use model_when_conditions to shape the dataframe
         if  self.transaction.lmd['type'] == TRANSACTION_PREDICT:
             if self.transaction.lmd['when_data'] is not None:

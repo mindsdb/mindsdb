@@ -109,11 +109,6 @@ class Transaction:
 
             self._call_phase_module('ModelAnalyzer')
 
-            # @STARTFIX Null out some non jsonable columns, temporary
-            self.lmd['from_data'] = None
-            self.lmd['test_from_data'] = None
-            # @ENDFIX
-
             with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['model_name'] + '_light_model_metadata.pickle', 'wb') as fp:
                 lmd['updated_at'] = datetime.datetime.now()
                 pickle.dump(self.lmd, fp)

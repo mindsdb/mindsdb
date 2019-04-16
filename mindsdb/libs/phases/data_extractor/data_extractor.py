@@ -83,6 +83,7 @@ class DataExtractor(BaseModule):
                 df = df.where((pandas.notnull(df)), None)
 
             elif self.transaction.lmd['model_when_conditions'] is not None:
+
                 # if no data frame yet, make one
                 df = self._get_data_frame_from_when_conditions()
 

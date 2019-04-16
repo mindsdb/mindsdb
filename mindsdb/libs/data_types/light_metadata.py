@@ -27,7 +27,7 @@ light_metadata = api.schema_model({
             "type": "number"
         }
     }
-  },
+  }
 })
 
 

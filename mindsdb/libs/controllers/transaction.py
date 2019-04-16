@@ -14,6 +14,7 @@ import traceback
 import importlib
 import copy
 import pickle
+import datetime
 
 class Transaction:
 
@@ -34,6 +35,7 @@ class Transaction:
         self.breakpoint = breakpoint
         self.session = session
         self.lmd = light_transaction_metadata
+        lmd['created_at'] = datetime.datetime.now()
         self.hmd = heavy_transaction_metadata
 
         # variables to de defined by setup
@@ -97,8 +99,13 @@ class Transaction:
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
 
             if self.lmd['model_backend'] == 'ludwig':
+                self.lmd['is_active'] = True
                 self.model_backend = LudwigBackend(self)
                 self.model_backend.train()
+                self.lmd['is_active'] = False
+
+
+            self.lmd['train_end_at'] = datetime.datetime.now()
 
             self._call_phase_module('ModelAnalyzer')
 
@@ -108,6 +115,7 @@ class Transaction:
             # @ENDFIX
 
             with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['model_name'] + '_light_model_metadata.pickle', 'wb') as fp:
+                lmd['updated_at'] = datetime.datetime.now()
                 pickle.dump(self.lmd, fp)
 
             with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['model_name'] + '_heavy_model_metadata.pickle', 'wb') as fp:
@@ -116,6 +124,7 @@ class Transaction:
             return
 
         except Exception as e:
+            self.lmd['is_active'] = False
             self.lmd['current_phase'] = MODEL_STATUS_ERROR
             self.lmd['error_msg'] = traceback.print_exc()
             self.log.error(str(e))
@@ -200,6 +209,13 @@ class Transaction:
                 self.output_data.data[confidence_column_name][row_number] = prediction_evaluation
                 #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong
                 self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
+
+        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['model_name'] + '_light_model_metadata.pickle', 'wb') as fp:
+            lmd['updated_at'] = datetime.datetime.now()
+            pickle.dump(self.lmd, fp)
+
+        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['model_name'] + '_heavy_model_metadata.pickle', 'wb') as fp:
+            pickle.dump(self.hmd, fp)
 
         return
 

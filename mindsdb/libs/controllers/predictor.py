@@ -110,14 +110,15 @@ class Predictor:
                 print(f'Key {k} not found in the light model metadata !')
 
         amd['data_analysis'] = {
-            ,'target_columns_metadata': []
+            'target_columns_metadata': []
             ,'input_columns_metadata': []
         }
-        
+
+        amd['model_analysis'] = []
+
         for col in lmd['model_columns_map'].keys():
             icm = {}
             icm['column_name'] = col
-            icm['importance_score'] = 0 #lmd['column_importances'][col]
             icm['data_type'] = lmd['column_stats'][col]['data_type']
             icm['data_subtype'] = lmd['column_stats'][col]['data_subtype']
 
@@ -210,9 +211,42 @@ class Predictor:
                 }
 
             if col in lmd['predict_columns']:
+                icm['importance_score'] = None
                 amd['data_analysis']['target_columns_metadata'].append(icm)
+
+                # Model analysis building for each of the predict columns
+                mao = {
+                    'column_name': col
+                    ,'overall_input_importance': {
+                        "type": "categorical"
+                        ,"x": []
+                        ,"y": []
+                    }
+                  ,"train_accuracy_over_time": {
+                    "type": "categorical",
+                    "x": [0],
+                    "y": [0]
+                  }
+                  ,"test_accuracy_over_time": {
+                    "type": "categorical",
+                    "x": [0],
+                    "y": [0]
+                  }
+                  ,"accuracy_histogram": {
+                    
+                  }
+                }
+
+                for icol in lmd['model_columns_map'].keys():
+                    if icol not in lmd['predict_columns']:
+                        mao['overall_input_importance']['x'].append(icol)
+                        mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
+
+                amd['model_analysis'].append(mao)
             else:
+                icm['importance_score'] = lmd['column_importances'][col]
                 amd['data_analysis']['input_columns_metadata'].append(icm)
+
 
 
         # ADAPTOR CODE

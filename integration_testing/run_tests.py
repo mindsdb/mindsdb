@@ -113,6 +113,8 @@ def test_timeseries():
 
     try:
         results = mdb.predict(when_data=test_file_name)
+        models = mdb.get_models()
+        get_model_data(models[0])
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
             for col in expect_columns:
@@ -191,6 +193,8 @@ def test_one_label_prediction():
 
     try:
         results = mdb.predict(when_data=test_file_name)
+        models = mdb.get_models()
+        get_model_data(models[0])
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
             for col in expect_columns:
@@ -267,6 +271,8 @@ def test_one_label_prediction_wo_strings():
 
     try:
         results = mdb.predict(when_data=test_file_name)
+        models = mdb.get_models()
+        get_model_data(models[0])
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
             for col in expect_columns:
@@ -346,6 +352,8 @@ def test_multilabel_prediction():
 
     try:
         results = mdb.predict(when_data=test_file_name)
+        models = mdb.get_models()
+        get_model_data(models[0])
         for i in range(len(results)):
             row = results[i]
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']

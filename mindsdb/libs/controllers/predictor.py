@@ -193,7 +193,7 @@ class Predictor:
             lmd = pickle.load(fp)
         # ADAPTOR CODE
         amd = {}
-        for k in lmd: print(k)
+
         # Shared keys
         for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
         'status', 'train_end_at', 'updated_at', 'created_at','data_preparation']:

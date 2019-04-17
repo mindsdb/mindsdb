@@ -186,6 +186,8 @@ class Predictor:
                 ,"description": "Scores have no descriptions yet"
             }
 
+            return icm
+
     def get_model_data(self, model_name):
         with open(CONFIG.MINDSDB_STORAGE_PATH + f'/{model_name}_light_model_metadata.pickle', 'rb') as fp:
             lmd = pickle.load(fp)
@@ -214,7 +216,7 @@ class Predictor:
             icm = self._adapt_column(lmd['column_stats'][col],col)
 
             if col in lmd['predict_columns']:
-                
+
                 icm['importance_score'] = None
                 amd['data_analysis']['target_columns_metadata'].append(icm)
 

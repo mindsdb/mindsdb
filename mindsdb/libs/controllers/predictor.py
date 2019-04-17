@@ -109,9 +109,12 @@ class Predictor:
                 amd[k] = None
                 print(f'Key {k} not found in the light model metadata !')
 
-        amd['data_analysis'] = {}
-        amd['data_analysis']['target_columns_metadata'] = []
-        for col in lmd['predict_columns']:
+        amd['data_analysis'] = {
+            ,'target_columns_metadata': []
+            ,'input_columns_metadata': []
+        }
+        
+        for col in lmd['model_columns_map'].keys():
             icm = {}
             icm['column_name'] = col
             icm['importance_score'] = 0 #lmd['column_importances'][col]
@@ -206,19 +209,10 @@ class Predictor:
                     ,"description": "Scores have no descriptions yet"
                 }
 
-
-            amd['data_analysis']['target_columns_metadata'].append(icm)
-
-        amd['data_analysis']['input_columns_metadata'] = []
-        for col in lmd['model_columns_map'].keys():
-            if col not in lmd['predict_columns']:
-                icm = {}
-                icm['column_name'] = col
-                icm['importance_score'] = lmd['column_importances'][col]
-                icm['data_type'] = lmd['column_stats'][col]['data_type']
-                icm['data_subtype'] = lmd['column_stats'][col]['data_subtype']
-
-                #amd['data_analysis']['input_columns_metadata'].append(icm)
+            if col in lmd['predict_columns']:
+                amd['data_analysis']['target_columns_metadata'].append(icm)
+            else:
+                amd['data_analysis']['input_columns_metadata'].append(icm)
 
 
         # ADAPTOR CODE

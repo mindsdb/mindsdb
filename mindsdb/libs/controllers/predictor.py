@@ -84,9 +84,7 @@ class Predictor:
                 for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
                 'status', 'train_end_at', 'updated_at', 'created_at']:
                     model = {}
-                    if k == 'predict':
-                        model[k] = lmd['predict_columns']
-                    elif k in lmd:
+                    if k in lmd:
                         model[k] = lmd[k]
                     else:
                         model[k] = None
@@ -96,12 +94,136 @@ class Predictor:
 
     def get_model_data(self, model_name):
         with open(CONFIG.MINDSDB_STORAGE_PATH + f'/{model_name}_light_model_metadata.pickle', 'rb') as fp:
-            light_metadata = pickle.load(fp)
+            lmd = pickle.load(fp)
         # ADAPTOR CODE
-        adapted_light_metadata = {}
+        amd = {}
+        for k in lmd: print(k)
+        # Shared keys
+        for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
+        'status', 'train_end_at', 'updated_at', 'created_at','data_preparation']:
+            if k == 'predict':
+                amd[k] = lmd['predict_columns']
+            elif k in lmd:
+                amd[k] = lmd[k]
+            else:
+                amd[k] = None
+                print(f'Key {k} not found in the light model metadata !')
+
+        amd['data_analysis'] = {}
+        amd['data_analysis']['target_columns_metadata'] = []
+        for col in lmd['predict_columns']:
+            icm = {}
+            icm['column_name'] = col
+            icm['importance_score'] = 0 #lmd['column_importances'][col]
+            icm['data_type'] = lmd['column_stats'][col]['data_type']
+            icm['data_subtype'] = lmd['column_stats'][col]['data_subtype']
+
+            icm['data_type_distribution'] = {
+                'type': lmd['column_stats'][col]['data_type']
+                ,'x': []
+                ,'y': []
+            }
+            for k in lmd['column_stats'][col]['data_type_dist']:
+                icm['data_type_distribution']['x'].append(k)
+                icm['data_type_distribution']['y'].append(lmd['column_stats'][col]['data_type_dist'][k])
+
+            icm['data_subtype_distribution'] = {
+                'type': lmd['column_stats'][col]['data_subtype']
+                ,'x': []
+                ,'y': []
+            }
+            for k in lmd['column_stats'][col]['data_subtype_dist']:
+                icm['data_subtype_distribution']['x'].append(k)
+                icm['data_subtype_distribution']['y'].append(lmd['column_stats'][col]['data_subtype_dist'][k])
+
+            icm['data_distribution'] = {}
+            icm['data_distribution']['data_histogram'] = {
+                "type": lmd['column_stats'][col]['data_type'],
+                'x': [],
+                'y': []
+            }
+            icm['data_distribution']['clusters'] = {}
+            for k, v in lmd['column_stats'][col]['histogram'].items():
+                icm['data_distribution']['data_histogram']['x'].append(k)
+                icm['data_distribution']['data_histogram']['y'].append(v)
+
+            scores = ['consistency_score', 'redundancy_score', 'variability_score']
+            for score in scores:
+                metrics = []
+                if score == 'consistency_score':
+                    metrics.append({
+                          "type": "score",
+                          "score": lmd['column_stats'][col]['data_type_distribution_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+                    metrics.append({
+                          "type": "score",
+                          "score": lmd['column_stats'][col]['empty_cells_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+                    if 'duplicates_score' in lmd['column_stats'][col]:
+                        metrics.append({
+                              "type": "score",
+                              "score": lmd['column_stats'][col]['duplicates_score'],
+                              "description": "Scores have no descriptions yet"
+                        })
+
+                if score == 'variability_score':
+                    if 'lof_based_outlier_score' in lmd['column_stats'][col] and 'z_test_based_outlier_score' in lmd['column_stats'][col]:
+                        metrics.append({
+                              "type": "score",
+                              "score": lmd['column_stats'][col]['lof_based_outlier_score'],
+                              "description": "Scores have no descriptions yet"
+                        })
+                        metrics.append({
+                              "type": "score",
+                              "score": lmd['column_stats'][col]['z_test_based_outlier_score'],
+                              "description": "Scores have no descriptions yet"
+                        })
+                        metrics.append({
+                              "type": "score",
+                              "score": lmd['column_stats'][col]['value_distribution_score'],
+                              "description": "Scores have no descriptions yet"
+                        })
+                    else:
+                        metrics.append({
+                              "type": "score",
+                              "score": lmd['column_stats'][col]['value_distribution_score'],
+                              "description": "Scores have no descriptions yet"
+                        })
+
+                if score == 'redundancy_score':
+                    metrics.append({
+                          "type": "score",
+                          "score": lmd['column_stats'][col]['similarity_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+
+
+                icm[score.replace('','_score')] = {
+                    'score': lmd['column_stats'][col][score],
+                    'metrics': metrics
+                    ,"description": "Scores have no descriptions yet"
+                }
+
+
+            amd['data_analysis']['target_columns_metadata'].append(icm)
+
+        amd['data_analysis']['input_columns_metadata'] = []
+        for col in lmd['model_columns_map'].keys():
+            if col not in lmd['predict_columns']:
+                icm = {}
+                icm['column_name'] = col
+                icm['importance_score'] = lmd['column_importances'][col]
+                icm['data_type'] = lmd['column_stats'][col]['data_type']
+                icm['data_subtype'] = lmd['column_stats'][col]['data_subtype']
+
+                #amd['data_analysis']['input_columns_metadata'].append(icm)
+
+
         # ADAPTOR CODE
-        adapted_light_metadata = light_metadata #temporary
-        return adapted_light_metadata
+
+        return amd
 
     def load(self, model_zip_file='mindsdb_storage.zip'):
         """

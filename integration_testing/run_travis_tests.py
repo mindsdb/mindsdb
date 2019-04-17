@@ -78,7 +78,7 @@ def run_tests():
 
 
     try:
-        mdb.learn(from_data=train_file_name, to_predict=label_headers)
+        #mdb.learn(from_data=train_file_name, to_predict=label_headers)
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:
         print(traceback.format_exc())
@@ -95,6 +95,7 @@ def run_tests():
         exit(1)
 
     try:
+        '''
         results = mdb.predict(when_data=test_file_name)
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
@@ -105,9 +106,14 @@ def run_tests():
                     exit(1)
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
-
+        '''
+        # Print statements are in for debugging, remove later, but keep the funcion calls to make sure the interface is working
         models = mdb.get_models()
         print(models)
+
+        lmd = mdb.get_model_data(models[0]['name'])
+        print(lmd)
+
     except:
         print(traceback.format_exc())
         logger.error(f'Failed whilst predicting')

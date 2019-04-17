@@ -92,6 +92,100 @@ class Predictor:
                     models.append(model)
         return models
 
+    def _adapt_column(self, col_stats, col):
+        icm = {}
+        icm['column_name'] = col
+        icm['data_type'] = col_stats['data_type']
+        icm['data_subtype'] = col_stats['data_subtype']
+
+        icm['data_type_distribution'] = {
+            'type': col_stats['data_type']
+            ,'x': []
+            ,'y': []
+        }
+        for k in col_stats['data_type_dist']:
+            icm['data_type_distribution']['x'].append(k)
+            icm['data_type_distribution']['y'].append(col_stats['data_type_dist'][k])
+
+        icm['data_subtype_distribution'] = {
+            'type': col_stats['data_subtype']
+            ,'x': []
+            ,'y': []
+        }
+        for k in col_stats['data_subtype_dist']:
+            icm['data_subtype_distribution']['x'].append(k)
+            icm['data_subtype_distribution']['y'].append(col_stats['data_subtype_dist'][k])
+
+        icm['data_distribution'] = {}
+        icm['data_distribution']['data_histogram'] = {
+            "type": col_stats['data_type'],
+            'x': [],
+            'y': []
+        }
+        icm['data_distribution']['clusters'] = {}
+        for k, v in col_stats['histogram'].items():
+            icm['data_distribution']['data_histogram']['x'].append(k)
+            icm['data_distribution']['data_histogram']['y'].append(v)
+
+        scores = ['consistency_score', 'redundancy_score', 'variability_score']
+        for score in scores:
+            metrics = []
+            if score == 'consistency_score':
+                metrics.append({
+                      "type": "score",
+                      "score": col_stats['data_type_distribution_score'],
+                      "description": "Scores have no descriptions yet"
+                })
+                metrics.append({
+                      "type": "score",
+                      "score": col_stats['empty_cells_score'],
+                      "description": "Scores have no descriptions yet"
+                })
+                if 'duplicates_score' in col_stats:
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['duplicates_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+
+            if score == 'variability_score':
+                if 'lof_based_outlier_score' in col_stats and 'z_test_based_outlier_score' in col_stats:
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['lof_based_outlier_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['z_test_based_outlier_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['value_distribution_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+                else:
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['value_distribution_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+
+            if score == 'redundancy_score':
+                metrics.append({
+                      "type": "score",
+                      "score": col_stats['similarity_score'],
+                      "description": "Scores have no descriptions yet"
+                })
+
+
+            icm[score.replace('','_score')] = {
+                'score': col_stats[score],
+                'metrics': metrics
+                ,"description": "Scores have no descriptions yet"
+            }
+
     def get_model_data(self, model_name):
         with open(CONFIG.MINDSDB_STORAGE_PATH + f'/{model_name}_light_model_metadata.pickle', 'rb') as fp:
             lmd = pickle.load(fp)
@@ -117,100 +211,10 @@ class Predictor:
         amd['model_analysis'] = []
 
         for col in lmd['model_columns_map'].keys():
-            icm = {}
-            icm['column_name'] = col
-            icm['data_type'] = lmd['column_stats'][col]['data_type']
-            icm['data_subtype'] = lmd['column_stats'][col]['data_subtype']
-
-            icm['data_type_distribution'] = {
-                'type': lmd['column_stats'][col]['data_type']
-                ,'x': []
-                ,'y': []
-            }
-            for k in lmd['column_stats'][col]['data_type_dist']:
-                icm['data_type_distribution']['x'].append(k)
-                icm['data_type_distribution']['y'].append(lmd['column_stats'][col]['data_type_dist'][k])
-
-            icm['data_subtype_distribution'] = {
-                'type': lmd['column_stats'][col]['data_subtype']
-                ,'x': []
-                ,'y': []
-            }
-            for k in lmd['column_stats'][col]['data_subtype_dist']:
-                icm['data_subtype_distribution']['x'].append(k)
-                icm['data_subtype_distribution']['y'].append(lmd['column_stats'][col]['data_subtype_dist'][k])
-
-            icm['data_distribution'] = {}
-            icm['data_distribution']['data_histogram'] = {
-                "type": lmd['column_stats'][col]['data_type'],
-                'x': [],
-                'y': []
-            }
-            icm['data_distribution']['clusters'] = {}
-            for k, v in lmd['column_stats'][col]['histogram'].items():
-                icm['data_distribution']['data_histogram']['x'].append(k)
-                icm['data_distribution']['data_histogram']['y'].append(v)
-
-            scores = ['consistency_score', 'redundancy_score', 'variability_score']
-            for score in scores:
-                metrics = []
-                if score == 'consistency_score':
-                    metrics.append({
-                          "type": "score",
-                          "score": lmd['column_stats'][col]['data_type_distribution_score'],
-                          "description": "Scores have no descriptions yet"
-                    })
-                    metrics.append({
-                          "type": "score",
-                          "score": lmd['column_stats'][col]['empty_cells_score'],
-                          "description": "Scores have no descriptions yet"
-                    })
-                    if 'duplicates_score' in lmd['column_stats'][col]:
-                        metrics.append({
-                              "type": "score",
-                              "score": lmd['column_stats'][col]['duplicates_score'],
-                              "description": "Scores have no descriptions yet"
-                        })
-
-                if score == 'variability_score':
-                    if 'lof_based_outlier_score' in lmd['column_stats'][col] and 'z_test_based_outlier_score' in lmd['column_stats'][col]:
-                        metrics.append({
-                              "type": "score",
-                              "score": lmd['column_stats'][col]['lof_based_outlier_score'],
-                              "description": "Scores have no descriptions yet"
-                        })
-                        metrics.append({
-                              "type": "score",
-                              "score": lmd['column_stats'][col]['z_test_based_outlier_score'],
-                              "description": "Scores have no descriptions yet"
-                        })
-                        metrics.append({
-                              "type": "score",
-                              "score": lmd['column_stats'][col]['value_distribution_score'],
-                              "description": "Scores have no descriptions yet"
-                        })
-                    else:
-                        metrics.append({
-                              "type": "score",
-                              "score": lmd['column_stats'][col]['value_distribution_score'],
-                              "description": "Scores have no descriptions yet"
-                        })
-
-                if score == 'redundancy_score':
-                    metrics.append({
-                          "type": "score",
-                          "score": lmd['column_stats'][col]['similarity_score'],
-                          "description": "Scores have no descriptions yet"
-                    })
-
-
-                icm[score.replace('','_score')] = {
-                    'score': lmd['column_stats'][col][score],
-                    'metrics': metrics
-                    ,"description": "Scores have no descriptions yet"
-                }
+            icm = self._adapt_column(lmd['column_stats'][col],col)
 
             if col in lmd['predict_columns']:
+                
                 icm['importance_score'] = None
                 amd['data_analysis']['target_columns_metadata'].append(icm)
 
@@ -233,9 +237,18 @@ class Predictor:
                     "y": [0]
                   }
                   ,"accuracy_histogram": {
-                    
+                        "x": []
+                        ,"y": []
+                        ,'x_explained': []
                   }
                 }
+
+                for sub_group in mao['accuracy_histogram']['x']:
+                    sub_group_stats = {} # Something like: `self._adapt_column(lmd['subgroup_stats'][col][sub_group],col) ``... once we actually implement the subgroup stats
+                    # TEMP PLACEHOLDER
+                    sub_group_stats = self._adapt_column(lmd['column_stats'][col],col)
+                    # TEMP PLACEHOLDER
+                    mao['accuracy_histogram'].append(sub_group_stats)
 
                 for icol in lmd['model_columns_map'].keys():
                     if icol not in lmd['predict_columns']:

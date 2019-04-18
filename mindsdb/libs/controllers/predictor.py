@@ -230,13 +230,13 @@ class Predictor:
                     }
                   ,"train_accuracy_over_time": {
                     "type": "categorical",
-                    "x": [0],
-                    "y": [0]
+                    "x": [],
+                    "y": []
                   }
                   ,"test_accuracy_over_time": {
                     "type": "categorical",
-                    "x": [0],
-                    "y": [0]
+                    "x": [],
+                    "y": []
                   }
                   ,"accuracy_histogram": {
                         "x": []
@@ -249,12 +249,12 @@ class Predictor:
                 test_acc = lmd['model_accuracy']['test']['combined']
 
                 for i in range(0,len(train_acc)):
-                    mao['train_accuracy_over_time']['x'] = i
-                    mao['train_accuracy_over_time']['y'] = train_acc[i]
+                    mao['train_accuracy_over_time']['x'].append(i)
+                    mao['train_accuracy_over_time']['y'].append(train_acc[i])
 
                 for i in range(0,len(test_acc)):
-                    mao['test_accuracy_over_time']['x'] = i
-                    mao['test_accuracy_over_time']['y'] = test_acc[i]
+                    mao['test_accuracy_over_time']['x'].append(i)
+                    mao['test_accuracy_over_time']['y'].append([i])
 
                 for sub_group in mao['accuracy_histogram']['x']:
                     sub_group_stats = {} # Something like: `self._adapt_column(lmd['subgroup_stats'][col][sub_group],col) ``... once we actually implement the subgroup stats

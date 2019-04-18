@@ -245,6 +245,17 @@ class Predictor:
                   }
                 }
 
+                train_acc = self.lmd['model_accuracy']['train']['combined']
+                test_acc = self.lmd['model_accuracy']['test']['combined']
+
+                for i in range(0,len(train_acc)):
+                    mao['train_accuracy_over_time']['x'] = i
+                    mao['train_accuracy_over_time']['y'] = train_acc[i]
+
+                for i in range(0,len(test_acc)):
+                    mao['test_accuracy_over_time']['x'] = i
+                    mao['test_accuracy_over_time']['y'] = test_acc[i]
+
                 for sub_group in mao['accuracy_histogram']['x']:
                     sub_group_stats = {} # Something like: `self._adapt_column(lmd['subgroup_stats'][col][sub_group],col) ``... once we actually implement the subgroup stats
                     # TEMP PLACEHOLDER
@@ -371,6 +382,7 @@ class Predictor:
         light_transaction_metadata['stop_training_in_x_seconds'] = stop_training_in_x_seconds
         light_transaction_metadata['stop_training_in_accuracy'] = stop_training_in_accuracy
         light_transaction_metadata['rebuild_model'] = rebuild_model
+        light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
 

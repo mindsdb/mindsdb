@@ -358,11 +358,7 @@ class LudwigBackend():
 
         #with disable_ludwig_output():
 
-        if lmd['rebuild_model'] == True:
-            model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
-            for i in range(0,100):
-                train_stats = model.train_online(data_df=training_dataframe)
-        else:
+        if self.transaction.lmd['rebuild_model'] is True:
             model = LudwigModel(model_definition)
 
             # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train...
@@ -370,10 +366,24 @@ class LudwigBackend():
             #train_stats = model.train_online(data_df=training_dataframe) # ??Where to add model_name?? ----> model_name=self.transaction.lmd['name']
 
             train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=True)
-            #print(train_stats)
+
             for k in train_stats['train']:
-                print(k)
+                if k not in self.transaction.lmd['model_accuracy']['train']:
+                    self.transaction.lmd['model_accuracy']['train'][k] = []
+                    self.transaction.lmd['model_accuracy']['test'][k] = []
+                elif k is not 'combined':
+                    # We should be adding the accuracy here but we only have it for combined, so, for now use that, will only affect multi-output scenarios anyway
+                    pass
+                else:
+                    self.transaction.lmd['model_accuracy']['train'][k].extend(train_stats['train'][k]['accuracy'])
+                    self.transaction.lmd['model_accuracy']['test'][k].extend(train_stats['test'][k]['accuracy'])
+                    
             exit()
+
+        else:
+            model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
+            for i in range(0,100):
+                train_stats = model.train_online(data_df=training_dataframe)
 
         ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.lmd['name']
 

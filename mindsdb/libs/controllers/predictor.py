@@ -245,8 +245,8 @@ class Predictor:
                   }
                 }
 
-                train_acc = self.lmd['model_accuracy']['train']['combined']
-                test_acc = self.lmd['model_accuracy']['test']['combined']
+                train_acc = lmd['model_accuracy']['train']['combined']
+                test_acc = lmd['model_accuracy']['test']['combined']
 
                 for i in range(0,len(train_acc)):
                     mao['train_accuracy_over_time']['x'] = i

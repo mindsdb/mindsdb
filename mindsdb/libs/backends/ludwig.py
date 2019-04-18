@@ -377,8 +377,6 @@ class LudwigBackend():
                 else:
                     self.transaction.lmd['model_accuracy']['train'][k].extend(train_stats['train'][k]['accuracy'])
                     self.transaction.lmd['model_accuracy']['test'][k].extend(train_stats['test'][k]['accuracy'])
-                    
-            exit()
 
         else:
             model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])

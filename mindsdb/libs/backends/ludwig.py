@@ -356,13 +356,16 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
-        with disable_ludwig_output():
-            model = LudwigModel(model_definition)
+        #with disable_ludwig_output():
+        model = LudwigModel(model_definition)
 
-            # Figure out how to pass `model_load_path`
-            train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'])
+        # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train...
+        #model.initialize_model(train_set_metadata={})
+        #train_stats = model.train_online(data_df=training_dataframe) #, model_name=self.transaction.lmd['name']
 
-        #model.model.weights_save_path.rstrip('/model_weights_progress') + '/model'
+        train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=True)
+        print(train_stats)
+
         ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.lmd['name']
 
         model.save(ludwig_model_savepath)

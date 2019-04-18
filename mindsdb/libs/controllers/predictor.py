@@ -84,9 +84,7 @@ class Predictor:
                 for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
                 'status', 'train_end_at', 'updated_at', 'created_at']:
                     model = {}
-                    if k == 'predict':
-                        model[k] = lmd['predict_columns']
-                    elif k in lmd:
+                    if k in lmd:
                         model[k] = lmd[k]
                     else:
                         model[k] = None
@@ -94,14 +92,181 @@ class Predictor:
                     models.append(model)
         return models
 
+    def _adapt_column(self, col_stats, col):
+        icm = {}
+        icm['column_name'] = col
+        icm['data_type'] = col_stats['data_type']
+        icm['data_subtype'] = col_stats['data_subtype']
+
+        icm['data_type_distribution'] = {
+            'type': col_stats['data_type']
+            ,'x': []
+            ,'y': []
+        }
+        for k in col_stats['data_type_dist']:
+            icm['data_type_distribution']['x'].append(k)
+            icm['data_type_distribution']['y'].append(col_stats['data_type_dist'][k])
+
+        icm['data_subtype_distribution'] = {
+            'type': col_stats['data_subtype']
+            ,'x': []
+            ,'y': []
+        }
+        for k in col_stats['data_subtype_dist']:
+            icm['data_subtype_distribution']['x'].append(k)
+            icm['data_subtype_distribution']['y'].append(col_stats['data_subtype_dist'][k])
+
+        icm['data_distribution'] = {}
+        icm['data_distribution']['data_histogram'] = {
+            "type": col_stats['data_type'],
+            'x': [],
+            'y': []
+        }
+        icm['data_distribution']['clusters'] = {}
+        for k, v in col_stats['histogram'].items():
+            icm['data_distribution']['data_histogram']['x'].append(k)
+            icm['data_distribution']['data_histogram']['y'].append(v)
+
+        scores = ['consistency_score', 'redundancy_score', 'variability_score']
+        for score in scores:
+            metrics = []
+            if score == 'consistency_score':
+                metrics.append({
+                      "type": "score",
+                      "score": col_stats['data_type_distribution_score'],
+                      "description": "Scores have no descriptions yet"
+                })
+                metrics.append({
+                      "type": "score",
+                      "score": col_stats['empty_cells_score'],
+                      "description": "Scores have no descriptions yet"
+                })
+                if 'duplicates_score' in col_stats:
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['duplicates_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+
+            if score == 'variability_score':
+                if 'lof_based_outlier_score' in col_stats and 'z_test_based_outlier_score' in col_stats:
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['lof_based_outlier_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['z_test_based_outlier_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['value_distribution_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+                else:
+                    metrics.append({
+                          "type": "score",
+                          "score": col_stats['value_distribution_score'],
+                          "description": "Scores have no descriptions yet"
+                    })
+
+            if score == 'redundancy_score':
+                metrics.append({
+                      "type": "score",
+                      "score": col_stats['similarity_score'],
+                      "description": "Scores have no descriptions yet"
+                })
+
+
+            icm[score.replace('','_score')] = {
+                'score': col_stats[score],
+                'metrics': metrics
+                ,"description": "Scores have no descriptions yet"
+            }
+
+            return icm
+
     def get_model_data(self, model_name):
         with open(CONFIG.MINDSDB_STORAGE_PATH + f'/{model_name}_light_model_metadata.pickle', 'rb') as fp:
-            light_metadata = pickle.load(fp)
+            lmd = pickle.load(fp)
         # ADAPTOR CODE
-        adapted_light_metadata = {}
+        amd = {}
+
+        # Shared keys
+        for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
+        'status', 'train_end_at', 'updated_at', 'created_at','data_preparation']:
+            if k == 'predict':
+                amd[k] = lmd['predict_columns']
+            elif k in lmd:
+                amd[k] = lmd[k]
+            else:
+                amd[k] = None
+                print(f'Key {k} not found in the light model metadata !')
+
+        amd['data_analysis'] = {
+            'target_columns_metadata': []
+            ,'input_columns_metadata': []
+        }
+
+        amd['model_analysis'] = []
+
+        for col in lmd['model_columns_map'].keys():
+            icm = self._adapt_column(lmd['column_stats'][col],col)
+
+            if col in lmd['predict_columns']:
+
+                icm['importance_score'] = None
+                amd['data_analysis']['target_columns_metadata'].append(icm)
+
+                # Model analysis building for each of the predict columns
+                mao = {
+                    'column_name': col
+                    ,'overall_input_importance': {
+                        "type": "categorical"
+                        ,"x": []
+                        ,"y": []
+                    }
+                  ,"train_accuracy_over_time": {
+                    "type": "categorical",
+                    "x": [0],
+                    "y": [0]
+                  }
+                  ,"test_accuracy_over_time": {
+                    "type": "categorical",
+                    "x": [0],
+                    "y": [0]
+                  }
+                  ,"accuracy_histogram": {
+                        "x": []
+                        ,"y": []
+                        ,'x_explained': []
+                  }
+                }
+
+                for sub_group in mao['accuracy_histogram']['x']:
+                    sub_group_stats = {} # Something like: `self._adapt_column(lmd['subgroup_stats'][col][sub_group],col) ``... once we actually implement the subgroup stats
+                    # TEMP PLACEHOLDER
+                    sub_group_stats = self._adapt_column(lmd['column_stats'][col],col)
+                    # TEMP PLACEHOLDER
+                    mao['accuracy_histogram'].append(sub_group_stats)
+
+                for icol in lmd['model_columns_map'].keys():
+                    if icol not in lmd['predict_columns']:
+                        mao['overall_input_importance']['x'].append(icol)
+                        mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
+
+                amd['model_analysis'].append(mao)
+            else:
+                icm['importance_score'] = lmd['column_importances'][col]
+                amd['data_analysis']['input_columns_metadata'].append(icm)
+
+
+
         # ADAPTOR CODE
-        adapted_light_metadata = light_metadata #temporary
-        return adapted_light_metadata
+
+        return amd
 
     def load(self, model_zip_file='mindsdb_storage.zip'):
         """

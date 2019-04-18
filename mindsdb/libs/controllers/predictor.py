@@ -99,7 +99,7 @@ class Predictor:
         icm['data_subtype'] = col_stats['data_subtype']
 
         icm['data_type_distribution'] = {
-            'type': col_stats['data_type']
+            'type': "categorical"
             ,'x': []
             ,'y': []
         }
@@ -108,7 +108,7 @@ class Predictor:
             icm['data_type_distribution']['y'].append(col_stats['data_type_dist'][k])
 
         icm['data_subtype_distribution'] = {
-            'type': col_stats['data_subtype']
+            'type': "categorical"
             ,'x': []
             ,'y': []
         }
@@ -118,7 +118,7 @@ class Predictor:
 
         icm['data_distribution'] = {}
         icm['data_distribution']['data_histogram'] = {
-            "type": col_stats['data_type'],
+            "type": "categorical",
             'x': [],
             'y': []
         }

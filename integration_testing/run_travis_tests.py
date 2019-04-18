@@ -110,8 +110,8 @@ def run_tests():
         # Print statements are in for debugging, remove later, but keep the funcion calls to make sure the interface is working
         models = mdb.get_models()
         lmd = mdb.get_model_data(models[0]['name'])
-        print(lmd)
-        
+        #print(lmd)
+
     except:
         print(traceback.format_exc())
         logger.error(f'Failed whilst predicting')

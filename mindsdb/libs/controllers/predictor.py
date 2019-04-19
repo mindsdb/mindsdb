@@ -384,6 +384,25 @@ class Predictor:
         light_transaction_metadata['rebuild_model'] = rebuild_model
         light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
 
+        if rebuild_model is False:
+            old_lmd = {}
+            for k in light_transaction_metadata: old_lmd[k] = light_transaction_metadata[k]
+
+            old_hmd = {}
+            for k in heavy_transaction_metadata: old_hmd[k] = heavy_transaction_metadata[k]
+
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + light_transaction_metadata['name'] + '_light_model_metadata.pickle', 'rb') as fp:
+                light_transaction_metadata = pickle.load(fp)
+
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' +heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle', 'rb') as fp:
+                heavy_transaction_metadata= pickle.load(fp)
+
+            for k in ['data_preparation']:
+                if old_lmd[k] is not None: light_transaction_metadata[k] = old_lmd[k]
+
+            for k in ['from_data', 'test_from_data']:
+                if old_hmd[k] is not None: heavy_transaction_metadata[k] = old_hmd[k]
+
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 

@@ -80,6 +80,8 @@ def run_tests():
     try:
         mdb.learn(from_data=train_file_name, to_predict=label_headers)
         logger.info(f'--------------- Learning ran succesfully ---------------')
+        mdb.learn(from_data=train_file_name, to_predict=label_headers, rebuild_model=False)
+        logger.info(f'--------------- Additional learning ran succesfully ---------------')
     except:
         print(traceback.format_exc())
         logger.error(f'Failed during the training !')

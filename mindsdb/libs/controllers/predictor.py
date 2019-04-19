@@ -397,7 +397,7 @@ class Predictor:
             with open(CONFIG.MINDSDB_STORAGE_PATH + '/' +heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle', 'rb') as fp:
                 heavy_transaction_metadata= pickle.load(fp)
 
-            for k in ['data_preparation']:
+            for k in ['data_preparation', 'rebuild_model']:
                 if old_lmd[k] is not None: light_transaction_metadata[k] = old_lmd[k]
 
             for k in ['from_data', 'test_from_data']:

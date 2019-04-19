@@ -356,32 +356,32 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
-        #with disable_ludwig_output():
+        with disable_ludwig_output():
 
-        if self.transaction.lmd['rebuild_model'] is True:
-            model = LudwigModel(model_definition)
+            if self.transaction.lmd['rebuild_model'] is True:
+                model = LudwigModel(model_definition)
 
-            # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train... see this issue for any updates on the matter: https://github.com/uber/ludwig/issues/295
-            #model.initialize_model(train_set_metadata={})
-            #train_stats = model.train_online(data_df=training_dataframe) # ??Where to add model_name?? ----> model_name=self.transaction.lmd['name']
+                # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train... see this issue for any updates on the matter: https://github.com/uber/ludwig/issues/295
+                #model.initialize_model(train_set_metadata={})
+                #train_stats = model.train_online(data_df=training_dataframe) # ??Where to add model_name?? ----> model_name=self.transaction.lmd['name']
 
-            train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=True)
+                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=True)
 
-            for k in train_stats['train']:
-                if k not in self.transaction.lmd['model_accuracy']['train']:
-                    self.transaction.lmd['model_accuracy']['train'][k] = []
-                    self.transaction.lmd['model_accuracy']['test'][k] = []
-                elif k is not 'combined':
-                    # We should be adding the accuracy here but we only have it for combined, so, for now use that, will only affect multi-output scenarios anyway
-                    pass
-                else:
-                    self.transaction.lmd['model_accuracy']['train'][k].extend(train_stats['train'][k]['accuracy'])
-                    self.transaction.lmd['model_accuracy']['test'][k].extend(train_stats['test'][k]['accuracy'])
+                for k in train_stats['train']:
+                    if k not in self.transaction.lmd['model_accuracy']['train']:
+                        self.transaction.lmd['model_accuracy']['train'][k] = []
+                        self.transaction.lmd['model_accuracy']['test'][k] = []
+                    elif k is not 'combined':
+                        # We should be adding the accuracy here but we only have it for combined, so, for now use that, will only affect multi-output scenarios anyway
+                        pass
+                    else:
+                        self.transaction.lmd['model_accuracy']['train'][k].extend(train_stats['train'][k]['accuracy'])
+                        self.transaction.lmd['model_accuracy']['test'][k].extend(train_stats['test'][k]['accuracy'])
 
-        else:
-            model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
-            for i in range(0,100):
-                train_stats = model.train_online(data_df=training_dataframe)
+            else:
+                model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
+                for i in range(0,100):
+                    train_stats = model.train_online(data_df=training_dataframe)
 
         ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.lmd['name']
 

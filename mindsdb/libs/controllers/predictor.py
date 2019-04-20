@@ -134,8 +134,8 @@ class Predictor:
                 metrics.append({
                       "type": "score",
                       "score": col_stats['data_type_distribution_score'],
-                      "description": col_stats['data_type_distribution_description'],
-                      "warning": col_stats['data_type_distribution_warning']
+                      "description": col_stats['data_type_distribution_score_description'],
+                      "warning": col_stats['data_type_distribution_score_warning']
                 })
                 metrics.append({
                       "type": "score",

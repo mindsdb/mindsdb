@@ -183,15 +183,16 @@ class Predictor:
                 metrics.append({
                       "type": "score",
                       "score": col_stats['similarity_score'],
-                          "description": col_stats['similarity_score_description'],
-                          "warning": col_stats['similarity_score_warning']
+                      "description": col_stats['similarity_score_description'],
+                      "warning": col_stats['similarity_score_warning']
                 })
 
 
             icm[score.replace('','_score')] = {
                 'score': col_stats[score],
                 'metrics': metrics
-                ,"description": "Scores have no descriptions yet"
+                "description": col_stats[f'{score}_description'],
+                "warning": col_stats[f'{score}_warning']
             }
 
             return icm

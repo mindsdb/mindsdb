@@ -190,7 +190,7 @@ class Predictor:
 
             icm[score.replace('','_score')] = {
                 'score': col_stats[score],
-                'metrics': metrics
+                'metrics': metrics,
                 "description": col_stats[f'{score}_description'],
                 "warning": col_stats[f'{score}_warning']
             }

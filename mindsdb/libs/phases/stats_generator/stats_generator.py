@@ -291,6 +291,9 @@ class StatsGenerator(BaseModule):
             'bucket_probabilities': bucket_probabilities
             ,'value_distribution_score': value_distribution_score
             ,'max_probability_key': max_probability_key
+            ,'value_distribution_score_description': """
+            This score can indicate either biasing towards one specific value in the column or a large number of outliers. So it is a reliable quality indicator but we can't know for which of the two reasons.
+            """
         }
 
         return data
@@ -317,6 +320,9 @@ class StatsGenerator(BaseModule):
         data = {
             'nr_duplicates': nr_duplicates
             ,'duplicates_percentage': nr_duplicates*100/len(columns[col_name])
+            ,'duplicates_score_description':"""
+            The duplicates score consists in the % of duplicate values / 100. So, it can range from 0 (no duplicates) to 1 (all the values have one or more duplicates). This score being large, on it's own, is not necessarily an indicator that your data is of poor quality.
+            """
         }
 
         if stats[col_name]['data_type'] != DATA_TYPES.CATEGORICAL and stats[col_name]['data_type'] != DATA_TYPES.DATE:
@@ -337,7 +343,8 @@ class StatsGenerator(BaseModule):
             empty_cells_score: A quality score based on the nr of empty cells, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
-        return {'empty_cells_score': stats[col_name]['empty_percentage']/100}
+        return {'empty_cells_score': stats[col_name]['empty_percentage']/100
+                ,'empty_cells_score_description':"""This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data."""}
 
     def _compute_data_type_dist_score(self, stats, columns, col_name):
         """
@@ -356,7 +363,10 @@ class StatsGenerator(BaseModule):
         principal = max(vals)
         total = len(columns[col_name])
         data_type_dist_score = (total - principal)/total
-        return {'data_type_distribution_score': data_type_dist_score}
+        return {'data_type_distribution_score': data_type_dist_score
+        ,'data_type_distribution_score_description':"""
+        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.
+        """}
 
     def _compute_z_score(self, stats, columns, col_name):
         """
@@ -382,6 +392,9 @@ class StatsGenerator(BaseModule):
             'z_score_outliers': z_score_outlier_indexes
             ,'mean_z_score': np.mean(z_scores)
             ,'z_test_based_outlier_score': len(z_score_outlier_indexes)/len(columns[col_name])
+            ,'z_test_based_outlier_score_description':"""
+            This score indicates the amount of data that are 3 STDs or more away from the mean. That is to say, the amount of data that we consider to be an outlir. A hgih z socre means your data contains a large amount of outliers.
+            """
         }
         return data
 
@@ -412,6 +425,9 @@ class StatsGenerator(BaseModule):
             'lof_outliers': outlier_indexes
             ,'lof_based_outlier_score': len(outlier_indexes)/len(columns[col_name])
             ,'percentage_of_log_based_outliers': (len(outlier_indexes)/len(columns[col_name])) * 100
+            ,'lof_based_outlier_score_description':"""
+            The higher this score, the more outliers your dataset has. This is based on distance from the center of 20 clusters as constructed via KNN.
+            """
         }
 
 
@@ -442,6 +458,10 @@ class StatsGenerator(BaseModule):
             'similarities': similarities
             ,'similarity_score': max_similarity
             ,'most_similar_column_name': list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
+            ,'similarity_score_description':"""
+            This score is simply a matthews correlation applied between this column and all other column.
+            The score * 100 is the number of values which are similar in the column that is most similar to the scored column.
+            """
         }
 
 
@@ -495,6 +515,9 @@ class StatsGenerator(BaseModule):
             'correlation_score': prediction_score * highest_correlated_column
             ,'highest_correlation': max(corr_scores)
             ,'most_correlated_column': other_feature_names[corr_scores.index(max(corr_scores))]
+            ,'similarity_score_description':"""
+            A high value for this score means that two of your columns are highly similar. This is done by trying to predict one column using the other via a simple DT.
+            """
         }
 
     def _compute_consistency_score(self, stats, col_name):
@@ -512,7 +535,11 @@ class StatsGenerator(BaseModule):
             consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2.5 + col_stats['duplicates_score']/5
         else:
             consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2
-        return {'consistency_score': consistency_score}
+        return {'consistency_score': consistency_score
+        ,'consistency_score_description':"""
+        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).
+        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.
+        """}
 
     def _compute_redundancy_score(self, stats, col_name):
         """
@@ -526,7 +553,11 @@ class StatsGenerator(BaseModule):
         """
         col_stats = stats[col_name]
         redundancy_score = (col_stats['similarity_score'])/1
-        return {'redundancy_score': redundancy_score}
+        return {'redundancy_score': redundancy_score
+            ,'redundancy_score_description':"""
+            A high value in this score indicates the data in this column is highly redundant for making any sort of prediction, you should make sure that values heavily related to this column are no already expressed in another column (e.g. if this column is a timestamp, make sure you don't have another column representing the exact same time in ISO datetime format).
+            The value is based in equal part on the Similarity Score and the Correlation Score.
+            """}
 
     def _compute_variability_score(self, stats, col_name):
         """
@@ -545,7 +576,11 @@ class StatsGenerator(BaseModule):
         else:
             variability_score = col_stats['value_distribution_score']/2
 
-        return {'variability_score': variability_score}
+        return {'variability_score': variability_score
+        ,'variability_score_description':"""
+        A high value for this score indicates the data in this column seems to be very variable, indicating a large possibility of some random noise affecting your data. This could mean that the values for this column are not collected or processed correctly.
+        The value is based in equal part on the Z Test based outliers score, the LOG based outlier score and the Value Distribution Score.
+        """}
 
 
     def _compute_data_quality_score(self, stats, col_name):
@@ -568,7 +603,10 @@ class StatsGenerator(BaseModule):
             quality_score += col_stats[score]
         quality_score = quality_score/len(scores)
 
-        return {'quality_score': quality_score}
+        return {'quality_score': quality_score
+        ,'quality_score_description':"""
+        The higher this score is, the lower the quality of a given column.
+        """}
 
     def _log_interesting_stats(self, stats):
         """
@@ -590,7 +628,8 @@ class StatsGenerator(BaseModule):
 
             #Compound scores
             if col_stats['consistency_score'] > 0.25:
-                self.log.warning(f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info')
+                w = f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info'
+                self.log.warning(w)
 
             if col_stats['redundancy_score'] > 0.45:
                 self.log.warning(f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info')

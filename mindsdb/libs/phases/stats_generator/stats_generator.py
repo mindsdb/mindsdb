@@ -630,44 +630,62 @@ class StatsGenerator(BaseModule):
             if col_stats['consistency_score'] > 0.25:
                 w = f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info'
                 self.log.warning(w)
+                col_stats['consistency_score_warning'] = w
 
             if col_stats['redundancy_score'] > 0.45:
-                self.log.warning(f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info')
+                w = f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info'
+                self.log.warning(w)
+                col_stats['redundancy_score_warning'] = w
 
             if col_stats['variability_score'] > 0.5:
-                self.log.warning(f'The data in the column {col_name} seems to have too contain too much noise/randomness based on the value variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.')
-
+                w = f'The data in the column {col_name} seems to have too contain too much noise/randomness based on the value variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.'
+                self.log.warning(w)
+                col_stats['variability_score_warning'] = w
 
 
             # Some scores are meaningful on their own, and the user should be warnned if they fall bellow a certain threshold
             if col_stats['empty_cells_score'] > 0.2:
                 empty_cells_percentage = col_stats['empty_percentage']
-                self.log.warning(f'{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate your data is of poor quality.')
+                w = f'{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate your data is of poor quality.'
+                self.log.warning(w)
+                col_stats['empty_cells_score_warning'] = w
 
             if col_stats['data_type_distribution_score'] > 0.2:
                 #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
                 percentage_of_data_not_of_principal_type = col_stats['data_type_distribution_score'] * 100
                 principal_data_type = col_stats['data_type']
-                self.log.warning(f'{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate your data is of poor quality.')
+                w = f'{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate your data is of poor quality.'
+                self.log.warning(w)
+                col_stats['data_type_distribution_score_warning'] = w
 
             if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 0.3:
                 percentage_of_outliers = col_stats['z_test_based_outlier_score']*100
-                self.log.warning(f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means there might
-                be too much randomness in this column for us to make an accurate prediction based on it.""")
+                w = f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means there might
+                be too much randomness in this column for us to make an accurate prediction based on it."""
+                self.log.warning(w)
+                col_stats['z_test_based_outlier_score_warning'] = w
 
             if 'lof_based_outlier_score' in col_stats and col_stats['lof_based_outlier_score'] > 0.3:
                 percentage_of_outliers = col_stats['percentage_of_log_based_outliers']
-                self.log.warning(f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data doesn't fit closely in any cluster using the KNN algorithm (20n) to cluster your data, this means there might
-                be too much randomness in this column for us to make an accurate prediction based on it.""")
+                w = f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data doesn't fit closely in any cluster using the KNN algorithm (20n) to cluster your data, this means there might
+                be too much randomness in this column for us to make an accurate prediction based on it."""
+                self.log.warning(w)
+                col_stats['lof_based_outlier_score_warning'] = w
 
             if col_stats['value_distribution_score'] > 0.8:
                 max_probability_key = col_stats['max_probability_key']
-                self.log.warning(f"""Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !""")
+                w = f"""Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !"""
+                self.log.warning(w)
+                col_stats['lvalue_distribution_score_warning'] = w
+
 
             if col_stats['similarity_score'] > 0.5:
                 similar_percentage = col_stats['similarity_score'] * 100
                 similar_col_name = col_stats['most_similar_column_name']
-                self.log.warning(f'Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !')
+                w = f'Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !'
+                self.log.warning(w)
+                col_stats['lof_based_outlier_score_warning'] = w
+
 
             '''
             if col_stats['correlation_score'] > 0.4:

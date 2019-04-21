@@ -81,15 +81,15 @@ class Predictor:
             if '_light_model_metadata.pickle' in fn:
                 model_name = fn.replace('_light_model_metadata.pickle','')
                 lmd = self.get_model_data(model_name)
+                model = {}
                 for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
                 'status', 'train_end_at', 'updated_at', 'created_at']:
-                    model = {}
                     if k in lmd:
                         model[k] = lmd[k]
                     else:
                         model[k] = None
                         print(f'Key {k} not found in the light model metadata !')
-                    models.append(model)
+                models.append(model)
         return models
 
     def _adapt_column(self, col_stats, col):

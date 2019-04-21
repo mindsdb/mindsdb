@@ -134,18 +134,21 @@ class Predictor:
                 metrics.append({
                       "type": "score",
                       "score": col_stats['data_type_distribution_score'],
-                      "description": "Scores have no descriptions yet"
+                      "description": col_stats['data_type_distribution_score_description'],
+                      "warning": col_stats['data_type_distribution_score_warning']
                 })
                 metrics.append({
                       "type": "score",
                       "score": col_stats['empty_cells_score'],
-                      "description": "Scores have no descriptions yet"
+                      "description": col_stats['empty_cells_score_description'],
+                      "warning": col_stats['empty_cells_score_warning']
                 })
                 if 'duplicates_score' in col_stats:
                     metrics.append({
                           "type": "score",
                           "score": col_stats['duplicates_score'],
-                          "description": "Scores have no descriptions yet"
+                          "description": col_stats['duplicates_score_description'],
+                          "warning": col_stats['duplicates_score_warning']
                     })
 
             if score == 'variability_score':
@@ -153,37 +156,43 @@ class Predictor:
                     metrics.append({
                           "type": "score",
                           "score": col_stats['lof_based_outlier_score'],
-                          "description": "Scores have no descriptions yet"
+                          "description": col_stats['lof_based_outlier_score_description'],
+                          "warning": col_stats['lof_based_outlier_score_warning']
                     })
                     metrics.append({
                           "type": "score",
                           "score": col_stats['z_test_based_outlier_score'],
-                          "description": "Scores have no descriptions yet"
+                          "description": col_stats['z_test_based_outlier_score_description'],
+                          "warning": col_stats['z_test_based_outlier_score_warning']
                     })
                     metrics.append({
                           "type": "score",
                           "score": col_stats['value_distribution_score'],
-                          "description": "Scores have no descriptions yet"
+                          "description": col_stats['value_distribution_score_description'],
+                          "warning": col_stats['value_distribution_score_warning']
                     })
                 else:
                     metrics.append({
                           "type": "score",
                           "score": col_stats['value_distribution_score'],
-                          "description": "Scores have no descriptions yet"
+                          "description": col_stats['value_distribution_score_description'],
+                          "warning": col_stats['value_distribution_score_warning']
                     })
 
             if score == 'redundancy_score':
                 metrics.append({
                       "type": "score",
                       "score": col_stats['similarity_score'],
-                      "description": "Scores have no descriptions yet"
+                      "description": col_stats['similarity_score_description'],
+                      "warning": col_stats['similarity_score_warning']
                 })
 
 
             icm[score.replace('','_score')] = {
                 'score': col_stats[score],
-                'metrics': metrics
-                ,"description": "Scores have no descriptions yet"
+                'metrics': metrics,
+                "description": col_stats[f'{score}_description'],
+                "warning": col_stats[f'{score}_warning']
             }
 
             return icm

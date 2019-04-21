@@ -99,7 +99,7 @@ class Predictor:
         icm['data_subtype'] = col_stats['data_subtype']
 
         icm['data_type_distribution'] = {
-            'type': col_stats['data_type']
+            'type': "categorical"
             ,'x': []
             ,'y': []
         }
@@ -108,7 +108,7 @@ class Predictor:
             icm['data_type_distribution']['y'].append(col_stats['data_type_dist'][k])
 
         icm['data_subtype_distribution'] = {
-            'type': col_stats['data_subtype']
+            'type': "categorical"
             ,'x': []
             ,'y': []
         }
@@ -118,7 +118,7 @@ class Predictor:
 
         icm['data_distribution'] = {}
         icm['data_distribution']['data_histogram'] = {
-            "type": col_stats['data_type'],
+            "type": "categorical",
             'x': [],
             'y': []
         }
@@ -230,13 +230,13 @@ class Predictor:
                     }
                   ,"train_accuracy_over_time": {
                     "type": "categorical",
-                    "x": [0],
-                    "y": [0]
+                    "x": [],
+                    "y": []
                   }
                   ,"test_accuracy_over_time": {
                     "type": "categorical",
-                    "x": [0],
-                    "y": [0]
+                    "x": [],
+                    "y": []
                   }
                   ,"accuracy_histogram": {
                         "x": []
@@ -244,6 +244,17 @@ class Predictor:
                         ,'x_explained': []
                   }
                 }
+
+                train_acc = lmd['model_accuracy']['train']['combined']
+                test_acc = lmd['model_accuracy']['test']['combined']
+
+                for i in range(0,len(train_acc)):
+                    mao['train_accuracy_over_time']['x'].append(i)
+                    mao['train_accuracy_over_time']['y'].append(train_acc[i])
+
+                for i in range(0,len(test_acc)):
+                    mao['test_accuracy_over_time']['x'].append(i)
+                    mao['test_accuracy_over_time']['y'].append([i])
 
                 for sub_group in mao['accuracy_histogram']['x']:
                     sub_group_stats = {} # Something like: `self._adapt_column(lmd['subgroup_stats'][col][sub_group],col) ``... once we actually implement the subgroup stats
@@ -279,7 +290,7 @@ class Predictor:
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,
-    stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS, backend='ludwig'):
+    stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS, backend='ludwig', rebuild_model=True):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -370,6 +381,27 @@ class Predictor:
         light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
         light_transaction_metadata['stop_training_in_x_seconds'] = stop_training_in_x_seconds
         light_transaction_metadata['stop_training_in_accuracy'] = stop_training_in_accuracy
+        light_transaction_metadata['rebuild_model'] = rebuild_model
+        light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
+
+        if rebuild_model is False:
+            old_lmd = {}
+            for k in light_transaction_metadata: old_lmd[k] = light_transaction_metadata[k]
+
+            old_hmd = {}
+            for k in heavy_transaction_metadata: old_hmd[k] = heavy_transaction_metadata[k]
+
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + light_transaction_metadata['name'] + '_light_model_metadata.pickle', 'rb') as fp:
+                light_transaction_metadata = pickle.load(fp)
+
+            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' +heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle', 'rb') as fp:
+                heavy_transaction_metadata= pickle.load(fp)
+
+            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'ignore_columns', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:
+                if old_lmd[k] is not None: light_transaction_metadata[k] = old_lmd[k]
+
+            for k in ['from_data', 'test_from_data']:
+                if old_hmd[k] is not None: heavy_transaction_metadata[k] = old_hmd[k]
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
 

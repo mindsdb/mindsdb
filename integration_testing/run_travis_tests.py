@@ -80,6 +80,8 @@ def run_tests():
     try:
         mdb.learn(from_data=train_file_name, to_predict=label_headers)
         logger.info(f'--------------- Learning ran succesfully ---------------')
+        mdb.learn(from_data=train_file_name, to_predict=label_headers, rebuild_model=False)
+        logger.info(f'--------------- Additional learning ran succesfully ---------------')
     except:
         print(traceback.format_exc())
         logger.error(f'Failed during the training !')
@@ -110,6 +112,7 @@ def run_tests():
         # Print statements are in for debugging, remove later, but keep the funcion calls to make sure the interface is working
         models = mdb.get_models()
         lmd = mdb.get_model_data(models[0]['name'])
+        #print(lmd)
 
     except:
         print(traceback.format_exc())

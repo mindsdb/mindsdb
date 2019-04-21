@@ -220,7 +220,6 @@ class Transaction:
             # Don't save data for now
             pickle.dump(self.hmd, fp)
 
-        print(self.lmd)
         return
 
 

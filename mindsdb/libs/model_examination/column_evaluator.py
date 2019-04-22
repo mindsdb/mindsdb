@@ -37,9 +37,11 @@ class ColumnEvaluator():
                         bucket = None
 
                     vb = get_value_bucket(value, bucket, stats[input_column])
-                    split_data[vb] =
+                    if vb not in split_data:
+                        split_data[vb] = []
 
-                print(f'\n\n\n\n--------------------!!!!!!!!!!!!    {input_column}   !!!!!!!!!!!!--------------------\n\n\n\n')
+                    split_data[vb].append(value)
+
 
             col_only_normalized_accuracy = col_only_accuracy/normal_accuracy
 

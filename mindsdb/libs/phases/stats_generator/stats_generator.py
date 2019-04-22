@@ -117,7 +117,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
-    def _get_column_data_type(self, data, col_index):
+    def _get_column_data_type(self, data, col_index, data_array):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -219,7 +219,7 @@ class StatsGenerator(BaseModule):
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
         all_values = []
-        for row in self.transaction.input_data.data_array:
+        for row in input_data.data_array:
             all_values.append(row[col_index])
 
         all_distinct_vals = set(all_values)
@@ -720,7 +720,7 @@ class StatsGenerator(BaseModule):
             self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
 
-    def run(self, columns):
+    def run(self, columns, input_data, modify_light_metadata):
         """
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
@@ -739,7 +739,7 @@ class StatsGenerator(BaseModule):
         column_count = {}
 
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
-        population_size = len(self.transaction.input_data.data_array)
+        population_size = len(input_data.data_array)
         sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
         if sample_size > 3000 and sample_size > population_size/8:
             sample_size = min(round(population_size/8),3000)
@@ -748,7 +748,7 @@ class StatsGenerator(BaseModule):
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
         for sample_i in input_data_sample_indexes:
-            row = self.transaction.input_data.data_array[sample_i]
+            row = input_data.data_array[sample_i]
 
             for i, val in enumerate(row):
                 column = header[i]
@@ -768,7 +768,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data, i)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data, i, input_data.data_array)
 
 
             if data_type == DATA_TYPES.DATE:
@@ -851,7 +851,7 @@ class StatsGenerator(BaseModule):
                 }
             elif data_type == DATA_TYPES.CATEGORICAL:
                 all_values = []
-                for row in self.transaction.input_data.data_array:
+                for row in input_data.data_array:
                     all_values.append(row[i])
 
                 histogram = Counter(all_values)
@@ -921,16 +921,14 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self._compute_data_quality_score(stats, col_name))
 
 
-        total_rows = len(self.transaction.input_data.data_array)
-        test_rows = len(self.transaction.input_data.test_indexes)
-        validation_rows = len(self.transaction.input_data.validation_indexes)
-        train_rows = len(self.transaction.input_data.train_indexes)
+        total_rows = len(input_data.data_array)
 
-        self.transaction.lmd['column_stats'] = stats
-        self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
-        self.transaction.lmd['data_preparation']['test_row_count'] = test_rows
-        self.transaction.lmd['data_preparation']['train_row_count'] = train_rows
-        self.transaction.lmd['data_preparation']['validation_row_count'] = validation_rows
+        if modify_light_metadata:
+            self.transaction.lmd['column_stats'] = stats
+            self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
+            self.transaction.lmd['data_preparation']['test_row_count'] = len(input_data.test_indexes)
+            self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes)
+            self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes)
 
         self._log_interesting_stats(stats)
         return stats

@@ -95,7 +95,7 @@ class Transaction:
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
             self.lmd['columns'] = self.input_data.columns # this is populated by data extractor
 
-            self._call_phase_module('StatsGenerator', columns=self.input_data.columns)
+            self._call_phase_module('StatsGenerator', columns=self.input_data.columns, data_array=self.input_data, modify_light_metadata=True)
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
 
             if self.lmd['model_backend'] == 'ludwig':

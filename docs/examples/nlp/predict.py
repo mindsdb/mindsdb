@@ -1,13 +1,9 @@
-"""
-
-"""
-
 from mindsdb import *
 
+mdb = Predictor(name='real_estate_desc')
+
 # Here we use the model to make predictions (NOTE: You need to run train.py first)
-result = MindsDB().predict(
-    predict='number_of_rooms',
-    model_name='real_estate_desc',
+result = mdb.predict(
     when={
         "description": """A true gem
  rooms: 2

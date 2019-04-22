@@ -34,8 +34,6 @@ class Predictor:
         self.name = name
         self.root_folder = root_folder
         self.uuid = str(uuid.uuid1())
-        self.predict_worker = None
-
         # initialize log
         self.log = MindsdbLogger(log_level=log_level, send_logs=False, log_url=log_server, uuid=self.uuid)
 
@@ -430,21 +428,20 @@ class Predictor:
         breakpoint = CONFIG.DEBUG_BREAK_POINT
         when_ds = None if when_data is None else getDS(when_data)
 
-        heavy_transaction_metadata = {}
-
-        heavy_transaction_metadata['name'] = self.name
-
-        if update_cached_model:
-            self.predict_worker = None
 
         # lets turn into lists: when
         when = [when] if type(when) in [type(None), type({})] else when
-        heavy_transaction_metadata['when_data'] = when_ds
+
+        heavy_transaction_metadata = {}
+        if when_ds is None:
+            heavy_transaction_metadata['when_data'] = None
+        else:
+            heavy_transaction_metadata['when_data'] = when_ds
+        heavy_transaction_metadata['model_when_conditions'] = when
+        heavy_transaction_metadata['name'] = self.name
 
         light_transaction_metadata = {}
-
         light_transaction_metadata['name'] = self.name
-        light_transaction_metadata['model_when_conditions'] = when
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['data_preparation'] = {}
 

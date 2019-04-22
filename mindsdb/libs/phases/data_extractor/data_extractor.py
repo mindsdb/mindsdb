@@ -21,7 +21,7 @@ class DataExtractor(BaseModule):
         """
 
         columns = self.transaction.lmd['columns']
-        when_conditions = self.transaction.lmd['model_when_conditions']
+        when_conditions = self.transaction.hmd['model_when_conditions']
 
         when_conditions_list = []
         # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
@@ -78,11 +78,14 @@ class DataExtractor(BaseModule):
 
         # if this is a predict statement, create use model_when_conditions to shape the dataframe
         if  self.transaction.lmd['type'] == TRANSACTION_PREDICT:
+            print('!!!!!!!!!!')
+            print(self.transaction.hmd.keys())
+            print('!!!!!!!!!!!!!!!!!!!!!')
             if self.transaction.hmd['when_data'] is not None:
                 df = self.transaction.hmd['when_data']
                 df = df.where((pandas.notnull(df)), None)
 
-            elif self.transaction.lmd['model_when_conditions'] is not None:
+            elif self.transaction.hmd['model_when_conditions'] is not None:
 
                 # if no data frame yet, make one
                 df = self._get_data_frame_from_when_conditions()

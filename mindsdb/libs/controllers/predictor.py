@@ -433,12 +433,15 @@ class Predictor:
         when = [when] if type(when) in [type(None), type({})] else when
 
         heavy_transaction_metadata = {}
-        heavy_transaction_metadata['when_data'] = when_ds
+        if when_ds is None:
+            heavy_transaction_metadata['when_data'] = None
+        else:
+            heavy_transaction_metadata['when_data'] = when_ds
         heavy_transaction_metadata['model_when_conditions'] = when
         heavy_transaction_metadata['name'] = self.name
 
         light_transaction_metadata = {}
-        light_transaction_metadata['name'] = self.name]
+        light_transaction_metadata['name'] = self.name
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['data_preparation'] = {}
 

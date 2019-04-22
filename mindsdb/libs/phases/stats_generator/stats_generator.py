@@ -219,7 +219,7 @@ class StatsGenerator(BaseModule):
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
         all_values = []
-        for row in input_data.data_array:
+        for row in data_array:
             all_values.append(row[col_index])
 
         all_distinct_vals = set(all_values)

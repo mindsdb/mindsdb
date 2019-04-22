@@ -17,7 +17,7 @@ result = mdb.predict(
 
 result[0].explain()
 print(result[0]['rental_price'])
-print(result[0]._predicted_values)
+print(result[0])
 #3306 (5%)
 #3837 (37%)
 #3836 (26%)

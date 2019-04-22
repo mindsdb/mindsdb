@@ -155,14 +155,11 @@ class Transaction:
 
         old_hmd = {}
         for k in self.hmd: old_hmd[k] = self.hmd[k]
-        print(old_hmd.keys())
-
         with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['name'] + '_light_model_metadata.pickle', 'rb') as fp:
             self.lmd = pickle.load(fp)
 
         with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['name'] + '_heavy_model_metadata.pickle', 'rb') as fp:
             self.hmd = pickle.load(fp)
-            print(self.hmd.keys())
 
         for k in old_lmd:
             if old_lmd[k] is not None:

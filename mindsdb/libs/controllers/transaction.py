@@ -53,7 +53,7 @@ class Transaction:
         self.run()
 
 
-    def _call_phase_module(self, module_name):
+    def _call_phase_module(self, module_name, **kwargs):
         """
         Loads the module and runs it
 
@@ -67,7 +67,7 @@ class Transaction:
         try:
             main_module = importlib.import_module(module_full_path)
             module = getattr(main_module, module_name)
-            return module(self.session, self)()
+            return module(self.session, self)(**kwargs)
         except:
             error = 'Could not load module {module_name}'.format(module_name=module_name)
             self.log.error('Could not load module {module_name}'.format(module_name=module_name))
@@ -95,7 +95,7 @@ class Transaction:
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
             self.lmd['columns'] = self.input_data.columns # this is populated by data extractor
 
-            self._call_phase_module('StatsGenerator')
+            self._call_phase_module('StatsGenerator', columns=self.input_data.columns)
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
 
             if self.lmd['model_backend'] == 'ludwig':

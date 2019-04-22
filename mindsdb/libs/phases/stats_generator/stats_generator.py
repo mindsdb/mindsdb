@@ -630,7 +630,7 @@ class StatsGenerator(BaseModule):
                     col_stats['duplicates_score_warning'] = None
             else:
                 col_stats['duplicates_score_warning'] = None
-                
+
             #Compound scores
             if col_stats['consistency_score'] > 0.25:
                 w = f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info'
@@ -720,14 +720,14 @@ class StatsGenerator(BaseModule):
             self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
 
-    def run(self):
+    def run(self, columns):
         """
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
 
-        header = self.transaction.input_data.columns
+        header = columns
         non_null_data = {}
         all_sampled_data = {}
 

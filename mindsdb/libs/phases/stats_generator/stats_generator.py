@@ -720,14 +720,14 @@ class StatsGenerator(BaseModule):
             self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
 
-    def run(self, columns, input_data, modify_light_metadata):
+    def run(self, input_data, modify_light_metadata):
         """
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
 
-        header = columns
+        header = input_data.columns
         non_null_data = {}
         all_sampled_data = {}
 

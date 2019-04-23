@@ -39,27 +39,32 @@ class ColumnEvaluator():
 
                     vb = get_value_bucket(value, bucket, stats[input_column])
                     if vb not in split_data:
-                        split_data[f'{input_column}_{vb}'] = []
+                        split_data[f'{input_column}_bucket_{vb}'] = []
 
-                    split_data[f'{input_column}_{vb}'].append(value)
+                    split_data[f'{input_column}_bucket_{vb}'].append(value)
 
                 row_wise_data = []
                 max_length = max(list(map(len, split_data.values())))
+
+                columns = []
                 for i in range(max_length):
                     row_wise_data.append([])
                     for k in split_data.keys():
-                        if len(split_data[k]) > i:
-                            row_wise_data[-1].append(split_data[k][i])
-                        else:
-                            row_wise_data[-1].append(None)
+                        # If the sub bucket has less than 6 values, it's no relevant
+                        if len(split_data[k]) > 6:
+                            columns.append(k)
+                            if len(split_data[k]) > i:
+                                row_wise_data[-1].append(split_data[k][i])
+                            else:
+                                row_wise_data[-1].append(None)
 
 
                 input_data = TransactionData()
                 input_data.data_array = row_wise_data
-                input_data.columns = list(split_data.keys())
+                input_data.columns = columns
 
                 sg = StatsGenerator(session=None, transaction=self.transaction)
-                stats = sg.run(input_data=input_data, modify_light_metadata=False)
+                bucket_stats = sg.run(input_data=input_data, modify_light_metadata=False)
 
 
             col_only_normalized_accuracy = col_only_accuracy/normal_accuracy

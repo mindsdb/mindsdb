@@ -741,7 +741,7 @@ class StatsGenerator(BaseModule):
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
         population_size = len(input_data.data_array)
 
-        if population_size < 5:
+        if population_size < 50:
             sample_size = population_size
         else:
             sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
@@ -753,7 +753,7 @@ class StatsGenerator(BaseModule):
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
         for sample_i in input_data_sample_indexes:
-            row = input_data.data_array[sample_i])
+            row = input_data.data_array[sample_i]
             for i, val in enumerate(row):
                 column = header[i]
                 value = cast_string_to_python_type(val)

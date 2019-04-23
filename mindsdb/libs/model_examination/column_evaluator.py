@@ -19,7 +19,7 @@ class ColumnEvaluator():
         normal_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
 
         column_importance_dict = {}
-        col_buckets_stats = {}
+        buckets_stats = {}
 
         for input_column in input_columns:
             # See what happens with the accuracy of the outputs if only this column is present
@@ -27,7 +27,18 @@ class ColumnEvaluator():
             col_only_predictions = model.predict('validate', ignore_columns)
             col_only_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
 
-            if col_only_accuracy > normal_accuracy*0.75:
+            col_only_normalized_accuracy = col_only_accuracy/normal_accuracy
+
+            # See what happens with the accuracy if all columns but this one are present
+            ignore_columns = [input_column]
+            col_missing_predictions = model.predict('validate', ignore_columns)
+
+            self.columnless_predictions[input_column] = col_missing_predictions
+
+            col_missing_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
+
+            # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)
+            if col_missing_accuracy > normal_accuracy*0.75 or col_only_accuracy > normal_accuracy*0.75:
                 split_data = {}
                 #columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd['columns'])]
                 for value in full_dataset[input_column]:
@@ -63,28 +74,15 @@ class ColumnEvaluator():
                 input_data.data_array = row_wise_data
                 input_data.columns = columns
 
-                sg = StatsGenerator(session=None, transaction=self.transaction)
-                bucket_stats = sg.run(input_data=input_data, modify_light_metadata=False)
+                stats_generator = StatsGenerator(session=None, transaction=self.transaction)
+                col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
-
-            col_only_normalized_accuracy = col_only_accuracy/normal_accuracy
-
-            # See what happens with the accuracy if all columns but this one are present
-            ignore_columns = [input_column]
-            col_missing_predictions = model.predict('validate', ignore_columns)
-
-            self.columnless_predictions[input_column] = col_missing_predictions
-
-            col_missing_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
-
-            if col_missing_accuracy > normal_accuracy*0.75:
-                pass
+                buckets_stats.update(col_buckets_stats)
 
             col_missing_reverse_accuracy = (normal_accuracy - col_missing_accuracy)/normal_accuracy
-
             column_importance = (col_only_normalized_accuracy + col_missing_reverse_accuracy)/2
             column_importance_dict[input_column] = column_importance
-        return column_importance_dict
+        return column_importance_dict, buckets_stats
 
     def get_column_influence(self):
         pass

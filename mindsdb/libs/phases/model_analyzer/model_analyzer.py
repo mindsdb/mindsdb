@@ -28,10 +28,11 @@ class ModelAnalyzer(BaseModule):
 
         # Test some hypotheses about our columns
         column_evaluator = ColumnEvaluator(self.transaction)
-        column_importances = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
+        column_importances, buckets_stats = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
         full_dataset=validation_dataset, stats=self.transaction.lmd['column_stats'])
 
         self.transaction.lmd['column_importances'] = column_importances
+        self.transaction.lmd['unusual_columns_buckets_importances'] = buckets_stats
 
         # Create the probabilistic validators for each of the predict column
         probabilistic_validators = {}

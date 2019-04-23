@@ -1,5 +1,6 @@
 from mindsdb.libs.helpers.general_helpers import evaluate_accuracy, get_value_bucket
-from mindsdb.libs.phases.stats_generator import StatsGenerator
+from mindsdb.libs.phases.stats_generator.stats_generator import StatsGenerator
+from mindsdb.libs.data_types.transaction_data import TransactionData
 
 class ColumnEvaluator():
     """
@@ -8,10 +9,10 @@ class ColumnEvaluator():
     input variables or the variability of output values
     """
 
-    def __init__(self):
+    def __init__(self, transaction):
         self.columnless_predictions = {}
         self.normal_predictions = None
-
+        self.transaction = transaction
 
     def get_column_importance(self, model, output_columns, input_columns, full_dataset, stats):
         self.normal_predictions = model.predict('validate')
@@ -38,9 +39,27 @@ class ColumnEvaluator():
 
                     vb = get_value_bucket(value, bucket, stats[input_column])
                     if vb not in split_data:
-                        split_data[vb] = []
+                        split_data[f'{input_column}_{vb}'] = []
 
-                    split_data[vb].append(value)
+                    split_data[f'{input_column}_{vb}'].append(value)
+
+                row_wise_data = []
+                max_length = max(list(map(len, split_data.values())))
+                for i in range(max_length):
+                    row_wise_data.append([])
+                    for k in split_data.keys():
+                        if len(split_data[k]) > i:
+                            row_wise_data[-1].append(split_data[k][i])
+                        else:
+                            row_wise_data[-1].append(None)
+
+
+                input_data = TransactionData()
+                input_data.data_array = row_wise_data
+                input_data.columns = list(split_data.keys())
+
+                sg = StatsGenerator(session=None, transaction=self.transaction)
+                stats = sg.run(input_data=input_data, modify_light_metadata=False)
 
 
             col_only_normalized_accuracy = col_only_accuracy/normal_accuracy
@@ -54,7 +73,7 @@ class ColumnEvaluator():
             col_missing_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
 
             if col_missing_accuracy > normal_accuracy*0.75:
-                print(f'\n\n\n\n--------------------!!!!!!!!!!!!    {input_column}   !!!!!!!!!!!!--------------------\n\n\n\n')
+                pass
 
             col_missing_reverse_accuracy = (normal_accuracy - col_missing_accuracy)/normal_accuracy
 

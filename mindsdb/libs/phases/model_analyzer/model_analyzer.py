@@ -27,7 +27,7 @@ class ModelAnalyzer(BaseModule):
                 validation_dataset[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
         # Test some hypotheses about our columns
-        column_evaluator = ColumnEvaluator()
+        column_evaluator = ColumnEvaluator(self.transaction)
         column_importances = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
         full_dataset=validation_dataset, stats=self.transaction.lmd['column_stats'])
 

@@ -182,6 +182,11 @@ class LudwigBackend():
         for ele in columns:
             col = ele[0]
             col_ind = ele[1]
+
+            # Handle malformed columns
+            if col in self.transaction.lmd['malformed_columns']['names']:
+                continue
+
             data[col] = []
 
             col_stats = self.transaction.lmd['column_stats'][col]
@@ -285,7 +290,11 @@ class LudwigBackend():
                     custom_logic_continue = True
 
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
-                    unix_ts = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind]).timestamp()
+                    if self.transaction.input_data.data_array[row_ind][col_ind] is None:
+                        unix_ts = 0
+                    else:
+                        unix_ts = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind]).timestamp()
+
                     data[col].append(unix_ts)
 
                 elif data_subtype in (DATA_SUBTYPES.FLOAT):

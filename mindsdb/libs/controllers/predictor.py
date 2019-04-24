@@ -220,7 +220,14 @@ class Predictor:
         amd['model_analysis'] = []
 
         for col in lmd['model_columns_map'].keys():
-            icm = self._adapt_column(lmd['column_stats'][col],col)
+            if col in lmd['malformed_columns']['names']:
+                continue
+
+            try:
+                icm = self._adapt_column(lmd['column_stats'][col],col)
+            except:
+                print(f'Issue processing column: {icol} !')
+                continue
 
             if col in lmd['predict_columns']:
 
@@ -271,18 +278,22 @@ class Predictor:
                     mao['accuracy_histogram']['y'] = lmd['column_importances'][incol]
 
                     if len(incol_bucket_importance_keys) > 0:
-                        sub_group_stats = self._adapt_column(lmd['unusual_columns_buckets_importances'][f'{incol}_bucket_{vb}'], f'{incol}_bucket_{vb}')
+                        sub_group_stats = []
+                        for sub_incol in incol_bucket_importance_keys:
+                            sub_group_stats.append(self._adapt_column(lmd['unusual_columns_buckets_importances'][sub_incol], sub_incol))
                     else:
                         sub_group_stats = [None]
                     mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
 
                 for icol in lmd['model_columns_map'].keys():
+                    if icol in lmd['malformed_columns']['names']:
+                        continue
                     if icol not in lmd['predict_columns']:
-
-
-
-                        mao['overall_input_importance']['x'].append(icol)
-                        mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
+                        try:
+                            mao['overall_input_importance']['x'].append(icol)
+                            mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
+                        except:
+                            print(f'No column importances found for {icol} !')
 
                 amd['model_analysis'].append(mao)
             else:
@@ -401,6 +412,8 @@ class Predictor:
         light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
         light_transaction_metadata['column_importances'] = None
         light_transaction_metadata['unusual_columns_buckets_importances'] = None
+        light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
+
 
         if rebuild_model is False:
             old_lmd = {}

@@ -4,6 +4,7 @@ docs/video_docs/results
 docs/video_docs/metadata.json
 metadata.json
 results
+integration_testing/ins_train_indep_test
 integration_testing/rr_ts_test
 integration_testing/*.csv
 integration_testing/*.xlsx

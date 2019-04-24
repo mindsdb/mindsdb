@@ -37,10 +37,13 @@ class ColumnEvaluator():
 
             col_missing_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
 
+            col_missing_reverse_accuracy = (normal_accuracy - col_missing_accuracy)/normal_accuracy
+            column_importance = (col_only_normalized_accuracy + col_missing_reverse_accuracy)/2
+            column_importance_dict[input_column] = column_importance
+
             # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)
-            if col_missing_accuracy > normal_accuracy*0.75 or col_only_accuracy > normal_accuracy*0.75:
+            if column_importance > 0.8 or column_importance < 0.2:
                 split_data = {}
-                #columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd['columns'])]
                 for value in full_dataset[input_column]:
 
                     if 'percentage_buckets' in stats[input_column]:
@@ -49,7 +52,7 @@ class ColumnEvaluator():
                         bucket = None
 
                     vb = get_value_bucket(value, bucket, stats[input_column])
-                    if vb not in split_data:
+                    if f'{input_column}_bucket_{vb}' not in split_data:
                         split_data[f'{input_column}_bucket_{vb}'] = []
 
                     split_data[f'{input_column}_bucket_{vb}'].append(value)
@@ -69,7 +72,6 @@ class ColumnEvaluator():
                             else:
                                 row_wise_data[-1].append(None)
 
-
                 input_data = TransactionData()
                 input_data.data_array = row_wise_data
                 input_data.columns = columns
@@ -79,9 +81,6 @@ class ColumnEvaluator():
 
                 buckets_stats.update(col_buckets_stats)
 
-            col_missing_reverse_accuracy = (normal_accuracy - col_missing_accuracy)/normal_accuracy
-            column_importance = (col_only_normalized_accuracy + col_missing_reverse_accuracy)/2
-            column_importance_dict[input_column] = column_importance
         return column_importance_dict, buckets_stats
 
     def get_column_influence(self):

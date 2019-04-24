@@ -17,11 +17,13 @@ class ModelAnalyzer(BaseModule):
         """
 
         output_columns = self.transaction.lmd['predict_columns']
-        input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns]
+        input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns and col not in self.transaction.lmd['malformed_columns']['names']]
         validation_dataset = {}
 
         for row_ind in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
             for col_ind, col in enumerate(self.transaction.lmd['columns']):
+                if col in self.transaction.lmd['malformed_columns']['names']:
+                    continue
                 if col not in validation_dataset:
                     validation_dataset[col] = []
                 validation_dataset[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
@@ -30,7 +32,6 @@ class ModelAnalyzer(BaseModule):
         column_evaluator = ColumnEvaluator(self.transaction)
         column_importances, buckets_stats = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns,
         full_dataset=validation_dataset, stats=self.transaction.lmd['column_stats'])
-
         self.transaction.lmd['column_importances'] = column_importances
         self.transaction.lmd['unusual_columns_buckets_importances'] = buckets_stats
 
@@ -60,7 +61,6 @@ class ModelAnalyzer(BaseModule):
                     predicted_val = predictions[pcol][i]
                     real_val = validation_dataset[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
-
 
         for pcol in output_columns:
             probabilistic_validators[pcol].partial_fit()

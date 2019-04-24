@@ -117,7 +117,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
-    def _get_column_data_type(self, data, col_index, data_array):
+    def _get_column_data_type(self, data, col_index, data_array, col_name):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -132,6 +132,10 @@ class StatsGenerator(BaseModule):
         additional_info = {}
 
         # calculate type_dist
+        if len(data) < 1:
+            self.log.warning(f'Column {col_name} has not data in it. Please remove {col_name} from the training file or fill in some of the values !')
+            return None, None, None, None, None, 'Column empty'
+
         for element in data:
             # Maybe use list of functions in the future
             element = element
@@ -237,7 +241,7 @@ class StatsGenerator(BaseModule):
             type_dist[curr_data_type] = len(data)
             subtype_dist[curr_data_subtype] = len(data)
 
-        return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info
+        return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
 
     def _get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
@@ -452,12 +456,17 @@ class StatsGenerator(BaseModule):
                 similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
                 similarities.append((other_col_name,similarity))
 
-        max_similarity = max(map(lambda x: x[1], similarities))
+        if len(similarities) > 0:
+            max_similarity = max(map(lambda x: x[1], similarities))
+            most_similar_column_name = list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
+        else:
+            max_similarity = 0
+            most_similar_column_name = None
 
         return {
             'similarities': similarities
             ,'similarity_score': max_similarity
-            ,'most_similar_column_name': list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
+            ,'most_similar_column_name': most_similar_column_name
             ,'similarity_score_description':"""
             This score is simply a matthews correlation applied between this column and all other column.
             The score * 100 is the number of values which are similar in the column that is most similar to the scored column.
@@ -616,12 +625,11 @@ class StatsGenerator(BaseModule):
         """
         for col_name in stats:
             col_stats = stats[col_name]
-
             # Overall quality
             if col_stats['quality_score'] > 0.5:
                 # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
                 self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission will be listed bellow')
-                if col_stats['duplicates_score'] > 0.5:
+                if 'duplicates_score' in col_stats and col_stats['duplicates_score'] > 0.5:
                     duplicates_percentage = col_stats['duplicates_percentage']
                     w = f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.'
                     self.log.warning(w)
@@ -726,7 +734,6 @@ class StatsGenerator(BaseModule):
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
-
         header = input_data.columns
         non_null_data = {}
         all_sampled_data = {}
@@ -772,8 +779,13 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data, i, input_data.data_array)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, i, input_data.data_array, col_name)
 
+            if column_status == 'Column empty':
+                if modify_light_metadata:
+                    self.transaction.lmd['malformed_columns']['names'].append(col_name)
+                    self.transaction.lmd['malformed_columns']['indices'].append(i)
+                continue
 
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
@@ -909,6 +921,9 @@ class StatsGenerator(BaseModule):
             col_data_dict[col_name] = col_data
 
         for i, col_name in enumerate(all_sampled_data):
+            if col_name in self.transaction.lmd['malformed_columns']['names']:
+                continue
+
             stats[col_name].update(self._compute_duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_empty_cells_score(stats, all_sampled_data, col_name))
             #stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))

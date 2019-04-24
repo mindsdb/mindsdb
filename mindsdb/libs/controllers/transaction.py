@@ -147,7 +147,6 @@ class Transaction:
 
     def _execute_predict(self):
         """
-
         :return:
         """
         old_lmd = {}

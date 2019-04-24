@@ -454,13 +454,15 @@ class StatsGenerator(BaseModule):
 
         if len(similarities) > 0:
             max_similarity = max(map(lambda x: x[1], similarities))
+            most_similar_column_name = list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
         else:
             max_similarity = 0
-            
+            most_similar_column_name = None
+
         return {
             'similarities': similarities
             ,'similarity_score': max_similarity
-            ,'most_similar_column_name': list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
+            ,'most_similar_column_name': most_similar_column_name
             ,'similarity_score_description':"""
             This score is simply a matthews correlation applied between this column and all other column.
             The score * 100 is the number of values which are similar in the column that is most similar to the scored column.

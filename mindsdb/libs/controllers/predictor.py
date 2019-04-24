@@ -265,15 +265,25 @@ class Predictor:
                     mao['test_accuracy_over_time']['x'].append(i)
                     mao['test_accuracy_over_time']['y'].append([i])
 
-                for sub_group in mao['accuracy_histogram']['x']:
-                    sub_group_stats = {} # Something like: `self._adapt_column(lmd['subgroup_stats'][col][sub_group],col) ``... once we actually implement the subgroup stats
+                bucket_importance_keys = list(lmd['unusual_columns_buckets_importances'].keys())
+                for incol in lmd['column_importance_dict']:
+                    incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
+
+                    if len(incol_bucket_importance_keys) > 0:
+                        sub_group_stats = self._adapt_column(lmd['unusual_columns_buckets_importances'][f'{incol}_bucket_{vb}'], f'{incol}_bucket_{vb}')
+                    else:
+                        sub_group_stats = [None]
+                    sub_group_stats = {} # Something like: `
                     # TEMP PLACEHOLDER
                     sub_group_stats = self._adapt_column(lmd['column_stats'][col],col)
                     # TEMP PLACEHOLDER
-                    mao['accuracy_histogram'].append(sub_group_stats)
+                    mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
 
                 for icol in lmd['model_columns_map'].keys():
                     if icol not in lmd['predict_columns']:
+
+
+
                         mao['overall_input_importance']['x'].append(icol)
                         mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
 

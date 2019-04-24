@@ -134,6 +134,7 @@ class StatsGenerator(BaseModule):
         # calculate type_dist
         if len(data) < 1:
             self.log.error(f'Column {col_name} has not data in it. Please remove {col_name} from the training file or fill in some of the values !')
+            rasie Exception('Column ' + col_name + ' is empty !')
 
         for element in data:
             # Maybe use list of functions in the future

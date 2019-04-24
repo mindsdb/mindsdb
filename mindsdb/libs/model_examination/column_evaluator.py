@@ -40,9 +40,7 @@ class ColumnEvaluator():
             col_missing_reverse_accuracy = (normal_accuracy - col_missing_accuracy)/normal_accuracy
             column_importance = (col_only_normalized_accuracy + col_missing_reverse_accuracy)/2
             column_importance_dict[input_column] = column_importance
-
-            print(column_importance)
-
+            
             # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)
             if column_importance > 0.49 or column_importance < 0.49:
                 split_data = {}
@@ -59,9 +57,6 @@ class ColumnEvaluator():
 
                     split_data[f'{input_column}_bucket_{vb}'].append(value)
 
-                for k in split_data:
-                    print(split_data[k])
-
                 row_wise_data = []
                 max_length = max(list(map(len, split_data.values())))
 
@@ -77,7 +72,6 @@ class ColumnEvaluator():
                             else:
                                 row_wise_data[-1].append(None)
 
-                print(len(row_wise_data))
                 input_data = TransactionData()
                 input_data.data_array = row_wise_data
                 input_data.columns = columns

@@ -452,8 +452,11 @@ class StatsGenerator(BaseModule):
                 similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
                 similarities.append((other_col_name,similarity))
 
-        max_similarity = max(map(lambda x: x[1], similarities))
-
+        if len(similarities) > 0:
+            max_similarity = max(map(lambda x: x[1], similarities))
+        else:
+            max_similarity = 0
+            
         return {
             'similarities': similarities
             ,'similarity_score': max_similarity
@@ -616,13 +619,11 @@ class StatsGenerator(BaseModule):
         """
         for col_name in stats:
             col_stats = stats[col_name]
-            print(col_name)
-            print(col_stats)
             # Overall quality
             if col_stats['quality_score'] > 0.5:
                 # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
                 self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission will be listed bellow')
-                if duplicates_score in col_stats and col_stats['duplicates_score'] > 0.5:
+                if 'duplicates_score' in col_stats and col_stats['duplicates_score'] > 0.5:
                     duplicates_percentage = col_stats['duplicates_percentage']
                     w = f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.'
                     self.log.warning(w)

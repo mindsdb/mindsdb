@@ -117,7 +117,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
-    def _get_column_data_type(self, data, col_index):
+    def _get_column_data_type(self, data, col_index, col_name):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -132,6 +132,9 @@ class StatsGenerator(BaseModule):
         additional_info = {}
 
         # calculate type_dist
+        if len(data) < 1:
+            self.log.error(f'Column {col_name} has not data in it. Please remove {col_name} from the training file or fill in some of the values !')
+
         for element in data:
             # Maybe use list of functions in the future
             element = element
@@ -630,7 +633,7 @@ class StatsGenerator(BaseModule):
                     col_stats['duplicates_score_warning'] = None
             else:
                 col_stats['duplicates_score_warning'] = None
-                
+
             #Compound scores
             if col_stats['consistency_score'] > 0.25:
                 w = f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info'
@@ -768,7 +771,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data, i)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data, i, col_name)
 
 
             if data_type == DATA_TYPES.DATE:

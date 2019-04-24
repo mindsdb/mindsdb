@@ -265,15 +265,26 @@ class Predictor:
                     mao['test_accuracy_over_time']['x'].append(i)
                     mao['test_accuracy_over_time']['y'].append([i])
 
-                for sub_group in mao['accuracy_histogram']['x']:
-                    sub_group_stats = {} # Something like: `self._adapt_column(lmd['subgroup_stats'][col][sub_group],col) ``... once we actually implement the subgroup stats
-                    # TEMP PLACEHOLDER
-                    sub_group_stats = self._adapt_column(lmd['column_stats'][col],col)
-                    # TEMP PLACEHOLDER
-                    mao['accuracy_histogram'].append(sub_group_stats)
+                bucket_importance_keys = list(lmd['unusual_columns_buckets_importances'].keys())
+                for incol in lmd['column_importances']:
+                    incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
+
+                    mao['accuracy_histogram']['x'] = incol
+                    mao['accuracy_histogram']['y'] = lmd['column_importances'][incol]
+
+                    if len(incol_bucket_importance_keys) > 0:
+                        sub_group_stats = []
+                        for sub_incol in incol_bucket_importance_keys:
+                            sub_group_stats.append(self._adapt_column(lmd['unusual_columns_buckets_importances'][sub_incol], sub_incol))
+                    else:
+                        sub_group_stats = [None]
+                    mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
 
                 for icol in lmd['model_columns_map'].keys():
                     if icol not in lmd['predict_columns']:
+
+
+
                         mao['overall_input_importance']['x'].append(icol)
                         mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
 
@@ -392,6 +403,8 @@ class Predictor:
         light_transaction_metadata['stop_training_in_accuracy'] = stop_training_in_accuracy
         light_transaction_metadata['rebuild_model'] = rebuild_model
         light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
+        light_transaction_metadata['column_importances'] = None
+        light_transaction_metadata['unusual_columns_buckets_importances'] = None
 
         if rebuild_model is False:
             old_lmd = {}

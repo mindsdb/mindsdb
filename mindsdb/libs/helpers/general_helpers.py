@@ -167,6 +167,9 @@ def get_value_bucket(value, buckets, col_stats):
     """
     :return: The bucket in the `histogram` in which our `value` falls
     """
+    if buckets is None:
+        return None
+        
     if col_stats['data_subtype'] in (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE):
         if value in buckets:
             bucket = buckets.index(value)

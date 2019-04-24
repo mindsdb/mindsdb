@@ -117,7 +117,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
-    def _get_column_data_type(self, data, col_index, col_name):
+    def _get_column_data_type(self, data, col_index, data_array, col_name):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -223,7 +223,7 @@ class StatsGenerator(BaseModule):
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
         all_values = []
-        for row in self.transaction.input_data.data_array:
+        for row in data_array:
             all_values.append(row[col_index])
 
         all_distinct_vals = set(all_values)
@@ -456,12 +456,17 @@ class StatsGenerator(BaseModule):
                 similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
                 similarities.append((other_col_name,similarity))
 
-        max_similarity = max(map(lambda x: x[1], similarities))
+        if len(similarities) > 0:
+            max_similarity = max(map(lambda x: x[1], similarities))
+            most_similar_column_name = list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
+        else:
+            max_similarity = 0
+            most_similar_column_name = None
 
         return {
             'similarities': similarities
             ,'similarity_score': max_similarity
-            ,'most_similar_column_name': list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
+            ,'most_similar_column_name': most_similar_column_name
             ,'similarity_score_description':"""
             This score is simply a matthews correlation applied between this column and all other column.
             The score * 100 is the number of values which are similar in the column that is most similar to the scored column.
@@ -620,12 +625,11 @@ class StatsGenerator(BaseModule):
         """
         for col_name in stats:
             col_stats = stats[col_name]
-
             # Overall quality
             if col_stats['quality_score'] > 0.5:
                 # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
                 self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission will be listed bellow')
-                if col_stats['duplicates_score'] > 0.5:
+                if 'duplicates_score' in col_stats and col_stats['duplicates_score'] > 0.5:
                     duplicates_percentage = col_stats['duplicates_percentage']
                     w = f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.'
                     self.log.warning(w)
@@ -724,14 +728,14 @@ class StatsGenerator(BaseModule):
             self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
 
-    def run(self):
+    def run(self, input_data, modify_light_metadata):
         """
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
 
-        header = self.transaction.input_data.columns
+        header = input_data.columns
         non_null_data = {}
         all_sampled_data = {}
 
@@ -743,17 +747,21 @@ class StatsGenerator(BaseModule):
         column_count = {}
 
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
-        population_size = len(self.transaction.input_data.data_array)
-        sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
-        if sample_size > 3000 and sample_size > population_size/8:
-            sample_size = min(round(population_size/8),3000)
+        population_size = len(input_data.data_array)
+
+        if population_size < 50:
+            sample_size = population_size
+        else:
+            sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
+            if sample_size > 3000 and sample_size > population_size/8:
+                sample_size = min(round(population_size/8),3000)
+
         # get the indexes of randomly selected rows given the population size
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
         for sample_i in input_data_sample_indexes:
-            row = self.transaction.input_data.data_array[sample_i]
-
+            row = input_data.data_array[sample_i]
             for i, val in enumerate(row):
                 column = header[i]
                 value = cast_string_to_python_type(val)
@@ -772,11 +780,13 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, i, col_name)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, i, input_data.data_array, col_name)
 
-            if column_status ==  'Column empty':
-
-
+            if column_status == 'Column empty':
+                if modify_light_metadata:
+                    self.transaction.lmd['column_is_malformed'] = True
+                continue
+            
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
@@ -857,7 +867,7 @@ class StatsGenerator(BaseModule):
                 }
             elif data_type == DATA_TYPES.CATEGORICAL:
                 all_values = []
-                for row in self.transaction.input_data.data_array:
+                for row in input_data.data_array:
                     all_values.append(row[i])
 
                 histogram = Counter(all_values)
@@ -927,16 +937,14 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self._compute_data_quality_score(stats, col_name))
 
 
-        total_rows = len(self.transaction.input_data.data_array)
-        test_rows = len(self.transaction.input_data.test_indexes)
-        validation_rows = len(self.transaction.input_data.validation_indexes)
-        train_rows = len(self.transaction.input_data.train_indexes)
+        total_rows = len(input_data.data_array)
 
-        self.transaction.lmd['column_stats'] = stats
-        self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
-        self.transaction.lmd['data_preparation']['test_row_count'] = test_rows
-        self.transaction.lmd['data_preparation']['train_row_count'] = train_rows
-        self.transaction.lmd['data_preparation']['validation_row_count'] = validation_rows
+        if modify_light_metadata:
+            self.transaction.lmd['column_stats'] = stats
+            self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
+            self.transaction.lmd['data_preparation']['test_row_count'] = len(input_data.test_indexes)
+            self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes)
+            self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes)
 
         self._log_interesting_stats(stats)
         return stats

@@ -616,7 +616,8 @@ class StatsGenerator(BaseModule):
         """
         for col_name in stats:
             col_stats = stats[col_name]
-
+            print(col_name)
+            print(col_stats)
             # Overall quality
             if col_stats['quality_score'] > 0.5:
                 # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.

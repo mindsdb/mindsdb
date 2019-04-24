@@ -784,9 +784,13 @@ class StatsGenerator(BaseModule):
 
             if column_status == 'Column empty':
                 if modify_light_metadata:
-                    self.transaction.lmd['column_is_malformed'] = True
+                    if 'malformed_columns' not in self.transaction.lmd:
+                        self.transaction.lmd['malformed_columns'] = {'names': [], 'indices': []}
+
+                    self.transaction.lmd['malformed_columns']['names'].append(col_name)
+                    self.transaction.lmd['malformed_columns']['names'].append(i)
                 continue
-            
+
             if data_type == DATA_TYPES.DATE:
                 for i, element in enumerate(col_data):
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
@@ -921,6 +925,9 @@ class StatsGenerator(BaseModule):
             col_data_dict[col_name] = col_data
 
         for i, col_name in enumerate(all_sampled_data):
+            if col_name in self.transaction.lmd['malformed_columns']['names']:
+                continue
+                
             stats[col_name].update(self._compute_duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_empty_cells_score(stats, all_sampled_data, col_name))
             #stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))

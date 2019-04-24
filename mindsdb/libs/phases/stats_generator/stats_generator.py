@@ -134,6 +134,7 @@ class StatsGenerator(BaseModule):
         # calculate type_dist
         if len(data) < 1:
             self.log.warning(f'Column {col_name} has not data in it. Please remove {col_name} from the training file or fill in some of the values !')
+            return None, None, None, None, None, 'Column empty'
 
         for element in data:
             # Maybe use list of functions in the future
@@ -240,7 +241,7 @@ class StatsGenerator(BaseModule):
             type_dist[curr_data_type] = len(data)
             subtype_dist[curr_data_subtype] = len(data)
 
-        return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info
+        return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
 
     def _get_words_dictionary(self, data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
@@ -771,7 +772,9 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name] # all rows in just one column
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info = self._get_column_data_type(col_data, i, col_name)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, i, col_name)
+
+            if column_status ==  'Column empty':
 
 
             if data_type == DATA_TYPES.DATE:

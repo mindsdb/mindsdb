@@ -17,11 +17,13 @@ class ModelAnalyzer(BaseModule):
         """
 
         output_columns = self.transaction.lmd['predict_columns']
-        input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns]
+        input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns and col not in self.transaction.lmd['malformed_columns']['names']]
         validation_dataset = {}
 
         for row_ind in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
             for col_ind, col in enumerate(self.transaction.lmd['columns']):
+                if col in self.transaction.lmd['malformed_columns']['names']:
+                    continue
                 if col not in validation_dataset:
                     validation_dataset[col] = []
                 validation_dataset[col].append(self.transaction.input_data.data_array[row_ind][col_ind])

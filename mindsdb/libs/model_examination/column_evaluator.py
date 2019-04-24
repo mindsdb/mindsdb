@@ -40,9 +40,9 @@ class ColumnEvaluator():
             col_missing_reverse_accuracy = (normal_accuracy - col_missing_accuracy)/normal_accuracy
             column_importance = (col_only_normalized_accuracy + col_missing_reverse_accuracy)/2
             column_importance_dict[input_column] = column_importance
-            
+
             # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)
-            if column_importance > 0.49 or column_importance < 0.49:
+            if column_importance > 0.8 or column_importance < 0.2:
                 split_data = {}
                 for value in full_dataset[input_column]:
 

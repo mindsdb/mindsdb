@@ -788,7 +788,7 @@ class StatsGenerator(BaseModule):
                         self.transaction.lmd['malformed_columns'] = {'names': [], 'indices': []}
 
                     self.transaction.lmd['malformed_columns']['names'].append(col_name)
-                    self.transaction.lmd['malformed_columns']['names'].append(i)
+                    self.transaction.lmd['malformed_columns']['indices'].append(i)
                 continue
 
             if data_type == DATA_TYPES.DATE:
@@ -927,7 +927,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(all_sampled_data):
             if col_name in self.transaction.lmd['malformed_columns']['names']:
                 continue
-                
+
             stats[col_name].update(self._compute_duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(self._compute_empty_cells_score(stats, all_sampled_data, col_name))
             #stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))

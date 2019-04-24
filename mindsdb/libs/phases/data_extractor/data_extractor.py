@@ -21,7 +21,7 @@ class DataExtractor(BaseModule):
         """
 
         columns = self.transaction.lmd['columns']
-        when_conditions = self.transaction.lmd['model_when_conditions']
+        when_conditions = self.transaction.hmd['model_when_conditions']
 
         when_conditions_list = []
         # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
@@ -82,7 +82,7 @@ class DataExtractor(BaseModule):
                 df = self.transaction.hmd['when_data']
                 df = df.where((pandas.notnull(df)), None)
 
-            elif self.transaction.lmd['model_when_conditions'] is not None:
+            elif self.transaction.hmd['model_when_conditions'] is not None:
 
                 # if no data frame yet, make one
                 df = self._get_data_frame_from_when_conditions()

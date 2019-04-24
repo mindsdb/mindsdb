@@ -733,7 +733,7 @@ class StatsGenerator(BaseModule):
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
-        """    
+        """
         header = input_data.columns
         non_null_data = {}
         all_sampled_data = {}

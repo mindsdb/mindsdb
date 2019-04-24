@@ -222,9 +222,14 @@ class Predictor:
         amd['model_analysis'] = []
 
         for col in lmd['model_columns_map'].keys():
-            if col in light_transaction_metadata['malformed_columns']['names']:
+            if col in lmd['malformed_columns']['names']:
                 continue
-            icm = self._adapt_column(lmd['column_stats'][col],col)
+
+            try:
+                icm = self._adapt_column(lmd['column_stats'][col],col)
+            except:
+                print(f'Issue processing column: {icol} !')
+                continue
 
             if col in lmd['predict_columns']:
 
@@ -283,11 +288,14 @@ class Predictor:
                     mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
 
                 for icol in lmd['model_columns_map'].keys():
-                    if icol in light_transaction_metadata['malformed_columns']['names']:
+                    if icol in lmd['malformed_columns']['names']:
                         continue
                     if icol not in lmd['predict_columns']:
-                        mao['overall_input_importance']['x'].append(icol)
-                        mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
+                        try:
+                            mao['overall_input_importance']['x'].append(icol)
+                            mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
+                        except:
+                            print(f'No column importances found for {icol} !')
 
                 amd['model_analysis'].append(mao)
             else:

@@ -222,6 +222,8 @@ class Predictor:
         amd['model_analysis'] = []
 
         for col in lmd['model_columns_map'].keys():
+            if col in light_transaction_metadata['malformed_columns']['names']:
+                continue
             icm = self._adapt_column(lmd['column_stats'][col],col)
 
             if col in lmd['predict_columns']:
@@ -281,10 +283,9 @@ class Predictor:
                     mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
 
                 for icol in lmd['model_columns_map'].keys():
+                    if icol in light_transaction_metadata['malformed_columns']['names']:
+                        continue
                     if icol not in lmd['predict_columns']:
-
-
-
                         mao['overall_input_importance']['x'].append(icol)
                         mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
 

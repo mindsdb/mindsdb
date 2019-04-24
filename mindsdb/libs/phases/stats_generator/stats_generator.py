@@ -733,8 +733,7 @@ class StatsGenerator(BaseModule):
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
-        """
-
+        """    
         header = input_data.columns
         non_null_data = {}
         all_sampled_data = {}
@@ -784,9 +783,6 @@ class StatsGenerator(BaseModule):
 
             if column_status == 'Column empty':
                 if modify_light_metadata:
-                    if 'malformed_columns' not in self.transaction.lmd:
-                        self.transaction.lmd['malformed_columns'] = {'names': [], 'indices': []}
-
                     self.transaction.lmd['malformed_columns']['names'].append(col_name)
                     self.transaction.lmd['malformed_columns']['indices'].append(i)
                 continue

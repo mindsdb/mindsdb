@@ -405,6 +405,8 @@ class Predictor:
         light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
         light_transaction_metadata['column_importances'] = None
         light_transaction_metadata['unusual_columns_buckets_importances'] = None
+        light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
+
 
         if rebuild_model is False:
             old_lmd = {}

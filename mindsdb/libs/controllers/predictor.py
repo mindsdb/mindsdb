@@ -60,15 +60,15 @@ class Predictor:
             error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
             raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
-    def export(self, model_zip_file='mindsdb_storage'):
+    def export(self, mindsdb_storage_dir='mindsdb_storage'):
         """
         If you want to export this mind to a file
-        :param model_zip_file: this is the full_path where you want to store a mind to, it will be a zip file
+        :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
 
         :return: bool (True/False) True if mind was exported successfully
         """
         try:
-            shutil.make_archive(model_zip_file, 'zip', CONFIG.MINDSDB_STORAGE_PATH)
+            shutil.make_archive(mindsdb_storage_dir, 'zip', CONFIG.MINDSDB_STORAGE_PATH)
             return True
         except:
             return False
@@ -286,14 +286,14 @@ class Predictor:
 
         return amd
 
-    def load(self, model_zip_file='mindsdb_storage.zip'):
+    def load(self, mindsdb_storage_dir='mindsdb_storage.zip'):
         """
         If you want to import a mind from a file
 
-        :param model_zip_file: this is the full_path that contains your mind
+        :param mindsdb_storage_dir: this is the full_path that contains your mind
         :return: bool (True/False) True if mind was importerd successfully
         """
-        shutil.unpack_archive(model_zip_file, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
+        shutil.unpack_archive(mindsdb_storage_dir, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,

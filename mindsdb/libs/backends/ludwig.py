@@ -399,7 +399,7 @@ class LudwigBackend():
                     # The resulting train_stats are "None"... wonderful -_-
                 '''
 
-        ludwig_model_savepath = Config.LOCALSTORE_PATH.rstrip('local_jsondb_store') + self.transaction.lmd['name']
+        ludwig_model_savepath = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_ludwig_data')
 
         model.save(ludwig_model_savepath)
         model.close()

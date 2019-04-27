@@ -1,5 +1,6 @@
 import inspect
 import os
+from pathlib import Path
 
 from mindsdb.__about__ import __version__
 

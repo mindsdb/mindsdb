@@ -109,11 +109,11 @@ class Transaction:
 
             self._call_phase_module('ModelAnalyzer')
 
-            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['name'] + '_light_model_metadata.pickle', 'wb') as fp:
+            with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
                 self.lmd['updated_at'] = str(datetime.datetime.now())
                 pickle.dump(self.lmd, fp)
 
-            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['name'] + '_heavy_model_metadata.pickle', 'wb') as fp:
+            with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'wb') as fp:
                 # Don't save data for now
                 self.hmd['from_data'] = None
                 self.hmd['test_from_data'] = None
@@ -154,10 +154,10 @@ class Transaction:
 
         old_hmd = {}
         for k in self.hmd: old_hmd[k] = self.hmd[k]
-        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['name'] + '_light_model_metadata.pickle', 'rb') as fp:
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
             self.lmd = pickle.load(fp)
 
-        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['name'] + '_heavy_model_metadata.pickle', 'rb') as fp:
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
             self.hmd = pickle.load(fp)
 
         for k in old_lmd:
@@ -215,11 +215,11 @@ class Transaction:
                 #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong
                 self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
 
-        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.lmd['name'] + '_light_model_metadata.pickle', 'wb') as fp:
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
             self.lmd['updated_at'] = str(datetime.datetime.now())
             pickle.dump(self.lmd, fp)
 
-        with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + self.hmd['name'] + '_heavy_model_metadata.pickle', 'wb') as fp:
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'wb') as fp:
             # Don't save data for now
             self.hmd['from_data'] = None
             self.hmd['test_from_data'] = None

@@ -196,7 +196,7 @@ class Predictor:
             return icm
 
     def get_model_data(self, model_name):
-        with open(CONFIG.MINDSDB_STORAGE_PATH + f'/{model_name}_light_model_metadata.pickle', 'rb') as fp:
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{model_name}_light_model_metadata.pickle'), 'rb') as fp:
             lmd = pickle.load(fp)
         # ADAPTOR CODE
         amd = {}
@@ -425,10 +425,10 @@ class Predictor:
             old_hmd = {}
             for k in heavy_transaction_metadata: old_hmd[k] = heavy_transaction_metadata[k]
 
-            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' + light_transaction_metadata['name'] + '_light_model_metadata.pickle', 'rb') as fp:
+            with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, light_transaction_metadata['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
                 light_transaction_metadata = pickle.load(fp)
 
-            with open(CONFIG.MINDSDB_STORAGE_PATH + '/' +heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle', 'rb') as fp:
+            with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
                 heavy_transaction_metadata= pickle.load(fp)
 
             for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'ignore_columns', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:

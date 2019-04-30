@@ -6,7 +6,7 @@ from dateutil.parser import parse as parse_datetime
 from scipy.misc import imread
 import os, sys
 
-from ludwig import LudwigModel
+from ludwig.api import LudwigModel
 import pandas as pd
 
 # @TODO: Define generci interface, similar to 'base_module' in the phases

@@ -402,8 +402,8 @@ class LudwigBackend():
         ludwig_model_savepath = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_ludwig_data')
 
         print(model)
-        print(model.model_definition.keys())
-        print(model.train_set_metadata.keys())
+        print(model.model)
+        print(model.model.session)
         model.save(ludwig_model_savepath)
         model.close()
 

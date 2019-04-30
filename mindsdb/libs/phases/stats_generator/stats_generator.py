@@ -902,6 +902,7 @@ class StatsGenerator(BaseModule):
                     if dictionary_lenght_percentage > 10 and len(col_data) > 50 and is_full_text==False:
                         dictionary = []
                         dictionary_available = False
+
                 col_stats = {
                     'data_type': data_type,
                     'data_subtype': curr_data_subtype,

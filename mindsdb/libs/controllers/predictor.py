@@ -121,9 +121,10 @@ class Predictor:
             'y': []
         }
         icm['data_distribution']['clusters'] = {}
-        for k, v in col_stats['histogram'].items():
-            icm['data_distribution']['data_histogram']['x'].append(k)
-            icm['data_distribution']['data_histogram']['y'].append(v)
+
+        for i in range(len(col_stats['histogram']['x'])):
+            icm['data_distribution']['data_histogram']['x'].append(col_stats['histogram']['x'][i])
+            icm['data_distribution']['data_histogram']['y'].append(col_stats['histogram']['y'][i])
 
         scores = ['consistency_score', 'redundancy_score', 'variability_score']
         for score in scores:

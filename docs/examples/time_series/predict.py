@@ -9,4 +9,5 @@ result = Predictor(name='fuel').predict(when_data = 'fuel_predict.csv')
 
 # you can now print the results
 print('The predicted main engine fuel consumption')
-print(result.predicted_values)
+for row in result:
+  print(row)

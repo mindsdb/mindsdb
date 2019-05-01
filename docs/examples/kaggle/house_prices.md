@@ -38,21 +38,19 @@ mdb = MindsDB()
 # Here we use the model to make predictions (NOTE: You need to run train.py first)
 result = mdb.predict(predict='SalePrice', when={"MSSubClass": 20, "MSZoning": "Rh","LotFrontage":80,"LotArea":11622}, model_name='kaggle_house_sale')
 
-print(result.predicted_values)
+print(result)
 # you can now print the results
-print('The predicted price is ${price} with {conf} confidence'.format(price=result.predicted_values[0]['SalePrice'], conf=result.predicted_values[0]['prediction_confidence']))
+print('The predicted price is ${price} with {conf} confidence'.format(price=result[0]['SalePrice'], conf=result[0]['prediction_confidence']))
 
 ```
-In when clause you can specify different input parameters with different values. 
+In when clause you can specify different input parameters with different values.
 Open kaggle house prices dataset page and check [data_description file](https://www.kaggle.com/lespin/house-prices-dataset#data_description.txt).
 Inside data_description.txt file you can find full data description and how to use those values for predicting new price.
-Example: 
+Example:
 
-* "MSZoning":"A" means Agriculture, 
-* "MSZoning":"C" means Commercial 
+* "MSZoning":"A" means Agriculture,
+* "MSZoning":"C" means Commercial
 * "OverallQual": 10 means Very Excellent etc
 
 ## Contributions
 Feel free to investigate and find new datasets in kaggle, use them to train new models with mindsdb and share the examples.
-
-

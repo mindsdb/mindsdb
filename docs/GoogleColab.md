@@ -1,7 +1,7 @@
 [<Back to Table of Contents](../README.md)
 # Using MindsDB with Google Colab
 
-[Google Colab](https://colab.research.google.com) is a free cloud service that supports free GPU! 
+[Google Colab](https://colab.research.google.com) is a free cloud service that supports free GPU!
 You can use MindsDB there, here's how: [Demo](https://colab.research.google.com/gist/JohannesFerner/88773019cd385fe6ba0a9377a4779f40/mindsdb.ipynb)
 
 Fortunately, this is really easy.
@@ -71,7 +71,7 @@ Finally we print out the result
 ```Python
 print(
     'The predicted reading score is {score} with {conf} confidence'
-      .format(score=result.predicted_values[0]['reading_score'], 
-       conf=result.predicted_values[0]['prediction_confidence'])
+      .format(score=result[0]['reading_score'],
+       conf=result[0]['prediction_confidence'])
 )
 ```

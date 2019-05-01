@@ -18,4 +18,4 @@ result = mdb.predict(
 
 # you can now print the results
 print('The predicted number of rooms')
-print(result.predicted_values)
+print(result)

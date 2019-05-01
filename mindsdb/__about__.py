@@ -1,6 +1,6 @@
 __title__ = 'MindsDB'
 __package_name__ = 'mindsdb'
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 __description__ = "MindsDB's goal is to make it very simple for developers to use the power of artificial neural networks in their projects."
 __email__ = "jorge@mindsdb.com"
 __author__ = 'MindsDB Inc'

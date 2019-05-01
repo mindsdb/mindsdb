@@ -257,7 +257,10 @@ class LudwigBackend():
 
                 elif ludwig_dtype == 'sequence':
                     arr_str = self.transaction.input_data.data_array[row_ind][col_ind]
-                    arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.lmd['column_stats'][col]['separator'])))
+                    if arr_str is not None:
+                        arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.lmd['column_stats'][col]['separator'])))
+                    else:
+                        arr = ''
                     data[col].append(arr)
 
                 # Date isn't supported yet, so we hack around it

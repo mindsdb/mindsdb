@@ -21,3 +21,4 @@ tensorflow==1.13.1
 tensorflow-estimator>=1.13.0
 ludwig>=0.1.0
 xlrd>=1.0.0
+ImageHash==4.0

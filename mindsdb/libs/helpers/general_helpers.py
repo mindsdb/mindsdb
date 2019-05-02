@@ -238,7 +238,7 @@ class suppress_stdout_stderr(object):
 
 @contextmanager
 # @TODO: Make it work with mindsdb logger/log levels... maybe
-def disable_ludwig_output(disable=False):
+def disable_ludwig_output(disable=True):
     try:
         try:
             old_tf_loglevel = os.environ['TF_CPP_MIN_LOG_LEVEL']

@@ -368,7 +368,7 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
-        with disable_ludwig_output(disable):
+        with disable_ludwig_output(True):
 
             model = LudwigModel(model_definition)
 

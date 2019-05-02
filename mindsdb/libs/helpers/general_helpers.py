@@ -181,7 +181,7 @@ def get_value_bucket(value, buckets, col_stats):
     elif col_stats['data_subtype'] in (DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
         bucket = closest(buckets, value)
     elif col_stats['data_subtype'] in (DATA_SUBTYPES.IMAGE):
-        bucket = self.hmd['bucketing_algorithms'][col_name].fit(np.array(imagehash.phash(Image.open(value)).reshape(1, -1)))[0]
+        bucket = self.hmd['bucketing_algorithms'][col_name].predict(np.array(imagehash.phash(Image.open(value)).reshape(1, -1)))[0]
         print(bucket)
     else:
         bucket = len(buckets) # for null values

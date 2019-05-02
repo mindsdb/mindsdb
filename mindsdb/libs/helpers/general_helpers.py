@@ -16,6 +16,8 @@ from mindsdb.__about__ import __version__
 from mindsdb.config import CONFIG
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.constants.mindsdb import *
+import imagehash
+from PIL import Image
 
 
 def get_key_for_val(key, dict_map):
@@ -169,7 +171,7 @@ def get_value_bucket(value, buckets, col_stats):
     """
     if buckets is None:
         return None
-        
+
     if col_stats['data_subtype'] in (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE):
         if value in buckets:
             bucket = buckets.index(value)
@@ -178,6 +180,9 @@ def get_value_bucket(value, buckets, col_stats):
 
     elif col_stats['data_subtype'] in (DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
         bucket = closest(buckets, value)
+    elif col_stats['data_subtype'] in (DATA_SUBTYPES.IMAGE):
+        bucket = self.hmd['bucketing_algorithms'][col_name].fit(np.array(imagehash.phash(Image.open(value)).reshape(1, -1)))[0]
+        print(bucket)
     else:
         bucket = len(buckets) # for null values
 

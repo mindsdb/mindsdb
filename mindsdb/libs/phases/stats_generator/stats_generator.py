@@ -886,7 +886,7 @@ class StatsGenerator(BaseModule):
                     }
                     #"percentage_buckets": list(histogram.keys())
                 }
-                print(col_stats['histogram'])
+
             elif curr_data_subtype == DATA_SUBTYPES.IMAGE:
                 image_hashes = []
                 for img_path in col_data:
@@ -902,13 +902,28 @@ class StatsGenerator(BaseModule):
                 kmeans.fit(image_hashes)
 
                 if hmd is not None:
-
                     hmd['bucketing_algorithms'][col_name] = kmeans
 
+
+                y = [kmeans.cluster_centers_]
+                x = []
+
+                for cluster in kmeans.cluster_centers_:
+                    similarities = cosine_similarity(image_hashes,kmeans.cluster_centers_)
+
+                    similarities = list(map(lambda x: sum(x), similarities))
+
+                    index_of_most_similar = similarities.index(max(similarities))
+                    x.append(col_data[index_of_most_similar])
 
                 col_stats = {
                     'data_type': data_type,
                     'data_subtype': curr_data_subtype,
+                    'percentage_buckets': kmeans.cluster_centers_,
+                    'histogram': {
+                        'x': x,
+                        'y': y
+                    }
                 }
 
             # @TODO This is probably wrong, look into it a bit later

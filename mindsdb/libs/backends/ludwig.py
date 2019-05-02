@@ -368,7 +368,7 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
-        with disable_ludwig_output():
+        with disable_ludwig_output(disable):
 
             model = LudwigModel(model_definition)
 
@@ -412,6 +412,8 @@ class LudwigBackend():
 
     def predict(self, mode='predict', ignore_columns=[]):
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
+        print(model_definition)
+        print(predict_dataframe)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
 
         model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])

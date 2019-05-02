@@ -904,13 +904,20 @@ class StatsGenerator(BaseModule):
                 if hmd is not None:
                     hmd['bucketing_algorithms'][col_name] = kmeans
 
-                x = list(kmeans.cluster_centers_)
-                y = [0] * len(x)
+                x = []
+                y = [0] * len(kmeans.cluster_centers_)
 
-                for cluster in x:
-                    indices = kmeans.predict(image_hashes)
-                    for index in indices:
-                        y[index] +=1
+                for cluster in kmeans.cluster_centers_:
+                    similarities = cosine_similarity(image_hashes,kmeans.cluster_centers_)
+
+                    similarities = list(map(lambda x: sum(x), similarities))
+
+                    index_of_most_similar = similarities.index(max(similarities))
+                    x.append(col_data[index_of_most_similar])
+
+                indices = kmeans.predict(image_hashes)
+                for index in indices:
+                    y[index] +=1
 
                 col_stats = {
                     'data_type': data_type,

@@ -904,7 +904,7 @@ class StatsGenerator(BaseModule):
                 if hmd is not None:
                     hmd['bucketing_algorithms'][col_name] = kmeans
 
-                x = [kmeans.cluster_centers_]
+                x = list(kmeans.cluster_centers_)
                 y = [0] * len(x)
 
                 for cluster in x:

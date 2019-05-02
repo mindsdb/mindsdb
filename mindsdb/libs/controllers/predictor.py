@@ -392,6 +392,7 @@ class Predictor:
         heavy_transaction_metadata['name'] = self.name
         heavy_transaction_metadata['from_data'] = from_ds
         heavy_transaction_metadata['test_from_data'] = test_from_ds
+        heavy_transaction_metadata['bucketing_algorithms'] = {}
 
         light_transaction_metadata = {}
         light_transaction_metadata['version'] = str(__version__)

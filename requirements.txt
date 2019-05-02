@@ -21,3 +21,4 @@ tensorflow-estimator>=1.13.0
 ludwig==0.1.1
 xlrd>=1.0.0
 ImageHash==4.0
+Pillow==6.0

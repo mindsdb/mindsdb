@@ -11,6 +11,10 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import matthews_corrcoef
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.cluster import MiniBatchKMeans
+import imagehash
+from PIL import Image
 
 from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
@@ -728,7 +732,7 @@ class StatsGenerator(BaseModule):
             self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
 
-    def run(self, input_data, modify_light_metadata):
+    def run(self, input_data, modify_light_metadata, hmd=None):
         """
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
@@ -777,7 +781,7 @@ class StatsGenerator(BaseModule):
 
         col_data_dict = {}
         for i, col_name in enumerate(non_null_data):
-            col_data = non_null_data[col_name] # all rows in just one column
+            col_data = non_null_data[col_name]
             full_col_data = all_sampled_data[col_name]
             data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, i, input_data.data_array, col_name)
 
@@ -881,6 +885,30 @@ class StatsGenerator(BaseModule):
                         "y": list(histogram.values())
                     }
                     #"percentage_buckets": list(histogram.keys())
+                }
+                print(col_stats['histogram'])
+            elif curr_data_subtype == DATA_SUBTYPES.IMAGE:
+                image_hashes = []
+                for img_path in col_data:
+                    img_hash = imagehash.phash(Image.open(img_path))
+                    seq_hash = []
+                    for hash_row in img_hash.hash:
+                        seq_hash.extend(hash_row)
+
+                    image_hashes.append(np.array(seq_hash))
+
+                kmeans = MiniBatchKMeans(n_clusters=20, batch_size=round(len(image_hashes)/4))
+
+                kmeans.fit(image_hashes)
+
+                if hmd is not None:
+
+                    hmd['bucketing_algorithms'][col_name] = kmeans
+
+
+                col_stats = {
+                    'data_type': data_type,
+                    'data_subtype': curr_data_subtype,
                 }
 
             # @TODO This is probably wrong, look into it a bit later

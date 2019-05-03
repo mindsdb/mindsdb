@@ -52,6 +52,13 @@ class Transaction:
 
         self.run()
 
+    def load_metadata(self):
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
+            self.lmd = pickle.load(fp)
+
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
+            self.hmd = pickle.load(fp)
+
     def save_metadata(self):
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
             self.lmd['updated_at'] = str(datetime.datetime.now())
@@ -60,10 +67,14 @@ class Transaction:
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'wb') as fp:
             # Don't save data for now
             save_hmd = {}
+            null_out_fields = ['test_from_data', 'from_data']
+            for k in null_out_fields:
+                save_hmd[k] = None
+                
             for k in self.hmd:
-                if k not in ['test_from_data', 'from_data']:
+                if k not in null_out_fields:
                     save_hmd[k] = self.hmd[k]
-                    
+
             # Don't save data for now
             pickle.dump(save_hmd, fp)
 
@@ -161,11 +172,7 @@ class Transaction:
 
         old_hmd = {}
         for k in self.hmd: old_hmd[k] = self.hmd[k]
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
-            self.lmd = pickle.load(fp)
-
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
-            self.hmd = pickle.load(fp)
+        self.load_metadata()
 
         for k in old_lmd:
             if old_lmd[k] is not None:

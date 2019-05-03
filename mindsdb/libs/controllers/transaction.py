@@ -52,6 +52,20 @@ class Transaction:
 
         self.run()
 
+    def save_metadata(self):
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
+            self.lmd['updated_at'] = str(datetime.datetime.now())
+            pickle.dump(self.lmd, fp)
+
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'wb') as fp:
+            # Don't save data for now
+            save_hmd = {}
+            for k in self.hmd:
+                if k not in ['test_from_data', 'from_data']:
+                    save_hmd[k] = self.hmd[k]
+                    
+            # Don't save data for now
+            pickle.dump(save_hmd, fp)
 
     def _call_phase_module(self, module_name, **kwargs):
         """
@@ -83,8 +97,10 @@ class Transaction:
 
         :return:
         """
-
+        self.lmd['current_phase'] = MODEL_STATUS_PREPARING
+        self.save_metadata()
         self._call_phase_module('DataExtractor')
+
         if len(self.input_data.data_array) <= 0 or len(self.input_data.data_array[0]) <=0:
             self.type = TRANSACTION_BAD_QUERY
             self.errorMsg = "No results for this query."
@@ -94,9 +110,11 @@ class Transaction:
             # start populating data
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
             self.lmd['columns'] = self.input_data.columns # this is populated by data extractor
+            self.save_metadata()
 
             self._call_phase_module('StatsGenerator', input_data=self.input_data, modify_light_metadata=True)
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
+            self.save_metadata()
 
             if self.lmd['model_backend'] == 'ludwig':
                 self.lmd['is_active'] = True
@@ -104,22 +122,11 @@ class Transaction:
                 self.model_backend.train()
                 self.lmd['is_active'] = False
 
-
             self.lmd['train_end_at'] = str(datetime.datetime.now())
+            self.save_metadata()
 
             self._call_phase_module('ModelAnalyzer')
-
-            with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
-                self.lmd['updated_at'] = str(datetime.datetime.now())
-                pickle.dump(self.lmd, fp)
-
-            with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'wb') as fp:
-                # Don't save data for now
-                self.hmd['from_data'] = None
-                self.hmd['test_from_data'] = None
-                # Don't save data for now
-                pickle.dump(self.hmd, fp)
-
+            self.save_metadata()
             return
 
         except Exception as e:
@@ -179,6 +186,7 @@ class Transaction:
             return
 
         self._call_phase_module('DataExtractor')
+        self.save_metadata()
 
         if len(self.input_data.data_array[0]) <= 0:
             self.output_data = self.input_data
@@ -189,6 +197,7 @@ class Transaction:
         if self.lmd['model_backend'] == 'ludwig':
             self.model_backend = LudwigBackend(self)
             predictions = self.model_backend.predict()
+        self.save_metadata()
 
         # self.transaction.lmd['predict_columns']
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
@@ -215,16 +224,7 @@ class Transaction:
                 #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong
                 self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
 
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
-            self.lmd['updated_at'] = str(datetime.datetime.now())
-            pickle.dump(self.lmd, fp)
-
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'wb') as fp:
-            # Don't save data for now
-            self.hmd['from_data'] = None
-            self.hmd['test_from_data'] = None
-            # Don't save data for now
-            pickle.dump(self.hmd, fp)
+        self.save_metadata()
 
         return
 

@@ -52,6 +52,7 @@ class Transaction:
 
         self.run()
 
+    # @TODO Make it more generic, move to general helpers, use inside predictor instead of linline loading
     def load_metadata(self):
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
             self.lmd = pickle.load(fp)
@@ -59,6 +60,7 @@ class Transaction:
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
             self.hmd = pickle.load(fp)
 
+    # @TODO Make it more generic, move to general helpers
     def save_metadata(self):
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
             self.lmd['updated_at'] = str(datetime.datetime.now())
@@ -70,7 +72,7 @@ class Transaction:
             null_out_fields = ['test_from_data', 'from_data']
             for k in null_out_fields:
                 save_hmd[k] = None
-                
+
             for k in self.hmd:
                 if k not in null_out_fields:
                     save_hmd[k] = self.hmd[k]

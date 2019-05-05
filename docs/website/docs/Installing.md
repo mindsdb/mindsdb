@@ -5,15 +5,24 @@ title: Installing MindsDB
 
 ## Prerequisites
 
-Before you begin, you need **[python>=3.7](https://realpython.com/installing-python/)** or **[Conda Python3](https://www.anaconda.com/download/)**, and make sure you have the **latest pip3**
+Before you begin, you need **[python>=3.7](https://realpython
+.com/installing-python/)** or **[Conda Python3](https://www.anaconda.com/download/)**, and make sure you have the **latest pip3**.
+
 ```bash
 curl https://bootstrap.pypa.io/get-pip.py | python3
 pip3 install --upgrade pip
 ```
 
-Once you have those, you can install MindsDB
+Once you have those, you can install MindsDB.
 
 ## On Mac or Linux
+
+It might be needed that you need to install `tkinter` in addition.
+
+- Fedora: `sudo dnf -y install python3-tkinter`
+- Debian: `sudo apt-get install python3-tk tk`
+
+Install MindsDB:
 
 ```bash
 pip3 install mindsdb --user
@@ -21,9 +30,8 @@ pip3 install mindsdb --user
 
 ## On Windows 10
 
-Install Conda [download here](https://www.anaconda.com/download/#windows).
-
- and then run the **anaconda prompt**:
+Install Conda [download here](https://www.anaconda.com/download/#windows) 
+and then run the **anaconda prompt**:
 
 ```bash
 conda install -c peterjc123 pytorch

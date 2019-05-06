@@ -232,6 +232,15 @@ class Predictor:
 
             if col in lmd['predict_columns']:
 
+         = columnless_prediction_distribution
+         = all_columns_prediction_distribution
+
+                amd['force_vectors'][col] = {}
+                amd['force_vectors'][col]['normal_data_distribution'] = self.transaction.lmd['all_columns_prediction_distribution']
+                amd['force_vectors'][col]['missing_data_distribution'] = {}
+                for missing_column in self.transaction.lmd['columnless_prediction_distribution']:
+                    amd['force_vectors'][col]['missing_data_distribution'][missing_column] = self.transaction.lmd['columnless_prediction_distribution'][missing_column]
+
                 icm['importance_score'] = None
                 amd['data_analysis']['target_columns_metadata'].append(icm)
 

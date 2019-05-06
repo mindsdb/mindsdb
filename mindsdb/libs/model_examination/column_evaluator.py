@@ -10,16 +10,27 @@ class ColumnEvaluator():
     """
 
     def __init__(self, transaction):
-        self.columnless_predictions = {}
+        self.columnless_prediction_distribution = {}
+        self.all_columns_prediction_distribution = {}
         self.normal_predictions = None
         self.transaction = transaction
 
     def get_column_importance(self, model, output_columns, input_columns, full_dataset, stats):
         self.normal_predictions = model.predict('validate')
         normal_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
-
         column_importance_dict = {}
         buckets_stats = {}
+
+        # Histogram for when all columns are present, in order to plot the force vectors
+        for output_column in output_columns:
+            stats_generator = StatsGenerator(session=None, transaction=self.transaction)
+            input_data = TransactionData()
+            input_data.data_array = list(map(lambda x: [x], list(self.normal_predictions[output_column])))
+            input_data.columns = [output_column]
+            validation_set_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+
+            if 'histogram' in validation_set_output_stats[output_column]:
+                self.all_columns_prediction_distribution[output_column] = validation_set_output_stats[output_column]['histogram']
 
         for input_column in input_columns:
             # See what happens with the accuracy of the outputs if only this column is present
@@ -33,13 +44,25 @@ class ColumnEvaluator():
             ignore_columns = [input_column]
             col_missing_predictions = model.predict('validate', ignore_columns)
 
-            self.columnless_predictions[input_column] = col_missing_predictions
-
             col_missing_accuracy = evaluate_accuracy(col_missing_predictions, full_dataset, stats, output_columns)
 
             col_missing_reverse_accuracy = (normal_accuracy - col_missing_accuracy)/normal_accuracy
             column_importance = (col_only_normalized_accuracy + col_missing_reverse_accuracy)/2
             column_importance_dict[input_column] = column_importance
+
+            # Histogram for when the column is missing, in order to plot the force vectors
+            self.columnless_prediction_distribution[input_column] = {
+
+            }
+            for output_column in output_columns:
+                stats_generator = StatsGenerator(session=None, transaction=self.transaction)
+                input_data = TransactionData()
+                input_data.data_array = list(map(lambda x: [x], list(col_missing_predictions[output_column])))
+                input_data.columns = [output_column]
+                col_missing_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+
+                if 'histogram' in col_missing_output_stats[output_column]:
+                    self.columnless_prediction_distribution[input_column][output_column] = col_missing_output_stats[output_column]['histogram']
 
             # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)
             if column_importance > 0.8 or column_importance < 0.2:

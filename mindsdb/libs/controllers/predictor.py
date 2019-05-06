@@ -235,9 +235,12 @@ class Predictor:
                 # Histograms for plotting the force vectors
                 amd['force_vectors'][col] = {}
                 amd['force_vectors'][col]['normal_data_distribution'] = lmd['all_columns_prediction_distribution'][col]
+                amd['force_vectors'][col]['normal_data_distribution']['type'] = 'categorical'
+
                 amd['force_vectors'][col]['missing_data_distribution'] = {}
                 for missing_column in lmd['columnless_prediction_distribution'][col]:
                     amd['force_vectors'][col]['missing_data_distribution'][missing_column] = lmd['columnless_prediction_distribution'][col][missing_column]
+                    amd['force_vectors'][col]['missing_data_distribution'][missing_column]['type'] = 'categorical'
 
                 icm['importance_score'] = None
                 amd['data_analysis']['target_columns_metadata'].append(icm)

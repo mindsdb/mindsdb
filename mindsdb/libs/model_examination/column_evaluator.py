@@ -25,7 +25,7 @@ class ColumnEvaluator():
             # See what happens with the accuracy of the outputs if only this column is present
             ignore_columns = [col for col in input_columns if col != input_column ]
             col_only_predictions = model.predict('validate', ignore_columns)
-            col_only_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
+            col_only_accuracy = evaluate_accuracy(col_only_predictions, full_dataset, stats, output_columns)
 
             col_only_normalized_accuracy = col_only_accuracy/normal_accuracy
 
@@ -35,7 +35,7 @@ class ColumnEvaluator():
 
             self.columnless_predictions[input_column] = col_missing_predictions
 
-            col_missing_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
+            col_missing_accuracy = evaluate_accuracy(col_missing_predictions, full_dataset, stats, output_columns)
 
             col_missing_reverse_accuracy = (normal_accuracy - col_missing_accuracy)/normal_accuracy
             column_importance = (col_only_normalized_accuracy + col_missing_reverse_accuracy)/2

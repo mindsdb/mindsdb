@@ -57,6 +57,10 @@ def fixFileIfPossible(filepath):
     return fixed, error
 
 
+def get_file_type():
+    pass
+
+
 
 
 def test():

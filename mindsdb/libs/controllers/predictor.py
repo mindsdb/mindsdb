@@ -234,10 +234,10 @@ class Predictor:
             if col in lmd['predict_columns']:
                 # Histograms for plotting the force vectors
                 amd['force_vectors'][col] = {}
-                amd['force_vectors'][col]['normal_data_distribution'] = lmd['all_columns_prediction_distribution']
+                amd['force_vectors'][col]['normal_data_distribution'] = lmd['all_columns_prediction_distribution'][col]
                 amd['force_vectors'][col]['missing_data_distribution'] = {}
-                for missing_column in lmd['columnless_prediction_distribution']:
-                    amd['force_vectors'][col]['missing_data_distribution'][missing_column] = lmd['columnless_prediction_distribution'][missing_column]
+                for missing_column in lmd['columnless_prediction_distribution'][col]:
+                    amd['force_vectors'][col]['missing_data_distribution'][missing_column] = lmd['columnless_prediction_distribution'][col][missing_column]
 
                 icm['importance_score'] = None
                 amd['data_analysis']['target_columns_metadata'].append(icm)
@@ -423,6 +423,8 @@ class Predictor:
         light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
         light_transaction_metadata['column_importances'] = None
         light_transaction_metadata['unusual_columns_buckets_importances'] = None
+        light_transaction_metadata['columnless_prediction_distribution'] = None
+        light_transaction_metadata['all_columns_prediction_distribution'] = None
         light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
 
 

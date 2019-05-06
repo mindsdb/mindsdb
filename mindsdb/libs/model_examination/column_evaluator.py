@@ -10,12 +10,13 @@ class ColumnEvaluator():
     """
 
     def __init__(self, transaction):
-        self.columnless_prediction_distribution = {}
-        self.all_columns_prediction_distribution = {}
         self.normal_predictions = None
         self.transaction = transaction
 
     def get_column_importance(self, model, output_columns, input_columns, full_dataset, stats):
+        columnless_prediction_distribution = {}
+        all_columns_prediction_distribution = {}
+
         self.normal_predictions = model.predict('validate')
         normal_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
         column_importance_dict = {}
@@ -30,7 +31,7 @@ class ColumnEvaluator():
             validation_set_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
             if 'histogram' in validation_set_output_stats[output_column]:
-                self.all_columns_prediction_distribution[output_column] = validation_set_output_stats[output_column]['histogram']
+                all_columns_prediction_distribution[output_column] = validation_set_output_stats[output_column]['histogram']
 
         for input_column in input_columns:
             # See what happens with the accuracy of the outputs if only this column is present
@@ -51,9 +52,7 @@ class ColumnEvaluator():
             column_importance_dict[input_column] = column_importance
 
             # Histogram for when the column is missing, in order to plot the force vectors
-            self.columnless_prediction_distribution[input_column] = {
-
-            }
+            columnless_prediction_distribution[input_column] = {}
             for output_column in output_columns:
                 stats_generator = StatsGenerator(session=None, transaction=self.transaction)
                 input_data = TransactionData()
@@ -62,7 +61,7 @@ class ColumnEvaluator():
                 col_missing_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
                 if 'histogram' in col_missing_output_stats[output_column]:
-                    self.columnless_prediction_distribution[input_column][output_column] = col_missing_output_stats[output_column]['histogram']
+                    columnless_prediction_distribution[input_column][output_column] = col_missing_output_stats[output_column]['histogram']
 
             # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)
             if column_importance > 0.8 or column_importance < 0.2:
@@ -104,7 +103,7 @@ class ColumnEvaluator():
 
                 buckets_stats.update(col_buckets_stats)
 
-        return column_importance_dict, buckets_stats
+        return column_importance_dict, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution
 
     def get_column_influence(self):
         pass

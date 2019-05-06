@@ -234,7 +234,7 @@ class Predictor:
             if col in lmd['predict_columns']:
                 # Histograms for plotting the force vectors
                 amd['force_vectors'][col] = {}
-                amd['force_vectors'][col]['normal_data_distribution'] = slmd['all_columns_prediction_distribution']
+                amd['force_vectors'][col]['normal_data_distribution'] = lmd['all_columns_prediction_distribution']
                 amd['force_vectors'][col]['missing_data_distribution'] = {}
                 for missing_column in lmd['columnless_prediction_distribution']:
                     amd['force_vectors'][col]['missing_data_distribution'][missing_column] = lmd['columnless_prediction_distribution'][missing_column]

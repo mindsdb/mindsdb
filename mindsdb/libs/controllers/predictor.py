@@ -230,8 +230,9 @@ class Predictor:
                 print(f'Issue processing column: {icol} !')
                 continue
 
+            amd['force_vectors'] = {}
             if col in lmd['predict_columns']:
-
+                # Histograms for plotting the force vectors
                 amd['force_vectors'][col] = {}
                 amd['force_vectors'][col]['normal_data_distribution'] = self.transaction.lmd['all_columns_prediction_distribution']
                 amd['force_vectors'][col]['missing_data_distribution'] = {}

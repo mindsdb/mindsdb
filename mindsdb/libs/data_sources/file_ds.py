@@ -1,9 +1,8 @@
 import pandas
 import re
 import requests
-from io import BytesIO, StringIO
+from io import BytesIO
 import csv
-import codecs
 import json
 import traceback
 
@@ -87,14 +86,16 @@ class FileDS(DataSource):
         # check for file type
         ############
         try:
-            ending, dialect = get_file_type(data)
-            return data, ending, dialect
+            format, dialect = get_file_type(data)
+            print(format, dialect)
+            return data, format, dialect
         except:
             data.seek(0)
             log.error('Could not detect format for this file')
             log.error(traceback.format_exc())
+            exit()
             # No file type identified
-            return data, None, dialect
+            return data, None, None
 
 
 

@@ -13,6 +13,13 @@ import csv
 import sys
 import traceback
 
+import codecs
+import csv
+import json
+from io import StringIO
+
+from mindsdb.libs.data_types.mindsdb_logger import log
+
 
 def fixFileIfPossible(filepath):
     """
@@ -58,6 +65,8 @@ def fixFileIfPossible(filepath):
 
 
 def get_file_type(data):
+    dialect = None
+
     # try to guess if its an excel file
     xlsx_sig = b'\x50\x4B\x05\06'
     xlsx_sig2 = b'\x50\x4B\x03\x04'

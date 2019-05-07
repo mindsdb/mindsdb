@@ -2,7 +2,7 @@
 # Using MindsDB with Google Colab
 
 [Google Colab](https://colab.research.google.com) is a free cloud service that supports free GPU!
-You can use MindsDB there, here's how: [Demo](https://colab.research.google.com/gist/JohannesFerner/88773019cd385fe6ba0a9377a4779f40/mindsdb.ipynb)
+You can use MindsDB there.
 
 Fortunately, this is really easy.
 Inside Google Colab, start a new python 3 notebook and in a cell, insert the following:
@@ -14,7 +14,7 @@ Inside Google Colab, start a new python 3 notebook and in a cell, insert the fol
 
 First we'll import mindsdb
 ```Python
-from mindsdb import *
+from mindsdb import Predictor
 ```
 This is where it gets interesting. It's now up to you to install any dataset you want, so long as its a CSV file. We'll be linking it to colab next.
 In this example we'll be using a students dataset from kaggle. You can get it [here](https://www.kaggle.com/spscientist/students-performance-in-exams) if you want to follow along.
@@ -39,12 +39,11 @@ file = "./drive/My Drive/Datasets/StudentsPerformance.csv"
 Now let's create a MindsDB object and initialize it with our data from the file. We'll be prediciting the reading_score and we'll call our model 'reading_predictor'.
 Remember that depending on your dataset, these variables might change. Just remember that `predict` is the column you want to make your prediction on and that mindsdb will automatically rename all your columns to snake case.
 ```Python
-mdb = MindsDB()
+mdb = Predictor(name='reading_score_predictor')
 
 mdb.learn(
   from_data=file, # call file from google drive
-  predict='reading_score',
-  model_name='reading_predictor'
+  tp_predict='reading_score'
 )
 ```
 
@@ -56,22 +55,17 @@ mdb.learn(
 `model_name` is the same as in `mdb.learn`
 
 ```Python
-result = mdb.predict(
-  predict='reading_score',
+
+predictions = Predictor(name='reading_score_predictor').predict(
   when={
       'writing_score' : 80,
       'math_score' : 40,
       'lunch' : 'standard'
-  },
-  model_name='reading_predictor'
+  }
 )
 ```
 
 Finally we print out the result
 ```Python
-print(
-    'The predicted reading score is {score} with {conf} confidence'
-      .format(score=result[0]['reading_score'],
-       conf=result[0]['prediction_confidence'])
-)
+print(predictions)
 ```

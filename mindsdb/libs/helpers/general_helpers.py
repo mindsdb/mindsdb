@@ -16,6 +16,8 @@ from mindsdb.__about__ import __version__
 from mindsdb.config import CONFIG
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.constants.mindsdb import *
+import imagehash
+from PIL import Image
 
 
 def get_key_for_val(key, dict_map):
@@ -169,7 +171,7 @@ def get_value_bucket(value, buckets, col_stats):
     """
     if buckets is None:
         return None
-        
+
     if col_stats['data_subtype'] in (DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE):
         if value in buckets:
             bucket = buckets.index(value)
@@ -178,6 +180,9 @@ def get_value_bucket(value, buckets, col_stats):
 
     elif col_stats['data_subtype'] in (DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
         bucket = closest(buckets, value)
+    elif col_stats['data_subtype'] in (DATA_SUBTYPES.IMAGE):
+        bucket = self.hmd['bucketing_algorithms'][col_name].predict(np.array(imagehash.phash(Image.open(value)).reshape(1, -1)))[0]
+        print(bucket)
     else:
         bucket = len(buckets) # for null values
 
@@ -233,13 +238,15 @@ class suppress_stdout_stderr(object):
 
 @contextmanager
 # @TODO: Make it work with mindsdb logger/log levels... maybe
-def disable_ludwig_output():
+def disable_ludwig_output(disable=True):
     try:
         try:
             old_tf_loglevel = os.environ['TF_CPP_MIN_LOG_LEVEL']
         except:
             old_tf_loglevel = '2'
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+        if not disable:
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
         # Maybe get rid of this to not supress all errors and stdout
         with suppress_stdout_stderr():
             yield

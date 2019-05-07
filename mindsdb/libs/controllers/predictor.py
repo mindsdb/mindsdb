@@ -230,7 +230,17 @@ class Predictor:
                 print(f'Issue processing column: {icol} !')
                 continue
 
+            amd['force_vectors'] = {}
             if col in lmd['predict_columns']:
+                # Histograms for plotting the force vectors
+                amd['force_vectors'][col] = {}
+                amd['force_vectors'][col]['normal_data_distribution'] = lmd['all_columns_prediction_distribution'][col]
+                amd['force_vectors'][col]['normal_data_distribution']['type'] = 'categorical'
+
+                amd['force_vectors'][col]['missing_data_distribution'] = {}
+                for missing_column in lmd['columnless_prediction_distribution'][col]:
+                    amd['force_vectors'][col]['missing_data_distribution'][missing_column] = lmd['columnless_prediction_distribution'][col][missing_column]
+                    amd['force_vectors'][col]['missing_data_distribution'][missing_column]['type'] = 'categorical'
 
                 icm['importance_score'] = None
                 amd['data_analysis']['target_columns_metadata'].append(icm)
@@ -392,6 +402,7 @@ class Predictor:
         heavy_transaction_metadata['name'] = self.name
         heavy_transaction_metadata['from_data'] = from_ds
         heavy_transaction_metadata['test_from_data'] = test_from_ds
+        heavy_transaction_metadata['bucketing_algorithms'] = {}
 
         light_transaction_metadata = {}
         light_transaction_metadata['version'] = str(__version__)
@@ -416,6 +427,8 @@ class Predictor:
         light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
         light_transaction_metadata['column_importances'] = None
         light_transaction_metadata['unusual_columns_buckets_importances'] = None
+        light_transaction_metadata['columnless_prediction_distribution'] = None
+        light_transaction_metadata['all_columns_prediction_distribution'] = None
         light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
 
 

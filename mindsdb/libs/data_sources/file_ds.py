@@ -10,7 +10,7 @@ import traceback
 from mindsdb.libs.data_types.data_source import DataSource
 from pandas.io.json import json_normalize
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.helpers.file_helpers import get_file_type
+from mindsdb.libs.helpers.file_helpers import get_file_type
 
 class FileDS(DataSource):
 

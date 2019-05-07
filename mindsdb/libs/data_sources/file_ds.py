@@ -9,7 +9,7 @@ import traceback
 from mindsdb.libs.data_types.data_source import DataSource
 from pandas.io.json import json_normalize
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.helpers.file_helpers import get_file_type
+from mindsdb.libs.helpers.file_helpers import get_file_type, get_headers
 
 class FileDS(DataSource):
 
@@ -69,10 +69,8 @@ class FileDS(DataSource):
         # get data from either url or file load in memory
         if file[:5] == 'http:' or file[:6] == 'https:':
             r = requests.get(file, allow_redirects=True)
-
             data.write(r.content)
             data.seek(0)
-
         # else read file from local file system
         else:
             try:
@@ -82,12 +80,8 @@ class FileDS(DataSource):
                 log.error(error)
                 raise ValueError(error)
 
-        ############
-        # check for file type
-        ############
         try:
-            format, dialect = get_file_type(data)
-            print(format, dialect)
+            data, format, dialect = get_file_type(data)
             return data, format, dialect
         except:
             data.seek(0)
@@ -113,29 +107,7 @@ class FileDS(DataSource):
         data, format, dialect = self._getDataIo(file)
         data.seek(0) # make sure we are at 0 in file pointer
 
-        if format is None:
-            log.error('Could not laod file into any format, supported formats are csv, json, xls, xslx')
-
-        if custom_parser:
-            header, file_data = custom_parser(data, format)
-
-        elif format == 'csv':
-            csv_reader = list(csv.reader(data, dialect))
-            header = csv_reader[0]
-            file_data =  csv_reader[1:]
-
-        elif format in ['xlsx', 'xls']:
-            data.seek(0)
-            df = pandas.read_excel(data)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
-
-        elif format == 'json':
-            data.seek(0)
-            json_doc = json.loads(data.read())
-            df = json_normalize(json_doc)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
+        header, file_data = get_headers(data, format, dialect, custom_parser)
 
         if clean_header == True:
             header = self.clean(header)

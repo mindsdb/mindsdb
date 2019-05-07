@@ -84,9 +84,9 @@ def get_file_type(data):
             codecs.getencoder('hex')(bytes)
 
             if bytes == xls_sig:
-                return 'xls', dialect
+                return data,'xls', dialect
             elif bytes == xlsx_sig:
-                return 'xlsx', dialect
+                return data, 'xlsx', dialect
 
         except:
             data.seek(0)
@@ -113,10 +113,10 @@ def get_file_type(data):
             try:
                 json.loads(data.read())
                 data.seek(0)
-                return 'json', dialect
+                return data, 'json', dialect
             except:
                 data.seek(0)
-                return None, dialect
+                return data, None, dialect
 
     # lets try to figure out if its a csv
     data.seek(0)
@@ -133,11 +133,33 @@ def get_file_type(data):
     data.seek(0)
     # if csv dialect identified then return csv
     if dialect:
-        return 'csv', dialect
+        return data, 'csv', dialect
     else:
-        return None, dialect
+        return data, None, dialect
 
+def get_headers(data, format, dialect, custom_parser=None):
+    if custom_parser:
+        header, file_data = custom_parser(data, format)
 
+    elif format == 'csv':
+        csv_reader = list(csv.reader(data, dialect))
+        header = csv_reader[0]
+        file_data =  csv_reader[1:]
+
+    elif format in ['xlsx', 'xls']:
+        data.seek(0)
+        df = pandas.read_excel(data)
+        header = df.columns.values.tolist()
+        file_data = df.values.tolist()
+
+    elif format == 'json':
+        data.seek(0)
+        json_doc = json.loads(data.read())
+        df = json_normalize(json_doc)
+        header = df.columns.values.tolist()
+        file_data = df.values.tolist()
+
+    return header, file_data
 
 def test():
     log.info(fixFileIfPossible('/Users/jorge/Downloads/tweets (1).csv'))

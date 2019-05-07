@@ -1,6 +1,6 @@
 import pandas
 import re
-import urllib3
+import requests
 from io import BytesIO, StringIO
 import csv
 import codecs
@@ -69,11 +69,9 @@ class FileDS(DataSource):
 
         # get data from either url or file load in memory
         if file[:5] == 'http:' or file[:6] == 'https:':
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            http = urllib3.PoolManager()
-            r = http.request('GET', file, preload_content=False)
+            r = requests.get(file, allow_redirects=True)
 
-            data.write(r.read())
+            data.write(r.content)
             data.seek(0)
 
         # else read file from local file system

@@ -13,6 +13,8 @@ import csv
 import sys
 import traceback
 
+from mindsdb.libs.data_types.mindsdb_logger import log
+
 
 def fixFileIfPossible(filepath):
     """
@@ -55,9 +57,6 @@ def fixFileIfPossible(filepath):
             writer.writerows(rows)
 
     return fixed, error
-
-
-
 
 def test():
     log.info(fixFileIfPossible('/Users/jorge/Downloads/tweets (1).csv'))

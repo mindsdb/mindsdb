@@ -812,6 +812,10 @@ class StatsGenerator(BaseModule):
 
                 col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
 
+                # This shouldn't happen... an all null column makes no sense
+                if len(col_data) < 1:
+                    return None
+
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
                 x = x.tolist()
@@ -850,11 +854,7 @@ class StatsGenerator(BaseModule):
                     kurtosis = 0
                     xp = []
 
-                try:
-                    is_float = True if max([1 if int(i) != i else 0 for i in col_data]) == 1 else False
-                except Exception as e:
-                    self.log.warning('Exception: "{}" thrown when determining numerical type'.format(e))
-                    is_float = True
+                is_float = True if max([1 if int(i) != i else 0 for i in col_data]) == 1 else False
 
                 col_stats = {
                     'data_type': data_type,

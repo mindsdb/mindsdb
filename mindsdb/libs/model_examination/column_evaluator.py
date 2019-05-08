@@ -61,7 +61,9 @@ class ColumnEvaluator():
                 input_data.columns = [output_column]
                 col_missing_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
-                if 'histogram' in col_missing_output_stats[output_column]:
+                if col_missing_output_stats is None:
+                    pass 
+                elif 'histogram' in col_missing_output_stats[output_column]:
                     columnless_prediction_distribution[output_column][input_column] = col_missing_output_stats[output_column]['histogram']
 
             # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)

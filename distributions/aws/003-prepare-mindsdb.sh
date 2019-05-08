@@ -27,7 +27,7 @@ yes | conda create --name mindsdb python=3.7.1
 source activate mindsdb
 if [ $? -ne 0 ]; then echo "ERROR: Unable to create mindsdb anaconda environment"; exit 1; fi;
 pip install numpy
-pip install scipy pandas urllib3 requests pymongo tinymongo torch sklearn
+pip install scipy pandas requests pymongo tinymongo torch sklearn
 if [ $? -ne 0 ]; then echo "ERROR: Unable to install necessary pip packages"; exit 1; fi;
 
 echo '================================================================================'

@@ -812,6 +812,10 @@ class StatsGenerator(BaseModule):
 
                 col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
 
+                # This shouldn't happen... an all null column makes no sense
+                if len(col_data) < 1:
+                    return None
+
                 y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
                 x = x.tolist()

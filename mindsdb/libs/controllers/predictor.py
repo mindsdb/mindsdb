@@ -120,7 +120,13 @@ class Predictor:
             'x': [],
             'y': []
         }
-        icm['data_distribution']['clusters'] = {}
+        icm['data_distribution']['clusters'] =  [
+             {
+                 "group": [],
+                 "members": []
+             }
+         ]
+
 
         for i in range(len(col_stats['histogram']['x'])):
             icm['data_distribution']['data_histogram']['x'].append(col_stats['histogram']['x'][i])

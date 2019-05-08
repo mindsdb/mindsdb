@@ -1,15 +1,16 @@
 import pandas
 import re
-import requests
-from io import BytesIO
+import urllib3
+from io import BytesIO, StringIO
 import csv
+import codecs
 import json
 import traceback
 
 from mindsdb.libs.data_types.data_source import DataSource
 from pandas.io.json import json_normalize
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.helpers.file_helpers import get_file_type, get_headers
+
 
 class FileDS(DataSource):
 
@@ -68,9 +69,13 @@ class FileDS(DataSource):
 
         # get data from either url or file load in memory
         if file[:5] == 'http:' or file[:6] == 'https:':
-            r = requests.get(file, allow_redirects=True)
-            data.write(r.content)
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            http = urllib3.PoolManager()
+            r = http.request('GET', file, preload_content=False)
+
+            data.write(r.read())
             data.seek(0)
+
         # else read file from local file system
         else:
             try:
@@ -80,16 +85,89 @@ class FileDS(DataSource):
                 log.error(error)
                 raise ValueError(error)
 
+
+        dialect = None
+
+        ############
+        # check for file type
+        ############
+
+        # try to guess if its an excel file
+        xlsx_sig = b'\x50\x4B\x05\06'
+        xlsx_sig2 = b'\x50\x4B\x03\x04'
+        xls_sig = b'\x09\x08\x10\x00\x00\x06\x05\x00'
+
+        # differnt whence, offset, size for different types
+        excel_meta = [ ('xls', 0, 512, 8), ('xlsx', 2, -22, 4)]
+
+        for filename, whence, offset, size in excel_meta:
+
+            try:
+                data.seek(offset, whence)  # Seek to the offset.
+                bytes = data.read(size)  # Capture the specified number of bytes.
+                data.seek(0)
+                codecs.getencoder('hex')(bytes)
+
+                if bytes == xls_sig:
+                    return data, 'xls', dialect
+                elif bytes == xlsx_sig:
+                    return data, 'xlsx', dialect
+
+            except:
+                data.seek(0)
+
+        # if not excel it can be a json file or a CSV, convert from binary to stringio
+
+        byte_str = data.read()
+        # Move it to StringIO
         try:
-            data, format, dialect = get_file_type(data)
-            return data, format, dialect
+            data = StringIO(byte_str.decode('UTF-8'))
+        except:
+            log.error(traceback.format_exc())
+            log.error('Could not load into string')
+
+        # see if its JSON
+        buffer = data.read(100)
+        data.seek(0)
+        text = buffer.strip()
+        # analyze first n characters
+        if len(text) > 0:
+            text = text.strip()
+            # it it looks like a json, then try to parse it
+            if text != "" and ((text[0] == "{") or (text[0] == "[")):
+                try:
+                    json.loads(data.read())
+                    data.seek(0)
+                    return data, 'json', dialect
+                except:
+                    data.seek(0)
+                    return data, None, dialect
+
+        # lets try to figure out if its a csv
+        try:
+            data.seek(0)
+            first_few_lines = []
+            i = 0
+            for line in data:
+                i += 1
+                first_few_lines.append(line)
+                if i > 0:
+                    break
+
+            accepted_delimiters = [',','\t']
+            dialect = csv.Sniffer().sniff(''.join(first_few_lines[0]), delimiters=accepted_delimiters)
+            data.seek(0)
+            # if csv dialect identified then return csv
+            if dialect:
+                return data, 'csv', dialect
+            else:
+                return data, None, dialect
         except:
             data.seek(0)
             log.error('Could not detect format for this file')
             log.error(traceback.format_exc())
-            exit()
             # No file type identified
-            return data, None, None
+            return data, None, dialect
 
 
 
@@ -107,7 +185,29 @@ class FileDS(DataSource):
         data, format, dialect = self._getDataIo(file)
         data.seek(0) # make sure we are at 0 in file pointer
 
-        header, file_data = get_headers(data, format, dialect, custom_parser)
+        if format is None:
+            log.error('Could not laod file into any format, supported formats are csv, json, xls, xslx')
+
+        if custom_parser:
+            header, file_data = custom_parser(data, format)
+
+        elif format == 'csv':
+            csv_reader = list(csv.reader(data, dialect))
+            header = csv_reader[0]
+            file_data =  csv_reader[1:]
+
+        elif format in ['xlsx', 'xls']:
+            data.seek(0)
+            df = pandas.read_excel(data)
+            header = df.columns.values.tolist()
+            file_data = df.values.tolist()
+
+        elif format == 'json':
+            data.seek(0)
+            json_doc = json.loads(data.read())
+            df = json_normalize(json_doc)
+            header = df.columns.values.tolist()
+            file_data = df.values.tolist()
 
         if clean_header == True:
             header = self.clean(header)

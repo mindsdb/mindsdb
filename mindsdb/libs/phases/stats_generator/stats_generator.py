@@ -706,7 +706,7 @@ class StatsGenerator(BaseModule):
                 max_probability_key = col_stats['max_probability_key']
                 w = f"""Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !"""
                 self.log.warning(w)
-                col_stats['lvalue_distribution_score_warning'] = w
+                col_stats['value_distribution_score_warning'] = w
             else:
                 col_stats['value_distribution_score_warning'] = None
 
@@ -715,7 +715,7 @@ class StatsGenerator(BaseModule):
                 similar_col_name = col_stats['most_similar_column_name']
                 w = f'Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !'
                 self.log.warning(w)
-                col_stats['lof_based_outlier_score_warning'] = w
+                col_stats['similarity_score_warning'] = w
             else:
                 col_stats['similarity_score_warning'] = None
 

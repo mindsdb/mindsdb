@@ -120,7 +120,13 @@ class Predictor:
             'x': [],
             'y': []
         }
-        icm['data_distribution']['clusters'] = {}
+        icm['data_distribution']['clusters'] =  [
+             {
+                 "group": [],
+                 "members": []
+             }
+         ]
+
 
         for i in range(len(col_stats['histogram']['x'])):
             icm['data_distribution']['data_histogram']['x'].append(col_stats['histogram']['x'][i])
@@ -187,14 +193,14 @@ class Predictor:
                 })
 
 
-            icm[score.replace('','_score')] = {
+            icm[score.replace('_score','')] = {
                 'score': col_stats[score],
                 'metrics': metrics,
                 "description": col_stats[f'{score}_description'],
                 "warning": col_stats[f'{score}_warning']
             }
 
-            return icm
+        return icm
 
     def get_model_data(self, model_name):
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{model_name}_light_model_metadata.pickle'), 'rb') as fp:

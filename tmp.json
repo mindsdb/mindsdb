@@ -1,0 +1,457 @@
+{
+  'name': 'nr_bathrooms_predictor',
+  'version': '1.0.7',
+  'is_active': False,
+  'data_source': 'storage/home_rentals(1)/datasource/home_rentals.csv',
+  'predict': ['number_of_bathrooms'],
+  'accuracy': None,
+  'status': None,
+  'train_end_at': '2019-05-08 00:06:49.258263',
+  'updated_at': '2019-05-08 00:07:13.661854',
+  'created_at': '2019-05-08 00:06:39.188209',
+  'data_preparation': {
+    'total_row_count': 5037,
+    'test_row_count': 1,
+    'train_row_count': 1,
+    'validation_row_count': 1
+  },
+  'data_analysis': {
+    'target_columns_metadata': [{
+      'column_name': 'number_of_bathrooms',
+      'data_type': 'Categorical',
+      'data_subtype': 'Binary Category',
+      'data_type_distribution': {
+        'type': 'categorical',
+        'x': ['Categorical'],
+        'y': [630]
+      },
+      'data_subtype_distribution': {
+        'type': 'categorical',
+        'x': ['Binary Category'],
+        'y': [630]
+      },
+      'data_distribution': {
+        'data_histogram': {
+          'type': 'categorical',
+          'x': ['1', '2'],
+          'y': [3805, 1232]
+        },
+        'clusters': {}
+      },
+      'consistency': {
+        'score': 0.0,
+        'metrics': [{
+          'type': 'score',
+          'score': 0.0,
+          'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.0,
+          'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+          'warning': None
+        }],
+        'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+        'warning': None
+      },
+      'importance_score': None
+    }],
+    'input_columns_metadata': [{
+      'column_name': 'number_of_rooms',
+      'data_type': 'Categorical',
+      'data_subtype': 'Category',
+      'data_type_distribution': {
+        'type': 'categorical',
+        'x': ['Categorical'],
+        'y': [630]
+      },
+      'data_subtype_distribution': {
+        'type': 'categorical',
+        'x': ['Category'],
+        'y': [630]
+      },
+      'data_distribution': {
+        'data_histogram': {
+          'type': 'categorical',
+          'x': ['1', '2', '0', '3'],
+          'y': [1278, 1256, 1271, 1232]
+        },
+        'clusters': {}
+      },
+      'consistency': {
+        'score': 0.0,
+        'metrics': [{
+          'type': 'score',
+          'score': 0.0,
+          'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.0,
+          'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+          'warning': None
+        }],
+        'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+        'warning': None
+      },
+      'importance_score': 0.3121272365805169
+    }, {
+      'column_name': 'sqft',
+      'data_type': 'Numeric',
+      'data_subtype': 'Int',
+      'data_type_distribution': {
+        'type': 'categorical',
+        'x': ['Numeric'],
+        'y': [630]
+      },
+      'data_subtype_distribution': {
+        'type': 'categorical',
+        'x': ['Int'],
+        'y': [630]
+      },
+      'data_distribution': {
+        'data_histogram': {
+          'type': 'categorical',
+          'x': [112.47, 135.41, 158.35, 181.29, 204.23, 227.17000000000002, 250.11, 273.05, 295.99, 318.93, 341.87, 364.81000000000006, 387.75, 410.69000000000005, 433.63, 456.57000000000005, 479.51, 502.45000000000005, 525.3900000000001, 548.3299999999999, 571.27, 594.21, 617.1500000000001, 640.09, 663.03, 685.97, 708.9100000000001, 731.85, 754.79, 777.73, 800.6700000000001, 823.61, 846.5500000000001, 869.49, 892.4300000000001, 915.3700000000001, 938.3100000000001, 961.25, 984.19, 1007.1300000000001, 1030.07, 1053.01, 1075.95, 1098.89, 1121.83, 1144.77, 1167.71, 1190.65, 1213.5900000000001, 1236.5300000000002],
+          'y': [13, 10, 5, 9, 8, 9, 7, 4, 12, 10, 10, 15, 21, 13, 16, 16, 13, 22, 22, 27, 20, 10, 22, 9, 23, 17, 19, 15, 15, 19, 15, 14, 9, 14, 15, 13, 13, 9, 7, 4, 8, 10, 5, 15, 9, 6, 12, 5, 7, 9]
+        },
+        'clusters': {}
+      },
+      'consistency': {
+        'score': 0.11396825396825397,
+        'metrics': [{
+          'type': 'score',
+          'score': 0.0,
+          'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.0,
+          'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.5698412698412698,
+          'description': "\n            The duplicates score consists in the % of duplicate values / 100. So, it can range from 0 (no duplicates) to 1 (all the values have one or more duplicates). This score being large, on it's own, is not necessarily an indicator that your data is of poor quality.\n            ",
+          'warning': None
+        }],
+        'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+        'warning': None
+      },
+      'importance_score': 0.24453280818091452
+    }, {
+      'column_name': 'location',
+      'data_type': 'Categorical',
+      'data_subtype': 'Category',
+      'data_type_distribution': {
+        'type': 'categorical',
+        'x': ['Categorical'],
+        'y': [630]
+      },
+      'data_subtype_distribution': {
+        'type': 'categorical',
+        'x': ['Category'],
+        'y': [630]
+      },
+      'data_distribution': {
+        'data_histogram': {
+          'type': 'categorical',
+          'x': ['good', 'great', 'poor'],
+          'y': [2217, 1094, 1726]
+        },
+        'clusters': {}
+      },
+      'consistency': {
+        'score': 0.0,
+        'metrics': [{
+          'type': 'score',
+          'score': 0.0,
+          'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.0,
+          'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+          'warning': None
+        }],
+        'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+        'warning': None
+      },
+      'importance_score': 0.13220675944333996
+    }, {
+      'column_name': 'days_on_market',
+      'data_type': 'Categorical',
+      'data_subtype': 'Category',
+      'data_type_distribution': {
+        'type': 'categorical',
+        'x': ['Categorical'],
+        'y': [630]
+      },
+      'data_subtype_distribution': {
+        'type': 'categorical',
+        'x': ['Category'],
+        'y': [630]
+      },
+      'data_distribution': {
+        'data_histogram': {
+          'type': 'categorical',
+          'x': ['8', '14', '7', '49', '0', '3', '1', '58', '11', '13', '56', '2', '4', '32', '12', '36', '5', '10', '53', '48', '6', '31', '9', '40', '60', '35', '45', '57', '46', '63', '27', '26', '33', '17', '64', '54', '21', '20', '16', '18', '62', '59', '30', '23', '55', '38', '15', '44', '19', '22', '24', '25', '41', '39', '42', '28', '34', '43', '47', '52', '51', '61', '29', '37', '50'],
+          'y': [208, 206, 231, 43, 213, 257, 219, 25, 222, 193, 36, 214, 204, 24, 256, 40, 220, 224, 36, 34, 214, 38, 230, 33, 35, 36, 40, 40, 31, 39, 39, 43, 35, 37, 38, 29, 27, 34, 38, 29, 38, 44, 35, 24, 40, 37, 37, 43, 27, 29, 32, 29, 26, 29, 30, 39, 34, 32, 42, 29, 28, 37, 36, 43, 27]
+        },
+        'clusters': {}
+      },
+      'consistency': {
+        'score': 0.0,
+        'metrics': [{
+          'type': 'score',
+          'score': 0.0,
+          'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.0,
+          'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+          'warning': None
+        }],
+        'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+        'warning': None
+      },
+      'importance_score': 0.6013916500994035
+    }, {
+      'column_name': 'initial_price',
+      'data_type': 'Numeric',
+      'data_subtype': 'Int',
+      'data_type_distribution': {
+        'type': 'categorical',
+        'x': ['Numeric'],
+        'y': [630]
+      },
+      'data_subtype_distribution': {
+        'type': 'categorical',
+        'x': ['Int'],
+        'y': [630]
+      },
+      'data_distribution': {
+        'data_histogram': {
+          'type': 'categorical',
+          'x': [986.75, 1080.25, 1173.75, 1267.25, 1360.75, 1454.25, 1547.75, 1641.25, 1734.75, 1828.25, 1921.75, 2015.25, 2108.75, 2202.25, 2295.75, 2389.25, 2482.75, 2576.25, 2669.75, 2763.25, 2856.75, 2950.25, 3043.75, 3137.25, 3230.75, 3324.25, 3417.75, 3511.25, 3604.75, 3698.25, 3791.75, 3885.25, 3978.75, 4072.25, 4165.75, 4259.25, 4352.75, 4446.25, 4539.75, 4633.25, 4726.75, 4820.25, 4913.75, 5007.25, 5100.75, 5194.25, 5287.75, 5381.25, 5474.75, 5568.25],
+          'y': [5, 6, 7, 9, 21, 24, 31, 31, 39, 31, 25, 21, 15, 13, 10, 9, 5, 13, 9, 5, 11, 12, 17, 23, 19, 15, 13, 6, 4, 12, 8, 8, 0, 1, 2, 3, 12, 9, 6, 24, 22, 22, 14, 7, 7, 8, 6, 4, 4, 2]
+        },
+        'clusters': {}
+      },
+      'consistency': {
+        'score': 0.16031746031746033,
+        'metrics': [{
+          'type': 'score',
+          'score': 0.0,
+          'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.0,
+          'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.8015873015873016,
+          'description': "\n            The duplicates score consists in the % of duplicate values / 100. So, it can range from 0 (no duplicates) to 1 (all the values have one or more duplicates). This score being large, on it's own, is not necessarily an indicator that your data is of poor quality.\n            ",
+          'warning': None
+        }],
+        'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+        'warning': None
+      },
+      'importance_score': 0.4125248508946322
+    }, {
+      'column_name': 'neighborhood',
+      'data_type': 'Categorical',
+      'data_subtype': 'Category',
+      'data_type_distribution': {
+        'type': 'categorical',
+        'x': ['Categorical'],
+        'y': [630]
+      },
+      'data_subtype_distribution': {
+        'type': 'categorical',
+        'x': ['Category'],
+        'y': [630]
+      },
+      'data_distribution': {
+        'data_histogram': {
+          'type': 'categorical',
+          'x': ['west_welmwood', 'berkeley_hills', 'northwest', 'east_elmwood', 'downtown', 'alcatraz_ave', 'north_berkeley', 'zaytuna_college', 'thowsand_oaks', 'frontage_rd', 'westbrae', 'south_side'],
+          'y': [1476, 76, 1159, 955, 135, 109, 473, 59, 133, 306, 93, 63]
+        },
+        'clusters': {}
+      },
+      'consistency': {
+        'score': 0.0,
+        'metrics': [{
+          'type': 'score',
+          'score': 0.0,
+          'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.0,
+          'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+          'warning': None
+        }],
+        'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+        'warning': None
+      },
+      'importance_score': 0.18886679920477137
+    }, {
+      'column_name': 'rental_price',
+      'data_type': 'Numeric',
+      'data_subtype': 'Int',
+      'data_type_distribution': {
+        'type': 'categorical',
+        'x': ['Numeric'],
+        'y': [630]
+      },
+      'data_subtype_distribution': {
+        'type': 'categorical',
+        'x': ['Int', 'Float'],
+        'y': [433, 197]
+      },
+      'data_distribution': {
+        'data_histogram': {
+          'type': 'categorical',
+          'x': [910.39328, 1005.43584, 1100.4784, 1195.5209599999998, 1290.56352, 1385.60608, 1480.64864, 1575.6911999999998, 1670.73376, 1765.77632, 1860.8188799999998, 1955.86144, 2050.904, 2145.94656, 2240.9891199999997, 2336.03168, 2431.07424, 2526.1168, 2621.1593599999997, 2716.20192, 2811.24448, 2906.2870399999997, 3001.3295999999996, 3096.37216, 3191.4147199999998, 3286.4572799999996, 3381.4998399999995, 3476.5424, 3571.5849599999997, 3666.6275199999995, 3761.67008, 3856.7126399999997, 3951.7551999999996, 4046.7977599999995, 4141.84032, 4236.88288, 4331.92544, 4426.968, 4522.01056, 4617.05312, 4712.09568, 4807.13824, 4902.1808, 4997.22336, 5092.26592, 5187.30848, 5282.35104, 5377.3936, 5472.43616, 5567.47872],
+          'y': [5, 4, 8, 11, 14, 22, 29, 28, 29, 38, 28, 21, 23, 12, 11, 10, 11, 10, 14, 10, 11, 6, 12, 17, 18, 19, 15, 9, 2, 13, 5, 10, 8, 9, 4, 5, 4, 5, 3, 26, 16, 17, 14, 13, 6, 7, 8, 4, 4, 2]
+        },
+        'clusters': {}
+      },
+      'consistency': {
+        'score': 0.17873015873015874,
+        'metrics': [{
+          'type': 'score',
+          'score': 0.0,
+          'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.0,
+          'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+          'warning': None
+        }, {
+          'type': 'score',
+          'score': 0.8936507936507937,
+          'description': "\n            The duplicates score consists in the % of duplicate values / 100. So, it can range from 0 (no duplicates) to 1 (all the values have one or more duplicates). This score being large, on it's own, is not necessarily an indicator that your data is of poor quality.\n            ",
+          'warning': None
+        }],
+        'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+        'warning': None
+      },
+      'importance_score': 0.7435387673956262
+    }]
+  },
+  'model_analysis': [{
+    'column_name': 'number_of_bathrooms',
+    'overall_input_importance': {
+      'type': 'categorical',
+      'x': ['number_of_rooms', 'sqft', 'location', 'days_on_market', 'initial_price', 'neighborhood', 'rental_price'],
+      'y': [0.3121272365805169, 0.24453280818091452, 0.13220675944333996, 0.6013916500994035, 0.4125248508946322, 0.18886679920477137, 0.7435387673956262]
+    },
+    'train_accuracy_over_time': {
+      'type': 'categorical',
+      'x': [],
+      'y': []
+    },
+    'test_accuracy_over_time': {
+      'type': 'categorical',
+      'x': [],
+      'y': []
+    },
+    'accuracy_histogram': {
+      'x': ['number_of_rooms', 'sqft', 'location', 'days_on_market', 'initial_price', 'neighborhood', 'rental_price'],
+      'y': [0.3121272365805169, 0.24453280818091452, 0.13220675944333996, 0.6013916500994035, 0.4125248508946322, 0.18886679920477137, 0.7435387673956262],
+      'x_explained': [
+        [None],
+        [None],
+        [{
+          'column_name': 'location_bucket_None',
+          'data_type': 'Categorical',
+          'data_subtype': 'Category',
+          'data_type_distribution': {
+            'type': 'categorical',
+            'x': ['Categorical'],
+            'y': [503]
+          },
+          'data_subtype_distribution': {
+            'type': 'categorical',
+            'x': ['Category'],
+            'y': [503]
+          },
+          'data_distribution': {
+            'data_histogram': {
+              'type': 'categorical',
+              'x': ['poor', 'great', 'good'],
+              'y': [155, 115, 233]
+            },
+            'clusters': {}
+          },
+          'consistency': {
+            'score': 0.0,
+            'metrics': [{
+              'type': 'score',
+              'score': 0.0,
+              'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+              'warning': None
+            }, {
+              'type': 'score',
+              'score': 0.0,
+              'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+              'warning': None
+            }],
+            'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+            'warning': None
+          }
+        }],
+        [None],
+        [None],
+        [{
+          'column_name': 'neighborhood_bucket_None',
+          'data_type': 'Categorical',
+          'data_subtype': 'Category',
+          'data_type_distribution': {
+            'type': 'categorical',
+            'x': ['Categorical'],
+            'y': [503]
+          },
+          'data_subtype_distribution': {
+            'type': 'categorical',
+            'x': ['Category'],
+            'y': [503]
+          },
+          'data_distribution': {
+            'data_histogram': {
+              'type': 'categorical',
+              'x': ['northwest', 'east_elmwood', 'west_welmwood', 'frontage_rd', 'berkeley_hills', 'downtown', 'north_berkeley', 'thowsand_oaks', 'westbrae', 'alcatraz_ave', 'south_side', 'zaytuna_college'],
+              'y': [107, 103, 148, 24, 6, 16, 52, 17, 7, 9, 6, 8]
+            },
+            'clusters': {}
+          },
+          'consistency': {
+            'score': 0.0,
+            'metrics': [{
+              'type': 'score',
+              'score': 0.0,
+              'description': '\n        This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.\n        ',
+              'warning': None
+            }, {
+              'type': 'score',
+              'score': 0.0,
+              'description': 'This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data.',
+              'warning': None
+            }],
+            'description': "\n        A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).\n        The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.\n        ",
+            'warning': None
+          }
+        }],
+        [None]
+      ]
+    }
+  }],
+  'force_vectors': {}
+}

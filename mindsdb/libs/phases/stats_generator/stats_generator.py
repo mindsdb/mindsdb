@@ -706,7 +706,7 @@ class StatsGenerator(BaseModule):
                 max_probability_key = col_stats['max_probability_key']
                 w = f"""Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !"""
                 self.log.warning(w)
-                col_stats['lvalue_distribution_score_warning'] = w
+                col_stats['value_distribution_score_warning'] = w
             else:
                 col_stats['value_distribution_score_warning'] = None
 

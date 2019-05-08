@@ -194,7 +194,7 @@ class Predictor:
                 "warning": col_stats[f'{score}_warning']
             }
 
-            return icm
+        return icm
 
     def get_model_data(self, model_name):
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{model_name}_light_model_metadata.pickle'), 'rb') as fp:

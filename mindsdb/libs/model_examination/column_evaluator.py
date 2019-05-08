@@ -30,7 +30,9 @@ class ColumnEvaluator():
             input_data.columns = [output_column]
             validation_set_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
-            if 'histogram' in validation_set_output_stats[output_column]:
+            if validation_set_output_stats is None:
+                pass
+            elif 'histogram' in validation_set_output_stats[output_column]:
                 all_columns_prediction_distribution[output_column] = validation_set_output_stats[output_column]['histogram']
 
         for input_column in input_columns:
@@ -62,7 +64,7 @@ class ColumnEvaluator():
                 col_missing_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
                 if col_missing_output_stats is None:
-                    pass 
+                    pass
                 elif 'histogram' in col_missing_output_stats[output_column]:
                     columnless_prediction_distribution[output_column][input_column] = col_missing_output_stats[output_column]['histogram']
 

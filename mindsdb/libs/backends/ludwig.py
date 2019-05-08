@@ -412,8 +412,6 @@ class LudwigBackend():
 
     def predict(self, mode='predict', ignore_columns=[]):
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
-        print(model_definition)
-        print(predict_dataframe)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
 
         model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])

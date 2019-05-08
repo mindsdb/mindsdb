@@ -187,7 +187,7 @@ class Predictor:
                 })
 
 
-            icm[score.replace('','_score')] = {
+            icm[score.replace('_score','')] = {
                 'score': col_stats[score],
                 'metrics': metrics,
                 "description": col_stats[f'{score}_description'],

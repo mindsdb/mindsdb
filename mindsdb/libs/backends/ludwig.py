@@ -8,6 +8,7 @@ import os, sys
 
 from ludwig.api import LudwigModel
 import pandas as pd
+import typing
 
 # @TODO: Define generci interface, similar to 'base_module' in the phases
 class LudwigBackend():
@@ -410,11 +411,22 @@ class LudwigBackend():
         self.transaction.lmd['ludwig_data'] = {'ludwig_save_path': ludwig_model_savepath}
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}
 
-    def predict(self, mode='predict', ignore_columns=[]):
+    def predict(self, mode: typing.Optional[str] = None,
+                ignore_columns: typing.Optional[list] = None):
+        """
+        :params predict
+        :param mode:
+        :param ignore_columns:
+        :return:
+        """
+        if not ignore_columns:
+            ignore_columns = []
+
+        if not mode:
+            mode = 'predict'
+
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
-
-        model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
 
         if self.transaction.lmd['model_order_by'] is None:
             timeseries_cols = []

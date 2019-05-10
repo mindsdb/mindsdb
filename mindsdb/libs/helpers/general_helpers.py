@@ -215,26 +215,38 @@ def evaluate_accuracy(predictions, real_values, col_stats, output_columns):
 
 class suppress_stdout_stderr(object):
     def __init__(self):
-        # Open a pair of null files
-        self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
-        # Save the actual stdout (1) and stderr (2) file descriptors.
-        self.c_stdout = sys.stdout.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stdout'))
-        self.c_stderr = sys.stderr.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stderr'))
+        try:
+            crash = 'fileno' in dir(sys.stdout)
+            # Open a pair of null files
+            self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
+            # Save the actual stdout (1) and stderr (2) file descriptors.
+            self.c_stdout = sys.stdout.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stdout'))
+            self.c_stderr = sys.stderr.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stderr'))
 
-        self.save_fds = [os.dup(self.c_stdout), os.dup(self.c_stderr)]
+            self.save_fds = [os.dup(self.c_stdout), os.dup(self.c_stderr)]
+        except:
+            print('Can\'t disable output on Jupyter notebook')
 
     def __enter__(self):
-        # Assign the null pointers to stdout and stderr.
-        os.dup2(self.null_fds[0],self.c_stdout)
-        os.dup2(self.null_fds[1],self.c_stderr)
+        try:
+            crash = 'dup2' in dir(os)
+            # Assign the null pointers to stdout and stderr.
+            os.dup2(self.null_fds[0],self.c_stdout)
+            os.dup2(self.null_fds[1],self.c_stderr)
+        except:
+            print('Can\'t disable output on Jupyter notebook')
 
     def __exit__(self, *_):
-        # Re-assign the real stdout/stderr back to (1) and (2)
-        os.dup2(self.save_fds[0],self.c_stdout)
-        os.dup2(self.save_fds[1],self.c_stderr)
-        # Close all file descriptors
-        for fd in self.null_fds + self.save_fds:
-            os.close(fd)
+        try:
+            crash = 'dup2' in dir(os)
+            # Re-assign the real stdout/stderr back to (1) and (2)
+            os.dup2(self.save_fds[0],self.c_stdout)
+            os.dup2(self.save_fds[1],self.c_stderr)
+            # Close all file descriptors
+            for fd in self.null_fds + self.save_fds:
+                os.close(fd)
+        except:
+            print('Can\'t disable output on Jupyter notebook')
 
 @contextmanager
 # @TODO: Make it work with mindsdb logger/log levels... maybe

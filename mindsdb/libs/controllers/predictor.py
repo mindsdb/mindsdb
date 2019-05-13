@@ -326,15 +326,18 @@ class Predictor:
         except:
             return False
 
-    def export_model(self, model_name=None, mindsdb_storage_dir='mindsdb_storage'):
+    def export_model(self, model_name=None):
         """
         If you want to export this mind to a file
         :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
 
         :return: bool (True/False) True if mind was exported successfully
         """
+        if model_name is None:
+            model_name = self.name
+
         try:
-            shutil.make_archive(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name), 'zip', CONFIG.MINDSDB_STORAGE_PATH)
+            shutil.make_archive(os.path.join(base_name=model_name, format='zip', root_dir=CONFIG.MINDSDB_STORAGE_PATH,base_dir=model_name + '_')
             return True
         except:
             return False

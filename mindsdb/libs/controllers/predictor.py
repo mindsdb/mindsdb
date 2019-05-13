@@ -1,4 +1,5 @@
 import shutil
+import zipfile
 import os
 import _thread
 import uuid
@@ -59,19 +60,6 @@ class Predictor:
         if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK) or storage_ok == False:
             error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
             raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
-
-    def export(self, mindsdb_storage_dir='mindsdb_storage'):
-        """
-        If you want to export this mind to a file
-        :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
-
-        :return: bool (True/False) True if mind was exported successfully
-        """
-        try:
-            shutil.make_archive(mindsdb_storage_dir, 'zip', CONFIG.MINDSDB_STORAGE_PATH)
-            return True
-        except:
-            return False
 
     def get_models(self):
         models = []
@@ -326,14 +314,60 @@ class Predictor:
 
         return amd
 
+    def export(self, mindsdb_storage_dir='mindsdb_storage'):
+        """
+        If you want to export this mindsdb's instance storage to a file
+
+        :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
+        :return: bool (True/False) True if mind was exported successfully
+        """
+        try:
+            shutil.make_archive(base_name=mindsdb_storage_dir, format='zip', root_dir=CONFIG.MINDSDB_STORAGE_PATH)
+            print(f'Exported mindsdb storage to {mindsdb_storage_dir}.zip')
+            return True
+        except:
+            return False
+
+    def export_model(self, model_name):
+        """
+        If you want to export a model to a file
+
+        :param model_name: this is the name of the model you wish to export (defaults to the name of the current Predictor)
+        :return: bool (True/False) True if mind was exported successfully
+        """
+        if model_name is None:
+            model_name = self.name
+        try:
+            storage_file = model_name + '.zip'
+            with zipfile.ZipFile(storage_file, 'w') as zip_fp:
+                for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle']:
+                    full_path = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, file_name)
+                    zip_fp.write(full_path, os.path.basename(full_path))
+            print(f'Exported model to {storage_file}')
+            return True
+        except Exception as e:
+            print(e)
+            return False
+
     def load(self, mindsdb_storage_dir='mindsdb_storage.zip'):
         """
-        If you want to import a mind from a file
+        If you want to import a mindsdb instance storage from a file
 
         :param mindsdb_storage_dir: this is the full_path that contains your mind
         :return: bool (True/False) True if mind was importerd successfully
         """
         shutil.unpack_archive(mindsdb_storage_dir, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
+
+
+    def load_model(self, model_archive_path=None):
+        """
+        If you want to load a model to a file
+
+        :param model_archive_path: this is the path to the archive where your model resides
+        :return: bool (True/False) True if mind was importerd successfully
+        """
+        shutil.unpack_archive(model_archive_path, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
+
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,

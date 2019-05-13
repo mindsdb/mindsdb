@@ -337,7 +337,7 @@ class Predictor:
             model_name = self.name
 
         try:
-            shutil.make_archive(os.path.join(base_name=model_name, format='zip', root_dir=CONFIG.MINDSDB_STORAGE_PATH,base_dir=model_name + '_')
+            shutil.make_archive(base_name=model_name, format='zip', root_dir=CONFIG.MINDSDB_STORAGE_PATH,base_dir=model_name + '_')
             return True
         except:
             return False

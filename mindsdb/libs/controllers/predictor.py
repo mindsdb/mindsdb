@@ -1,4 +1,5 @@
 import shutil
+import zipfile
 import os
 import _thread
 import uuid
@@ -337,9 +338,12 @@ class Predictor:
             model_name = self.name
 
         try:
-            shutil.make_archive(base_name=model_name, format='zip', root_dir=CONFIG.MINDSDB_STORAGE_PATH,base_dir=model_name + '_')
+            with zipfile.ZipFile(model_name + '.zip', 'w') as zip_fp:
+                for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle']:
+                    zip_fp.write(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, file_name))
             return True
-        except:
+        except Exception as e:
+            print(e)
             return False
 
     def load(self, mindsdb_storage_dir='mindsdb_storage.zip'):

@@ -327,15 +327,13 @@ class Predictor:
         except:
             return False
 
-    def export_model(self, model_name=None):
+    def export_model(self, model_name=self.name):
         """
         If you want to export this mind to a file
-        :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
+        :param model_name: this is the name of the model you wish to export (defaults to the name of the current Predictor)
 
         :return: bool (True/False) True if mind was exported successfully
         """
-        if model_name is None:
-            model_name = self.name
 
         try:
             with zipfile.ZipFile(model_name + '.zip', 'w') as zip_fp:

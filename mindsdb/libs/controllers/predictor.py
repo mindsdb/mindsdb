@@ -323,23 +323,27 @@ class Predictor:
         """
         try:
             shutil.make_archive(base_name=mindsdb_storage_dir, format='zip', root_dir=CONFIG.MINDSDB_STORAGE_PATH)
+            print(f'Exported mindsdb storage to {mindsdb_storage_dir}.zip')
             return True
         except:
             return False
 
-    def export_model(self, model_name=self.name):
+    def export_model(self, model_name):
         """
         If you want to export a model to a file
 
         :param model_name: this is the name of the model you wish to export (defaults to the name of the current Predictor)
         :return: bool (True/False) True if mind was exported successfully
         """
-
+        if model_name is None:
+            model_name = self.name
         try:
-            with zipfile.ZipFile(model_name + '.zip', 'w') as zip_fp:
+            storage_file = model_name + '.zip'
+            with zipfile.ZipFile(storage_file, 'w') as zip_fp:
                 for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle']:
                     full_path = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, file_name)
                     zip_fp.write(full_path, os.path.basename(full_path))
+            print(f'Exported model to {storage_file}')
             return True
         except Exception as e:
             print(e)
@@ -355,14 +359,14 @@ class Predictor:
         shutil.unpack_archive(mindsdb_storage_dir, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
 
 
-    def load_model(self, model_name=self.name + '.zip'):
+    def load_model(self, model_archive_path=None):
         """
         If you want to load a model to a file
 
-        :param model_name: this is the name of the model you wish to export (defaults to the name of the current Predictor)
+        :param model_archive_path: this is the path to the archive where your model resides
         :return: bool (True/False) True if mind was importerd successfully
         """
-        shutil.unpack_archive(mindsdb_storage_dir, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
+        shutil.unpack_archive(model_archive_path, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
 
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,

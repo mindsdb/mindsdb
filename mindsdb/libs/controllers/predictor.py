@@ -340,7 +340,8 @@ class Predictor:
         try:
             with zipfile.ZipFile(model_name + '.zip', 'w') as zip_fp:
                 for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle']:
-                    zip_fp.write(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, file_name))
+                    full_path = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, file_name)
+                    zip_fp.write(full_path, os.path.basename(full_path))
             return True
         except Exception as e:
             print(e)

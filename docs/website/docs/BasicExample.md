@@ -19,7 +19,7 @@ mdb = mindsdb.Predictor(name='real_estate_model')
 
 # We tell the Predictor what column or key we want to learn and from what data
 mdb.learn(
-    from_data="https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv", # the path to the file where we can learn from, (note: can be url)
+    from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv", # the path to the file where we can learn from, (note: can be url)
     to_predict='rental_price', # the column we want to learn to predict given all the data in the file
 )
 ```
@@ -57,7 +57,7 @@ Please note the **when** argument, in this case assuming we only know that:
 * 'number_of_bathrooms':1
 * 'sqft': 1190
 
-So long the columns that you pass in the when statement exist in the data it learned from it will work (see columns in [home_rentals.csv](https://raw.githubusercontent.com/mindsdb/mindsdb/master/docs/examples/basic/home_rentals.csv))
+So long the columns that you pass in the when statement exist in the data it learned from it will work (see columns in [home_rentals.csv](https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv))
 
 ### Running online
 

@@ -6,7 +6,7 @@ The example code objective here is to:
 
 - learn a model to predict the best retal price for a given property.
 
-In order to to this we have a dataset "data_sources/home_rentals.csv"
+In order to to this we have a dataset "data_sources/home_rentals.csv" (or download from https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv)
 
 """
 
@@ -18,4 +18,3 @@ Predictor(name='home_rentals_price').learn(
     to_predict='rental_price', # the column we want to learn to predict given all the data in the file
     from_data="home_rentals.csv" # the path to the file where we can learn from, (note: can be url)
 )
-

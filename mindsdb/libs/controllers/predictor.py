@@ -321,7 +321,7 @@ class Predictor:
         :return: bool (True/False) True if mind was exported successfully
         """
         try:
-            shutil.make_archive(base_name=mindsdb_storage_dir, format='zip', root_dir=CONFIG.MINDSDB_STORAGE_PATH, base_dir=mindsdb_storage_dir)
+            shutil.make_archive(base_name=mindsdb_storage_dir, format='zip', root_dir=CONFIG.MINDSDB_STORAGE_PATH)
             return True
         except:
             return False

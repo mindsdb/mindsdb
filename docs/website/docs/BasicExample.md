@@ -61,4 +61,4 @@ So long the columns that you pass in the when statement exist in the data it lea
 
 ### Running online
 
-You can follow [this example](https://colab.research.google.com/gist/JohannesFerner/88773019cd385fe6ba0a9377a4779f40/mindsdb.ipynb)  on Google Colab
+You can follow [this example](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)  on Google Colab

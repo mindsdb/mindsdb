@@ -316,9 +316,9 @@ class Predictor:
 
     def export(self, mindsdb_storage_dir='mindsdb_storage'):
         """
-        If you want to export this mind to a file
-        :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
+        If you want to export this mindsdb's instance storage to a file
 
+        :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
         :return: bool (True/False) True if mind was exported successfully
         """
         try:
@@ -329,9 +329,9 @@ class Predictor:
 
     def export_model(self, model_name=self.name):
         """
-        If you want to export this mind to a file
-        :param model_name: this is the name of the model you wish to export (defaults to the name of the current Predictor)
+        If you want to export a model to a file
 
+        :param model_name: this is the name of the model you wish to export (defaults to the name of the current Predictor)
         :return: bool (True/False) True if mind was exported successfully
         """
 
@@ -347,12 +347,23 @@ class Predictor:
 
     def load(self, mindsdb_storage_dir='mindsdb_storage.zip'):
         """
-        If you want to import a mind from a file
+        If you want to import a mindsdb instance storage from a file
 
         :param mindsdb_storage_dir: this is the full_path that contains your mind
         :return: bool (True/False) True if mind was importerd successfully
         """
         shutil.unpack_archive(mindsdb_storage_dir, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
+
+
+    def load_model(self, model_name=self.name + '.zip'):
+        """
+        If you want to load a model to a file
+
+        :param model_name: this is the name of the model you wish to export (defaults to the name of the current Predictor)
+        :return: bool (True/False) True if mind was importerd successfully
+        """
+        shutil.unpack_archive(mindsdb_storage_dir, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
+
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,

@@ -60,19 +60,6 @@ class Predictor:
             error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
             raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
-    def export(self, mindsdb_storage_dir='mindsdb_storage'):
-        """
-        If you want to export this mind to a file
-        :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
-
-        :return: bool (True/False) True if mind was exported successfully
-        """
-        try:
-            shutil.make_archive(mindsdb_storage_dir, 'zip', CONFIG.MINDSDB_STORAGE_PATH)
-            return True
-        except:
-            return False
-
     def get_models(self):
         models = []
         for fn in os.listdir(CONFIG.MINDSDB_STORAGE_PATH):
@@ -325,6 +312,32 @@ class Predictor:
         # ADAPTOR CODE
 
         return amd
+
+    def export(self, mindsdb_storage_dir='mindsdb_storage'):
+        """
+        If you want to export this mind to a file
+        :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
+
+        :return: bool (True/False) True if mind was exported successfully
+        """
+        try:
+            shutil.make_archive(base_name=mindsdb_storage_dir, format='zip', root_dir=os.join('..', '..', CONFIG.MINDSDB_STORAGE_PATH)
+            return True
+        except:
+            return False
+
+    def export_model(self, model_name=None, mindsdb_storage_dir='mindsdb_storage'):
+        """
+        If you want to export this mind to a file
+        :param mindsdb_storage_dir: this is the full_path where you want to store a mind to, it will be a zip file
+
+        :return: bool (True/False) True if mind was exported successfully
+        """
+        try:
+            shutil.make_archive(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name), 'zip', CONFIG.MINDSDB_STORAGE_PATH)
+            return True
+        except:
+            return False
 
     def load(self, mindsdb_storage_dir='mindsdb_storage.zip'):
         """

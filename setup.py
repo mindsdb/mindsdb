@@ -32,6 +32,11 @@ setuptools.setup(
 )
 
 try:
+    subprocess.call(['python3','-m','spacy','download','en_core_web_sm'])
+except:
+    subprocess.call(['python','-m','spacy','download','en_core_web_sm'])
+
+try:
     subprocess.call(['python3','-m','spacy','download','en'])
 except:
     subprocess.call(['python','-m','spacy','download','en'])

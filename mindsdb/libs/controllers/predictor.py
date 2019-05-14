@@ -368,6 +368,22 @@ class Predictor:
         """
         shutil.unpack_archive(model_archive_path, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
 
+    def delete_model(self, model_name):
+        """
+        If you want to export a model to a file
+
+        :param model_name: this is the name of the model you wish to export (defaults to the name of the current Predictor)
+        :return: bool (True/False) True if mind was exported successfully
+        """
+        if model_name is None:
+            model_name = self.name
+        try:
+            for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle']:
+                os.remove(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, file_name))
+            return True
+        except Exception as e:
+            print(e)
+            return False
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,

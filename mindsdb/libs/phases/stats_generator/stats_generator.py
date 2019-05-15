@@ -235,7 +235,9 @@ class StatsGenerator(BaseModule):
         all_distinct_vals = set(all_values)
 
         # The numbers here are picked randomly, the gist of it is that if values repeat themselves a lot we should consider the column to be categorical
-        if (len(all_distinct_vals) < len(all_values)/100) or ( (len(all_distinct_vals) < 120) and (len(all_distinct_vals) < len(all_values)/6) ):
+        nr_vals = len(all_values)
+        nr_distinct_vals = len(all_distinct_vals)
+        if (nr_vals/15 > nr_distinct_vals)
             curr_data_type = DATA_TYPES.CATEGORICAL
             if len(all_distinct_vals) < 3:
                 curr_data_subtype = DATA_SUBTYPES.SINGLE

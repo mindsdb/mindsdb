@@ -1,20 +1,11 @@
 from mindsdb import Predictor
 
 
-mdb = Predictor(name='marvel')
+mdb = Predictor(name='suicide_model')
+mdb.learn(from_data="integration_testing/suicide.csv", to_predict='suicides_no')
 
-mdb.learn(from_data="marvel-wikia.xlsx", to_predict='FIRST_APPEARANCE')
+# use the model to make predictions
+result = Predictor(name='suicide_rates').predict(when={'country':'Greece','year':1981,'sex':'male','age':'35-54','population':300000})
 
-print('------------------------------------------------------------Done training------------------------------------------------------------')
-"""
-predicted = mdb.predict(when={
-    'Date':'11/03/2020',
-    'Time':'18.00.00',
-    'NMHC_GT': 1360.0,
-    'AH': 0.655
-})
-print('------------------------------------------------------------Preidiction output------------------------------------------------------------')
-for val in predicted:
-    print(val['CO_GT'])
-    print(val['CO_GT_confidence'])
-"""
+# you can now print the results
+print(result)

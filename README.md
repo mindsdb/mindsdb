@@ -66,7 +66,7 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 ```
 
 
-[Learn More](docs/examples/basic/README.md)
+[Learn More](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 
 ## Report Issues
 

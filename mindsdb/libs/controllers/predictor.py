@@ -307,8 +307,6 @@ class Predictor:
 
                 amd['model_analysis'].append(mao)
             else:
-                print(lmd['column_importances'])
-                print(col)
                 icm['importance_score'] = lmd['column_importances'][col]
                 amd['data_analysis']['input_columns_metadata'].append(icm)
         # ADAPTOR CODE

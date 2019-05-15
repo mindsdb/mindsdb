@@ -26,7 +26,7 @@ class DATA_SUBTYPES:
 
     # CATEGORICAL
     SINGLE = 'Binary Category'
-    MULTIPLE = 'Category' # Kind of unclear on the implementation
+    MULTIPLE = 'Category'
 
     # FILE_PATH
     IMAGE = 'Image'

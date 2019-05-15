@@ -112,11 +112,12 @@ class StatsGenerator(BaseModule):
             if max_number_of_words < words:
                 max_number_of_words += words
 
-        if max_number_of_words == 1:
-            return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.SINGLE
-        if max_number_of_words <= 3 and len(key_count) < total_length * 0.8:
-            # @TODO This used to be multiple... but, makes no sense for cateogry, should be discussed
-            return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.SINGLE
+        # If all sentences are less than or equal and 3 words, assume it's a category rather than a sentence
+        if max_number_of_words <= 3:
+            if len(key_count.keys()) < 3:
+                return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.SINGLE
+            else:
+                return DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.MULTIPLE
         else:
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
@@ -226,14 +227,15 @@ class StatsGenerator(BaseModule):
             type_dist[curr_data_type] = type_dist.pop('Unknown')
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
+        # @TODO: Extremely slow for large datasets, make it faster
         all_values = []
         for row in data_array:
             all_values.append(row[col_index])
 
         all_distinct_vals = set(all_values)
 
-        # Let's chose so random number
-        if (len(all_distinct_vals) < len(all_values)/200) or ( (len(all_distinct_vals) < 120) and (len(all_distinct_vals) < len(all_values)/6) ):
+        # The numbers here are picked randomly, the gist of it is that if values repeat themselves a lot we should consider the column to be categorical
+        if (len(all_distinct_vals) < len(all_values)/100) or ( (len(all_distinct_vals) < 120) and (len(all_distinct_vals) < len(all_values)/6) ):
             curr_data_type = DATA_TYPES.CATEGORICAL
             if len(all_distinct_vals) < 3:
                 curr_data_subtype = DATA_SUBTYPES.SINGLE

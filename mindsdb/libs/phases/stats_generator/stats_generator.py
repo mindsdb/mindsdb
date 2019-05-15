@@ -228,26 +228,27 @@ class StatsGenerator(BaseModule):
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
         # @TODO: Extremely slow for large datasets, make it faster
-        all_values = []
-        for row in data_array:
-            all_values.append(row[col_index])
+        if curr_data_type != DATA_TYPES.CATEGORICAL:
+            all_values = []
+            for row in data_array:
+                all_values.append(row[col_index])
 
-        all_distinct_vals = set(all_values)
+            all_distinct_vals = set(all_values)
 
-        # The numbers here are picked randomly, the gist of it is that if values repeat themselves a lot we should consider the column to be categorical
-        nr_vals = len(all_values)
-        nr_distinct_vals = len(all_distinct_vals)
-        if (nr_vals/15 > nr_distinct_vals)
-            curr_data_type = DATA_TYPES.CATEGORICAL
-            if len(all_distinct_vals) < 3:
-                curr_data_subtype = DATA_SUBTYPES.SINGLE
-            else:
-                curr_data_subtype = DATA_SUBTYPES.MULTIPLE
-            type_dist = {}
-            subtype_dist = {}
+            # The numbers here are picked randomly, the gist of it is that if values repeat themselves a lot we should consider the column to be categorical
+            nr_vals = len(all_values)
+            nr_distinct_vals = len(all_distinct_vals)
+            if (nr_vals/15 > nr_distinct_vals)
+                curr_data_type = DATA_TYPES.CATEGORICAL
+                if len(all_distinct_vals) < 3:
+                    curr_data_subtype = DATA_SUBTYPES.SINGLE
+                else:
+                    curr_data_subtype = DATA_SUBTYPES.MULTIPLE
+                type_dist = {}
+                subtype_dist = {}
 
-            type_dist[curr_data_type] = len(data)
-            subtype_dist[curr_data_subtype] = len(data)
+                type_dist[curr_data_type] = len(data)
+                subtype_dist[curr_data_subtype] = len(data)
 
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
 

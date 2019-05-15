@@ -284,7 +284,8 @@ class Predictor:
                     incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
 
                     mao['accuracy_histogram']['x'].append(incol)
-                    mao['accuracy_histogram']['y'].append(lmd['column_importances'][incol])
+                    mao['accuracy_histogram']['y'].append(
+                        [incol])
 
                     if len(incol_bucket_importance_keys) > 0:
                         sub_group_stats = []
@@ -306,11 +307,10 @@ class Predictor:
 
                 amd['model_analysis'].append(mao)
             else:
+                print(lmd['column_importances'])
+                print(col)
                 icm['importance_score'] = lmd['column_importances'][col]
                 amd['data_analysis']['input_columns_metadata'].append(icm)
-
-
-
         # ADAPTOR CODE
 
         return amd
@@ -507,7 +507,6 @@ class Predictor:
 
             for k in ['from_data', 'test_from_data']:
                 if old_hmd[k] is not None: heavy_transaction_metadata[k] = old_hmd[k]
-
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 

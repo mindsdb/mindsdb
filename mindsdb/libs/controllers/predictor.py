@@ -284,8 +284,7 @@ class Predictor:
                     incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
 
                     mao['accuracy_histogram']['x'].append(incol)
-                    mao['accuracy_histogram']['y'].append(
-                        [incol])
+                    mao['accuracy_histogram']['y'].append(lmd['column_importances'][incol])
 
                     if len(incol_bucket_importance_keys) > 0:
                         sub_group_stats = []

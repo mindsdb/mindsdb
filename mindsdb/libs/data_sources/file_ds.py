@@ -6,6 +6,7 @@ import csv
 import codecs
 import json
 import traceback
+import codecs
 
 from mindsdb.libs.data_types.data_source import DataSource
 from pandas.io.json import json_normalize
@@ -28,6 +29,9 @@ class FileDS(DataSource):
             col = re.sub('_+','_',col)
             if col[-1] == '_':
                 col = col[:-1]
+            while col[0] == '_':
+                col = col[1:]
+
             col_count[col] = 1 if col not in col_count else col_count[col]+1
             if col_count[col] > 1:
                 col = col+'_'+str(col_count[col])
@@ -121,7 +125,12 @@ class FileDS(DataSource):
         byte_str = data.read()
         # Move it to StringIO
         try:
-            data = StringIO(byte_str.decode('UTF-8'))
+            # Handle Microsoft's BOM "special" UTF-8 encoding
+            if byte_str.startswith(codecs.BOM_UTF8):
+                data = StringIO(byte_str.decode('utf-8-sig'))
+            else:
+                data = StringIO(byte_str.decode('utf-8'))
+
         except:
             log.error(traceback.format_exc())
             log.error('Could not load into string')

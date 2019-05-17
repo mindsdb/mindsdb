@@ -380,7 +380,7 @@ class LudwigBackend():
         if len(gpu_indices) == 0:
             return None
         else:
-            return [gpu_indices]
+            return gpu_indices
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')

@@ -111,7 +111,7 @@ def run_tests():
 
         # Print statements are in for debugging, remove later, but keep the funcion calls to make sure the interface is working
         models = mdb.get_models()
-        amd = mdb.get_model_data(models[0]['name'])
+        amd = mdb.get_model_data('test_one_label_prediction')
         print(amd)
 
     except:

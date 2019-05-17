@@ -76,10 +76,10 @@ class Predictor:
                         else:
                             model[k] = None
                             print(f'Key {k} not found in the light model metadata !')
+                    models.append(model)
                 except:
-                    print(f"Can't adapt metadata for model: {model_name} when calling `get_models()`")
-                    
-                models.append(model)
+                    print(f"Can't adapt metadata for model: '{model_name}' when calling `get_models()`")
+
         return models
 
     def _adapt_column(self, col_stats, col):

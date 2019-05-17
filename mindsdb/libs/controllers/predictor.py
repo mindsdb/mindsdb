@@ -344,6 +344,13 @@ class Predictor:
                 for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle']:
                     full_path = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, file_name)
                     zip_fp.write(full_path, os.path.basename(full_path))
+
+                ludwig_model_path = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name + '_ludwig_data')
+                for root, dirs, files in os.walk(ludwig_model_path):
+                    for file in files:
+                        full_path = os.path.join(root, file)
+                        zip_fp.write(full_path, full_path[len(ludwig_model_path):])
+
             print(f'Exported model to {storage_file}')
             return True
         except Exception as e:

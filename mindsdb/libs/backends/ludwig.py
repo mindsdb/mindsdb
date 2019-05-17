@@ -415,7 +415,7 @@ class LudwigBackend():
 
                 train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self.get_useable_gpus())
             else:
-                model = LudwigModel.load(model_dir=get_model_dir())
+                model = LudwigModel.load(model_dir=self.get_model_dir())
                 train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self.get_useable_gpus())
 
             for k in train_stats['train']:

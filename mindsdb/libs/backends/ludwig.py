@@ -3,11 +3,15 @@ from mindsdb.config import *
 from mindsdb.libs.helpers.general_helpers import disable_ludwig_output
 
 from dateutil.parser import parse as parse_datetime
-from scipy.misc import imread
 import os, sys
+import shutil
 
+from tensorflow.python.client import device_lib
 from ludwig.api import LudwigModel
+from ludwig.data.preprocessing import build_metadata
 import pandas as pd
+from scipy.misc import imread
+
 
 # @TODO: Define generci interface, similar to 'base_module' in the phases
 class LudwigBackend():
@@ -341,6 +345,7 @@ class LudwigBackend():
                             ,'width': width
                             ,'resize_image': True
                             ,'resize_method': 'crop_or_pad'
+                            ,'num_channels': 3
                         }
                     }
 
@@ -358,6 +363,25 @@ class LudwigBackend():
 
         return df, model_definition
 
+    def get_model_dir(self):
+        model_dir = None
+        for thing in os.listdir(self.transaction.lmd['ludwig_data']['ludwig_save_path']):
+            if 'api_experiment' in thing:
+                model_dir = os.path.join(self.transaction.lmd['ludwig_data']['ludwig_save_path'],thing,'model')
+        if model_dir is None:
+            model_dir = os.path.join(self.transaction.lmd['ludwig_data']['ludwig_save_path'],'model')
+        return model_dir
+
+    def get_useable_gpus(self):
+        local_device_protos = device_lib.list_local_devices()
+        gpus = [x for x in local_device_protos if x.device_type == 'GPU']
+        #bus_ids = [x.locality.bus_id for x in gpus]
+        gpu_indices = [i for i in range(len(gpus))]
+        if len(gpu_indices) == 0:
+            return None
+        else:
+            return gpu_indices
+
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')
         if self.transaction.lmd['model_order_by'] is None:
@@ -369,19 +393,30 @@ class LudwigBackend():
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
         with disable_ludwig_output(True):
-
-            model = LudwigModel(model_definition)
-
             # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train... see this issue for any updates on the matter: https://github.com/uber/ludwig/issues/295
             #model.initialize_model(train_set_metadata={})
             #train_stats = model.train_online(data_df=training_dataframe) # ??Where to add model_name?? ----> model_name=self.transaction.lmd['name']
 
+            ludwig_save_is_working = False
+
+            if not ludwig_save_is_working:
+                shutil.rmtree('results',ignore_errors=True)
+
             if self.transaction.lmd['rebuild_model'] is True:
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=True)
+                model = LudwigModel(model_definition)
+                merged_model_definition = model.model_definition
+                train_set_metadata = build_metadata(
+                    training_dataframe,
+                    (merged_model_definition['input_features'] +
+                    merged_model_definition['output_features']),
+                    merged_model_definition['preprocessing']
+                )
+                model.initialize_model(train_set_metadata=train_set_metadata, gpus=self.get_useable_gpus())
+
+                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self.get_useable_gpus())
             else:
-                model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=True)
-                #,model_load_path=self.transaction.lmd['ludwig_data']['ludwig_save_path'])
+                model = LudwigModel.load(model_dir=self.get_model_dir())
+                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self.get_useable_gpus())
 
             for k in train_stats['train']:
                 if k not in self.transaction.lmd['model_accuracy']['train']:
@@ -394,27 +429,27 @@ class LudwigBackend():
                     self.transaction.lmd['model_accuracy']['train'][k].extend(train_stats['train'][k]['accuracy'])
                     self.transaction.lmd['model_accuracy']['test'][k].extend(train_stats['test'][k]['accuracy'])
 
-                '''
-                @ TRAIN ONLINE BIT That's not working
-                model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
-                for i in range(0,100):
-                    train_stats = model.train_online(data_df=training_dataframe)
-                    # The resulting train_stats are "None"... wonderful -_-
-                '''
+            '''
+            @ TRAIN ONLINE BIT That's not working
+            model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
+            for i in range(0,100):
+                train_stats = model.train_online(data_df=training_dataframe)
+                # The resulting train_stats are "None"... wonderful -_-
+            '''
 
-            ludwig_model_savepath = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_ludwig_data')
-
-        model.save(ludwig_model_savepath)
-        model.close()
-
+        ludwig_model_savepath = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_ludwig_data')
+        if ludwig_save_is_working:
+            model.save(ludwig_model_savepath)
+            model.close()
+        else:
+            shutil.rmtree(ludwig_model_savepath,ignore_errors=True)
+            shutil.move(os.path.join('results',os.listdir('results')[0]),ludwig_model_savepath)
         self.transaction.lmd['ludwig_data'] = {'ludwig_save_path': ludwig_model_savepath}
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}
 
     def predict(self, mode='predict', ignore_columns=[]):
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
-
-        model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
 
         if self.transaction.lmd['model_order_by'] is None:
             timeseries_cols = []
@@ -431,9 +466,10 @@ class LudwigBackend():
                 for date_appendage in ['_year', '_month','_day']:
                     predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
-        with disable_ludwig_output():
-            model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
-            predictions = model.predict(data_df=predict_dataframe)
+        with disable_ludwig_output(True):
+            model_dir = self.get_model_dir()
+            model = LudwigModel.load(model_dir=model_dir)
+            predictions = model.predict(data_df=predict_dataframe, gpus=self.get_useable_gpus())
 
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')

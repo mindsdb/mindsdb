@@ -1,6 +1,7 @@
 from mindsdb.libs.helpers.general_helpers import evaluate_accuracy, get_value_bucket
 from mindsdb.libs.phases.stats_generator.stats_generator import StatsGenerator
 from mindsdb.libs.data_types.transaction_data import TransactionData
+from mindsdb.libs.constants.mindsdb import *
 
 class ColumnEvaluator():
     """
@@ -35,9 +36,14 @@ class ColumnEvaluator():
             elif 'histogram' in validation_set_output_stats[output_column]:
                 all_columns_prediction_distribution[output_column] = validation_set_output_stats[output_column]['histogram']
 
+        ignorable_input_columns = []
         for input_column in input_columns:
+            if stats[input_column]['data_type'] != DATA_TYPES.FILE_PATH:
+                ignorable_input_columns.append(input_column)
+
+        for input_column in ignorable_input_columns:
             # See what happens with the accuracy of the outputs if only this column is present
-            ignore_columns = [col for col in input_columns if col != input_column ]
+            ignore_columns = [col for col in ignorable_input_columns if col != input_column]
             col_only_predictions = model.predict('validate', ignore_columns)
             col_only_accuracy = evaluate_accuracy(col_only_predictions, full_dataset, stats, output_columns)
 

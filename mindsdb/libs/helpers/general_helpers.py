@@ -256,11 +256,11 @@ def disable_ludwig_output(disable=True):
             old_tf_loglevel = os.environ['TF_CPP_MIN_LOG_LEVEL']
         except:
             old_tf_loglevel = '2'
-
-        if not disable:
-            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
         # Maybe get rid of this to not supress all errors and stdout
-        with suppress_stdout_stderr():
+        if disable:
+            with suppress_stdout_stderr():
+                yield
+        else:
             yield
     finally:
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = old_tf_loglevel

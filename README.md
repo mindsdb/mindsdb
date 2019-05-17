@@ -3,7 +3,7 @@
 #
 
 [![Build Status](https://travis-ci.org/mindsdb/mindsdb.svg?branch=master)](https://travis-ci.org/mindsdb/mindsdb)
-[![PyPI version](https://badge.fury.io/py/mindsdb.svg)](https://badge.fury.io/py/mindsdb)
+[![PyPI version](https://badge.fury.io/py/MindsDB.svg)](https://badge.fury.io/py/MindsDB)
 
 MindsDB's goal is to give developers easy access to the power of artificial neural networks for their projects.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
@@ -66,7 +66,7 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 ```
 
 
-[Learn More](docs/examples/basic/README.md)
+[Learn More](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 
 ## Report Issues
 

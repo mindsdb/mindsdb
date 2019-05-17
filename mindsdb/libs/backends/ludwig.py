@@ -397,7 +397,6 @@ class LudwigBackend():
         else:
             model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
             train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True)
-            #,model_load_path=self.transaction.lmd['ludwig_data']['ludwig_save_path'])
 
         for k in train_stats['train']:
             if k not in self.transaction.lmd['model_accuracy']['train']:
@@ -419,21 +418,21 @@ class LudwigBackend():
             '''
 
         ludwig_model_savepath = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_ludwig_data')
-
         if ludwig_save_is_working:
             model.save(ludwig_model_savepath)
             model.close()
         else:
+            try:
+                shutil.rmtree(ludwig_model_savepath)
+            except:
+                pass
             shutil.move(os.path.join('results',os.listdir('results')[0]),ludwig_model_savepath)
-
         self.transaction.lmd['ludwig_data'] = {'ludwig_save_path': ludwig_model_savepath}
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}
 
     def predict(self, mode='predict', ignore_columns=[]):
         predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
-
-        model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
 
         if self.transaction.lmd['model_order_by'] is None:
             timeseries_cols = []
@@ -451,7 +450,11 @@ class LudwigBackend():
                     predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
         with disable_ludwig_output():
-            model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
+            model_dir = None
+            for thing in os.listdir(self.transaction.lmd['ludwig_data']['ludwig_save_path']):
+                if 'api_experiment' in thing:
+                    model_dir = os.path.join(self.transaction.lmd['ludwig_data']['ludwig_save_path'],thing,'model')
+            model = LudwigModel.load(model_dir=model_dir)
             predictions = model.predict(data_df=predict_dataframe)
 
         for col_name in predictions:

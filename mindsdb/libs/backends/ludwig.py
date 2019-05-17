@@ -405,12 +405,12 @@ class LudwigBackend():
                     merged_model_definition['output_features']),
                     merged_model_definition['preprocessing']
                 )
-                model.initialize_model(train_set_metadata=train_set_metadata)
+                model.initialize_model(train_set_metadata=train_set_metadata, gpus=self.get_useable_gpus())
 
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True)
+                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self.get_useable_gpus())
             else:
                 model = LudwigModel.load(model_dir=get_model_dir())
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True)
+                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self.get_useable_gpus())
 
             for k in train_stats['train']:
                 if k not in self.transaction.lmd['model_accuracy']['train']:
@@ -466,7 +466,7 @@ class LudwigBackend():
         with disable_ludwig_output():
             model_dir = self.get_model_dir()
             model = LudwigModel.load(model_dir=model_dir)
-            predictions = model.predict(data_df=predict_dataframe)
+            predictions = model.predict(data_df=predict_dataframe, gpus=self.get_useable_gpus())
 
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')

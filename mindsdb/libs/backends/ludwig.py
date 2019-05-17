@@ -6,6 +6,7 @@ from dateutil.parser import parse as parse_datetime
 import os, sys
 import shutil
 
+from tensorflow.python.client import device_lib
 from ludwig.api import LudwigModel
 from ludwig.data.preprocessing import build_metadata
 import pandas as pd
@@ -370,6 +371,10 @@ class LudwigBackend():
         if model_dir is None:
             model_dir = os.path.join(self.transaction.lmd['ludwig_data']['ludwig_save_path'],'model')
         return model_dir
+
+    def get_useable_gpus(self):
+        local_device_protos = device_lib.list_local_devices()
+        return [x.name for x in local_device_protos if x.device_type == 'GPU']
 
     def train(self):
         training_dataframe, model_definition = self._create_ludwig_dataframe('train')

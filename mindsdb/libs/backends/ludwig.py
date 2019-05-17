@@ -362,7 +362,7 @@ class LudwigBackend():
 
         return df, model_definition
 
-    def get_model_dir():
+    def get_model_dir(self):
         model_dir = None
         for thing in os.listdir(self.transaction.lmd['ludwig_data']['ludwig_save_path']):
             if 'api_experiment' in thing:

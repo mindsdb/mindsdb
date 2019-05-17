@@ -46,8 +46,13 @@ class ModelAnalyzer(BaseModule):
                 probabilistic_validators[col] = ProbabilisticValidator(
                     col_stats=self.transaction.lmd['column_stats'][col])
 
+        ignorable_input_columns = []
+        for input_column in input_columns:
+            if self.transaction.lmd['column_stats'][input_column]['data_type'] != DATA_TYPES.FILE_PATH:
+                ignorable_input_columns.append(input_column)
+
         # Run on the validation set multiple times, each time with one of the column blanked out
-        for column_name in input_columns:
+        for column_name in ignorable_input_columns:
             ignore_columns = []
             ignore_columns.append(column_name)
 

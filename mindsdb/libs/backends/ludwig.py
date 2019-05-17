@@ -460,7 +460,6 @@ class LudwigBackend():
 
         with disable_ludwig_output():
             model_dir = self.get_model_dir()
-
             model = LudwigModel.load(model_dir=model_dir)
             predictions = model.predict(data_df=predict_dataframe)
 

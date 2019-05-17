@@ -349,7 +349,7 @@ class Predictor:
                 for root, dirs, files in os.walk(ludwig_model_path):
                     for file in files:
                         full_path = os.path.join(root, file)
-                        zip_fp.write(full_path, full_path[len(ludwig_model_path):])
+                        zip_fp.write(full_path, full_path[len(CONFIG.MINDSDB_STORAGE_PATH):])
 
             print(f'Exported model to {storage_file}')
             return True

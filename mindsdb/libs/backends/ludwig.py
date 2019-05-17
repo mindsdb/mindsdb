@@ -3,11 +3,14 @@ from mindsdb.config import *
 from mindsdb.libs.helpers.general_helpers import disable_ludwig_output
 
 from dateutil.parser import parse as parse_datetime
-from scipy.misc import imread
 import os, sys
+import shutil
 
 from ludwig.api import LudwigModel
+from ludwig.data.preprocessing import build_metadata
 import pandas as pd
+from scipy.misc import imread
+
 
 # @TODO: Define generci interface, similar to 'base_module' in the phases
 class LudwigBackend():
@@ -341,6 +344,7 @@ class LudwigBackend():
                             ,'width': width
                             ,'resize_image': True
                             ,'resize_method': 'crop_or_pad'
+                            ,'num_channels': 3
                         }
                     }
 
@@ -368,44 +372,59 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
-        with disable_ludwig_output(True):
-
-            model = LudwigModel(model_definition)
-
+        #with disable_ludwig_output(True):
             # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train... see this issue for any updates on the matter: https://github.com/uber/ludwig/issues/295
             #model.initialize_model(train_set_metadata={})
             #train_stats = model.train_online(data_df=training_dataframe) # ??Where to add model_name?? ----> model_name=self.transaction.lmd['name']
 
-            if self.transaction.lmd['rebuild_model'] is True:
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=True)
+        ludwig_save_is_working = False
+
+        if not ludwig_save_is_working:
+            shutil.rmtree('results')
+
+        if self.transaction.lmd['rebuild_model'] is True:
+            model = LudwigModel(model_definition)
+            merged_model_definition = model.model_definition
+            train_set_metadata = build_metadata(
+                training_dataframe,
+                (merged_model_definition['input_features'] +
+                merged_model_definition['output_features']),
+                merged_model_definition['preprocessing']
+            )
+            model.initialize_model(train_set_metadata=train_set_metadata)
+
+            train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True)
+        else:
+            model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
+            train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True)
+            #,model_load_path=self.transaction.lmd['ludwig_data']['ludwig_save_path'])
+
+        for k in train_stats['train']:
+            if k not in self.transaction.lmd['model_accuracy']['train']:
+                self.transaction.lmd['model_accuracy']['train'][k] = []
+                self.transaction.lmd['model_accuracy']['test'][k] = []
+            elif k is not 'combined':
+                # We should be adding the accuracy here but we only have it for combined, so, for now use that, will only affect multi-output scenarios anyway
+                pass
             else:
-                model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=True)
-                #,model_load_path=self.transaction.lmd['ludwig_data']['ludwig_save_path'])
+                self.transaction.lmd['model_accuracy']['train'][k].extend(train_stats['train'][k]['accuracy'])
+                self.transaction.lmd['model_accuracy']['test'][k].extend(train_stats['test'][k]['accuracy'])
 
-            for k in train_stats['train']:
-                if k not in self.transaction.lmd['model_accuracy']['train']:
-                    self.transaction.lmd['model_accuracy']['train'][k] = []
-                    self.transaction.lmd['model_accuracy']['test'][k] = []
-                elif k is not 'combined':
-                    # We should be adding the accuracy here but we only have it for combined, so, for now use that, will only affect multi-output scenarios anyway
-                    pass
-                else:
-                    self.transaction.lmd['model_accuracy']['train'][k].extend(train_stats['train'][k]['accuracy'])
-                    self.transaction.lmd['model_accuracy']['test'][k].extend(train_stats['test'][k]['accuracy'])
+            '''
+            @ TRAIN ONLINE BIT That's not working
+            model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
+            for i in range(0,100):
+                train_stats = model.train_online(data_df=training_dataframe)
+                # The resulting train_stats are "None"... wonderful -_-
+            '''
 
-                '''
-                @ TRAIN ONLINE BIT That's not working
-                model = LudwigModel.load(self.transaction.lmd['ludwig_data']['ludwig_save_path'])
-                for i in range(0,100):
-                    train_stats = model.train_online(data_df=training_dataframe)
-                    # The resulting train_stats are "None"... wonderful -_-
-                '''
+        ludwig_model_savepath = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_ludwig_data')
 
-            ludwig_model_savepath = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_ludwig_data')
-
-        model.save(ludwig_model_savepath)
-        model.close()
+        if ludwig_save_is_working:
+            model.save(ludwig_model_savepath)
+            model.close()
+        else:
+            shutil.move(os.path.join('results',os.listdir('results')[0]),ludwig_model_savepath)
 
         self.transaction.lmd['ludwig_data'] = {'ludwig_save_path': ludwig_model_savepath}
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}

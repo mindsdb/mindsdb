@@ -378,11 +378,8 @@ class LudwigBackend():
         #bus_ids = [x.locality.bus_id for x in gpus]
         gpu_indices = [i for i in range(len(gpus))]
         if len(gpu_indices) == 0:
-            print('\n\n\n----------HERE1--------\n\n\n')
             return None
         else:
-            print('\n\n\n----------HERE2--------\n\n\n')
-            print(gpu_indices)
             return [gpu_indices]
 
     def train(self):

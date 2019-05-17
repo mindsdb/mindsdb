@@ -449,13 +449,16 @@ class LudwigBackend():
                 for date_appendage in ['_year', '_month','_day']:
                     predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
-        with disable_ludwig_output():
-            model_dir = None
-            for thing in os.listdir(self.transaction.lmd['ludwig_data']['ludwig_save_path']):
-                if 'api_experiment' in thing:
-                    model_dir = os.path.join(self.transaction.lmd['ludwig_data']['ludwig_save_path'],thing,'model')
-            model = LudwigModel.load(model_dir=model_dir)
-            predictions = model.predict(data_df=predict_dataframe)
+        #with disable_ludwig_output():
+        model_dir = None
+        for thing in os.listdir(self.transaction.lmd['ludwig_data']['ludwig_save_path']):
+            if 'api_experiment' in thing:
+                model_dir = os.path.join(self.transaction.lmd['ludwig_data']['ludwig_save_path'],thing,'model')
+        if model_dir is None:
+            model_dir = os.path.join(self.transaction.lmd['ludwig_data']['ludwig_save_path'],'model')
+
+        model = LudwigModel.load(model_dir=model_dir)
+        predictions = model.predict(data_df=predict_dataframe)
 
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')

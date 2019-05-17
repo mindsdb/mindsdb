@@ -23,6 +23,7 @@ If you'd prefer to watch a video tutorial, you can find it [here](https://www.yo
 
 Set up is simple, just use:
 
+
 ```bash
  pip3 install mindsdb --user
 ```

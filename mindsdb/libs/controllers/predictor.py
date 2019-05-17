@@ -66,15 +66,19 @@ class Predictor:
         for fn in os.listdir(CONFIG.MINDSDB_STORAGE_PATH):
             if '_light_model_metadata.pickle' in fn:
                 model_name = fn.replace('_light_model_metadata.pickle','')
-                lmd = self.get_model_data(model_name)
-                model = {}
-                for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
-                'status', 'train_end_at', 'updated_at', 'created_at']:
-                    if k in lmd:
-                        model[k] = lmd[k]
-                    else:
-                        model[k] = None
-                        print(f'Key {k} not found in the light model metadata !')
+                try:
+                    lmd = self.get_model_data(model_name)
+                    model = {}
+                    for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
+                    'status', 'train_end_at', 'updated_at', 'created_at']:
+                        if k in lmd:
+                            model[k] = lmd[k]
+                        else:
+                            model[k] = None
+                            print(f'Key {k} not found in the light model metadata !')
+                except:
+                    print(f"Can't adapt metadata for model: {model_name} when calling `get_models()`")
+                    
                 models.append(model)
         return models
 

@@ -10,7 +10,7 @@ from tensorflow.python.client import device_lib
 from ludwig.api import LudwigModel
 from ludwig.data.preprocessing import build_metadata
 import pandas as pd
-from scipy.misc import imread
+from imageio import imread
 
 
 # @TODO: Define generci interface, similar to 'base_module' in the phases

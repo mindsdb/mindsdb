@@ -45,7 +45,7 @@ def test_timeseries():
     logger.info('Starting timeseries test !')
     ts_hours = 12
     separator = ','
-    data_len = 1200
+    data_len = 5000
     train_file_name = 'train_data.csv'
     test_file_name = 'test_data.csv'
 
@@ -91,9 +91,9 @@ def test_timeseries():
             from_data=train_file_name,
             to_predict=label_headers
             # timeseries specific argsw
-            ,order_by=feature_headers[0]
-            ,window_size_seconds=ts_hours* 3600 * 1.5
-            #,window_size=6
+            ,order_by=feature_headers[1]
+            #,window_size_seconds=ts_hours* 3600 * 1.5
+            ,window_size_samples=6
             ,group_by = feature_headers[3]
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
@@ -378,7 +378,7 @@ def test_multilabel_prediction():
 
 
 setup_testing_logger()
-test_one_label_prediction_wo_strings()
+#test_one_label_prediction_wo_strings()
 test_timeseries()
-test_multilabel_prediction()
-test_one_label_prediction()
+#test_multilabel_prediction()
+#test_one_label_prediction()

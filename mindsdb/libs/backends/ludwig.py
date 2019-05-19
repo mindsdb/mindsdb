@@ -205,12 +205,12 @@ class LudwigBackend():
 
             if col in timeseries_cols:
                 encoder = 'rnn'
-                cell_type = 'gru_cudnn'
+                cell_type = 'rnn'
                 ludwig_dtype = 'order_by_col'
 
             if data_subtype in DATA_SUBTYPES.ARRAY:
                 encoder = 'rnn'
-                cell_type = 'gru_cudnn'
+                cell_type = 'rnn'
                 ludwig_dtype = 'sequence'
 
             elif data_subtype in (DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):

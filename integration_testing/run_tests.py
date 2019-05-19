@@ -79,7 +79,7 @@ def test_timeseries():
 
     mdb = None
     try:
-        mdb = mindsdb.Predictor(name='test_date_timeseries')
+        mdb = mindsdb.Predictor(name='test_date_timeseries',use_gpu=False)
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         logger.error(f'Failed to create mindsdb Predictor')
@@ -104,7 +104,7 @@ def test_timeseries():
 
     # Predict
     try:
-        mdb = mindsdb.Predictor(name='test_date_timeseries')
+        mdb = mindsdb.Predictor(name='test_date_timeseries',use_gpu=False)
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         print(traceback.format_exc())

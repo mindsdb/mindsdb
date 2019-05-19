@@ -296,6 +296,12 @@ class LudwigBackend():
 
                     custom_logic_continue = True
 
+                    if col in timeseries_cols:
+                        timeseries_cols.remove(col)
+                        timeseries_cols.append(col + '_day')
+                        timeseries_cols.append(col + '_month')
+                        timeseries_cols.append(col + '_year')
+
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
                     if self.transaction.input_data.data_array[row_ind][col_ind] is None:
                         unix_ts = 0

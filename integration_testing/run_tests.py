@@ -79,9 +79,10 @@ def test_timeseries():
 
     mdb = None
     try:
-        mdb = mindsdb.Predictor(name='test_date_timeseries',use_gpu=False)
+        mdb = mindsdb.Predictor(name='test_date_timeseries')
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
+        print(traceback.format_exc())
         logger.error(f'Failed to create mindsdb Predictor')
         exit(1)
 
@@ -95,6 +96,7 @@ def test_timeseries():
             #,window_size_seconds=ts_hours* 3600 * 1.5
             ,window_size_samples=6
             #,group_by = feature_headers[3]
+            ,use_gpu=False
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:
@@ -104,7 +106,7 @@ def test_timeseries():
 
     # Predict
     try:
-        mdb = mindsdb.Predictor(name='test_date_timeseries',use_gpu=False)
+        mdb = mindsdb.Predictor(name='test_date_timeseries')
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         print(traceback.format_exc())
@@ -112,7 +114,7 @@ def test_timeseries():
         exit(1)
 
     try:
-        results = mdb.predict(when_data=test_file_name)
+        results = mdb.predict(when_data=test_file_name,use_gpu=False)
         models = mdb.get_models()
         mdb.get_model_data(models[0]['name'])
         for row in results:

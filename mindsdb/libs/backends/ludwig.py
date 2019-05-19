@@ -47,7 +47,7 @@ class LudwigBackend():
         for feature_def in model_definition['input_features']:
             if feature_def['name'] not in self.transaction.lmd['model_group_by'] and feature_def['name'] not in previous_predict_col_names:
                 feature_def['type'] = 'sequence'
-                if feature_def['name'] not in timeseries_cols:
+                if feature_def['name'] not in [timeseries_col_name]:
                     other_col_names.append(feature_def['name'])
 
 
@@ -367,7 +367,7 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             df.sort_values(timeseries_cols)
 
-        return df, model_definition
+        return df, model_definition, timeseries_cols
 
     def get_model_dir(self):
         model_dir = None
@@ -389,16 +389,13 @@ class LudwigBackend():
             return gpu_indices
 
     def train(self):
-        training_dataframe, model_definition = self._create_ludwig_dataframe('train')
-        if self.transaction.lmd['model_order_by'] is None:
-            timeseries_cols = []
-        else:
-            timeseries_cols = list(map(lambda x: x[0], self.transaction.lmd['model_order_by']))
+        training_dataframe, model_definition, timeseries_cols = self._create_ludwig_dataframe('train')
 
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
+            print(training_dataframe)
 
-        with disable_ludwig_output(True):
+        with disable_ludwig_output(False):
             # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train... see this issue for any updates on the matter: https://github.com/uber/ludwig/issues/295
             #model.initialize_model(train_set_metadata={})
             #train_stats = model.train_online(data_df=training_dataframe) # ??Where to add model_name?? ----> model_name=self.transaction.lmd['name']
@@ -454,13 +451,8 @@ class LudwigBackend():
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}
 
     def predict(self, mode='predict', ignore_columns=[]):
-        predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
+        predict_dataframe, model_definition, timeseries_cols = self._create_ludwig_dataframe(mode)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
-
-        if self.transaction.lmd['model_order_by'] is None:
-            timeseries_cols = []
-        else:
-            timeseries_cols = list(map(lambda x: x[0], self.transaction.lmd['model_order_by']))
 
         if len(timeseries_cols) > 0:
             predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)
@@ -472,7 +464,7 @@ class LudwigBackend():
                 for date_appendage in ['_year', '_month','_day']:
                     predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
-        with disable_ludwig_output(True):
+        with disable_ludwig_output(False):
             model_dir = self.get_model_dir()
             model = LudwigModel.load(model_dir=model_dir)
             predictions = model.predict(data_df=predict_dataframe, gpus=self.get_useable_gpus())

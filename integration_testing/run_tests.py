@@ -45,7 +45,7 @@ def test_timeseries():
     logger.info('Starting timeseries test !')
     ts_hours = 12
     separator = ','
-    data_len = 5000
+    data_len = 600
     train_file_name = 'train_data.csv'
     test_file_name = 'test_data.csv'
 
@@ -54,9 +54,9 @@ def test_timeseries():
 
     try:
         # add ,'ascii' in the features list to re-implement the group by
-        features = generate_value_cols(['datetime','int','float', 'ascii'],data_len, separator, ts_hours * 3600)
-        features[3] = list(map(lambda x: str(x[0]) if len(x) > 0 else 'Nrmm', features[3]))
-        labels = [generate_labels_1(features, separator)]
+        features = generate_value_cols(['date','int'],data_len, separator, ts_hours * 3600)
+        #features[3] = list(map(lambda x: str(x[0]) if len(x) > 0 else 'Nrmm', features[3]))
+        labels = [generate_labels_2(features, separator)]
 
         feature_headers = list(map(lambda col: col[0], features))
         label_headers = list(map(lambda col: col[0], labels))
@@ -91,10 +91,10 @@ def test_timeseries():
             from_data=train_file_name,
             to_predict=label_headers
             # timeseries specific argsw
-            ,order_by=feature_headers[1]
+            ,order_by=feature_headers[0]
             #,window_size_seconds=ts_hours* 3600 * 1.5
             ,window_size_samples=6
-            ,group_by = feature_headers[3]
+            #,group_by = feature_headers[3]
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:

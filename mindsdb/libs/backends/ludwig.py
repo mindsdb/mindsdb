@@ -379,6 +379,8 @@ class LudwigBackend():
         return model_dir
 
     def get_useable_gpus(self):
+        if self.lmd['use_gpu'] == False:
+            return []
         local_device_protos = device_lib.list_local_devices()
         gpus = [x for x in local_device_protos if x.device_type == 'GPU']
         #bus_ids = [x.locality.bus_id for x in gpus]

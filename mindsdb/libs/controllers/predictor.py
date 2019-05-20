@@ -225,7 +225,7 @@ class Predictor:
             try:
                 icm = self._adapt_column(lmd['column_stats'][col],col)
             except:
-                print(f'Issue processing column: {col} !')
+                icm = {'column_name': col}
                 continue
 
             amd['force_vectors'] = {}

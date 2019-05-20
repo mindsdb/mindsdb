@@ -47,7 +47,7 @@ class LudwigBackend():
         for feature_def in model_definition['input_features']:
             if feature_def['name'] not in self.transaction.lmd['model_group_by'] and feature_def['name'] not in previous_predict_col_names:
                 feature_def['type'] = 'sequence'
-                if feature_def['name'] not in timeseries_cols:
+                if feature_def['name'] not in [timeseries_col_name]:
                     other_col_names.append(feature_def['name'])
 
 
@@ -205,12 +205,12 @@ class LudwigBackend():
 
             if col in timeseries_cols:
                 encoder = 'rnn'
-                cell_type = 'gru_cudnn'
+                cell_type = 'rnn'
                 ludwig_dtype = 'order_by_col'
 
             if data_subtype in DATA_SUBTYPES.ARRAY:
                 encoder = 'rnn'
-                cell_type = 'gru_cudnn'
+                cell_type = 'rnn'
                 ludwig_dtype = 'sequence'
 
             elif data_subtype in (DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
@@ -296,6 +296,12 @@ class LudwigBackend():
 
                     custom_logic_continue = True
 
+                    if col in timeseries_cols:
+                        timeseries_cols.remove(col)
+                        timeseries_cols.append(col + '_day')
+                        timeseries_cols.append(col + '_month')
+                        timeseries_cols.append(col + '_year')
+
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
                     if self.transaction.input_data.data_array[row_ind][col_ind] is None:
                         unix_ts = 0
@@ -361,7 +367,7 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             df.sort_values(timeseries_cols)
 
-        return df, model_definition
+        return df, model_definition, timeseries_cols
 
     def get_model_dir(self):
         model_dir = None
@@ -373,6 +379,8 @@ class LudwigBackend():
         return model_dir
 
     def get_useable_gpus(self):
+        if self.transaction.lmd['use_gpu'] == False:
+            return []
         local_device_protos = device_lib.list_local_devices()
         gpus = [x for x in local_device_protos if x.device_type == 'GPU']
         #bus_ids = [x.locality.bus_id for x in gpus]
@@ -383,11 +391,7 @@ class LudwigBackend():
             return gpu_indices
 
     def train(self):
-        training_dataframe, model_definition = self._create_ludwig_dataframe('train')
-        if self.transaction.lmd['model_order_by'] is None:
-            timeseries_cols = []
-        else:
-            timeseries_cols = list(map(lambda x: x[0], self.transaction.lmd['model_order_by']))
+        training_dataframe, model_definition, timeseries_cols = self._create_ludwig_dataframe('train')
 
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
@@ -448,13 +452,8 @@ class LudwigBackend():
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}
 
     def predict(self, mode='predict', ignore_columns=[]):
-        predict_dataframe, model_definition = self._create_ludwig_dataframe(mode)
+        predict_dataframe, model_definition, timeseries_cols = self._create_ludwig_dataframe(mode)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
-
-        if self.transaction.lmd['model_order_by'] is None:
-            timeseries_cols = []
-        else:
-            timeseries_cols = list(map(lambda x: x[0], self.transaction.lmd['model_order_by']))
 
         if len(timeseries_cols) > 0:
             predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)

@@ -45,7 +45,7 @@ def test_timeseries():
     logger.info('Starting timeseries test !')
     ts_hours = 12
     separator = ','
-    data_len = 1200
+    data_len = 600
     train_file_name = 'train_data.csv'
     test_file_name = 'test_data.csv'
 
@@ -54,9 +54,9 @@ def test_timeseries():
 
     try:
         # add ,'ascii' in the features list to re-implement the group by
-        features = generate_value_cols(['datetime','int','float', 'ascii'],data_len, separator, ts_hours * 3600)
-        features[3] = list(map(lambda x: str(x[0]) if len(x) > 0 else 'Nrmm', features[3]))
-        labels = [generate_labels_1(features, separator)]
+        features = generate_value_cols(['date','int'],data_len, separator, ts_hours * 3600)
+        #features[3] = list(map(lambda x: str(x[0]) if len(x) > 0 else 'Nrmm', features[3]))
+        labels = [generate_labels_2(features, separator)]
 
         feature_headers = list(map(lambda col: col[0], features))
         label_headers = list(map(lambda col: col[0], labels))
@@ -82,6 +82,7 @@ def test_timeseries():
         mdb = mindsdb.Predictor(name='test_date_timeseries')
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
+        print(traceback.format_exc())
         logger.error(f'Failed to create mindsdb Predictor')
         exit(1)
 
@@ -92,9 +93,10 @@ def test_timeseries():
             to_predict=label_headers
             # timeseries specific argsw
             ,order_by=feature_headers[0]
-            ,window_size_seconds=ts_hours* 3600 * 1.5
-            #,window_size=6
-            ,group_by = feature_headers[3]
+            #,window_size_seconds=ts_hours* 3600 * 1.5
+            ,window_size_samples=6
+            #,group_by = feature_headers[3]
+            ,use_gpu=False
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:
@@ -112,7 +114,7 @@ def test_timeseries():
         exit(1)
 
     try:
-        results = mdb.predict(when_data=test_file_name)
+        results = mdb.predict(when_data=test_file_name,use_gpu=False)
         models = mdb.get_models()
         mdb.get_model_data(models[0]['name'])
         for row in results:
@@ -378,7 +380,7 @@ def test_multilabel_prediction():
 
 
 setup_testing_logger()
-test_one_label_prediction_wo_strings()
+#test_one_label_prediction_wo_strings()
 test_timeseries()
-test_multilabel_prediction()
-test_one_label_prediction()
+#test_multilabel_prediction()
+#test_one_label_prediction()

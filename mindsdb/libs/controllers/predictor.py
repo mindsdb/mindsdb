@@ -400,7 +400,7 @@ class Predictor:
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,
-    stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS, backend='ludwig', rebuild_model=True):
+    stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS, backend='ludwig', rebuild_model=True, use_gpu=True):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -498,6 +498,7 @@ class Predictor:
         light_transaction_metadata['unusual_columns_buckets_importances'] = None
         light_transaction_metadata['columnless_prediction_distribution'] = None
         light_transaction_metadata['all_columns_prediction_distribution'] = None
+        light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
 
 
@@ -522,7 +523,7 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
 
 
-    def predict(self, when={}, when_data = None, update_cached_model = False):
+    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=True):
         """
         You have a mind trained already and you want to make a prediction
 
@@ -552,6 +553,7 @@ class Predictor:
         light_transaction_metadata = {}
         light_transaction_metadata['name'] = self.name
         light_transaction_metadata['type'] = transaction_type
+        light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
 
         transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)

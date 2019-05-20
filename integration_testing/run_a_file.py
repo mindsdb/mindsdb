@@ -1,11 +1,21 @@
 from mindsdb import Predictor
 
 
-mdb = Predictor(name='suicide_model')
-mdb.learn(from_data="integration_testing/suicide.csv", to_predict='suicides_no')
+class Insurance:
 
-# use the model to make predictions
-result = Predictor(name='suicide_rates').predict(when={'country':'Greece','year':1981,'sex':'male','age':'35-54','population':300000})
+   def __init__(self):
+       self.mindsDb = Predictor(name='insurance')
 
-# you can now print the results
-print(result)
+   def insurance_train(self):
+       self.mindsDb.learn(to_predict='PolicyStatus',
+                          from_data="insu_replicate.csv",
+                          order_by=['DateRequested',
+                                    'DateRqmtLastFollowed1',
+                                    'DateRqmtLastFollowed2',
+                                    'DateRqmtLastFollowedF',
+                                    'DateRqmtLastFollowed3',
+                                    'DateSignedOff'],
+                                    window_size_samples=4)
+if __name__ == "__main__":
+   tTest = Insurance()
+   tTest.insurance_train()

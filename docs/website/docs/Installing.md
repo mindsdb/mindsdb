@@ -30,7 +30,7 @@ pip3 install mindsdb --user
 
 ## On Windows 10
 
-Install Conda [download here](https://www.anaconda.com/download/#windows) 
+Install Conda [download here](https://www.anaconda.com/download/#windows)
 and then run the **anaconda prompt**:
 
 ```bash
@@ -51,7 +51,7 @@ sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/dist
 
 ```
 
-We also have prebuilt images in [DockerHub](https://cloud.docker.com/repository/docker/mindsdb/mindsdb)
+You can also use the Docker image [here](https://github.com/mindsdb/mindsdb/tree/master/distributions/docker)
 
 # Hardware
 

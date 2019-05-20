@@ -19,7 +19,7 @@ You can get started with your own computer within under a minute.
 
 You can try MindsDb on [Google Colab](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
 
-You can also use the prebuilt images in [DockerHub](https://cloud.docker.com/repository/docker/mindsdb/mindsdb) or from [here](https://github.com/mindsdb/mindsdb/tree/master/distributions/docker)
+You can also use the Docker image [here](https://github.com/mindsdb/mindsdb/tree/master/distributions/docker)
 
 If you'd prefer to watch a video tutorial, you can find it [here](https://www.youtube.com/watch?v=a49CvkoOdfY). (Note: Please manually set it to 720p or greater to have the text appear clearly)
 

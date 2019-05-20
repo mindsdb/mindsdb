@@ -242,7 +242,7 @@ class Predictor:
                         amd['force_vectors'][col]['missing_data_distribution'][missing_column]['type'] = 'categorical'
 
                     icm['importance_score'] = None
-                    amd['data_analysis']['target_columns_metadata'].append(icm)
+                amd['data_analysis']['target_columns_metadata'].append(icm)
 
                 # Model analysis building for each of the predict columns
                 mao = {
@@ -269,48 +269,51 @@ class Predictor:
                   }
                 }
 
-                train_acc = lmd['model_accuracy']['train']['combined']
-                test_acc = lmd['model_accuracy']['test']['combined']
+                # This is a check to see if model analysis has run on this data
+                if 'model_accuracy' in lmd:
+                    train_acc = lmd['model_accuracy']['train']['combined']
+                    test_acc = lmd['model_accuracy']['test']['combined']
 
-                for i in range(0,len(train_acc)):
-                    mao['train_accuracy_over_time']['x'].append(i)
-                    mao['train_accuracy_over_time']['y'].append(train_acc[i])
+                    for i in range(0,len(train_acc)):
+                        mao['train_accuracy_over_time']['x'].append(i)
+                        mao['train_accuracy_over_time']['y'].append(train_acc[i])
 
-                for i in range(0,len(test_acc)):
-                    mao['test_accuracy_over_time']['x'].append(i)
-                    mao['test_accuracy_over_time']['y'].append([i])
+                    for i in range(0,len(test_acc)):
+                        mao['test_accuracy_over_time']['x'].append(i)
+                        mao['test_accuracy_over_time']['y'].append([i])
 
-                mao['accuracy_histogram']['x'] = []
-                mao['accuracy_histogram']['y'] = []
+                    mao['accuracy_histogram']['x'] = []
+                    mao['accuracy_histogram']['y'] = []
 
-                bucket_importance_keys = list(lmd['unusual_columns_buckets_importances'].keys())
-                for incol in lmd['column_importances']:
-                    incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
+                    bucket_importance_keys = list(lmd['unusual_columns_buckets_importances'].keys())
+                    for incol in lmd['column_importances']:
+                        incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
 
-                    mao['accuracy_histogram']['x'].append(incol)
-                    mao['accuracy_histogram']['y'].append(lmd['column_importances'][incol])
+                        mao['accuracy_histogram']['x'].append(incol)
+                        mao['accuracy_histogram']['y'].append(lmd['column_importances'][incol])
 
-                    if len(incol_bucket_importance_keys) > 0:
-                        sub_group_stats = []
-                        for sub_incol in incol_bucket_importance_keys:
-                            sub_group_stats.append(self._adapt_column(lmd['unusual_columns_buckets_importances'][sub_incol], sub_incol))
-                    else:
-                        sub_group_stats = [None]
-                    mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
+                        if len(incol_bucket_importance_keys) > 0:
+                            sub_group_stats = []
+                            for sub_incol in incol_bucket_importance_keys:
+                                sub_group_stats.append(self._adapt_column(lmd['unusual_columns_buckets_importances'][sub_incol], sub_incol))
+                        else:
+                            sub_group_stats = [None]
+                        mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
 
-                for icol in lmd['model_columns_map'].keys():
-                    if icol in lmd['malformed_columns']['names']:
-                        continue
-                    if icol not in lmd['predict_columns']:
-                        try:
-                            mao['overall_input_importance']['x'].append(icol)
-                            mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
-                        except:
-                            print(f'No column importances found for {icol} !')
+                    for icol in lmd['model_columns_map'].keys():
+                        if icol in lmd['malformed_columns']['names']:
+                            continue
+                        if icol not in lmd['predict_columns']:
+                            try:
+                                mao['overall_input_importance']['x'].append(icol)
+                                mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
+                            except:
+                                print(f'No column importances found for {icol} !')
 
                 amd['model_analysis'].append(mao)
             else:
-                icm['importance_score'] = lmd['column_importances'][col]
+                if 'column_importances' in lmd:
+                    icm['importance_score'] = lmd['column_importances'][col]
                 amd['data_analysis']['input_columns_metadata'].append(icm)
         # ADAPTOR CODE
 

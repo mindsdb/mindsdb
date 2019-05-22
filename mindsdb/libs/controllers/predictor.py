@@ -384,6 +384,12 @@ class Predictor:
         """
         shutil.unpack_archive(model_archive_path, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
 
+    def rename(self, new_name):
+        """
+        Renames the name of the predictor object
+        """
+        self.name = new_name
+
     def delete_model(self, model_name):
         """
         If you want to export a model to a file

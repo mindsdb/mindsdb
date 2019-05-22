@@ -1,12 +1,12 @@
 import pandas
 import re
-import urllib3
 from io import BytesIO, StringIO
 import csv
 import codecs
 import json
 import traceback
 import codecs
+import requests
 
 from mindsdb.libs.data_types.data_source import DataSource
 from pandas.io.json import json_normalize
@@ -73,10 +73,7 @@ class FileDS(DataSource):
 
         # get data from either url or file load in memory
         if file[:5] == 'http:' or file[:6] == 'https:':
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            http = urllib3.PoolManager()
-            r = http.request('GET', file, preload_content=False)
-
+            r = requests.get(file, stream=True)
             data.write(r.read())
             data.seek(0)
 

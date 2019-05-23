@@ -1007,28 +1007,3 @@ class StatsGenerator(BaseModule):
 
         self._log_interesting_stats(stats)
         return stats
-
-
-
-def test():
-    from mindsdb.libs.controllers.predictor import Predictor
-    from mindsdb import CONFIG
-
-    CONFIG.DEBUG_BREAK_POINT = PHASE_STATS_GENERATOR
-
-    mdb = Predictor(name='home_rentals')
-
-    mdb.learn(
-        from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",
-        # the path to the file where we can learn from, (note: can be url)
-        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        sample_margin_of_error=0.02
-    )
-
-
-
-
-
-# only run the test if this file is called from debugger
-if __name__ == "__main__":
-    test()

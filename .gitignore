@@ -80,3 +80,4 @@ integration_testing/video.py
 integration_testing/canvas.py
 test.out
 tmp.*
+tmp

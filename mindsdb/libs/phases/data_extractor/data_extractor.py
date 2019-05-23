@@ -97,7 +97,8 @@ class DataExtractor(BaseModule):
 
         df = self._apply_sort_conditions_to_df(df)
         g = df.columns.to_series().groupby(df.dtypes).groups
-
+        print(g)
+        exit()
         if np.dtype('<M8[ns]') in g:
             for colname in g[np.dtype('<M8[ns]')]:
                 df[colname] = df[colname].astype(str)

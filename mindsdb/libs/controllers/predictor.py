@@ -440,6 +440,7 @@ class Predictor:
 
         from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
+
         breakpoint = CONFIG.DEBUG_BREAK_POINT
         transaction_type = TRANSACTION_LEARN
         sample_confidence_level = 1 - sample_margin_of_error

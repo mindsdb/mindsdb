@@ -80,7 +80,7 @@ class Transaction:
             # Don't save data for now
             pickle.dump(save_hmd, fp)
 
-    def _call_phase_module(self, module_name, **kwargs):
+    def _call_phase_module(self, clean_exit, module_name, **kwargs):
         """
         Loads the module and runs it
 
@@ -99,8 +99,11 @@ class Transaction:
             error = 'Could not load module {module_name}'.format(module_name=module_name)
             self.log.error('Could not load module {module_name}'.format(module_name=module_name))
             self.log.error(traceback.format_exc())
-            raise ValueError(error)
-            return None
+            if clean_exit:
+                exit(1)
+            else:
+                raise ValueError(error)
+                return None
         finally:
             self.lmd['is_active'] = False
 
@@ -112,7 +115,7 @@ class Transaction:
         """
         self.lmd['current_phase'] = MODEL_STATUS_PREPARING
         self.save_metadata()
-        self._call_phase_module('DataExtractor')
+        self._call_phase_module(clean_exit=True, module_name='DataExtractor')
 
         if len(self.input_data.data_array) <= 0 or len(self.input_data.data_array[0]) <=0:
             self.type = TRANSACTION_BAD_QUERY
@@ -125,7 +128,7 @@ class Transaction:
             self.lmd['columns'] = self.input_data.columns # this is populated by data extractor
             self.save_metadata()
 
-            self._call_phase_module('StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+            self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
 
@@ -138,7 +141,7 @@ class Transaction:
             self.lmd['train_end_at'] = str(datetime.datetime.now())
             self.save_metadata()
 
-            self._call_phase_module('ModelAnalyzer')
+            self._call_phase_module(clean_exit=True, module_name='ModelAnalyzer')
             self.save_metadata()
             return
 
@@ -194,7 +197,7 @@ class Transaction:
             self.log.error('No metadata found for this model')
             return
 
-        self._call_phase_module('DataExtractor')
+        self._call_phase_module(clean_exit=True, module_name='DataExtractor')
         self.save_metadata()
 
         if len(self.input_data.data_array[0]) <= 0:

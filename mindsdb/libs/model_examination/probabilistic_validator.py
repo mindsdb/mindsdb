@@ -36,6 +36,8 @@ class ProbabilisticValidator():
         if 'percentage_buckets' in col_stats:
             self.buckets = col_stats['percentage_buckets']
             self.bucket_keys = [i for i in range(len(self.buckets))]
+            print(self.bucket_keys)
+            exit()
         else:
             self.buckets = None
 

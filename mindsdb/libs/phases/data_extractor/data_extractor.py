@@ -107,13 +107,9 @@ class DataExtractor(BaseModule):
 
     def _validate_input_data_integrity(self):
         """
-
         :return:
         """
-
-
-
-        if len(self.transaction.input_data.data_frame) <= 0:
+        if self.transaction.input_data.data_frame.shape[0] <= 0:
             error = 'Input Data has no rows, please verify from_data or when_conditions'
             self.log.error(error)
             raise ValueError(error)
@@ -138,14 +134,8 @@ class DataExtractor(BaseModule):
     def run(self):
         result = self._get_prepared_input_df()
 
-        columns = list(result.columns.values)
-        print(type(result.columns.values))
-        exit()
-        self.transaction.input_data.columns = columns
+        self.transaction.input_data.columns = result.columns.values.tolist()
         self.transaction.input_data.data_frame = result
-
-        print(type(data_array))
-        exit()
 
         self._validate_input_data_integrity()
 

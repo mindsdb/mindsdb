@@ -286,6 +286,7 @@ class Predictor:
                     mao['accuracy_histogram']['y'] = []
 
                     bucket_importance_keys = list(lmd['unusual_columns_buckets_importances'].keys())
+
                     for incol in lmd['column_importances']:
                         incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
 
@@ -315,8 +316,7 @@ class Predictor:
                 if 'column_importances' in lmd:
                     icm['importance_score'] = lmd['column_importances'][col]
                 amd['data_analysis']['input_columns_metadata'].append(icm)
-        # ADAPTOR CODE
-
+                
         return amd
 
     def export(self, mindsdb_storage_dir='mindsdb_storage'):

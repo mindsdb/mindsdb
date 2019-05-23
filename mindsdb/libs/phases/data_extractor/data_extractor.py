@@ -139,8 +139,8 @@ class DataExtractor(BaseModule):
         result = self._get_prepared_input_df()
 
         columns = list(result.columns.values)
-        data_array = list(result.values.tolist())
-
+        print(type(result.columns.values))
+        exit()
         self.transaction.input_data.columns = columns
         self.transaction.input_data.data_frame = result
 

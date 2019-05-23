@@ -195,7 +195,6 @@ class Predictor:
                       "warning": col_stats['similarity_score_warning']
                 })
 
-
             icm[score.replace('_score','')] = {
                 "score": round(10 * (1 - col_stats[score])),
                 "metrics": metrics,
@@ -308,7 +307,13 @@ class Predictor:
                         if len(incol_bucket_importance_keys) > 0:
                             sub_group_stats = []
                             for sub_incol in incol_bucket_importance_keys:
-                                sub_group_stats.append(self._adapt_column(lmd['unusual_columns_buckets_importances'][sub_incol], sub_incol))
+                                adapted_sub_incol = self._adapt_column(lmd['unusual_columns_buckets_importances'][sub_incol], sub_incol)
+
+                                sub_incol_parts = sub_incol.split('_bucket_')
+                                sub_incol_name = 'Value Bucket "{}" for column: "{}"'.format(sub_incol_parts[1],sub_incol_parts[0])
+                                adapted_sub_incol['column_name'] = sub_incol_name
+
+                                sub_group_stats.append(adapted_sub_incol)
                         else:
                             sub_group_stats = [None]
                         mao['accuracy_histogram']['x_explained'].append(sub_group_stats)

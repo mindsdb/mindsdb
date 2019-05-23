@@ -110,7 +110,6 @@ class Transaction:
 
     def _execute_learn(self):
         """
-
         :return:
         """
         self.lmd['current_phase'] = MODEL_STATUS_PREPARING
@@ -151,21 +150,6 @@ class Transaction:
             self.lmd['error_msg'] = traceback.print_exc()
             self.log.error(str(e))
             raise e
-
-
-    def _execute_drop_model(self):
-        """
-        Make sure that we remove all previous data about this model
-
-        :return:
-        """
-
-
-        self.output_data.data_array = [['Model '+self.lmd['name']+' deleted.']]
-        self.output_data.columns = ['Status']
-
-        return
-
 
 
     def _execute_predict(self):
@@ -251,11 +235,6 @@ class Transaction:
             self.log.error(self.errorMsg)
             self.error = True
             return
-
-        if self.lmd['type'] == TRANSACTION_DROP_MODEL:
-            self._execute_drop_model()
-            return
-
 
         if self.lmd['type'] == TRANSACTION_LEARN:
             self.output_data.data_array = [['Model ' + self.lmd['name'] + ' training.']]

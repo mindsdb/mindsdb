@@ -113,7 +113,7 @@ class Transaction:
         self.save_metadata()
         self._call_phase_module(clean_exit=True, module_name='DataExtractor')
 
-        if len(self.input_data.data_frame) <= 0 or len(self.input_data.data_frame[0]) <=0:
+        if len(self.input_data.data_frame) == 0:
             self.type = TRANSACTION_BAD_QUERY
             self.errorMsg = "No results for this query."
             return

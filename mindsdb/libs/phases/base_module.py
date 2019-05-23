@@ -62,14 +62,6 @@ class BaseModule():
         if self.log_on_run:
             self.log.info('[START] {class_name}'.format(class_name=class_name))
 
-        # if we are past the breakpoint do nothing, breakpoints are used when testing a particular module
-        if self.transaction.breakpoint is not None and self.phase_name > self.transaction.breakpoint:
-            warning = 'Module {class_name} has a phase that is beyond breakpoint, module\'s phase: {current_phase}, transaction\'s breakpoint: {breakpoint}'.format(class_name=class_name, current_phase=self.phase_name, breakpoint=self.transaction.breakpoint)
-            self.log.warning(warning)
-            exit()
-
-
-        # else run it
         ret = self.run(**kwargs)
         execution_time = time.time() - start
         if self.log_on_run:

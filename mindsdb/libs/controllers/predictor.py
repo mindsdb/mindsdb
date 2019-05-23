@@ -130,20 +130,20 @@ class Predictor:
             if score == 'consistency_score':
                 metrics.append({
                       "type": "score",
-                      "score": col_stats['data_type_distribution_score'],
+                      "score": round(10 * (1 - col_stats['data_type_distribution_score'])),
                       "description": col_stats['data_type_distribution_score_description'],
                       "warning": col_stats['data_type_distribution_score_warning']
                 })
                 metrics.append({
                       "type": "score",
-                      "score": col_stats['empty_cells_score'],
+                      "score": round(10 * (1 - col_stats['empty_cells_score'])),
                       "description": col_stats['empty_cells_score_description'],
                       "warning": col_stats['empty_cells_score_warning']
                 })
                 if 'duplicates_score' in col_stats:
                     metrics.append({
                           "type": "score",
-                          "score": col_stats['duplicates_score'],
+                          "score": round(10 * (1 - col_stats['duplicates_score'])),
                           "description": col_stats['duplicates_score_description'],
                           "warning": col_stats['duplicates_score_warning']
                     })
@@ -152,26 +152,26 @@ class Predictor:
                 if 'lof_based_outlier_score' in col_stats and 'z_test_based_outlier_score' in col_stats:
                     metrics.append({
                           "type": "score",
-                          "score": col_stats['lof_based_outlier_score'],
+                          "score": round(10 * (1 - col_stats['lof_based_outlier_score'])),
                           "description": col_stats['lof_based_outlier_score_description'],
                           "warning": col_stats['lof_based_outlier_score_warning']
                     })
                     metrics.append({
                           "type": "score",
-                          "score": col_stats['z_test_based_outlier_score'],
+                          "score": round(10 * (1 - col_stats['z_test_based_outlier_score'])),
                           "description": col_stats['z_test_based_outlier_score_description'],
                           "warning": col_stats['z_test_based_outlier_score_warning']
                     })
                     metrics.append({
                           "type": "score",
-                          "score": col_stats['value_distribution_score'],
+                          "score": round(10 * (1 - col_stats['value_distribution_score'])),
                           "description": col_stats['value_distribution_score_description'],
                           "warning": col_stats['value_distribution_score_warning']
                     })
                 else:
                     metrics.append({
                           "type": "score",
-                          "score": col_stats['value_distribution_score'],
+                          "score": round(10 * (1 - col_stats['value_distribution_score'])),
                           "description": col_stats['value_distribution_score_description'],
                           "warning": col_stats['value_distribution_score_warning']
                     })
@@ -179,15 +179,15 @@ class Predictor:
             if score == 'redundancy_score':
                 metrics.append({
                       "type": "score",
-                      "score": col_stats['similarity_score'],
+                      "score": round(10 * (1 - col_stats['similarity_score'])),
                       "description": col_stats['similarity_score_description'],
                       "warning": col_stats['similarity_score_warning']
                 })
 
 
             icm[score.replace('_score','')] = {
-                'score': col_stats[score],
-                'metrics': metrics,
+                "score": round(10 * (1 - col_stats[score])),
+                "metrics": metrics,
                 "description": col_stats[f'{score}_description'],
                 "warning": col_stats[f'{score}_warning']
             }
@@ -316,7 +316,7 @@ class Predictor:
                 if 'column_importances' in lmd:
                     icm['importance_score'] = lmd['column_importances'][col]
                 amd['data_analysis']['input_columns_metadata'].append(icm)
-                
+
         return amd
 
     def export(self, mindsdb_storage_dir='mindsdb_storage'):

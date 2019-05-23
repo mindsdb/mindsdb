@@ -441,7 +441,6 @@ class Predictor:
         from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
 
-        breakpoint = CONFIG.DEBUG_BREAK_POINT
         transaction_type = TRANSACTION_LEARN
         sample_confidence_level = 1 - sample_margin_of_error
         predict_columns_map = {}
@@ -524,7 +523,7 @@ class Predictor:
 
             for k in ['from_data', 'test_from_data']:
                 if old_hmd[k] is not None: heavy_transaction_metadata[k] = old_hmd[k]
-        Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
+        Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
     def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=True):
@@ -539,7 +538,6 @@ class Predictor:
         """
 
         transaction_type = TRANSACTION_PREDICT
-        breakpoint = CONFIG.DEBUG_BREAK_POINT
         when_ds = None if when_data is None else getDS(when_data)
 
 
@@ -560,6 +558,6 @@ class Predictor:
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
 
-        transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
+        transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata)
 
         return transaction.output_data

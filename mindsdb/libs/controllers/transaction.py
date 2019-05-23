@@ -18,7 +18,7 @@ import datetime
 
 class Transaction:
 
-    def __init__(self, session, light_transaction_metadata, heavy_transaction_metadata, logger =  log, breakpoint = PHASE_END):
+    def __init__(self, session, light_transaction_metadata, heavy_transaction_metadata, logger =  log):
         """
         A transaction is the interface to start some MindsDB operation within a session
 
@@ -28,11 +28,8 @@ class Transaction:
         :param transaction_metadata:
         :type transaction_metadata: dict
         :type heavy_transaction_metadata: dict
-        :param breakpoint:
         """
 
-
-        self.breakpoint = breakpoint
         self.session = session
         self.lmd = light_transaction_metadata
         self.lmd['created_at'] = str(datetime.datetime.now())

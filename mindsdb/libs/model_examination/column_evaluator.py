@@ -27,7 +27,7 @@ class ColumnEvaluator():
         for output_column in output_columns:
             stats_generator = StatsGenerator(session=None, transaction=self.transaction)
             input_data = TransactionData()
-            input_data.data_array = list(map(lambda x: [x], list(self.normal_predictions[output_column])))
+            input_data.data_frame = list(map(lambda x: [x], list(self.normal_predictions[output_column])))
             input_data.columns = [output_column]
             validation_set_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
@@ -65,7 +65,7 @@ class ColumnEvaluator():
                     columnless_prediction_distribution[output_column] = {}
                 stats_generator = StatsGenerator(session=None, transaction=self.transaction)
                 input_data = TransactionData()
-                input_data.data_array = list(map(lambda x: [x], list(col_missing_predictions[output_column])))
+                input_data.data_frame = list(map(lambda x: [x], list(col_missing_predictions[output_column])))
                 input_data.columns = [output_column]
                 col_missing_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
@@ -106,7 +106,7 @@ class ColumnEvaluator():
                                 row_wise_data[-1].append(None)
 
                 input_data = TransactionData()
-                input_data.data_array = row_wise_data
+                input_data.data_frame = row_wise_data
                 input_data.columns = columns
 
                 stats_generator = StatsGenerator(session=None, transaction=self.transaction)

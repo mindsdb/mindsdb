@@ -26,7 +26,7 @@ class ModelAnalyzer(BaseModule):
                     continue
                 if col not in validation_dataset:
                     validation_dataset[col] = []
-                validation_dataset[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
+                validation_dataset[col].append(self.transaction.input_data.data_frame[row_ind][col_ind])
 
         # Test some hypotheses about our columns
         column_evaluator = ColumnEvaluator(self.transaction)

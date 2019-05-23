@@ -101,7 +101,7 @@ class DataExtractor(BaseModule):
         if np.dtype('datetime64[ns]') in groups:
             for colname in groups[np.dtype('datetime64[ns]')]:
                 df[colname] = df[colname].astype(str)
-                
+
         return df
 
 
@@ -113,7 +113,7 @@ class DataExtractor(BaseModule):
 
 
 
-        if len(self.transaction.input_data.data_array) <= 0:
+        if len(self.transaction.input_data.data_frame) <= 0:
             error = 'Input Data has no rows, please verify from_data or when_conditions'
             self.log.error(error)
             raise ValueError(error)
@@ -142,7 +142,10 @@ class DataExtractor(BaseModule):
         data_array = list(result.values.tolist())
 
         self.transaction.input_data.columns = columns
-        self.transaction.input_data.data_array = data_array
+        self.transaction.input_data.data_frame = result
+
+        print(type(data_array))
+        exit()
 
         self._validate_input_data_integrity()
 
@@ -158,7 +161,7 @@ class DataExtractor(BaseModule):
         self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] = []
         self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY] = []
         self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY] = []
-        for i, row in enumerate(self.transaction.input_data.data_array):
+        for i, row in enumerate(self.transaction.input_data.data_frame):
 
             if len(group_by) > 0:
                 group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in group_by_col_indexes])
@@ -218,7 +221,7 @@ class DataExtractor(BaseModule):
 
 
             total_rows_used = sum(total_rows_used_by_subset.values())
-            total_rows_in_input = len(self.transaction.input_data.data_array)
+            total_rows_in_input = len(self.transaction.input_data.data_frame)
             total_number_of_groupby_groups = len(self.transaction.input_data.all_indexes)
 
             if total_rows_used != total_rows_in_input:

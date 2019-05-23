@@ -116,7 +116,7 @@ class Transaction:
         self.save_metadata()
         self._call_phase_module(clean_exit=True, module_name='DataExtractor')
 
-        if len(self.input_data.data_array) <= 0 or len(self.input_data.data_array[0]) <=0:
+        if len(self.input_data.data_frame) <= 0 or len(self.input_data.data_frame[0]) <=0:
             self.type = TRANSACTION_BAD_QUERY
             self.errorMsg = "No results for this query."
             return
@@ -184,7 +184,7 @@ class Transaction:
         self._call_phase_module(clean_exit=True, module_name='DataExtractor')
         self.save_metadata()
 
-        if len(self.input_data.data_array[0]) <= 0:
+        if len(self.input_data.data_frame[0]) <= 0:
             self.output_data = self.input_data
             return
 
@@ -199,7 +199,7 @@ class Transaction:
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
         input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
 
-        for row in self.input_data.data_array:
+        for row in self.input_data.data_frame:
             for index, cell in enumerate(row):
                 col = self.input_data.columns[index]
                 self.output_data.data[col].append(cell)
@@ -237,7 +237,7 @@ class Transaction:
             return
 
         if self.lmd['type'] == TRANSACTION_LEARN:
-            self.output_data.data_array = [['Model ' + self.lmd['name'] + ' training.']]
+            self.output_data.data_frame = [['Model ' + self.lmd['name'] + ' training.']]
             self.output_data.columns = ['Status']
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False:

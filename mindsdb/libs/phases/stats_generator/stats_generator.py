@@ -755,7 +755,7 @@ class StatsGenerator(BaseModule):
         column_count = {}
 
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
-        population_size = len(input_data.data_array)
+        population_size = len(input_data.data_frame)
 
         if population_size < 50:
             sample_size = population_size
@@ -769,7 +769,7 @@ class StatsGenerator(BaseModule):
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
         for sample_i in input_data_sample_indexes:
-            row = input_data.data_array[sample_i]
+            row = input_data.data_frame[sample_i]
             for i, val in enumerate(row):
                 column = header[i]
                 value = cast_string_to_python_type(val)
@@ -788,7 +788,7 @@ class StatsGenerator(BaseModule):
         for i, col_name in enumerate(non_null_data):
             col_data = non_null_data[col_name]
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, i, input_data.data_array, col_name)
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, i, input_data.data_frame, col_name)
 
             if column_status == 'Column empty':
                 if modify_light_metadata:
@@ -880,7 +880,7 @@ class StatsGenerator(BaseModule):
                 }
             elif data_type == DATA_TYPES.CATEGORICAL:
                 all_values = []
-                for row in input_data.data_array:
+                for row in input_data.data_frame:
                     all_values.append(row[i])
 
                 histogram = Counter(all_values)
@@ -996,7 +996,7 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self._compute_data_quality_score(stats, col_name))
 
 
-        total_rows = len(input_data.data_array)
+        total_rows = len(input_data.data_frame)
 
         if modify_light_metadata:
             self.transaction.lmd['column_stats'] = stats

@@ -5,7 +5,7 @@ from mindsdb.libs.data_types.transaction_output_row import TransactionOutputRow
 
 class TrainTransactionOutputData():
     def __init__(self):
-        self.data_array = None
+        self.data_frame = None
         self.columns = None
 
 

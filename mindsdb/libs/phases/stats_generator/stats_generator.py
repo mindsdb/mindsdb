@@ -768,6 +768,10 @@ class StatsGenerator(BaseModule):
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
+        print(input_data.data_frame)
+        print(len(input_data.data_frame))
+        print(input_data_sample_indexes)
+        
         for sample_i in input_data_sample_indexes:
             row = input_data.data_frame[sample_i]
             for i, val in enumerate(row):

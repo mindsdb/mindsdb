@@ -281,7 +281,7 @@ class Predictor:
                 }
 
                 # This is a check to see if model analysis has run on this data
-                if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None:
+                if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and 'train' in lmd['model_accuracy'] and 'combined' in lmd['model_accuracy']['train'] and lmd['model_accuracy']['train']['combined'] is not None:
                     train_acc = lmd['model_accuracy']['train']['combined']
                     test_acc = lmd['model_accuracy']['test']['combined']
 

@@ -13,7 +13,7 @@ from mindsdb import CONST
 #@TODO: Currently we use this isntead of randomly generated data since randomly generated data is not reliable enough
 
 # We tell mindsDB what we want to learn and from what data
-mdb = Predictor(name='home_rentals_price')
+mdb = mindsdb.Predictor(name='home_rentals_price')
 
 mdb.learn(
     to_predict='rental_price', # the column we want to learn to predict given all the data in the file

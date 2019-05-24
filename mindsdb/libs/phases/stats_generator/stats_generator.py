@@ -1001,8 +1001,8 @@ class StatsGenerator(BaseModule):
         if modify_light_metadata:
             self.transaction.lmd['column_stats'] = stats
 
-            if 'sample_margin_of_error' in lmd and lmd['sample_margin_of_error'] is not None:
-                self.transaction.lmd['data_preparation']['sample_margin_of_error'] = lmd['sample_margin_of_error']
+            if 'sample_margin_of_error' in self.transaction.lmd and self.transaction.lmd['sample_margin_of_error'] is not None:
+                self.transaction.lmd['data_preparation']['sample_margin_of_error'] = self.transaction.lmd['sample_margin_of_error']
 
             self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
             self.transaction.lmd['data_preparation']['used_row_count'] = sample_size

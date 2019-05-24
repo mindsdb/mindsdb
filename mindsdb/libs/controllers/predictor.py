@@ -293,7 +293,7 @@ class Predictor:
                         mao['test_accuracy_over_time']['x'].append(i)
                         mao['test_accuracy_over_time']['y'].append([i])
 
-                if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and 'unusual_columns_buckets_importances' in lmd and lmd['unusual_columns_buckets_importances'] is not None:
+                if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and 'unusual_columns_buckets_importances' in lmd and lmd['unusual_columns_buckets_importances'] is not None and lmd['column_importances'] is not None:
                     mao['accuracy_histogram']['x'] = []
                     mao['accuracy_histogram']['y'] = []
 

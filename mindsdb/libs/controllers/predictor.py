@@ -211,9 +211,15 @@ class Predictor:
         # ADAPTOR CODE
         amd = {}
 
+        if lmd['current_phase'] == MODEL_STATUS_TRAINED:
+            amd['status'] = 'complete'
+        elif lmd['current_phase'] == MODEL_STATUS_ERROR:
+            amd['status'] = 'error'
+        else:
+            amd['status'] = 'training'
         # Shared keys
         for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
-        'status', 'train_end_at', 'updated_at', 'created_at','data_preparation']:
+        'current_phase', 'train_end_at', 'updated_at', 'created_at','data_preparation']:
             if k == 'predict':
                 amd[k] = lmd['predict_columns']
             elif k in lmd:

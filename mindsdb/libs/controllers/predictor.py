@@ -128,67 +128,78 @@ class Predictor:
         for score in scores:
             metrics = []
             if score == 'consistency_score':
+                simple_description = "A low value indicates the data is not very consistent, it's either missing a lot of valus or the type (e.g. number, text, category, date) of values varries quite a lot."
                 metrics.append({
                       "type": "score",
-                      "score": col_stats['data_type_distribution_score'],
-                      "description": col_stats['data_type_distribution_score_description'],
+                      "name": "Type Distribution",
+                      "score": round(10 * (1 - col_stats['data_type_distribution_score'])),
+                      #"description": col_stats['data_type_distribution_score_description'],
+                      "description": "A low value indicates that we can't consistently determine a single data type (e.g. number, text, category, date) for most values in this column",
                       "warning": col_stats['data_type_distribution_score_warning']
                 })
                 metrics.append({
                       "type": "score",
-                      "score": col_stats['empty_cells_score'],
-                      "description": col_stats['empty_cells_score_description'],
+                      "score": round(10 * (1 - col_stats['empty_cells_score'])),
+                      "name": "Empty Cells",
+                      #"description": col_stats['empty_cells_score_description'],
+                      "description": "A low value indicates that a lot of the values in this column are empty or null. A value of 10 means no cell is missing data, a value of 0 means no cell has any data.",
                       "warning": col_stats['empty_cells_score_warning']
                 })
                 if 'duplicates_score' in col_stats:
                     metrics.append({
                           "type": "score",
-                          "score": col_stats['duplicates_score'],
-                          "description": col_stats['duplicates_score_description'],
+                          "name": "Value Duplication",
+                          "score": round(10 * (1 - col_stats['duplicates_score'])),
+                          #"description": col_stats['duplicates_score_description'],
+                          "description": "A low value indicates that a lot of the values in this columns are duplicates, as in, the same value shows up more than once in the column. This is not necessarily bad and could be normal for certain data types.",
                           "warning": col_stats['duplicates_score_warning']
                     })
 
             if score == 'variability_score':
+                simple_description = "A low value indicates a high possibility of some noise affecting your data collection process. This could mean that the values for this column are not collected or processed correctly."
                 if 'lof_based_outlier_score' in col_stats and 'z_test_based_outlier_score' in col_stats:
                     metrics.append({
                           "type": "score",
-                          "score": col_stats['lof_based_outlier_score'],
-                          "description": col_stats['lof_based_outlier_score_description'],
+                          "name": "Z Outlier Score",
+                          "score": round(10 * (1 - col_stats['lof_based_outlier_score'])),
+                          #"description": col_stats['lof_based_outlier_score_description'],
+                          "description": "A low value indicates a large number of outliers in your dataset. This is based on distance from the center of 20 clusters as constructed via KNN.",
                           "warning": col_stats['lof_based_outlier_score_warning']
                     })
                     metrics.append({
                           "type": "score",
-                          "score": col_stats['z_test_based_outlier_score'],
-                          "description": col_stats['z_test_based_outlier_score_description'],
+                          "name": "Z Outlier Score",
+                          "score": round(10 * (1 - col_stats['z_test_based_outlier_score'])),
+                          #"description": col_stats['z_test_based_outlier_score_description'],
+                          "description": "A low value indicates a large number of data points are more than 3 standard deviations away from the mean value of this column. This means that this column likely has a large amount of outliers",
                           "warning": col_stats['z_test_based_outlier_score_warning']
                     })
-                    metrics.append({
-                          "type": "score",
-                          "score": col_stats['value_distribution_score'],
-                          "description": col_stats['value_distribution_score_description'],
-                          "warning": col_stats['value_distribution_score_warning']
-                    })
-                else:
-                    metrics.append({
-                          "type": "score",
-                          "score": col_stats['value_distribution_score'],
-                          "description": col_stats['value_distribution_score_description'],
-                          "warning": col_stats['value_distribution_score_warning']
-                    })
-
-            if score == 'redundancy_score':
                 metrics.append({
                       "type": "score",
-                      "score": col_stats['similarity_score'],
-                      "description": col_stats['similarity_score_description'],
+                      "name":"Value Distribution",
+                      "score": round(10 * (1 - col_stats['value_distribution_score'])),
+                      #"description": col_stats['value_distribution_score_description'],
+                      "description": "A low value indicates the possibility of a large number of outliers, the clusters in which your data is distributed aren't evenly sized.",
+                      "warning": col_stats['value_distribution_score_warning']
+                })
+
+            if score == 'redundancy_score':
+                simple_description = "A low value indicates that the data in this column is highly redundant (useless) for making any sort of prediction. You should make sure that values heavily related to this column are no already expressed in another column (e.g. if this column is a timestamp, make sure you don't have another column representing the exact same time in ISO datetime format)"
+
+                metrics.append({
+                      "type": "score",
+                      "name": "Matthews Correlation Score",
+                      "score": round(10 * (1 - col_stats['similarity_score'])),
+                      #"description": col_stats['similarity_score_description'],
+                      "description": "A low value indicates a large number of values in this column being similar to values on the same row of other columns",
                       "warning": col_stats['similarity_score_warning']
                 })
 
-
             icm[score.replace('_score','')] = {
-                'score': col_stats[score],
-                'metrics': metrics,
-                "description": col_stats[f'{score}_description'],
+                "score": round(10 * (1 - col_stats[score])),
+                "metrics": metrics,
+                #"description": col_stats[f'{score}_description'],
+                "description": simple_description,
                 "warning": col_stats[f'{score}_warning']
             }
 
@@ -286,6 +297,7 @@ class Predictor:
                     mao['accuracy_histogram']['y'] = []
 
                     bucket_importance_keys = list(lmd['unusual_columns_buckets_importances'].keys())
+
                     for incol in lmd['column_importances']:
                         incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
 
@@ -295,7 +307,13 @@ class Predictor:
                         if len(incol_bucket_importance_keys) > 0:
                             sub_group_stats = []
                             for sub_incol in incol_bucket_importance_keys:
-                                sub_group_stats.append(self._adapt_column(lmd['unusual_columns_buckets_importances'][sub_incol], sub_incol))
+                                adapted_sub_incol = self._adapt_column(lmd['unusual_columns_buckets_importances'][sub_incol], sub_incol)
+
+                                sub_incol_parts = sub_incol.split('_bucket_')
+                                sub_incol_name = 'Value Bucket "{}" for column: "{}"'.format(sub_incol_parts[1],sub_incol_parts[0])
+                                adapted_sub_incol['column_name'] = sub_incol_name
+
+                                sub_group_stats.append(adapted_sub_incol)
                         else:
                             sub_group_stats = [None]
                         mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
@@ -315,7 +333,6 @@ class Predictor:
                 if 'column_importances' in lmd:
                     icm['importance_score'] = lmd['column_importances'][col]
                 amd['data_analysis']['input_columns_metadata'].append(icm)
-        # ADAPTOR CODE
 
         return amd
 

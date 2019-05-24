@@ -195,7 +195,7 @@ class Transaction:
             return
 
         self._call_phase_module('DataExtractor')
-        self.save_metadata()
+        #self.save_metadata()
 
         if len(self.input_data.data_array[0]) <= 0:
             self.output_data = self.input_data
@@ -206,7 +206,7 @@ class Transaction:
         if self.lmd['model_backend'] == 'ludwig':
             self.model_backend = LudwigBackend(self)
             predictions = self.model_backend.predict()
-        self.save_metadata()
+        #self.save_metadata()
 
         # self.transaction.lmd['predict_columns']
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}

@@ -242,7 +242,7 @@ class Predictor:
             amd['force_vectors'] = {}
             if col in lmd['predict_columns']:
                 # Histograms for plotting the force vectors
-                if 'all_columns_prediction_distribution' in lmd:
+                if 'all_columns_prediction_distribution' in lmd and lmd['all_columns_prediction_distribution'] is not None:
                     amd['force_vectors'][col] = {}
                     amd['force_vectors'][col]['normal_data_distribution'] = lmd['all_columns_prediction_distribution'][col]
                     amd['force_vectors'][col]['normal_data_distribution']['type'] = 'categorical'
@@ -281,7 +281,7 @@ class Predictor:
                 }
 
                 # This is a check to see if model analysis has run on this data
-                if 'model_accuracy' in lmd:
+                if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None:
                     train_acc = lmd['model_accuracy']['train']['combined']
                     test_acc = lmd['model_accuracy']['test']['combined']
 
@@ -330,7 +330,7 @@ class Predictor:
 
                 amd['model_analysis'].append(mao)
             else:
-                if 'column_importances' in lmd:
+                if 'column_importances' in lmd and lmd['column_importances'] is not None:
                     icm['importance_score'] = lmd['column_importances'][col]
                 amd['data_analysis']['input_columns_metadata'].append(icm)
 

@@ -70,7 +70,7 @@ class Predictor:
                     lmd = self.get_model_data(model_name)
                     model = {}
                     for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
-                    'status', 'train_end_at', 'updated_at', 'created_at']:
+                    'status', 'train_end_at', 'updated_at', 'created_at','current_phase']:
                         if k in lmd:
                             model[k] = lmd[k]
                         else:
@@ -217,6 +217,7 @@ class Predictor:
             amd['status'] = 'error'
         else:
             amd['status'] = 'training'
+
         # Shared keys
         for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
         'current_phase', 'train_end_at', 'updated_at', 'created_at','data_preparation']:

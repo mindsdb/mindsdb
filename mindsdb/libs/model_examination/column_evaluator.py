@@ -110,9 +110,11 @@ class ColumnEvaluator():
                 input_data.columns = columns
 
                 stats_generator = StatsGenerator(session=None, transaction=self.transaction)
-                col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
-
-                buckets_stats.update(col_buckets_stats)
+                try:
+                    col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+                    buckets_stats.update(col_buckets_stats)
+                except:
+                    print('Cloud not generate bucket stats for sub-bucket: {}'.format(input_data))
 
         return column_importance_dict, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution
 

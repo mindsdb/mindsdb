@@ -897,7 +897,7 @@ class StatsGenerator(BaseModule):
                         "x": list(histogram.keys()),
                         "y": list(histogram.values())
                     }
-                    #"percentage_buckets": list(histogram.keys())
+                    ,"percentage_buckets": list(histogram.keys())
                 }
 
             elif curr_data_subtype == DATA_SUBTYPES.IMAGE:

@@ -768,24 +768,9 @@ class StatsGenerator(BaseModule):
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
-        print(input_data.data_frame)
-        print(len(input_data.data_frame))
-        print(input_data_sample_indexes)
+        all_sampled_data = input_data.data_frame.iloc[input_data_sample_indexes]
+        all_non_null_sampled_data =
         
-        for sample_i in input_data_sample_indexes:
-            row = input_data.data_frame[sample_i]
-            for i, val in enumerate(row):
-                column = header[i]
-                value = cast_string_to_python_type(val)
-                if not column in empty_count:
-                    empty_count[column] = 0
-                    column_count[column] = 0
-                if value == None:
-                    empty_count[column] += 1
-                else:
-                    non_null_data[column].append(value)
-                all_sampled_data[column].append(value)
-                column_count[column] += 1
         stats = {}
 
         col_data_dict = {}

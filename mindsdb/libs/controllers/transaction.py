@@ -118,7 +118,7 @@ class Transaction:
             self.lmd['columns'] = self.input_data.columns # this is populated by data extractor
             self.save_metadata()
             self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
-            self._call_phase_module('StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+            self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
 
@@ -132,7 +132,7 @@ class Transaction:
             self.save_metadata()
 
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
-            self._call_phase_module('ModelAnalyzer')
+            self._call_phase_module(clean_exit=True, module_name='ModelAnalyzer')
             self.lmd['current_phase'] = MODEL_STATUS_TRAINED
             self.save_metadata()
             return

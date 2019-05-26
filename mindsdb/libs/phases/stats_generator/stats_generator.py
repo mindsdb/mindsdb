@@ -989,10 +989,15 @@ class StatsGenerator(BaseModule):
 
         if modify_light_metadata:
             self.transaction.lmd['column_stats'] = stats
+
+            if 'sample_margin_of_error' in self.transaction.lmd and self.transaction.lmd['sample_margin_of_error'] is not None:
+                self.transaction.lmd['data_preparation']['sample_margin_of_error'] = self.transaction.lmd['sample_margin_of_error']
+
             self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
-            self.transaction.lmd['data_preparation']['test_row_count'] = len(input_data.test_indexes)
-            self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes)
-            self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes)
+            self.transaction.lmd['data_preparation']['used_row_count'] = sample_size
+            self.transaction.lmd['data_preparation']['test_row_count'] = len(input_data.test_indexes[KEY_NO_GROUP_BY])
+            self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes[KEY_NO_GROUP_BY])
+            self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])
 
         self._log_interesting_stats(stats)
         return stats

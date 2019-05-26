@@ -70,7 +70,7 @@ class Predictor:
                     lmd = self.get_model_data(model_name)
                     model = {}
                     for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
-                    'status', 'train_end_at', 'updated_at', 'created_at']:
+                    'status', 'train_end_at', 'updated_at', 'created_at','current_phase']:
                         if k in lmd:
                             model[k] = lmd[k]
                         else:
@@ -211,9 +211,16 @@ class Predictor:
         # ADAPTOR CODE
         amd = {}
 
+        if lmd['current_phase'] == MODEL_STATUS_TRAINED:
+            amd['status'] = 'complete'
+        elif lmd['current_phase'] == MODEL_STATUS_ERROR:
+            amd['status'] = 'error'
+        else:
+            amd['status'] = 'training'
+
         # Shared keys
         for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
-        'status', 'train_end_at', 'updated_at', 'created_at','data_preparation']:
+        'current_phase', 'train_end_at', 'updated_at', 'created_at','data_preparation']:
             if k == 'predict':
                 amd[k] = lmd['predict_columns']
             elif k in lmd:
@@ -242,7 +249,7 @@ class Predictor:
             amd['force_vectors'] = {}
             if col in lmd['predict_columns']:
                 # Histograms for plotting the force vectors
-                if 'all_columns_prediction_distribution' in lmd:
+                if 'all_columns_prediction_distribution' in lmd and lmd['all_columns_prediction_distribution'] is not None:
                     amd['force_vectors'][col] = {}
                     amd['force_vectors'][col]['normal_data_distribution'] = lmd['all_columns_prediction_distribution'][col]
                     amd['force_vectors'][col]['normal_data_distribution']['type'] = 'categorical'
@@ -281,7 +288,7 @@ class Predictor:
                 }
 
                 # This is a check to see if model analysis has run on this data
-                if 'model_accuracy' in lmd:
+                if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and 'train' in lmd['model_accuracy'] and 'combined' in lmd['model_accuracy']['train'] and lmd['model_accuracy']['train']['combined'] is not None:
                     train_acc = lmd['model_accuracy']['train']['combined']
                     test_acc = lmd['model_accuracy']['test']['combined']
 
@@ -293,6 +300,7 @@ class Predictor:
                         mao['test_accuracy_over_time']['x'].append(i)
                         mao['test_accuracy_over_time']['y'].append([i])
 
+                if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and 'unusual_columns_buckets_importances' in lmd and lmd['unusual_columns_buckets_importances'] is not None and lmd['column_importances'] is not None:
                     mao['accuracy_histogram']['x'] = []
                     mao['accuracy_histogram']['y'] = []
 
@@ -330,7 +338,7 @@ class Predictor:
 
                 amd['model_analysis'].append(mao)
             else:
-                if 'column_importances' in lmd:
+                if 'column_importances' in lmd and lmd['column_importances'] is not None:
                     icm['importance_score'] = lmd['column_importances'][col]
                 amd['data_analysis']['input_columns_metadata'].append(icm)
 

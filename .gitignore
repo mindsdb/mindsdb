@@ -81,3 +81,4 @@ integration_testing/canvas.py
 test.out
 tmp.*
 tmp
+*.csv

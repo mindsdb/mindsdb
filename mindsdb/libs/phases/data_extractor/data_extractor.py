@@ -71,7 +71,7 @@ class DataExtractor(BaseModule):
         df = None
 
         # if transaction metadata comes with some data as from_data create the data frame
-        if self.transaction.hmd['from_data'] is not None:
+        if 'from_data' in self.transaction.hmd and self.transaction.hmd['from_data'] is not None:
             # make sure we build a dataframe that has all the columns we need
             df = self.transaction.hmd['from_data']
             df = df.where((pandas.notnull(df)), None)

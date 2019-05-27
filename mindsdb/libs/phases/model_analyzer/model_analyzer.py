@@ -18,15 +18,6 @@ class ModelAnalyzer(BaseModule):
 
         output_columns = self.transaction.lmd['predict_columns']
         input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns and col not in self.transaction.lmd['malformed_columns']['names']]
-        validation_dataset = {}
-
-        for row_ind in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
-            for col_ind, col in enumerate(self.transaction.lmd['columns']):
-                if col in self.transaction.lmd['malformed_columns']['names']:
-                    continue
-                if col not in validation_dataset:
-                    validation_dataset[col] = []
-                validation_dataset[col].append(self.transaction.input_data.data_frame[row_ind][col_ind])
 
         # Test some hypotheses about our columns
         column_evaluator = ColumnEvaluator(self.transaction)
@@ -56,7 +47,7 @@ class ModelAnalyzer(BaseModule):
         for pcol in output_columns:
             for i in range(len(predictions[pcol])):
                 predicted_val = predictions[pcol][i]
-                real_val = validation_dataset[pcol][i]
+                real_val = validation_df[pcol][i]
                 probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=real_val, predicted_value=predicted_val)
 
         # Run on the validation set multiple times, each time with one of the column blanked out
@@ -73,7 +64,7 @@ class ModelAnalyzer(BaseModule):
             for pcol in output_columns:
                 for i in range(len(predictions[pcol])):
                     predicted_val = predictions[pcol][i]
-                    real_val = validation_dataset[pcol][i]
+                    real_val = validation_df[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
 
         self.transaction.lmd['accuracy_histogram'] = {}

@@ -33,7 +33,7 @@ class ModelAnalyzer(BaseModule):
         column_importances, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns, full_dataset=validation_dataset, stats=self.transaction.lmd['column_stats'])
 
         self.transaction.lmd['column_importances'] = column_importances
-        self.transaction.lmd['unusual_columns_buckets_importances'] = buckets_stats
+        self.transaction.lmd['columns_buckets_importances'] = buckets_stats
         self.transaction.lmd['columnless_prediction_distribution'] = columnless_prediction_distribution
         self.transaction.lmd['all_columns_prediction_distribution'] = all_columns_prediction_distribution
         # Create the probabilistic validators for each of the predict column

@@ -86,10 +86,10 @@ class ColumnEvaluator():
                         bucket = None
 
                     vb = get_value_bucket(value, bucket, stats[column])
-                    if f'{input_column}_bucket_{vb}' not in split_data:
-                        split_data[f'{input_column}_bucket_{vb}'] = []
+                    if f'{column}_bucket_{vb}' not in split_data:
+                        split_data[f'{column}_bucket_{vb}'] = []
 
-                    split_data[f'{input_column}_bucket_{vb}'].append(value)
+                    split_data[f'{column}_bucket_{vb}'].append(value)
 
                 row_wise_data = []
                 max_length = max(list(map(len, split_data.values())))
@@ -113,7 +113,7 @@ class ColumnEvaluator():
                 stats_generator = StatsGenerator(session=None, transaction=self.transaction)
                 try:
                     col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
-                    buckets_stats.update(col_buckets_stats)
+                    buckets_stats[column] = col_buckets_stats
                 except:
                     print('Cloud not generate bucket stats for sub-bucket: {}'.format(input_data))
 

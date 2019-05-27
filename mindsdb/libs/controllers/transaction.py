@@ -61,16 +61,16 @@ class Transaction:
         sys.setrecursionlimit(0x100000)
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
-            self.lmd = pickle.load(fp)
+            self.lmd = pickle.load(fp,protocol=pickle.HIGHEST_PROTOCOL)
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
-            self.hmd = pickle.load(fp)
+            self.hmd = pickle.load(fp,protocol=pickle.HIGHEST_PROTOCOL)
 
     # @TODO Make it more generic, move to general helpers
     def save_metadata(self):
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
             self.lmd['updated_at'] = str(datetime.datetime.now())
-            pickle.dump(self.lmd, fp)
+            pickle.dump(self.lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'wb') as fp:
             # Don't save data for now
@@ -84,7 +84,7 @@ class Transaction:
                     save_hmd[k] = self.hmd[k]
 
             # Don't save data for now
-            pickle.dump(save_hmd, fp)
+            pickle.dump(save_hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
 
     def _call_phase_module(self, module_name, **kwargs):
         """

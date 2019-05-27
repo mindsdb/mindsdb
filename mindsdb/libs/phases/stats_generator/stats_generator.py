@@ -761,7 +761,7 @@ class StatsGenerator(BaseModule):
         col_data_dict = {}
 
         for col_name in all_sampled_data.columns.values:
-            col_data = all_sampled_data[col_name].notnull()
+            col_data = all_sampled_data[col_name].dropna()
             full_col_data = all_sampled_data[col_name]
 
             data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
@@ -855,11 +855,7 @@ class StatsGenerator(BaseModule):
                     "percentage_buckets": xp
                 }
             elif data_type == DATA_TYPES.CATEGORICAL:
-                all_values = []
-                for row in input_data.data_frame:
-                    all_values.append(row[i])
-
-                histogram = Counter(all_values)
+                histogram = Counter(input_data.data_frame[col_name])
                 all_possible_values = histogram.keys()
 
                 col_stats = {

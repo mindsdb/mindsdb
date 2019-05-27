@@ -304,7 +304,6 @@ class Predictor:
                     mao['accuracy_histogram']['x'] = [f'Bucket "{x}" for column {col}' for x in lmd['accuracy_histogram'][col]['buckets']]
                     mao['accuracy_histogram']['y'] = lmd['accuracy_histogram'][col]['accuracies']
 
-                    print(mao['accuracy_histogram'])
 
                     '''
                     mao['accuracy_histogram']['x'] = []

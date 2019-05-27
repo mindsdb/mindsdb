@@ -182,29 +182,30 @@ def get_value_bucket(value, buckets, col_stats):
         bucket = closest(buckets, value)
     elif col_stats['data_subtype'] in (DATA_SUBTYPES.IMAGE):
         bucket = self.hmd['bucketing_algorithms'][col_name].predict(np.array(imagehash.phash(Image.open(value)).reshape(1, -1)))[0]
-        print(bucket)
     else:
         bucket = len(buckets) # for null values
 
     return bucket
 
 
-def evaluate_accuracy(predictions, real_values, col_stats, output_columns):
+def evaluate_accuracy(predictions, full_dataset, col_stats, output_columns):
     score = 0
     for output_column in output_columns:
         cummulative_scores = 0
         if 'percentage_buckets' in col_stats[output_column]:
-            bucket = col_stats[output_column]['percentage_buckets']
+            buckets = col_stats[output_column]['percentage_buckets']
         else:
-            bucket = None
+            buckets = None
 
-        for i in range(len(real_values[output_column])):
-            pred_val_bucket = get_value_bucket(predictions[output_column][i], bucket, col_stats[output_column])
+        i = 0
+        for real_value in full_dataset[output_column]:
+            pred_val_bucket = get_value_bucket(predictions[output_column][i], buckets, col_stats[output_column])
             if pred_val_bucket is None:
-                if predictions[output_column][i] == real_values[output_column][i]:
+                if predictions[output_column][i] == real_value:
                     cummulative_scores += 1
-            elif pred_val_bucket == get_value_bucket(real_values[output_column][i], bucket, col_stats[output_column]):
+            elif pred_val_bucket == get_value_bucket(real_value, buckets, col_stats[output_column]):
                 cummulative_scores += 1
+            i += 1
 
         score += cummulative_scores/len(predictions[output_column])
     score = score/len(output_columns)

@@ -183,7 +183,7 @@ class Transaction:
         self._call_phase_module(clean_exit=True, module_name='DataExtractor')
         #self.save_metadata()
 
-        if len(self.input_data.data_frame[0]) <= 0:
+        if self.input_data.data_frame.shape[0] <= 0:
             self.output_data = self.input_data
             return
 
@@ -197,7 +197,7 @@ class Transaction:
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
         input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
 
-        for row in self.input_data.data_frame:
+        for i, row in self.input_data.data_frame.iterrows():
             for index, cell in enumerate(row):
                 col = self.input_data.columns[index]
                 self.output_data.data[col].append(cell)

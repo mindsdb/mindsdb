@@ -147,7 +147,7 @@ def unpickle_obj(pickle_string):
     :param pickle_string: A latin1 encoded python str containing the pickle data
     :return: Returns an object generated from the pickle string
     """
-    return pickle.loads(pickle_string.encode(encoding='latin1'),protocol=pickle.HIGHEST_PROTOCOL)
+    return pickle.loads(pickle_string.encode(encoding='latin1'))
 
 
 def closest(arr, value):

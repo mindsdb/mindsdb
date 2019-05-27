@@ -61,10 +61,10 @@ class Transaction:
         sys.setrecursionlimit(0x100000)
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
-            self.lmd = pickle.load(fp,protocol=pickle.HIGHEST_PROTOCOL)
+            self.lmd = pickle.load(fp)
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
-            self.hmd = pickle.load(fp,protocol=pickle.HIGHEST_PROTOCOL)
+            self.hmd = pickle.load(fp)
 
     # @TODO Make it more generic, move to general helpers
     def save_metadata(self):

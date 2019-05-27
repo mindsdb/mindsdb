@@ -122,7 +122,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
-    def _get_column_data_type(self, data, col_index, data_array, col_name):
+    def _get_column_data_type(self, data, data_frame, col_name):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -229,10 +229,7 @@ class StatsGenerator(BaseModule):
 
         # @TODO: Extremely slow for large datasets, make it faster
         if curr_data_type != DATA_TYPES.CATEGORICAL:
-            all_values = []
-            for row in data_array:
-                all_values.append(row[col_index])
-
+            all_values = data_frame[col_name]
             all_distinct_vals = set(all_values)
 
             # The numbers here are picked randomly, the gist of it is that if values repeat themselves a lot we should consider the column to be categorical
@@ -743,16 +740,6 @@ class StatsGenerator(BaseModule):
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
-        header = input_data.columns
-        non_null_data = {}
-        all_sampled_data = {}
-
-        for column in header:
-            non_null_data[column] = []
-            all_sampled_data[column] = []
-
-        empty_count = {}
-        column_count = {}
 
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
         population_size = len(input_data.data_frame)
@@ -769,15 +756,15 @@ class StatsGenerator(BaseModule):
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
         all_sampled_data = input_data.data_frame.iloc[input_data_sample_indexes]
-        all_non_null_sampled_data =
-        
-        stats = {}
 
+        stats = {}
         col_data_dict = {}
-        for i, col_name in enumerate(non_null_data):
-            col_data = non_null_data[col_name]
+
+        for col_name in all_sampled_data.columns.values:
+            col_data = all_sampled_data[col_name].notnull()
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, i, input_data.data_frame, col_name)
+
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
 
             if column_status == 'Column empty':
                 if modify_light_metadata:

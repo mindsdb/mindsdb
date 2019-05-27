@@ -98,6 +98,9 @@ class DataExtractor(BaseModule):
         df = self._apply_sort_conditions_to_df(df)
         groups = df.columns.to_series().groupby(df.dtypes).groups
 
+        boolean_dictionary = {True: 'True', False: 'False'}
+        df = df.replace(boolean_dictionary)
+
         if np.dtype('datetime64[ns]') in groups:
             for colname in groups[np.dtype('datetime64[ns]')]:
                 df[colname] = df[colname].astype(str)

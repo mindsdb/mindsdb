@@ -301,14 +301,15 @@ class Predictor:
                         mao['test_accuracy_over_time']['y'].append([i])
 
                 if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and 'unusual_columns_buckets_importances' in lmd and lmd['unusual_columns_buckets_importances'] is not None and lmd['column_importances'] is not None:
+                    mao['accuracy_histogram']['x'] = [f'Bucket "{x}" for column {col}' for x in lmd['accuracy_histogram'][col]['buckets']]
+                    mao['accuracy_histogram']['y'] = lmd['accuracy_histogram'][col]['accuracies']
+
+                    print(mao['accuracy_histogram'])
+
+                    '''
                     mao['accuracy_histogram']['x'] = []
                     mao['accuracy_histogram']['y'] = []
 
-                    for bucket in lmd['accuracy_histogram'][col]:
-                        
-
-
-                    '''
                     bucket_importance_keys = list(lmd['unusual_columns_buckets_importances'].keys())
 
                     for incol in lmd['column_importances']:

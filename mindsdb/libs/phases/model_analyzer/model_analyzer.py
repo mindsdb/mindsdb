@@ -51,11 +51,18 @@ class ModelAnalyzer(BaseModule):
             if self.transaction.lmd['column_stats'][input_column]['data_type'] != DATA_TYPES.FILE_PATH:
                 ignorable_input_columns.append(input_column)
 
+
+        predictions = self.transaction.model_backend.predict('validate')
+        for pcol in output_columns:
+            for i in range(len(predictions[pcol])):
+                predicted_val = predictions[pcol][i]
+                real_val = validation_dataset[pcol][i]
+                probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=real_val, predicted_value=predicted_val)
+
         # Run on the validation set multiple times, each time with one of the column blanked out
-        for column_name in [*ignorable_input_columns,None]:
+        for column_name in ignorable_input_columns:
             ignore_columns = []
-            if column_name is not None:
-                ignore_columns.append(column_name)
+            ignore_columns.append(column_name)
 
             predictions = self.transaction.model_backend.predict('validate', ignore_columns)
 

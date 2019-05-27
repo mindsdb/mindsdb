@@ -41,6 +41,9 @@ class ProbabilisticValidator():
 
         self.data_type = col_stats['data_type']
 
+        self.bucket_accuracy = {
+
+        }
 
     def register_observation(self, features_existence, real_value, predicted_value):
         """
@@ -51,6 +54,8 @@ class ProbabilisticValidator():
         :param predicted_value: The predicted value/label
         :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value` and `real_value`
         """
+        nr_missing_features = len([x for x in features_existence if x is False or x is 0])
+
         predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
         try:
             real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(str(real_value).replace(',','.'))
@@ -65,11 +70,30 @@ class ProbabilisticValidator():
             X = X + features_existence
             self.X_buff.append(X)
             self.Y_buff.append(real_value_b)
+
+            # If no column is ignored, compute the accuracy for this bucket
+            if nr_missing_features == 0:
+                if predicted_value_b not in self.bucket_accuracy:
+                    self.bucket_accuracy[predicted_value_b] = []
+                self.bucket_accuracy[predicted_value_b].append(int(real_value_b == predicted_value_b))
         else:
             predicted_value_b = predicted_value
             real_value_b = real_value
             self.X_buff.append(features_existence)
             self.Y_buff.append(real_value_b == predicted_value_b)
+
+    def get_accuracy_histogram(self):
+        x = []
+        y = []
+        for bucket in self.bucket_accuracy:
+            x.append(bucket)
+            y.append(sum(self.bucket_accuracy[bucket])/len(self.bucket_accuracy[bucket]))
+
+        return {
+            'buckets': x
+            ,'accuracies': y
+        }
+
 
     def partial_fit(self):
         """

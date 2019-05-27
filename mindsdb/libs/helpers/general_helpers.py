@@ -139,7 +139,7 @@ def pickle_obj(object_to_pickle):
     :return: The data of an object serialized via pickle and decoded as a latin1 string
     """
 
-    return pickle.dumps(object_to_pickle).decode(encoding='latin1')
+    return pickle.dumps(object_to_pickle,protocol=pickle.HIGHEST_PROTOCOL).decode(encoding='latin1')
 
 
 def unpickle_obj(pickle_string):

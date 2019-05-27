@@ -15,6 +15,9 @@ import importlib
 import copy
 import pickle
 import datetime
+import resource
+import sys
+
 
 class Transaction:
 
@@ -51,6 +54,9 @@ class Transaction:
 
     # @TODO Make it more generic, move to general helpers, use inside predictor instead of linline loading
     def load_metadata(self):
+        resource.setrlimit(resource.RLIMIT_STACK, [0x10000000, resource.RLIM_INFINITY])
+        sys.setrecursionlimit(0x100000)
+
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
             self.lmd = pickle.load(fp)
 
@@ -61,7 +67,7 @@ class Transaction:
     def save_metadata(self):
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
             self.lmd['updated_at'] = str(datetime.datetime.now())
-            pickle.dump(self.lmd, fp)
+            pickle.dump(self.lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'wb') as fp:
             # Don't save data for now
@@ -75,7 +81,7 @@ class Transaction:
                     save_hmd[k] = self.hmd[k]
 
             # Don't save data for now
-            pickle.dump(save_hmd, fp)
+            pickle.dump(save_hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
 
     def _call_phase_module(self, clean_exit, module_name, **kwargs):
         """
@@ -212,7 +218,7 @@ class Transaction:
                 #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong
                 self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
 
-        self.save_metadata()
+        #self.save_metadata()
 
         return
 

@@ -304,6 +304,11 @@ class Predictor:
                     mao['accuracy_histogram']['x'] = []
                     mao['accuracy_histogram']['y'] = []
 
+                    for bucket in lmd['accuracy_histogram'][col]:
+                        
+
+
+                    '''
                     bucket_importance_keys = list(lmd['unusual_columns_buckets_importances'].keys())
 
                     for incol in lmd['column_importances']:
@@ -325,6 +330,7 @@ class Predictor:
                         else:
                             sub_group_stats = [None]
                         mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
+                    '''
 
                     for icol in lmd['model_columns_map'].keys():
                         if icol in lmd['malformed_columns']['names']:

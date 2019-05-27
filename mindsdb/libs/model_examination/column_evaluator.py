@@ -74,17 +74,18 @@ class ColumnEvaluator():
                 elif 'histogram' in col_missing_output_stats[output_column]:
                     columnless_prediction_distribution[output_column][input_column] = col_missing_output_stats[output_column]['histogram']
 
+        for column in [*ignorable_input_columns,*output_columns]:
             # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)
-            if column_importance > 0.8 or column_importance < 0.2:
+            if column in output_columns or (column_importance_dict[column] > 0.8 or column_importance_dict[column] < 0.2):
                 split_data = {}
-                for value in full_dataset[input_column]:
+                for value in full_dataset[column]:
 
-                    if 'percentage_buckets' in stats[input_column]:
-                        bucket = stats[input_column]['percentage_buckets']
+                    if 'percentage_buckets' in stats[column]:
+                        bucket = stats[column]['percentage_buckets']
                     else:
                         bucket = None
 
-                    vb = get_value_bucket(value, bucket, stats[input_column])
+                    vb = get_value_bucket(value, bucket, stats[column])
                     if f'{input_column}_bucket_{vb}' not in split_data:
                         split_data[f'{input_column}_bucket_{vb}'] = []
 

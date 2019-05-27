@@ -52,9 +52,10 @@ class ModelAnalyzer(BaseModule):
                 ignorable_input_columns.append(input_column)
 
         # Run on the validation set multiple times, each time with one of the column blanked out
-        for column_name in ignorable_input_columns:
+        for column_name in [*ignorable_input_columns,None]:
             ignore_columns = []
-            ignore_columns.append(column_name)
+            if column_name is not None:
+                ignore_columns.append(column_name)
 
             predictions = self.transaction.model_backend.predict('validate', ignore_columns)
 
@@ -68,8 +69,11 @@ class ModelAnalyzer(BaseModule):
                     real_val = validation_dataset[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
 
+        self.transaction.lmd['accuracy_histogram'] = {}
         for pcol in output_columns:
             probabilistic_validators[pcol].partial_fit()
+            accuracy_histogram = probabilistic_validators[pcol].get_accuracy_histogram()
+            self.transaction.lmd['accuracy_histogram'][pcol] = accuracy_histogram
 
         # Pickle for later use
         self.transaction.hmd['probabilistic_validators'] = {}

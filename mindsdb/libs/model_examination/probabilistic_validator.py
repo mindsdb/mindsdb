@@ -41,6 +41,9 @@ class ProbabilisticValidator():
 
         self.data_type = col_stats['data_type']
 
+        self.bucket_accuracy = {
+
+        }
 
     def register_observation(self, features_existence, real_value, predicted_value):
         """
@@ -70,6 +73,25 @@ class ProbabilisticValidator():
             real_value_b = real_value
             self.X_buff.append(features_existence)
             self.Y_buff.append(real_value_b == predicted_value_b)
+
+            # If no column is ignored, compute the accuracy for this bucket
+            if len([x for x in features_existence if x is 0]) == 0:
+                if predicted_value_b not in bucket_accuracy:
+                    self.bucket_accuracy[predicted_value_b] = []
+                self.bucket_accuracy[predicted_value_b].append(int(real_value_b == predicted_value_b))
+
+    def get_accuracy_histogram(self):
+        x = []
+        y = []
+        for bucket in self.bucket_accuracy:
+            x.append(bucket)
+            y.append(sum(self.bucket_accuracy[bucket])/len(self.bucket_accuracy[bucket]))
+
+        return {
+            'buckets': x
+            ,'accuracies': y
+        }
+
 
     def partial_fit(self):
         """

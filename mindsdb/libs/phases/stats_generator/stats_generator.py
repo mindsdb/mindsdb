@@ -946,7 +946,7 @@ class StatsGenerator(BaseModule):
             empty_count = len(full_col_data) - len(col_data)
 
             stats[col_name]['empty_cells'] = empty_count
-            stats[col_name]['empty_percentage'] = empty_count * 100 / column_count[col_name]
+            stats[col_name]['empty_percentage'] = empty_count * 100 / len(full_col_data)
             if 'separator' in additional_info:
                 stats[col_name]['separator'] = additional_info['separator']
             col_data_dict[col_name] = col_data

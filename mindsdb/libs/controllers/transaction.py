@@ -240,7 +240,7 @@ class Transaction:
                 #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong
                 self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
 
-        self.save_metadata()
+        #self.save_metadata()
 
         return
 

@@ -25,7 +25,7 @@ class Insurance:
            y_pred.append(row['PolicyStatus'])
 
         acc_score = accuracy_score(y_real, y_pred, normalize=True)
-        acc_pct = round(acc_score)
+        acc_pct = round(acc_score * 100)
         print(f'Accuracy of : {acc_pct}%')
 
 

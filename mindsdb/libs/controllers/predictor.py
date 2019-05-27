@@ -300,11 +300,27 @@ class Predictor:
                         mao['test_accuracy_over_time']['x'].append(i)
                         mao['test_accuracy_over_time']['y'].append([i])
 
-                if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and 'unusual_columns_buckets_importances' in lmd and lmd['unusual_columns_buckets_importances'] is not None and lmd['column_importances'] is not None:
+                if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and lmd['column_importances'] is not None:
+                    mao['accuracy_histogram']['x'] = [f'Bucket "{x}"' for x in lmd['accuracy_histogram'][col]['buckets']]
+                    mao['accuracy_histogram']['y'] = lmd['accuracy_histogram'][col]['accuracies']
+
+                    bucket_stats = lmd['columns_buckets_importances'][col]
+                    sub_group_stats = []
+                    for sub_incol in bucket_stats:
+                        adapted_sub_incol = self._adapt_column(bucket_stats[sub_incol], sub_incol)
+
+                        sub_incol_parts = sub_incol.split('_bucket_')
+                        sub_incol_name = 'Value Bucket "{}" for column: "{}"'.format(sub_incol_parts[1],sub_incol_parts[0])
+                        adapted_sub_incol['column_name'] = sub_incol_name
+
+                        sub_group_stats.append(adapted_sub_incol)
+                    mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
+
+                    '''
                     mao['accuracy_histogram']['x'] = []
                     mao['accuracy_histogram']['y'] = []
 
-                    bucket_importance_keys = list(lmd['unusual_columns_buckets_importances'].keys())
+                    bucket_importance_keys = list(lmd['columns_buckets_importances'].keys())
 
                     for incol in lmd['column_importances']:
                         incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
@@ -315,7 +331,7 @@ class Predictor:
                         if len(incol_bucket_importance_keys) > 0:
                             sub_group_stats = []
                             for sub_incol in incol_bucket_importance_keys:
-                                adapted_sub_incol = self._adapt_column(lmd['unusual_columns_buckets_importances'][sub_incol], sub_incol)
+                                adapted_sub_incol = self._adapt_column(lmd['columns_buckets_importances'][sub_incol], sub_incol)
 
                                 sub_incol_parts = sub_incol.split('_bucket_')
                                 sub_incol_name = 'Value Bucket "{}" for column: "{}"'.format(sub_incol_parts[1],sub_incol_parts[0])
@@ -325,6 +341,7 @@ class Predictor:
                         else:
                             sub_group_stats = [None]
                         mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
+                    '''
 
                     for icol in lmd['model_columns_map'].keys():
                         if icol in lmd['malformed_columns']['names']:
@@ -523,7 +540,7 @@ class Predictor:
         light_transaction_metadata['rebuild_model'] = rebuild_model
         light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
         light_transaction_metadata['column_importances'] = None
-        light_transaction_metadata['unusual_columns_buckets_importances'] = None
+        light_transaction_metadata['columns_buckets_importances'] = None
         light_transaction_metadata['columnless_prediction_distribution'] = None
         light_transaction_metadata['all_columns_prediction_distribution'] = None
         light_transaction_metadata['use_gpu'] = use_gpu

@@ -33,7 +33,7 @@ class ModelAnalyzer(BaseModule):
         column_importances, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns, full_dataset=validation_dataset, stats=self.transaction.lmd['column_stats'])
 
         self.transaction.lmd['column_importances'] = column_importances
-        self.transaction.lmd['unusual_columns_buckets_importances'] = buckets_stats
+        self.transaction.lmd['columns_buckets_importances'] = buckets_stats
         self.transaction.lmd['columnless_prediction_distribution'] = columnless_prediction_distribution
         self.transaction.lmd['all_columns_prediction_distribution'] = all_columns_prediction_distribution
         # Create the probabilistic validators for each of the predict column
@@ -50,6 +50,14 @@ class ModelAnalyzer(BaseModule):
         for input_column in input_columns:
             if self.transaction.lmd['column_stats'][input_column]['data_type'] != DATA_TYPES.FILE_PATH:
                 ignorable_input_columns.append(input_column)
+
+
+        predictions = self.transaction.model_backend.predict('validate')
+        for pcol in output_columns:
+            for i in range(len(predictions[pcol])):
+                predicted_val = predictions[pcol][i]
+                real_val = validation_dataset[pcol][i]
+                probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=real_val, predicted_value=predicted_val)
 
         # Run on the validation set multiple times, each time with one of the column blanked out
         for column_name in ignorable_input_columns:
@@ -68,8 +76,11 @@ class ModelAnalyzer(BaseModule):
                     real_val = validation_dataset[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
 
+        self.transaction.lmd['accuracy_histogram'] = {}
         for pcol in output_columns:
             probabilistic_validators[pcol].partial_fit()
+            accuracy_histogram = probabilistic_validators[pcol].get_accuracy_histogram()
+            self.transaction.lmd['accuracy_histogram'][pcol] = accuracy_histogram
 
         # Pickle for later use
         self.transaction.hmd['probabilistic_validators'] = {}

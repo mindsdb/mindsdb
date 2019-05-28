@@ -13,4 +13,4 @@ mdb.learn(
 prediction = mdb.predict(when={'sqft':300})
 print(prediction[0])
 amd = mdb.get_model_data('home_rentals_price')
-#print(amd)
+print(amd)

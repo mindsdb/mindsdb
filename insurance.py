@@ -31,5 +31,5 @@ class Insurance:
 
 if __name__ == "__main__":
    tTest = Insurance()
-   #tTest.insurance_train()
+   tTest.insurance_train()
    tTest.insurance_predict()

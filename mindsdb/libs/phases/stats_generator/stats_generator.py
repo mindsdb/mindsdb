@@ -1002,7 +1002,9 @@ class StatsGenerator(BaseModule):
             self.transaction.lmd['column_stats'] = stats
 
             if 'sample_margin_of_error' in self.transaction.lmd and self.transaction.lmd['sample_margin_of_error'] is not None:
-                self.transaction.lmd['data_preparation']['sample_margin_of_error'] = self.transaction.lmd['sample_margin_of_error']
+                self.transaction.lmd['data_preparation']['accepted_margin_of_error'] = self.transaction.lmd['sample_margin_of_error']
+            else:
+                self.transaction.lmd['data_preparation']['accepted_margin_of_error'] = CONFIG.DEFAULT_MARGIN_OF_ERROR
 
             self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
             self.transaction.lmd['data_preparation']['used_row_count'] = sample_size

@@ -304,17 +304,14 @@ class Predictor:
                     mao['accuracy_histogram']['x'] = [f'{x}' for x in lmd['accuracy_histogram'][col]['buckets']]
                     mao['accuracy_histogram']['y'] = lmd['accuracy_histogram'][col]['accuracies']
 
-                    bucket_stats = lmd['columns_buckets_importances'][col]
-                    sub_group_stats = []
-                    for sub_incol in bucket_stats:
-                        adapted_sub_incol = self._adapt_column(bucket_stats[sub_incol], sub_incol)
 
-                        sub_incol_parts = sub_incol.split('_bucket_')
-                        sub_incol_name = 'Value Bucket "{}" for column: "{}"'.format(sub_incol_parts[1],sub_incol_parts[0])
-                        adapted_sub_incol['column_name'] = sub_incol_name
-
-                        sub_group_stats.append(adapted_sub_incol)
-                    mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
+                    for output_col_bucket in lmd['columns_buckets_importances'][col]:
+                        x_explained_member = []
+                        for input_col in lmd['columns_buckets_importances'][col][output_col_bucket]:
+                            stats = lmd['columns_buckets_importances'][col][output_col_bucket][input_col]
+                            adapted_sub_incol = self._adapt_column(stats, input_col)
+                            x_explained_member.append(adapted_sub_incol)
+                        mao['accuracy_histogram']['x_explained'].append(x_explained_member)
 
                     '''
                     mao['accuracy_histogram']['x'] = []
@@ -482,7 +479,7 @@ class Predictor:
 
         from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
-        breakpoint = CONFIG.DEBUG_BREAK_POINT
+
         transaction_type = TRANSACTION_LEARN
         sample_confidence_level = 1 - sample_margin_of_error
         predict_columns_map = {}
@@ -565,7 +562,7 @@ class Predictor:
 
             for k in ['from_data', 'test_from_data']:
                 if old_hmd[k] is not None: heavy_transaction_metadata[k] = old_hmd[k]
-        Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log, breakpoint=breakpoint)
+        Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
     def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=True):
@@ -580,7 +577,6 @@ class Predictor:
         """
 
         transaction_type = TRANSACTION_PREDICT
-        breakpoint = CONFIG.DEBUG_BREAK_POINT
         when_ds = None if when_data is None else getDS(when_data)
 
 
@@ -601,6 +597,6 @@ class Predictor:
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
 
-        transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, breakpoint=breakpoint)
+        transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata)
 
         return transaction.output_data

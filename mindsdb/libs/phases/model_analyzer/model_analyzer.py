@@ -18,19 +18,10 @@ class ModelAnalyzer(BaseModule):
 
         output_columns = self.transaction.lmd['predict_columns']
         input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns and col not in self.transaction.lmd['malformed_columns']['names']]
-        validation_dataset = {}
-
-        for row_ind in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
-            for col_ind, col in enumerate(self.transaction.lmd['columns']):
-                if col in self.transaction.lmd['malformed_columns']['names']:
-                    continue
-                if col not in validation_dataset:
-                    validation_dataset[col] = []
-                validation_dataset[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
 
         # Test some hypotheses about our columns
         column_evaluator = ColumnEvaluator(self.transaction)
-        column_importances, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns, full_dataset=validation_dataset, stats=self.transaction.lmd['column_stats'])
+        column_importances, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns, full_dataset=self.transaction.input_data.validation_df, stats=self.transaction.lmd['column_stats'])
 
         self.transaction.lmd['column_importances'] = column_importances
         self.transaction.lmd['columns_buckets_importances'] = buckets_stats
@@ -54,10 +45,11 @@ class ModelAnalyzer(BaseModule):
 
         predictions = self.transaction.model_backend.predict('validate')
         for pcol in output_columns:
-            for i in range(len(predictions[pcol])):
+            i = 0
+            for real_val in self.transaction.input_data.validation_df[pcol]:
                 predicted_val = predictions[pcol][i]
-                real_val = validation_dataset[pcol][i]
                 probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=real_val, predicted_value=predicted_val)
+                i += 1
 
         # Run on the validation set multiple times, each time with one of the column blanked out
         for column_name in ignorable_input_columns:
@@ -71,10 +63,11 @@ class ModelAnalyzer(BaseModule):
 
             # A separate probabilistic model is trained for each predicted column, we may want to change this in the future, @TODO
             for pcol in output_columns:
-                for i in range(len(predictions[pcol])):
+                i = 0
+                for real_val in self.transaction.input_data.validation_df:
                     predicted_val = predictions[pcol][i]
-                    real_val = validation_dataset[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
+                    i += 1
 
         self.transaction.lmd['accuracy_histogram'] = {}
         for pcol in output_columns:

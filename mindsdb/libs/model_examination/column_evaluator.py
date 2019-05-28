@@ -3,6 +3,9 @@ from mindsdb.libs.phases.stats_generator.stats_generator import StatsGenerator
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.constants.mindsdb import *
 
+import pandas as pd
+
+
 class ColumnEvaluator():
     """
     # The Hypothesis Executor is responsible for testing out various scenarios
@@ -27,8 +30,9 @@ class ColumnEvaluator():
         for output_column in output_columns:
             stats_generator = StatsGenerator(session=None, transaction=self.transaction)
             input_data = TransactionData()
-            input_data.data_array = list(map(lambda x: [x], list(self.normal_predictions[output_column])))
+            input_data.data_frame = self.normal_predictions[[output_column]]
             input_data.columns = [output_column]
+            # @TODO: Running stats generator just to get the histogram is very inefficient, change this
             validation_set_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
             if validation_set_output_stats is None:
@@ -65,8 +69,10 @@ class ColumnEvaluator():
                     columnless_prediction_distribution[output_column] = {}
                 stats_generator = StatsGenerator(session=None, transaction=self.transaction)
                 input_data = TransactionData()
-                input_data.data_array = list(map(lambda x: [x], list(col_missing_predictions[output_column])))
+                input_data.data_frame = col_missing_predictions[[output_column]]
                 input_data.columns = [output_column]
+
+                # @TODO: Running stats generator just to get the histogram is very inefficient, change this
                 col_missing_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
 
                 if col_missing_output_stats is None:
@@ -74,48 +80,39 @@ class ColumnEvaluator():
                 elif 'histogram' in col_missing_output_stats[output_column]:
                     columnless_prediction_distribution[output_column][input_column] = col_missing_output_stats[output_column]['histogram']
 
-        for column in [*ignorable_input_columns,*output_columns]:
-            # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)
-            if column in output_columns or (column_importance_dict[column] > 0.8 or column_importance_dict[column] < 0.2):
-                split_data = {}
-                for value in full_dataset[column]:
+        # @TODO should be go back to generating this information based on the buckets of the input columns ? Or just keep doing the stats generation for the input columns based on the indexes of the buckets for the output column
+        #for column in ignorable_input_columns:
+        #    if c(column_importance_dict[column] > 0.8 or column_importance_dict[column] < 0.2):
 
-                    if 'percentage_buckets' in stats[column]:
-                        bucket = stats[column]['percentage_buckets']
+        for output_column in output_columns:
+                buckets_stats[output_column] = {}
+
+                bucket_indexes = {}
+                for index,row in full_dataset.iterrows():
+                    print(index)
+                    value = row[output_column]
+                    if 'percentage_buckets' in stats[output_column]:
+                        percentage_buckets = stats[output_column]['percentage_buckets']
                     else:
-                        bucket = None
+                        percentage_buckets = None
 
-                    vb = get_value_bucket(value, bucket, stats[column])
-                    if f'{column}_bucket_{vb}' not in split_data:
-                        split_data[f'{column}_bucket_{vb}'] = []
+                    value_bucket = get_value_bucket(value, percentage_buckets, stats[output_column])
+                    if value_bucket not in bucket_indexes:
+                        bucket_indexes[value_bucket] = []
+                    bucket_indexes[value_bucket].append(index)
 
-                    split_data[f'{column}_bucket_{vb}'].append(value)
+                for bucket in bucket_indexes:
+                    buckets_stats[output_column][bucket] = {}
+                    input_data = TransactionData()
+                    input_data.data_frame = full_dataset.loc[bucket_indexes[bucket]]
+                    input_data.columns = input_data.data_frame.columns
 
-                row_wise_data = []
-                max_length = max(list(map(len, split_data.values())))
-
-                columns = []
-                for i in range(max_length):
-                    row_wise_data.append([])
-                    for k in split_data.keys():
-                        # If the sub bucket has less than 6 values, it's no relevant
-                        if len(split_data[k]) > 6:
-                            columns.append(k)
-                            if len(split_data[k]) > i:
-                                row_wise_data[-1].append(split_data[k][i])
-                            else:
-                                row_wise_data[-1].append(None)
-
-                input_data = TransactionData()
-                input_data.data_array = row_wise_data
-                input_data.columns = columns
-
-                stats_generator = StatsGenerator(session=None, transaction=self.transaction)
-                try:
-                    col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
-                    buckets_stats[column] = col_buckets_stats
-                except:
-                    print('Cloud not generate bucket stats for sub-bucket: {}'.format(input_data))
+                    stats_generator = StatsGenerator(session=None, transaction=self.transaction)
+                    try:
+                        col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+                        buckets_stats[output_column][bucket].update(col_buckets_stats)
+                    except:
+                        print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
 
         return column_importance_dict, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution
 

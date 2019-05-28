@@ -251,7 +251,7 @@ class LudwigBackend():
 
             for row_ind in indexes:
                 if ludwig_dtype == 'order_by_col':
-                    ts_data_point = self.transaction.input_data.data_array[row_ind][col_ind]
+                    ts_data_point = self.transaction.input_data.data_frame[col][row_ind]
 
                     try:
                         ts_data_point = float(ts_data_point)
@@ -260,7 +260,7 @@ class LudwigBackend():
                     data[col].append(ts_data_point)
 
                 elif ludwig_dtype == 'sequence':
-                    arr_str = self.transaction.input_data.data_array[row_ind][col_ind]
+                    arr_str = self.transaction.input_data.data_frame[col][row_ind]
                     if arr_str is not None:
                         arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.lmd['column_stats'][col]['separator'])))
                     else:
@@ -288,7 +288,7 @@ class LudwigBackend():
                             ,'type': 'numerical'
                         })
 
-                    date = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind])
+                    date = parse_datetime(self.transaction.input_data.data_frame[col][row_ind])
 
                     data[col + '_year'].append(date.year)
                     data[col + '_month'].append(date.month)
@@ -303,27 +303,27 @@ class LudwigBackend():
                         timeseries_cols.append(col + '_year')
 
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
-                    if self.transaction.input_data.data_array[row_ind][col_ind] is None:
+                    if self.transaction.input_data.data_frame[col][row_ind] is None:
                         unix_ts = 0
                     else:
-                        unix_ts = parse_datetime(self.transaction.input_data.data_array[row_ind][col_ind]).timestamp()
+                        unix_ts = parse_datetime(self.transaction.input_data.data_frame[col][row_ind]).timestamp()
 
                     data[col].append(unix_ts)
 
                 elif data_subtype in (DATA_SUBTYPES.FLOAT):
-                    if type(self.transaction.input_data.data_array[row_ind][col_ind]) == str:
-                        data[col].append(float(str(self.transaction.input_data.data_array[row_ind][col_ind]).replace(',','.')))
+                    if type(self.transaction.input_data.data_frame[col][row_ind]) == str:
+                        data[col].append(float(str(self.transaction.input_data.data_frame[col][row_ind]).replace(',','.')))
                     else:
-                        data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
+                        data[col].append(self.transaction.input_data.data_frame[col][row_ind])
 
                 elif data_subtype in (DATA_SUBTYPES.INT):
-                    if type(self.transaction.input_data.data_array[row_ind][col_ind]) == str:
-                        data[col].append(round(float(str(self.transaction.input_data.data_array[row_ind][col_ind]).replace(',','.'))))
+                    if type(self.transaction.input_data.data_frame[col][row_ind]) == str:
+                        data[col].append(round(float(str(self.transaction.input_data.data_frame[col][row_ind]).replace(',','.'))))
                     else:
-                        data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
+                        data[col].append(self.transaction.input_data.data_frame[col][row_ind])
 
                 else:
-                    data[col].append(self.transaction.input_data.data_array[row_ind][col_ind])
+                    data[col].append(self.transaction.input_data.data_frame[col][row_ind])
 
             if custom_logic_continue:
                 continue

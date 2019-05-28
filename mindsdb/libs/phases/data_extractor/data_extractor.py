@@ -96,23 +96,23 @@ class DataExtractor(BaseModule):
             return None
 
         df = self._apply_sort_conditions_to_df(df)
-        g = df.columns.to_series().groupby(df.dtypes).groups
+        groups = df.columns.to_series().groupby(df.dtypes).groups
 
-        if np.dtype('<M8[ns]') in g:
-            for colname in g[np.dtype('<M8[ns]')]:
+        boolean_dictionary = {True: 'True', False: 'False'}
+        df = df.replace(boolean_dictionary)
+
+        if np.dtype('datetime64[ns]') in groups:
+            for colname in groups[np.dtype('datetime64[ns]')]:
                 df[colname] = df[colname].astype(str)
+
         return df
 
 
     def _validate_input_data_integrity(self):
         """
-
         :return:
         """
-
-
-
-        if len(self.transaction.input_data.data_array) <= 0:
+        if self.transaction.input_data.data_frame.shape[0] <= 0:
             error = 'Input Data has no rows, please verify from_data or when_conditions'
             self.log.error(error)
             raise ValueError(error)
@@ -137,11 +137,8 @@ class DataExtractor(BaseModule):
     def run(self):
         result = self._get_prepared_input_df()
 
-        columns = list(result.columns.values)
-        data_array = list(result.values.tolist())
-
-        self.transaction.input_data.columns = columns
-        self.transaction.input_data.data_array = data_array
+        self.transaction.input_data.columns = result.columns.values.tolist()
+        self.transaction.input_data.data_frame = result
 
         self._validate_input_data_integrity()
 
@@ -157,7 +154,7 @@ class DataExtractor(BaseModule):
         self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] = []
         self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY] = []
         self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY] = []
-        for i, row in enumerate(self.transaction.input_data.data_array):
+        for i, row in self.transaction.input_data.data_frame.iterrows():
 
             if len(group_by) > 0:
                 group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in group_by_col_indexes])
@@ -171,6 +168,7 @@ class DataExtractor(BaseModule):
 
         # move indexes to corresponding train, test, validation, etc and trim input data accordingly
         for key in self.transaction.input_data.all_indexes:
+            #If this is a group by, skip the `KEY_NO_GROUP_BY` key
             if len(self.transaction.input_data.all_indexes) > 1 and key == KEY_NO_GROUP_BY:
                 continue
 
@@ -202,25 +200,15 @@ class DataExtractor(BaseModule):
                     self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][test_window[0]:test_window[1]]
                     self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][validation_window[0]:validation_window[1]]
 
+        self.transaction.input_data.train_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]]
+        self.transaction.input_data.test_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]]
+        self.transaction.input_data.validation_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]]
+        # @TODO: Consider deleting self.transaction.input_data.data_frame here
+
         # log some stats
         if self.transaction.lmd['type'] == TRANSACTION_LEARN:
-
-            total_rows_used_by_subset = {'train': 0, 'test': 0, 'validation': 0}
-            average_number_of_rows_used_per_groupby = {'train': 0, 'test': 0, 'validation': 0}
-            number_of_groups_per_subset = {'train': 0, 'test': 0, 'validation': 0}
-
-            for group_key in total_rows_used_by_subset:
-                pointer = getattr(self.transaction.input_data, group_key+'_indexes')
-                total_rows_used_by_subset[group_key] = sum([len(pointer[key_i]) for key_i in pointer])
-                number_of_groups_per_subset[group_key] = len(pointer)
-                #average_number_of_rows_used_per_groupby[group_key] = total_rows_used_by_subset[group_key] / number_of_groups_per_subset[group_key]
-
-
-            total_rows_used = sum(total_rows_used_by_subset.values())
-            total_rows_in_input = len(self.transaction.input_data.data_array)
-            total_number_of_groupby_groups = len(self.transaction.input_data.all_indexes)
-
-            if total_rows_used != total_rows_in_input:
+            # @TODO I don't think the above works, fix at some point or just remove `sample_margin_of_error` option from the interface
+            if len(self.transaction.input_data.data_frame) != sum([len(self.transaction.input_data.train_df),len(self.transaction.input_data.test_df),len(self.transaction.input_data.validation_df)]):
                 self.log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.lmd['sample_confidence_level'], sample_margin_of_error= self.transaction.lmd['sample_margin_of_error']))
                 self.log.info('Using a [Cochran\'s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
                 data = {
@@ -229,53 +217,16 @@ class DataExtractor(BaseModule):
                     'label': 'Sample size for margin of error of ({sample_margin_of_error}) and a confidence level of ({sample_confidence_level})'.format(sample_confidence_level=self.transaction.lmd['sample_confidence_level'], sample_margin_of_error= self.transaction.lmd['sample_margin_of_error'])
                 }
                 self.log.infoChart(data, type='pie')
-
-            '''
-            if total_number_of_groupby_groups > 1:
-                self.log.info('You are grouping your data by [{group_by}], we found:'.format(group_by=', '.join(group_by)))
-                data = {
-                    'Total number of groupby groups': total_number_of_groupby_groups,
-                    'Average number of rows per groupby group': int(sum(average_number_of_rows_used_per_groupby.values())/len(average_number_of_rows_used_per_groupby))
-                }
-                self.log.infoChart(data, type='list')
-            '''
-
-            self.log.info('We have split the input data into:')
+            # @TODO Bad code ends here (see @TODO above)
 
             data = {
                 'subsets': [
-                    [total_rows_used_by_subset['train'], 'Train'],
-                    [total_rows_used_by_subset['test'], 'Test'],
-                    [total_rows_used_by_subset['validation'], 'Validation']
+                    [len(self.transaction.input_data.train_df), 'Train'],
+                    [len(self.transaction.input_data.test_df), 'Test'],
+                    [len(self.transaction.input_data.validation_df), 'Validation']
                 ],
                 'label': 'Number of rows per subset'
             }
 
+            self.log.info('We have split the input data into:')
             self.log.infoChart(data, type='pie')
-
-
-
-def test():
-    from mindsdb.libs.controllers.predictor import Predictor
-    from mindsdb import CONFIG
-
-    CONFIG.DEBUG_BREAK_POINT = PHASE_DATA_EXTRACTOR
-
-    mdb = Predictor(name='home_rentals')
-
-
-    mdb.learn(
-        from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",
-        # the path to the file where we can learn from, (note: can be url)
-        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        sample_margin_of_error=0.02
-    )
-
-
-
-
-
-
-# only run the test if this file is called from debugger
-if __name__ == "__main__":
-    test()

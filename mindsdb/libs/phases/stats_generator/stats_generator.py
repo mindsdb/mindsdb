@@ -122,7 +122,7 @@ class StatsGenerator(BaseModule):
             return DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT
 
 
-    def _get_column_data_type(self, data, col_index, data_array, col_name):
+    def _get_column_data_type(self, data, data_frame, col_name):
         """
         Provided the column data, define it its numeric, data or class
 
@@ -229,10 +229,7 @@ class StatsGenerator(BaseModule):
 
         # @TODO: Extremely slow for large datasets, make it faster
         if curr_data_type != DATA_TYPES.CATEGORICAL:
-            all_values = []
-            for row in data_array:
-                all_values.append(row[col_index])
-
+            all_values = data_frame[col_name]
             all_distinct_vals = set(all_values)
 
             # The numbers here are picked randomly, the gist of it is that if values repeat themselves a lot we should consider the column to be categorical
@@ -743,19 +740,9 @@ class StatsGenerator(BaseModule):
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
-        header = input_data.columns
-        non_null_data = {}
-        all_sampled_data = {}
-
-        for column in header:
-            non_null_data[column] = []
-            all_sampled_data[column] = []
-
-        empty_count = {}
-        column_count = {}
 
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
-        population_size = len(input_data.data_array)
+        population_size = len(input_data.data_frame)
 
         if population_size < 50:
             sample_size = population_size
@@ -768,27 +755,16 @@ class StatsGenerator(BaseModule):
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
-        for sample_i in input_data_sample_indexes:
-            row = input_data.data_array[sample_i]
-            for i, val in enumerate(row):
-                column = header[i]
-                value = cast_string_to_python_type(val)
-                if not column in empty_count:
-                    empty_count[column] = 0
-                    column_count[column] = 0
-                if value == None:
-                    empty_count[column] += 1
-                else:
-                    non_null_data[column].append(value)
-                all_sampled_data[column].append(value)
-                column_count[column] += 1
-        stats = {}
+        all_sampled_data = input_data.data_frame.iloc[input_data_sample_indexes]
 
+        stats = {}
         col_data_dict = {}
-        for i, col_name in enumerate(non_null_data):
-            col_data = non_null_data[col_name]
+
+        for col_name in all_sampled_data.columns.values:
+            col_data = all_sampled_data[col_name].dropna()
             full_col_data = all_sampled_data[col_name]
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, i, input_data.data_array, col_name)
+
+            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
 
             if column_status == 'Column empty':
                 if modify_light_metadata:
@@ -879,11 +855,7 @@ class StatsGenerator(BaseModule):
                     "percentage_buckets": xp
                 }
             elif data_type == DATA_TYPES.CATEGORICAL:
-                all_values = []
-                for row in input_data.data_array:
-                    all_values.append(row[i])
-
-                histogram = Counter(all_values)
+                histogram = Counter(input_data.data_frame[col_name])
                 all_possible_values = histogram.keys()
 
                 col_stats = {
@@ -970,8 +942,11 @@ class StatsGenerator(BaseModule):
             stats[col_name]['data_type_dist'] = data_type_dist
             stats[col_name]['data_subtype_dist'] = data_subtype_dist
             stats[col_name]['column'] = col_name
-            stats[col_name]['empty_cells'] = empty_count[col_name]
-            stats[col_name]['empty_percentage'] = empty_count[col_name] * 100 / column_count[col_name]
+
+            empty_count = len(full_col_data) - len(col_data)
+
+            stats[col_name]['empty_cells'] = empty_count
+            stats[col_name]['empty_percentage'] = empty_count * 100 / len(full_col_data)
             if 'separator' in additional_info:
                 stats[col_name]['separator'] = additional_info['separator']
             col_data_dict[col_name] = col_data
@@ -996,7 +971,7 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(self._compute_data_quality_score(stats, col_name))
 
 
-        total_rows = len(input_data.data_array)
+        total_rows = len(input_data.data_frame)
 
         if modify_light_metadata:
             self.transaction.lmd['column_stats'] = stats
@@ -1014,28 +989,3 @@ class StatsGenerator(BaseModule):
 
         self._log_interesting_stats(stats)
         return stats
-
-
-
-def test():
-    from mindsdb.libs.controllers.predictor import Predictor
-    from mindsdb import CONFIG
-
-    CONFIG.DEBUG_BREAK_POINT = PHASE_STATS_GENERATOR
-
-    mdb = Predictor(name='home_rentals')
-
-    mdb.learn(
-        from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",
-        # the path to the file where we can learn from, (note: can be url)
-        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        sample_margin_of_error=0.02
-    )
-
-
-
-
-
-# only run the test if this file is called from debugger
-if __name__ == "__main__":
-    test()

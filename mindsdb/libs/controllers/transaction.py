@@ -21,7 +21,7 @@ import sys
 
 class Transaction:
 
-    def __init__(self, session, light_transaction_metadata, heavy_transaction_metadata, logger =  log, breakpoint = PHASE_END):
+    def __init__(self, session, light_transaction_metadata, heavy_transaction_metadata, logger =  log):
         """
         A transaction is the interface to start some MindsDB operation within a session
 
@@ -31,11 +31,8 @@ class Transaction:
         :param transaction_metadata:
         :type transaction_metadata: dict
         :type heavy_transaction_metadata: dict
-        :param breakpoint:
         """
 
-
-        self.breakpoint = breakpoint
         self.session = session
         self.lmd = light_transaction_metadata
         self.lmd['created_at'] = str(datetime.datetime.now())
@@ -86,7 +83,7 @@ class Transaction:
             # Don't save data for now
             pickle.dump(save_hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
 
-    def _call_phase_module(self, module_name, **kwargs):
+    def _call_phase_module(self, clean_exit, module_name, **kwargs):
         """
         Loads the module and runs it
 
@@ -105,32 +102,29 @@ class Transaction:
             error = 'Could not load module {module_name}'.format(module_name=module_name)
             self.log.error('Could not load module {module_name}'.format(module_name=module_name))
             self.log.error(traceback.format_exc())
-            raise ValueError(error)
-            return None
+            if clean_exit:
+                exit(1)
+            else:
+                raise ValueError(error)
+                return None
         finally:
             self.lmd['is_active'] = False
 
 
     def _execute_learn(self):
         """
-
         :return:
         """
         self.lmd['current_phase'] = MODEL_STATUS_PREPARING
         self.save_metadata()
-        self._call_phase_module('DataExtractor')
-
-        if len(self.input_data.data_array) <= 0 or len(self.input_data.data_array[0]) <=0:
-            self.type = TRANSACTION_BAD_QUERY
-            self.errorMsg = "No results for this query."
-            return
+        self._call_phase_module(clean_exit=True, module_name='DataExtractor')
 
         try:
             # start populating data
             self.lmd['columns'] = self.input_data.columns # this is populated by data extractor
             self.save_metadata()
             self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
-            self._call_phase_module('StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+            self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
 
@@ -144,7 +138,7 @@ class Transaction:
             self.save_metadata()
 
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
-            self._call_phase_module('ModelAnalyzer')
+            self._call_phase_module(clean_exit=True, module_name='ModelAnalyzer')
             self.lmd['current_phase'] = MODEL_STATUS_TRAINED
             self.save_metadata()
             return
@@ -155,21 +149,6 @@ class Transaction:
             self.lmd['error_msg'] = traceback.print_exc()
             self.log.error(str(e))
             raise e
-
-
-    def _execute_drop_model(self):
-        """
-        Make sure that we remove all previous data about this model
-
-        :return:
-        """
-
-
-        self.output_data.data_array = [['Model '+self.lmd['name']+' deleted.']]
-        self.output_data.columns = ['Status']
-
-        return
-
 
 
     def _execute_predict(self):
@@ -201,10 +180,10 @@ class Transaction:
             self.log.error('No metadata found for this model')
             return
 
-        self._call_phase_module('DataExtractor')
+        self._call_phase_module(clean_exit=True, module_name='DataExtractor')
         #self.save_metadata()
 
-        if len(self.input_data.data_array[0]) <= 0:
+        if self.input_data.data_frame.shape[0] <= 0:
             self.output_data = self.input_data
             return
 
@@ -215,11 +194,10 @@ class Transaction:
             predictions = self.model_backend.predict()
         #self.save_metadata()
 
-        # self.transaction.lmd['predict_columns']
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
         input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
 
-        for row in self.input_data.data_array:
+        for i, row in self.input_data.data_frame.iterrows():
             for index, cell in enumerate(row):
                 col = self.input_data.columns[index]
                 self.output_data.data[col].append(cell)
@@ -256,13 +234,8 @@ class Transaction:
             self.error = True
             return
 
-        if self.lmd['type'] == TRANSACTION_DROP_MODEL:
-            self._execute_drop_model()
-            return
-
-
         if self.lmd['type'] == TRANSACTION_LEARN:
-            self.output_data.data_array = [['Model ' + self.lmd['name'] + ' training.']]
+            self.output_data.data_frame = [['Model ' + self.lmd['name'] + ' training.']]
             self.output_data.columns = ['Status']
 
             if CONFIG.EXEC_LEARN_IN_THREAD == False:

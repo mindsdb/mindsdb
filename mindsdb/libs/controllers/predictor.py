@@ -304,17 +304,14 @@ class Predictor:
                     mao['accuracy_histogram']['x'] = [f'{x}' for x in lmd['accuracy_histogram'][col]['buckets']]
                     mao['accuracy_histogram']['y'] = lmd['accuracy_histogram'][col]['accuracies']
 
-                    bucket_stats = lmd['columns_buckets_importances'][col]
-                    sub_group_stats = []
-                    for sub_incol in bucket_stats:
-                        adapted_sub_incol = self._adapt_column(bucket_stats[sub_incol], sub_incol)
-
-                        sub_incol_parts = sub_incol.split('_bucket_')
-                        sub_incol_name = 'Value Bucket "{}" for column: "{}"'.format(sub_incol_parts[1],sub_incol_parts[0])
-                        adapted_sub_incol['column_name'] = sub_incol_name
-
-                        sub_group_stats.append(adapted_sub_incol)
-                    mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
+                    x_explained = []
+                    for output_col_bucket in lmd['columns_buckets_importances'][col]:
+                        x_explained.append([])
+                        for input_col in lmd['columns_buckets_importances'][col][output_col_bucket]:
+                            stats = lmd['columns_buckets_importances'][col][output_col_bucket][input_col]
+                            adapted_sub_incol = self._adapt_column(stats, input_col)
+                            x_explained[-1].append(adapted_sub_incol)
+                    mao['accuracy_histogram']['x_explained'].append(x_explained)
 
                     '''
                     mao['accuracy_histogram']['x'] = []

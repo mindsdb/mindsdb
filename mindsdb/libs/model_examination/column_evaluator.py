@@ -89,13 +89,14 @@ class ColumnEvaluator():
 
                 bucket_indexes = {}
                 for index,row in full_dataset.iterrows():
+                    print(index)
                     value = row[output_column]
-                    if 'percentage_buckets' in stats[column]:
-                        percentage_buckets = stats[column]['percentage_buckets']
+                    if 'percentage_buckets' in stats[output_column]:
+                        percentage_buckets = stats[output_column]['percentage_buckets']
                     else:
                         percentage_buckets = None
 
-                    value_bucket = get_value_bucket(value, percentage_buckets, stats[column])
+                    value_bucket = get_value_bucket(value, percentage_buckets, stats[output_column])
                     if value_bucket not in bucket_indexes:
                         bucket_indexes[value_bucket] = []
                     bucket_indexes[value_bucket].append(index)
@@ -103,13 +104,13 @@ class ColumnEvaluator():
                 for bucket in bucket_indexes:
                     buckets_stats[output_column][bucket] = {}
                     input_data = TransactionData()
-                    input_data.data_frame = full_dataset.iloc(bucket_indexes[bucket])
-                    input_data.columns = data_frame.columns
+                    input_data.data_frame = full_dataset.loc[bucket_indexes[bucket]]
+                    input_data.columns = input_data.data_frame.columns
 
                     stats_generator = StatsGenerator(session=None, transaction=self.transaction)
                     try:
                         col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
-                        buckets_stats[output_column].update(col_buckets_stats)
+                        buckets_stats[output_column][bucket].update(col_buckets_stats)
                     except:
                         print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
 

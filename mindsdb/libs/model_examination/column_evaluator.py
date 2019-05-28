@@ -80,33 +80,36 @@ class ColumnEvaluator():
                 elif 'histogram' in col_missing_output_stats[output_column]:
                     columnless_prediction_distribution[output_column][input_column] = col_missing_output_stats[output_column]['histogram']
 
-        for column in [*ignorable_input_columns,*output_columns]:
-            # If this coulmn is either very important or not important at all, compute stats for each of the buckets (in the validation data)
-            if column in output_columns or (column_importance_dict[column] > 0.8 or column_importance_dict[column] < 0.2):
-                buckets_stats[column] = {}
-                split_data = {}
-                for value in full_dataset[column]:
+        # @TODO should be go back to generating this information based on the buckets of the input columns ? Or just keep doing the stats generation for the input columns based on the indexes of the buckets for the output column
+        #for column in ignorable_input_columns:
+        #    if c(column_importance_dict[column] > 0.8 or column_importance_dict[column] < 0.2):
 
+        for output_column in output_columns:
+                buckets_stats[output_column] = {}
+
+                bucket_indexes = {}
+                for index,row in full_dataset.iterrows():
+                    value = row[output_column]
                     if 'percentage_buckets' in stats[column]:
-                        bucket = stats[column]['percentage_buckets']
+                        percentage_buckets = stats[column]['percentage_buckets']
                     else:
-                        bucket = None
+                        percentage_buckets = None
 
-                    vb = get_value_bucket(value, bucket, stats[column])
-                    if f'{column}_bucket_{vb}' not in split_data:
-                        split_data[f'{column}_bucket_{vb}'] = []
+                    value_bucket = get_value_bucket(value, percentage_buckets, stats[column])
+                    if value_bucket not in bucket_indexes:
+                        bucket_indexes[value_bucket] = []
+                    bucket_indexes[value_bucket].append(index)
 
-                    split_data[f'{column}_bucket_{vb}'].append(value)
-
-                for bucket in split_data:
+                for bucket in bucket_indexes:
+                    buckets_stats[output_column][bucket] = {}
                     input_data = TransactionData()
-                    input_data.data_frame = pd.DataFrame(split_data[bucket], columns=[bucket])
-                    input_data.columns = [bucket]
+                    input_data.data_frame = full_dataset.iloc(bucket_indexes[bucket])
+                    input_data.columns = data_frame.columns
 
                     stats_generator = StatsGenerator(session=None, transaction=self.transaction)
                     try:
                         col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
-                        buckets_stats[column].update(col_buckets_stats)
+                        buckets_stats[output_column].update(col_buckets_stats)
                     except:
                         print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
 

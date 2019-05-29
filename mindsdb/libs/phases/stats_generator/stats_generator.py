@@ -249,7 +249,8 @@ class StatsGenerator(BaseModule):
 
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
 
-    def _get_words_dictionary(self, data, full_text = False):
+    @staticmethod
+    def get_words_dictionary(data, full_text = False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
 
         splitter = lambda w, t: [wi.split(t) for wi in w] if type(w) == type([]) else splitter(w,t)
@@ -914,7 +915,7 @@ class StatsGenerator(BaseModule):
             else:
                 # see if its a sentence or a word
                 is_full_text = True if curr_data_subtype == DATA_SUBTYPES.TEXT else False
-                dictionary, histogram = self._get_words_dictionary(col_data, is_full_text)
+                dictionary, histogram = StatsGenerator.get_words_dictionary(col_data, is_full_text)
 
                 # if no words, then no dictionary
                 if len(col_data) == 0:

@@ -290,7 +290,7 @@ class StatsGenerator(BaseModule):
             return StatsGenerator.get_words_histogram(data, is_full_text), None
         elif data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
             data = StatsGenerator.clean_int_and_date_data(data)
-            x, y = np.histogram(data, 50, density=False)
+            y, x = np.histogram(data, 50, density=False)
             x = (x + np.roll(x, -1))[:-1] / 2.0
             x = x.tolist()
             y = y.tolist()
@@ -865,10 +865,6 @@ class StatsGenerator(BaseModule):
                 if len(col_data) < 1:
                     return None
 
-                x = (x + np.roll(x, -1))[:-1] / 2.0
-                x = x.tolist()
-                y = y.tolist()
-
                 xp = []
 
                 if len(col_data) > 0:
@@ -944,7 +940,7 @@ class StatsGenerator(BaseModule):
             # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word
-                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=None, data_subtype=curr_data_subtype)
+                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=curr_data_type, data_subtype=curr_data_subtype)
                 dictionary = list(histogram.keys())
 
                 # if no words, then no dictionary

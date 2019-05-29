@@ -262,12 +262,12 @@ class StatsGenerator(BaseModule):
         return newData
 
     @staticmethod
-    def get_words_histogram(data, full_text=False):
+    def get_words_histogram(data, is_full_text=False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
 
         splitter = lambda w, t: [wi.split(t) for wi in w] if type(w) == type([]) else splitter(w,t)
 
-        if full_text:
+        if is_full_text:
             # get all words in every cell and then calculate histograms
             words = []
             for cell in data:
@@ -285,8 +285,9 @@ class StatsGenerator(BaseModule):
     @staticmethod
     def get_histogram(data, data_type=None, data_subtype=None, full_text=None):
         """ Returns a histogram for the data and [optionaly] the percentage buckets"""
-        if data_type == None:
-            return StatsGenerator.get_words_histogram(data, full_text), None
+        if data_type == DATA_TYPE.SEQUENTIAL:
+            is_full_text = True if data_subtype == DATA_SUBTYPES.TEXT else False
+            return StatsGenerator.get_words_histogram(data, is_full_text), None
         elif data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
             data = StatsGenerator.clean_int_and_date_data(data)
             x, y = np.histogram(data, 50, density=False)
@@ -337,7 +338,7 @@ class StatsGenerator(BaseModule):
                 'y': y
             }, kmeans.cluster_centers_
         else:
-            return {'x': [],'y': []}, None
+            return None, None
 
     def _compute_value_distribution_score(self, stats, columns, col_name):
         """
@@ -940,8 +941,7 @@ class StatsGenerator(BaseModule):
             # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word
-                is_full_text = True if curr_data_subtype == DATA_SUBTYPES.TEXT else False
-                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=None, full_text=is_full_text)
+                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=None, data_subtype=curr_data_subtype)
                 dictionary = list(histogram.keys())
 
                 # if no words, then no dictionary
@@ -954,6 +954,7 @@ class StatsGenerator(BaseModule):
                     dictionary_lenght_percentage = len(
                         dictionary) / len(col_data) * 100
                     # if the number of uniques is too large then treat is a text
+                    is_full_text = True if curr_data_subtype == DATA_SUBTYPES.TEXT else False
                     if dictionary_lenght_percentage > 10 and len(col_data) > 50 and is_full_text==False:
                         dictionary = []
                         dictionary_available = False

@@ -29,16 +29,14 @@ class ColumnEvaluator():
         # Histogram for when all columns are present, in order to plot the force vectors
         for output_column in output_columns:
             stats_generator = StatsGenerator(session=None, transaction=self.transaction)
-            input_data = TransactionData()
-            input_data.data_frame = self.normal_predictions[[output_column]]
-            input_data.columns = [output_column]
             # @TODO: Running stats generator just to get the histogram is very inefficient, change this
-            validation_set_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+            validation_set_output_column_histogram, _ = StatsGenerator.get_histogram(self.normal_predictions[output_column], data_type=stats[output_column]['data_type'],data_subtype=stats[output_column]['data_subtype'])
 
-            if validation_set_output_stats is None:
-                pass
-            elif 'histogram' in validation_set_output_stats[output_column]:
-                all_columns_prediction_distribution[output_column] = validation_set_output_stats[output_column]['histogram']
+            if validation_set_output_column_histogram is not None:
+                all_columns_prediction_distribution[output_column] = validation_set_output_column_histogram
+            else:
+                print('Cant generate hisotgram !')
+                exit()
 
         ignorable_input_columns = []
         for input_column in input_columns:

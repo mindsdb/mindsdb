@@ -34,9 +34,6 @@ class ColumnEvaluator():
 
             if validation_set_output_column_histogram is not None:
                 all_columns_prediction_distribution[output_column] = validation_set_output_column_histogram
-            else:
-                print('Cant generate hisotgram !')
-                exit()
 
         ignorable_input_columns = []
         for input_column in input_columns:
@@ -65,18 +62,12 @@ class ColumnEvaluator():
             for output_column in output_columns:
                 if output_column not in columnless_prediction_distribution:
                     columnless_prediction_distribution[output_column] = {}
-                stats_generator = StatsGenerator(session=None, transaction=self.transaction)
-                input_data = TransactionData()
-                input_data.data_frame = col_missing_predictions[[output_column]]
-                input_data.columns = [output_column]
 
                 # @TODO: Running stats generator just to get the histogram is very inefficient, change this
-                col_missing_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+                col_missing_output_histogram, _ = StatsGenerator.get_histogram(self.col_missing_predictions[output_column], data_type=stats[output_column]['data_type'],data_subtype=stats[output_column]['data_subtype'])
 
-                if col_missing_output_stats is None:
-                    pass
-                elif 'histogram' in col_missing_output_stats[output_column]:
-                    columnless_prediction_distribution[output_column][input_column] = col_missing_output_stats[output_column]['histogram']
+                if col_missing_output_histogram is None:
+                    columnless_prediction_distribution[output_column][input_column] = missing_output_histogram
 
         # @TODO should be go back to generating this information based on the buckets of the input columns ? Or just keep doing the stats generation for the input columns based on the indexes of the buckets for the output column
         #for column in ignorable_input_columns:

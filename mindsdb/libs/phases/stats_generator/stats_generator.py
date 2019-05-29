@@ -250,7 +250,19 @@ class StatsGenerator(BaseModule):
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
 
     @staticmethod
-    def get_words_dictionary(data, full_text = False):
+    def clean_int_and_date_data(col_data):
+        newData = []
+
+        for value in col_data:
+            if value != '' and value != '\r' and value != '\n':
+                newData.append(value)
+
+
+        col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
+        return newData
+
+    @staticmethod
+    def get_words_histogram(data, full_text=False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
 
         splitter = lambda w, t: [wi.split(t) for wi in w] if type(w) == type([]) else splitter(w,t)
@@ -265,12 +277,67 @@ class StatsGenerator(BaseModule):
         else:
             hist = {i: data.count(i) for i in data}
 
-        x = list(hist.keys())
-        histogram = {
-            'x': x,
+        return {
+            'x': list(hist.keys()),
             'y': list(hist.values())
         }
-        return x, histogram
+
+    @staticmethod
+    def get_histogram(data, data_type, data_subtype=None, full_text=None):
+        """ Returns a histogram for the data and [optionaly] the percentage buckets"""
+        if data_type == None:
+            return StatsGenerator.get_words_histogram(data, full_text), None
+        elif data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
+            data = StatsGenerator.clean_int_and_date_data(data)
+            x, y = np.histogram(data, 50, density=False)
+            return {
+                'x': x
+                ,'y': y
+            }, None
+        elif DATA_TYPES.CATEGORICAL:
+            histogram = Counter(data)
+            return {
+                'x': list(histogram.keys()),
+                'y': list(histogram.values())
+            }, None
+        elif data_subtype == DATA_SUBTYPES.IMAGE:
+            image_hashes = []
+            for img_path in data:
+                img_hash = imagehash.phash(Image.open(img_path))
+                seq_hash = []
+                for hash_row in img_hash.hash:
+                    seq_hash.extend(hash_row)
+
+                image_hashes.append(np.array(seq_hash))
+
+            kmeans = MiniBatchKMeans(n_clusters=20, batch_size=round(len(image_hashes)/4))
+
+            kmeans.fit(image_hashes)
+
+            if hmd is not None:
+                hmd['bucketing_algorithms'][col_name] = kmeans
+
+            x = []
+            y = [0] * len(kmeans.cluster_centers_)
+
+            for cluster in kmeans.cluster_centers_:
+                similarities = cosine_similarity(image_hashes,kmeans.cluster_centers_)
+
+                similarities = list(map(lambda x: sum(x), similarities))
+
+                index_of_most_similar = similarities.index(max(similarities))
+                x.append(col_data[index_of_most_similar])
+
+            indices = kmeans.predict(image_hashes)
+            for index in indices:
+                y[index] +=1
+
+            return {
+                'x': x,
+                'y': y
+            }, kmeans.cluster_centers_
+        else:
+            return {'x': [],'y': []}, None
 
     def _compute_value_distribution_score(self, stats, columns, col_name):
         """
@@ -785,20 +852,15 @@ class StatsGenerator(BaseModule):
                             col_data[i] = None
 
             if data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
-                newData = []
+                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type)
+                x = histogram['x']
+                y = histogram['y']
 
-                for value in col_data:
-                    if value != '' and value != '\r' and value != '\n':
-                        newData.append(value)
-
-
-                col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
-
-                # This shouldn't happen... an all null column makes no sense
+                col_data = StatsGenerator.clean_int_and_date_data(col_data)
+                # This means the column is all nulls, which we don't handle at the moment
                 if len(col_data) < 1:
                     return None
 
-                y, x = np.histogram(col_data, 50, density=False)
                 x = (x + np.roll(x, -1))[:-1] / 2.0
                 x = x.tolist()
                 y = y.tolist()
@@ -856,66 +918,31 @@ class StatsGenerator(BaseModule):
                     "percentage_buckets": xp
                 }
             elif data_type == DATA_TYPES.CATEGORICAL:
-                histogram = Counter(input_data.data_frame[col_name])
-                all_possible_values = histogram.keys()
+                histogram, _ = StatsGenerator.get_histogram(input_data.data_frame[col_name], data_type=DATA_TYPES.CATEGORICAL)
 
                 col_stats = {
                     'data_type': data_type,
                     'data_subtype': curr_data_subtype,
-                    "histogram": {
-                        "x": list(histogram.keys()),
-                        "y": list(histogram.values())
-                    }
-                    ,"percentage_buckets": list(histogram.keys())
+                    "histogram": histogram,
+                    "percentage_buckets": histogram['x']
                 }
 
             elif curr_data_subtype == DATA_SUBTYPES.IMAGE:
-                image_hashes = []
-                for img_path in col_data:
-                    img_hash = imagehash.phash(Image.open(img_path))
-                    seq_hash = []
-                    for hash_row in img_hash.hash:
-                        seq_hash.extend(hash_row)
-
-                    image_hashes.append(np.array(seq_hash))
-
-                kmeans = MiniBatchKMeans(n_clusters=20, batch_size=round(len(image_hashes)/4))
-
-                kmeans.fit(image_hashes)
-
-                if hmd is not None:
-                    hmd['bucketing_algorithms'][col_name] = kmeans
-
-                x = []
-                y = [0] * len(kmeans.cluster_centers_)
-
-                for cluster in kmeans.cluster_centers_:
-                    similarities = cosine_similarity(image_hashes,kmeans.cluster_centers_)
-
-                    similarities = list(map(lambda x: sum(x), similarities))
-
-                    index_of_most_similar = similarities.index(max(similarities))
-                    x.append(col_data[index_of_most_similar])
-
-                indices = kmeans.predict(image_hashes)
-                for index in indices:
-                    y[index] +=1
+                histogram, percentage_buckets = StatsGenerator.get_histogram(col_data, data_subtype=curr_data_subtype)
 
                 col_stats = {
                     'data_type': data_type,
                     'data_subtype': curr_data_subtype,
-                    'percentage_buckets': kmeans.cluster_centers_,
-                    'histogram': {
-                        'x': x,
-                        'y': y
-                    }
+                    'percentage_buckets': percentage_buckets,
+                    'histogram': histogram
                 }
 
             # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word
                 is_full_text = True if curr_data_subtype == DATA_SUBTYPES.TEXT else False
-                dictionary, histogram = StatsGenerator.get_words_dictionary(col_data, is_full_text)
+                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=None, full_text=is_full_text)
+                dictionary = list(histogram.keys())
 
                 # if no words, then no dictionary
                 if len(col_data) == 0:

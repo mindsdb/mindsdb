@@ -291,6 +291,9 @@ class StatsGenerator(BaseModule):
         elif data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
             data = StatsGenerator.clean_int_and_date_data(data)
             x, y = np.histogram(data, 50, density=False)
+            x = (x + np.roll(x, -1))[:-1] / 2.0
+            x = x.tolist()
+            y = y.tolist()
             return {
                 'x': x
                 ,'y': y

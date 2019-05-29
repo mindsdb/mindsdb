@@ -283,7 +283,7 @@ class StatsGenerator(BaseModule):
         }
 
     @staticmethod
-    def get_histogram(data, data_type, data_subtype=None, full_text=None):
+    def get_histogram(data, data_type=None, data_subtype=None, full_text=None):
         """ Returns a histogram for the data and [optionaly] the percentage buckets"""
         if data_type == None:
             return StatsGenerator.get_words_histogram(data, full_text), None

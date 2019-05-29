@@ -259,6 +259,7 @@ class StatsGenerator(BaseModule):
 
 
         col_data = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
+        print(newData)
         return newData
 
     @staticmethod

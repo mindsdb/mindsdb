@@ -77,7 +77,6 @@ class ColumnEvaluator():
 
                 bucket_indexes = {}
                 for index,row in full_dataset.iterrows():
-                    print(index)
                     value = row[output_column]
                     if 'percentage_buckets' in stats[output_column]:
                         percentage_buckets = stats[output_column]['percentage_buckets']

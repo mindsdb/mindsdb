@@ -4,7 +4,6 @@ from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.backends.ludwig import LudwigBackend
 from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
 
@@ -115,30 +114,26 @@ class Transaction:
         """
         :return:
         """
-        self.lmd['current_phase'] = MODEL_STATUS_PREPARING
-        self.save_metadata()
-        self._call_phase_module(clean_exit=True, module_name='DataExtractor')
-
         try:
-            # start populating data
-            self.lmd['columns'] = self.input_data.columns # this is populated by data extractor
+            self.lmd['current_phase'] = MODEL_STATUS_PREPARING
             self.save_metadata()
+
+            self._call_phase_module(clean_exit=True, module_name='DataExtractor')
+            self.save_metadata()
+            self.lmd['columns'] = self.input_data.columns
+
             self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
+            self.save_metadata()
             self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
-
-            if self.lmd['model_backend'] == 'ludwig':
-                self.lmd['is_active'] = True
-                self.model_backend = LudwigBackend(self)
-                self.model_backend.train()
-                self.lmd['is_active'] = False
-
-            self.lmd['train_end_at'] = str(datetime.datetime.now())
-            self.save_metadata()
+            self._call_phase_module(clean_exit=True, module_name='ModelInterface')
 
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
+            self.save_metadata()
             self._call_phase_module(clean_exit=True, module_name='ModelAnalyzer')
+
             self.lmd['current_phase'] = MODEL_STATUS_TRAINED
             self.save_metadata()
             return

@@ -14,31 +14,24 @@ class ColumnEvaluator():
     """
 
     def __init__(self, transaction):
-        self.normal_predictions = None
         self.transaction = transaction
 
     def get_column_importance(self, model, output_columns, input_columns, full_dataset, stats):
         columnless_prediction_distribution = {}
         all_columns_prediction_distribution = {}
 
-        self.normal_predictions = model.predict('validate')
-        normal_accuracy = evaluate_accuracy(self.normal_predictions, full_dataset, stats, output_columns)
+        normal_predictions = model.predict('validate')
+        normal_accuracy = evaluate_accuracy(normal_predictions, full_dataset, stats, output_columns)
         column_importance_dict = {}
         buckets_stats = {}
 
         # Histogram for when all columns are present, in order to plot the force vectors
         for output_column in output_columns:
-            stats_generator = StatsGenerator(session=None, transaction=self.transaction)
-            input_data = TransactionData()
-            input_data.data_frame = self.normal_predictions[[output_column]]
-            input_data.columns = [output_column]
             # @TODO: Running stats generator just to get the histogram is very inefficient, change this
-            validation_set_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+            validation_set_output_column_histogram, _ = StatsGenerator.get_histogram(normal_predictions[output_column], data_type=stats[output_column]['data_type'],data_subtype=stats[output_column]['data_subtype'])
 
-            if validation_set_output_stats is None:
-                pass
-            elif 'histogram' in validation_set_output_stats[output_column]:
-                all_columns_prediction_distribution[output_column] = validation_set_output_stats[output_column]['histogram']
+            if validation_set_output_column_histogram is not None:
+                all_columns_prediction_distribution[output_column] = validation_set_output_column_histogram
 
         ignorable_input_columns = []
         for input_column in input_columns:
@@ -67,18 +60,12 @@ class ColumnEvaluator():
             for output_column in output_columns:
                 if output_column not in columnless_prediction_distribution:
                     columnless_prediction_distribution[output_column] = {}
-                stats_generator = StatsGenerator(session=None, transaction=self.transaction)
-                input_data = TransactionData()
-                input_data.data_frame = col_missing_predictions[[output_column]]
-                input_data.columns = [output_column]
 
                 # @TODO: Running stats generator just to get the histogram is very inefficient, change this
-                col_missing_output_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+                col_missing_output_histogram, _ = StatsGenerator.get_histogram(col_missing_predictions[output_column], data_type=stats[output_column]['data_type'],data_subtype=stats[output_column]['data_subtype'])
 
-                if col_missing_output_stats is None:
-                    pass
-                elif 'histogram' in col_missing_output_stats[output_column]:
-                    columnless_prediction_distribution[output_column][input_column] = col_missing_output_stats[output_column]['histogram']
+                if col_missing_output_histogram is None:
+                    columnless_prediction_distribution[output_column][input_column] = missing_output_histogram
 
         # @TODO should be go back to generating this information based on the buckets of the input columns ? Or just keep doing the stats generation for the input columns based on the indexes of the buckets for the output column
         #for column in ignorable_input_columns:

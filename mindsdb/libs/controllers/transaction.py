@@ -120,7 +120,6 @@ class Transaction:
 
             self._call_phase_module(clean_exit=True, module_name='DataExtractor')
             self.save_metadata()
-            self.lmd['columns'] = self.input_data.columns
 
             self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
             self.save_metadata()

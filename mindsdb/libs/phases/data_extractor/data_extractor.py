@@ -138,6 +138,7 @@ class DataExtractor(BaseModule):
         result = self._get_prepared_input_df()
 
         self.transaction.input_data.columns = result.columns.values.tolist()
+        self.transaction.lmd['columns'] = self.input_data.columns
         self.transaction.input_data.data_frame = result
 
         self._validate_input_data_integrity()

@@ -20,13 +20,16 @@ class ModelAnalyzer(BaseModule):
         input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns and col not in self.transaction.lmd['malformed_columns']['names']]
 
         # Test some hypotheses about our columns
-        column_evaluator = ColumnEvaluator(self.transaction)
-        column_importances, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns, full_dataset=self.transaction.input_data.validation_df, stats=self.transaction.lmd['column_stats'])
 
-        self.transaction.lmd['column_importances'] = column_importances
-        self.transaction.lmd['columns_buckets_importances'] = buckets_stats
-        self.transaction.lmd['columnless_prediction_distribution'] = columnless_prediction_distribution
-        self.transaction.lmd['all_columns_prediction_distribution'] = all_columns_prediction_distribution
+        if self.transaction.lmd['disable_optional_analysis'] is False:
+            column_evaluator = ColumnEvaluator(self.transaction)
+            column_importances, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns, full_dataset=self.transaction.input_data.validation_df, stats=self.transaction.lmd['column_stats'])
+
+            self.transaction.lmd['column_importances'] = column_importances
+            self.transaction.lmd['columns_buckets_importances'] = buckets_stats
+            self.transaction.lmd['columnless_prediction_distribution'] = columnless_prediction_distribution
+            self.transaction.lmd['all_columns_prediction_distribution'] = all_columns_prediction_distribution
+
         # Create the probabilistic validators for each of the predict column
         probabilistic_validators = {}
         for col in output_columns:

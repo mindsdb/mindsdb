@@ -2,6 +2,7 @@ import random
 import warnings
 import imghdr
 import sndhdr
+import logging
 from collections import Counter
 
 import numpy as np
@@ -806,13 +807,17 @@ class StatsGenerator(BaseModule):
             self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
 
-    def run(self, input_data, modify_light_metadata, hmd=None):
+    def run(self, input_data, modify_light_metadata, hmd=None, print_logs=True):
         """
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
 
+        if print_logs == False:
+            self.log = logging.getLogger('null-logger')
+            self.log.propagate = False
+            
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
         population_size = len(input_data.data_frame)
 

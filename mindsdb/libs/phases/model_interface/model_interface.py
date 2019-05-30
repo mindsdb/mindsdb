@@ -6,6 +6,8 @@ import datetime
 
 class ModelInterface(BaseModule):
 
+    phase_name = PHASE_DATA_EXTRACTOR
+
     def run(self):
         if self.transaction.lmd['model_backend'] == 'ludwig':
             self.transaction.lmd['is_active'] = True

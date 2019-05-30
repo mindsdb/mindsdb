@@ -96,7 +96,7 @@ class ColumnEvaluator():
 
                     stats_generator = StatsGenerator(session=None, transaction=self.transaction)
                     try:
-                        col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+                        col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False, print_logs=False)
                         buckets_stats[output_column][bucket].update(col_buckets_stats)
                     except:
                         print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))

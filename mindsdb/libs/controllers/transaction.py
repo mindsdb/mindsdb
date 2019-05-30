@@ -127,7 +127,7 @@ class Transaction:
 
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
-            self._call_phase_module(clean_exit=True, module_name='ModelInterface')
+            self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='train')
 
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
             self.save_metadata()
@@ -181,6 +181,8 @@ class Transaction:
             return
 
         self.output_data = PredictTransactionOutputData(transaction=self)
+
+        self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='predict')
 
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
         input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]

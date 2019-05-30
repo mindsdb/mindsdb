@@ -1,6 +1,6 @@
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.config import *
-from mindsdb.libs.helpers.general_helpers import disable_ludwig_output
+from mindsdb.libs.helpers.general_helpers import disable_console_output
 
 from dateutil.parser import parse as parse_datetime
 import os, sys
@@ -396,7 +396,7 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
-        with disable_ludwig_output(True):
+        with disable_console_output(True):
             # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train... see this issue for any updates on the matter: https://github.com/uber/ludwig/issues/295
             #model.initialize_model(train_set_metadata={})
             #train_stats = model.train_online(data_df=training_dataframe) # ??Where to add model_name?? ----> model_name=self.transaction.lmd['name']
@@ -465,7 +465,7 @@ class LudwigBackend():
                 for date_appendage in ['_year', '_month','_day']:
                     predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
-        with disable_ludwig_output(True):
+        with disable_console_output(True):
             model_dir = self.get_model_dir()
             model = LudwigModel.load(model_dir=model_dir)
             predictions = model.predict(data_df=predict_dataframe, gpus=self.get_useable_gpus())

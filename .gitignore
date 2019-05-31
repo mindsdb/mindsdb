@@ -81,6 +81,6 @@ integration_testing/canvas.py
 test.out
 tmp.*
 tmp
-*.csv
+insu_*.csv
 insurance.py
 l_insurance.py

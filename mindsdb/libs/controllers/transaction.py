@@ -4,7 +4,6 @@ from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.backends.ludwig import LudwigBackend
 from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
 
@@ -115,30 +114,25 @@ class Transaction:
         """
         :return:
         """
-        self.lmd['current_phase'] = MODEL_STATUS_PREPARING
-        self.save_metadata()
-        self._call_phase_module(clean_exit=True, module_name='DataExtractor')
-
         try:
-            # start populating data
-            self.lmd['columns'] = self.input_data.columns # this is populated by data extractor
+            self.lmd['current_phase'] = MODEL_STATUS_PREPARING
             self.save_metadata()
+
+            self._call_phase_module(clean_exit=True, module_name='DataExtractor')
+            self.save_metadata()
+
             self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
+            self.save_metadata()
             self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
-
-            if self.lmd['model_backend'] == 'ludwig':
-                self.lmd['is_active'] = True
-                self.model_backend = LudwigBackend(self)
-                self.model_backend.train()
-                self.lmd['is_active'] = False
-
-            self.lmd['train_end_at'] = str(datetime.datetime.now())
-            self.save_metadata()
+            self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='train')
 
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
+            self.save_metadata()
             self._call_phase_module(clean_exit=True, module_name='ModelAnalyzer')
+
             self.lmd['current_phase'] = MODEL_STATUS_TRAINED
             self.save_metadata()
             return
@@ -181,7 +175,6 @@ class Transaction:
             return
 
         self._call_phase_module(clean_exit=True, module_name='DataExtractor')
-        #self.save_metadata()
 
         if self.input_data.data_frame.shape[0] <= 0:
             self.output_data = self.input_data
@@ -189,10 +182,7 @@ class Transaction:
 
         self.output_data = PredictTransactionOutputData(transaction=self)
 
-        if self.lmd['model_backend'] == 'ludwig':
-            self.model_backend = LudwigBackend(self)
-            predictions = self.model_backend.predict()
-        #self.save_metadata()
+        self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='predict')
 
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
         input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
@@ -205,7 +195,7 @@ class Transaction:
         for predicted_col in self.lmd['predict_columns']:
             probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
 
-            predicted_values = predictions[predicted_col]
+            predicted_values = self.hmd['predictions'][predicted_col]
             self.output_data.data[predicted_col] = predicted_values
             confidence_column_name = "{col}_confidence".format(col=predicted_col)
             self.output_data.data[confidence_column_name] = [None] * len(predicted_values)

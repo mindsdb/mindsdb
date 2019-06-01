@@ -442,7 +442,8 @@ class Predictor:
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,
-    stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS, backend='ludwig', rebuild_model=True, use_gpu=True):
+    stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS, backend='ludwig', rebuild_model=True, use_gpu=True,
+    disable_optional_analysis=False):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -514,6 +515,7 @@ class Predictor:
         heavy_transaction_metadata['from_data'] = from_ds
         heavy_transaction_metadata['test_from_data'] = test_from_ds
         heavy_transaction_metadata['bucketing_algorithms'] = {}
+        heavy_transaction_metadata['predictions'] = None
 
         light_transaction_metadata = {}
         light_transaction_metadata['version'] = str(__version__)
@@ -542,6 +544,7 @@ class Predictor:
         light_transaction_metadata['all_columns_prediction_distribution'] = None
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
+        light_transaction_metadata['disable_optional_analysis'] = disable_optional_analysis
 
 
         if rebuild_model is False:

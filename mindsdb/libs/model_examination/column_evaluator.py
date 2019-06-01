@@ -2,6 +2,7 @@ from mindsdb.libs.helpers.general_helpers import evaluate_accuracy, get_value_bu
 from mindsdb.libs.phases.stats_generator.stats_generator import StatsGenerator
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.constants.mindsdb import *
+from mindsdb.libs.helpers.general_helpers import disable_console_output
 
 import pandas as pd
 
@@ -76,7 +77,6 @@ class ColumnEvaluator():
 
                 bucket_indexes = {}
                 for index,row in full_dataset.iterrows():
-                    print(index)
                     value = row[output_column]
                     if 'percentage_buckets' in stats[output_column]:
                         percentage_buckets = stats[output_column]['percentage_buckets']
@@ -96,10 +96,13 @@ class ColumnEvaluator():
 
                     stats_generator = StatsGenerator(session=None, transaction=self.transaction)
                     try:
-                        col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False)
+                        with disable_console_output():
+                            col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False, print_logs=False)
                         buckets_stats[output_column][bucket].update(col_buckets_stats)
                     except:
-                        print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
+                        pass
+                        # @TODO Is this worth informing the user about ?
+                        #print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
 
         return column_importance_dict, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution
 

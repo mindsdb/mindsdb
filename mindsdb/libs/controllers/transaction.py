@@ -54,9 +54,12 @@ class Transaction:
 
     # @TODO Make it more generic, move to general helpers, use inside predictor instead of linline loading
     def load_metadata(self):
-        resource.setrlimit(resource.RLIMIT_STACK, [0x10000000, resource.RLIM_INFINITY])
-        sys.setrecursionlimit(0x100000)
-
+        try:
+            resource.setrlimit(resource.RLIMIT_STACK, [0x10000000, resource.RLIM_INFINITY])
+            sys.setrecursionlimit(0x100000)
+        except:
+            pass
+            
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
             self.lmd = pickle.load(fp)
 

@@ -84,3 +84,4 @@ tmp
 insu_*.csv
 insurance.py
 l_insurance.py
+model_definition.yaml

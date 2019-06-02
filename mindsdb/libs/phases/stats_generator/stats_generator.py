@@ -229,7 +229,7 @@ class StatsGenerator(BaseModule):
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
         # @TODO: Extremely slow for large datasets, make it faster
-        if curr_data_type != DATA_TYPES.CATEGORICAL:
+        if curr_data_type != DATA_TYPES.CATEGORICAL and curr_data_subtype != DATA_SUBTYPES.DATE:
             all_values = data_frame[col_name]
             all_distinct_vals = set(all_values)
 

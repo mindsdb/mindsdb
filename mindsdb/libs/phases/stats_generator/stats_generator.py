@@ -860,8 +860,8 @@ class StatsGenerator(BaseModule):
                             self.log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
                             col_data[i] = None
 
-            if data_type == DATA_TYPES.NUMERIC or data_subtype == DATA_SUBTYPES.TIMESTAMP:
-                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=data_subtype)
+            if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
+                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
                 x = histogram['x']
                 y = histogram['y']
 
@@ -922,8 +922,8 @@ class StatsGenerator(BaseModule):
                     },
                     "percentage_buckets": xp
                 }
-            elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE:
-                histogram, _ = StatsGenerator.get_histogram(input_data.data_frame[col_name], data_type=data_type, data_subtype=data_subtype)
+            elif data_type == DATA_TYPES.CATEGORICAL or curr_data_subtype == DATA_SUBTYPES.DATE:
+                histogram, _ = StatsGenerator.get_histogram(input_data.data_frame[col_name], data_type=data_type, data_subtype=curr_data_subtype)
 
                 col_stats = {
                     'data_type': data_type,

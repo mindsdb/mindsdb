@@ -131,7 +131,6 @@ class ProbabilisticValidator():
         :param predicted_value: The predicted value/label
         :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
         """
-
         if self.buckets is not None:
             predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
             X = [False] * (len(self.buckets) + 1)

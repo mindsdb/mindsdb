@@ -289,7 +289,7 @@ class StatsGenerator(BaseModule):
         if data_type == DATA_TYPES.SEQUENTIAL:
             is_full_text = True if data_subtype == DATA_SUBTYPES.TEXT else False
             return StatsGenerator.get_words_histogram(data, is_full_text), None
-        elif data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
+        elif data_type == DATA_TYPES.NUMERIC or data_type == DATA_SUBTYPES.TIMESTAMP:
             data = StatsGenerator.clean_int_and_date_data(data)
             y, x = np.histogram(data, 50, density=False)
             x = (x + np.roll(x, -1))[:-1] / 2.0
@@ -299,7 +299,7 @@ class StatsGenerator(BaseModule):
                 'x': x
                 ,'y': y
             }, None
-        elif DATA_TYPES.CATEGORICAL:
+        elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE :
             histogram = Counter(data)
             return {
                 'x': list(histogram.keys()),
@@ -860,8 +860,8 @@ class StatsGenerator(BaseModule):
                             self.log.warning('Could not convert string to date and it was expected, current value {value}'.format(value=element))
                             col_data[i] = None
 
-            if data_type == DATA_TYPES.NUMERIC or data_type == DATA_TYPES.DATE:
-                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type)
+            if data_type == DATA_TYPES.NUMERIC or data_subtype == DATA_SUBTYPES.TIMESTAMP:
+                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=data_subtype)
                 x = histogram['x']
                 y = histogram['y']
 
@@ -922,8 +922,8 @@ class StatsGenerator(BaseModule):
                     },
                     "percentage_buckets": xp
                 }
-            elif data_type == DATA_TYPES.CATEGORICAL:
-                histogram, _ = StatsGenerator.get_histogram(input_data.data_frame[col_name], data_type=DATA_TYPES.CATEGORICAL)
+            elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE:
+                histogram, _ = StatsGenerator.get_histogram(input_data.data_frame[col_name], data_type=data_type, data_subtype=data_subtype)
 
                 col_stats = {
                     'data_type': data_type,

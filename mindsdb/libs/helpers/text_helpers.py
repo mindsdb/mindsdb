@@ -12,7 +12,7 @@
 from mindsdb.libs.constants.mindsdb import *
 import json
 import hashlib
-
+from dateutil.parser import parse as parse_datetime
 import numpy
 
 def clean_float(str):
@@ -21,6 +21,11 @@ def clean_float(str):
 
     if isinstance(str, numpy.float64) or isinstance(str, float):
         return str
+
+    try:
+        return float(int(parse_datetime(str).timestamp()))
+    except:
+        pass
 
     str = str.replace(',','.')
     return float(str)

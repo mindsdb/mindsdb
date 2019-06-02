@@ -258,8 +258,8 @@ class StatsGenerator(BaseModule):
             if value != '' and value != '\r' and value != '\n':
                 newData.append(value)
 
-
         newData = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
+
         return newData
 
     @staticmethod

@@ -277,11 +277,11 @@ class LudwigBackend():
 
                         model_definition['input_features'].append({
                             'name': col + '_year'
-                            ,'type': 'numerical'
+                            ,'type': 'categorical'
                         })
                         model_definition['input_features'].append({
                             'name': col + '_month'
-                            ,'type': 'numerical'
+                            ,'type': 'categorical'
                         })
                         model_definition['input_features'].append({
                             'name': col + '_day'

@@ -85,14 +85,21 @@ class ProbabilisticValidator():
     def get_accuracy_histogram(self):
         x = []
         y = []
+
+        total_correct = 0
+        total_vals = 0
+
         for bucket in self.bucket_accuracy:
+            total_correct += sum(self.bucket_accuracy[bucket])
+            total_vals += len(self.bucket_accuracy[bucket])
             x.append(bucket)
             y.append(sum(self.bucket_accuracy[bucket])/len(self.bucket_accuracy[bucket]))
 
+        validation_set_accuracy = total_correct/total_vals
         return {
             'buckets': x
             ,'accuracies': y
-        }
+        }, validation_set_accuracy
 
 
     def partial_fit(self):

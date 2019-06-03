@@ -73,10 +73,14 @@ class ModelAnalyzer(BaseModule):
                     i += 1
 
         self.transaction.lmd['accuracy_histogram'] = {}
+
+        total_accuracy = 0
         for pcol in output_columns:
             probabilistic_validators[pcol].partial_fit()
-            accuracy_histogram = probabilistic_validators[pcol].get_accuracy_histogram()
+            accuracy_histogram, validation_set_accuracy = probabilistic_validators[pcol].get_accuracy_histogram()
             self.transaction.lmd['accuracy_histogram'][pcol] = accuracy_histogram
+            total_accuracy += validation_set_accuracy
+        self.transaction.lmd['validation_set_accuracy'] = total_accuracy/len(output_columns)
 
         # Pickle for later use
         self.transaction.hmd['probabilistic_validators'] = {}

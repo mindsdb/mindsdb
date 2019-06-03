@@ -220,9 +220,11 @@ class Predictor:
 
         # Shared keys
         for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
-        'current_phase', 'train_end_at', 'updated_at', 'created_at','data_preparation']:
+        'current_phase', 'train_end_at', 'updated_at', 'created_at','data_preparation', 'validation_set_accuracy']:
             if k == 'predict':
                 amd[k] = lmd['predict_columns']
+            elif k == 'validation_set_accuracy':
+                amd['accuracy'] = lmd['validation_set_accuracy']
             elif k in lmd:
                 amd[k] = lmd[k]
             else:
@@ -545,7 +547,7 @@ class Predictor:
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
         light_transaction_metadata['disable_optional_analysis'] = disable_optional_analysis
-
+        light_transaction_metadata['validation_set_accuracy'] = None
 
         if rebuild_model is False:
             old_lmd = {}

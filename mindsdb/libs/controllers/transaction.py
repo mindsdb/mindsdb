@@ -205,7 +205,7 @@ class Transaction:
             self.output_data.evaluations[predicted_col] = [None] * len(predicted_values)
 
             for row_number, predicted_value in enumerate(predicted_values):
-                features_existance_vector = [False if self.output_data.data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']]
+                features_existance_vector = [False if self.output_data.data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']['names']]
                 prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
                 self.output_data.data[confidence_column_name][row_number] = prediction_evaluation
                 #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong

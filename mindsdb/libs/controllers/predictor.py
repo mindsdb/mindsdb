@@ -67,12 +67,12 @@ class Predictor:
             if '_light_model_metadata.pickle' in fn:
                 model_name = fn.replace('_light_model_metadata.pickle','')
                 try:
-                    lmd = self.get_model_data(model_name)
+                    amd = self.get_model_data(model_name)
                     model = {}
                     for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
                     'status', 'train_end_at', 'updated_at', 'created_at','current_phase']:
-                        if k in lmd:
-                            model[k] = lmd[k]
+                        if k in amd:
+                            model[k] = amd[k]
                         else:
                             model[k] = None
                             print(f'Key {k} not found in the light model metadata !')

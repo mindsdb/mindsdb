@@ -236,7 +236,7 @@ class StatsGenerator(BaseModule):
             # The numbers here are picked randomly, the gist of it is that if values repeat themselves a lot we should consider the column to be categorical
             nr_vals = len(all_values)
             nr_distinct_vals = len(all_distinct_vals)
-            if nr_vals/15 > nr_distinct_vals:
+            if nr_vals/10 < nr_distinct_vals:
                 curr_data_type = DATA_TYPES.CATEGORICAL
                 if len(all_distinct_vals) < 3:
                     curr_data_subtype = DATA_SUBTYPES.SINGLE
@@ -252,15 +252,14 @@ class StatsGenerator(BaseModule):
 
     @staticmethod
     def clean_int_and_date_data(col_data):
-        newData = []
+        cleaned_data = []
 
         for value in col_data:
             if value != '' and value != '\r' and value != '\n':
-                newData.append(value)
+                cleaned_data.append(value)
 
-        newData = [clean_float(i) for i in newData if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
-
-        return newData
+        cleaned_data = [clean_float(i) for i in cleaned_data if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
+        return cleaned_data
 
     @staticmethod
     def get_words_histogram(data, is_full_text=False):
@@ -289,7 +288,7 @@ class StatsGenerator(BaseModule):
         if data_type == DATA_TYPES.SEQUENTIAL:
             is_full_text = True if data_subtype == DATA_SUBTYPES.TEXT else False
             return StatsGenerator.get_words_histogram(data, is_full_text), None
-        elif data_type == DATA_TYPES.NUMERIC or data_type == DATA_SUBTYPES.TIMESTAMP:
+        elif data_type == DATA_TYPES.NUMERIC or data_subtype == DATA_SUBTYPES.TIMESTAMP:
             data = StatsGenerator.clean_int_and_date_data(data)
             y, x = np.histogram(data, 50, density=False)
             x = (x + np.roll(x, -1))[:-1] / 2.0
@@ -945,7 +944,7 @@ class StatsGenerator(BaseModule):
             # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word
-                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=curr_data_type, data_subtype=curr_data_subtype)
+                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
                 dictionary = list(histogram.keys())
 
                 # if no words, then no dictionary

@@ -223,10 +223,10 @@ class Predictor:
         'current_phase', 'train_end_at', 'updated_at', 'created_at','data_preparation', 'validation_set_accuracy']:
             if k == 'predict':
                 amd[k] = lmd['predict_columns']
-            elif k == 'validation_set_accuracy':
-                amd['accuracy'] = lmd['validation_set_accuracy']
             elif k in lmd:
                 amd[k] = lmd[k]
+                if k == 'validation_set_accuracy':
+                    amd['accuracy'] = round(lmd['validation_set_accuracy'],3)
             else:
                 amd[k] = None
                 print(f'Key {k} not found in the light model metadata !')

@@ -12,8 +12,6 @@ class ModelAnalyzer(BaseModule):
     phase_name = PHASE_MODEL_ANALYZER
 
     def run(self):
-        if self.transaction.lmd['disable_optional_analysis']  is True:
-            return 
         """
         # Runs the model on the validation set in order to fit a probabilistic model that will evaluate the accuracy of future predictions
         """

@@ -824,8 +824,8 @@ class StatsGenerator(BaseModule):
             sample_size = population_size
         else:
             sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
-            if sample_size > 3000 and sample_size > population_size/8:
-                sample_size = min(round(population_size/8),3000)
+            #if sample_size > 3000 and sample_size > population_size/8:
+            #    sample_size = min(round(population_size/8),3000)
 
         # get the indexes of randomly selected rows given the population size
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
@@ -1014,7 +1014,7 @@ class StatsGenerator(BaseModule):
                 self.transaction.lmd['data_preparation']['accepted_margin_of_error'] = CONFIG.DEFAULT_MARGIN_OF_ERROR
 
             self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
-            self.transaction.lmd['data_preparation']['used_row_count'] = total_rows * (1 - self.transaction.lmd['data_preparation']['accepted_margin_of_error']) #sample_size
+            self.transaction.lmd['data_preparation']['used_row_count'] = sample_size
             self.transaction.lmd['data_preparation']['test_row_count'] = len(input_data.test_indexes[KEY_NO_GROUP_BY])
             self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes[KEY_NO_GROUP_BY])
             self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])

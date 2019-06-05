@@ -824,8 +824,8 @@ class StatsGenerator(BaseModule):
             sample_size = population_size
         else:
             sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
-            if sample_size > 3000 and sample_size > population_size/8:
-                sample_size = min(round(population_size/8),3000)
+            #if sample_size > 3000 and sample_size > population_size/8:
+            #    sample_size = min(round(population_size/8),3000)
 
         # get the indexes of randomly selected rows given the population size
         input_data_sample_indexes = random.sample(range(population_size), sample_size)

@@ -77,7 +77,8 @@ class Predictor:
                             model[k] = None
                             print(f'Key {k} not found in the light model metadata !')
                     models.append(model)
-                except:
+                except Exception as e:
+                    print(e)
                     print(f"Can't adapt metadata for model: '{model_name}' when calling `get_models()`")
 
         return models
@@ -226,7 +227,10 @@ class Predictor:
             elif k in lmd:
                 amd[k] = lmd[k]
                 if k == 'validation_set_accuracy':
-                    amd['accuracy'] = round(lmd['validation_set_accuracy'],3)
+                    if lmd['validation_set_accuracy'] is not None:
+                        amd['accuracy'] = round(lmd['validation_set_accuracy'],3)
+                    else:
+                        amd['accuracy'] = None
             else:
                 amd[k] = None
                 print(f'Key {k} not found in the light model metadata !')

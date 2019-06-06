@@ -85,3 +85,4 @@ insu_*.csv
 insurance.py
 l_insurance.py
 model_definition.yaml
+.~lock.insu_train_indep_dep.csv#

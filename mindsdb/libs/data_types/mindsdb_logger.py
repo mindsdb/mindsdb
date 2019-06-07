@@ -18,7 +18,6 @@ class MindsdbLogger():
         # Initialize the log module, should only be called once at the begging of the program
 
         :param log_level: What logs to display
-        :param send_logs: Whether or not to send logs to the remote Mindsdb server
         :param uuid: The unique id for this MindsDB instance or training/prediction session
         '''
 
@@ -126,4 +125,4 @@ class MindsdbLogger():
 
 
 main_logger_uuid = 'core-logger'
-log = MindsdbLogger(log_level=CONFIG.DEFAULT_LOG_LEVEL, log_url=None, send_logs=False, uuid=main_logger_uuid)
+log = MindsdbLogger(log_level=CONFIG.DEFAULT_LOG_LEVEL, uuid=main_logger_uuid)

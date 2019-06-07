@@ -7,10 +7,9 @@ MindsDB has config variables that can be set by as environment variables or on a
 
 Here are some of the variables of general interest:
 
-* `MINDSDB_STORAGE_PATH` Where MindsDB stores its data, by default it is on the pip mindsdb/mindsdb_storage directory
-* `STORE_INFO_IN_MONGODB` You can choose to store info about models in MongoDB or not By default it uses a local object store (Default False)
-* `MONGO_SERVER_HOST` If `STORE_INFO_IN_MONGODB == True` then specify the host here
-
+* `MINDSDB_STORAGE_PATH` Where MindsDB stores its data, by default it is the path where pip installs packages + `mindsdb/mindsdb_storage`
+* `DEFAULT_MARGIN_OF_ERROR` The reverse of how much of the data you feed in mindsdb will sample in order to generate insights about the data. For example, if this is set to 0.4, mindsdb will sample 0.6 of the data.
+* `DEFAULT_LOG_LEVEL` What logs mindsdb will display (By default this is set to: `CONST.INFO_LOG_LEVEL`)
 
 ## How to set config variables?
 
@@ -22,17 +21,23 @@ import os
 os.environ['<varname>'] = <value>
 
 ```
-For example: if you want to specify a different Mongo Server
+For example, if you want to specify a different storage directory:
 
 ```python
 import os
 
-os.environ['MONGO_SERVER_HOST'] = 'mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]'
+os.environ['MINDSDB_STORAGE_PATH'] = '/home/my_wonderful_username/place_where_i_store_big_files/'
 
 # now we import mindsdb
 from mindsdb import MindsDB
 
 ```
 
+Alternatively, we can se the variable after importing mindsdb:
 
-You can read the config variables available ([here](../mindsdb/config/__init__.py))
+```python
+mindsdb.CONFIG.MINDSDB_STORAGE_PATH = '/home/my_wonderful_username/place_where_i_store_big_files/'
+```
+
+
+You can see all the config variables available [here](https://github.com/mindsdb/mindsdb/blob/master/mindsdb/config/__init__.py)

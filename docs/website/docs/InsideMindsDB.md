@@ -5,13 +5,7 @@ title: Inside MindsdDB
 
 ![](https://docs.google.com/drawings/d/e/2PACX-1vQPGU3nzH0dwpgjzZ-bb95nJRhYUDYFuTuzIUERoVBGMMZW1ocUA1LAyDCldNKKp5RCw3Wxac21qPP7/pub?w=960&h=252)
 
-Different transactions PREDICT, CREATE MODEL etc, require different
-steps/phases, however they may share some of these phases,
-in order to make this process modular we keep the variables in the Transaction
-controller (the data bus) as the communication interface, as such,
-the implementation of a given phase can change, so long as the expected
-variables in the bus prevail. (We will describe in more detail some of
-the Phase Modules in the next section)
+Different transactions PREDICT, CREATE MODEL etc, require different steps/phases, however they may share some of these phases, in order to make this process modular we keep the variables in the Transaction controller (the data bus) as the communication interface, as such, the implementation of a given phase can change, so long as the expected variables in the bus prevail. (We will describe in more detail some of the Phase Modules in the next section)
 
 ## DataExtractor
 
@@ -42,10 +36,16 @@ generated values to plot some interesting information about the data (e.g. data 
 Finally, the various stats are passed on as part of the metadata, so that further phases and the model itself can use them.
 
 
-## Model Backend
+## Model Interface
 
-* **ModelTrainer**: The model backend will feed the data to a machine learning framework which does the training and predicting. Currently the two learning backends we are working
-on supporting are Ludwig (maintained mainly by Uber, fully supported) and Lightwood (created by us, based on the pre 1.0 version of mindsdb, work in progress).
+* **Train mode**: When calling `learn`,the model interface will feed the data to a machine learning framework which does the training in order to build a model.
+
+* **Preidct mode**: When calling `predict`, the model interface will feed the data to the model built by `learn` in order to generate a prediction.
+
+* **Data adaption**: The `ModelInterface` phase is simply a lighteight wrapper over the model [backends](https://github.com/mindsdb/mindsdb/tree/master/mindsdb/libs/backends) which handle adapting the data frame used by mindsdb into a format they can work with. During this process additional metadata for the machine learning libraries/frameworks is generated based on the results of the **Stats Generator** phase.
+
+* **Learning backend**: The learning backends as the [ensemble learning](https://en.wikipedia.org/wiki/Ensemble_learning) libraries used by mindsdb to train the model that will generate the predictions.
+Currently the two learning backends we are working on supporting are Ludwig (maintained mainly by Uber, fully supported) and Lightwood (created by us, based on the pre 1.0 version of mindsdb, work in progress).
 
 ## ModelAnalyzer
 

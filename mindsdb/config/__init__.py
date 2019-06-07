@@ -23,9 +23,6 @@ class Config:
     # IF YOU CAN TO MOVE THE TRAINING OPERATION TO A DIFFERENT EXECUTION THREAD (DEFAULT True)
     EXEC_LEARN_IN_THREAD = ifEnvElse('EXEC_LEARN_IN_THREAD', False)
 
-    # MindsDB has various Proxies that you can plug into
-    MINDSDB_SERVER_URL = ifEnvElse('MINDSDB_SERVER_URL', 'http://localhost:35261')
-
     # LOG Config settings
     DEFAULT_LOG_LEVEL = ifEnvElse('DEFAULT_LOG_LEVEL', CONST.INFO_LOG_LEVEL)
 

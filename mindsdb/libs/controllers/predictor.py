@@ -20,14 +20,13 @@ from pathlib import Path
 
 class Predictor:
 
-    def __init__(self, name, root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL, log_server=CONFIG.MINDSDB_SERVER_URL):
+    def __init__(self, name, root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL):
         """
         This controller defines the API to a MindsDB 'mind', a mind is an object that can learn and predict from data
 
         :param name: the namespace you want to identify this mind instance with
         :param root_folder: the folder where you want to store this mind or load from
         :param log_level: the desired log level
-        :param log_server: the url for a server that can accept log streams
 
         """
 
@@ -36,7 +35,7 @@ class Predictor:
         self.root_folder = root_folder
         self.uuid = str(uuid.uuid1())
         # initialize log
-        self.log = MindsdbLogger(log_level=log_level, send_logs=False, log_url=log_server, uuid=self.uuid)
+        self.log = MindsdbLogger(log_level=log_level, uuid=self.uuid)
 
         # check for updates
         _thread.start_new_thread(check_for_updates, ())

@@ -1,6 +1,6 @@
 from mindsdb.libs.constants.mindsdb import *
 
-import lighwood
+import lightwood
 
 
 class LightwoodBackend():

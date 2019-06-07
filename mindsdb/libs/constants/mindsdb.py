@@ -11,8 +11,6 @@ KILL_TRAINING = 'kill_training'
 KEY_MODEL_CACHE = 'model_cache'
 KEY_NO_GROUP_BY = 'ALL_ROWS_NO_GROUP_BY'
 
-EXTENSION_COLUMNS_TEMPLATE = '_extensions_.buckets.{column_name}'
-ALL_INDEXES_LIST = ['*']
 
 class DATA_SUBTYPES:
     # Numeric

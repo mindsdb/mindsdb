@@ -82,3 +82,5 @@ print(predictions['reading_score_confidence'])
 # The actual value predicted for `reading_score`
 print(predictions['reading_score'])
 ```
+
+You can find our GoogleColab example here: https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb

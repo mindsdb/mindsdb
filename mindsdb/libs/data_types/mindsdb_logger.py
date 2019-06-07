@@ -12,43 +12,17 @@ from inspect import getframeinfo, stack
 class MindsdbLogger():
     internal_logger = None
     id = None
-    sio = None
-    send = None
 
-    def __init__(self, log_level, log_url, send_logs, uuid):
+    def __init__(self, log_level, uuid):
         '''
         # Initialize the log module, should only be called once at the begging of the program
 
         :param log_level: What logs to display
-        :param log_url: What urls to send logs to
-        :param send_logs: Whether or not to send logs to the remote Mindsdb server
         :param uuid: The unique id for this MindsDB instance or training/prediction session
         '''
 
         self.id = uuid
         self.internal_logger = logging.getLogger('mindsdb-logger-{}'.format(self.id))
-
-        self.send = send_logs
-
-
-
-        if self.send:
-            sio = socketio.Client()
-
-            @sio.on('connect')
-            def on_connect():
-                print('connection established')
-
-            @sio.on('send_url')
-            def on_call(payload):
-                self.info('\n\n{eq1}\n{eq2}   You can view your logs at: {url}   {eq2}\n{eq1}\n\n'.format(eq1=gen_chars(104, "="), eq2=gen_chars(2, "|"), url=payload['url']))
-
-            @sio.on('disconnect')
-            def on_disconnect():
-                self.warning('disconnected from server')
-
-            self.sio = sio
-            self.sio.connect(log_url)
 
         self.internal_logger.handlers = []
         self.internal_logger.propagate = False
@@ -69,8 +43,6 @@ class MindsdbLogger():
         '''
         caller = getframeinfo(stack()[2][0])
         message = pprint.pformat(str(message))
-        if self.send and func != 'debug':
-            self.sio.emit('call',{'message':str(message),'uuid':self.id})
 
         call = getattr(self.internal_logger, func)
         call("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))
@@ -86,8 +58,6 @@ class MindsdbLogger():
 
     def error(self, message):
         self.log_message(message, 'error')
-        if self.send:
-            self.sio.disconnect()
 
     def infoChart(self, message, type, uid=None):
         """
@@ -102,10 +72,6 @@ class MindsdbLogger():
 
         if uid is None:
             uid = str(uuid.uuid1())
-        if self.send:
-            self.info('<chart type="{type}" uid={uid}>'.format(type=type, uid=uid))
-            self.info(message)
-            self.info('</chart>')
         else:
             self.info(gen_chars(10, '-'))
             if type in ['pie']:
@@ -159,4 +125,4 @@ class MindsdbLogger():
 
 
 main_logger_uuid = 'core-logger'
-log = MindsdbLogger(log_level=CONFIG.DEFAULT_LOG_LEVEL, log_url=None, send_logs=False, uuid=main_logger_uuid)
+log = MindsdbLogger(log_level=CONFIG.DEFAULT_LOG_LEVEL, uuid=main_logger_uuid)

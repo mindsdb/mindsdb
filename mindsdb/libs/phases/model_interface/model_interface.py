@@ -20,4 +20,13 @@ class ModelInterface(BaseModule):
             elif mode == 'predict':
                 self.transaction.model_backend = LudwigBackend(self.transaction)
                 self.transaction.hmd['predictions'] = self.transaction.model_backend.predict()
+
         if self.transaction.lmd['model_backend'] == 'lightwood':
+            if mode == 'train':
+                self.transaction.lmd['is_active'] = True
+                self.transaction.model_backend = LudwigBackend(self.transaction)
+                self.transaction.model_backend.train()
+                self.transaction.lmd['is_active'] = False
+                self.transaction.lmd['train_end_at'] = str(datetime.datetime.now())
+            elif mode == 'predict':
+                raise Exception('Predict not implemented for lightwood')    

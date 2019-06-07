@@ -369,7 +369,7 @@ class LudwigBackend():
 
         return df, model_definition, timeseries_cols
 
-    def get_model_dir(self):
+    def _get_model_dir(self):
         model_dir = None
         for thing in os.listdir(self.transaction.lmd['ludwig_data']['ludwig_save_path']):
             if 'api_experiment' in thing:
@@ -378,7 +378,7 @@ class LudwigBackend():
             model_dir = os.path.join(self.transaction.lmd['ludwig_data']['ludwig_save_path'],'model')
         return model_dir
 
-    def get_useable_gpus(self):
+    def _get_useable_gpus(self):
         if self.transaction.lmd['use_gpu'] == False:
             return []
         local_device_protos = device_lib.list_local_devices()
@@ -415,12 +415,12 @@ class LudwigBackend():
                     merged_model_definition['output_features']),
                     merged_model_definition['preprocessing']
                 )
-                model.initialize_model(train_set_metadata=train_set_metadata, gpus=self.get_useable_gpus())
+                model.initialize_model(train_set_metadata=train_set_metadata, gpus=self._get_useable_gpus())
 
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self.get_useable_gpus())
+                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
             else:
-                model = LudwigModel.load(model_dir=self.get_model_dir())
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self.get_useable_gpus())
+                model = LudwigModel.load(model_dir=self._get_model_dir())
+                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
 
             for k in train_stats['train']:
                 if k not in self.transaction.lmd['model_accuracy']['train']:
@@ -466,9 +466,9 @@ class LudwigBackend():
                     predict_dataframe[ignore_col + date_appendage] = [None] * len(predict_dataframe[ignore_col + date_appendage])
 
         with disable_console_output(True):
-            model_dir = self.get_model_dir()
+            model_dir = self._get_model_dir()
             model = LudwigModel.load(model_dir=model_dir)
-            predictions = model.predict(data_df=predict_dataframe, gpus=self.get_useable_gpus())
+            predictions = model.predict(data_df=predict_dataframe, gpus=self._get_useable_gpus())
 
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')

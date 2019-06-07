@@ -24,22 +24,22 @@ class LightwoodBackend():
             data_subtype = col_stats['data_subtype']
             data_type = col_stats['data_type']
 
-            ludwig_data_type = None
+            lightwood_data_type = None
 
             if data_type in (DATA_TYPES.NUMERIC):
-                ludwig_data_type = 'numeric'
+                lightwood_data_type = 'numeric'
 
             elif data_type in (DATA_TYPES.CATEGORICAL):
-                ludwig_data_type = 'categorical'
+                lightwood_data_type = 'categorical'
 
             elif data_type in (DATA_TYPES.DATE):
-                ludwig_data_type = 'datetime'
+                lightwood_data_type = 'datetime'
 
             elif data_subtype in (DATA_SUBTYPES.IMAGE):
-                ludwig_data_type = 'image'
+                lightwood_data_type = 'image'
 
             elif data_subtype in (DATA_SUBTYPES.TEXT):
-                ludwig_data_type = 'text'
+                lightwood_data_type = 'text'
 
             # @TODO Handle lightwood's time_series data type
 
@@ -49,13 +49,13 @@ class LightwoodBackend():
 
             if col not in self.transaction.lmd['predict_columns']:
                 config['input_features'].append({
-                    'name': col_name
-                    'tpye': ludwig_data_type
+                    'name': col_name,
+                    'tpye': lightwood_data_type
                 })
             else:
                 config['output_features'].append({
-                    'name': col_name
-                    'tpye': ludwig_data_type
+                    'name': col_name,
+                    'tpye': lightwood_data_type
                 })
 
             return config

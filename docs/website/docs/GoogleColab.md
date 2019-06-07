@@ -1,4 +1,9 @@
-dmesg [<Back to Table of Contents](../README.md)
+---
+id: google-colab
+title: Google Colab
+---
+
+[<Back to Table of Contents](../README.md)
 # Using MindsDB with Google Colab
 
 [Google Colab](https://colab.research.google.com) is a free cloud service that supports free GPU!

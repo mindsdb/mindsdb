@@ -17,16 +17,17 @@ Once you have those, you can install MindsDB.
 
 ## On Mac or Linux
 
-It might be needed that you need to install `tkinter` in addition.
-
-- Fedora: `sudo dnf -y install python3-tkinter`
-- Debian: `sudo apt-get install python3-tk tk`
-
 Install MindsDB:
 
 ```bash
 pip3 install mindsdb --user
 ```
+
+It might be needed that you need to install `tkinter` from your package manager in certain situations.
+
+- Ubuntu/Debian: `sudo apt-get install python3-tk tk`
+- Fedora: `sudo dnf -y install python3-tkinter`
+- Arch: `sudo pacman -S tk`
 
 ## On Windows 10
 
@@ -35,8 +36,6 @@ and then run the **anaconda prompt**:
 
 ```bash
 conda install -c peterjc123 pytorch
-conda install -c blaze blaze
-conda install -c blaze sqlite3
 curl -o reqs.txt https://raw.githubusercontent.com/mindsdb/mindsdb/master/requirements-win.txt
 pip install --requirement reqs.txt
 pip install mindsdb --no-dependencies

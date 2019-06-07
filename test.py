@@ -1,4 +1,5 @@
 from mindsdb import Predictor
+import sys
 
 if len(sys.argv) > 1:
     backend = sys.argv[1]

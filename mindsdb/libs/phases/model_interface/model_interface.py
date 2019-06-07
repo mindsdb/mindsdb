@@ -20,3 +20,4 @@ class ModelInterface(BaseModule):
             elif mode == 'predict':
                 self.transaction.model_backend = LudwigBackend(self.transaction)
                 self.transaction.hmd['predictions'] = self.transaction.model_backend.predict()
+        if self.transaction.lmd['model_backend'] == 'lightwood':

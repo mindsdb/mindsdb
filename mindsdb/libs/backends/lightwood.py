@@ -11,7 +11,7 @@ class LightwoodBackend():
     def _create_lightwood_config(self):
         config = {}
 
-        config['name'] = self.transaction.lmd['name']
+        config['name'] = 'lightwood_predictor_' + self.transaction.lmd['name']
 
         config['input_features'] = []
         config['output_features'] = []
@@ -58,8 +58,13 @@ class LightwoodBackend():
                     'tpye': ludwig_data_type
                 })
 
+            return config
+
     def train(self):
-        pass
+        lightwood_config = self._create_lightwood_config()
+        predictor = lighwood.Predictor(name=lightwood_config)
+        predictor.learn(from_data=self.transaction.input_data.train_df)
+        print(predictor.train_accuracy)
 
     def predict(self, mode='predict', ignore_columns=[]):
         pass

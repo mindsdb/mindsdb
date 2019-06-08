@@ -58,11 +58,13 @@ class LightwoodBackend():
                     'tpye': lightwood_data_type
                 })
 
-            return config
+        return config
 
     def train(self):
         lightwood_config = self._create_lightwood_config()
-        predictor = lightwood.Predictor(name=lightwood_config)
+        print(lightwood_config)
+        predictor = lightwood.Predictor(lightwood_config)
+        print(self.transaction.input_data.train_df)
         predictor.learn(from_data=self.transaction.input_data.train_df)
         print(predictor.train_accuracy)
 

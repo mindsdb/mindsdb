@@ -50,12 +50,12 @@ class LightwoodBackend():
             if col_name not in self.transaction.lmd['predict_columns']:
                 config['input_features'].append({
                     'name': col_name,
-                    'tpye': lightwood_data_type
+                    'type': lightwood_data_type
                 })
             else:
                 config['output_features'].append({
                     'name': col_name,
-                    'tpye': lightwood_data_type
+                    'type': lightwood_data_type
                 })
 
         return config

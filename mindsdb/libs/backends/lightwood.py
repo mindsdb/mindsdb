@@ -11,7 +11,7 @@ class LightwoodBackend():
     def _create_lightwood_config(self):
         config = {}
 
-        config['name'] = 'lightwood_predictor_' + self.transaction.lmd['name']
+        #config['name'] = 'lightwood_predictor_' + self.transaction.lmd['name']
 
         config['input_features'] = []
         config['output_features'] = []
@@ -28,6 +28,10 @@ class LightwoodBackend():
 
             if data_type in (DATA_TYPES.NUMERIC):
                 lightwood_data_type = 'numeric'
+                try:
+                    self.transaction.input_data.train_df[col_name] = self.transaction.input_data.train_df[col_name].apply(int)
+                except:
+                    self.transaction.input_data.train_df[col_name] = self.transaction.input_data.train_df[col_name].apply(lambda x: float(x.replace(',','.')))
 
             elif data_type in (DATA_TYPES.CATEGORICAL):
                 lightwood_data_type = 'categorical'
@@ -62,9 +66,7 @@ class LightwoodBackend():
 
     def train(self):
         lightwood_config = self._create_lightwood_config()
-        print(lightwood_config)
         predictor = lightwood.Predictor(lightwood_config)
-        print(self.transaction.input_data.train_df)
         predictor.learn(from_data=self.transaction.input_data.train_df)
         print(predictor.train_accuracy)
 

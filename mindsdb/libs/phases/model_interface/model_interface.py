@@ -1,5 +1,13 @@
-from mindsdb.libs.backends.ludwig import LudwigBackend
-from mindsdb.libs.backends.lightwood import LightwoodBackend
+try:
+    from mindsdb.libs.backends.ludwig import LudwigBackend
+except ImportError:
+    pass
+
+try:
+    from mindsdb.libs.backends.lightwood import LightwoodBackend
+except ImportError:
+    pass
+    
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.constants.mindsdb import *
 

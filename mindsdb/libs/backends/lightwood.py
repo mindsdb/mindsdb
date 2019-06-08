@@ -17,7 +17,7 @@ class LightwoodBackend():
         config['output_features'] = []
 
         for col_name in self.transaction.input_data.columns:
-            if col in self.transaction.lmd['malformed_columns']['names']:
+            if col_name in self.transaction.lmd['malformed_columns']['names']:
                 continue
 
             col_stats = self.transaction.lmd['column_stats'][col_name]
@@ -47,7 +47,7 @@ class LightwoodBackend():
                 self.transaction.log.error(f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
                 raise Exception('Failed to build data definition for Lightwood model backend')
 
-            if col not in self.transaction.lmd['predict_columns']:
+            if col_name not in self.transaction.lmd['predict_columns']:
                 config['input_features'].append({
                     'name': col_name,
                     'tpye': lightwood_data_type
@@ -62,7 +62,7 @@ class LightwoodBackend():
 
     def train(self):
         lightwood_config = self._create_lightwood_config()
-        predictor = lighwood.Predictor(name=lightwood_config)
+        predictor = lightwood.Predictor(name=lightwood_config)
         predictor.learn(from_data=self.transaction.input_data.train_df)
         print(predictor.train_accuracy)
 

@@ -13,9 +13,15 @@ MindsDB's goal is to give developers easy access to the power of artificial neur
 * [Provide Feedback to Improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
 
 
-## Quick Overview
+## Try it out
 
-You can get started with your own computer within under a minute.
+### Installation
+
+You can use MindsDb on your own computer in under a minute, simply follow the [installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb) or, if you already have a python environment setup, just run:
+
+```bash
+ pip3 install mindsdb --user
+```
 
 You can try MindsDb on [Google Colab](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
 
@@ -23,21 +29,13 @@ You can also use the Docker image [here](https://github.com/mindsdb/mindsdb/tree
 
 If you'd prefer to watch a video tutorial, you can find it [here](https://www.youtube.com/watch?v=a49CvkoOdfY). (Note: Please manually set it to 720p or greater to have the text appear clearly)
 
-Set up is simple, just use:
+Having porlbems ? Please tell us about them with [an issue on github](https://github.com/mindsdb/mindsdb/issues/new/choose)
 
-
-```bash
- pip3 install mindsdb --user
-```
-
-Having issues? [Learn More](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
+### Usage
 
 Once you have MindsDB installed, you can use it as follows:
 
-
 To **train a model**:
-
-
 
 ```python
 
@@ -55,7 +53,6 @@ Predictor(name='home_rentals_price').learn(
 
 To **use the model**:
 
-
 ```python
 
 from mindsdb import Predictor
@@ -68,8 +65,7 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 
 ```
 
-
-[Learn More](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
+Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 
 ## Report Issues
 

@@ -27,10 +27,6 @@ import time
 
 
 class BaseModule():
-
-    phase_name = PHASE_END
-    log_on_run = True
-
     def __init__(self, session, transaction, **kwargs):
         '''
         Initialize the base module and the basic global variables
@@ -53,19 +49,12 @@ class BaseModule():
         start = time.time()
         class_name = type(self).__name__
 
-        if self.phase_name != PHASE_END:
-            self.log.warning('Target phase is different than PHASE_END, Only change this for debug purposes')
-        # log warning if no phase name has been set or designed for the model
-        if self.phase_name == PHASE_END and self.log_on_run:
-            self.log.error('Module {class_name} has no \'phase_name\' defined and therefore it cannot be properly tested'.format(class_name=class_name))
-
-        if self.log_on_run:
-            self.log.info('[START] {class_name}'.format(class_name=class_name))
+        self.log.info('[START] {class_name}'.format(class_name=class_name))
 
         ret = self.run(**kwargs)
         execution_time = time.time() - start
-        if self.log_on_run:
-            self.log.info('[END] {class_name}, execution time: {execution_time:.3f} seconds'.format(class_name=class_name, execution_time=execution_time))
+
+        self.log.info('[END] {class_name}, execution time: {execution_time:.3f} seconds'.format(class_name=class_name, execution_time=execution_time))
         return ret
 
     def setup(self, **kwargs):

@@ -8,11 +8,8 @@ TRANSACTION_DROP_MODEL ='drop_model'
 STOP_TRAINING = 'stop_training'
 KILL_TRAINING = 'kill_training'
 
-KEY_MODEL_CACHE = 'model_cache'
 KEY_NO_GROUP_BY = 'ALL_ROWS_NO_GROUP_BY'
 
-EXTENSION_COLUMNS_TEMPLATE = '_extensions_.buckets.{column_name}'
-ALL_INDEXES_LIST = ['*']
 
 class DATA_SUBTYPES:
     # Numeric
@@ -59,17 +56,10 @@ class DATA_TYPES_SUBTYPES:
     }
 
 
-class KEYS:
-    X ='x'
-    Y ='y'
-
 class ORDER_BY_KEYS:
     COLUMN = 0
     ASCENDING_VALUE = 1
 
-
-PHASE_START = 0
-PHASE_END = 1000
 PHASE_DATA_EXTRACTOR = 1
 PHASE_STATS_GENERATOR = 2
 PHASE_MODEL_INTERFACE = 3
@@ -83,8 +73,6 @@ MODEL_STATUS_ANALYZING = "Analyzing"
 MODEL_STATUS_ERROR = "Error"
 
 WORD_SEPARATORS = [',', "\t", ' ']
-
-MODEL_GROUP_BY_DEAFAULT_LIMIT = 80
 
 DEBUG_LOG_LEVEL = 10
 INFO_LOG_LEVEL = 20

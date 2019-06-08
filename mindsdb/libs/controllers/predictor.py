@@ -20,14 +20,13 @@ from pathlib import Path
 
 class Predictor:
 
-    def __init__(self, name, root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL, log_server=CONFIG.MINDSDB_SERVER_URL):
+    def __init__(self, name, root_folder=CONFIG.MINDSDB_STORAGE_PATH, log_level=CONFIG.DEFAULT_LOG_LEVEL):
         """
         This controller defines the API to a MindsDB 'mind', a mind is an object that can learn and predict from data
 
         :param name: the namespace you want to identify this mind instance with
         :param root_folder: the folder where you want to store this mind or load from
         :param log_level: the desired log level
-        :param log_server: the url for a server that can accept log streams
 
         """
 
@@ -36,7 +35,7 @@ class Predictor:
         self.root_folder = root_folder
         self.uuid = str(uuid.uuid1())
         # initialize log
-        self.log = MindsdbLogger(log_level=log_level, send_logs=False, log_url=log_server, uuid=self.uuid)
+        self.log = MindsdbLogger(log_level=log_level, uuid=self.uuid)
 
         # check for updates
         _thread.start_new_thread(check_for_updates, ())
@@ -448,7 +447,7 @@ class Predictor:
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,
-    stop_training_in_x_seconds = None, stop_training_in_accuracy = None,  send_logs=CONFIG.SEND_LOGS, backend='ludwig', rebuild_model=True, use_gpu=True,
+    stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='ludwig', rebuild_model=True, use_gpu=True,
     disable_optional_analysis=False):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
@@ -473,7 +472,6 @@ class Predictor:
         :param sample_margin_error (DEFAULT 0): Maximum expected difference between the true population parameter, such as the mean, and the sample estimate.
 
         Optional debug arguments:
-        :param send_logs: If you want to stream these logs to a server
         :param stop_training_in_x_seconds: (default None), if set, you want training to finish in a given number of seconds
 
         :return:

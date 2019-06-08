@@ -25,6 +25,12 @@
       },
       "Installing": {
         "title": "Installing"
+      },
+      "ColumnMetrics": {
+        "title": "ColumnMetrics"
+      },
+      "GoogleColab": {
+        "title": "GoogleColab"
       }
     },
     "links": {

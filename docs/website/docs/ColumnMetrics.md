@@ -7,13 +7,15 @@ Mindsdb generate some metrics (we call them "scores") for each of the columns it
 
 This document contains information on each of these scores, as well as an outline for how mindsdb computes and uses them.
 
+*Note: the scores display by mindsdb are currently inverted, with "0" being a perfect score and "1" being the worst possible score. The scores displayed in the GUI go from 0 to 100, with 0 being the worst and 100 being the best. This will be changed in the future for the sake of consistency (with all scores going from 0 to 100).*
+
 # The Scores
 
 ## Value Distribution Score
 
-Warning if: > 0.8
+**Warning if: > 0.8**
 
-Reliability: Average
+*Reliability: Average*
 
 The duplicates score represents how biased the data is towards a certain value.
 
@@ -30,9 +32,9 @@ If this score is especially high > 0.8 (meaning a value is present 5x times more
 
 ## Duplicates Score
 
-Warning if: > 0.5 AND overall quality is low
+**Warning if: > 0.5 AND overall quality is low**
 
-Reliability: Poor
+*Reliability: Poor*
 
 As it stands, duplicates score consists in the % of duplicate values / 100. So, it can range from 0 (no duplicates) to 1 (all the values have one or more duplicates).
 
@@ -45,9 +47,9 @@ Thus, we should give a warning about this score if it’s above 0.5, but ONLY if
 
 ## Empty cells score
 
-Warning if: > 0.2
+**Warning if: > 0.2**
 
-Reliability: Good
+*Reliability: Good*
 
 This score is computed as the % of empty values / 100. It’s very reliable on its own, since empty values in a column are never a good sign.
 
@@ -56,9 +58,9 @@ If more than 20% of a column is empty, the user should be warned about it, since
 
 ## Data type distribution score
 
-Warning if: > 0.2
+**Warning if: > 0.2**
 
-Reliability: Average
+*Reliability: Average*
 
 This score indicates the % of data that are not of the same data type as the principal column type / 100.
 
@@ -67,13 +69,12 @@ Realistically speaking, it’s unlikely this score will often be close to 1, so 
 
 ## Z Test based outlier score
 
-Warning if: > 0.3
+**Warning if: > 0.3**
 
-Reliability: Average
+*Reliability: Average*
 
 This score indicates the % of data that are 3 STDs or more away from the mean.
 
- \
 There are various types of data where this can be the case, but usually it might indicate the data has too much noise.
 
 We should warn the user if this value is above 0.3 (over 30% of the data are considered outliers based on the test).
@@ -81,7 +82,36 @@ We should warn the user if this value is above 0.3 (over 30% of the data are con
 
 ## Local outlier factor score
 
-Warning if: > 0.2
+*Reliability: Average*
+
+The data consistency score is mainly based upon the **Data Type Distribution Score** and the **Empty Cells Score**, the **Duplicates Score** is also taken into account if present but with a smaller (2x smaller) bias.
+
+If this score is > 0.2 we should warn the user about the data in his column being inconsistent (as in, incomplete and/or vague)
+
+
+## Redundancy score
+
+**Warning if: > 0.45**
+
+*Reliability: Average*
+
+The value is based in equal part on the **Similarity Score** and the **Correlation Score**.
+
+If this score is > 0.45 we should warn the user about the data in his column being possibly redundant, that means any insights implied by this column are already present in the data from other columns).
+
+Variability/Randomness score
+
+**Warning if: > 0.5**
+
+Reliability: Average
+
+The value is based in equal part on the **Z Test based outliers score**, the **LOG based outlier score** and the **Value Distribution Score**.
+
+In certain cases, only the **Value Distribution Score **can be computed for the column. Then, we reduce the relevance of this score by dividing it by 2 (possibly not the best approach).
+
+If this score is > 0.5 we should warn the user that there’s too much randomness/noise in this data.
+
+**Warning if: > 0.2**
 
 Reliability: Average
 
@@ -98,9 +128,9 @@ Since obtaining a score of < 0.8 based on LOF is rather difficult, we should be 
 
 ## Similarity score
 
-Warning if: > 0.5
+**Warning if: > 0.5**
 
-Reliability: Good (When high)
+*Reliability: Good (When high)*
 
 This score is simply a matthews correlation applied between this column and all other column.
 
@@ -111,9 +141,9 @@ If this score is > 0.5 that means half the values are similar (in the same posit
 
 ## Correlation score
 
-Warning if: > 0.4
+**Warning if: > 0.4**
 
-Reliability: Average
+*Reliability: Average*
 
 This score uses a classifier (in this case a decision tree) and tries to predict the value in one column based on the values in all the other column (the classifier is pre-fit on the data it tries to predict, so we essentially just look at the features biasing inside the classifier by running a predict).
 
@@ -127,9 +157,9 @@ If this score is above 0.4, we should warn the user that one of his column is he
 
 ## Consistency score
 
-Warning if: > 0.2
+**Warning if: > 0.2**
 
-Reliability: Average
+*Reliability: Average*
 
 The data consistency score is mainly based upon the **Data Type Distribution Score** and the **Empty Cells Score**, the **Duplicates Score** is also taken into account if present but with a smaller (2x smaller) bias.
 
@@ -138,9 +168,9 @@ If this score is > 0.2 we should warn the user about the data in his column bein
 
 ## Redundancy score
 
-Warning if: > 0.45
+**Warning if: > 0.45**
 
-Reliability: Average
+*Reliability: Average*
 
 The value is based in equal part on the **Similarity Score** and the **Correlation Score**.
 
@@ -148,9 +178,9 @@ If this score is > 0.45 we should warn the user about the data in his column bei
 
 Variability/Randomness score
 
-Warning if: > 0.5
+**Warning if: > 0.5**
 
-Reliability: Average
+*Reliability: Average*
 
 The value is based in equal part on the **Z Test based outliers score**, the **LOG based outlier score** and the **Value Distribution Score**.
 

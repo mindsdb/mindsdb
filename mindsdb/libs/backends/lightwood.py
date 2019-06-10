@@ -7,6 +7,7 @@ class LightwoodBackend():
 
     def __init__(self, transaction):
         self.transaction = transaction
+        self.predictor = None
 
     def _create_lightwood_config(self):
         config = {}
@@ -29,9 +30,9 @@ class LightwoodBackend():
             if data_type in (DATA_TYPES.NUMERIC):
                 lightwood_data_type = 'numeric'
                 try:
-                    self.transaction.input_data.train_df[col_name] = self.transaction.input_data.train_df[col_name].apply(int)
+                    self.transaction.data_frame.data_frame[col_name] = self.transaction.data_frame.train_df[col_name].apply(int)
                 except:
-                    self.transaction.input_data.train_df[col_name].apply(lambda x: float(x.replace(',','.')))
+                    self.transaction.data_frame.data_frame[col_name].apply(lambda x: float(x.replace(',','.')))
 
             elif data_type in (DATA_TYPES.CATEGORICAL):
                 lightwood_data_type = 'categorical'
@@ -66,9 +67,25 @@ class LightwoodBackend():
 
     def train(self):
         lightwood_config = self._create_lightwood_config()
-        predictor = lightwood.Predictor(lightwood_config)
-        predictor.learn(from_data=self.transaction.input_data.train_df)
-        print(predictor.train_accuracy)
+        self.predictor = lightwood.Predictor(lightwood_config)
+        self.predictor.learn(from_data=self.transaction.input_data.train_df, test_data=self.transaction.input_data.test_df)
+        print(self.predictor.train_accuracy)
 
     def predict(self, mode='predict', ignore_columns=[]):
+        if mode == 'predict':
+            # Doing it here since currently data cleanup is included in this, in the future separate data cleanup
+            lightwood_config = self._create_lightwood_config()
+            df = self.transaction.input_data.data_frame
+        if mode == 'validation':
+            df = self.transaction.input_data.validation_df
+
+        # not the most efficient but least prone to bug and should be fast enough
+        if len(ignore_columns > 0):
+            run_df = df.copy(deep=True)
+            for col_name in ignore_columns:
+                run_df[col_name] = [None] * len(run_df[col_name])
+        else:
+            run_df = df
+
+        self.predictor.predict(from_data=run_df)
         pass

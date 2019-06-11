@@ -527,7 +527,7 @@ class StatsGenerator(BaseModule):
         col_data = columns[col_name]
 
         similarities = []
-        for _, other_col_name in enumerate(columns):
+        for other_col_name in columns.columns:
             if other_col_name == col_name:
                 continue
             else:
@@ -578,7 +578,7 @@ class StatsGenerator(BaseModule):
 
         other_feature_names = []
         other_features = []
-        for _, other_col_name in enumerate(columns):
+        for other_col_name in columns.columns:
             if other_col_name == col_name:
                 continue
 
@@ -842,14 +842,17 @@ class StatsGenerator(BaseModule):
 
             data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
 
+
             if column_status == 'Column empty':
                 if modify_light_metadata:
                     self.transaction.lmd['malformed_columns']['names'].append(col_name)
                     self.transaction.lmd['malformed_columns']['indices'].append(i)
                 continue
-'''
+
             if data_type == DATA_TYPES.DATE:
-                for i, element in enumerate(col_data):
+                i = 0
+                for element in col_data:
+                    print(i)
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
                         col_data[i] = None
                     else:
@@ -858,7 +861,8 @@ class StatsGenerator(BaseModule):
                         except:
                             self.log.warning(f'Could not convert string from col "{col_name}" to date and it was expected, instead got: {element}')
                             col_data[i] = None
-'''
+                    i += 1
+
             if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
                 histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
                 x = histogram['x']
@@ -983,7 +987,7 @@ class StatsGenerator(BaseModule):
                 stats[col_name]['separator'] = additional_info['separator']
             col_data_dict[col_name] = col_data
 
-        for i, col_name in enumerate(all_sampled_data):
+        for col_name in all_sampled_data.columns:
             if col_name in self.transaction.lmd['malformed_columns']['names']:
                 continue
 
@@ -1020,8 +1024,5 @@ class StatsGenerator(BaseModule):
             self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])
 
         self._log_interesting_stats(stats)
-
-        #print(self.transaction.input_data.data_frame)
         exit()
-
         return stats

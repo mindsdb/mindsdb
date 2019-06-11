@@ -1022,5 +1022,5 @@ class StatsGenerator(BaseModule):
             self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])
 
         self._log_interesting_stats(stats)
-        exit()
+        
         return stats

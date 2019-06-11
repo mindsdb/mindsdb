@@ -850,7 +850,7 @@ class StatsGenerator(BaseModule):
                 continue
 
             new_col_data = []
-            if data_type == DATA_TYPES.DATE:
+            if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP: #data_type == DATA_TYPES.DATE:
                 for element in col_data:
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
                         new_col_data.append(None)
@@ -1022,5 +1022,5 @@ class StatsGenerator(BaseModule):
             self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])
 
         self._log_interesting_stats(stats)
-        
+
         return stats

@@ -849,20 +849,18 @@ class StatsGenerator(BaseModule):
                     self.transaction.lmd['malformed_columns']['indices'].append(i)
                 continue
 
+            new_col_data = []
             if data_type == DATA_TYPES.DATE:
-                i = 0
                 for element in col_data:
-                    print(i)
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
-                        col_data[i] = None
+                        new_col_data.append(None)
                     else:
                         try:
-                            col_data[i] = int(parse_datetime(element).timestamp())
+                            new_col_data.append(int(parse_datetime(element).timestamp()))
                         except:
                             self.log.warning(f'Could not convert string from col "{col_name}" to date and it was expected, instead got: {element}')
-                            col_data[i] = None
-                    i += 1
-
+                            new_col_data.append(None)
+                col_data = new_col_data
             if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
                 histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
                 x = histogram['x']

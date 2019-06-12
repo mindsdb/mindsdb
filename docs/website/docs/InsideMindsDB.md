@@ -3,8 +3,6 @@ id: inside-mindsdb
 title: Inside MindsdDB
 ---
 
-![](https://docs.google.com/drawings/d/e/2PACX-1vQPGU3nzH0dwpgjzZ-bb95nJRhYUDYFuTuzIUERoVBGMMZW1ocUA1LAyDCldNKKp5RCw3Wxac21qPP7/pub?w=960&h=252)
-
 Different transactions PREDICT, CREATE MODEL etc, require different steps/phases, however they may share some of these phases, in order to make this process modular we keep the variables in the Transaction controller (the data bus) as the communication interface, as such, the implementation of a given phase can change, so long as the expected variables in the bus prevail. (We will describe in more detail some of the Phase Modules in the next section)
 
 ## DataExtractor

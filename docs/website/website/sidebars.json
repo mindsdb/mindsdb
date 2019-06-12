@@ -2,7 +2,6 @@
 	"docs": {
 		"Getting started": [
       "installing-mindsdb",
-			"basic-mindsdb",
 			"google-colab"
     ],
     "Tutorials": [

@@ -1,5 +1,5 @@
 ---
-id: column_metrics
+id: column-metrics
 title: Column metrics
 ---
 

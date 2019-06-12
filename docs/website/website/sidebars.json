@@ -7,14 +7,13 @@
     ],
     "Tutorials": [
       "basic-mindsdb",
-      "advanced-mindsdb",
-			"column-metrics",
-			"data-sources"
+      "advanced-mindsdb"
     ],
 		"Configuration": [
       "config"
 		],
 		"Features": [
+			"column-metrics",
       "data-sources"
     ],
     "Contributing": [

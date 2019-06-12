@@ -1,12 +1,13 @@
 {
 	"docs": {
 		"Getting started": [
-      "installing-mindsdb"
+      "installing-mindsdb",
+			"basic-mindsdb",
+			"google-colab",
     ],
     "Tutorials": [
       "basic-mindsdb",
-      "advanced-mindsdb",
-      "inside-mindsdb"
+      "advanced-mindsdb"
     ],
 		"Configuration": [
       "config"
@@ -15,7 +16,8 @@
       "data-sources"
     ],
     "Contributing": [
-      "faq"
+      "faq",
+			"inside-mindsdb"
 		]
 	}
 }

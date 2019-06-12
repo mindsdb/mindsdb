@@ -14,7 +14,6 @@ import importlib
 import copy
 import pickle
 import datetime
-import resource
 import sys
 
 
@@ -54,6 +53,7 @@ class Transaction:
     # @TODO Make it more generic, move to general helpers, use inside predictor instead of linline loading
     def load_metadata(self):
         try:
+            import resource
             resource.setrlimit(resource.RLIMIT_STACK, [0x10000000, resource.RLIM_INFINITY])
             sys.setrecursionlimit(0x100000)
         except:

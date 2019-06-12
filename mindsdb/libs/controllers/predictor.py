@@ -184,15 +184,18 @@ class Predictor:
                 })
 
             if score == 'redundancy_score':
-                simple_description = "A low value indicates that the data in this column is highly redundant (useless) for making any sort of prediction. You should make sure that values heavily related to this column are no already expressed in another column (e.g. if this column is a timestamp, make sure you don't have another column representing the exact same time in ISO datetime format)"
+                # CLF based score to be included here once we find a faster way of computing it...
+                similarity_score_based_most_correlated_column = col_stats['most_correlated_column']
 
-                most_correlated_column = col_stats['most_correlated_column']
+                simple_description = f"A low value indicates that the data in this column is highly redundant (useless) for making any sort of prediction. You should make sure that values heavily related to this column are no already expressed in the \"{similarity_score_based_most_correlated_column}\" column (e.g. if this column is a timestamp, make sure you don't have another column representing the exact same time in ISO datetime format)"
+
+
                 metrics.append({
                       "type": "score",
                       "name": "Matthews Correlation Score",
                       "score": col_stats['similarity_score'],
                       #"description": col_stats['similarity_score_description'],
-                      "description": f"A low value indicates a large number of values in this column are similar to values in the \"{most_correlated_column}\" column",
+                      "description": f"A low value indicates a large number of values in this column are similar to values in the \"{similarity_score_based_most_correlated_column}\" column",
                       "warning": col_stats['similarity_score_warning']
                 })
 

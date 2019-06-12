@@ -5,8 +5,8 @@ title: Installing MindsDB
 
 ## Prerequisites
 
-Before you begin, you need **[python>=3.7](https://realpython
-.com/installing-python/)** or **[Conda Python3](https://www.anaconda.com/download/)**, and make sure you have the **latest pip3**.
+Before you begin, you need [**python>=3.7**](https://realpython
+.com/installing-python/) or [**Conda Python3**](https://www.anaconda.com/download/), and make sure you have the **latest pip3**.
 
 ```bash
 curl https://bootstrap.pypa.io/get-pip.py | python3

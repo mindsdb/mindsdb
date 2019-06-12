@@ -43,7 +43,7 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 ## Notes
 
 ### About the Learning
-The first thing we can do is to learn from the csv file. Learn in the scope of MindsDB is to let it figure out a neural network that can best learn from this data as well as train and test such model given the data that we have (learn more in [InsideMindsDB](/docs/InsideMindsDB.md)).
+The first thing we can do is to learn from the csv file. Learn in the scope of MindsDB is to let it figure out a neural network that can best learn from this data as well as train and test such model given the data that we have (learn more in [InsideMindsDB](/mindsdb/docs/InsideMindsDB.md)).
 
 When you run this script, note that it will start logging various information about the data and about the training process.
 

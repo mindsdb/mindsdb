@@ -371,7 +371,7 @@ class StatsGenerator(BaseModule):
 
         data = {
             'bucket_probabilities': bucket_probabilities
-            ,'value_distribution_score':  round(10 * (1 - value_distribution_score))
+            ,'value_distribution_score': round(10 * (1 - value_distribution_score))
             ,'max_probability_key': max_probability_key
             ,'value_distribution_score_description': """
             This score can indicate either biasing towards one specific value in the column or a large number of outliers. So it is a reliable quality indicator but we can't know for which of the two reasons.
@@ -622,7 +622,7 @@ class StatsGenerator(BaseModule):
             consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2.5 + col_stats['duplicates_score']/5
         else:
             consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2
-        return {'consistency_score': round(10 * (1 - consistency_score))
+        return {'consistency_score': consistency_score
         ,'consistency_score_description':"""
         A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).
         The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.
@@ -640,7 +640,7 @@ class StatsGenerator(BaseModule):
         """
         col_stats = stats[col_name]
         redundancy_score = (col_stats['similarity_score'])/1
-        return {'redundancy_score': round(10 * (1 - redundancy_score))
+        return {'redundancy_score': redundancy_score
             ,'redundancy_score_description':"""
             A high value in this score indicates the data in this column is highly redundant for making any sort of prediction, you should make sure that values heavily related to this column are no already expressed in another column (e.g. if this column is a timestamp, make sure you don't have another column representing the exact same time in ISO datetime format).
             The value is based in equal part on the Similarity Score and the Correlation Score.
@@ -663,7 +663,7 @@ class StatsGenerator(BaseModule):
         else:
             variability_score = col_stats['value_distribution_score']/2
 
-        return {'variability_score': round(10 * (1 - variability_score))
+        return {'variability_score': variability_score
         ,'variability_score_description':"""
         A high value for this score indicates the data in this column seems to be very variable, indicating a large possibility of some random noise affecting your data. This could mean that the values for this column are not collected or processed correctly.
         The value is based in equal part on the Z Test based outliers score, the LOG based outlier score and the Value Distribution Score.
@@ -704,7 +704,7 @@ class StatsGenerator(BaseModule):
         for col_name in stats:
             col_stats = stats[col_name]
             # Overall quality
-            if col_stats['quality_score'] > 0.5:
+            if col_stats['quality_score'] < 6:
                 # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
                 self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission will be listed bellow')
                 if 'duplicates_score' in col_stats and col_stats['duplicates_score'] > 0.5:

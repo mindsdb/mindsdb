@@ -371,7 +371,7 @@ class StatsGenerator(BaseModule):
 
         data = {
             'bucket_probabilities': bucket_probabilities
-            ,'value_distribution_score': value_distribution_score
+            ,'value_distribution_score':  round(10 * (1 - value_distribution_score))
             ,'max_probability_key': max_probability_key
             ,'value_distribution_score_description': """
             This score can indicate either biasing towards one specific value in the column or a large number of outliers. So it is a reliable quality indicator but we can't know for which of the two reasons.
@@ -425,7 +425,7 @@ class StatsGenerator(BaseModule):
             empty_cells_score: A quality score based on the nr of empty cells, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
-        return {'empty_cells_score': stats[col_name]['empty_percentage']/100
+        return {'empty_cells_score': round(10 * (1 - stats[col_name]['empty_percentage']/100))
                 ,'empty_cells_score_description':"""This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data."""}
 
     def _compute_data_type_dist_score(self, stats, columns, col_name):
@@ -445,7 +445,7 @@ class StatsGenerator(BaseModule):
         principal = max(vals)
         total = len(columns[col_name])
         data_type_dist_score = (total - principal)/total
-        return {'data_type_distribution_score': data_type_dist_score
+        return {'data_type_distribution_score': round(10 * (1 - data_type_dist_score))
         ,'data_type_distribution_score_description':"""
         This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.
         """}
@@ -472,8 +472,8 @@ class StatsGenerator(BaseModule):
         z_score_outlier_indexes = [i for i in range(len(z_scores)) if z_scores[i] > threshold]
         data = {
             'z_score_outliers': z_score_outlier_indexes
-            ,'mean_z_score': np.mean(z_scores)
-            ,'z_test_based_outlier_score': len(z_score_outlier_indexes)/len(columns[col_name])
+            ,'mean_z_score': round(10 * (1 - np.mean(z_scores)))
+            ,'z_test_based_outlier_score': round(10 * (1 - len(z_score_outlier_indexes)/len(columns[col_name])))
             ,'z_test_based_outlier_score_description':"""
             This score indicates the amount of data that are 3 STDs or more away from the mean. That is to say, the amount of data that we consider to be an outlir. A hgih z socre means your data contains a large amount of outliers.
             """
@@ -505,7 +505,7 @@ class StatsGenerator(BaseModule):
 
         return {
             'lof_outliers': outlier_indexes
-            ,'lof_based_outlier_score': len(outlier_indexes)/len(columns[col_name])
+            ,'lof_based_outlier_score': round(10 * (1 - len(outlier_indexes)/len(columns[col_name])))
             ,'percentage_of_log_based_outliers': (len(outlier_indexes)/len(columns[col_name])) * 100
             ,'lof_based_outlier_score_description':"""
             The higher this score, the more outliers your dataset has. This is based on distance from the center of 20 clusters as constructed via KNN.
@@ -543,7 +543,7 @@ class StatsGenerator(BaseModule):
 
         return {
             'similarities': similarities
-            ,'similarity_score': max_similarity
+            ,'similarity_score': round(10 * (1 - max_similarity))
             ,'most_similar_column_name': most_similar_column_name
             ,'similarity_score_description':"""
             This score is simply a matthews correlation applied between this column and all other column.
@@ -599,7 +599,7 @@ class StatsGenerator(BaseModule):
         corr_scores = list(dt_clf.feature_importances_)
         highest_correlated_column = max(corr_scores)
         return {
-            'correlation_score': prediction_score * highest_correlated_column
+            'correlation_score': round(10 * (1 - prediction_score * highest_correlated_column))
             ,'highest_correlation': max(corr_scores)
             ,'most_correlated_column': other_feature_names[corr_scores.index(max(corr_scores))]
             ,'similarity_score_description':"""
@@ -622,7 +622,7 @@ class StatsGenerator(BaseModule):
             consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2.5 + col_stats['duplicates_score']/5
         else:
             consistency_score = (col_stats['data_type_distribution_score'] + col_stats['empty_cells_score'])/2
-        return {'consistency_score': consistency_score
+        return {'consistency_score': round(10 * (1 - consistency_score))
         ,'consistency_score_description':"""
         A high value for this score indicates that the data in a column is not very consistent, it's either missing a lot of valus or the type of values it has varries quite a lot (e.g. combination of strings, dates, integers and floats).
         The data consistency score is mainly based upon the Data Type Distribution Score and the Empty Cells Score, the Duplicates Score is also taken into account if present but with a smaller (2x smaller) bias.
@@ -640,7 +640,7 @@ class StatsGenerator(BaseModule):
         """
         col_stats = stats[col_name]
         redundancy_score = (col_stats['similarity_score'])/1
-        return {'redundancy_score': redundancy_score
+        return {'redundancy_score': round(10 * (1 - redundancy_score))
             ,'redundancy_score_description':"""
             A high value in this score indicates the data in this column is highly redundant for making any sort of prediction, you should make sure that values heavily related to this column are no already expressed in another column (e.g. if this column is a timestamp, make sure you don't have another column representing the exact same time in ISO datetime format).
             The value is based in equal part on the Similarity Score and the Correlation Score.
@@ -663,7 +663,7 @@ class StatsGenerator(BaseModule):
         else:
             variability_score = col_stats['value_distribution_score']/2
 
-        return {'variability_score': variability_score
+        return {'variability_score': round(10 * (1 - variability_score))
         ,'variability_score_description':"""
         A high value for this score indicates the data in this column seems to be very variable, indicating a large possibility of some random noise affecting your data. This could mean that the values for this column are not collected or processed correctly.
         The value is based in equal part on the Z Test based outliers score, the LOG based outlier score and the Value Distribution Score.

@@ -3,7 +3,7 @@
 		"Getting started": [
       "installing-mindsdb",
 			"basic-mindsdb",
-			"google-colab",
+			"google-colab"
     ],
     "Tutorials": [
       "basic-mindsdb",

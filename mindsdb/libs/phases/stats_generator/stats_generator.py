@@ -794,7 +794,7 @@ class StatsGenerator(BaseModule):
                 col_stats['similarity_score_warning'] = None
 
             '''
-            if col_stats['correlation_score'] > 0.4:
+            if col_stats['correlation_score'] < 5:
                 not_quite_correlation_percentage = col_stats['correlation_score'] * 100
                 most_correlated_column = col_stats['most_correlated_column']
                 self.log.warning(f"""Using a statistical predictor we\'v discovered a correlation of roughly {not_quite_correlation_percentage}% between column

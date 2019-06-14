@@ -330,7 +330,7 @@ class StatsGenerator(BaseModule):
                 similarities = list(map(lambda x: sum(x), similarities))
 
                 index_of_most_similar = similarities.index(max(similarities))
-                x.append(col_data[index_of_most_similar])
+                x.append(data[index_of_most_similar])
 
             indices = kmeans.predict(image_hashes)
             for index in indices:

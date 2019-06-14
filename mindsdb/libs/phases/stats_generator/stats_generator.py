@@ -371,7 +371,7 @@ class StatsGenerator(BaseModule):
 
         data = {
             'bucket_probabilities': bucket_probabilities
-            ,'value_distribution_score': value_distribution_score
+            ,'value_distribution_score': round(10 * (1 - value_distribution_score))
             ,'max_probability_key': max_probability_key
             ,'value_distribution_score_description': """
             This score can indicate either biasing towards one specific value in the column or a large number of outliers. So it is a reliable quality indicator but we can't know for which of the two reasons.
@@ -425,7 +425,7 @@ class StatsGenerator(BaseModule):
             empty_cells_score: A quality score based on the nr of empty cells, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
         """
 
-        return {'empty_cells_score': stats[col_name]['empty_percentage']/100
+        return {'empty_cells_score': round(10 * (1 - stats[col_name]['empty_percentage']/100))
                 ,'empty_cells_score_description':"""This score is computed as the % of empty values / 100. Empty values in a column are always bad for training correctly on that data."""}
 
     def _compute_data_type_dist_score(self, stats, columns, col_name):
@@ -445,7 +445,7 @@ class StatsGenerator(BaseModule):
         principal = max(vals)
         total = len(columns[col_name])
         data_type_dist_score = (total - principal)/total
-        return {'data_type_distribution_score': data_type_dist_score
+        return {'data_type_distribution_score': round(10 * (1 - data_type_dist_score))
         ,'data_type_distribution_score_description':"""
         This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.
         """}
@@ -472,8 +472,8 @@ class StatsGenerator(BaseModule):
         z_score_outlier_indexes = [i for i in range(len(z_scores)) if z_scores[i] > threshold]
         data = {
             'z_score_outliers': z_score_outlier_indexes
-            ,'mean_z_score': np.mean(z_scores)
-            ,'z_test_based_outlier_score': len(z_score_outlier_indexes)/len(columns[col_name])
+            ,'mean_z_score': round(10 * (1 - np.mean(z_scores)))
+            ,'z_test_based_outlier_score': round(10 * (1 - len(z_score_outlier_indexes)/len(columns[col_name])))
             ,'z_test_based_outlier_score_description':"""
             This score indicates the amount of data that are 3 STDs or more away from the mean. That is to say, the amount of data that we consider to be an outlir. A hgih z socre means your data contains a large amount of outliers.
             """
@@ -505,7 +505,7 @@ class StatsGenerator(BaseModule):
 
         return {
             'lof_outliers': outlier_indexes
-            ,'lof_based_outlier_score': len(outlier_indexes)/len(columns[col_name])
+            ,'lof_based_outlier_score': round(10 * (1 - len(outlier_indexes)/len(columns[col_name])))
             ,'percentage_of_log_based_outliers': (len(outlier_indexes)/len(columns[col_name])) * 100
             ,'lof_based_outlier_score_description':"""
             The higher this score, the more outliers your dataset has. This is based on distance from the center of 20 clusters as constructed via KNN.
@@ -543,7 +543,7 @@ class StatsGenerator(BaseModule):
 
         return {
             'similarities': similarities
-            ,'similarity_score': max_similarity
+            ,'similarity_score': round(10 * (1 - max_similarity))
             ,'most_similar_column_name': most_similar_column_name
             ,'similarity_score_description':"""
             This score is simply a matthews correlation applied between this column and all other column.
@@ -599,7 +599,7 @@ class StatsGenerator(BaseModule):
         corr_scores = list(dt_clf.feature_importances_)
         highest_correlated_column = max(corr_scores)
         return {
-            'correlation_score': prediction_score * highest_correlated_column
+            'correlation_score': round(10 * (1 - prediction_score * highest_correlated_column))
             ,'highest_correlation': max(corr_scores)
             ,'most_correlated_column': other_feature_names[corr_scores.index(max(corr_scores))]
             ,'similarity_score_description':"""
@@ -704,10 +704,10 @@ class StatsGenerator(BaseModule):
         for col_name in stats:
             col_stats = stats[col_name]
             # Overall quality
-            if col_stats['quality_score'] > 0.5:
+            if col_stats['quality_score'] < 6:
                 # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
                 self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission will be listed bellow')
-                if 'duplicates_score' in col_stats and col_stats['duplicates_score'] > 0.5:
+                if 'duplicates_score' in col_stats and col_stats['duplicates_score'] < 6:
                     duplicates_percentage = col_stats['duplicates_percentage']
                     w = f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.'
                     self.log.warning(w)
@@ -718,21 +718,21 @@ class StatsGenerator(BaseModule):
                 col_stats['duplicates_score_warning'] = None
 
             #Compound scores
-            if col_stats['consistency_score'] > 0.25:
+            if col_stats['consistency_score'] < 3:
                 w = f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info'
                 self.log.warning(w)
                 col_stats['consistency_score_warning'] = w
             else:
                 col_stats['consistency_score_warning'] = None
 
-            if col_stats['redundancy_score'] > 0.45:
+            if col_stats['redundancy_score'] < 5:
                 w = f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info'
                 self.log.warning(w)
                 col_stats['redundancy_score_warning'] = w
             else:
                 col_stats['redundancy_score_warning'] = None
 
-            if col_stats['variability_score'] > 0.5:
+            if col_stats['variability_score'] < 6:
                 w = f'The data in the column {col_name} seems to have too contain too much noise/randomness based on the value variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.'
                 self.log.warning(w)
                 col_stats['variability_score_warning'] = w
@@ -740,7 +740,7 @@ class StatsGenerator(BaseModule):
                 col_stats['variability_score_warning'] = None
 
             # Some scores are meaningful on their own, and the user should be warnned if they fall bellow a certain threshold
-            if col_stats['empty_cells_score'] > 0.2:
+            if col_stats['empty_cells_score'] < 3:
                 empty_cells_percentage = col_stats['empty_percentage']
                 w = f'{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate your data is of poor quality.'
                 self.log.warning(w)
@@ -748,7 +748,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['empty_cells_score_warning'] = None
 
-            if col_stats['data_type_distribution_score'] > 0.2:
+            if col_stats['data_type_distribution_score'] < 3:
                 #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
                 percentage_of_data_not_of_principal_type = col_stats['data_type_distribution_score'] * 100
                 principal_data_type = col_stats['data_type']
@@ -758,7 +758,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['data_type_distribution_score_warning'] = None
 
-            if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] > 0.3:
+            if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] < 4:
                 percentage_of_outliers = col_stats['z_test_based_outlier_score']*100
                 w = f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means there might
                 be too much randomness in this column for us to make an accurate prediction based on it."""
@@ -767,7 +767,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['z_test_based_outlier_score_warning'] = None
 
-            if 'lof_based_outlier_score' in col_stats and col_stats['lof_based_outlier_score'] > 0.3:
+            if 'lof_based_outlier_score' in col_stats and col_stats['lof_based_outlier_score'] < 4:
                 percentage_of_outliers = col_stats['percentage_of_log_based_outliers']
                 w = f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data doesn't fit closely in any cluster using the KNN algorithm (20n) to cluster your data, this means there might
                 be too much randomness in this column for us to make an accurate prediction based on it."""
@@ -776,7 +776,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['lof_based_outlier_score_warning'] = None
 
-            if col_stats['value_distribution_score'] > 0.8:
+            if col_stats['value_distribution_score'] < 9:
                 max_probability_key = col_stats['max_probability_key']
                 w = f"""Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !"""
                 self.log.warning(w)
@@ -784,7 +784,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['value_distribution_score_warning'] = None
 
-            if col_stats['similarity_score'] > 0.5:
+            if col_stats['similarity_score'] < 6:
                 similar_percentage = col_stats['similarity_score'] * 100
                 similar_col_name = col_stats['most_similar_column_name']
                 w = f'Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !'
@@ -794,7 +794,7 @@ class StatsGenerator(BaseModule):
                 col_stats['similarity_score_warning'] = None
 
             '''
-            if col_stats['correlation_score'] > 0.4:
+            if col_stats['correlation_score'] < 5:
                 not_quite_correlation_percentage = col_stats['correlation_score'] * 100
                 most_correlated_column = col_stats['most_correlated_column']
                 self.log.warning(f"""Using a statistical predictor we\'v discovered a correlation of roughly {not_quite_correlation_percentage}% between column

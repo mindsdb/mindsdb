@@ -283,7 +283,7 @@ class StatsGenerator(BaseModule):
         }
 
     @staticmethod
-    def get_histogram(data, data_type=None, data_subtype=None, full_text=None):
+    def get_histogram(data, data_type=None, data_subtype=None, full_text=None, hmd=None):
         """ Returns a histogram for the data and [optionaly] the percentage buckets"""
         if data_type == DATA_TYPES.SEQUENTIAL:
             is_full_text = True if data_subtype == DATA_SUBTYPES.TEXT else False

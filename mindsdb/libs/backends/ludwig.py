@@ -322,6 +322,11 @@ class LudwigBackend():
                     else:
                         data[col].append(self.transaction.input_data.data_frame[col][row_ind])
 
+                elif data_subtype in (DATA_SUBTYPES.IMAGE):
+                    if os.path.isabs(self.transaction.input_data.data_frame[col][row_ind]):
+                        data[col].append(self.transaction.input_data.data_frame[col][row_ind])
+                    else:
+                        data[col].append(os.path.join(os.getcwd(), self.transaction.input_data.data_frame[col][row_ind]))
                 else:
                     data[col].append(self.transaction.input_data.data_frame[col][row_ind])
 

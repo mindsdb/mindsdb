@@ -531,8 +531,20 @@ class StatsGenerator(BaseModule):
             if other_col_name == col_name:
                 continue
             else:
-                similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
-                similarities.append((other_col_name,similarity))
+                try:
+                    similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
+                    similarities.append((other_col_name,similarity))
+                except:
+                    similarity = 0
+                    X1 = list(map(str,col_data))
+                    X2 = list(map(str,columns[other_col_name]))
+                    for ii in range(len(X1)):
+                        if X1[ii] == X2[ii]:
+                            similarity += 1
+
+                    similarity = similarity/len(X1)
+                    similarities.append((other_col_name,similarity))
+
 
         if len(similarities) > 0:
             max_similarity = max(map(lambda x: x[1], similarities))
@@ -540,6 +552,9 @@ class StatsGenerator(BaseModule):
         else:
             max_similarity = 0
             most_similar_column_name = None
+
+        if max_similarity < 0:
+            max_similarity = 0
 
         return {
             'similarities': similarities

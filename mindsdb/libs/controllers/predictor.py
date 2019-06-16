@@ -253,7 +253,7 @@ class Predictor:
                 icm = self._adapt_column(lmd['column_stats'][col],col)
             except Exception as e:
                 icm = {'column_name': col}
-                continue
+                #continue
 
             amd['force_vectors'] = {}
             if col in lmd['predict_columns']:
@@ -321,33 +321,6 @@ class Predictor:
                             adapted_sub_incol = self._adapt_column(stats, input_col)
                             x_explained_member.append(adapted_sub_incol)
                         mao['accuracy_histogram']['x_explained'].append(x_explained_member)
-
-                    '''
-                    mao['accuracy_histogram']['x'] = []
-                    mao['accuracy_histogram']['y'] = []
-
-                    bucket_importance_keys = list(lmd['columns_buckets_importances'].keys())
-
-                    for incol in lmd['column_importances']:
-                        incol_bucket_importance_keys = list(filter(lambda x: incol in x, bucket_importance_keys))
-
-                        mao['accuracy_histogram']['x'].append(incol)
-                        mao['accuracy_histogram']['y'].append(lmd['column_importances'][incol])
-
-                        if len(incol_bucket_importance_keys) > 0:
-                            sub_group_stats = []
-                            for sub_incol in incol_bucket_importance_keys:
-                                adapted_sub_incol = self._adapt_column(lmd['columns_buckets_importances'][sub_incol], sub_incol)
-
-                                sub_incol_parts = sub_incol.split('_bucket_')
-                                sub_incol_name = 'Value Bucket "{}" for column: "{}"'.format(sub_incol_parts[1],sub_incol_parts[0])
-                                adapted_sub_incol['column_name'] = sub_incol_name
-
-                                sub_group_stats.append(adapted_sub_incol)
-                        else:
-                            sub_group_stats = [None]
-                        mao['accuracy_histogram']['x_explained'].append(sub_group_stats)
-                    '''
 
                     for icol in lmd['model_columns_map'].keys():
                         if icol in lmd['malformed_columns']['names']:

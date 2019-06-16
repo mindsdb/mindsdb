@@ -247,7 +247,6 @@ class Predictor:
 
         for col in lmd['model_columns_map'].keys():
             if col in lmd['malformed_columns']['names']:
-                pinrt('HAAAr')
                 continue
 
             try:

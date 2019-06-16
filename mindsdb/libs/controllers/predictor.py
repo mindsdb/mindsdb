@@ -185,7 +185,7 @@ class Predictor:
 
             if score == 'redundancy_score':
                 # CLF based score to be included here once we find a faster way of computing it...
-                similarity_score_based_most_correlated_column = col_stats['most_correlated_column']
+                similarity_score_based_most_correlated_column = col_stats['most_similar_column_name']
 
                 simple_description = f"A low value indicates that the data in this column is highly redundant (useless) for making any sort of prediction. You should make sure that values heavily related to this column are no already expressed in the \"{similarity_score_based_most_correlated_column}\" column (e.g. if this column is a timestamp, make sure you don't have another column representing the exact same time in ISO datetime format)"
 
@@ -247,11 +247,12 @@ class Predictor:
 
         for col in lmd['model_columns_map'].keys():
             if col in lmd['malformed_columns']['names']:
+                pinrt('HAAAr')
                 continue
 
             try:
                 icm = self._adapt_column(lmd['column_stats'][col],col)
-            except:
+            except Exception as e:
                 icm = {'column_name': col}
                 continue
 

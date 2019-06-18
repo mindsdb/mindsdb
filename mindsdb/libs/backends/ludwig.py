@@ -421,10 +421,16 @@ class LudwigBackend():
                     merged_model_definition['preprocessing']
                 )
                 model.initialize_model(train_set_metadata=train_set_metadata, gpus=self._get_useable_gpus())
-
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
             else:
                 model = LudwigModel.load(model_dir=self._get_model_dir())
+
+            if len(training_dataframe[training_dataframe.columns[0]]) > 5000:
+                i = 0
+                while i < len(training_dataframe[training_dataframe.columns[0]]) + 5000:
+                    training_sample = training_dataframe.iloc[i:i+5000]
+                    train_stats = model.train(data_df=, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
+                    i = i + 5000
+            else:
                 train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
 
             for k in train_stats['train']:

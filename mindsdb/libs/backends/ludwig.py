@@ -418,7 +418,7 @@ class LudwigBackend():
                 model = LudwigModel(model_definition)
                 merged_model_definition = model.model_definition
                 train_set_metadata = build_metadata(
-                    training_dataframe.iloc[0:2000],
+                    training_dataframe,
                     (merged_model_definition['input_features'] +
                     merged_model_definition['output_features']),
                     merged_model_definition['preprocessing']
@@ -427,7 +427,7 @@ class LudwigBackend():
             else:
                 model = LudwigModel.load(model_dir=self._get_model_dir())
 
-            split_by = 200
+            split_by = 100
             df_len = len(training_dataframe[training_dataframe.columns[0]])
             if (df_len > split_by and has_heavy_data) or df_len > split_by * 100:
                 i = 0

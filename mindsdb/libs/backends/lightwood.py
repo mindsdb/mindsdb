@@ -80,7 +80,7 @@ class LightwoodBackend():
             df = self.transaction.input_data.validation_df
 
         # not the most efficient but least prone to bug and should be fast enough
-        if len(ignore_columns > 0):
+        if len(ignore_columns)  > 0:
             run_df = df.copy(deep=True)
             for col_name in ignore_columns:
                 run_df[col_name] = [None] * len(run_df[col_name])

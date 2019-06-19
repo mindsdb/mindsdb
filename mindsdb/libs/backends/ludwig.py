@@ -427,7 +427,7 @@ class LudwigBackend():
             else:
                 model = LudwigModel.load(model_dir=self._get_model_dir())
 
-            split_by = 100
+            split_by = 50
             df_len = len(training_dataframe[training_dataframe.columns[0]])
             if (df_len > split_by and has_heavy_data) or df_len > split_by * 100:
                 i = 0

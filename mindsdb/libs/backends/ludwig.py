@@ -404,7 +404,7 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
-        with disable_console_output(True):
+        with disable_console_output(False):
             # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train... see this issue for any updates on the matter: https://github.com/uber/ludwig/issues/295
             #model.initialize_model(train_set_metadata={})
             #train_stats = model.train_online(data_df=training_dataframe) # ??Where to add model_name?? ----> model_name=self.transaction.lmd['name']
@@ -427,7 +427,7 @@ class LudwigBackend():
             else:
                 model = LudwigModel.load(model_dir=self._get_model_dir())
 
-            split_by = 50
+            split_by = 30
             df_len = len(training_dataframe[training_dataframe.columns[0]])
             if (df_len > split_by and has_heavy_data) or df_len > split_by * 100:
                 i = 0

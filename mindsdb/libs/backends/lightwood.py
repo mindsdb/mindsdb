@@ -76,9 +76,11 @@ class LightwoodBackend():
             # Doing it here since currently data cleanup is included in this, in the future separate data cleanup
             lightwood_config = self._create_lightwood_config()
             df = self.transaction.input_data.data_frame
-        if mode == 'validation':
+        if mode == 'validate':
             df = self.transaction.input_data.validation_df
-
+        elif mode == 'test':
+            df = self.transaction.input_data.test_df
+            
         # not the most efficient but least prone to bug and should be fast enough
         if len(ignore_columns)  > 0:
             run_df = df.copy(deep=True)

@@ -80,7 +80,7 @@ class LightwoodBackend():
             df = self.transaction.input_data.validation_df
         elif mode == 'test':
             df = self.transaction.input_data.test_df
-            
+
         # not the most efficient but least prone to bug and should be fast enough
         if len(ignore_columns)  > 0:
             run_df = df.copy(deep=True)
@@ -89,5 +89,5 @@ class LightwoodBackend():
         else:
             run_df = df
 
-        self.predictor.predict(from_data=run_df)
+        self.predictor.predict(when_data=run_df)
         pass

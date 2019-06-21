@@ -89,5 +89,5 @@ class LightwoodBackend():
         else:
             run_df = df
 
-        self.predictor.predict(when_data=run_df)
-        pass
+        predictions = self.predictor.predict(when_data=run_df)
+        return predictions

@@ -15,16 +15,17 @@ import hashlib
 from dateutil.parser import parse as parse_datetime
 import numpy
 
-def clean_float(str):
-    if type(str) in [type(int(1)), type(1.0)] :
-        return float(str)
+def clean_float(val):
+    if type(val) in [type(int(1)), type(1.0)] :
+        return float(val)
 
-    if isinstance(str, numpy.float64) or isinstance(str, float) or isinstance(str, int):
-        return str
+    if isinstance(val, numpy.float64) or isinstance(val, float) or isinstance(val, int):
+        return val
 
-    str = str.replace(',','.')
-    str = str.rstrip('"').lstrip('"')
-    return float(str)
+    val = str(val)
+    val = val.replace(',','.')
+    val = val.rstrip('"').lstrip('"')
+    return float(val)
 
 
 def gen_chars(length, character):

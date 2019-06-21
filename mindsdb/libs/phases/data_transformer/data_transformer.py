@@ -11,6 +11,8 @@ class DataTransformer(BaseModule):
             data_stype = self.transaction.lmd['column_stats'][column]['data_subtype']
 
             if data_type == DATA_TYPES.NUMERIC:
-                input_data.data_frame[column] =
+                input_data.data_frame[column] = input_data.data_frame[column].apply(clean_float)
+                if data_stype == DATA_SUBTYPES.INT:
+                    input_data.data_frame[column] = input_data.data_frame[column].apply(round)
 
             self.transaction.input_data

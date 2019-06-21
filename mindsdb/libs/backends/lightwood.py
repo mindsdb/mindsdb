@@ -29,10 +29,6 @@ class LightwoodBackend():
 
             if data_type in (DATA_TYPES.NUMERIC):
                 lightwood_data_type = 'numeric'
-                try:
-                    self.transaction.input_data.data_frame[col_name] = self.transaction.input_data.train_df[col_name].apply(int)
-                except:
-                    self.transaction.input_data.data_frame[col_name].apply(lambda x: float(x.replace(',','.')))
 
             elif data_type in (DATA_TYPES.CATEGORICAL):
                 lightwood_data_type = 'categorical'

@@ -1,3 +1,5 @@
+import os
+
 from mindsdb.libs.constants.mindsdb import *
 
 import lightwood
@@ -70,6 +72,9 @@ class LightwoodBackend():
 
         self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 
+        self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data')
+        predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])
+
     def predict(self, mode='predict', ignore_columns=[]):
         if mode == 'predict':
             # Doing it here since currently data cleanup is included in this, in the future separate data cleanup
@@ -80,6 +85,8 @@ class LightwoodBackend():
         elif mode == 'test':
             df = self.transaction.input_data.test_df
 
+        if self.predictor is None:
+            self.predictor = lightwood.Predictor(load_from_path=self.transaction.lmd['lightwood_data']['save_path'])
         # not the most efficient but least prone to bug and should be fast enough
         if len(ignore_columns)  > 0:
             run_df = df.copy(deep=True)

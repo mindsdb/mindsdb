@@ -23,6 +23,7 @@ def clean_float(str):
         return str
 
     str = str.replace(',','.')
+    str = str.rstrip('"').lstrip('"')
     return float(str)
 
 

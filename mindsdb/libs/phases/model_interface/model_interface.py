@@ -1,4 +1,3 @@
-'''
 try:
     from mindsdb.libs.backends.ludwig import LudwigBackend
 except ImportError as e:
@@ -10,9 +9,6 @@ try:
 except ImportError as e:
     print(e)
     pass
-'''
-from mindsdb.libs.backends.ludwig import LudwigBackend
-from mindsdb.libs.backends.lightwood import LightwoodBackend
 
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.constants.mindsdb import *

@@ -88,12 +88,8 @@ class LightwoodBackend():
         elif mode == 'test':
             df = self.transaction.input_data.test_df
 
-        print('-------------')
-        print(self.predictor)
         if self.predictor is None:
-            print('I AM HAR !')
             self.predictor = lightwood.Predictor(load_from_path=self.transaction.lmd['lightwood_data']['save_path'])
-        print('---------------')
 
         # not the most efficient but least prone to bug and should be fast enough
         if len(ignore_columns)  > 0:

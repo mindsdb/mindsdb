@@ -25,6 +25,10 @@ def clean_float(val):
     val = str(val)
     val = val.replace(',','.')
     val = val.rstrip('"').lstrip('"')
+
+    if val == '' or val is 'None':
+        return None
+
     return float(val)
 
 

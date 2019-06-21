@@ -63,8 +63,11 @@ class LightwoodBackend():
 
     def train(self):
         lightwood_config = self._create_lightwood_config()
+
         self.predictor = lightwood.Predictor(lightwood_config)
+
         self.predictor.learn(from_data=self.transaction.input_data.train_df, test_data=self.transaction.input_data.test_df)
+
         self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 
     def predict(self, mode='predict', ignore_columns=[]):
@@ -86,7 +89,7 @@ class LightwoodBackend():
             run_df = df
 
         predictions = self.predictor.predict(when_data=run_df)
-        
+
         formated_predictions = {}
         for k in predictions:
             formated_predictions[k] = predictions[k]['predictions']

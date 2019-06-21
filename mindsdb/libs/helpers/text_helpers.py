@@ -19,7 +19,7 @@ def clean_float(str):
     if type(str) in [type(int(1)), type(1.0)] :
         return float(str)
 
-    if isinstance(str, numpy.float64) or isinstance(str, float):
+    if isinstance(str, numpy.float64) or isinstance(str, float) or isinstance(str, int):
         return str
 
     str = str.replace(',','.')

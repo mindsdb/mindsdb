@@ -186,6 +186,8 @@ class Transaction:
             self.output_data = self.input_data
             return
 
+        self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
+
         self.output_data = PredictTransactionOutputData(transaction=self)
 
         self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='predict')

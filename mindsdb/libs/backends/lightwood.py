@@ -70,7 +70,6 @@ class LightwoodBackend():
 
         self.predictor = lightwood.Predictor(lightwood_config)
 
-        #self.predictor.learn(from_data=self.transaction.input_data.train_df)
         self.predictor.learn(from_data=self.transaction.input_data.train_df, test_data=self.transaction.input_data.test_df)
 
         self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))

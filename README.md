@@ -65,6 +65,15 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 
 ```
 
+
+
+**Note**:
+To use ludwig backend install ludwig using the following commands.
+
+```bash
+pip3 install ludwig
+```
+
 Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 
 ## Report Issues

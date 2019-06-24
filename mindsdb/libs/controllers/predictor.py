@@ -527,6 +527,8 @@ class Predictor:
         light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
         light_transaction_metadata['disable_optional_analysis'] = disable_optional_analysis
         light_transaction_metadata['validation_set_accuracy'] = None
+        light_transaction_metadata['lightwood_data'] = {}
+        light_transaction_metadata['ludwig_data'] = {}
 
         if rebuild_model is False:
             old_lmd = {}

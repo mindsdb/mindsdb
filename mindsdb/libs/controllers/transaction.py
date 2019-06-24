@@ -128,6 +128,9 @@ class Transaction:
             self.save_metadata()
             self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
 
+            self.save_metadata()
+            self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
+
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
             self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='train')
@@ -182,6 +185,8 @@ class Transaction:
         if self.input_data.data_frame.shape[0] <= 0:
             self.output_data = self.input_data
             return
+
+        self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
 
         self.output_data = PredictTransactionOutputData(transaction=self)
 

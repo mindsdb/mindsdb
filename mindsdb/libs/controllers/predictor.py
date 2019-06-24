@@ -366,7 +366,7 @@ class Predictor:
         try:
             storage_file = model_name + '.zip'
             with zipfile.ZipFile(storage_file, 'w') as zip_fp:
-                for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle']:
+                for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle', model_name + '_lightwood_data']:
                     full_path = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, file_name)
                     zip_fp.write(full_path, os.path.basename(full_path))
 

@@ -161,6 +161,8 @@ class LudwigBackend():
         return df, model_definition
 
     def _create_ludwig_dataframe(self, mode):
+        has_heavy_data = False
+
         if mode == 'train':
             indexes = self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]
             columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd['columns'])]
@@ -232,6 +234,7 @@ class LudwigBackend():
                 ludwig_dtype = 'category'
 
             elif data_subtype in (DATA_SUBTYPES.IMAGE):
+                has_heavy_data = True
                 ludwig_dtype = 'image'
                 encoder = 'stacked_cnn'
                 in_memory = True
@@ -372,7 +375,7 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             df.sort_values(timeseries_cols)
 
-        return df, model_definition, timeseries_cols
+        return df, model_definition, timeseries_cols, has_heavy_data
 
     def _get_model_dir(self):
         model_dir = None
@@ -396,7 +399,7 @@ class LudwigBackend():
             return gpu_indices
 
     def train(self):
-        training_dataframe, model_definition, timeseries_cols = self._create_ludwig_dataframe('train')
+        training_dataframe, model_definition, timeseries_cols, has_heavy_data = self._create_ludwig_dataframe('train')
 
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
@@ -421,10 +424,24 @@ class LudwigBackend():
                     merged_model_definition['preprocessing']
                 )
                 model.initialize_model(train_set_metadata=train_set_metadata, gpus=self._get_useable_gpus())
-
-                train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
             else:
                 model = LudwigModel.load(model_dir=self._get_model_dir())
+
+
+            split_by = 10 * 1000
+            if has_heavy_data:
+                split_by = 40
+            df_len = len(training_dataframe[training_dataframe.columns[0]])
+            if df_len > split_by:
+                i = 0
+                while i < df_len + split_by:
+                    end = i + split_by
+                    self.transaction.log.info(f'Training with batch from index {i} to index {end}')
+                    training_sample = training_dataframe.iloc[i:end]
+                    training_sample = training_sample.reset_index()
+                    train_stats = model.train(data_df=training_sample, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
+                    i = end
+            else:
                 train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
 
             for k in train_stats['train']:
@@ -457,7 +474,7 @@ class LudwigBackend():
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}
 
     def predict(self, mode='predict', ignore_columns=[]):
-        predict_dataframe, model_definition, timeseries_cols = self._create_ludwig_dataframe(mode)
+        predict_dataframe, model_definition, timeseries_cols, has_heavy_data = self._create_ludwig_dataframe(mode)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
 
         if len(timeseries_cols) > 0:

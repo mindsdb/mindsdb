@@ -531,7 +531,7 @@ class Predictor:
         light_transaction_metadata['ludwig_data'] = {}
 
         if 'balance_target_category' in unstable_parameters_dict:
-            light_transaction_metadata['balance_target_category'] = True
+            light_transaction_metadata['balance_target_category'] = unstable_parameters_dict['balance_target_category']
         else:
             light_transaction_metadata['balance_target_category'] = False
 

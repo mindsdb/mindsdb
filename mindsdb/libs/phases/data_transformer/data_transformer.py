@@ -12,7 +12,7 @@ class DataTransformer(BaseModule):
         except:
             return None
 
-    def run(self, input_data):
+    def run(self, input_data, mode=None):
         for column in input_data.columns:
             data_type = self.transaction.lmd['column_stats'][column]['data_type']
             data_stype = self.transaction.lmd['column_stats'][column]['data_subtype']
@@ -31,7 +31,7 @@ class DataTransformer(BaseModule):
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:
-            if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['balance_target_category'] == True:
+            if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['balance_target_category'] == True and mode == 'train':
                 occurance_map = {}
                 ciclying_map = {}
 

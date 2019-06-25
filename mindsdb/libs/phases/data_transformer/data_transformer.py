@@ -45,7 +45,7 @@ class DataTransformer(BaseModule):
                 for val in occurance_map:
                     while occurance_map[val] < max_val_occurances:
                         print(ciclying_map[val])
-                        copied_row = input_data.data_frame[input_data.data_frame[colum]].reindex().iloc[ciclying_map[val]]
+                        copied_row = input_data.data_frame[input_data.data_frame[colum] == val].iloc[ciclying_map[val]]
 
                         input_data.data_frame[column].append(copied_row)
                         input_data.train_df[column].append(copied_row)

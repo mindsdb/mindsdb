@@ -33,13 +33,24 @@ class DataTransformer(BaseModule):
         for colum in self.transaction.lmd['predict_columns']:
             if self.transaction.lmd['column_stats'][column]['data_subtype'] == DATA_SUBTYPES.SINGLE:
                 occurance_map = {}
+                ciclying_map = {}
+
                 for i in range(0,len(self.transaction.lmd['column_stats'][column]['histogram']['x'])):
+                    ciclying_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = 0
                     occurance_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = self.transaction.lmd['column_stats'][column]['histogram']['y'][i]
+
+                print(occurance_map)
 
                 max_val_occurances = max(occurance_map.values())
                 for val in occurance_map:
                     while occurance_map[val] < max_val_occurances:
-                        occurance_map[val] += 1
-                        input_data.data_frame[column]
 
-        exit()
+                        input_data.data_frame[column].append(copied_row)
+                        input_data.train_df[column].append(copied_row)
+
+                        index = len(input_data.data_frame)
+                        self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(index)
+                        self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(index)
+
+                        occurance_map[val] += 1
+                        ciclying_map[val] += 1

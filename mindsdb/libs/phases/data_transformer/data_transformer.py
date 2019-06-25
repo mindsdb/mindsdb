@@ -31,7 +31,7 @@ class DataTransformer(BaseModule):
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:
-            if self.transaction.lmd['column_stats'][column]['data_subtype'] == DATA_SUBTYPES.SINGLE:
+            if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['balance_target_category'] == True:
                 occurance_map = {}
                 ciclying_map = {}
 
@@ -39,7 +39,6 @@ class DataTransformer(BaseModule):
                     ciclying_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = 0
                     occurance_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = self.transaction.lmd['column_stats'][column]['histogram']['y'][i]
 
-                print(occurance_map)
 
                 max_val_occurances = max(occurance_map.values())
                 for val in occurance_map:

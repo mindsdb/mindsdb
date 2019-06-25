@@ -201,9 +201,9 @@ class DataExtractor(BaseModule):
                     self.transaction.input_data.test_indexes[key] = self.transaction.input_data.all_indexes[key][test_window[0]:test_window[1]]
                     self.transaction.input_data.validation_indexes[key] = self.transaction.input_data.all_indexes[key][validation_window[0]:validation_window[1]]
 
-        self.transaction.input_data.train_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]]
-        self.transaction.input_data.test_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]]
-        self.transaction.input_data.validation_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]]
+        self.transaction.input_data.train_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]].copy()
+        self.transaction.input_data.test_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]].copy()
+        self.transaction.input_data.validation_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]].copy()
         # @TODO: Consider deleting self.transaction.input_data.data_frame here
 
         # log some stats

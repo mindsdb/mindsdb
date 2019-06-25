@@ -366,7 +366,7 @@ class Predictor:
         try:
             storage_file = model_name + '.zip'
             with zipfile.ZipFile(storage_file, 'w') as zip_fp:
-                for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle']:
+                for file_name in [model_name + '_heavy_model_metadata.pickle', model_name + '_light_model_metadata.pickle', model_name + '_lightwood_data']:
                     full_path = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, file_name)
                     zip_fp.write(full_path, os.path.basename(full_path))
 
@@ -425,7 +425,7 @@ class Predictor:
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
     window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,
     stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='ludwig', rebuild_model=True, use_gpu=True,
-    disable_optional_analysis=False):
+    disable_optional_analysis=False, unstable_parameters_dict={}):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -529,6 +529,11 @@ class Predictor:
         light_transaction_metadata['validation_set_accuracy'] = None
         light_transaction_metadata['lightwood_data'] = {}
         light_transaction_metadata['ludwig_data'] = {}
+
+        if 'balance_target_category' in unstable_parameters_dict:
+            light_transaction_metadata['balance_target_category'] = unstable_parameters_dict['balance_target_category']
+        else:
+            light_transaction_metadata['balance_target_category'] = False
 
         if rebuild_model is False:
             old_lmd = {}

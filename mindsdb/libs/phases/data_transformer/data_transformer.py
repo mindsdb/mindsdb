@@ -44,11 +44,10 @@ class DataTransformer(BaseModule):
                 max_val_occurances = max(occurance_map.values())
                 for val in occurance_map:
                     while occurance_map[val] < max_val_occurances:
-                        print(ciclying_map[val])
                         copied_row = input_data.data_frame[input_data.data_frame[colum] == val].iloc[ciclying_map[val]]
 
-                        input_data.data_frame.append(copied_row)
-                        input_data.train_df.append(copied_row)
+                        input_data.data_frame = input_data.data_frame.append(copied_row)
+                        input_data.train_df = input_data.train_df.append(copied_row)
 
                         index = len(input_data.data_frame)
                         self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(index)

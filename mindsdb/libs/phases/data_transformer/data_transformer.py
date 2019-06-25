@@ -28,3 +28,18 @@ class DataTransformer(BaseModule):
                     input_data.train_df[column] = input_data.train_df[column].apply(DataTransformer._try_round)
                     input_data.test_df[column] = input_data.test_df[column].apply(DataTransformer._try_round)
                     input_data.validation_df[column] = input_data.validation_df[column].apply(DataTransformer._try_round)
+
+        # Un-bias dataset for training
+        for colum in self.transaction.lmd['predict_columns']:
+            if self.transaction.lmd['column_stats'][column]['data_subtype'] == DATA_SUBTYPES.SINGLE:
+                occurance_map = {}
+                for i in range(0,len(self.transaction.lmd['column_stats'][column]['histogram']['x'])):
+                    occurance_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = self.transaction.lmd['column_stats'][column]['histogram']['y'][i]
+
+                max_val_occurances = max(occurance_map.values())
+                for val in occurance_map:
+                    while occurance_map[val] < max_val_occurances:
+                        occurance_map[val] += 1
+                        input_data.data_frame[column]
+
+        exit()

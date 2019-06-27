@@ -2,7 +2,7 @@ from mindsdb.libs.helpers.general_helpers import pickle_obj
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
-from mindsdb.libs.model_examination.column_evaluator import ColumnEvaluator
+from mindsdb.libs.phases.model_analyzer.helpers.probabilistic_validator import ColumnEvaluator
 
 import pandas as pd
 import numpy as np

@@ -68,7 +68,7 @@ class DataTransformer(BaseModule):
                 if data_stype == DATA_SUBTYPES.INT:
                     self._aply_to_all_data(column, DataTransformer._try_round)
 
-            if data_type = DATA_TYPES.DATE:
+            if data_type == DATA_TYPES.DATE:
                 if data_stype == DATA_SUBTYPES.DATE:
                     self._aply_to_all_data(column, self._standardize_date)
 

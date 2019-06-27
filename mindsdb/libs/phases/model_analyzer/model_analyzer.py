@@ -68,6 +68,9 @@ class ModelAnalyzer(BaseModule):
             for pcol in output_columns:
                 i = 0
                 for real_val in self.transaction.input_data.validation_df:
+                    print('##')
+                    print(i)
+                    print(predictions[pcol])
                     predicted_val = predictions[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
                     i += 1

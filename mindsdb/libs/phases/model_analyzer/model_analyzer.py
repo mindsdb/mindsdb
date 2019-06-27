@@ -67,10 +67,7 @@ class ModelAnalyzer(BaseModule):
             # A separate probabilistic model is trained for each predicted column, we may want to change this in the future, @TODO
             for pcol in output_columns:
                 i = 0
-                for real_val in self.transaction.input_data.validation_df:
-                    print('##')
-                    print(i)
-                    print(predictions[pcol])
+                for real_val in self.transaction.input_data.validation_df[pcol]:
                     predicted_val = predictions[pcol][i]
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
                     i += 1

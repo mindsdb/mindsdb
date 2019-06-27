@@ -71,11 +71,11 @@ class LightwoodBackend():
     def train(self):
         lightwood_config = self._create_lightwood_config()
 
-        self.predictor = lightwood.Predictor(lightwood_config)
+        #self.predictor = lightwood.Predictor(lightwood_config)
 
-        self.predictor.learn(from_data=self.transaction.input_data.train_df, test_data=self.transaction.input_data.test_df)
-
-        self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
+        #self.predictor.learn(from_data=self.transaction.input_data.train_df, test_data=self.transaction.input_data.test_df)
+        self.predictor = lightwood.Predictor(load_from_path=self.transaction.lmd['lightwood_data']['save_path'])
+        #self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 
         self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data')
         self.predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])

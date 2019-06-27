@@ -1,3 +1,6 @@
+from dateutil.parser import parse as parse_datetime
+import datetime
+
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import clean_float
@@ -12,25 +15,36 @@ class DataTransformer(BaseModule):
         except:
             return None
 
+    def _aply_to_all_data(self, column, func):
+        input_data.data_frame[column] = input_data.data_frame[column].apply(func)
+        input_data.train_df[column] = input_data.train_df[column].apply(func)
+        input_data.test_df[column] = input_data.test_df[column].apply(func)
+        input_data.validation_df[column] = input_data.validation_df[column].apply(func)
+
     def run(self, input_data, mode=None):
         for column in input_data.columns:
             if column in self.transaction.lmd['malformed_columns']['names']:
                 continue
-                
+
             data_type = self.transaction.lmd['column_stats'][column]['data_type']
             data_stype = self.transaction.lmd['column_stats'][column]['data_subtype']
 
             if data_type == DATA_TYPES.NUMERIC:
-                input_data.data_frame[column] = input_data.data_frame[column].apply(clean_float)
-                input_data.train_df[column] = input_data.train_df[column].apply(clean_float)
-                input_data.test_df[column] = input_data.test_df[column].apply(clean_float)
-                input_data.validation_df[column] = input_data.validation_df[column].apply(clean_float)
+                self._aply_to_all_data(column, clean_float)
 
                 if data_stype == DATA_SUBTYPES.INT:
-                    input_data.data_frame[column] = input_data.data_frame[column].apply(DataTransformer._try_round)
-                    input_data.train_df[column] = input_data.train_df[column].apply(DataTransformer._try_round)
-                    input_data.test_df[column] = input_data.test_df[column].apply(DataTransformer._try_round)
-                    input_data.validation_df[column] = input_data.validation_df[column].apply(DataTransformer._try_round)
+                    self._aply_to_all_data(column, DataTransformer._try_round)
+
+            if data_type = DATA_TYPES.DATE:
+                if data_stype == DATA_SUBTYPES.DATE:
+                    pass
+                    date_time_obj = datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S')
+
+                elif data_subtype == DATA_SUBTYPES.TIMESTAMP:
+                    if self.transaction.input_data.data_frame[col][row_ind] is None:
+                        unix_ts = 0
+                    else:
+                        unix_ts = parse_datetime(self.transaction.input_data.data_frame[col][row_ind]).timestamp()
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:

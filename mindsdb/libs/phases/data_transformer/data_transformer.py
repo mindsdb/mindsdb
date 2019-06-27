@@ -15,6 +15,39 @@ class DataTransformer(BaseModule):
         except:
             return None
 
+    @staticmethod
+    def _standardize_date(date_str):
+        try:
+            # will return a datetime object
+            date = parse_datetime(date_str)
+        except:
+            try:
+                date = datetime.datetime.utcfromtimestamp(date_str)
+            except:
+                return None
+        # Uncomment if we want to work internally date type
+        #return date.date()
+
+        # Uncomment if we want to work internally with string type
+        return date.strftime('%y-%m-%d')
+
+    @staticmethod
+    def _standardize_datetime(datetime_str):
+        try:
+            # will return a datetime object
+            dt = parse_datetime(date_str)
+        except:
+            try:
+                dt = datetime.datetime.utcfromtimestamp(date_str)
+            except:
+                return None
+        # Uncomment if we want to work internally date type
+        #return dt
+
+        # Uncomment if we want to work internally with string type
+        # @TODO Decide if we ever need/want the milliseconds
+        return dt.strftime('%y-%m-%d %H:%M:%S')
+
     def _aply_to_all_data(self, column, func):
         input_data.data_frame[column] = input_data.data_frame[column].apply(func)
         input_data.train_df[column] = input_data.train_df[column].apply(func)
@@ -37,14 +70,10 @@ class DataTransformer(BaseModule):
 
             if data_type = DATA_TYPES.DATE:
                 if data_stype == DATA_SUBTYPES.DATE:
-                    pass
-                    date_time_obj = datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S')
+                    self._aply_to_all_data(column, self._standardize_date)
 
                 elif data_subtype == DATA_SUBTYPES.TIMESTAMP:
-                    if self.transaction.input_data.data_frame[col][row_ind] is None:
-                        unix_ts = 0
-                    else:
-                        unix_ts = parse_datetime(self.transaction.input_data.data_frame[col][row_ind]).timestamp()
+                    self._aply_to_all_data(column, self._standardize_datetime)
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:

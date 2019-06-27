@@ -428,7 +428,7 @@ class LudwigBackend():
                 model = LudwigModel.load(model_dir=self._get_model_dir())
 
 
-            split_by = 10 * 1000
+            split_by = 50 * 1000
             if has_heavy_data:
                 split_by = 40
             df_len = len(training_dataframe[training_dataframe.columns[0]])

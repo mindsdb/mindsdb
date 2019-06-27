@@ -37,7 +37,10 @@ class LightwoodBackend():
             elif data_type in (DATA_TYPES.CATEGORICAL):
                 lightwood_data_type = 'categorical'
 
-            elif data_type in (DATA_TYPES.DATE):
+            elif data_subtype in (DATA_SUBTYPES.DATE):
+                lightwood_data_type = 'categorical'
+
+            elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
                 lightwood_data_type = 'datetime'
 
             elif data_subtype in (DATA_SUBTYPES.IMAGE):
@@ -68,11 +71,12 @@ class LightwoodBackend():
     def train(self):
         lightwood_config = self._create_lightwood_config()
 
-        self.predictor = lightwood.Predictor(lightwood_config)
-
-        self.predictor.learn(from_data=self.transaction.input_data.train_df, test_data=self.transaction.input_data.test_df)
-
-        self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
+        if self.transaction.lmd['skip_model_training'] == True:
+            self.predictor = lightwood.Predictor(load_from_path=os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data'))
+        else:
+            self.predictor = lightwood.Predictor(lightwood_config)
+            self.predictor.learn(from_data=self.transaction.input_data.train_df, test_data=self.transaction.input_data.test_df)
+            self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 
         self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data')
         self.predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])

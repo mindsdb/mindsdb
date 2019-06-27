@@ -4,7 +4,7 @@ from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.model_examination.probabilistic_validator import ProbabilisticValidator
+from mindsdb.libs.helpers.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
 
 import time

@@ -535,6 +535,11 @@ class Predictor:
         else:
             light_transaction_metadata['balance_target_category'] = False
 
+        if 'skip_model_training' in unstable_parameters_dict:
+            light_transaction_metadata['skip_model_training'] = unstable_parameters_dict['skip_model_training']
+        else:
+            light_transaction_metadata['skip_model_training'] = False
+
         if rebuild_model is False:
             old_lmd = {}
             for k in light_transaction_metadata: old_lmd[k] = light_transaction_metadata[k]

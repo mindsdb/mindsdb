@@ -24,10 +24,10 @@ class ProbabilisticValidator():
         As of right now we go with ComplementNB
         """
         # <--- Pick one of the 3
-        self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
+        #self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         #, class_prior=[0.5,0.5]
-        #self._probabilistic_model = GaussianNB(var_smoothing=1)
-        #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
+        #self._probabilistic_model = GaussianNB()
+        self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
 
@@ -69,7 +69,8 @@ class ProbabilisticValidator():
             X[predicted_value_b] = True
             X = X + features_existence
             self.X_buff.append(X)
-            self.Y_buff.append(real_value_b)
+            #print(real_value_b == predicted_value_b)
+            self.Y_buff.append(real_value_b == predicted_value_b)
 
             # If no column is ignored, compute the accuracy for this bucket
             if nr_missing_features == 0:

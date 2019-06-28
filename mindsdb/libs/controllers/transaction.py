@@ -125,10 +125,13 @@ class Transaction:
             self.save_metadata()
 
             self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
-            self.save_metadata()
-            self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+            if 'skip_stats_generation' in self.lmd and self.lmd['skip_stats_generation'] == True:
+                self.load_metadata()
+            else:
+                self.save_metadata()
+                self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+                self.save_metadata()
 
-            self.save_metadata()
             self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data, mode='train')
 
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING

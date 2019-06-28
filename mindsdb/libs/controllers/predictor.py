@@ -540,6 +540,11 @@ class Predictor:
         else:
             light_transaction_metadata['skip_model_training'] = False
 
+        if 'skip_model_training' in unstable_parameters_dict:
+            light_transaction_metadata['skip_stats_generation'] = unstable_parameters_dict['skip_stats_generation']
+        else:
+            light_transaction_metadata['skip_stats_generation'] = False
+
         if rebuild_model is False:
             old_lmd = {}
             for k in light_transaction_metadata: old_lmd[k] = light_transaction_metadata[k]

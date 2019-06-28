@@ -180,11 +180,10 @@ class FileDS(DataSource):
 
 
 
-    def _setup(self,file, clean_header = True, clean_rows = True, custom_parser = None):
+    def _setup(self,file, clean_rows = True, custom_parser = None):
         """
         Setup from file
         :param file: fielpath or url
-        :param clean_header: if you want to clean header column names
         :param clean_rows:  if you want to clean rows for strange null values
         :param custom_parser: if you want to parse the file with some custom parser
         """
@@ -217,8 +216,8 @@ class FileDS(DataSource):
             header = df.columns.values.tolist()
             file_data = df.values.tolist()
 
-        if clean_header == True:
-            header = self.clean(header)
+        for col in header:
+            self._col_map[col] = col
 
         if clean_rows == True:
             file_list_data = []

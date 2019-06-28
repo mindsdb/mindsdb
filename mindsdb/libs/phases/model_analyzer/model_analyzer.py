@@ -48,11 +48,12 @@ class ModelAnalyzer(BaseModule):
 
         predictions = self.transaction.model_backend.predict('validate')
         for pcol in output_columns:
-            i = 0
-            for real_val in self.transaction.input_data.validation_df[pcol]:
-                predicted_val = predictions[pcol][i]
-                probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=real_val, predicted_value=predicted_val)
-                i += 1
+            for _ in range(len(input_columns)):
+                i = 0
+                for real_val in self.transaction.input_data.validation_df[pcol]:
+                    predicted_val = predictions[pcol][i]
+                    probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=real_val, predicted_value=predicted_val)
+                    i += 1
 
         # Run on the validation set multiple times, each time with one of the column blanked out
         for column_name in ignorable_input_columns:

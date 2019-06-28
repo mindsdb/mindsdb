@@ -26,8 +26,8 @@ class ProbabilisticValidator():
         # <--- Pick one of the 3
         #self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         #, class_prior=[0.5,0.5]
-        #self._probabilistic_model = GaussianNB()
-        self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
+        self._probabilistic_model = GaussianNB()
+        #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
 

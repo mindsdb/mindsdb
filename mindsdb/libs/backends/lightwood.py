@@ -31,7 +31,7 @@ class LightwoodBackend():
 
             lightwood_data_type = None
 
-            other_keys = {}
+            other_keys = {'encoder_attrs': {}}
             if data_type in (DATA_TYPES.NUMERIC):
                 lightwood_data_type = 'numeric'
 
@@ -46,7 +46,7 @@ class LightwoodBackend():
 
             elif data_subtype in (DATA_SUBTYPES.IMAGE):
                 lightwood_data_type = 'image'
-                other_keys['encoding_aim'] = 'speed'
+                other_keys['encoder_attrs']['aim'] = 'speed'
 
             elif data_subtype in (DATA_SUBTYPES.TEXT):
                 lightwood_data_type = 'text'

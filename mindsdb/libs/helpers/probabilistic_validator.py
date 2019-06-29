@@ -111,6 +111,7 @@ class ProbabilisticValidator():
         np.seterr(divide='ignore')
 
         if self.buckets is not None:
+            print(self.X_buff, self.Y_buff)
             self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=self.bucket_keys)
         else:
             self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=[True, False])

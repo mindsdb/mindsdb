@@ -529,7 +529,7 @@ class Predictor:
         else:
             light_transaction_metadata['skip_model_training'] = False
 
-        if 'skip_model_training' in unstable_parameters_dict:
+        if 'skip_stats_generation' in unstable_parameters_dict:
             light_transaction_metadata['skip_stats_generation'] = unstable_parameters_dict['skip_stats_generation']
         else:
             light_transaction_metadata['skip_stats_generation'] = False

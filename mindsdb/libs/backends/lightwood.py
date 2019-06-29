@@ -31,6 +31,7 @@ class LightwoodBackend():
 
             lightwood_data_type = None
 
+            other_keys = {}
             if data_type in (DATA_TYPES.NUMERIC):
                 lightwood_data_type = 'numeric'
 
@@ -45,6 +46,7 @@ class LightwoodBackend():
 
             elif data_subtype in (DATA_SUBTYPES.IMAGE):
                 lightwood_data_type = 'image'
+                other_keys['encoding_aim'] = 'speed'
 
             elif data_subtype in (DATA_SUBTYPES.TEXT):
                 lightwood_data_type = 'text'
@@ -55,16 +57,16 @@ class LightwoodBackend():
                 self.transaction.log.error(f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
                 raise Exception('Failed to build data definition for Lightwood model backend')
 
+            col_config = {
+                'name': col_name,
+                'type': lightwood_data_type
+            }
+            col_config.update(other_keys)
+
             if col_name not in self.transaction.lmd['predict_columns']:
-                config['input_features'].append({
-                    'name': col_name,
-                    'type': lightwood_data_type
-                })
+                config['input_features'].append(col_config)
             else:
-                config['output_features'].append({
-                    'name': col_name,
-                    'type': lightwood_data_type
-                })
+                config['output_features'].append(col_config)
 
         return config
 

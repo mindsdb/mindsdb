@@ -484,6 +484,7 @@ class LudwigBackend():
             predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)
 
         for ignore_col in ignore_columns:
+            ignore_col = col_map[ignore_col]
             try:
                 predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
             except:

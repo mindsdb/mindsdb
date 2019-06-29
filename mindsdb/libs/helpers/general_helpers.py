@@ -249,6 +249,15 @@ class suppress_stdout_stderr(object):
         except:
             print('Can\'t disable output on Jupyter notebook')
 
+def get_tensorflow_colname(col):
+    replace_chars = """ ,./;'[]!@#$%^&*()+{-=+~`}\\|:"<>?"""
+
+    for char in replace_chars:
+        col = col.replace(char,'_')
+    col = re.sub('_+','_',col)
+
+    return col
+
 @contextmanager
 # @TODO: Make it work with mindsdb logger/log levels... maybe
 def disable_console_output(activate=True):

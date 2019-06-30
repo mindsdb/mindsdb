@@ -188,10 +188,9 @@ class Transaction:
 
         self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
 
-        self.output_data = PredictTransactionOutputData(transaction=self)
-
         self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='predict')
 
+        self.output_data = PredictTransactionOutputData(transaction=self)
         self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
         input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
 

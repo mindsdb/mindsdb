@@ -1,3 +1,6 @@
+from mindsdb.libs import explain_prediction
+
+
 class TransactionOutputRow:
     def __init__(self, transaction_output, row_index):
         self.transaction_output = transaction_output
@@ -13,8 +16,9 @@ class TransactionOutputRow:
         return {key:self.transaction_output.data[key][self.row_index] for key in self.transaction_output.data}
 
     def explain(self):
-        for pred_col in self.transaction_output.evaluations:
-            self.transaction_output.evaluations[pred_col][self.row_index].explain()
+        return explain_prediction(self.transaction.lmd,)
+
+    def why(self): return self.explain()
 
     def __str__(self):
         return str(self.as_dict())

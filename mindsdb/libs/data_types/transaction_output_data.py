@@ -10,7 +10,7 @@ class TrainTransactionOutputData():
 
 
 class PredictTransactionOutputData():
-    def __init__(self, transaction = None, data = {}, evaluations = {}, ):
+    def __init__(self, transaction, data, evaluations = {}, ):
         self.data = data
         self.evaluations = evaluations
         self.transaction = transaction

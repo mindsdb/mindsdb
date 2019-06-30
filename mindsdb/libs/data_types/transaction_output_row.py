@@ -1,4 +1,4 @@
-from mindsdb.libs.helpers import explain_prediction
+from mindsdb.libs.helpers.explain_prediction import explain_prediction
 
 
 class TransactionOutputRow:
@@ -12,22 +12,23 @@ class TransactionOutputRow:
     def __contains__(self, item):
         return item in self.transaction_output.data.keys()
 
-    def as_dict(self):
-        return {key:self.transaction_output.data[key][self.row_index] for key in self.transaction_output.data}
-
     def explain(self):
-        prediction_row = [self.transaction_output.evaluations[col][self.row_index] for col in self.transaction_output.transaction.lmd['columns']]
+        prediction_row = [self.transaction_output.data[col][self.row_index] for col in self.transaction_output.transaction.lmd['columns']]
         #self.transaction_output.data.iloc[self.row_index]
-        return explain_prediction(self.transaction.lmd, prediction_row)
+        return explain_prediction(self.transaction_output.transaction.lmd, prediction_row)
 
     def why(self): return self.explain()
 
     def __str__(self):
         return str(self.as_dict())
 
+
+    def as_dict(self):
+        return {key: self.transaction_output.data[key][self.row_index] for key in self.transaction_output.transaction.lmd['columns']}
+
     def as_list(self):
         #Note that here we will not output the confidence columns
-        return [self.transaction_output.evaluations[col][self.row_index] for col in self.transaction_output.transaction.lmd['columns']]
+        return [self.transaction_output.data[col][self.row_index] for col in self.transaction_output.transaction.lmd['columns']]
 
     @property
     def _predicted_values(self):

@@ -10,14 +10,14 @@ class TrainTransactionOutputData():
 
 
 class PredictTransactionOutputData():
-    def __init__(self, transaction, data, evaluations = {}):
+    def __init__(self, transaction, data, evaluations):
         self.data = data
         self.evaluations = evaluations
         self.transaction = transaction
 
     def __iter__(self):
-        for i, cell in enumerate(self.data[self.transaction.lmd['columns'][0]]):
-            yield TransactionOutputRow(self, i).as_dict()
+        for i, value in enumerate(self.data[self.transaction.lmd['columns'][0]]):
+            yield TransactionOutputRow(self, i)
 
     def __getitem__(self, item):
         return TransactionOutputRow(self, item)

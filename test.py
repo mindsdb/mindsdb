@@ -14,6 +14,17 @@ mdb = Predictor(name='home_rentals_price')
 
 prediction = mdb.predict(when={'sqft':300})
 
+# Test all different forms of output
+print(prediction)
+print(prediction[0])
+print(type(prediction.evaluations))
+for p in prediction:
+    print(p)
+print(prediction[0].as_dict())
+print(prediction[0].as_list())
+print(prediction[0]['rental_price_confidence'])
+print(type(prediction[0]['rental_price_confidence']))
+
 print('\n\n========================\n\n')
 print(prediction[0].explain())
 print('\n\n')

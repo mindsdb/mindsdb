@@ -183,7 +183,7 @@ class Transaction:
         self._call_phase_module(clean_exit=True, module_name='DataExtractor')
 
         if self.input_data.data_frame.shape[0] <= 0:
-            self.output_data = self.input_data
+            self.log.error('No input data provided !')
             return
 
         self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
@@ -197,19 +197,28 @@ class Transaction:
             output_data[column] = list(self.input_data.data_frame[column])
 
         for predicted_col in self.lmd['predict_columns']:
-            output_data[predicted_col] = self.hmd['predictions'][predicted_col]
+            output_data[predicted_col] = list(self.hmd['predictions'][predicted_col])
 
             probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
             confidence_column_name = f'{predicted_col}_confidence'
-            output_data[confidence_column_name] = [None] * len(predicted_values)
-            evaluations[predicted_col] = [None] * len(predicted_values)
+            output_data[confidence_column_name] = [None] * len(output_data[predicted_col])
+            evaluations[predicted_col] = [None] * len(output_data[predicted_col])
 
-            for row_number, predicted_value in enumerate(predicted_values):
-                features_existance_vector = [False if self.output_data.data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']['names']]
+            for row_number, predicted_value in enumerate(output_data[predicted_col]):
+
+                # Compute the feature existance vector
+                input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
+                features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']['names']]
+
+                # Create the probabilsitic evaluation
                 prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
                 print(prediction_evaluation)
-                self.output_data.data[confidence_column_name][row_number] = prediction_evaluation
-                self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
+                if type(prediction_evaluation) == float:
+                    output_data[confidence_column_name][row_number] = prediction_evaluation
+                    evaluations[predicted_col][row_number] = None
+                else:
+                    output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
+                    evaluations[predicted_col][row_number] = prediction_evaluation
 
         self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
 

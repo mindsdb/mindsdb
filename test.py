@@ -17,7 +17,7 @@ prediction = mdb.predict(when={'sqft':300})
 # Test all different forms of output
 print(prediction)
 print(prediction[0])
-print(type(prediction.evaluations))
+print(type(prediction.evaluations[0]))
 for p in prediction:
     print(p)
 print(prediction[0].as_dict())

@@ -190,32 +190,28 @@ class Transaction:
 
         self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='predict')
 
-        self.output_data = PredictTransactionOutputData(transaction=self)
-        self.output_data.data = {col: [] for i, col in enumerate(self.input_data.columns)}
-        input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
+        output_data = {col: [] for col in self.lmd['columns']}
+        evaluations = {}
 
-        for i, row in self.input_data.data_frame.iterrows():
-            for index, cell in enumerate(row):
-                col = self.input_data.columns[index]
-                self.output_data.data[col].append(cell)
+        for column in self.input_data.data_frame.columns:
+            output_data[column] = list(self.input_data.data_frame[column])
 
         for predicted_col in self.lmd['predict_columns']:
-            probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
+            output_data[predicted_col] = self.hmd['predictions'][predicted_col]
 
-            predicted_values = self.hmd['predictions'][predicted_col]
-            self.output_data.data[predicted_col] = predicted_values
-            confidence_column_name = "{col}_confidence".format(col=predicted_col)
-            self.output_data.data[confidence_column_name] = [None] * len(predicted_values)
-            self.output_data.evaluations[predicted_col] = [None] * len(predicted_values)
+            probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
+            confidence_column_name = f'{predicted_col}_confidence'
+            output_data[confidence_column_name] = [None] * len(predicted_values)
+            evaluations[predicted_col] = [None] * len(predicted_values)
 
             for row_number, predicted_value in enumerate(predicted_values):
                 features_existance_vector = [False if self.output_data.data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']['names']]
                 prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
+                print(prediction_evaluation)
                 self.output_data.data[confidence_column_name][row_number] = prediction_evaluation
-                #output_data[col][row_number] = prediction_evaluation.most_likely_value Huh, is this correct, are we replacing the predicted value with the most likely one ? Seems... wrong
                 self.output_data.evaluations[predicted_col][row_number] = prediction_evaluation
 
-        #self.save_metadata()
+        self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
 
         return
 

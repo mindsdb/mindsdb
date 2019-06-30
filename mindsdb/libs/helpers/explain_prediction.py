@@ -4,4 +4,5 @@ def explain_prediction(lmd, prediction_row):
         :param prediction_row: The row that was predicted by the model backend and processed by mindsdb
         :return: A, hopefully human readable, string containing the explaination
     '''
+    print(lmd['column_importances'])
     return ''

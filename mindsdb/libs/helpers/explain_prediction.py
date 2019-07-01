@@ -55,7 +55,7 @@ def explain_prediction(lmd, prediction_row):
                 confidence_str = 'not confident'
 
             if percentage_bucket_percentage < 2:
-                column_explaination = f'A similar value for the column {pcol} occurs rarely in your dataset'
+                column_explaination = f'A similar value for the predicted column {pcol} occurs rarely in your dataset'
 
                 if column_confidence >= 70:
                     column_explaination += ', in spite of this, due to the quality of the input data and the model, we are very confident this prediction is correct.'
@@ -67,7 +67,7 @@ def explain_prediction(lmd, prediction_row):
                     column_explaination += ', it is partially because of this reason that we aren\'t confident this prediction is correct.'
 
             elif percentage_bucket_percentage < 12.5:
-                column_explaination = f'A similar value for the column {pcol} occurs a moderate amount of times in your dataset'
+                column_explaination = f'A similar value for the predicted column {pcol} occurs a moderate amount of times in your dataset'
 
                 if column_confidence >= 70:
                     column_explaination += ', we are very confident this prediction is correct.'
@@ -79,7 +79,7 @@ def explain_prediction(lmd, prediction_row):
                     column_explaination += ', you\'r input data might be of sub-par qualkity, since we aren\'t confident this prediction is correct.'
 
             else:
-                column_explaination = f'A similar value for the column {pcol} occurs very often in your dataset'
+                column_explaination = f'A similar value for the predicted column {pcol} occurs very often in your dataset'
 
                 if column_confidence >= 70:
                     column_explaination += ', it\'s partially because of this plaethora of examples that we can be very confident this prediction is correct.'

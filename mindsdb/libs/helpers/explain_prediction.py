@@ -108,6 +108,6 @@ def explain_prediction(lmd, prediction_row):
             else:
                 explain_inputs[icol] = f'The column {icol} is probably not very relevant for this prediction.'
 
-        explaination = '\n*'.join(explain_predictions.values())
-        explaination += '\n*'.join(explain_inputs.values())
+        explaination = '\n\n* '.join(explain_predictions.values())
+        explaination += '\n\n* '.join(explain_inputs.values())
     return explaination

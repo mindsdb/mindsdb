@@ -13,7 +13,7 @@ class TransactionOutputRow:
         return item in self.transaction_output.data.keys()
 
     def explain(self):
-        prediction_row = [self.transaction_output.data[col][self.row_index] for col in self.transaction_output.transaction.lmd['columns']]
+        prediction_row = {col: self.transaction_output.data[col][self.row_index] for col in list(self.transaction_output.data.keys())}
         #self.transaction_output.data.iloc[self.row_index]
         return explain_prediction(self.transaction_output.transaction.lmd, prediction_row)
 
@@ -24,11 +24,11 @@ class TransactionOutputRow:
 
 
     def as_dict(self):
-        return {key: self.transaction_output.data[key][self.row_index] for key in self.transaction_output.transaction.lmd['columns']}
+        return {key: self.transaction_output.data[key][self.row_index] for key in list(self.transaction_output.data.keys())}
 
     def as_list(self):
         #Note that here we will not output the confidence columns
-        return [self.transaction_output.data[col][self.row_index] for col in self.transaction_output.transaction.lmd['columns']]
+        return [self.transaction_output.data[col][self.row_index] for col in list(self.transaction_output.data.keys())]
 
     @property
     def _predicted_values(self):

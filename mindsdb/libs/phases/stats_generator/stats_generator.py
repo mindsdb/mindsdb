@@ -463,7 +463,7 @@ class StatsGenerator(BaseModule):
         no_processes = multiprocessing.cpu_count() - 2
         if no_processes < 1:
             no_processes = 1
-        pool = multiprocessing.Pool(processes=no_processes)
+        #pool = multiprocessing.Pool(processes=no_processes)
 
         if print_logs == False:
             self.log = logging.getLogger('null-logger')
@@ -643,6 +643,7 @@ class StatsGenerator(BaseModule):
 
             scores = []
 
+            '''
             scores.append(pool.apply_async(compute_duplicates_score, args=(stats, all_sampled_data, col_name)))
             scores.append(pool.apply_async(compute_empty_cells_score, args=(stats, all_sampled_data, col_name)))
             #scores.append(pool.apply_async(compute_clf_based_correlation_score, args=(stats, all_sampled_data, col_name)))
@@ -651,11 +652,21 @@ class StatsGenerator(BaseModule):
             scores.append(pool.apply_async(compute_lof_score, args=(stats, col_data_dict, col_name)))
             scores.append(pool.apply_async(compute_similariy_score, args=(stats, all_sampled_data, col_name)))
             scores.append(pool.apply_async(compute_value_distribution_score, args=(stats, all_sampled_data, col_name)))
-
+            '''
             for score_promise in scores:
                 # Wait for function on process to finish running
                 score = score_promise.get()
                 stats[col_name].update(score)
+
+
+            stats[col_name].update(compute_duplicates_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(compute_empty_cells_score(stats, all_sampled_data, col_name))
+            #stats[col_name].update(compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(compute_data_type_dist_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(compute_z_score(stats, col_data_dict, col_name))
+            stats[col_name].update(compute_lof_score(stats, col_data_dict, col_name))
+            stats[col_name].update(compute_similariy_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(compute_value_distribution_score(stats, all_sampled_data, col_name))
 
             stats[col_name].update(compute_consistency_score(stats, col_name))
             stats[col_name].update(compute_redundancy_score(stats, col_name))
@@ -679,8 +690,8 @@ class StatsGenerator(BaseModule):
             self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes[KEY_NO_GROUP_BY])
             self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])
 
-        pool.close()
-        pool.join()
+        #pool.close()
+        #pool.join()
 
         self._log_interesting_stats(stats)
 

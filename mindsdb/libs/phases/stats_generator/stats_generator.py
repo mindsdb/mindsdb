@@ -1,4 +1,5 @@
 import random
+import time
 import warnings
 import imghdr
 import sndhdr
@@ -652,13 +653,16 @@ class StatsGenerator(BaseModule):
                 score = score_promise.get()
                 stats[col_name].update(score)
 
-            stats[col_name].update(compute_duplicates_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(compute_empty_cells_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(compute_data_type_dist_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(compute_z_score(stats, col_data_dict, col_name))
-            stats[col_name].update(compute_lof_score(stats, col_data_dict, col_name))
-            stats[col_name].update(compute_similariy_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(compute_value_distribution_score(stats, all_sampled_data, col_name))
+            for score_func in [compute_duplicates_score, compute_empty_cells_score, compute_data_type_dist_score, compute_z_score, compute_lof_score, compute_similariy_score, compute_value_distribution_score]:
+                start_time = time.time()
+                if 'compute_z_score' in str(score_func) or 'compute_lof_score' in str(score_func):
+                    stats[col_name].update(score_func(stats, col_data_dict, col_name))
+                else:
+                    stats[col_name].update(score_func(stats, all_sampled_data, col_name))
+
+                fun_name = str(score_func)
+                run_duration = round(time.time() - start_time, 2)
+                #print(f'Running scoring function "{run_duration}" took {run_duration} seconds !')
 
             stats[col_name].update(compute_consistency_score(stats, col_name))
             stats[col_name].update(compute_redundancy_score(stats, col_name))

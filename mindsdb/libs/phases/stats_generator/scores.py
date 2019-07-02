@@ -183,7 +183,7 @@ def compute_lof_score(stats, columns, col_name):
 
 def compute_similariy_score(stats, columns, col_name):
     """
-    # Uses matthews correlation to determine up what % of their cells two columns are identical
+    # Uses equality between values in the same position to determine up what % of their cells two columns are identical
 
     :param stats: The stats extracted up until this point for all columns
     :param columns: All the columns
@@ -227,7 +227,7 @@ def compute_similariy_score(stats, columns, col_name):
         ,'similarity_score': round(10 * (1 - max_similarity))
         ,'most_similar_column_name': most_similar_column_name
         ,'similarity_score_description':"""
-        This score is simply a matthews correlation applied between this column and all other column.
+        This score is simple element-wise equality applied between this column and all other column.
         The score * 100 is the number of values which are similar in the column that is most similar to the scored column.
         """
     }

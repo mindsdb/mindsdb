@@ -16,4 +16,6 @@ prediction = mdb.predict(when={'sqft':300})
 print(prediction[0])
 print(list(map(lambda x: int(x['rental_price']), prediction)))
 amd = mdb.get_model_data('home_rentals_price')
-print(amd)
+
+with open('out.txt','w') as f:
+    f.write(str(amd))

@@ -4,6 +4,7 @@ import numpy as np
 import scipy.stats as st
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import matthews_corrcoef
 
 from mindsdb.libs.constants.mindsdb import *
 

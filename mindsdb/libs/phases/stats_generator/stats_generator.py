@@ -652,22 +652,10 @@ class StatsGenerator(BaseModule):
             scores.append(pool.apply_async(compute_similariy_score, args=(stats, all_sampled_data, col_name)))
             scores.append(pool.apply_async(compute_value_distribution_score, args=(stats, all_sampled_data, col_name)))
 
-            '''
-            stats[col_name].update(compute_duplicates_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(compute_empty_cells_score(stats, all_sampled_data, col_name))
-            #stats[col_name].update(compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(compute_data_type_dist_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(compute_z_score(stats, col_data_dict, col_name))
-            stats[col_name].update(compute_lof_score(stats, col_data_dict, col_name))
-            stats[col_name].update(compute_similariy_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(compute_value_distribution_score(stats, all_sampled_data, col_name))
-            '''
-
-            print(f'Column name if: {col_name}')
-            for score in scores:
-                s = score.get()
-                print(s)
-                stats[col_name].update(s)
+            for score_promise in scores:
+                # Wait for function on process to finish running
+                score = score_promise.get()
+                stats[col_name].update(score)
 
             stats[col_name].update(compute_consistency_score(stats, col_name))
             stats[col_name].update(compute_redundancy_score(stats, col_name))

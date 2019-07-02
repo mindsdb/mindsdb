@@ -8,8 +8,6 @@ from collections import Counter
 import numpy as np
 import scipy.stats as st
 from dateutil.parser import parse as parse_datetime
-from sklearn.neighbors import LocalOutlierFactor
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import matthews_corrcoef
 from sklearn.metrics.pairwise import cosine_similarity
@@ -652,7 +650,7 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(compute_variability_score(stats, col_name))
 
             stats[col_name].update(compute_data_quality_score(stats, col_name))
-
+            print(stats[col_name])
 
         total_rows = len(input_data.data_frame)
 

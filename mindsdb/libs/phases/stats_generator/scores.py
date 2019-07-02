@@ -1,3 +1,7 @@
+from collections import Counter
+
+
+
 def compute_value_distribution_score(stats, columns, col_name):
     """
     # Looks at the histogram and transforms it into a proability mapping for each

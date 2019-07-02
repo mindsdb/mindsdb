@@ -3,6 +3,7 @@ from collections import Counter
 import numpy as np
 import scipy.stats as st
 from sklearn.neighbors import LocalOutlierFactor
+from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import matthews_corrcoef
 
@@ -198,33 +199,31 @@ def compute_similariy_score(stats, columns, col_name):
         if other_col_name == col_name:
             continue
         else:
-            try:
-                similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
-                similarities.append((other_col_name,similarity))
-            except:
-                similarity = 0
-                X1 = list(map(str,col_data))
-                X2 = list(map(str,columns[other_col_name]))
-                for ii in range(len(X1)):
-                    if X1[ii] == X2[ii]:
-                        similarity += 1
+            # @TODO Figure out why computing matthews_corrcoef is so slow, possibly find a better implementation and replace it with that
+            #try:
+            #    similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
+            #    similarities.append((other_col_name,similarity))
+            #except:
+            similarity = 0
+            X1 = list(map(str,col_data))
+            X2 = list(map(str,columns[other_col_name]))
+            for ii in range(len(X1)):
+                if X1[ii] == X2[ii]:
+                    similarity += 1
 
-                similarity = similarity/len(X1)
-                similarities.append((other_col_name,similarity))
+            similarity = similarity/len(X1)
+            similarities.append((other_col_name,similarity))
 
 
-    if len(similarities) > 0:
-        max_similarity = max(map(lambda x: x[1], similarities))
-        most_similar_column_name = list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
-    else:
-        max_similarity = 0
-        most_similar_column_name = None
+    max_similarity = max(map(lambda x: x[1], similarities))
+    most_similar_column_name = list(filter(lambda x: x[1] == max_similarity, similarities))[0][0]
 
     if max_similarity < 0:
         max_similarity = 0
 
     return {
-        'similarities': similarities
+        'max_similarity': max_similarity
+        ,'similarities': similarities
         ,'similarity_score': round(10 * (1 - max_similarity))
         ,'most_similar_column_name': most_similar_column_name
         ,'similarity_score_description':"""

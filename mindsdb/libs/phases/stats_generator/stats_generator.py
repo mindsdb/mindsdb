@@ -9,7 +9,6 @@ import multiprocessing
 import numpy as np
 import scipy.stats as st
 from dateutil.parser import parse as parse_datetime
-from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import MiniBatchKMeans
 import imagehash
@@ -432,7 +431,7 @@ class StatsGenerator(BaseModule):
                 col_stats['value_distribution_score_warning'] = None
 
             if col_stats['similarity_score'] < 6:
-                similar_percentage = col_stats['similarity_score'] * 100
+                similar_percentage = col_stats['max_similarity'] * 100
                 similar_col_name = col_stats['most_similar_column_name']
                 w = f'Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !'
                 self.log.warning(w)
@@ -463,7 +462,7 @@ class StatsGenerator(BaseModule):
         no_processes = multiprocessing.cpu_count() - 2
         if no_processes < 1:
             no_processes = 1
-        #pool = multiprocessing.Pool(processes=no_processes)
+        pool = multiprocessing.Pool(processes=no_processes)
 
         if print_logs == False:
             self.log = logging.getLogger('null-logger')
@@ -641,27 +640,20 @@ class StatsGenerator(BaseModule):
             if col_name in self.transaction.lmd['malformed_columns']['names']:
                 continue
 
+            # Use the multiprocessing pool for computing scores which take a very long time to compute
+            # For now there's only one and computing it takes way too long, so this is not enabled
             scores = []
 
             '''
-            scores.append(pool.apply_async(compute_duplicates_score, args=(stats, all_sampled_data, col_name)))
-            scores.append(pool.apply_async(compute_empty_cells_score, args=(stats, all_sampled_data, col_name)))
-            #scores.append(pool.apply_async(compute_clf_based_correlation_score, args=(stats, all_sampled_data, col_name)))
-            scores.append(pool.apply_async(compute_data_type_dist_score, args=(stats, all_sampled_data, col_name)))
-            scores.append(pool.apply_async(compute_z_score, args=(stats, col_data_dict, col_name)))
-            scores.append(pool.apply_async(compute_lof_score, args=(stats, col_data_dict, col_name)))
-            scores.append(pool.apply_async(compute_similariy_score, args=(stats, all_sampled_data, col_name)))
-            scores.append(pool.apply_async(compute_value_distribution_score, args=(stats, all_sampled_data, col_name)))
+            scores.append(pool.apply_async(compute_clf_based_correlation_score, args=(stats, all_sampled_data, col_name)))
             '''
             for score_promise in scores:
                 # Wait for function on process to finish running
                 score = score_promise.get()
                 stats[col_name].update(score)
 
-
             stats[col_name].update(compute_duplicates_score(stats, all_sampled_data, col_name))
             stats[col_name].update(compute_empty_cells_score(stats, all_sampled_data, col_name))
-            #stats[col_name].update(compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
             stats[col_name].update(compute_data_type_dist_score(stats, all_sampled_data, col_name))
             stats[col_name].update(compute_z_score(stats, col_data_dict, col_name))
             stats[col_name].update(compute_lof_score(stats, col_data_dict, col_name))
@@ -690,8 +682,8 @@ class StatsGenerator(BaseModule):
             self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes[KEY_NO_GROUP_BY])
             self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])
 
-        #pool.close()
-        #pool.join()
+        pool.close()
+        pool.join()
 
         self._log_interesting_stats(stats)
 

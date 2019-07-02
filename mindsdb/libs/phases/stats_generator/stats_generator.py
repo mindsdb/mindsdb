@@ -638,20 +638,20 @@ class StatsGenerator(BaseModule):
             if col_name in self.transaction.lmd['malformed_columns']['names']:
                 continue
 
-            stats[col_name].update(self._compute_duplicates_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_empty_cells_score(stats, all_sampled_data, col_name))
-            #stats[col_name].update(self._compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_data_type_dist_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_z_score(stats, col_data_dict, col_name))
-            stats[col_name].update(self._compute_lof_score(stats, col_data_dict, col_name))
-            stats[col_name].update(self._compute_similariy_score(stats, all_sampled_data, col_name))
-            stats[col_name].update(self._compute_value_distribution_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(compute_duplicates_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(compute_empty_cells_score(stats, all_sampled_data, col_name))
+            #stats[col_name].update(compute_clf_based_correlation_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(compute_data_type_dist_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(compute_z_score(stats, col_data_dict, col_name))
+            stats[col_name].update(compute_lof_score(stats, col_data_dict, col_name))
+            stats[col_name].update(compute_similariy_score(stats, all_sampled_data, col_name))
+            stats[col_name].update(compute_value_distribution_score(stats, all_sampled_data, col_name))
 
-            stats[col_name].update(self._compute_consistency_score(stats, col_name))
-            stats[col_name].update(self._compute_redundancy_score(stats, col_name))
-            stats[col_name].update(self._compute_variability_score(stats, col_name))
+            stats[col_name].update(compute_consistency_score(stats, col_name))
+            stats[col_name].update(compute_redundancy_score(stats, col_name))
+            stats[col_name].update(compute_variability_score(stats, col_name))
 
-            stats[col_name].update(self._compute_data_quality_score(stats, col_name))
+            stats[col_name].update(compute_data_quality_score(stats, col_name))
 
 
         total_rows = len(input_data.data_frame)

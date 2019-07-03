@@ -29,7 +29,7 @@ You can also use the Docker image [here](https://github.com/mindsdb/mindsdb/tree
 
 If you'd prefer to watch a video tutorial, you can find it [here](https://www.youtube.com/watch?v=a49CvkoOdfY). (Note: Please manually set it to 720p or greater to have the text appear clearly)
 
-Having porlbems ? Please tell us about them with [an issue on github](https://github.com/mindsdb/mindsdb/issues/new/choose)
+Having problems ? Please tell us about them with [an issue on github](https://github.com/mindsdb/mindsdb/issues/new/choose)
 
 ### Usage
 

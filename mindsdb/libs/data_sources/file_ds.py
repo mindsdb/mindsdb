@@ -66,7 +66,7 @@ class FileDS(DataSource):
         xlsx_sig2 = b'\x50\x4B\x03\x04'
         xls_sig = b'\x09\x08\x10\x00\x00\x06\x05\x00'
 
-        # differnt whence, offset, size for different types
+        # different whence, offset, size for different types
         excel_meta = [ ('xls', 0, 512, 8), ('xlsx', 2, -22, 4)]
 
         for filename, whence, offset, size in excel_meta:

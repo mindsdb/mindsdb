@@ -26,7 +26,7 @@ An important one is the one MindsDB uses to work with files.
 ```python
 from mindsdb import FileDS
 
-ds = FileDS(file, clean_header = True, clean_rows = True, custom_parser = None)
+ds = FileDS(file, clean_rows = True, custom_parser = None)
 
 
 # Now you can pass this DataSource to MindsDB

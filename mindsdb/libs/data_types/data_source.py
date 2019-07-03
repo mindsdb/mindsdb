@@ -27,33 +27,7 @@ class DataSource:
 
         cols = [col if col not in self._col_map else self._col_map[col] for col in column_list]
         self._df = self._df.drop(columns=cols)
-
-    def applyFunctionToColumn(self, column, function):
-        """
-        This applies a function for all rows in a column
-
-        :param column: column to affect
-        :param function: a lambda or function to call
-        :return: None
-        """
-
-        # make sure that we use the column name in the data source
-        column = self.getColNameAsInDF(column)
-
-        self._df[column] = self._df[column].apply(lambda col: function(col))
-
-
-    def getColNameAsInDF(self, column):
-        """
-        Since Columns can be mapped at somepoint in the DF then you can use this to get the DF column name by passing the original value
-
-        :param column:
-        :return: None
-        """
-
-        return column if column not in self._col_map else self._col_map[column]
-
-
+        
     def __getattr__(self, item):
         """
         Map all other functions to the DataFrame

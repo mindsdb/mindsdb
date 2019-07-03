@@ -46,31 +46,29 @@ class ModelAnalyzer(BaseModule):
                 ignorable_input_columns.append(input_column)
 
 
-        predictions = self.transaction.model_backend.predict('validate')
-        for pcol in output_columns:
-            i = 0
-            for real_val in self.transaction.input_data.validation_df[pcol]:
-                predicted_val = predictions[pcol][i]
-                probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=real_val, predicted_value=predicted_val)
-                i += 1
+        normal_predictions = self.transaction.model_backend.predict('validate')
+
+        # Single observation on the validation dataset when we have no ignorable column
+        if len(ignorable_input_columns) == 0:
+            for pcol in output_columns:
+                for i in range(len(self.transaction.input_data.validation_df[pcol])):
+                    probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i])
 
         # Run on the validation set multiple times, each time with one of the column blanked out
         for column_name in ignorable_input_columns:
             ignore_columns = []
             ignore_columns.append(column_name)
 
-            predictions = self.transaction.model_backend.predict('validate', ignore_columns)
+            ignore_col_predictions = self.transaction.model_backend.predict('validate', ignore_columns)
 
             # create a vector that has True for each feature that was passed to the model tester and False if it was blanked
             features_existence = [True if np_col not in ignore_columns else False for np_col in input_columns]
 
             # A separate probabilistic model is trained for each predicted column, we may want to change this in the future, @TODO
             for pcol in output_columns:
-                i = 0
-                for real_val in self.transaction.input_data.validation_df[pcol]:
-                    predicted_val = predictions[pcol][i]
-                    probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=real_val, predicted_value=predicted_val)
-                    i += 1
+                for i in range(len(self.transaction.input_data.validation_df[pcol])):
+                    probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=ignore_col_predictions[pcol][i])
+                    probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i])
 
         self.transaction.lmd['accuracy_histogram'] = {}
 

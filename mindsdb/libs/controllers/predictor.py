@@ -423,7 +423,7 @@ class Predictor:
             return False
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
-    window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], rename_strange_columns = False,
+    window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [],
     stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='ludwig', rebuild_model=True, use_gpu=True,
     disable_optional_analysis=False, unstable_parameters_dict={}):
         """
@@ -443,7 +443,6 @@ class Predictor:
 
         Optional data transformation arguments:
         :param ignore_columns: it simply removes the columns from the data sources
-        :param rename_strange_columns: this tells mindsDB that if columns have special characters, it should try to rename them, this is a legacy argument, as now mindsdb supports any column name
 
         Optional sampling parameters:
         :param sample_margin_error (DEFAULT 0): Maximum expected difference between the true population parameter, such as the mean, and the sample estimate.
@@ -464,7 +463,6 @@ class Predictor:
 
         transaction_type = TRANSACTION_LEARN
         sample_confidence_level = 1 - sample_margin_of_error
-        predict_columns_map = {}
 
         # lets turn into lists: predict, order_by and group by
         predict_columns = [to_predict] if type(to_predict) != type([]) else to_predict
@@ -482,15 +480,6 @@ class Predictor:
 
         is_time_series = True if len(order_by) > 0 else False
 
-        if rename_strange_columns is False:
-            for predict_col in predict_columns:
-                predict_col_as_in_df = from_ds.getColNameAsInDF(predict_col)
-                predict_columns_map[predict_col_as_in_df]=predict_col
-
-            predict_columns = list(predict_columns_map.keys())
-        else:
-            self.log.warning('Note that after version 1.0, the default value for argument rename_strange_columns in MindsDB().learn, will be flipped from True to False, this means that if your data has columns with special characters, MindsDB will not try to rename them by default.')
-
         heavy_transaction_metadata = {}
         heavy_transaction_metadata['name'] = self.name
         heavy_transaction_metadata['from_data'] = from_ds
@@ -504,7 +493,7 @@ class Predictor:
         light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['model_backend'] = backend
         light_transaction_metadata['predict_columns'] = predict_columns
-        light_transaction_metadata['model_columns_map'] = {} if rename_strange_columns else from_ds._col_map
+        light_transaction_metadata['model_columns_map'] = from_ds._col_map
         light_transaction_metadata['model_group_by'] = group_by
         light_transaction_metadata['model_order_by'] = order_by
         light_transaction_metadata['window_size_samples'] = window_size_samples
@@ -539,6 +528,11 @@ class Predictor:
             light_transaction_metadata['skip_model_training'] = unstable_parameters_dict['skip_model_training']
         else:
             light_transaction_metadata['skip_model_training'] = False
+
+        if 'skip_stats_generation' in unstable_parameters_dict:
+            light_transaction_metadata['skip_stats_generation'] = unstable_parameters_dict['skip_stats_generation']
+        else:
+            light_transaction_metadata['skip_stats_generation'] = False
 
         if rebuild_model is False:
             old_lmd = {}

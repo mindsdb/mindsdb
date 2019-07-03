@@ -26,7 +26,7 @@ class ProbabilisticValidator():
         # <--- Pick one of the 3
         self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         #, class_prior=[0.5,0.5]
-        #self._probabilistic_model = GaussianNB(var_smoothing=1)
+        #self._probabilistic_model = GaussianNB()
         #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
@@ -54,7 +54,6 @@ class ProbabilisticValidator():
         :param predicted_value: The predicted value/label
         :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value` and `real_value`
         """
-        nr_missing_features = len([x for x in features_existence if x is False or x is 0])
 
         predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
         try:
@@ -69,9 +68,11 @@ class ProbabilisticValidator():
             X[predicted_value_b] = True
             X = X + features_existence
             self.X_buff.append(X)
+
             self.Y_buff.append(real_value_b)
 
             # If no column is ignored, compute the accuracy for this bucket
+            nr_missing_features = len([x for x in features_existence if x is False or x is 0])
             if nr_missing_features == 0:
                 if predicted_value_b not in self.bucket_accuracy:
                     self.bucket_accuracy[predicted_value_b] = []
@@ -146,7 +147,6 @@ class ProbabilisticValidator():
         else:
             X = [features_existence]
 
-        #X = [[predicted_value_b, *features_existence]]
         log_types = np.seterr()
         np.seterr(divide='ignore')
         distribution = self._probabilistic_model.predict_proba(np.array(X))
@@ -169,8 +169,6 @@ if __name__ == "__main__":
         [bool(random.getrandbits(1)), bool(random.getrandbits(1)), bool(random.getrandbits(1))]
         for i in values
     ]
-
-    print(feature_rows)
 
     pbv = ProbabilisticValidator(buckets=[1,2,3,4,5])
 

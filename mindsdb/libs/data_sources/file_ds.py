@@ -14,41 +14,7 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 class FileDS(DataSource):
-
-    def clean(self, header):
-
-        clean_header = []
-        col_count={}
-
-        replace_chars = """ ,./;'[]!@#$%^&*()+{-=+~`}\\|:"<>?"""
-
-        for col in header:
-            orig_col = col
-            for char in replace_chars:
-                col = col.replace(char,'_')
-            col = re.sub('_+','_',col)
-            if col[-1] == '_':
-                col = col[:-1]
-            while col[0] == '_':
-                col = col[1:]
-
-            col_count[col] = 1 if col not in col_count else col_count[col]+1
-            if col_count[col] > 1:
-                col = col+'_'+str(col_count[col])
-
-            if orig_col != col:
-                log.debug('[Column renamed] {orig_col} to {col}'.format(orig_col=orig_col, col=col))
-
-            self._col_map[orig_col] = col
-            clean_header.append(col)
-
-        if clean_header != header:
-            string = """\n    {cols} \n""".format(cols=",\n    ".join(clean_header))
-            log.debug('The Columns have changed, here are the renamed columns: \n {string}'.format(string=string))
-
-
-        return  clean_header
-
+    
     def cleanRow(self, row):
         n_row = []
         for cell in row:
@@ -180,11 +146,10 @@ class FileDS(DataSource):
 
 
 
-    def _setup(self,file, clean_header = True, clean_rows = True, custom_parser = None):
+    def _setup(self,file, clean_rows = True, custom_parser = None):
         """
         Setup from file
         :param file: fielpath or url
-        :param clean_header: if you want to clean header column names
         :param clean_rows:  if you want to clean rows for strange null values
         :param custom_parser: if you want to parse the file with some custom parser
         """
@@ -217,8 +182,8 @@ class FileDS(DataSource):
             header = df.columns.values.tolist()
             file_data = df.values.tolist()
 
-        if clean_header == True:
-            header = self.clean(header)
+        for col in header:
+            self._col_map[col] = col
 
         if clean_rows == True:
             file_list_data = []

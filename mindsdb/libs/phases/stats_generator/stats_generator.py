@@ -475,7 +475,7 @@ class StatsGenerator(BaseModule):
         if population_size < 50:
             sample_size = population_size
         else:
-            sample_size = int(calculate_sample_size(population_size=population_size, margin_error=CONFIG.DEFAULT_MARGIN_OF_ERROR, confidence_level=CONFIG.DEFAULT_CONFIDENCE_LEVEL))
+            sample_size = int(calculate_sample_size(population_size=population_size, margin_error=self.transaction.lmd['sample_margin_of_error'], confidence_level=self.transaction.lmd['sample_confidence_level']))
             #if sample_size > 3000 and sample_size > population_size/8:
             #    sample_size = min(round(population_size/8),3000)
 

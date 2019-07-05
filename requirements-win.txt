@@ -10,7 +10,6 @@ pytz>=2018.5
 requests>=2.20.0
 scipy>=1.1.0
 scikit-learn>=0.20.3
-zope.interface>=4.5.0
 colorlog>=4.0.2
 tensorflow==1.13.1
 ludwig>=0.1.0

@@ -6,15 +6,15 @@ This file contains bits of codes that we might want to keep for later use,
 # Previously in: mindsdb/libs/helpers/train_helpers.py
 def getAllButOnePermutations(possible_columns):
 
-     permutations = {}
+    permutations = {}
 
-     for col in possible_columns:
+    for col in possible_columns:
         possible_columns_2 = [col3 for col3 in possible_columns if col3 != col ]
         n_perms = ":".join(possible_columns_2)
 
          permutations[n_perms] = 1
 
-     ret = [perm.split(':') for perm in list(permutations.keys())]
+    ret = [perm.split(':') for perm in list(permutations.keys())]
     return ret
 
 
@@ -131,4 +131,3 @@ def _get_params_as_dictionary(self, params):
 #                                       exc_traceback)
 #             return False
 #     return False
-

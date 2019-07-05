@@ -33,4 +33,6 @@ print(prediction[0].explain())
 print('\n\n')
 
 amd = mdb.get_model_data('home_rentals_price')
-#print(amd)
+
+with open('out.txt','w') as f:
+    f.write(str(amd))

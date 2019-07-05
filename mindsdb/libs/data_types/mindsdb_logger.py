@@ -1,7 +1,6 @@
 import pprint
 import logging
 import colorlog
-import socketio
 import uuid
 
 from mindsdb import CONFIG

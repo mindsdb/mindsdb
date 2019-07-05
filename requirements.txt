@@ -13,7 +13,6 @@ scikit-learn>=0.20.3
 zope.interface>=4.5.0
 colorlog>=4.0.2
 tensorflow==1.13.1
-tensorflow-estimator>=1.13.0
 ludwig==0.1.2
 xlrd>=1.0.0
 ImageHash==4.0

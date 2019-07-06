@@ -13,6 +13,13 @@ class LightwoodBackend():
         self.transaction = transaction
         self.predictor = None
 
+    def _create_timeseries_df(self, original_df):
+        group_by = self.transaction.lmd['model_group_by']
+        order_by = self.transaction.lmd['order_by']
+        nr_samples = self.transaction.lmd['window_size']
+
+        original_df
+
     def _create_lightwood_config(self):
         config = {}
 

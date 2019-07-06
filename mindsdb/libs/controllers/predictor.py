@@ -452,11 +452,6 @@ class Predictor:
         :return:
         """
 
-        # Backwards compatibility of interface
-        if window_size is not None:
-            window_size_samples = window_size
-        #
-
         from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
 
@@ -499,6 +494,7 @@ class Predictor:
         light_transaction_metadata['data_source'] = from_data
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['ignore_columns'] = ignore_columns
+        light_transaction_metadata['window_size'] = window_size
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
         light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
         light_transaction_metadata['stop_training_in_x_seconds'] = stop_training_in_x_seconds

@@ -58,103 +58,52 @@ class LudwigBackend():
             new_cols[col] = []
 
         nr_ele = len(df[timeseries_col_name])
+        
+        i = 0
+        while i < nr_ele:
+            new_row = {}
 
-        if self.transaction.lmd['window_size_seconds'] is not None:
-            window_size_seconds = self.transaction.lmd['window_size_seconds']
-            i = 0
-            while i < nr_ele:
-                current_window = 0
-                new_row = {}
+            timeseries_row = [df[timeseries_col_name][i]]
 
-                timeseries_row = [df[timeseries_col_name][i]]
+            for col in other_col_names:
+                new_row[col] = [df[col][i]]
+            for col in previous_predict_col_names:
+                new_row[col] = []
+            for col in predict_col_names:
+                new_row[col] = df[col][i]
+            for col in self.transaction.lmd['model_group_by']:
+                new_row[col] = df[col][i]
 
-                for col in other_col_names:
-                    new_row[col] = [df[col][i]]
-                for col in previous_predict_col_names:
-                    new_row[col] = []
-                for col in predict_col_names:
-                    new_row[col] = df[col][i]
-                for col in self.transaction.lmd['model_group_by']:
-                    new_row[col] = df[col][i]
-
-                inverted_index_range = list(range(i))
-                inverted_index_range.reverse()
-                ii = 0
-                for ii in inverted_index_range:
-                    if window_size_seconds < current_window + (timeseries_row[-1] - df[timeseries_col_name][ii]):
-                        break
-                    current_window += (timeseries_row[-1] - df[timeseries_col_name][ii])
-                    timeseries_row.append(df[timeseries_col_name][ii])
-
-                    for col in other_col_names:
-                        new_row[col].append(df[col][ii])
-                    for col in previous_predict_col_names:
-                        try:
-                            new_row[col].append(df[col.replace('previous_', '')][ii])
-                        except:
-                            try:
-                                new_row[col].append(df[col][ii])
-                            except:
-                                self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
-
-                if mode == 'train':
-                    i = max(i + 1, (i + round((i - ii)/2)))
-                else:
-                    i = i + 1
-
-                new_row[timeseries_col_name] = timeseries_row
-
-                for col in new_row:
-                    if col not in predict_col_names and col not in self.transaction.lmd['model_group_by']:
-                        new_row[col].reverse()
-                    new_cols[col].append(new_row[col])
-        else:
-            window_size_samples = self.transaction.lmd['window_size_samples']
-            i = 0
-            while i < nr_ele:
-                new_row = {}
-
-                timeseries_row = [df[timeseries_col_name][i]]
+            inverted_index_range = list(range(i))
+            inverted_index_range.reverse()
+            ii = 0
+            for ii in inverted_index_range:
+                if (i - ii) > self.transaction.lmd['window_size']:
+                    break
+                timeseries_row.append(df[timeseries_col_name][ii])
 
                 for col in other_col_names:
-                    new_row[col] = [df[col][i]]
+                    new_row[col].append(df[col][ii])
                 for col in previous_predict_col_names:
-                    new_row[col] = []
-                for col in predict_col_names:
-                    new_row[col] = df[col][i]
-                for col in self.transaction.lmd['model_group_by']:
-                    new_row[col] = df[col][i]
-
-                inverted_index_range = list(range(i))
-                inverted_index_range.reverse()
-                ii = 0
-                for ii in inverted_index_range:
-                    if (i - ii) > window_size_samples:
-                        break
-                    timeseries_row.append(df[timeseries_col_name][ii])
-
-                    for col in other_col_names:
-                        new_row[col].append(df[col][ii])
-                    for col in previous_predict_col_names:
+                    try:
+                        new_row[col].append(df[col.replace('previous_', '')][ii])
+                    except:
                         try:
-                            new_row[col].append(df[col.replace('previous_', '')][ii])
+                            new_row[col].append(df[col][ii])
                         except:
-                            try:
-                                new_row[col].append(df[col][ii])
-                            except:
-                                self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
+                            self.transaction.log.warning('Missing previous predicted values for output column: {}, these should be included in your input under the name: {}'.format(col.replace('previous_', ''), col))
 
-                if mode == 'train':
-                    i = max(i + 1, (i + round((i - ii)/2)))
-                else:
-                    i = i + 1
+            if mode == 'train':
+                i = max(i + 1, (i + round((i - ii)/2)))
+            else:
+                i = i + 1
 
-                new_row[timeseries_col_name] = timeseries_row
+            new_row[timeseries_col_name] = timeseries_row
 
-                for col in new_row:
-                    if col not in predict_col_names and col not in self.transaction.lmd['model_group_by']:
-                        new_row[col].reverse()
-                    new_cols[col].append(new_row[col])
+            for col in new_row:
+                if col not in predict_col_names and col not in self.transaction.lmd['model_group_by']:
+                    new_row[col].reverse()
+                new_cols[col].append(new_row[col])
 
         new_df = pd.DataFrame(data=new_cols)
         df = new_df

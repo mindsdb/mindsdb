@@ -495,8 +495,6 @@ class Predictor:
         light_transaction_metadata['model_columns_map'] = from_ds._col_map
         light_transaction_metadata['model_group_by'] = group_by
         light_transaction_metadata['model_order_by'] = order_by
-        light_transaction_metadata['window_size_samples'] = window_size_samples
-        light_transaction_metadata['window_size_seconds'] = window_size_seconds
         light_transaction_metadata['model_is_time_series'] = is_time_series
         light_transaction_metadata['data_source'] = from_data
         light_transaction_metadata['type'] = transaction_type

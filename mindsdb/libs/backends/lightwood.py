@@ -13,12 +13,30 @@ class LightwoodBackend():
         self.transaction = transaction
         self.predictor = None
 
+    def _get_group_by_key(group_by, row):
+        gb_lookup_key = ''
+        for column in group_by:
+            gb_lookup_key += column + '_' + row[column] + '!!@@!!'
+        return gb_lookup_key
+
     def _create_timeseries_df(self, original_df):
         group_by = self.transaction.lmd['model_group_by']
         order_by = self.transaction.lmd['order_by']
         nr_samples = self.transaction.lmd['window_size']
 
-        original_df
+        group_by_ts_map = {}
+
+        for i in len(original_df):
+            row = original_df[row]
+            gb_lookup_key = _get_group_by_key(group_by, row)
+            if gb_lookup_key not in group_by_ts_map:
+                group_by_ts_map[gb_lookup_key] = []
+
+            group_by_ts_map[gb_lookup_key].append(row)
+
+        for k in group_by_ts_map:
+            group_by_ts_map[k] = DataFrame.from_records(group_by_ts_map[k], columns=original_df.columns)
+            group_by_ts_map[k] = group_by_ts_map[k].sort_values(by=order_by)
 
     def _create_lightwood_config(self):
         config = {}

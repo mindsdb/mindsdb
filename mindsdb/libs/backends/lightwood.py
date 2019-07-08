@@ -52,6 +52,8 @@ class LightwoodBackend():
                     group_by_ts_map[k][i][order_col].reverse()
                     group_by_ts_map[k][i][order_col] = ' '.join(group_by_ts_map[k][i][order_col])
 
+        combined_df = pd.concat(list(group_by_ts_map.values()))
+        return combined_df
 
     def _create_lightwood_config(self):
         config = {}
@@ -111,13 +113,20 @@ class LightwoodBackend():
         return config
 
     def train(self):
+        if self.transaction.lmd['order_by'] is not None and len(self.transaction.lmd['order_by']) > 0:
+            train_df = self._create_timeseries_df(self.transaction.input_data.train_df)
+            test_df = self._create_timeseries_df(self.transaction.input_data.test_df)
+        else:
+            train_df = self.transaction.input_data.train_df
+            test_df = self.transaction.input_data.test_df
+
         lightwood_config = self._create_lightwood_config()
 
         if self.transaction.lmd['skip_model_training'] == True:
             self.predictor = lightwood.Predictor(load_from_path=os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data'))
         else:
             self.predictor = lightwood.Predictor(lightwood_config)
-            self.predictor.learn(from_data=self.transaction.input_data.train_df, test_data=self.transaction.input_data.test_df)
+            self.predictor.learn(from_data=train_df, test_data=test_df)
             self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 
         self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data')
@@ -132,6 +141,9 @@ class LightwoodBackend():
             df = self.transaction.input_data.validation_df
         elif mode == 'test':
             df = self.transaction.input_data.test_df
+
+        if self.transaction.lmd['order_by'] is not None and len(self.transaction.lmd['order_by']) > 0:
+            df = self._create_timeseries_df(df)
 
         if self.predictor is None:
             self.predictor = lightwood.Predictor(load_from_path=self.transaction.lmd['lightwood_data']['save_path'])

@@ -26,9 +26,8 @@ class LightwoodBackend():
 
         group_by_ts_map = {}
 
-        for i in len(original_df):
-            row = original_df[row]
-            gb_lookup_key = _get_group_by_key(group_by, row)
+        for row in original_df:
+            gb_lookup_key = self._get_group_by_key(group_by, row)
             if gb_lookup_key not in group_by_ts_map:
                 group_by_ts_map[gb_lookup_key] = []
 
@@ -37,6 +36,22 @@ class LightwoodBackend():
         for k in group_by_ts_map:
             group_by_ts_map[k] = DataFrame.from_records(group_by_ts_map[k], columns=original_df.columns)
             group_by_ts_map[k] = group_by_ts_map[k].sort_values(by=order_by)
+
+            for i in group_by_ts_map[k]:
+                for order_col in order_by:
+                    numerical_value = float(group_by_ts_map[k][i][order_col])
+                    group_by_ts_map[k][i][order_col] = [str(numerical_value)]
+
+                    previous_indexes = list(range((i - nr_samples, i)))
+                    previous_indexes = [x for x in previous_indexes if x > 0]
+                    previous_indexes.reverse()
+
+                    for prev_i in previous_indexes:
+                        group_by_ts_map[k][i][order_col].append(group_by_ts_map[k][prev_i][order_col][-1])
+
+                    group_by_ts_map[k][i][order_col].reverse()
+                    group_by_ts_map[k][i][order_col] = ' '.join(group_by_ts_map[k][i][order_col])
+
 
     def _create_lightwood_config(self):
         config = {}

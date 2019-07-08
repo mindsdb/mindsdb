@@ -21,7 +21,7 @@ class LightwoodBackend():
 
     def _create_timeseries_df(self, original_df):
         group_by = self.transaction.lmd['model_group_by']
-        order_by = self.transaction.lmd['order_by']
+        order_by = self.transaction.lmd['model_order_by']
         nr_samples = self.transaction.lmd['window_size']
 
         group_by_ts_map = {}
@@ -113,7 +113,7 @@ class LightwoodBackend():
         return config
 
     def train(self):
-        if self.transaction.lmd['order_by'] is not None and len(self.transaction.lmd['order_by']) > 0:
+        if self.transaction.lmd['model_order_by'] is not None and len(self.transaction.lmd['model_order_by']) > 0:
             train_df = self._create_timeseries_df(self.transaction.input_data.train_df)
             test_df = self._create_timeseries_df(self.transaction.input_data.test_df)
         else:
@@ -142,7 +142,7 @@ class LightwoodBackend():
         elif mode == 'test':
             df = self.transaction.input_data.test_df
 
-        if self.transaction.lmd['order_by'] is not None and len(self.transaction.lmd['order_by']) > 0:
+        if self.transaction.lmd['model_order_by'] is not None and len(self.transaction.lmd['model_order_by']) > 0:
             df = self._create_timeseries_df(df)
 
         if self.predictor is None:

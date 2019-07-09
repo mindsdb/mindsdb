@@ -45,7 +45,7 @@ def test_timeseries():
     logger.info('Starting timeseries test !')
     ts_hours = 12
     separator = ','
-    data_len = 5000
+    data_len = 1200
     train_file_name = 'train_data.csv'
     test_file_name = 'test_data.csv'
 
@@ -97,6 +97,7 @@ def test_timeseries():
             ,window_size=3
             #,group_by = feature_headers[3]
             ,use_gpu=False
+            ,backend='lightwood'
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:

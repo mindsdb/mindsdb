@@ -1,4 +1,5 @@
 import os
+from dateutil.parser import parse as parse_datetime
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.config import *
@@ -13,7 +14,7 @@ class LightwoodBackend():
         self.transaction = transaction
         self.predictor = None
 
-    def _get_group_by_key(group_by, row):
+    def _get_group_by_key(self, group_by, row):
         gb_lookup_key = '!!@@!!'
         for column in group_by:
             gb_lookup_key += column + '_' + row[column] + '!!@@!!'
@@ -21,37 +22,50 @@ class LightwoodBackend():
 
     def _create_timeseries_df(self, original_df):
         group_by = self.transaction.lmd['model_group_by']
-        order_by = self.transaction.lmd['model_order_by']
+        order_by = [x[0] for x in self.transaction.lmd['model_order_by']]
         nr_samples = self.transaction.lmd['window_size']
 
         group_by_ts_map = {}
 
-        for row in original_df:
+        for _, row in original_df.iterrows():
             gb_lookup_key = self._get_group_by_key(group_by, row)
             if gb_lookup_key not in group_by_ts_map:
                 group_by_ts_map[gb_lookup_key] = []
 
+            for col in order_by:
+                try:
+                    row[col] = float(row[col])
+                except:
+                    try:
+                        row[col] = float(parse_datetime(row[col]).timestamp())
+                    except:
+                        self.transaction.log.error(f'Backend Lightwood does not support ordering by the column: {col} !, Faulty value: {row[col]}')
+                        exit()
+
             group_by_ts_map[gb_lookup_key].append(row)
 
         for k in group_by_ts_map:
-            group_by_ts_map[k] = DataFrame.from_records(group_by_ts_map[k], columns=original_df.columns)
+            group_by_ts_map[k] = pd.DataFrame.from_records(group_by_ts_map[k], columns=original_df.columns)
             group_by_ts_map[k] = group_by_ts_map[k].sort_values(by=order_by)
 
-            for i in group_by_ts_map[k]:
-                for order_col in order_by:
-                    numerical_value = float(group_by_ts_map[k][i][order_col])
-                    group_by_ts_map[k][i][order_col] = [str(numerical_value)]
+            for order_col in order_by:
+                for i in range(0,len(group_by_ts_map[k])):
+                    group_by_ts_map[k][order_col] = group_by_ts_map[k][order_col].astype(object)
 
-                    previous_indexes = list(range((i - nr_samples, i)))
-                    previous_indexes = [x for x in previous_indexes if x > 0]
+                    numerical_value = float(group_by_ts_map[k][order_col].iloc[i])
+                    arr_val = [str(numerical_value)]
+
+                    group_by_ts_map[k][order_col].iat[i] = arr_val
+
+                    previous_indexes = list(range(i - nr_samples, i))
+                    previous_indexes = [x for x in previous_indexes if x >= 0]
                     previous_indexes.reverse()
 
                     for prev_i in previous_indexes:
-                        group_by_ts_map[k][i][order_col].append(group_by_ts_map[k][prev_i][order_col][-1])
+                        group_by_ts_map[k].iloc[i][order_col].append(group_by_ts_map[k].iloc[prev_i][order_col][-1])
 
-                    group_by_ts_map[k][i][order_col].reverse()
-                    group_by_ts_map[k][i][order_col] = ' '.join(group_by_ts_map[k][i][order_col])
-                print(group_by_ts_map[k])
+                    group_by_ts_map[k].iloc[i][order_col].reverse()
+                    group_by_ts_map[k][order_col].iat[i] = ' '.join(group_by_ts_map[k].iloc[i][order_col])
 
         combined_df = pd.concat(list(group_by_ts_map.values()))
         return combined_df

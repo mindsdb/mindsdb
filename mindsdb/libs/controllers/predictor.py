@@ -422,10 +422,7 @@ class Predictor:
             print(e)
             return False
 
-    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size_samples = None, window_size_seconds = None,
-    window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [],
-    stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='ludwig', rebuild_model=True, use_gpu=True,
-    disable_optional_analysis=False, unstable_parameters_dict={}):
+    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='ludwig', rebuild_model=True, use_gpu=True, disable_optional_analysis=False, unstable_parameters_dict={}):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -452,11 +449,6 @@ class Predictor:
 
         :return:
         """
-
-        # Backwards compatibility of interface
-        if window_size is not None:
-            window_size_samples = window_size
-        #
 
         from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
@@ -496,12 +488,11 @@ class Predictor:
         light_transaction_metadata['model_columns_map'] = from_ds._col_map
         light_transaction_metadata['model_group_by'] = group_by
         light_transaction_metadata['model_order_by'] = order_by
-        light_transaction_metadata['window_size_samples'] = window_size_samples
-        light_transaction_metadata['window_size_seconds'] = window_size_seconds
         light_transaction_metadata['model_is_time_series'] = is_time_series
         light_transaction_metadata['data_source'] = from_data
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['ignore_columns'] = ignore_columns
+        light_transaction_metadata['window_size'] = window_size
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
         light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
         light_transaction_metadata['stop_training_in_x_seconds'] = stop_training_in_x_seconds

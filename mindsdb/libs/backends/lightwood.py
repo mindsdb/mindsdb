@@ -14,7 +14,7 @@ class LightwoodBackend():
         self.predictor = None
 
     def _get_group_by_key(group_by, row):
-        gb_lookup_key = ''
+        gb_lookup_key = '!!@@!!'
         for column in group_by:
             gb_lookup_key += column + '_' + row[column] + '!!@@!!'
         return gb_lookup_key
@@ -51,6 +51,7 @@ class LightwoodBackend():
 
                     group_by_ts_map[k][i][order_col].reverse()
                     group_by_ts_map[k][i][order_col] = ' '.join(group_by_ts_map[k][i][order_col])
+                print(group_by_ts_map[k])
 
         combined_df = pd.concat(list(group_by_ts_map.values()))
         return combined_df

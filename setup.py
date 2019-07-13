@@ -1,6 +1,12 @@
 import setuptools
 import subprocess
 
+
+def remove_requirement(requirements, name):
+    return [x for x in requirements if name != x.split(' ')[0]]
+
+os = platform.system()
+
 about = {}
 with open("mindsdb/__about__.py") as fp:
     exec(fp.read(), about)
@@ -9,6 +15,23 @@ long_description = open('README.md', encoding='utf-8').read()
 
 with open('requirements.txt') as req_file:
     requirements = req_file.read().splitlines()
+
+# Linux specific requirements
+if os == 'Linux':
+    requirements = remove_requirement(requirements, 'lightwood')
+    requirements.append('lightwood == 0.6.7')
+
+# OSX specific requirements
+if os == 'Darwin':
+    requirements = requirements
+
+# Windows specific requirements
+if os == 'Windows':
+    requirements = remove_requirement(requirements,'wheel')
+    requirements.append('wheel == 0.26.0')
+
+    requirements = remove_requirement(requirements, 'lightwood')
+    requirements.append('lightwood == 0.6.7')
 
 setuptools.setup(
     name=about['__title__'],

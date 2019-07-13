@@ -7,12 +7,12 @@ matrix:
       sudo: true
 
     - os: osx
-      python: 3.7-dev
+      python: 3.6
       dist: xcode11
       osx_image: xcode11
 
-    - os: windows
-      python: 3.7
+#    - os: windows
+#      python: 3.7
 
 notifications:
   # send notifications only on master failure

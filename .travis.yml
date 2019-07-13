@@ -3,7 +3,7 @@ matrix:
   include:
     - name: "Python 3.7.1 on Ubuntu 16.0.4"
       os: linux
-      python: 3.7
+      python: 3.7.3
       dist: xenial
       sudo: true
 

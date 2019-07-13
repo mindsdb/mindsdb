@@ -7,8 +7,9 @@ matrix:
       sudo: true
 
     - os: osx
-      python: 3.7
+      python: 3.7-dev
       dist: xcode11
+      osx_image: xcode11
 
     - os: windows
       python: 3.7

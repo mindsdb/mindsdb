@@ -1,5 +1,6 @@
 import setuptools
 import subprocess
+import platform
 
 
 def remove_requirement(requirements, name):

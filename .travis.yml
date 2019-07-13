@@ -1,17 +1,17 @@
 language: python
 matrix:
   include:
-    #- python: 3.6
-    - python: 3.7
-
     - os: linux
+      python: 3.7
       dist: xenial
       sudo: true
 
     - os: osx
+      python: 3.7
       dist: xcode11
 
     - os: windows
+      python: 3.7
 
 notifications:
   # send notifications only on master failure

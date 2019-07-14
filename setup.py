@@ -32,7 +32,7 @@ if os == 'Windows':
     requirements.append('wheel == 0.26.0')
 
     requirements = remove_requirement(requirements, 'lightwood')
-    requirements.append('lightwood == 0.6.7')
+    requirements.append('-e git+https://github.com/mindsdb/lightwood.git@ci_testing')
 
 setuptools.setup(
     name=about['__title__'],

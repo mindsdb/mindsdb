@@ -1,12 +1,3 @@
-try:
-    from mindsdb.libs.backends.ludwig import LudwigBackend
-except ImportError as e:
-    self.transaction.log.warning(e)
-
-try:
-    from mindsdb.libs.backends.lightwood import LightwoodBackend
-except ImportError as e:
-    self.transaction.log.warning(e)
 
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.constants.mindsdb import *
@@ -15,6 +6,16 @@ import datetime
 
 
 class ModelInterface(BaseModule):
+
+    try:
+        from mindsdb.libs.backends.ludwig import LudwigBackend
+    except ImportError as e:
+        self.transaction.log.warning(e)
+
+    try:
+        from mindsdb.libs.backends.lightwood import LightwoodBackend
+    except ImportError as e:
+        self.transaction.log.warning(e)
 
     phase_name = PHASE_MODEL_INTERFACE
 

@@ -27,9 +27,9 @@ notifications:
 cache: pip
 # install dependencies
 install:
-  - pip3 install --upgrade pip
+  - travis_wait pip3 install --upgrade pip
   #- travis_wait pip3 install -e .
-  - python3 setup.py install
+  - travis_wait python3 setup.py install
 before_script: cd tests/ci_tests
 # run tests
 script:

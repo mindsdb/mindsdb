@@ -4,6 +4,7 @@ from tests import basic_test
 # Cycle through a few options:
 for backend in ['lightwood','ludwig']:
     for use_gpu in [False,True]:
+        print(f'use_gpu is set to {use_gpu}, backend is set to {backend}')
         basic_test(backend=backend,use_gpu=use_gpu,ignore_columns=[])
 
 # Try ignoring some columns

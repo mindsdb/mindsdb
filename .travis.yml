@@ -30,8 +30,8 @@ install:
   - travis_wait pip3 install --upgrade pip
   #- travis_wait pip3 install -e .
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python setup.py install; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 60 python3 setup.py clean --all; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 60 python3 setup.py install; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 60 python3 setup.py install; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 pip3 install -e . ; fi
 before_script: cd tests/ci_tests
 # run tests
 script:

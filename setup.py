@@ -35,8 +35,8 @@ if os == 'Windows':
 
     requirements = remove_requirement(requirements, 'lightwood')
     requirements.append('lightwood == 0.7.1')
-    dependency_links.append('git+https://github.com/mindsdb/lightwood.git@ci_testing#egg=lightwood-0.7.1')
-    
+    dependency_links.append('https://github.com/mindsdb/lightwood.git@ci_testing#egg=lightwood-0.7.1')
+
 setuptools.setup(
     name=about['__title__'],
     version=about['__version__'],

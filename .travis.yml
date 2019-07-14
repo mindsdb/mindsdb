@@ -28,8 +28,9 @@ cache: pip
 # install dependencies
 install:
   - pip3 install --upgrade pip
-  - travis_wait pip3 install -e .
+  #- travis_wait pip3 install -e .
+  - python3 setup.py install
 before_script: cd tests/ci_tests
 # run tests
 script:
-        - python3 full_test.py
+        - python full_test.py

@@ -2,8 +2,8 @@ from tests import basic_test
 
 
 # Cycle through a few options:
-for backend in ['ludwig','lightwood']:
-    for use_gpu in [True,False]:
+for backend in ['lightwood','ludwig']:
+    for use_gpu in [False,True]:
         basic_test(backend=backend,use_gpu=use_gpu,ignore_columns=[])
 
 # Try ignoring some columns

@@ -1,14 +1,12 @@
 try:
     from mindsdb.libs.backends.ludwig import LudwigBackend
 except ImportError as e:
-    print(e)
-    pass
+    self.transaction.log.warning(e)
 
 try:
     from mindsdb.libs.backends.lightwood import LightwoodBackend
 except ImportError as e:
-    print(e)
-    pass
+    self.transaction.log.warning(e)
 
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.constants.mindsdb import *

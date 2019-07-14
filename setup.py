@@ -21,6 +21,7 @@ dependency_links = []
 
 # Linux specific requirements
 if os == 'Linux':
+    requirements = remove_requirement(requirements, 'tensorflow-estimator')
     requirements = remove_requirement(requirements, 'lightwood')
     requirements.append('lightwood == 0.6.7')
 
@@ -31,6 +32,7 @@ if os == 'Darwin':
 
 # Windows specific requirements
 if os == 'Windows':
+    requirements = remove_requirement(requirements, 'tensorflow-estimator')
     requirements = remove_requirement(requirements,'wheel')
     requirements.append('wheel == 0.26.0')
 

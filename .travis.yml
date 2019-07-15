@@ -1,10 +1,25 @@
 language: python
 matrix:
   include:
-    #- python: 3.6
-    - python: 3.7
+    - name: "Python 3.7.3 on Ubuntu 16.0.4"
+      os: linux
+      python: 3.7.3
       dist: xenial
       sudo: true
+
+    - name: "Python 3.7.2 on OSX"
+      os: osx
+      language: shell
+      dist: xcode10.2
+
+    - name: "Python 3.7.3 on Windows"
+      os: windows           # Windows 10.0.17134 N/A Build 17134
+      language: shell       # 'language: python' is an error on Travis CI Windows
+      before_install:
+        - choco install python
+        - python -m pip install --upgrade pip
+      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
+
 notifications:
   # send notifications only on master failure
   email:
@@ -12,8 +27,14 @@ notifications:
 cache: pip
 # install dependencies
 install:
-  - travis_wait pip install -e .
-before_script: cd integration_testing
+  - travis_wait pip3 install --upgrade pip
+  #- travis_wait pip3 install -e .
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python setup.py install; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 60 python3 setup.py install; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 pip3 install -e . ; fi
+before_script: cd tests/ci_tests
 # run tests
 script:
-        - python3 run_travis_tests.py
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python fast_test.py; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 60 python3 full_test.py; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 python3 full_test.py; fi

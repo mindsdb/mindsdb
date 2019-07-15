@@ -1,3 +1,4 @@
+*__MACOSX*
 *.zip
 docs/video_docs/video_and_audio
 docs/video_docs/results
@@ -18,6 +19,7 @@ train_data.csv
 *.test.*
 .cache*
 storage/*
+mindsdb_storage
 mindsdb_storage/*
 config/personal_config.py
 *.jar

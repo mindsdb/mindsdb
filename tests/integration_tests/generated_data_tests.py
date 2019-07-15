@@ -379,9 +379,10 @@ def test_multilabel_prediction():
     data_file_name = 'test_data.csv'
     data_len = 10000
 
-
 setup_testing_logger()
-test_one_label_prediction_wo_strings()
-test_timeseries()
-test_multilabel_prediction()
-test_one_label_prediction()
+
+if __name__ == '__main__':
+    test_one_label_prediction_wo_strings()
+    test_timeseries()
+    test_multilabel_prediction()
+    test_one_label_prediction()

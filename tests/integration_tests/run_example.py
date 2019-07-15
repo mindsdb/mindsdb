@@ -34,3 +34,7 @@ def run_example(example_name):
 
     os.chdir(example_name)
     __import__(f'{example_name}.mindsdb_acc')
+
+
+if __name__ == '__main__':
+    run_example(sys.argv[1])

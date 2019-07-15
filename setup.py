@@ -28,7 +28,6 @@ if os == 'Linux':
 # OSX specific requirements
 if os == 'Darwin':
     requirements = requirements
-    requirements.append('tensorflow-estimator >= 1.13.0')
 
 # Windows specific requirements
 if os == 'Windows':

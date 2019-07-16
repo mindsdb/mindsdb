@@ -5,7 +5,7 @@ import os
 
 
 # Run the CI tests
-__import__(os.path.join('..','ci_tests','full_test'))
+exec(open(os.path.join('..','ci_tests','full_test.py'),'r').read())
 
 # Run the example datassts
 datasets = [{

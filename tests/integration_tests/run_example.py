@@ -20,8 +20,6 @@ def cleanup(name):
     except:
         pass
 
-    os.chdir('..')
-
 
 def run_example(example_name, sample=False):
     atexit.register(cleanup,name=example_name)
@@ -40,9 +38,14 @@ def run_example(example_name, sample=False):
 
     os.chdir(example_name)
     module = __import__(f'{example_name}.mindsdb_acc', fromlist=['run'])
-    print(module, module.__dict__.keys())
     run_func = getattr(module,'run')
-    res = run_func(sample)
+    try:
+        res = run_func(sample)
+        os.chdir('..')
+    except:
+        os.chdir('..')
+        exit()
+        
     return res
 
 

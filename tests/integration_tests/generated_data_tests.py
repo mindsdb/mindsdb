@@ -7,12 +7,9 @@ import logging
 from colorlog import ColoredFormatter
 import time
 
-# Not working for some reason, we need mindsdb in PYPATH for now
-#sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + '/../mindsdb/__init__.py')
-#print(os.path.dirname(os.path.realpath(__file__)) + '/../mindsdb/__init__.py')
-
 import mindsdb
 from mindsdb import CONST
+
 
 types_that_fail = ['str']
 types_that_work = ['int','float','date','datetime','timestamp','ascii']
@@ -121,7 +118,6 @@ def test_timeseries():
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
             for col in expect_columns:
-                print(col, row[col])
                 if col not in row:
                     logger.error(f'Prediction failed to return expected column: {col}')
                     logger.debug('Got row: {}'.format(row))

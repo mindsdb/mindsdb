@@ -136,7 +136,7 @@ class LightwoodBackend():
             test_df = self.transaction.input_data.test_df
 
         lightwood_config = self._create_lightwood_config()
-
+        
         if self.transaction.lmd['skip_model_training'] == True:
             self.predictor = lightwood.Predictor(load_from_path=os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data'))
         else:

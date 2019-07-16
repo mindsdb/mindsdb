@@ -5,7 +5,7 @@ import os
 
 
 # Run the CI tests
-exec(open(os.path.join('..','ci_tests','full_test.py'),'r').read())
+os.system('cd ..; cd ci_tests; python3 full_test.py')
 
 # Run the example datassts
 datasets = [{

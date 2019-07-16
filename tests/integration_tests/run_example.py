@@ -21,7 +21,7 @@ def cleanup(name):
         pass
 
 
-def run_example(example_name):
+def run_example(example_name, sample=False):
     atexit.register(cleanup,name=example_name)
 
     with open(f'{example_name}.tar.gz', 'wb') as f:
@@ -33,8 +33,10 @@ def run_example(example_name):
     tar.close()
 
     os.chdir(example_name)
-    __import__(f'{example_name}.mindsdb_acc')
+    module = __import__(f'{example_name}.mindsdb_acc')
+    res = module.run(sample)
+    return res
 
-
+    
 if __name__ == '__main__':
     run_example(sys.argv[1])

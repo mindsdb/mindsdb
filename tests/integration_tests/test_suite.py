@@ -4,20 +4,29 @@ import multiprocessing
 
 
 datasets = [{
+    'name':'default_of_credit',
+    'sample':True,
+    'expect_accuracy_above':77
+},{
+    'name':'imdb_movie_review',
+    'sample':False,
+    'expect_accuracy_above':84
+},{
     'name':'cifar_100',
     'sample':True,
-    'expect_accuracy_above':81
+    'expect_accuracy_above': 40 # For full dataset: 69
 }]
+
 
 for dataset in datasets:
     dataset_name = dataset['name']
-    
+
     res = run_example(dataset_name, sample=dataset['sample'])
 
     acc = res['accuracy']
     ex_acc = dataset['expect_accuracy_above']
 
-    if res['accuracy'] < dataset['expect_accuracy_above']:
+    if acc < ex_acc:
         print('\n\n\n============WARNING===============\n\n\n')
         print(f'Expected an accuracy above {ex_acc} for dataset {dataset_name}.')
         print(f'Got accuracy of {acc} instead.')
@@ -27,7 +36,7 @@ for dataset in datasets:
         print(f'Example dataset {dataset_name}, ran with success')
         print(f'Got accuracy of {acc} !')
         print('\n\n\n==================================\n\n\n')
-exit()
+
 test_one_label_prediction_wo_strings()
 test_timeseries()
 test_multilabel_prediction()

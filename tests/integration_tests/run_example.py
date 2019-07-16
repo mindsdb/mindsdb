@@ -28,15 +28,21 @@ def run_example(example_name, sample=False):
         r = requests.get(f'https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/{example_name}.tar.gz')
         f.write(r.content)
 
-    tar = tarfile.open(f'{example_name}.tar.gz', 'r:gz')
+    try:
+        tar = tarfile.open(f'{example_name}.tar.gz', 'r:gz')
+    except:
+        tar = tarfile.open(f'{example_name}.tar.gz', 'r')
+
     tar.extractall()
     tar.close()
 
     os.chdir(example_name)
-    module = __import__(f'{example_name}.mindsdb_acc')
-    res = module.run(sample)
+    module = __import__(f'{example_name}.mindsdb_acc', fromlist=['run'])
+    print(module, module.__dict__.keys())
+    run_func = getattr(module,'run')
+    res = run_func(sample)
     return res
 
-    
+
 if __name__ == '__main__':
     run_example(sys.argv[1])

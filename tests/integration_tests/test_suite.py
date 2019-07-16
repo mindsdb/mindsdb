@@ -11,11 +11,11 @@ os.system('cd ..; cd ci_tests; python3 full_test.py')
 datasets = [{
     'name':'default_of_credit',
     'sample':True,
-    'expect_accuracy_above':77
+    'expect_accuracy_above':72
 },{
     'name':'imdb_movie_review',
     'sample':False,
-    'expect_accuracy_above':84
+    'expect_accuracy_above':83
 },{
     'name':'cifar_100',
     'sample':True,

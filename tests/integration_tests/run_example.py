@@ -20,6 +20,8 @@ def cleanup(name):
     except:
         pass
 
+    os.chdir('..')
+
 
 def run_example(example_name, sample=False):
     atexit.register(cleanup,name=example_name)

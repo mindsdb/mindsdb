@@ -1,8 +1,13 @@
 from run_example import run_example
 from generated_data_tests import *
 import multiprocessing
+import os
 
 
+# Run the CI tests
+__import__(os.path.join('..','ci_tests','full_test'))
+
+# Run the example datassts
 datasets = [{
     'name':'default_of_credit',
     'sample':True,
@@ -37,6 +42,7 @@ for dataset in datasets:
         print(f'Got accuracy of {acc} !')
         print('\n\n\n==================================\n\n\n')
 
+# Run the generated data tests
 test_one_label_prediction_wo_strings()
 test_timeseries()
 test_multilabel_prediction()

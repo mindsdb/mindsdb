@@ -1,12 +1,12 @@
 import setuptools
 import subprocess
-import platform
+import sys
 
 
 def remove_requirement(requirements, name):
     return [x for x in requirements if name != x.split(' ')[0]]
 
-os = platform.system()
+sys_platform = sys.platform
 
 about = {}
 with open("mindsdb/__about__.py") as fp:
@@ -20,25 +20,26 @@ with open('requirements.txt') as req_file:
 dependency_links = []
 
 # Linux specific requirements
-if os == 'Linux':
+if sys_platform == 'linux' or sys_platform.startswith('linux'):
     requirements = remove_requirement(requirements, 'tensorflow-estimator')
-    requirements = remove_requirement(requirements, 'lightwood')
-    requirements.append('lightwood == 0.6.7')
 
 # OSX specific requirements
-if os == 'Darwin':
+elif sys_platform == 'darwin':
     requirements = requirements
 
 # Windows specific requirements
-if os == 'Windows':
+elif sys_platform in ['win32','cygwin'] :
     requirements = remove_requirement(requirements, 'tensorflow-estimator')
     requirements = remove_requirement(requirements,'wheel')
     requirements.append('wheel == 0.26.0')
 
-    requirements = remove_requirement(requirements, 'lightwood')
-    requirements.append('lightwood == 0.7.1')
-    dependency_links.append('https://github.com/mindsdb/lightwood/tarball/ci_testing#egg=lightwood-0.7.1')
-
+    # Leave commented out to remember how to do it
+    #requirements.append('lightwood == 0.7.1')
+    #dependency_links.append('https://github.com/mindsdb/lightwood/tarball/ci_testing#egg=lightwood-0.7.1')
+# For stuff like freebsd
+else:
+    print('\n\n====================\n\nError, platform {sys_platform} not recognized, proceeding to install anyway, but lightwood might not work properly !\n\n====================\n\n')
+    
 setuptools.setup(
     name=about['__title__'],
     version=about['__version__'],

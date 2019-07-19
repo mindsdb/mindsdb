@@ -6,7 +6,7 @@ import sys
 def remove_requirements(requirements, name):
     return [x for x in requirements if name != x.split(' ')[0]]
 
-sys_platform = sys.platforms
+sys_platform = sys.platform
 
 about = {}
 with open("mindsdb/__about__.py") as fp:

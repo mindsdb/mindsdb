@@ -20,10 +20,7 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[]):
     for item in prediction:
         print(item)
 
-    for k, v in prediction:
-        print(k)
-        print(v)
-        
+
     print(type(list(prediction.evaluations.values())[0][0]))
     assert('ProbabilityEvaluation' in str(type(list(prediction.evaluations.values())[0][0])))
 

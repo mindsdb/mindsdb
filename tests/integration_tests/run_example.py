@@ -4,6 +4,7 @@ import os
 import shutil
 import tarfile
 import atexit
+import sys
 
 
 def cleanup(name):
@@ -44,8 +45,8 @@ def run_example(example_name, sample=False):
         os.chdir('..')
     except:
         os.chdir('..')
-        exit()
-        
+        sys.exit()
+
     return res
 
 

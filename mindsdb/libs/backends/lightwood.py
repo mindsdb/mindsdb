@@ -1,4 +1,5 @@
 import os
+import sys
 from dateutil.parser import parse as parse_datetime
 
 from mindsdb.libs.constants.mindsdb import *
@@ -40,7 +41,7 @@ class LightwoodBackend():
                         row[col] = float(parse_datetime(row[col]).timestamp())
                     except:
                         self.transaction.log.error(f'Backend Lightwood does not support ordering by the column: {col} !, Faulty value: {row[col]}')
-                        exit()
+                        sys.exit()
 
             group_by_ts_map[gb_lookup_key].append(row)
 
@@ -136,7 +137,7 @@ class LightwoodBackend():
             test_df = self.transaction.input_data.test_df
 
         lightwood_config = self._create_lightwood_config()
-        
+
         if self.transaction.lmd['skip_model_training'] == True:
             self.predictor = lightwood.Predictor(load_from_path=os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data'))
         else:

@@ -3,6 +3,7 @@
 docs/video_docs/video_and_audio
 docs/video_docs/results
 docs/video_docs/metadata.json
+docs/video_docs/cifrar
 metadata.json
 results
 integration_testing/ins_train_indep_test

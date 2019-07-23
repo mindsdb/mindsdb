@@ -105,7 +105,7 @@ class Transaction:
             self.log.error('Could not load module {module_name}'.format(module_name=module_name))
             self.log.error(traceback.format_exc())
             if clean_exit:
-                exit(1)
+                sys.exit(1)
             else:
                 raise ValueError(error)
                 return None

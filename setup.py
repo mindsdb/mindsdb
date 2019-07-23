@@ -1,12 +1,12 @@
 import setuptools
 import subprocess
-import platform
+import sys
 
 
-def remove_requirement(requirements, name):
+def remove_requirements(requirements, name):
     return [x for x in requirements if name != x.split(' ')[0]]
 
-os = platform.system()
+sys_platform = sys.platform
 
 about = {}
 with open("mindsdb/__about__.py") as fp:
@@ -15,29 +15,27 @@ with open("mindsdb/__about__.py") as fp:
 long_description = open('README.md', encoding='utf-8').read()
 
 with open('requirements.txt') as req_file:
-    requirements = req_file.read().splitlines()
+    requirements = [req.strip() for req in req_file.read().splitlines()]
 
 dependency_links = []
 
 # Linux specific requirements
-if os == 'Linux':
-    requirements = remove_requirement(requirements, 'tensorflow-estimator')
-    requirements = remove_requirement(requirements, 'lightwood')
-    requirements.append('lightwood == 0.6.7')
+if sys_platform == 'linux' or sys_platform.startswith('linux'):
+    requirements = remove_requirements(requirements, 'tensorflow-estimator')
 
 # OSX specific requirements
-if os == 'Darwin':
+elif sys_platform == 'darwin':
     requirements = requirements
 
 # Windows specific requirements
-if os == 'Windows':
-    requirements = remove_requirement(requirements, 'tensorflow-estimator')
-    requirements = remove_requirement(requirements,'wheel')
+elif sys_platform in ['win32','cygwin'] :
+    requirements = remove_requirements(requirements, 'tensorflow-estimator')
+    requirements = remove_requirements(requirements,'wheel')
     requirements.append('wheel == 0.26.0')
 
-    requirements = remove_requirement(requirements, 'lightwood')
-    requirements.append('lightwood == 0.7.1')
-    dependency_links.append('https://github.com/mindsdb/lightwood/tarball/ci_testing#egg=lightwood-0.7.1')
+# For stuff like freebsd
+else:
+    print('\n\n====================\n\nError, platform {sys_platform} not recognized, proceeding to install anyway, but lightwood might not work properly !\n\n====================\n\n')
 
 setuptools.setup(
     name=about['__title__'],

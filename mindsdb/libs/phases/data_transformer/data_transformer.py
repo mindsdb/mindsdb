@@ -93,8 +93,13 @@ class DataTransformer(BaseModule):
                     index = len(input_data.data_frame)
                     while occurance_map[val] < max_val_occurances:
 
-                        copied_row = input_data.data_frame[input_data.data_frame[colum] == val].iloc[ciclying_map[val]]
-                        copied_rows.append(copied_row)
+                        try:
+                            copied_row = input_data.data_frame[input_data.data_frame[colum] == val].iloc[ciclying_map[val]]
+                            copied_rows.append(copied_row)
+                        except:
+                            input_data.data_frame = input_data.data_frame.append(copied_rows)
+                            input_data.train_df = input_data.train_df.append(copied_rows)
+                            copied_rows = []
 
                         index = index + 1
 

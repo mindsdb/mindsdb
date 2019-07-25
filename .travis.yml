@@ -33,7 +33,8 @@ install:
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python setup.py install; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 60 python3 setup.py install; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 pip3 install -e . ; fi
-  - if [ "$DEPLOYMENT_ENV" = "true" ]; then travis_wait pip3 install mkdocs mkdocs-material pymdown-extensions pygments; fi
+  # @TODO Uncomment and change when we get mkdocs / github pages working
+  #- if [ "$DEPLOYMENT_ENV" = "true" ]; then travis_wait pip3 install mkdocs mkdocs-material pymdown-extensions pygments; fi
 
 before_script: cd tests/ci_tests
 # run tests
@@ -43,6 +44,7 @@ script:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 python3 full_test.py; fi
   - cd ../..
 
+# @TODO Uncomment and change  when we get mkdocs / github pages working
 #before_deploy:
 #  - cd docs
 #  - mkdocs build --verbose --clean --strict
@@ -58,6 +60,7 @@ deploy:
       branch: master
       condition: $DEPLOYMENT_ENV = "true"
 
+# @TODO Uncomment and change  when we get mkdocs / github pages working
 #- provider: pages
 #    skip_cleanup: true
 #    github_token: $GITHUB_TOKEN

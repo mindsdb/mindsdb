@@ -82,3 +82,5 @@ How about the DB part?. Although in the future we will support all kinds of data
 As to becoming a **Mind** to your **DB**.
 
 Why the bear? Who *doesn't* like bears! Anyway, a bear for UC Berkeley where this all was initially coded.
+
+** debugging line, please remove me **

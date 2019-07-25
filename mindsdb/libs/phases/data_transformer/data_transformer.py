@@ -96,23 +96,20 @@ class DataTransformer(BaseModule):
                         try:
                             copied_row = input_data.data_frame[input_data.data_frame[colum] == val].iloc[ciclying_map[val]]
                             copied_rows.append(copied_row)
+                            
+                            index = index + 1
+
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(index)
+                            self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(index)
+
+                            occurance_map[val] += 1
+                            ciclying_map[val] += 1
                         except:
+                            # If there is no next row to copy, append all the previously coppied rows so that we start cycling throug them
                             input_data.data_frame = input_data.data_frame.append(copied_rows)
                             input_data.train_df = input_data.train_df.append(copied_rows)
                             copied_rows = []
 
-                        index = index + 1
-
-                        self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(index)
-                        self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(index)
-
-                        occurance_map[val] += 1
-                        ciclying_map[val] += 1
-
-                        print(index)
-
                     if len(copied_rows) > 0:
-                        print('HERE')
                         input_data.data_frame = input_data.data_frame.append(copied_rows)
                         input_data.train_df = input_data.train_df.append(copied_rows)
-                        print('ENDED')

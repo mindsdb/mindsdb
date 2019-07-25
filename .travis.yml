@@ -43,11 +43,11 @@ script:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 python3 full_test.py; fi
   - cd ../..
 
-before_deploy:
-  - cd docs
-  - mkdocs build --verbose --clean --strict
-  - cp -r site ../
-  - cd ..
+#before_deploy:
+#  - cd docs
+#  - mkdocs build --verbose --clean --strict
+#  - cp -r site ../
+#  - cd ..
 
 # deploy to pip
 deploy:
@@ -58,10 +58,10 @@ deploy:
       branch: master
       condition: $DEPLOYMENT_ENV = "true"
 
-  - provider: pages
-    skip_cleanup: true
-    github_token: $GITHUB_TOKEN
-    local_dir: site
-    on:
-      branch: master
-      condition: $DEPLOYMENT_ENV = "true"
+#- provider: pages
+#    skip_cleanup: true
+#    github_token: $GITHUB_TOKEN
+#    local_dir: site
+#    on:
+#      branch: master
+#      condition: $DEPLOYMENT_ENV = "true"

@@ -17,6 +17,10 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[]):
     print(prediction)
     print(prediction[0])
 
+    for item in prediction:
+        print(item)
+
+
     print(type(list(prediction.evaluations.values())[0][0]))
     assert('ProbabilityEvaluation' in str(type(list(prediction.evaluations.values())[0][0])))
 

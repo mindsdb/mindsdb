@@ -41,7 +41,8 @@ class MindsdbLogger():
         :param chracter: logger function to use (example: 'info' or 'error')
         '''
         caller = getframeinfo(stack()[2][0])
-        message = pprint.pformat(str(message))
+        #message = pprint.pformat(str(message))
+        message = str(message) + '\n'
 
         call = getattr(self.internal_logger, func)
         call("%s:%d - %s" % (caller.filename.split('mindsdb/')[-1], caller.lineno, message))

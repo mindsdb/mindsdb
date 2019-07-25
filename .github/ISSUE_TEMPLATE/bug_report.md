@@ -18,13 +18,13 @@ labels:
 A clear and concise description of what the bug is.
 
 **To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Run '....'
-3. See error
+Steps to reproduce the behavior, for example:
+1. Download the dataset from link: `xyz.com/data/train.csv`
+2. Run the code: `...etc`
+3. You should see the error: `... blah`
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
+A clear and concise description of what you expected to happen, if relevant to the bug.
 
 **Additional context**
 Add any other context or screenshots about the bug being reported.

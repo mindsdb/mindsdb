@@ -6,6 +6,8 @@ matrix:
       python: 3.7.3
       dist: xenial
       sudo: true
+      env:
+        DEPLOYMENT_ENV="true"
 
     - name: "Python 3.7.2 on OSX"
       os: osx
@@ -27,14 +29,42 @@ notifications:
 cache: pip
 # install dependencies
 install:
-  - travis_wait pip3 install --upgrade pip
-  #- travis_wait pip3 install -e .
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait pip install --no-cache-dir -e .; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait pip3 install --no-cache-dir -e .; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait pip3 install --no-cache-dir -e . ; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait pip3 install --upgrade pip; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python setup.py install; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 60 python3 setup.py install; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 pip3 install -e . ; fi
+  # @TODO Uncomment and change when we get mkdocs / github pages working
+  #- if [ "$DEPLOYMENT_ENV" = "true" ]; then travis_wait pip3 install mkdocs mkdocs-material pymdown-extensions pygments; fi
+
 before_script: cd tests/ci_tests
 # run tests
 script:
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python fast_test.py; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 60 python3 full_test.py; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 python3 full_test.py; fi
+  - cd ../..
+
+# @TODO Uncomment and change  when we get mkdocs / github pages working
+#before_deploy:
+#  - cd docs
+#  - mkdocs build --verbose --clean --strict
+#  - cp -r site ../
+#  - cd ..
+
+# deploy to pip
+deploy:
+  - provider: pypi
+    user: "mindsdb_sysadmin"
+    password: $PYPI_SYSADMIN_PASSWORD
+    on:
+      branch: master
+      condition: $DEPLOYMENT_ENV = "true"
+
+# @TODO Uncomment and change  when we get mkdocs / github pages working
+#- provider: pages
+#    skip_cleanup: true
+#    github_token: $GITHUB_TOKEN
+#    local_dir: site
+#    on:
+#      branch: master
+#      condition: $DEPLOYMENT_ENV = "true"

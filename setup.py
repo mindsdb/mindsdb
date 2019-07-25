@@ -3,8 +3,14 @@ import subprocess
 import sys
 
 
-def remove_requirements(requirements, name):
-    return [x for x in requirements if name != x.split(' ')[0]]
+def remove_requirements(requirements, name, replace=None):
+    new_requirements = []
+    for requirement in requirements:
+        if requirement.split(' ')[0] != name:
+            new_requirements.append(requirement)
+        elif replace is not None:
+            new_requirements.append(replace)
+    return new_requirements
 
 sys_platform = sys.platform
 
@@ -21,21 +27,19 @@ dependency_links = []
 
 # Linux specific requirements
 if sys_platform == 'linux' or sys_platform.startswith('linux'):
-    requirements = remove_requirements(requirements, 'tensorflow-estimator')
+    requirements = remove_requirement(requirements, 'tensorflow-estimator')
 
 # OSX specific requirements
 elif sys_platform == 'darwin':
     requirements = requirements
 
 # Windows specific requirements
-elif sys_platform in ['win32','cygwin'] :
-    requirements = remove_requirements(requirements, 'tensorflow-estimator')
-    requirements = remove_requirements(requirements,'wheel')
-    requirements.append('wheel == 0.26.0')
+elif sys_platform in ['win32','cygwin','windows'] :
+    requirements = remove_requirement(requirements, 'tensorflow-estimator')
+    requirements = remove_requirement(requirements,'wheel', replace='wheel == 0.26.0')
 
-# For stuff like freebsd
 else:
-    print('\n\n====================\n\nError, platform {sys_platform} not recognized, proceeding to install anyway, but lightwood might not work properly !\n\n====================\n\n')
+    print('\n\n====================\n\nError, platform {sys_platform} not recognized, proceeding to install anyway, but mindsdb might not work properly !\n\n====================\n\n')
 
 setuptools.setup(
     name=about['__title__'],
@@ -62,9 +66,14 @@ setuptools.setup(
 try:
     subprocess.call(['python3','-m','spacy','download','en_core_web_sm'])
 except:
-    subprocess.call(['python','-m','spacy','download','en_core_web_sm'])
-
+    try:
+        subprocess.call(['python','-m','spacy','download','en_core_web_sm'])
+    except:
+        print('Can\'t download spacy vocabulary, ludwig backend may fail when processing text input')
 try:
     subprocess.call(['python3','-m','spacy','download','en'])
 except:
-    subprocess.call(['python','-m','spacy','download','en'])
+    try:
+        subprocess.call(['python','-m','spacy','download','en'])
+    except:
+        print('Can\'t download spacy vocabulary, ludwig backend may fail when processing text input')

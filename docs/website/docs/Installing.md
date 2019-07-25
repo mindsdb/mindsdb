@@ -19,7 +19,7 @@ Once you have those, you can install MindsDB.
 Install MindsDB:
 
 ```bash
-pip3 install mindsdb --user
+pip3 install mindsdb --user --no-cache-dir
 ```
 
 It might be needed that you need to install `tkinter` from your package manager in certain situations.
@@ -34,10 +34,7 @@ Install Conda [download here](https://www.anaconda.com/download/#windows)
 and then run the **anaconda prompt**:
 
 ```bash
-conda install -c peterjc123 pytorch
-curl -o reqs.txt https://raw.githubusercontent.com/mindsdb/mindsdb/master/requirements-win.txt
-pip install --requirement reqs.txt
-pip install mindsdb --no-dependencies
+pip install mindsdb --user --no-cache-dir
 ```
 # Build and run your docker container
 

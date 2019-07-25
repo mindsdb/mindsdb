@@ -1,6 +1,6 @@
 import setuptools
 import subprocess
-import platform
+import sys
 
 
 def remove_requirements(requirements, name, replace=None):
@@ -21,7 +21,7 @@ with open("mindsdb/__about__.py") as fp:
 long_description = open('README.md', encoding='utf-8').read()
 
 with open('requirements.txt') as req_file:
-    requirements = req_file.read().splitlines()
+    requirements = [req.strip() for req in req_file.read().splitlines()]
 
 dependency_links = []
 

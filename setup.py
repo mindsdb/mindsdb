@@ -27,14 +27,14 @@ dependency_links = []
 
 # Linux specific requirements
 if sys_platform == 'linux' or sys_platform.startswith('linux'):
-    requirements = remove_requirements(requirements, 'tensorflow-estimator')
+    requirements = remove_requirement(requirements, 'tensorflow-estimator')
 
 # OSX specific requirements
 elif sys_platform == 'darwin':
     requirements = requirements
 
 # Windows specific requirements
-elif sys_platform in ['win32','cygwin','windows'] :
+elif sys_platform in ['win32','cygwin','windows']:
     requirements = remove_requirements(requirements, 'tensorflow-estimator')
     requirements = remove_requirements(requirements,'wheel', replace='wheel == 0.26.0')
     requirements = remove_requirements(requirements,'lightwood', replace='lightwood @ git+https://github.com/mindsdb/lightwood.git@master')

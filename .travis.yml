@@ -30,9 +30,8 @@ cache: pip
 # install dependencies
 install:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait pip3 install --upgrade pip; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python setup.py install; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 60 python3 setup.py install; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 pip3 install -e . ; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait pip install --no-cache-dir -e .; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait pip3 install --no-cache-dir -e .; fi
   # @TODO Uncomment and change when we get mkdocs / github pages working
   #- if [ "$DEPLOYMENT_ENV" = "true" ]; then travis_wait pip3 install mkdocs mkdocs-material pymdown-extensions pygments; fi
 
@@ -40,8 +39,7 @@ before_script: cd tests/ci_tests
 # run tests
 script:
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python fast_test.py; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 60 python3 full_test.py; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 python3 full_test.py; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 60 python3 full_test.py; fi
   - cd ../..
 
 # @TODO Uncomment and change  when we get mkdocs / github pages working

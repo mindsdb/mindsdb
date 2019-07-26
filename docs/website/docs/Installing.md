@@ -14,7 +14,7 @@ pip3 install --upgrade pip
 
 Once you have those, you can install MindsDB.
 
-## On Mac or Linux
+## On Mac or Linux or any other operating system
 
 Install MindsDB:
 
@@ -34,7 +34,7 @@ Install Conda [download here](https://www.anaconda.com/download/#windows)
 and then run the **anaconda prompt**:
 
 ```bash
-pip install mindsdb --user --no-cache-dir
+pip install git+https://github.com/mindsdb/mindsdb.git@master
 ```
 # Build and run your docker container
 

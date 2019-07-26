@@ -4,6 +4,7 @@ matrix:
     - name: "Python 3.7.3 on Ubuntu 16.0.4"
       os: linux
       python: 3.7.3
+      node: 11.15.0
       dist: xenial
       sudo: true
       env:
@@ -42,12 +43,11 @@ script:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 60 python3 full_test.py; fi
   - cd ../..
 
-# @TODO Uncomment and change  when we get mkdocs / github pages working
-#before_deploy:
-#  - cd docs
-#  - mkdocs build --verbose --clean --strict
-#  - cp -r site ../
-#  - cd ..
+before_deploy:
+  - cd docs/website/website
+  - npm install
+  - npm run build
+  - cd ../../..
 
 # deploy to pip
 deploy:
@@ -58,11 +58,10 @@ deploy:
       branch: master
       condition: $DEPLOYMENT_ENV = "true"
 
-# @TODO Uncomment and change  when we get mkdocs / github pages working
-#- provider: pages
-#    skip_cleanup: true
-#    github_token: $GITHUB_TOKEN
-#    local_dir: site
-#    on:
-#      branch: master
-#      condition: $DEPLOYMENT_ENV = "true"
+  - provider: pypi
+    skip_cleanup: true
+    github_token: $GITHUB_TOKEN
+    local_dir: docs/website/website/build/mindsdb
+    on:
+      branch: autodocs
+      condition: $DEPLOYMENT_ENV = "true"

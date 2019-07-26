@@ -61,5 +61,5 @@ deploy:
     github_token: $GITHUB_TOKEN
     local_dir: docs/website/website/build/mindsdb
     on:
-      branch: autodocs
+      branch: master
       condition: $DEPLOYMENT_ENV = "true"

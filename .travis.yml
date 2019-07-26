@@ -39,8 +39,7 @@ before_script: cd tests/ci_tests
 # run tests
 script:
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python fast_test.py; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 60 python3 full_test.py; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then travis_wait 60 python3 full_test.py; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 60 python3 full_test.py; fi
   - cd ../..
 
 # @TODO Uncomment and change  when we get mkdocs / github pages working

@@ -55,6 +55,13 @@ class DataTransformer(BaseModule):
         input_data.test_df[column] = input_data.test_df[column].apply(func)
         input_data.validation_df[column] = input_data.validation_df[column].apply(func)
 
+    @staticmethod
+    def _cast_all_data(input_data, column, cast_to_type):
+        input_data.data_frame[column] = input_data.data_frame[column].astype(cast_to_type)
+        input_data.train_df[column] = input_data.train_df[column].astype(cast_to_type)
+        input_data.test_df[column] = input_data.test_df[column].astype(cast_to_type)
+        input_data.validation_df[column] = input_data.validation_df[column].astype(cast_to_type)
+
     def run(self, input_data, mode=None):
         for column in input_data.columns:
             if column in self.transaction.lmd['malformed_columns']['names']:
@@ -77,7 +84,7 @@ class DataTransformer(BaseModule):
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
 
             if data_type == DATA_TYPES.CATEGORICAL:
-                    input_data['column'] = input_data['column'].astype('category')
+                    self._cast_all_data(input_data, column, 'category')
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:

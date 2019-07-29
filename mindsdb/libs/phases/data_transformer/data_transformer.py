@@ -1,7 +1,7 @@
 from dateutil.parser import parse as parse_datetime
 import datetime
-import pandas as pd
 
+import pandas as pd
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import clean_float

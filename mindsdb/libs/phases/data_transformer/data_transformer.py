@@ -76,6 +76,9 @@ class DataTransformer(BaseModule):
                 elif data_subtype == DATA_SUBTYPES.TIMESTAMP:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
 
+            if data_type == DATA_TYPES.CATEGORICAL:
+                    input_data['column'] = input_data['column'].astype('category')
+
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:
             if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['balance_target_category'] == True and mode == 'train':
@@ -96,7 +99,7 @@ class DataTransformer(BaseModule):
                         try:
                             copied_row = input_data.data_frame[input_data.data_frame[colum] == val].iloc[ciclying_map[val]]
                             copied_rows.append(copied_row)
-                            
+
                             index = index + 1
 
                             self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(index)

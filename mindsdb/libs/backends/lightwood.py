@@ -123,7 +123,6 @@ class LightwoodBackend():
             else:
                 config['output_features'].append(col_config)
 
-        print(config)
         return config
 
     def train(self):

@@ -1,5 +1,6 @@
 from dateutil.parser import parse as parse_datetime
 import datetime
+import pandas as pd
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
@@ -64,6 +65,7 @@ class DataTransformer(BaseModule):
 
     def run(self, input_data, mode=None):
         for column in input_data.columns:
+
             if column in self.transaction.lmd['malformed_columns']['names']:
                 continue
 
@@ -83,8 +85,14 @@ class DataTransformer(BaseModule):
                 elif data_subtype == DATA_SUBTYPES.TIMESTAMP:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
 
-            if data_type == DATA_TYPES.CATEGORICAL:
+            if data_type == DATA_TYPES.CATEGORICAL or data_stype == DATA_SUBTYPES.DATE:
                     self._cast_all_data(input_data, column, 'category')
+
+            if self.transaction.lmd['model_backend'] == 'lightwood':
+                if data_type == DATA_TYPES.DATE:
+                    #self._cast_all_data(input_data, column, 'datetime')
+                    self._aply_to_all_data(input_data, column, self._standardize_datetime)
+                    self._aply_to_all_data(input_data, column, pd.to_datetime)
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:

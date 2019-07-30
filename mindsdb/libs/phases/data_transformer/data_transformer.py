@@ -1,6 +1,7 @@
 from dateutil.parser import parse as parse_datetime
 import datetime
 
+import pandas as pd
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import clean_float
@@ -55,8 +56,16 @@ class DataTransformer(BaseModule):
         input_data.test_df[column] = input_data.test_df[column].apply(func)
         input_data.validation_df[column] = input_data.validation_df[column].apply(func)
 
+    @staticmethod
+    def _cast_all_data(input_data, column, cast_to_type):
+        input_data.data_frame[column] = input_data.data_frame[column].astype(cast_to_type)
+        input_data.train_df[column] = input_data.train_df[column].astype(cast_to_type)
+        input_data.test_df[column] = input_data.test_df[column].astype(cast_to_type)
+        input_data.validation_df[column] = input_data.validation_df[column].astype(cast_to_type)
+
     def run(self, input_data, mode=None):
         for column in input_data.columns:
+
             if column in self.transaction.lmd['malformed_columns']['names']:
                 continue
 
@@ -75,6 +84,15 @@ class DataTransformer(BaseModule):
 
                 elif data_subtype == DATA_SUBTYPES.TIMESTAMP:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
+
+            if data_type == DATA_TYPES.CATEGORICAL or data_stype == DATA_SUBTYPES.DATE:
+                    self._cast_all_data(input_data, column, 'category')
+
+            if self.transaction.lmd['model_backend'] == 'lightwood':
+                if data_type == DATA_TYPES.DATE:
+                    #self._cast_all_data(input_data, column, 'datetime')
+                    self._aply_to_all_data(input_data, column, self._standardize_datetime)
+                    self._aply_to_all_data(input_data, column, pd.to_datetime)
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:
@@ -96,7 +114,7 @@ class DataTransformer(BaseModule):
                         try:
                             copied_row = input_data.data_frame[input_data.data_frame[colum] == val].iloc[ciclying_map[val]]
                             copied_rows.append(copied_row)
-                            
+
                             index = index + 1
 
                             self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(index)

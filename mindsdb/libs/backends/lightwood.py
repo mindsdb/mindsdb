@@ -96,10 +96,7 @@ class LightwoodBackend():
             elif data_type in (DATA_TYPES.CATEGORICAL):
                 lightwood_data_type = 'categorical'
 
-            elif data_subtype in (DATA_SUBTYPES.DATE):
-                lightwood_data_type = 'categorical'
-
-            elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
+            elif data_subtype in (DATA_SUBTYPES.TIMESTAMP, DATA_SUBTYPES.DATE):
                 lightwood_data_type = 'datetime'
 
             elif data_subtype in (DATA_SUBTYPES.IMAGE):

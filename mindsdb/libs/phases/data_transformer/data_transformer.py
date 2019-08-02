@@ -70,22 +70,22 @@ class DataTransformer(BaseModule):
                 continue
 
             data_type = self.transaction.lmd['column_stats'][column]['data_type']
-            data_stype = self.transaction.lmd['column_stats'][column]['data_subtype']
+            data_subtype = self.transaction.lmd['column_stats'][column]['data_subtype']
 
             if data_type == DATA_TYPES.NUMERIC:
                 self._aply_to_all_data(input_data, column, clean_float)
 
-                if data_stype == DATA_SUBTYPES.INT:
+                if data_subtype == DATA_SUBTYPES.INT:
                     self._aply_to_all_data(input_data, column, DataTransformer._try_round)
 
             if data_type == DATA_TYPES.DATE:
-                if data_stype == DATA_SUBTYPES.DATE:
+                if data_subtype == DATA_SUBTYPES.DATE:
                     self._aply_to_all_data(input_data, column, self._standardize_date)
 
                 elif data_subtype == DATA_SUBTYPES.TIMESTAMP:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
 
-            if data_type == DATA_TYPES.CATEGORICAL or data_stype == DATA_SUBTYPES.DATE:
+            if data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE:
                     self._cast_all_data(input_data, column, 'category')
 
             if self.transaction.lmd['model_backend'] == 'lightwood':

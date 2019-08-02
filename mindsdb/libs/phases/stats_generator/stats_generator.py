@@ -198,6 +198,7 @@ class StatsGenerator(BaseModule):
             else:
                 subtype_dist[current_subtype_guess] += 1
 
+
         curr_data_type = 'Unknown'
         curr_data_subtype = 'Unknown'
         max_data_type = 0
@@ -227,6 +228,7 @@ class StatsGenerator(BaseModule):
             type_dist[curr_data_type] = type_dist.pop('Unknown')
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
+
         # @TODO: Extremely slow for large datasets, make it faster
         if curr_data_type != DATA_TYPES.CATEGORICAL and curr_data_subtype != DATA_SUBTYPES.DATE:
             all_values = data_frame[col_name]
@@ -235,7 +237,8 @@ class StatsGenerator(BaseModule):
             # The numbers here are picked randomly, the gist of it is that if values repeat themselves a lot we should consider the column to be categorical
             nr_vals = len(all_values)
             nr_distinct_vals = len(all_distinct_vals)
-            if nr_vals/20 > nr_distinct_vals and (curr_data_type != DATA_TYPES.NUMERIC or nr_distinct_vals < 20):
+
+            if nr_vals/20 > nr_distinct_vals and (curr_data_type not in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] or nr_distinct_vals < 20) and nr_distinct_vals < 400:
                 curr_data_type = DATA_TYPES.CATEGORICAL
                 if len(all_distinct_vals) < 3:
                     curr_data_subtype = DATA_SUBTYPES.SINGLE

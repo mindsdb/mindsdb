@@ -139,7 +139,12 @@ class LightwoodBackend():
             self.predictor = lightwood.Predictor(load_from_path=os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data'))
         else:
             self.predictor = lightwood.Predictor(lightwood_config)
-            self.predictor.learn(from_data=train_df, test_data=test_df)
+
+            if self.transaction.lmd['stop_training_in_x_seconds'] is None:
+                self.predictor.learn(from_data=train_df, test_data=test_df)
+            else:
+                self.predictor.learn(from_data=train_df, test_data=test_df, stop_training_after_seconds=self.transaction.lmd['stop_training_in_x_seconds'])
+
             self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 
         self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data')

@@ -126,6 +126,8 @@ class LightwoodBackend():
         return config
 
     def train(self):
+        lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
+
         if self.transaction.lmd['model_order_by'] is not None and len(self.transaction.lmd['model_order_by']) > 0:
             train_df = self._create_timeseries_df(self.transaction.input_data.train_df)
             test_df = self._create_timeseries_df(self.transaction.input_data.test_df)
@@ -151,6 +153,8 @@ class LightwoodBackend():
         self.predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])
 
     def predict(self, mode='predict', ignore_columns=[]):
+        lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
+
         if mode == 'predict':
             # Doing it here since currently data cleanup is included in this, in the future separate data cleanup
             lightwood_config = self._create_lightwood_config()

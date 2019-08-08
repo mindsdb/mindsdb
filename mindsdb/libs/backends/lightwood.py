@@ -34,6 +34,8 @@ class LightwoodBackend():
                 group_by_ts_map[gb_lookup_key] = []
 
             for col in order_by:
+                if row[col] is None:
+                    row[col] = 0.0
                 try:
                     row[col] = float(row[col])
                 except:
@@ -52,6 +54,7 @@ class LightwoodBackend():
             for order_col in order_by:
                 for i in range(0,len(group_by_ts_map[k])):
                     group_by_ts_map[k][order_col] = group_by_ts_map[k][order_col].astype(object)
+
 
                     numerical_value = float(group_by_ts_map[k][order_col].iloc[i])
                     arr_val = [str(numerical_value)]

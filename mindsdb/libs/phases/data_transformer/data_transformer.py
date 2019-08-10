@@ -1,5 +1,6 @@
 from dateutil.parser import parse as parse_datetime
 import datetime
+import math
 
 import pandas as pd
 from mindsdb.libs.constants.mindsdb import *
@@ -8,6 +9,13 @@ from mindsdb.libs.helpers.text_helpers import clean_float
 
 
 class DataTransformer(BaseModule):
+
+    @staticmethod
+    def _handle_nan(x):
+        if math.isnan(x):
+            return 0 #None
+        else:
+            return x
 
     @staticmethod
     def _try_round(x):
@@ -74,6 +82,7 @@ class DataTransformer(BaseModule):
 
             if data_type == DATA_TYPES.NUMERIC:
                 self._aply_to_all_data(input_data, column, clean_float)
+                self._aply_to_all_data(input_data, column, self._handle_nan)
 
                 if data_subtype == DATA_SUBTYPES.INT:
                     self._aply_to_all_data(input_data, column, DataTransformer._try_round)
@@ -85,12 +94,11 @@ class DataTransformer(BaseModule):
                 elif data_subtype == DATA_SUBTYPES.TIMESTAMP:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
 
-            if data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE:
+            if data_type == DATA_TYPES.CATEGORICAL:
                     self._cast_all_data(input_data, column, 'category')
 
             if self.transaction.lmd['model_backend'] == 'lightwood':
                 if data_type == DATA_TYPES.DATE:
-                    #self._cast_all_data(input_data, column, 'datetime')
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
                     self._aply_to_all_data(input_data, column, pd.to_datetime)
 

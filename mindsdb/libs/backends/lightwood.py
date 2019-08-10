@@ -101,6 +101,7 @@ class LightwoodBackend():
 
             elif data_subtype in (DATA_SUBTYPES.TIMESTAMP, DATA_SUBTYPES.DATE):
                 lightwood_data_type = 'datetime'
+                lightwood_data_type = 'time_series'
 
             elif data_subtype in (DATA_SUBTYPES.IMAGE):
                 lightwood_data_type = 'image'
@@ -126,6 +127,7 @@ class LightwoodBackend():
             else:
                 config['output_features'].append(col_config)
 
+        print(config)
         return config
 
     def train(self):

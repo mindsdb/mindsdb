@@ -128,7 +128,7 @@ class FileDS(DataSource):
                 if i > 0:
                     break
 
-            accepted_delimiters = [',','\t']
+            accepted_delimiters = [',','\t', ';']
             dialect = csv.Sniffer().sniff(''.join(first_few_lines[0]), delimiters=accepted_delimiters)
             data.seek(0)
             # if csv dialect identified then return csv

@@ -38,13 +38,13 @@ class DataTransformer(BaseModule):
         #return date.date()
 
         # Uncomment if we want to work internally with string type
-        return date.strftime('%y-%m-%d')
+        return date.strftime('%Y-%m-%d')
 
     @staticmethod
-    def _standardize_datetime(datetime_str):
+    def _standardize_datetime(date_str):
         try:
             # will return a datetime object
-            dt = parse_datetime(date_str)
+            dt = parse_datetime(str(date_str))
         except:
             try:
                 dt = datetime.datetime.utcfromtimestamp(date_str)
@@ -55,7 +55,7 @@ class DataTransformer(BaseModule):
 
         # Uncomment if we want to work internally with string type
         # @TODO Decide if we ever need/want the milliseconds
-        return dt.strftime('%y-%m-%d %H:%M:%S')
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
 
     @staticmethod
     def _aply_to_all_data(input_data, column, func):

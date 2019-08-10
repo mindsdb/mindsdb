@@ -40,7 +40,7 @@ class LightwoodBackend():
                     row[col] = float(row[col])
                 except:
                     try:
-                        row[col] = float(parse_datetime(row[col]).timestamp())
+                        row[col] = float(row[col].timestamp())
                     except:
                         self.transaction.log.error(f'Backend Lightwood does not support ordering by the column: {col} !, Faulty value: {row[col]}')
                         sys.exit()
@@ -67,6 +67,9 @@ class LightwoodBackend():
 
                     for prev_i in previous_indexes:
                         group_by_ts_map[k].iloc[i][order_col].append(group_by_ts_map[k].iloc[prev_i][order_col][-1])
+
+                    while len(group_by_ts_map[k].iloc[i][order_col]) <= nr_samples:
+                        group_by_ts_map[k].iloc[i][order_col].append('0')
 
                     group_by_ts_map[k].iloc[i][order_col].reverse()
                     group_by_ts_map[k][order_col].iat[i] = ' '.join(group_by_ts_map[k].iloc[i][order_col])
@@ -101,7 +104,6 @@ class LightwoodBackend():
 
             elif data_subtype in (DATA_SUBTYPES.TIMESTAMP, DATA_SUBTYPES.DATE):
                 lightwood_data_type = 'datetime'
-                lightwood_data_type = 'time_series'
 
             elif data_subtype in (DATA_SUBTYPES.IMAGE):
                 lightwood_data_type = 'image'
@@ -116,6 +118,9 @@ class LightwoodBackend():
                 self.transaction.log.error(f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
                 raise Exception('Failed to build data definition for Lightwood model backend')
 
+            if col_name in [x[0] for x in self.transaction.lmd['model_order_by']]:
+                lightwood_data_type = 'time_series'
+
             col_config = {
                 'name': col_name,
                 'type': lightwood_data_type
@@ -127,7 +132,6 @@ class LightwoodBackend():
             else:
                 config['output_features'].append(col_config)
 
-        print(config)
         return config
 
     def train(self):
@@ -140,6 +144,7 @@ class LightwoodBackend():
             train_df = self.transaction.input_data.train_df
             test_df = self.transaction.input_data.test_df
 
+        print(train_df)
         lightwood_config = self._create_lightwood_config()
 
         if self.transaction.lmd['skip_model_training'] == True:

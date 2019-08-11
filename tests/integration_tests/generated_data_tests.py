@@ -76,7 +76,7 @@ def test_timeseries():
 
     mdb = None
     try:
-        mdb = mindsdb.Predictor(name='test_date_timeseries')
+        mdb = mindsdb.Predictor(name='test_date_timeseries_2')
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         print(traceback.format_exc())
@@ -104,7 +104,7 @@ def test_timeseries():
 
     # Predict
     try:
-        mdb = mindsdb.Predictor(name='test_date_timeseries')
+        mdb = mindsdb.Predictor(name='test_date_timeseries_2')
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         print(traceback.format_exc())
@@ -112,10 +112,8 @@ def test_timeseries():
         exit(1)
 
     try:
-        results = mdb.predict(when_data=test_file_name,use_gpu=False)
-        models = mdb.get_models()
-        print(models)
-        mdb.get_model_data(models[0]['name'])
+        results = mdb.predict(when_data=test_file_name,use_gpu=False,order_by=feature_headers[0],window_size=3)
+
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
             for col in expect_columns:
@@ -123,6 +121,10 @@ def test_timeseries():
                     logger.error(f'Prediction failed to return expected column: {col}')
                     logger.debug('Got row: {}'.format(row))
                     exit(1)
+
+        models = mdb.get_models()
+        print(models)
+        mdb.get_model_data(models[0]['name'])
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
     except:

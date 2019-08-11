@@ -100,7 +100,7 @@ class DataTransformer(BaseModule):
             if self.transaction.lmd['model_backend'] == 'lightwood':
                 if data_type == DATA_TYPES.DATE:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
-                    self._aply_to_all_data(input_data, column, pd.to_datetime)
+                    self._aply_to_all_data(input_data, column, lambda x: pd.to_datetime(x, errors = 'coerce'))
                     self._aply_to_all_data(input_data, column, lambda x: int(x.timestamp()))
 
         # Un-bias dataset for training

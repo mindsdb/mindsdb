@@ -144,7 +144,6 @@ class LightwoodBackend():
             train_df = self.transaction.input_data.train_df
             test_df = self.transaction.input_data.test_df
 
-        print(train_df)
         lightwood_config = self._create_lightwood_config()
 
         if self.transaction.lmd['skip_model_training'] == True:
@@ -188,6 +187,7 @@ class LightwoodBackend():
         else:
             run_df = df
 
+        print(run_df)
         predictions = self.predictor.predict(when_data=run_df)
 
         formated_predictions = {}

@@ -112,7 +112,7 @@ def test_timeseries():
         exit(1)
 
     try:
-        results = mdb.predict(when_data=test_file_name,use_gpu=False,order_by=feature_headers[0],window_size=3)
+        results = mdb.predict(when_data=test_file_name,use_gpu=False)
 
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
@@ -381,7 +381,7 @@ def test_multilabel_prediction():
 setup_testing_logger()
 
 if __name__ == '__main__':
-    test_timeseries()
+    #test_timeseries()
     test_one_label_prediction_wo_strings()
-    test_multilabel_prediction()
-    test_one_label_prediction()
+    #test_multilabel_prediction()
+    #test_one_label_prediction()

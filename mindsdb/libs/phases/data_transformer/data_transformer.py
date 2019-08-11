@@ -12,8 +12,8 @@ class DataTransformer(BaseModule):
 
     @staticmethod
     def _handle_nan(x):
-        if math.isnan(x):
-            return 0 #None
+        if x is not None and math.isnan(x):
+            return 0
         else:
             return x
 
@@ -58,6 +58,15 @@ class DataTransformer(BaseModule):
         return dt.strftime('%Y-%m-%d %H:%M:%S')
 
     @staticmethod
+    def _lightwood_datetime_processing(dt):
+        dt = pd.to_datetime(dt, errors = 'coerce')
+        try:
+            return dt.timestamp()
+        except:
+            # @TODO Return `None` after appropriate changes in lightwood
+            return 0
+
+    @staticmethod
     def _aply_to_all_data(input_data, column, func):
         input_data.data_frame[column] = input_data.data_frame[column].apply(func)
         input_data.train_df[column] = input_data.train_df[column].apply(func)
@@ -100,8 +109,7 @@ class DataTransformer(BaseModule):
             if self.transaction.lmd['model_backend'] == 'lightwood':
                 if data_type == DATA_TYPES.DATE:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
-                    self._aply_to_all_data(input_data, column, lambda x: pd.to_datetime(x, errors = 'coerce'))
-                    self._aply_to_all_data(input_data, column, lambda x: int(x.timestamp()))
+                    self._aply_to_all_data(input_data, column, self._lightwood_datetime_processing)
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:

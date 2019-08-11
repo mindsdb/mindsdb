@@ -101,6 +101,7 @@ class DataTransformer(BaseModule):
                 if data_type == DATA_TYPES.DATE:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
                     self._aply_to_all_data(input_data, column, pd.to_datetime)
+                    self._aply_to_all_data(input_data, column, lambda x: int(x.timestamp()))
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:

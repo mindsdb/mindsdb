@@ -224,7 +224,7 @@ def test_one_label_prediction_wo_strings():
     logger.debug(f'Creating one-labe test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
 
     try:
-        features = generate_value_cols(['int','float','date','int'],data_len, separator)
+        features = generate_value_cols(['int','float','datetime','int'],data_len, separator)
         labels = [generate_labels_2(features, separator)]
 
         feature_headers = list(map(lambda col: col[0], features))
@@ -381,7 +381,7 @@ def test_multilabel_prediction():
 setup_testing_logger()
 
 if __name__ == '__main__':
-    #test_timeseries()
+    test_timeseries()
     test_one_label_prediction_wo_strings()
-    #test_multilabel_prediction()
-    #test_one_label_prediction()
+    test_multilabel_prediction()
+    test_one_label_prediction()

@@ -112,8 +112,6 @@ class LightwoodBackend():
             elif data_subtype in (DATA_SUBTYPES.TEXT):
                 lightwood_data_type = 'text'
 
-            # @TODO Handle lightwood's time_series data type
-
             else:
                 self.transaction.log.error(f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
                 raise Exception('Failed to build data definition for Lightwood model backend')

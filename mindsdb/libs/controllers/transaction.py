@@ -202,7 +202,7 @@ class Transaction:
         for predicted_col in self.lmd['predict_columns']:
             output_data[predicted_col] = list(self.hmd['predictions'][predicted_col])
 
-            #probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
+            probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
             confidence_column_name = f'{predicted_col}_confidence'
             output_data[confidence_column_name] = [None] * len(output_data[predicted_col])
             evaluations[predicted_col] = [None] * len(output_data[predicted_col])
@@ -214,8 +214,8 @@ class Transaction:
                 features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']['names']]
 
                 # Create the probabilsitic evaluation
-                #prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
-                prediction_evaluation = 1
+                prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
+                #prediction_evaluation = 1
                 if type(prediction_evaluation) == float or type(prediction_evaluation) == int:
                     output_data[confidence_column_name][row_number] = prediction_evaluation
                     evaluations[predicted_col][row_number] = None

@@ -66,7 +66,7 @@ class LightwoodBackend():
                     previous_indexes.reverse()
 
                     for prev_i in previous_indexes:
-                        group_by_ts_map[k].iloc[i][order_col].append(group_by_ts_map[k].iloc[prev_i][order_col][-1])
+                        group_by_ts_map[k].iloc[i][order_col].append(group_by_ts_map[k][order_col].iloc[prev_i].split(' ')[-1])
 
                     while len(group_by_ts_map[k].iloc[i][order_col]) <= nr_samples:
                         group_by_ts_map[k].iloc[i][order_col].append('0')
@@ -187,7 +187,6 @@ class LightwoodBackend():
         else:
             run_df = df
 
-        print(run_df)
         predictions = self.predictor.predict(when_data=run_df)
 
         formated_predictions = {}

@@ -114,6 +114,7 @@ def test_timeseries():
     try:
         results = mdb.predict(when_data=test_file_name,use_gpu=False)
         models = mdb.get_models()
+        print(models)
         mdb.get_model_data(models[0]['name'])
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']

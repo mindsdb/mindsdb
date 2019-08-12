@@ -1,5 +1,6 @@
 from dateutil.parser import parse as parse_datetime
 import datetime
+import math
 
 import pandas as pd
 from mindsdb.libs.constants.mindsdb import *
@@ -8,6 +9,13 @@ from mindsdb.libs.helpers.text_helpers import clean_float
 
 
 class DataTransformer(BaseModule):
+
+    @staticmethod
+    def _handle_nan(x):
+        if x is not None and math.isnan(x):
+            return 0
+        else:
+            return x
 
     @staticmethod
     def _try_round(x):
@@ -30,13 +38,13 @@ class DataTransformer(BaseModule):
         #return date.date()
 
         # Uncomment if we want to work internally with string type
-        return date.strftime('%y-%m-%d')
+        return date.strftime('%Y-%m-%d')
 
     @staticmethod
-    def _standardize_datetime(datetime_str):
+    def _standardize_datetime(date_str):
         try:
             # will return a datetime object
-            dt = parse_datetime(date_str)
+            dt = parse_datetime(str(date_str))
         except:
             try:
                 dt = datetime.datetime.utcfromtimestamp(date_str)
@@ -47,7 +55,16 @@ class DataTransformer(BaseModule):
 
         # Uncomment if we want to work internally with string type
         # @TODO Decide if we ever need/want the milliseconds
-        return dt.strftime('%y-%m-%d %H:%M:%S')
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
+
+    @staticmethod
+    def _lightwood_datetime_processing(dt):
+        dt = pd.to_datetime(dt, errors = 'coerce')
+        try:
+            return dt.timestamp()
+        except:
+            # @TODO Return `None` after appropriate changes in lightwood
+            return None
 
     @staticmethod
     def _aply_to_all_data(input_data, column, func):
@@ -74,6 +91,7 @@ class DataTransformer(BaseModule):
 
             if data_type == DATA_TYPES.NUMERIC:
                 self._aply_to_all_data(input_data, column, clean_float)
+                self._aply_to_all_data(input_data, column, self._handle_nan)
 
                 if data_subtype == DATA_SUBTYPES.INT:
                     self._aply_to_all_data(input_data, column, DataTransformer._try_round)
@@ -85,14 +103,14 @@ class DataTransformer(BaseModule):
                 elif data_subtype == DATA_SUBTYPES.TIMESTAMP:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
 
-            if data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE:
+            if data_type == DATA_TYPES.CATEGORICAL:
                     self._cast_all_data(input_data, column, 'category')
 
             if self.transaction.lmd['model_backend'] == 'lightwood':
                 if data_type == DATA_TYPES.DATE:
-                    #self._cast_all_data(input_data, column, 'datetime')
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
-                    self._aply_to_all_data(input_data, column, pd.to_datetime)
+                    self._aply_to_all_data(input_data, column, self._lightwood_datetime_processing)
+                    self._aply_to_all_data(input_data, column, self._handle_nan)
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:

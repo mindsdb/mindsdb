@@ -215,7 +215,8 @@ class Transaction:
 
                 # Create the probabilsitic evaluation
                 prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
-                if type(prediction_evaluation) == float:
+                #prediction_evaluation = 1
+                if type(prediction_evaluation) == float or type(prediction_evaluation) == int:
                     output_data[confidence_column_name][row_number] = prediction_evaluation
                     evaluations[predicted_col][row_number] = None
                 else:

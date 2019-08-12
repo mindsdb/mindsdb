@@ -42,7 +42,7 @@ class ModelAnalyzer(BaseModule):
 
         ignorable_input_columns = []
         for input_column in input_columns:
-            if self.transaction.lmd['column_stats'][input_column]['data_type'] != DATA_TYPES.FILE_PATH:
+            if self.transaction.lmd['column_stats'][input_column]['data_type'] != DATA_TYPES.FILE_PATH and input_column not in [x[0] for x in self.transaction.lmd['model_order_by']]:
                 ignorable_input_columns.append(input_column)
 
 

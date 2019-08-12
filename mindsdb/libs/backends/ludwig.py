@@ -58,7 +58,7 @@ class LudwigBackend():
             new_cols[col] = []
 
         nr_ele = len(df[timeseries_col_name])
-        
+
         i = 0
         while i < nr_ele:
             new_row = {}

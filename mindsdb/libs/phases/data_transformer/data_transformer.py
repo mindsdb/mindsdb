@@ -64,7 +64,7 @@ class DataTransformer(BaseModule):
             return dt.timestamp()
         except:
             # @TODO Return `None` after appropriate changes in lightwood
-            return 0
+            return None
 
     @staticmethod
     def _aply_to_all_data(input_data, column, func):
@@ -110,6 +110,7 @@ class DataTransformer(BaseModule):
                 if data_type == DATA_TYPES.DATE:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
                     self._aply_to_all_data(input_data, column, self._lightwood_datetime_processing)
+                    self._aply_to_all_data(input_data, column, self._handle_nan)
 
         # Un-bias dataset for training
         for colum in self.transaction.lmd['predict_columns']:

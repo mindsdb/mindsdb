@@ -46,8 +46,6 @@ sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/dist
 
 ```
 
-You can also use the Docker image [here](https://github.com/mindsdb/mindsdb/tree/master/distributions/docker)
-
 # Hardware
 
 Due to the fact that pytorch only supports certain instruction sets, mindsdb can only use certain types of GPUs.

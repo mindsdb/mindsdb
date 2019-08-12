@@ -67,6 +67,16 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 
 Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 
+## Contributing
+
+In order to make changes to mindsdb, the ideal approach is to fork the repository than clone the fork locally `PYTHONPATH`.
+
+For example: `export PYTHONPATH=$PYTHONPATH:/home/my_username/mindsdb`.
+
+To test if your changes are working you can try running the CI tests locally: `cd tests/ci_tests && python3 full_test.py`
+
+Once you have specific changes you want to merge into master, feel free to make a PR.
+
 ## Report Issues
 
 Please help us by reporting any issues you may have while using MindsDB.

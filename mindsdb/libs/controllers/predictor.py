@@ -223,8 +223,8 @@ class Predictor:
             amd['status'] = 'training'
 
         # Shared keys
-        for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'accuracy',
-        'current_phase', 'train_end_at', 'updated_at', 'created_at','data_preparation', 'validation_set_accuracy']:
+        for k in ['name', 'version', 'is_active', 'data_source', 'predict', 'current_phase',
+        'train_end_at', 'updated_at', 'created_at','data_preparation', 'validation_set_accuracy']:
             if k == 'predict':
                 amd[k] = lmd['predict_columns']
             elif k in lmd:
@@ -422,7 +422,7 @@ class Predictor:
             print(e)
             return False
 
-    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=True, disable_optional_analysis=False, unstable_parameters_dict={}):
+    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, unstable_parameters_dict={}):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -546,7 +546,7 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
-    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=True):
+    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False):
         """
         You have a mind trained already and you want to make a prediction
 

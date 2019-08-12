@@ -76,7 +76,7 @@ def test_timeseries():
 
     mdb = None
     try:
-        mdb = mindsdb.Predictor(name='test_date_timeseries')
+        mdb = mindsdb.Predictor(name='test_date_timeseries_2')
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         print(traceback.format_exc())
@@ -104,7 +104,7 @@ def test_timeseries():
 
     # Predict
     try:
-        mdb = mindsdb.Predictor(name='test_date_timeseries')
+        mdb = mindsdb.Predictor(name='test_date_timeseries_2')
         logger.debug(f'Succesfully create mindsdb Predictor')
     except:
         print(traceback.format_exc())
@@ -113,8 +113,7 @@ def test_timeseries():
 
     try:
         results = mdb.predict(when_data=test_file_name,use_gpu=False)
-        models = mdb.get_models()
-        mdb.get_model_data(models[0]['name'])
+
         for row in results:
             expect_columns = [label_headers[0] ,label_headers[0] + '_confidence']
             for col in expect_columns:
@@ -122,6 +121,10 @@ def test_timeseries():
                     logger.error(f'Prediction failed to return expected column: {col}')
                     logger.debug('Got row: {}'.format(row))
                     exit(1)
+
+        models = mdb.get_models()
+        print(models)
+        mdb.get_model_data(models[0]['name'])
 
         logger.info(f'--------------- Predicting ran succesfully ---------------')
     except:
@@ -221,7 +224,7 @@ def test_one_label_prediction_wo_strings():
     logger.debug(f'Creating one-labe test datasets and saving them to {train_file_name} and {test_file_name}, total dataset size will be {data_len} rows')
 
     try:
-        features = generate_value_cols(['int','float','date','int'],data_len, separator)
+        features = generate_value_cols(['int','float','datetime','date','int'],data_len, separator)
         labels = [generate_labels_2(features, separator)]
 
         feature_headers = list(map(lambda col: col[0], features))
@@ -378,7 +381,7 @@ def test_multilabel_prediction():
 setup_testing_logger()
 
 if __name__ == '__main__':
-    test_one_label_prediction_wo_strings()
     test_timeseries()
+    test_one_label_prediction_wo_strings()
     test_multilabel_prediction()
     test_one_label_prediction()

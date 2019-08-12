@@ -14,7 +14,7 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 class FileDS(DataSource):
-    
+
     def cleanRow(self, row):
         n_row = []
         for cell in row:
@@ -128,7 +128,7 @@ class FileDS(DataSource):
                 if i > 0:
                     break
 
-            accepted_delimiters = [',','\t']
+            accepted_delimiters = [',','\t', ';']
             dialect = csv.Sniffer().sniff(''.join(first_few_lines[0]), delimiters=accepted_delimiters)
             data.seek(0)
             # if csv dialect identified then return csv
@@ -193,4 +193,7 @@ class FileDS(DataSource):
         else:
             file_list_data = file_data
 
-        self.setDF(pandas.DataFrame(file_list_data, columns=header))
+        try:
+            self.setDF(pandas.DataFrame(file_list_data, columns=header))
+        except:
+            self.setDF(pandas.read_csv(file))

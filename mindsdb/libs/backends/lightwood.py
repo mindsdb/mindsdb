@@ -34,11 +34,13 @@ class LightwoodBackend():
                 group_by_ts_map[gb_lookup_key] = []
 
             for col in order_by:
+                if row[col] is None:
+                    row[col] = 0.0
                 try:
                     row[col] = float(row[col])
                 except:
                     try:
-                        row[col] = float(parse_datetime(row[col]).timestamp())
+                        row[col] = float(row[col].timestamp())
                     except:
                         self.transaction.log.error(f'Backend Lightwood does not support ordering by the column: {col} !, Faulty value: {row[col]}')
                         sys.exit()
@@ -53,6 +55,7 @@ class LightwoodBackend():
                 for i in range(0,len(group_by_ts_map[k])):
                     group_by_ts_map[k][order_col] = group_by_ts_map[k][order_col].astype(object)
 
+
                     numerical_value = float(group_by_ts_map[k][order_col].iloc[i])
                     arr_val = [str(numerical_value)]
 
@@ -63,7 +66,10 @@ class LightwoodBackend():
                     previous_indexes.reverse()
 
                     for prev_i in previous_indexes:
-                        group_by_ts_map[k].iloc[i][order_col].append(group_by_ts_map[k].iloc[prev_i][order_col][-1])
+                        group_by_ts_map[k].iloc[i][order_col].append(group_by_ts_map[k][order_col].iloc[prev_i].split(' ')[-1])
+
+                    while len(group_by_ts_map[k].iloc[i][order_col]) <= nr_samples:
+                        group_by_ts_map[k].iloc[i][order_col].append('0')
 
                     group_by_ts_map[k].iloc[i][order_col].reverse()
                     group_by_ts_map[k][order_col].iat[i] = ' '.join(group_by_ts_map[k].iloc[i][order_col])
@@ -106,11 +112,12 @@ class LightwoodBackend():
             elif data_subtype in (DATA_SUBTYPES.TEXT):
                 lightwood_data_type = 'text'
 
-            # @TODO Handle lightwood's time_series data type
-
             else:
                 self.transaction.log.error(f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
                 raise Exception('Failed to build data definition for Lightwood model backend')
+
+            if col_name in [x[0] for x in self.transaction.lmd['model_order_by']]:
+                lightwood_data_type = 'time_series'
 
             col_config = {
                 'name': col_name,
@@ -126,6 +133,8 @@ class LightwoodBackend():
         return config
 
     def train(self):
+        lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
+
         if self.transaction.lmd['model_order_by'] is not None and len(self.transaction.lmd['model_order_by']) > 0:
             train_df = self._create_timeseries_df(self.transaction.input_data.train_df)
             test_df = self._create_timeseries_df(self.transaction.input_data.test_df)
@@ -139,13 +148,20 @@ class LightwoodBackend():
             self.predictor = lightwood.Predictor(load_from_path=os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data'))
         else:
             self.predictor = lightwood.Predictor(lightwood_config)
-            self.predictor.learn(from_data=train_df, test_data=test_df)
+
+            if self.transaction.lmd['stop_training_in_x_seconds'] is None:
+                self.predictor.learn(from_data=train_df, test_data=test_df)
+            else:
+                self.predictor.learn(from_data=train_df, test_data=test_df, stop_training_after_seconds=self.transaction.lmd['stop_training_in_x_seconds'])
+
             self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 
         self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data')
         self.predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])
 
     def predict(self, mode='predict', ignore_columns=[]):
+        lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
+
         if mode == 'predict':
             # Doing it here since currently data cleanup is included in this, in the future separate data cleanup
             lightwood_config = self._create_lightwood_config()

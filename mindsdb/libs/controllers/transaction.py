@@ -59,31 +59,47 @@ class Transaction:
         except:
             pass
 
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'rb') as fp:
-            self.lmd = pickle.load(fp)
 
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
-            self.hmd = pickle.load(fp)
+        fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle')
+        try:
+            with open(fn, 'rb') as fp:
+                self.lmd = pickle.load(fp)
+        except:
+            self.log.error(f'Could not load mindsdb light metadata from the file: {fn}')
+
+        fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle')
+        try:
+            with open(fn, 'rb') as fp:
+                self.hmd = pickle.load(fp)
+        except:
+            self.log.error(f'Could not load mindsdb heavy metadata in the file: {fn}')
 
     # @TODO Make it more generic, move to general helpers
     def save_metadata(self):
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle'), 'wb') as fp:
-            self.lmd['updated_at'] = str(datetime.datetime.now())
-            pickle.dump(self.lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
+        fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle')
+        self.lmd['updated_at'] = str(datetime.datetime.now())
+        try:
+            with open(fn, 'wb') as fp:
+                pickle.dump(self.lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
+        except:
+            self.log.error(f'Could not save mindsdb heavy metadata in the file: {fn}')
 
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle'), 'wb') as fp:
-            # Don't save data for now
-            save_hmd = {}
-            null_out_fields = ['test_from_data', 'from_data']
-            for k in null_out_fields:
-                save_hmd[k] = None
+        fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle')
+        save_hmd = {}
+        null_out_fields = ['test_from_data', 'from_data']
+        for k in null_out_fields:
+            save_hmd[k] = None
 
-            for k in self.hmd:
-                if k not in null_out_fields:
-                    save_hmd[k] = self.hmd[k]
+        for k in self.hmd:
+            if k not in null_out_fields:
+                save_hmd[k] = self.hmd[k]
 
-            # Don't save data for now
-            pickle.dump(save_hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
+        try:
+            with open(fn, 'wb') as fp:
+                # Don't save data for now
+                pickle.dump(save_hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
+        except:
+            self.log.error(f'Could not save mindsdb light metadata in the file: {fn}')
 
     def _call_phase_module(self, clean_exit, module_name, **kwargs):
         """

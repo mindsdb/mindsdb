@@ -14,7 +14,7 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 class FileDS(DataSource):
-    
+
     def cleanRow(self, row):
         n_row = []
         for cell in row:
@@ -193,4 +193,7 @@ class FileDS(DataSource):
         else:
             file_list_data = file_data
 
-        self.setDF(pandas.DataFrame(file_list_data, columns=header))
+        try:
+            self.setDF(pandas.DataFrame(file_list_data, columns=header))
+        except:
+            self.setDF(pandas.read_csv(file))

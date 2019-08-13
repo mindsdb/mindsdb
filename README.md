@@ -25,7 +25,7 @@ You can use MindsDb on your own computer in under a minute, simply follow the [i
 
 You can try MindsDb on [Google Colab](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
 
-You can also use the Docker image [here](https://github.com/mindsdb/mindsdb/tree/master/distributions/docker)
+You can also use Docker to run mindsdb: `sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/build-docker.sh)"`
 
 If you'd prefer to watch a video tutorial, you can find it [here](https://www.youtube.com/watch?v=a49CvkoOdfY). (Note: Please manually set it to 720p or greater to have the text appear clearly)
 
@@ -66,6 +66,16 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 ```
 
 Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
+
+## Contributing
+
+In order to make changes to mindsdb, the ideal approach is to fork the repository than clone the fork locally `PYTHONPATH`.
+
+For example: `export PYTHONPATH=$PYTHONPATH:/home/my_username/mindsdb`.
+
+To test if your changes are working you can try running the CI tests locally: `cd tests/ci_tests && python3 full_test.py`
+
+Once you have specific changes you want to merge into master, feel free to make a PR.
 
 ## Report Issues
 

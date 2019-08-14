@@ -23,20 +23,19 @@ class ProbabilisticValidator():
         Chose the algorithm to use for the rest of the model
         As of right now we go with ComplementNB
         """
-        # <--- Pick one of the 3
-        self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
-        #, class_prior=[0.5,0.5]
-        #self._probabilistic_model = GaussianNB()
-        #self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
         self.X_buff = []
         self.Y_buff = []
 
         self.col_stats = col_stats
 
         if 'percentage_buckets' in col_stats:
+            self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
+
             self.buckets = col_stats['percentage_buckets']
             self.bucket_keys = [i for i in range(len(self.buckets))]
         else:
+            self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
+
             self.buckets = None
 
         self.data_type = col_stats['data_type']

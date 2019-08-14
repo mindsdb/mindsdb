@@ -126,7 +126,6 @@ class ProbabilityEvaluation:
 
         # if we our buckets are text, then return the most likely label
         if  type(self.buckets[0]) == type(""):
-            print(self.distribution)
             self.most_likely_value = bucket_margin_right
             self.final_value = self.most_likely_value
         # else calcualte the value in between the buckets (optional future implementation: we can also calcualte a random value in between the buckets)

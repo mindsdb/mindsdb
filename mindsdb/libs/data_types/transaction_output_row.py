@@ -26,7 +26,7 @@ class TransactionOutputRow:
 
             evaluation = self.evaluations[pred_col][self.row_index]
             clusters = evaluation.explain()
-            
+
             for cluster in clusters:
                 pct_confidence = round(cluster['confidence'] * 100)
                 probabilistic_value = cluster['middle_bucket']
@@ -65,6 +65,7 @@ class TransactionOutputRow:
                 else:
                     answers[pred_col].append({
                         'most_likely_value': cluster['middle_bucket'],
+                        'value_range': cluster['buckets'],
                         'confidence': cluster['confidence'],
                         'explaination': explaination,
                         'simple': f'We are {pct_confidence}% confident your answer is {probabilistic_value}'
@@ -98,4 +99,4 @@ class TransactionOutputRow:
 
     @property
     def _predicted_values(self):
-        return {pred_col:evaluations[pred_col][self.row_index].predicted_value for pred_col in evaluations}
+        return {pred_col: evaluations[pred_col][self.row_index].predicted_value for pred_col in evaluations}

@@ -144,24 +144,28 @@ class ProbabilisticValidator():
         else:
             X = [features_existence]
 
-        # @HACK
         distribution = self._probabilistic_model.predict_proba(np.array(X))[0]
         distribution = distribution.tolist()
 
-        mean = np.mean(distribution)
-        std = np.std(distribution)
+        if len([x for x in distribution if x > 0.01]) > 4:
+            # @HACK
+            mean = np.mean(distribution)
+            std = np.std(distribution)
 
-        distribution = [x if x > (mean - std/2) else 0 for x in distribution]
+            distribution = [x if x > (mean - std) else 0 for x in distribution]
 
-        sum_dist = sum(distribution)
-        distribution = [x/sum_dist for x in distribution]
+            sum_dist = sum(distribution)
+            distribution = [x/sum_dist for x in distribution]
 
-        min_val = min([x for x in distribution if x > 0.001])
-        distribution = [x - min_val if x > min_val else 0 for x in distribution]
+            min_val = min([x for x in distribution if x > 0.001])
+            distribution = [x - min_val if x > min_val else 0 for x in distribution]
 
-        sum_dist = sum(distribution)
-        distribution = [x/sum_dist for x in distribution]
-        # @HACK
+            sum_dist = sum(distribution)
+            distribution = [x/sum_dist for x in distribution]
+            # @HACK
+        else:
+            pass
+
 
         if self.buckets is not None:
             return ProbabilityEvaluation(self.buckets, distribution, predicted_value)

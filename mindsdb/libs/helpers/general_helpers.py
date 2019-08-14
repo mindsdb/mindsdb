@@ -155,9 +155,11 @@ def closest(arr, value):
     :return: The index of the member of `arr` which is closest to `value`
     """
 
+    if value == None:
+        return -1
+        
     for i,ele in enumerate(arr):
-        if value == None:
-            return -1
+
         value = float(str(value).replace(',','.'))
         if ele > value:
             return i - 1

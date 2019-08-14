@@ -27,7 +27,7 @@ class ProbabilityEvaluation:
             cluster_buckets = []
             if val >= peak_thr:
                 for i_prev in range(i - 1,0,-1):
-                    if distribution[i_prev] < memb_thr:
+                    if distribution[i_prev] < memb_thr or distribution[i_prev] < val/5:
                         break
                     vals.append(distribution[i_prev])
                     cluster_buckets.append(buckets[i_prev])

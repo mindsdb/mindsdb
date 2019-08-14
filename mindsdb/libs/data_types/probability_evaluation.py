@@ -94,9 +94,15 @@ class ProbabilityEvaluation:
         else:
             clusters = self.get_ranges_with_confidences(self.distribution,self.buckets,self.predicted_value, col_stats)
 
+            max_confidence = max([x['confidence'] for x in clusters])
             for i in range(len(clusters)):
-                if self.final_value == clusters[i] or self.final_value
-                clusters[i]['value'] = self.final_value
+                if clusters[i]['confidence'] >= (max_confidence - 0.0001):
+                    clusters[i]['value'] = self.final_value
+                elif clusters[i]['middle_bucket_left'] is not None:
+                    clusters[i]['value'] = (clusters[i]['middle_bucket_right'] + clusters[i]['middle_bucket_left'])/2
+                else:
+                    clusters[i]['value'] = clusters[i]['middle_bucket_right']
+
 
         return clusters
 

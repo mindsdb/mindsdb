@@ -23,7 +23,7 @@ class ProbabilityEvaluation:
         for i in range(len(distribution)):
             val = distribution[i]
             middle_bucket = buckets[i]
-            first_bucket_start = None
+            middle_bucket_left = None
 
             vals = []
             poss = []
@@ -34,11 +34,12 @@ class ProbabilityEvaluation:
                     for i_prev in range(i - 1,0,-1):
                         # Here we break afterwards since a bucket has as "limits" it's value (max) and the value of the previous bucket(min)
                         if distribution[i_prev] < memb_thr or distribution[i_prev] < val/5:
-                            first_bucket_start = buckets[i_prev]
+                            if i_prev == i
+                                if i_prev == 0:
+                                    middle_bucket_left = 0
+                                else:
+                                    middle_bucket_left = buckets[i_prev - 1]
                             break
-
-                        if i_prev == 0:
-                            first_bucket_start = 0
 
                         vals.append(distribution[i_prev])
                         cluster_buckets.append(buckets[i_prev])
@@ -60,7 +61,7 @@ class ProbabilityEvaluation:
                         poss.append(i_next)
                         cluster_buckets.append(buckets[i_next])
 
-                clusters.append({'values':vals,'positions':poss,'middle_confidence':val, 'buckets':cluster_buckets, 'confidence':sum(vals), 'middle_bucket': middle_bucket, 'middle_position': i})
+                clusters.append({'values':vals,'positions':poss,'middle_confidence':val, 'buckets':cluster_buckets, 'confidence':sum(vals), 'middle_bucket_right': middle_bucket, 'middle_position': i, 'middle_bucket_left':middle_bucket_left})
 
         i = 0
         while i < len(clusters):
@@ -94,6 +95,7 @@ class ProbabilityEvaluation:
             clusters = self.get_ranges_with_confidences(self.distribution,self.buckets,self.predicted_value, col_stats)
 
             for i in range(len(clusters)):
+                if self.final_value == clusters[i] or self.final_value
                 clusters[i]['value'] = self.final_value
 
         return clusters

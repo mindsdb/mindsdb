@@ -29,7 +29,6 @@ class TransactionOutputRow:
 
             for cluster in clusters:
                 pct_confidence = round(cluster['confidence'] * 100)
-                probabilistic_value = cluster['middle_bucket']
                 predicted_value = cluster['value']
 
                 if self.col_stats[pred_col]['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):

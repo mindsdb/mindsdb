@@ -82,10 +82,18 @@ class ProbabilityEvaluation:
 
 
     def explain(self, col_stats):
-        clusters = self.get_ranges_with_confidences(self.distribution,self.buckets,self.predicted_value, col_stats)
+        if self.buckets is None:
+            clusters = [{
+                    'middle_confidence':self.most_likely_probability,
+                    'confidence':self.most_likely_probability,
+                    'middle_bucket': self.most_likely_value,
+                    'value': self.final_value
+            }]
+        else:
+            clusters = self.get_ranges_with_confidences(self.distribution,self.buckets,self.predicted_value, col_stats)
 
-        for i in range(len(clusters)):
-            clusters[i]['value'] = self.final_value
+            for i in range(len(clusters)):
+                clusters[i]['value'] = self.final_value
 
         return clusters
 
@@ -106,7 +114,7 @@ class ProbabilityEvaluation:
         bucket_margin_right = self.buckets[max_prob_index]  # the predicted value will fall in between the two ends of the bucket (if not a text)
 
         # if we our buckets are text, then return the most likely label
-        if type(self.buckets[0]) == type(""):
+        if self.buckets is None or type(self.buckets[0]) == type(""):
             self.most_likely_value = bucket_margin_right
             self.final_value = self.most_likely_value
         # else calcualte the value in between the buckets (optional future implementation: we can also calcualte a random value in between the buckets)

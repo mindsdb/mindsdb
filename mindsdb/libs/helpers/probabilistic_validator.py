@@ -144,13 +144,25 @@ class ProbabilisticValidator():
         else:
             X = [features_existence]
 
-        log_types = np.seterr()
-        np.seterr(divide='ignore')
         distribution = self._probabilistic_model.predict_proba(np.array(X))[0]
-        np.seterr(divide=log_types['divide'])
+        distribution = distribution.tolist()
+
+        mean = np.mean(distribution)
+        std = np.std(distribution)
+
+        distribution = [x if x > (mean - std/2) else 0 for x in distribution]
+
+        sum_dist = sum(distribution)
+        distribution = [x/sum_dist for x in distribution]
+
+        min_val = min([x for x in distribution if x > 0.001])
+        distribution = [x - min_val if x > min_val else 0 for x in distribution]
+
+        sum_dist = sum(distribution)
+        distribution = [x/sum_dist for x in distribution]
 
         if self.buckets is not None:
-            return ProbabilityEvaluation(self.buckets, distribution.tolist(), predicted_value)
+            return ProbabilityEvaluation(self.buckets, distribution, predicted_value)
         else:
             return distribution[1]
 

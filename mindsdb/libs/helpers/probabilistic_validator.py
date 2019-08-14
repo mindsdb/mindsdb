@@ -144,6 +144,7 @@ class ProbabilisticValidator():
         else:
             X = [features_existence]
 
+        # @HACK
         distribution = self._probabilistic_model.predict_proba(np.array(X))[0]
         distribution = distribution.tolist()
 
@@ -160,6 +161,7 @@ class ProbabilisticValidator():
 
         sum_dist = sum(distribution)
         distribution = [x/sum_dist for x in distribution]
+        # @HACK
 
         if self.buckets is not None:
             return ProbabilityEvaluation(self.buckets, distribution, predicted_value)

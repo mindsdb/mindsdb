@@ -2,28 +2,25 @@
 
 class ProbabilityEvaluation:
 
-    def __init__(self, buckets, evaluation_distribution = None, predicted_value = None, logger = None):
+    def __init__(self, buckets, evaluation_distribution, predicted_value):
 
         self.distribution = evaluation_distribution
         self.predicted_value = predicted_value
         self.buckets = buckets
         self.most_likely_value = None
         self.most_likely_probability = None
-        self.logger = logger
 
         if evaluation_distribution is not None:
             self.update(evaluation_distribution, predicted_value)
 
-    def explain(self):
+    def get_detailed_values
 
+    def explain(self):
         data = {
             'x': [i if type(i) == type('') else "{0:.2f}".format(i) for i in self.buckets],
             'y': [i*100 for i in self.distribution],
             'label': 'The probability distribution of the prediction'
         }
-        if self.logger is not None:
-            self.logger.infoChart(data, type='histogram')
-
 
 
     def update(self, distribution, predicted_value):
@@ -39,8 +36,7 @@ class ProbabilityEvaluation:
         # now that we have a distribution obtain the most likely value and its probability
         max_prob_value = max(distribution)  # the highest probability in the distribution
         max_prob_index = distribution.index(max_prob_value)  # the index for the highest probability
-        max_prob_bucket_left = self.buckets[
-            max_prob_index]  # the predicted value will fall in between the two ends of the bucket (if not a text)
+        max_prob_bucket_left = self.buckets[max_prob_index]  # the predicted value will fall in between the two ends of the bucket (if not a text)
 
         if type(self.buckets[0]) == type(""):  # if we our buckets are text, then return the most likely label
             most_likely_value = max_prob_bucket_left

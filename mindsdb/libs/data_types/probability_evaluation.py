@@ -3,7 +3,6 @@
 class ProbabilityEvaluation:
 
     def __init__(self, buckets, evaluation_distribution, predicted_value):
-
         self.distribution = evaluation_distribution
         self.predicted_value = predicted_value
         self.buckets = buckets
@@ -13,14 +12,61 @@ class ProbabilityEvaluation:
         if evaluation_distribution is not None:
             self.update(evaluation_distribution, predicted_value)
 
-    def get_detailed_values
+    @staticmethod
+    def get_ranges_with_confidences(distribution,buckets):
+        peak_thr = min(12,max(distribution))
+        memb_thr = round(peak_thr/2)
+
+        clusters = []
+
+        for i in range(len(distribution)):
+            val = distribution[i]
+            vals = []
+            poss = []
+            buckets = []
+            if val >= peak_thr:
+                for i_prev in range(i,0,-1):
+                    if distribution[i_prev] < memb_thr:
+                        break
+                    vals.append(distribution[i_prev])
+                    buckets.append(buckets[i_prev])
+                    poss.append(i_prev)
+
+                vals.append(val)
+                poss.append(i)
+                buckets.append(buckets[i])
+
+            for i_next in range(i,len(distribution),1):
+                if distribution[i_next] < memb_thr:
+                    break
+                vals.append(distribution[i_next])
+                poss.append(i_next)
+                buckets.append(buckets[i_next])
+
+            clusters.append({'values':vals,'positions':poss,'middle':val, 'buckets':buckets, 'confidence':sum(vals)})
+
+        i = 0
+        while i < len(clusters):
+            broke = False
+            for ii in range(len(clusters)):
+                if i != ii:
+                    if len(set(clusters[i]).intersection(clusters[ii])) > 0:
+                        broke = True
+                        if clusters[i]['middle'] > clusters[ii]['middle']:
+                            del clusters[ii]
+                        else:
+                            del clusters[i]
+                        break
+            if broke:
+                break
+            i += 0
+
+
+
 
     def explain(self):
-        data = {
-            'x': [i if type(i) == type('') else "{0:.2f}".format(i) for i in self.buckets],
-            'y': [i*100 for i in self.distribution],
-            'label': 'The probability distribution of the prediction'
-        }
+        clusters = self.get_ranges_with_confidences(self.distribution,self.buckets)
+        return clusters
 
 
     def update(self, distribution, predicted_value):

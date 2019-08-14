@@ -232,14 +232,10 @@ class Transaction:
                 # Create the probabilsitic evaluation
                 prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
 
-                output_data[predicted_col][row_number] = prediction_evaluation.most_likely_value
+                output_data[predicted_col][row_number] = prediction_evaluation.final_value
 
-                if type(prediction_evaluation) == float or type(prediction_evaluation) == int:
-                    output_data[confidence_column_name][row_number] = prediction_evaluation
-                    evaluations[predicted_col][row_number] = None
-                else:
-                    output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
-                    evaluations[predicted_col][row_number] = prediction_evaluation
+                output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
+                evaluations[predicted_col][row_number] = prediction_evaluation
 
         self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
 

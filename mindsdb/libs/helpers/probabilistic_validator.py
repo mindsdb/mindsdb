@@ -167,10 +167,7 @@ class ProbabilisticValidator():
             pass
 
 
-        if self.buckets is not None:
-            return ProbabilityEvaluation(self.buckets, distribution, predicted_value)
-        else:
-            return distribution[1]
+        return ProbabilityEvaluation(self.buckets, distribution, predicted_value)
 
 
 

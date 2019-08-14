@@ -12,10 +12,9 @@ class ProbabilisticValidator():
     # It is fit to the results our model gets on the validation set
     """
     _smoothing_factor = 0.5 # TODO: Autodetermine smotthing factor depending on the info we know about the dataset
-    _value_bucket_probabilities = {}
     _probabilistic_model = None
-    X_buff = None
-    Y_buff = None
+    _X_buff = None
+    _Y_buff = None
 
 
     def __init__(self, col_stats, data_type=None):
@@ -23,8 +22,8 @@ class ProbabilisticValidator():
         Chose the algorithm to use for the rest of the model
         As of right now we go with ComplementNB
         """
-        self.X_buff = []
-        self.Y_buff = []
+        self._X_buff = []
+        self._Y_buff = []
 
         self.col_stats = col_stats
 
@@ -65,9 +64,9 @@ class ProbabilisticValidator():
             X = [False] * (len(self.buckets) + 1)
             X[predicted_value_b] = True
             X = X + features_existence
-            self.X_buff.append(X)
+            self._X_buff.append(X)
 
-            self.Y_buff.append(real_value_b)
+            self._Y_buff.append(real_value_b)
 
             # If no column is ignored, compute the accuracy for this bucket
             nr_missing_features = len([x for x in features_existence if x is False or x is 0])
@@ -78,8 +77,8 @@ class ProbabilisticValidator():
         else:
             predicted_value_b = predicted_value
             real_value_b = real_value
-            self.X_buff.append(features_existence)
-            self.Y_buff.append(real_value_b == predicted_value_b)
+            self._X_buff.append(features_existence)
+            self._Y_buff.append(real_value_b == predicted_value_b)
 
     def get_accuracy_histogram(self):
         x = []
@@ -109,14 +108,14 @@ class ProbabilisticValidator():
         np.seterr(divide='ignore')
 
         if self.buckets is not None:
-            self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=self.bucket_keys)
+            self._probabilistic_model.partial_fit(self._X_buff, self._Y_buff, classes=self.bucket_keys)
         else:
-            self._probabilistic_model.partial_fit(self.X_buff, self.Y_buff, classes=[True, False])
+            self._probabilistic_model.partial_fit(self._X_buff, self._Y_buff, classes=[True, False])
 
         np.seterr(divide=log_types['divide'])
 
-        self.X_buff= []
-        self.Y_buff= []
+        self._X_buff= []
+        self._Y_buff= []
 
     def fit(self):
         """
@@ -124,11 +123,11 @@ class ProbabilisticValidator():
         """
         log_types = np.seterr()
         np.seterr(divide='ignore')
-        self._probabilistic_model.fit(self.X_buff, self.Y_buff)
+        self._probabilistic_model.fit(self._X_buff, self._Y_buff)
         np.seterr(divide=log_types['divide'])
 
-        self.X_buff= []
-        self.Y_buff= []
+        self._X_buff= []
+        self._Y_buff= []
 
     def evaluate_prediction_accuracy(self, features_existence, predicted_value):
         """

@@ -70,13 +70,13 @@ class TransactionOutputRow:
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
                     })
 
-        answers = sorted(answers, lambda x: x['confidence'], reverse=True)
+        answers = sorted(answers, key=lambda x: x['confidence'], reverse=True)
 
         return answers
 
     # streamline, simplify, epitomize, outline, abdrige, review, clarify (ORIGINAL: simple_explain)
     def epitomize(self):
-        answers = self.explain()
+        answers = self.expound()
         simple_answers = []
 
         for pred_col in answers:

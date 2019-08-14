@@ -82,7 +82,7 @@ class TransactionOutputRow:
         for pred_col in answers:
             col_answers = answers[pred_col]
             simple_col_answers = [x['simple'] for x in col_answers]
-            simple_col_answers = ' and '.join(simple_col_answers) + '.'
+            simple_col_answers = ' and '.join(simple_col_answers) + '.\n'
             simple_answers.append(simple_col_answers)
 
         return '* ' + '\n* '.join(simple_answers)

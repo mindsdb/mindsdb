@@ -14,8 +14,8 @@ class ProbabilityEvaluation:
 
     @staticmethod
     def get_ranges_with_confidences(distribution,buckets):
-        peak_thr = min(0.12,max(distribution))
-        memb_thr = min(peak_thr/2,0.04)
+        peak_thr = min(0.12,max(distribution) - 0.01)
+        memb_thr = min(peak_thr/2,0.06)
         clusters = []
 
         for i in range(len(distribution)):
@@ -55,7 +55,7 @@ class ProbabilityEvaluation:
             broke = False
             for ii in range(len(clusters)):
                 if i != ii:
-                    if len(set(clusters[i]).intersection(clusters[ii])) > 0:
+                    if len(set(clusters[i]['positions']).intersection(clusters[ii]['positions'])) > 0:
                         broke = True
                         if clusters[i]['middle'] > clusters[ii]['middle']:
                             del clusters[ii]

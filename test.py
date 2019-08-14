@@ -8,4 +8,4 @@ mdb = Predictor(name='hrep')
 p_arr = mdb.predict(when_data='https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv')
 
 for p in p_arr:
-    print(p)
+    print(p.explain())

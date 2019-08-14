@@ -23,27 +23,27 @@ class ProbabilityEvaluation:
             val = distribution[i]
             vals = []
             poss = []
-            buckets = []
+            cluster_buckets = []
             if val >= peak_thr:
                 for i_prev in range(i,0,-1):
                     if distribution[i_prev] < memb_thr:
                         break
                     vals.append(distribution[i_prev])
-                    buckets.append(buckets[i_prev])
+                    cluster_buckets.append(buckets[i_prev])
                     poss.append(i_prev)
 
                 vals.append(val)
                 poss.append(i)
-                buckets.append(buckets[i])
+                cluster_buckets.append(buckets[i])
 
             for i_next in range(i,len(distribution),1):
                 if distribution[i_next] < memb_thr:
                     break
                 vals.append(distribution[i_next])
                 poss.append(i_next)
-                buckets.append(buckets[i_next])
+                cluster_buckets.append(buckets[i_next])
 
-            clusters.append({'values':vals,'positions':poss,'middle':val, 'buckets':buckets, 'confidence':sum(vals)})
+            clusters.append({'values':vals,'positions':poss,'middle':val, 'buckets':cluster_buckets, 'confidence':sum(vals)})
 
         i = 0
         while i < len(clusters):

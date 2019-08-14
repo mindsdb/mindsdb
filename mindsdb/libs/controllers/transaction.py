@@ -236,6 +236,8 @@ class Transaction:
                     output_data[confidence_column_name][row_number] = prediction_evaluation
                     evaluations[predicted_col][row_number] = None
                 else:
+                    print(prediction_evaluation.explain())
+                    exit()
                     output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
                     evaluations[predicted_col][row_number] = prediction_evaluation
 

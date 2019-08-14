@@ -32,6 +32,9 @@ class ProbabilisticValidator():
 
             self.buckets = col_stats['percentage_buckets']
             self.bucket_keys = [i for i in range(len(self.buckets))]
+
+            if len(self.buckets) < 3:
+                self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
         else:
             self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
 

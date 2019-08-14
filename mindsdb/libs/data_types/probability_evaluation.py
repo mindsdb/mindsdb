@@ -82,6 +82,7 @@ class ProbabilityEvaluation:
 
 
     def explain(self, col_stats):
+        self.update(self.distribution, self.predicted_value)
         if self.buckets is None:
             clusters = [{
                     'middle_confidence':self.most_likely_probability,
@@ -107,14 +108,17 @@ class ProbabilityEvaluation:
         self.predicted_value = predicted_value
         self.distribution = distribution
 
+        if self.buckets is None:
+            self.most_likely_probability = self.distribution[0]
 
         # now that we have a distribution obtain the most likely value and its probability
-        self.most_likely_probability = max(distribution)  # the highest probability in the distribution
-        max_prob_index = distribution.index(self.most_likely_probability)  # the index for the highest probability
+        self.most_likely_probability = max(self.distribution)  # the highest probability in the distribution
+        max_prob_index = self.distribution.index(self.most_likely_probability)  # the index for the highest probability
         bucket_margin_right = self.buckets[max_prob_index]  # the predicted value will fall in between the two ends of the bucket (if not a text)
 
         # if we our buckets are text, then return the most likely label
-        if self.buckets is None or type(self.buckets[0]) == type(""):
+        if  type(self.buckets[0]) == type(""):
+            print(self.distribution)
             self.most_likely_value = bucket_margin_right
             self.final_value = self.most_likely_value
         # else calcualte the value in between the buckets (optional future implementation: we can also calcualte a random value in between the buckets)
@@ -123,6 +127,7 @@ class ProbabilityEvaluation:
             bucket_margin_left = None
             if max_prob_index >= len(self.buckets) - 1:
                 self.most_likely_value = bucket_margin_right
+                self.final_value = self.most_likely_value
             else:
                 bucket_margin_left = self.buckets[max_prob_index - 1]
                 self.most_likely_value = (bucket_margin_right + bucket_margin_left)/2

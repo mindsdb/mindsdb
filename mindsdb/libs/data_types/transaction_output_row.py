@@ -16,7 +16,7 @@ class TransactionOutputRow:
         return item in self.data.keys()
 
     def explain(self):
-        for pred_col in evaluations:
+        for pred_col in self.evaluations:
             evaluation = self.evaluations[pred_col][self.row_index]
             clusters = evaluation.explain()
             return clusters

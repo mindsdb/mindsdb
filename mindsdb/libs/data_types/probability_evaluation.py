@@ -14,9 +14,8 @@ class ProbabilityEvaluation:
 
     @staticmethod
     def get_ranges_with_confidences(distribution,buckets):
-        peak_thr = min(12,max(distribution))
-        memb_thr = round(peak_thr/2)
-
+        peak_thr = min(0.12,max(distribution))
+        memb_thr = min(peak_thr/2,0.04)
         clusters = []
 
         for i in range(len(distribution)):
@@ -25,25 +24,29 @@ class ProbabilityEvaluation:
             poss = []
             cluster_buckets = []
             if val >= peak_thr:
-                for i_prev in range(i,0,-1):
+                for i_prev in range(i - 1,0,-1):
                     if distribution[i_prev] < memb_thr:
                         break
                     vals.append(distribution[i_prev])
                     cluster_buckets.append(buckets[i_prev])
                     poss.append(i_prev)
 
+                vals.reverse()
+                poss.reverse()
+                cluster_buckets.reverse()
+
                 vals.append(val)
                 poss.append(i)
                 cluster_buckets.append(buckets[i])
 
-            for i_next in range(i,len(distribution),1):
-                if distribution[i_next] < memb_thr:
-                    break
-                vals.append(distribution[i_next])
-                poss.append(i_next)
-                cluster_buckets.append(buckets[i_next])
+                for i_next in range(i + 1,len(distribution),1):
+                    if distribution[i_next] < memb_thr:
+                        break
+                    vals.append(distribution[i_next])
+                    poss.append(i_next)
+                    cluster_buckets.append(buckets[i_next])
 
-            clusters.append({'values':vals,'positions':poss,'middle':val, 'buckets':cluster_buckets, 'confidence':sum(vals)})
+                clusters.append({'values':vals,'positions':poss,'middle':val, 'buckets':cluster_buckets, 'confidence':sum(vals)})
 
         i = 0
         while i < len(clusters):
@@ -59,7 +62,7 @@ class ProbabilityEvaluation:
                         break
             if broke:
                 break
-            i += 0
+            i += 1
         return clusters
 
 

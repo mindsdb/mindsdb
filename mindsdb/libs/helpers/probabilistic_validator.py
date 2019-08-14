@@ -146,13 +146,13 @@ class ProbabilisticValidator():
 
         log_types = np.seterr()
         np.seterr(divide='ignore')
-        distribution = self._probabilistic_model.predict_proba(np.array(X))
+        distribution = self._probabilistic_model.predict_proba(np.array(X))[0]
         np.seterr(divide=log_types['divide'])
 
         if self.buckets is not None:
-            return ProbabilityEvaluation(self.buckets, distribution[0].tolist(), predicted_value)
+            return ProbabilityEvaluation(self.buckets, distribution.tolist(), predicted_value)
         else:
-            return distribution[0][1]
+            return distribution[1]
 
 
 

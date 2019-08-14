@@ -26,7 +26,7 @@ class TransactionOutputRow:
 
             evaluation = self.evaluations[pred_col][self.row_index]
             clusters = evaluation.explain()
-            print(len(clusters))
+            
             for cluster in clusters:
                 pct_confidence = round(cluster['confidence'] * 100)
                 probabilistic_value = cluster['middle_bucket']

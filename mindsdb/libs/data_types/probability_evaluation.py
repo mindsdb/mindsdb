@@ -20,6 +20,8 @@ class ProbabilityEvaluation:
 
         for i in range(len(distribution)):
             val = distribution[i]
+            middle_bucket = buckets[i]
+
             vals = []
             poss = []
             cluster_buckets = []
@@ -46,7 +48,7 @@ class ProbabilityEvaluation:
                     poss.append(i_next)
                     cluster_buckets.append(buckets[i_next])
 
-                clusters.append({'values':vals,'positions':poss,'middle':val, 'buckets':cluster_buckets, 'confidence':sum(vals)})
+                clusters.append({'values':vals,'positions':poss,'middle':val, 'buckets':cluster_buckets, 'confidence':sum(vals), 'middle_bucket': middle_bucket})
 
         i = 0
         while i < len(clusters):
@@ -68,6 +70,9 @@ class ProbabilityEvaluation:
 
     def explain(self):
         clusters = self.get_ranges_with_confidences(self.distribution,self.buckets)
+        for i in range(len(clusters)):
+            clusters[i]['predicted_value'] = self.predicted_value
+            
         return clusters
 
 

@@ -10,11 +10,10 @@ class TrainTransactionOutputData():
 
 
 class PredictTransactionOutputData():
-    def __init__(self, transaction, data, evaluations, col_stats):
+    def __init__(self, transaction, data, evaluations):
         self.data = data
         self.evaluations = evaluations
         self.transaction = transaction
-        self.col_stats = col_stats
 
     def __iter__(self):
         for i, value in enumerate(self.data[self.transaction.lmd['columns'][0]]):

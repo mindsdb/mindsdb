@@ -59,28 +59,29 @@ class TransactionOutputRow:
                         'range': value_range,
                         'confidence': cluster['confidence'],
                         'explaination': explaination,
-                        'simple': f'We are {pct_confidence}% confident your answer lies between {range_pretty_start} and {range_end_start}'
+                        'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" lies between {range_pretty_start} and {range_end_start}'
                     })
                 else:
                     answers[pred_col].append({
                         'value': predicted_value,
                         'confidence': cluster['middle_confidence'],
                         'explaination': explaination,
-                        'simple': f'We are {pct_confidence}% confident your answer is {predicted_value}'
+                        'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
                     })
 
         return answers
 
     def simple_explain(self):
         answers = self.explain()
-        simple_answers = {}
+        simple_answers = []
 
         for pred_col in answers:
             col_answers = answers[pred_col]
             simple_col_answers = [x['simple'] for x in col_answers]
-            simple_answers[pred_col] = simple_col_answers
+            simple_col_answers = ' and '.join(simple_col_answers) + '.'
+            simple_answers.append(simple_col_answers)
 
-        return simple_answers
+        return '* ' + '\n* '.join(simple_answers)
 
     def why(self): return self.explain()
 

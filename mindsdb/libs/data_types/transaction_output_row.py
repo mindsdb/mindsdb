@@ -34,12 +34,33 @@ class TransactionOutputRow:
 
                 if self.col_stats[pred_col]['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
                     value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
+
+                    range_pretty_start = value_range[0]
+                    if range_pretty_start > 1000:
+                        range_pretty_start = round(range_pretty_start)
+                    if range_pretty_start > 100:
+                        range_pretty_start = round(range_pretty_start,2)
+                    if range_pretty_start > 10:
+                        range_pretty_start = round(range_pretty_start,1)
+                    elif range_pretty_start > pow(10,-3):
+                        range_pretty_start = round(range_pretty_start,6)
+
+                    range_end_start = value_range[-1]
+                    if range_end_start > 1000:
+                        range_end_start = round(range_end_start)
+                    if range_end_start > 100:
+                        range_end_start = round(range_end_start,2)
+                    if range_end_start > 10:
+                        range_end_start = round(range_end_start,1)
+                    elif range_end_start > pow(10,-3):
+                        range_end_start = round(range_end_start,6)
+
                     answers[pred_col].append({
                         'most_likely_value': cluster['middle_bucket'],
                         'value_range': value_range,
                         'confidence': cluster['confidence'],
                         'explaination': explaination,
-                        'simple': f'We are {pct_confidence}% confident your answer lies between {value_range[0]} and {value_range[-1]}'
+                        'simple': f'We are {pct_confidence}% confident your answer lies between {range_pretty_start} and {range_end_start}'
                     })
                 else:
                     answers[pred_col].append({
@@ -53,7 +74,13 @@ class TransactionOutputRow:
 
     def simple_explain(self):
         answers = self.explain()
-        simple_answers = [x['simple'] for x in answers]
+        simple_answers = {}
+
+        for pred_col in answers:
+            col_answers = answers[pred_col]
+            simple_col_answers = [x['simple'] for x in col_answers]
+            simple_answers[pred_col] = simple_col_answers
+
         return simple_answers
 
     def why(self): return self.explain()

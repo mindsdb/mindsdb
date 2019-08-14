@@ -103,7 +103,7 @@ class ProbabilityEvaluation:
                 else:
                     clusters[i]['value'] = clusters[i]['middle_bucket_right']
 
-        clusters = sorted(clusters, key=lambda x: x['confidence'])
+        clusters = sorted(clusters, key=lambda x: x['confidence'], reverse=True)
         return clusters
 
 

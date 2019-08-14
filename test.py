@@ -12,11 +12,6 @@ for p in p_arr:
     exp = p.explain()
 
     if len(exp['rental_price']) > 0:
-        print(exp)
-
-    continue
-    if exp['rental_price'][0]['confidence'] < 0.3:
-        print(exp)
         print(exp_s)
 
 '''
@@ -32,6 +27,8 @@ for p in predictions:
 predictions = mindsdb.predict(blah)
 
 prediction = predictions[12]
+
+.value
 
 prediction.explain() -->
 {

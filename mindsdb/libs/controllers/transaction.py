@@ -233,8 +233,8 @@ class Transaction:
                 prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
 
                 output_data[predicted_col][row_number] = prediction_evaluation.final_value
-
                 output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
+
                 evaluations[predicted_col][row_number] = prediction_evaluation
 
         self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)

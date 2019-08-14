@@ -16,7 +16,8 @@ class TransactionOutputRow:
     def __contains__(self, item):
         return item in self.data.keys()
 
-    def explain(self):
+    # festoon, spiff_up, analyze, expound, demonstrate, analyze (ORIGINAL: explain)
+    def expound(self):
         answers = {}
         for pred_col in self.evaluations:
             answers[pred_col] = []
@@ -69,9 +70,12 @@ class TransactionOutputRow:
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
                     })
 
+        answers = sorted(answers, lambda x: x['confidence'], reverse=True)
+
         return answers
 
-    def simple_explain(self):
+    # streamline, simplify, epitomize, outline, abdrige, review, clarify (ORIGINAL: simple_explain)
+    def epitomize(self):
         answers = self.explain()
         simple_answers = []
 
@@ -83,11 +87,8 @@ class TransactionOutputRow:
 
         return '* ' + '\n* '.join(simple_answers)
 
-    def why(self): return self.explain()
-
     def __str__(self):
-        return str(self.as_dict())
-
+        return str(self.simple_explain())
 
     def as_dict(self):
         return {key: self.data[key][self.row_index] for key in list(self.data.keys())}

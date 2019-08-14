@@ -70,7 +70,7 @@ class TransactionOutputRow:
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
                     })
 
-        answers = sorted(answers, key=lambda x: x['confidence'], reverse=True)
+            answers[pred_col] = sorted(answers[pred_col], key=lambda x: x['confidence'], reverse=True)
 
         return answers
 

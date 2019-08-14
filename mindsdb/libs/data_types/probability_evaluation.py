@@ -1,3 +1,4 @@
+from mindsdb.libs.constants.mindsdb import *
 
 
 class ProbabilityEvaluation:
@@ -8,12 +9,13 @@ class ProbabilityEvaluation:
         self.buckets = buckets
         self.most_likely_value = None
         self.most_likely_probability = None
+        self.final_value = None
 
         if evaluation_distribution is not None:
             self.update(evaluation_distribution, predicted_value)
 
     @staticmethod
-    def get_ranges_with_confidences(distribution,buckets):
+    def get_ranges_with_confidences(distribution,buckets,predicted_value, col_stats):
         peak_thr = min(0.12,max(distribution) - 0.01)
         memb_thr = min(peak_thr/2,0.06)
         clusters = []
@@ -21,17 +23,26 @@ class ProbabilityEvaluation:
         for i in range(len(distribution)):
             val = distribution[i]
             middle_bucket = buckets[i]
+            first_bucket_start = None
 
             vals = []
             poss = []
             cluster_buckets = []
             if val >= peak_thr:
-                for i_prev in range(i - 1,0,-1):
-                    if distribution[i_prev] < memb_thr or distribution[i_prev] < val/5:
-                        break
-                    vals.append(distribution[i_prev])
-                    cluster_buckets.append(buckets[i_prev])
-                    poss.append(i_prev)
+
+                if col_stats['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
+                    for i_prev in range(i - 1,0,-1):
+                        # Here we break afterwards since a bucket has as "limits" it's value (max) and the value of the previous bucket(min)
+                        if distribution[i_prev] < memb_thr or distribution[i_prev] < val/5:
+                            first_bucket_start = buckets[i_prev]
+                            break
+
+                        if i_prev == 0:
+                            first_bucket_start = 0
+
+                        vals.append(distribution[i_prev])
+                        cluster_buckets.append(buckets[i_prev])
+                        poss.append(i_prev)
 
                 vals.reverse()
                 poss.reverse()
@@ -41,14 +52,15 @@ class ProbabilityEvaluation:
                 poss.append(i)
                 cluster_buckets.append(buckets[i])
 
-                for i_next in range(i + 1,len(distribution),1):
-                    if distribution[i_next] < memb_thr:
-                        break
-                    vals.append(distribution[i_next])
-                    poss.append(i_next)
-                    cluster_buckets.append(buckets[i_next])
+                if col_stats['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
+                    for i_next in range(i + 1,len(distribution),1):
+                        if distribution[i_next] < memb_thr:
+                            break
+                        vals.append(distribution[i_next])
+                        poss.append(i_next)
+                        cluster_buckets.append(buckets[i_next])
 
-                clusters.append({'values':vals,'positions':poss,'middle':val, 'buckets':cluster_buckets, 'confidence':sum(vals), 'middle_bucket': middle_bucket})
+                clusters.append({'values':vals,'positions':poss,'middle_confidence':val, 'buckets':cluster_buckets, 'confidence':sum(vals), 'middle_bucket': middle_bucket, 'middle_position': i})
 
         i = 0
         while i < len(clusters):
@@ -57,7 +69,7 @@ class ProbabilityEvaluation:
                 if i != ii:
                     if len(set(clusters[i]['positions']).intersection(clusters[ii]['positions'])) > 0:
                         broke = True
-                        if clusters[i]['middle'] > clusters[ii]['middle']:
+                        if clusters[i]['middle_confidence'] > clusters[ii]['middle_confidence']:
                             del clusters[ii]
                         else:
                             del clusters[i]
@@ -65,13 +77,15 @@ class ProbabilityEvaluation:
             if broke:
                 continue
             i += 1
+
         return clusters
 
 
-    def explain(self):
-        clusters = self.get_ranges_with_confidences(self.distribution,self.buckets)
+    def explain(self, col_stats):
+        clusters = self.get_ranges_with_confidences(self.distribution,self.buckets,self.predicted_value, col_stats)
+
         for i in range(len(clusters)):
-            clusters[i]['predicted_value'] = self.predicted_value
+            clusters[i]['value'] = self.final_value
 
         return clusters
 
@@ -87,19 +101,27 @@ class ProbabilityEvaluation:
 
 
         # now that we have a distribution obtain the most likely value and its probability
-        max_prob_value = max(distribution)  # the highest probability in the distribution
-        max_prob_index = distribution.index(max_prob_value)  # the index for the highest probability
-        max_prob_bucket_left = self.buckets[max_prob_index]  # the predicted value will fall in between the two ends of the bucket (if not a text)
+        self.most_likely_probability = max(distribution)  # the highest probability in the distribution
+        max_prob_index = distribution.index(self.most_likely_probability)  # the index for the highest probability
+        bucket_margin_right = self.buckets[max_prob_index]  # the predicted value will fall in between the two ends of the bucket (if not a text)
 
-        if type(self.buckets[0]) == type(""):  # if we our buckets are text, then return the most likely label
-            most_likely_value = max_prob_bucket_left
-        else:  # else calcualte the value in between the buckets (optional future implementation: we can also calcualte a random value in between the buckets)
-            if max_prob_index >= len(
-                    self.buckets) - 1:  # if most likely is the far most right value in the buckets then dont average
-                most_likely_value = max_prob_bucket_left
+        # if we our buckets are text, then return the most likely label
+        if type(self.buckets[0]) == type(""):
+            self.most_likely_value = bucket_margin_right
+            self.final_value = self.most_likely_value
+        # else calcualte the value in between the buckets (optional future implementation: we can also calcualte a random value in between the buckets)
+        else:
+            # if most likely is the far most right value in the buckets then dont average
+            bucket_margin_left = None
+            if max_prob_index >= len(self.buckets) - 1:
+                self.most_likely_value = bucket_margin_right
             else:
-                max_prob_bucket_right = self.buckets[max_prob_index + 1]
-                most_likely_value = max_prob_bucket_left + (max_prob_bucket_right - max_prob_bucket_left) / 2
+                bucket_margin_left = self.buckets[max_prob_index - 1]
+                self.most_likely_value = (bucket_margin_right + bucket_margin_left)/2
 
-        self.most_likely_value = most_likely_value
-        self.most_likely_probability = max_prob_value
+                if bucket_margin_left is None and predicted_value <= bucket_margin_right:
+                    self.final_value = predicted_value
+                elif predicted_value <= bucket_margin_right and predicted_value >= bucket_margin_left:
+                    self.final_value = predicted_value
+                else:
+                    self.final_value = self.most_likely_value

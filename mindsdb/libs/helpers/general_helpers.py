@@ -157,10 +157,9 @@ def closest(arr, value):
 
     if value == None:
         return -1
-        
-    for i,ele in enumerate(arr):
 
-        value = float(str(value).replace(',','.'))
+    for i,ele in enumerate(arr):
+        value = float(str(value).replace(',', '.'))
         if ele > value:
             return i - 1
 

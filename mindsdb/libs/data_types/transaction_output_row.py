@@ -25,12 +25,12 @@ class TransactionOutputRow:
             explaination = explain_prediction(self.transaction_output.transaction.lmd, prediction_row)
 
             evaluation = self.evaluations[pred_col][self.row_index]
-            clusters = evaluation.explain()
+            clusters = evaluation.explain(self.transaction_output.transaction.lmd['col_stats'][pred_col])
 
             for cluster in clusters:
                 pct_confidence = round(cluster['confidence'] * 100)
                 probabilistic_value = cluster['middle_bucket']
-                predicted_value = cluster['predicted_value']
+                predicted_value = cluster['value']
 
                 if self.col_stats[pred_col]['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
                     value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
@@ -56,19 +56,18 @@ class TransactionOutputRow:
                         range_end_start = round(range_end_start,6)
 
                     answers[pred_col].append({
-                        'most_likely_value': cluster['middle_bucket'],
-                        'value_range': value_range,
+                        'value': predicted_value,
+                        'range': value_range,
                         'confidence': cluster['confidence'],
                         'explaination': explaination,
                         'simple': f'We are {pct_confidence}% confident your answer lies between {range_pretty_start} and {range_end_start}'
                     })
                 else:
                     answers[pred_col].append({
-                        'most_likely_value': cluster['middle_bucket'],
-                        'value_range': cluster['buckets'],
-                        'confidence': cluster['confidence'],
+                        'value': predicted_value,
+                        'confidence': cluster['middle_confidence'],
                         'explaination': explaination,
-                        'simple': f'We are {pct_confidence}% confident your answer is {probabilistic_value}'
+                        'simple': f'We are {pct_confidence}% confident your answer is {predicted_value}'
                     })
 
         return answers

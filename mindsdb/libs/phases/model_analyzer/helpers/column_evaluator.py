@@ -83,7 +83,7 @@ class ColumnEvaluator():
                     else:
                         percentage_buckets = None
 
-                    value_bucket = get_value_bucket(value, percentage_buckets, stats[output_column])
+                    value_bucket = get_value_bucket(value, percentage_buckets, stats[output_column], self.transaction.hmd)
                     if value_bucket not in bucket_indexes:
                         bucket_indexes[value_bucket] = []
                     bucket_indexes[value_bucket].append(index)

@@ -40,11 +40,10 @@ class ProbabilisticValidator():
 
         self.data_type = col_stats['data_type']
 
-        self.bucket_accuracy = {
+        self.bucket_accuracy = {}
 
-        }
 
-    def register_observation(self, features_existence, real_value, predicted_value):
+    def register_observation(self, features_existence, real_value, predicted_value, hmd=None):
         """
         # Register an observation in the validator's internal buffers
 
@@ -61,8 +60,8 @@ class ProbabilisticValidator():
             real_value = None
 
         if self.buckets is not None:
-            predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
-            real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats)
+            predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats, hmd)
+            real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats, hmd)
             X = [False] * (len(self.buckets) + 1)
             X[predicted_value_b] = True
             X = X + features_existence
@@ -169,7 +168,7 @@ if __name__ == "__main__":
         for i in values
     ]
 
-    pbv = ProbabilisticValidator(buckets=[1,2,3,4,5])
+    pbv = ProbabilisticValidator(col_stats={'percentage_buckets':[1,2,3,4,5], 'data_type':DATA_TYPES.NUMERIC, 'data_subtype': ''})
 
     for i in range(len(feature_rows)):
         pbv.register_observation(feature_rows[i],values[i], predictions[i])
@@ -188,7 +187,7 @@ if __name__ == "__main__":
 
     print(feature_rows)
 
-    pbv = ProbabilisticValidator(buckets=['1', '2', '3', '4', '5'], data_type=DATA_TYPES.CATEGORICAL)
+    pbv = ProbabilisticValidator(col_stats={'percentage_buckets':[1,2,3,4,5], 'data_type':DATA_TYPES.CATEGORICAL, 'data_subtype': ''})
 
     for i in range(len(feature_rows)):
         pbv.register_observation(feature_rows[i], values[i], predictions[i])

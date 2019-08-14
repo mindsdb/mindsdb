@@ -25,7 +25,7 @@ class TransactionOutputRow:
             explaination = explain_prediction(self.transaction_output.transaction.lmd, prediction_row)
 
             evaluation = self.evaluations[pred_col][self.row_index]
-            clusters = evaluation.explain(self.transaction_output.transaction.lmd['col_stats'][pred_col])
+            clusters = evaluation.explain(self.transaction_output.transaction.lmd['column_stats'][pred_col])
 
             for cluster in clusters:
                 pct_confidence = round(cluster['confidence'] * 100)

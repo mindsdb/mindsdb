@@ -34,7 +34,7 @@ class ProbabilityEvaluation:
                     for i_prev in range(i - 1,0,-1):
                         # Here we break afterwards since a bucket has as "limits" it's value (max) and the value of the previous bucket(min)
                         if distribution[i_prev] < memb_thr or distribution[i_prev] < val/5:
-                            if i_prev == i
+                            if i_prev == i:
                                 if i_prev == 0:
                                     middle_bucket_left = 0
                                 else:

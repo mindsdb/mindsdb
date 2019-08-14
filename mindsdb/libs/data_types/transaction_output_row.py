@@ -36,7 +36,7 @@ class TransactionOutputRow:
                     value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
                     answers[pred_col].append({
                         'most_likely_value': cluster['middle_bucket'],
-                        'value_range': value_rage,
+                        'value_range': value_range,
                         'confidence': cluster['confidence'],
                         'explaination': explaination,
                         'simple': f'We are {pct_confidence}% confident your answer lies between {value_range[0]} and {value_range[-1]}'

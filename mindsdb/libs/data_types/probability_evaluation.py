@@ -63,7 +63,7 @@ class ProbabilityEvaluation:
                             del clusters[i]
                         break
             if broke:
-                break
+                continue
             i += 1
         return clusters
 
@@ -72,7 +72,7 @@ class ProbabilityEvaluation:
         clusters = self.get_ranges_with_confidences(self.distribution,self.buckets)
         for i in range(len(clusters)):
             clusters[i]['predicted_value'] = self.predicted_value
-            
+
         return clusters
 
 

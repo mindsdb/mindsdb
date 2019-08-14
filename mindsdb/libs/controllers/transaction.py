@@ -241,7 +241,7 @@ class Transaction:
                     output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
                     evaluations[predicted_col][row_number] = prediction_evaluation
 
-        self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
+        self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations, col_stats=self.lmd['column_stats'])
 
         return
 

@@ -19,6 +19,8 @@ class TransactionOutputRow:
         for pred_col in self.evaluations:
             evaluation = self.evaluations[pred_col][self.row_index]
             clusters = evaluation.explain()
+            print(self.col_stats[pred_col]['data_type'])
+            print(self.col_stats[pred_col]['data_subtype'])
             return clusters
 
             prediction_row = {col: self.data[col][self.row_index] for col in list(self.data.keys())}

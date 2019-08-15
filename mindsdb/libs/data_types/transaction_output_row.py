@@ -74,7 +74,7 @@ class TransactionOutputRow:
         return answers
 
     def epitomize(self):
-        answers = self.expound()
+        answers = self.explain()
         simple_answers = []
 
         for pred_col in answers:

@@ -463,10 +463,12 @@ class StatsGenerator(BaseModule):
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
 
-        #no_processes = multiprocessing.cpu_count() - 2
-        #if no_processes < 1:
-        #    no_processes = 1
-        #pool = multiprocessing.Pool(processes=no_processes)
+        ''' @TODO Uncomment when we need multiprocessing, possibly disable on OSX
+        no_processes = multiprocessing.cpu_count() - 2
+        if no_processes < 1:
+            no_processes = 1
+        pool = multiprocessing.Pool(processes=no_processes)
+        '''
 
         if print_logs == False:
             self.log = logging.getLogger('null-logger')
@@ -686,8 +688,10 @@ class StatsGenerator(BaseModule):
             self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes[KEY_NO_GROUP_BY])
             self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])
 
-        #pool.close()
-        #pool.join()
+        ''' @TODO Uncomment when we need multiprocessing, possibly disable on OSX
+        pool.close()
+        pool.join()
+        '''
 
         self._log_interesting_stats(stats)
 

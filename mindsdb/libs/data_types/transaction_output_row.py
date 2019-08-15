@@ -86,7 +86,7 @@ class TransactionOutputRow:
         return '* ' + '\n* '.join(simple_answers)
 
     def __str__(self):
-        return str(self.simple_explain())
+        return str(self.epitomize())
 
     def as_dict(self):
         return {key: self.data[key][self.row_index] for key in list(self.data.keys())}

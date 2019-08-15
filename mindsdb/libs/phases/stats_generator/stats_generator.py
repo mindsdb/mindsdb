@@ -463,9 +463,9 @@ class StatsGenerator(BaseModule):
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
 
-        no_processes = multiprocessing.cpu_count() - 2
-        if no_processes < 1:
-            no_processes = 1
+        #no_processes = multiprocessing.cpu_count() - 2
+        #if no_processes < 1:
+        #    no_processes = 1
         #pool = multiprocessing.Pool(processes=no_processes)
 
         if print_logs == False:

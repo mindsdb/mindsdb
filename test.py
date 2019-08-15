@@ -8,7 +8,7 @@ mdb = Predictor(name='hrep')
 p_arr = mdb.predict(when_data='https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv')
 
 for p in p_arr:
-    exp_s = p.simple_explain()
+    exp_s = p.epitomize()
     exp = p.explain()
 
     if len(exp['rental_price']) > 0:

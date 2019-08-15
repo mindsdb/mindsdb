@@ -16,8 +16,8 @@ class ProbabilityEvaluation:
 
     @staticmethod
     def get_ranges_with_confidences(distribution,buckets,predicted_value, col_stats):
-        peak_confidence_threshold = min(0.12,max(distribution) - 0.01)
-        cluster_member_confidence_threshold = min(peak_confidence_threshold/2,0.06)
+        peak_confidence_threshold = min(PEAK_CONFIDENCE_THRESHOLD,max(distribution) - 0.01)
+        cluster_member_confidence_threshold = min(peak_confidence_threshold/2,CLUSTER_MEMBER_CONFIDENCE_THRESHOLD)
         clusters = []
 
         for i in range(len(distribution)):

@@ -79,3 +79,7 @@ INFO_LOG_LEVEL = 20
 WARNING_LOG_LEVEL = 30
 ERROR_LOG_LEVEL = 40
 NO_LOGS_LOG_LEVEL = 50
+
+# Magic numbers for extracting significant clusters out of the confidence distribution
+PEAK_CONFIDENCE_THRESHOLD = 0.12
+CLUSTER_MEMBER_CONFIDENCE_THRESHOLD = 0.06

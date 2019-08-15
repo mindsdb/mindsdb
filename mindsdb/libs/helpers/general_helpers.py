@@ -155,17 +155,18 @@ def closest(arr, value):
     :return: The index of the member of `arr` which is closest to `value`
     """
 
+    if value == None:
+        return -1
+
     for i,ele in enumerate(arr):
-        if value == None:
-            return -1
-        value = float(str(value).replace(',','.'))
+        value = float(str(value).replace(',', '.'))
         if ele > value:
             return i - 1
 
     return len(arr)-1
 
 
-def get_value_bucket(value, buckets, col_stats):
+def get_value_bucket(value, buckets, col_stats, hmd=None):
     """
     :return: The bucket in the `histogram` in which our `value` falls
     """
@@ -180,15 +181,15 @@ def get_value_bucket(value, buckets, col_stats):
 
     elif col_stats['data_subtype'] in (DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
         bucket = closest(buckets, value)
-    elif col_stats['data_subtype'] in (DATA_SUBTYPES.IMAGE):
-        bucket = self.hmd['bucketing_algorithms'][col_name].predict(np.array(imagehash.phash(Image.open(value)).reshape(1, -1)))[0]
+    elif col_stats['data_subtype'] in (DATA_SUBTYPES.IMAGE) and hmd is not None:
+        bucket = hmd['bucketing_algorithms'][col_name].predict(np.array(imagehash.phash(Image.open(value)).reshape(1, -1)))[0]
     else:
         bucket = len(buckets) # for null values
 
     return bucket
 
 
-def evaluate_accuracy(predictions, full_dataset, col_stats, output_columns):
+def evaluate_accuracy(predictions, full_dataset, col_stats, output_columns, hmd=None):
     score = 0
     for output_column in output_columns:
         cummulative_scores = 0
@@ -199,11 +200,11 @@ def evaluate_accuracy(predictions, full_dataset, col_stats, output_columns):
 
         i = 0
         for real_value in full_dataset[output_column]:
-            pred_val_bucket = get_value_bucket(predictions[output_column][i], buckets, col_stats[output_column])
+            pred_val_bucket = get_value_bucket(predictions[output_column][i], buckets, col_stats[output_column], hmd)
             if pred_val_bucket is None:
                 if predictions[output_column][i] == real_value:
                     cummulative_scores += 1
-            elif pred_val_bucket == get_value_bucket(real_value, buckets, col_stats[output_column]):
+            elif pred_val_bucket == get_value_bucket(real_value, buckets, col_stats[output_column], hmd):
                 cummulative_scores += 1
             i += 1
 

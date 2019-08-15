@@ -49,7 +49,7 @@ class ProbabilityEvaluation:
                 confidence_distribution_positions.reverse()
                 value_bucket_arr.reverse()
 
-                confidence_arr.append(val)
+                confidence_arr.append(middle_confidence)
                 confidence_distribution_positions.append(i)
                 value_bucket_arr.append(buckets[i])
 

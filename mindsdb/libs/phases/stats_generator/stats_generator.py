@@ -5,7 +5,7 @@ import imghdr
 import sndhdr
 import logging
 from collections import Counter
-import multiprocessing
+#import multiprocessing
 
 import numpy as np
 import scipy.stats as st
@@ -466,7 +466,7 @@ class StatsGenerator(BaseModule):
         no_processes = multiprocessing.cpu_count() - 2
         if no_processes < 1:
             no_processes = 1
-        pool = multiprocessing.Pool(processes=no_processes)
+        #pool = multiprocessing.Pool(processes=no_processes)
 
         if print_logs == False:
             self.log = logging.getLogger('null-logger')
@@ -686,8 +686,8 @@ class StatsGenerator(BaseModule):
             self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes[KEY_NO_GROUP_BY])
             self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])
 
-        pool.close()
-        pool.join()
+        #pool.close()
+        #pool.join()
 
         self._log_interesting_stats(stats)
 

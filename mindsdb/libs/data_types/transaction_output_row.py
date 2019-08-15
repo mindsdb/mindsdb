@@ -16,8 +16,7 @@ class TransactionOutputRow:
     def __contains__(self, item):
         return item in self.data.keys()
 
-    # festoon, spiff_up, analyze, expound, demonstrate, analyze (ORIGINAL: explain)
-    def expound(self):
+    def explain(self):
         answers = {}
         for pred_col in self.evaluations:
             answers[pred_col] = []
@@ -74,7 +73,6 @@ class TransactionOutputRow:
 
         return answers
 
-    # streamline, simplify, epitomize, outline, abdrige, review, clarify (ORIGINAL: simple_explain)
     def epitomize(self):
         answers = self.expound()
         simple_answers = []

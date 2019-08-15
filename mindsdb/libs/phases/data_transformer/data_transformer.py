@@ -6,6 +6,7 @@ import pandas as pd
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import clean_float
+import sys
 
 
 class DataTransformer(BaseModule):
@@ -122,30 +123,78 @@ class DataTransformer(BaseModule):
                     ciclying_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = 0
                     occurance_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = self.transaction.lmd['column_stats'][column]['histogram']['y'][i]
 
+                print(len(input_data.train_df))
+                print(len(input_data.test_df))
+                print(len(input_data.validation_df))
+                print(len(input_data.data_frame))
 
                 max_val_occurances = max(occurance_map.values())
+
                 for val in occurance_map:
-                    copied_rows = []
-                    index = len(input_data.data_frame)
+                    copied_rows_train = []
+                    copied_rows_test = []
+                    copied_rows_validate = []
+
+                    data_frame_length = len(input_data.data_frame)
+                    valid_rows = input_data.data_frame[input_data.data_frame[colum] == val]
+
                     while occurance_map[val] < max_val_occurances:
+                        data_frame_length = data_frame_length + 1
 
                         try:
-                            copied_row = input_data.data_frame[input_data.data_frame[colum] == val].iloc[ciclying_map[val]]
-                            copied_rows.append(copied_row)
+                            copied_row = valid_rows.iloc[ciclying_map[val]]
+                            index = list(valid_rows.index)[ciclying_map[val]]
 
-                            index = index + 1
+                            if index in self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]:
+                                self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                                copied_rows_train.append(copied_row)
 
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(index)
-                            self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(index)
+                            elif index in self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]:
+                                self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                                copied_rows_test.append(copied_row)
+
+                            elif index in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
+                                self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                                copied_rows_validate.append(copied_row)
+                            else:
+                                self.transaction.log.error('Somethig went wrong when balancing dataset !')
+                                sys.exit()
+
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
 
                             occurance_map[val] += 1
                             ciclying_map[val] += 1
                         except:
                             # If there is no next row to copy, append all the previously coppied rows so that we start cycling throug them
-                            input_data.data_frame = input_data.data_frame.append(copied_rows)
-                            input_data.train_df = input_data.train_df.append(copied_rows)
-                            copied_rows = []
 
-                    if len(copied_rows) > 0:
-                        input_data.data_frame = input_data.data_frame.append(copied_rows)
-                        input_data.train_df = input_data.train_df.append(copied_rows)
+                            input_data.data_frame = input_data.data_frame.append(copied_rows_train)
+                            input_data.train_df = input_data.train_df.append(copied_rows_train)
+
+                            input_data.data_frame = input_data.data_frame.append(copied_rows_test)
+                            input_data.test_df = input_data.test_df.append(copied_rows_test)
+
+                            input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
+                            input_data.validation_df = input_data.validation_df.append(copied_rows_validate)
+
+                            copied_rows_train = []
+                            copied_rows_test = []
+                            copied_rows_validate = []
+
+                            valid_rows = input_data.data_frame[input_data.data_frame[colum] == val]
+
+                    if len(copied_rows_train) > 0:
+                        input_data.data_frame = input_data.data_frame.append(copied_rows_train)
+                        input_data.train_df = input_data.train_df.append(copied_rows_train)
+
+                    if len(copied_rows_test) > 0:
+                        input_data.data_frame = input_data.data_frame.append(copied_rows_test)
+                        input_data.train_df = input_data.test_df.append(copied_rows_test)
+
+                    if len(copied_rows_validate) > 0:
+                        input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
+                        input_data.train_df = input_data.validation_df.append(copied_rows_validate)
+
+                print(len(input_data.train_df))
+                print(len(input_data.test_df))
+                print(len(input_data.validation_df))
+                print(len(input_data.data_frame))

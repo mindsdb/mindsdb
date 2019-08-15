@@ -16,24 +16,24 @@ class ProbabilityEvaluation:
 
     @staticmethod
     def get_ranges_with_confidences(distribution,buckets,predicted_value, col_stats):
-        peak_thr = min(0.12,max(distribution) - 0.01)
-        memb_thr = min(peak_thr/2,0.06)
+        peak_confidence_threshold = min(0.12,max(distribution) - 0.01)
+        cluster_member_confidence_threshold = min(peak_confidence_threshold/2,0.06)
         clusters = []
 
         for i in range(len(distribution)):
-            val = distribution[i]
-            middle_bucket = buckets[i]
+            middle_confidence = distribution[i]
+            middle_bucket_right = buckets[i]
             middle_bucket_left = None
 
-            vals = []
-            poss = []
-            cluster_buckets = []
-            if val >= peak_thr:
+            confidence_arr = []
+            confidence_distribution_positions = []
+            value_bucket_arr = []
 
+            if middle_confidence >= peak_confidence_threshold:
                 if col_stats['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
                     for i_prev in range(i - 1,0,-1):
                         # Here we break afterwards since a bucket has as "limits" it's value (max) and the value of the previous bucket(min)
-                        if distribution[i_prev] < memb_thr or distribution[i_prev] < val/5:
+                        if distribution[i_prev] < cluster_member_confidence_threshold or distribution[i_prev] < middle_confidence/5:
                             if i_prev == i:
                                 if i_prev == 0:
                                     middle_bucket_left = 0
@@ -41,27 +41,27 @@ class ProbabilityEvaluation:
                                     middle_bucket_left = buckets[i_prev - 1]
                             break
 
-                        vals.append(distribution[i_prev])
-                        cluster_buckets.append(buckets[i_prev])
-                        poss.append(i_prev)
+                        confidence_arr.append(distribution[i_prev])
+                        value_bucket_arr.append(buckets[i_prev])
+                        confidence_distribution_positions.append(i_prev)
 
-                vals.reverse()
-                poss.reverse()
-                cluster_buckets.reverse()
+                confidence_arr.reverse()
+                confidence_distribution_positions.reverse()
+                value_bucket_arr.reverse()
 
-                vals.append(val)
-                poss.append(i)
-                cluster_buckets.append(buckets[i])
+                confidence_arr.append(val)
+                confidence_distribution_positions.append(i)
+                value_bucket_arr.append(buckets[i])
 
                 if col_stats['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
                     for i_next in range(i + 1,len(distribution),1):
-                        if distribution[i_next] < memb_thr:
+                        if distribution[i_next] < cluster_member_confidence_threshold:
                             break
-                        vals.append(distribution[i_next])
-                        poss.append(i_next)
-                        cluster_buckets.append(buckets[i_next])
+                        confidence_arr.append(distribution[i_next])
+                        confidence_distribution_positions.append(i_next)
+                        value_bucket_arr.append(buckets[i_next])
 
-                clusters.append({'values':vals,'positions':poss,'middle_confidence':val, 'buckets':cluster_buckets, 'confidence':sum(vals), 'middle_bucket_right': middle_bucket, 'middle_position': i, 'middle_bucket_left':middle_bucket_left})
+                clusters.append({'values':confidence_arr,'positions':confidence_distribution_positions,'middle_confidence':middle_confidence, 'buckets':value_bucket_arr, 'confidence':sum(confidence_arr), 'middle_bucket_right': middle_bucket_right, 'middle_position': i, 'middle_bucket_left':middle_bucket_left})
 
         i = 0
         while i < len(clusters):
@@ -104,6 +104,8 @@ class ProbabilityEvaluation:
                     clusters[i]['value'] = clusters[i]['middle_bucket_right']
 
         clusters = sorted(clusters, key=lambda x: x['confidence'], reverse=True)
+        if len(clusters) == len(self.distribution) and len(self.distribution) > 1:
+            clusters = clusters[:-1]
         return clusters
 
 

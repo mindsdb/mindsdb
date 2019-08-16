@@ -102,7 +102,7 @@ class ColumnEvaluator():
                         pass
                         # @TODO Is this worth informing the user about ?
                         #print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
-        exit()
+                        
         return column_importance_dict, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution
 
     def get_column_influence(self):

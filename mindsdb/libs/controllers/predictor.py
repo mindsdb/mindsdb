@@ -74,7 +74,7 @@ class Predictor:
                             model[k] = amd[k]
                         else:
                             model[k] = None
-                            print(f'Key {k} not found in the light model metadata !')
+                            
                     models.append(model)
                 except Exception as e:
                     print(e)
@@ -236,7 +236,6 @@ class Predictor:
                         amd['accuracy'] = None
             else:
                 amd[k] = None
-                print(f'Key {k} not found in the light model metadata !')
 
         amd['data_analysis'] = {
             'target_columns_metadata': []
@@ -327,6 +326,7 @@ class Predictor:
                             continue
                         if icol not in lmd['predict_columns']:
                             try:
+                                print(lmd['column_importances'][icol])
                                 mao['overall_input_importance']['x'].append(icol)
                                 mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
                             except:

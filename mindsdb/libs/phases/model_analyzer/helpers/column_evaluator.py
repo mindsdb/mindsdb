@@ -53,7 +53,7 @@ class ColumnEvaluator():
 
             col_missing_accuracy = evaluate_accuracy(col_missing_predictions, full_dataset, stats, output_columns)
 
-            col_missing_reverse_accuracy = (normal_accuracy - col_missing_accuracy)/normal_accuracy
+            col_missing_reverse_accuracy = (1 - col_missing_accuracy)/normal_accuracy
             column_importance = (col_only_normalized_accuracy + col_missing_reverse_accuracy)/2
             column_importance_dict[input_column] = column_importance
 
@@ -69,8 +69,6 @@ class ColumnEvaluator():
                     columnless_prediction_distribution[output_column][input_column] = missing_output_histogram
 
         # @TODO should be go back to generating this information based on the buckets of the input columns ? Or just keep doing the stats generation for the input columns based on the indexes of the buckets for the output column
-        #for column in ignorable_input_columns:
-        #    if c(column_importance_dict[column] > 0.8 or column_importance_dict[column] < 0.2):
 
         for output_column in output_columns:
                 buckets_stats[output_column] = {}

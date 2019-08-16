@@ -326,7 +326,6 @@ class Predictor:
                             continue
                         if icol not in lmd['predict_columns']:
                             try:
-                                print(lmd['column_importances'][icol])
                                 mao['overall_input_importance']['x'].append(icol)
                                 mao['overall_input_importance']['y'].append(round(lmd['column_importances'][icol],1))
                             except:

@@ -45,16 +45,17 @@ class ColumnEvaluator():
             col_only_predictions = model.predict('validate', ignore_columns)
             col_only_accuracy = evaluate_accuracy(col_only_predictions, full_dataset, stats, output_columns)
 
-            col_only_normalized_accuracy = col_only_accuracy/normal_accuracy
-
             # See what happens with the accuracy if all columns but this one are present
             ignore_columns = [input_column]
             col_missing_predictions = model.predict('validate', ignore_columns)
-
             col_missing_accuracy = evaluate_accuracy(col_missing_predictions, full_dataset, stats, output_columns)
 
-            col_missing_reverse_accuracy = (1 - col_missing_accuracy)/normal_accuracy
-            column_importance = (col_only_normalized_accuracy + col_missing_reverse_accuracy)/2
+            combined_column_accuracy = ((normal_accuracy - col_missing_accuracy) + col_only_accuracy)/2
+            if combined_column_accuracy < 0:
+                combined_column_accuracy = 0
+            column_importance = 10*(1 - (normal_accuracy - combined_column_accuracy)/normal_accuracy)
+            if column_importance < 1:
+                column_importance = 1
             column_importance_dict[input_column] = column_importance
 
             # Histogram for when the column is missing, in order to plot the force vectors
@@ -101,7 +102,7 @@ class ColumnEvaluator():
                         pass
                         # @TODO Is this worth informing the user about ?
                         #print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
-
+        exit()
         return column_importance_dict, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution
 
     def get_column_influence(self):

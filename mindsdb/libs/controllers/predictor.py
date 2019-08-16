@@ -74,7 +74,7 @@ class Predictor:
                             model[k] = amd[k]
                         else:
                             model[k] = None
-                            
+
                     models.append(model)
                 except Exception as e:
                     print(e)
@@ -328,7 +328,7 @@ class Predictor:
                             try:
                                 print(lmd['column_importances'][icol])
                                 mao['overall_input_importance']['x'].append(icol)
-                                mao['overall_input_importance']['y'].append(lmd['column_importances'][icol])
+                                mao['overall_input_importance']['y'].append(round(lmd['column_importances'][icol],1))
                             except:
                                 print(f'No column importances found for {icol} !')
 

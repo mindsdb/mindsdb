@@ -262,6 +262,9 @@ class Predictor:
                     amd['force_vectors'][col]['normal_data_distribution'] = lmd['all_columns_prediction_distribution'][col]
                     amd['force_vectors'][col]['normal_data_distribution']['type'] = 'categorical'
 
+                    print(lmd['columnless_prediction_distribution'])
+                    exit()
+                    
                     amd['force_vectors'][col]['missing_data_distribution'] = {}
                     for missing_column in lmd['columnless_prediction_distribution'][col]:
                         amd['force_vectors'][col]['missing_data_distribution'][missing_column] = lmd['columnless_prediction_distribution'][col][missing_column]

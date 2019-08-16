@@ -66,8 +66,8 @@ class ColumnEvaluator():
                 # @TODO: Running stats generator just to get the histogram is very inefficient, change this
                 col_missing_output_histogram, _ = StatsGenerator.get_histogram(col_missing_predictions[output_column], data_type=stats[output_column]['data_type'],data_subtype=stats[output_column]['data_subtype'])
 
-                if col_missing_output_histogram is None:
-                    columnless_prediction_distribution[output_column][input_column] = missing_output_histogram
+                if col_missing_output_histogram is not None:
+                    columnless_prediction_distribution[output_column][input_column] = col_missing_output_histogram
 
         # @TODO should be go back to generating this information based on the buckets of the input columns ? Or just keep doing the stats generation for the input columns based on the indexes of the buckets for the output column
 
@@ -102,7 +102,7 @@ class ColumnEvaluator():
                         pass
                         # @TODO Is this worth informing the user about ?
                         #print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
-                        
+
         return column_importance_dict, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution
 
     def get_column_influence(self):

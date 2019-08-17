@@ -96,14 +96,22 @@ def explain_prediction(lmd, prediction_row, confidence, pred_col):
         explain_predictions[pred_col] = f'Column {pred_col} is of type {col_type} and thus it\'s impossible for us to make statistical inferences about it.'
 
     explain_inputs = {}
+
     for icol in important_cols:
-        if prediction_row[icol] is None or np.isnan(prediction_row[icol]):
+        try:
+            if type(prediction_row[icol]) == float:
+                a = int(prediction_row[icol])
+            isnan = False
+        except:
+            isnan = True
+
+        if prediction_row[icol] is None or isnan:
             explain_inputs[icol] = f'The column {icol} is very important for this model to predict correctly. Since it\'s missing it\'s quite likely that the quality of this prediction is lacking because of this.'
         else:
             explain_inputs[icol] = f'The value of the column {icol} played a large role in generating this prediction.'
 
     for icol in useless_cols:
-        if prediction_row[icol] is None or np.isnan(prediction_row[icol]):
+        if prediction_row[icol] is None or isnan:
             explain_inputs[icol] = f'The fact that {icol} is missing is probably not very relevant for this prediction.'
         else:
             explain_inputs[icol] = f'The column {icol} is probably not very relevant for this prediction.'

@@ -1,6 +1,5 @@
 import numpy as np
 from mindsdb.libs.constants.mindsdb import *
-import math
 
 
 def explain_prediction(lmd, prediction_row, confidence, pred_col):
@@ -98,13 +97,13 @@ def explain_prediction(lmd, prediction_row, confidence, pred_col):
 
     explain_inputs = {}
     for icol in important_cols:
-        if prediction_row[icol] is None:
-            explain_inputs[icol] = f'The column {icol} is very important for this model to predict correctly. Since it\'s missing it\'s quite likely this prediction is a bit of wild guess.'
+        if prediction_row[icol] is None or np.isnan(prediction_row[icol]):
+            explain_inputs[icol] = f'The column {icol} is very important for this model to predict correctly. Since it\'s missing it\'s quite likely that the quality of this prediction is lacking because of this.'
         else:
             explain_inputs[icol] = f'The value of the column {icol} played a large role in generating this prediction.'
 
     for icol in useless_cols:
-        if prediction_row[icol] == None:
+        if prediction_row[icol] is None or np.isnan(prediction_row[icol]):
             explain_inputs[icol] = f'The fact that {icol} is missing is probably not very relevant for this prediction.'
         else:
             explain_inputs[icol] = f'The column {icol} is probably not very relevant for this prediction.'

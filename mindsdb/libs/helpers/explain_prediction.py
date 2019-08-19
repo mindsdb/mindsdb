@@ -8,11 +8,15 @@ def explain_prediction(lmd, prediction_row, confidence, pred_col):
         :param prediction_row: The row that was predicted by the model backend and processed by mindsdb
         :return: A, hopefully human readable, string containing the explaination
     '''
-    top_20_val = np.percentile(list(lmd['column_importances'].values()),80)
-    bottom_20_val = np.percentile(list(lmd['column_importances'].values()),20)
+    if len(lmd['column_importances']) < 2 or lmd['column_importances'] is None:
+        important_cols = [col in lmd['columns'] if col not in lmd['prredict_columns']]
+        useless_cols = []
+    else:
+        top_20_val = np.percentile(list(lmd['column_importances'].values()),80)
+        bottom_20_val = np.percentile(list(lmd['column_importances'].values()),20)
 
-    important_cols = [col for col in lmd['column_importances'] if lmd['column_importances'][col] >= top_20_val]
-    useless_cols = [col for col in lmd['column_importances'] if lmd['column_importances'][col] <= bottom_20_val]
+        important_cols = [col for col in lmd['column_importances'] if lmd['column_importances'][col] >= top_20_val]
+        useless_cols = [col for col in lmd['column_importances'] if lmd['column_importances'][col] <= bottom_20_val]
 
     explain_predictions = {}
 
@@ -20,7 +24,7 @@ def explain_prediction(lmd, prediction_row, confidence, pred_col):
     col_stats = lmd['column_stats'][pred_col]
     col_type = col_stats['data_type']
 
-    if 'histogram' in col_stats:
+    if 'histogram' in col_stats and ['histogram'] is not None:
         histogram_x = None
         histogram_keys = col_stats['histogram']['x']
         if col_type == DATA_TYPES.NUMERIC:

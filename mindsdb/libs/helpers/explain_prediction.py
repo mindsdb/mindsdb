@@ -8,7 +8,7 @@ def explain_prediction(lmd, prediction_row, confidence, pred_col):
         :param prediction_row: The row that was predicted by the model backend and processed by mindsdb
         :return: A, hopefully human readable, string containing the explaination
     '''
-    if len(lmd['column_importances']) < 2 or lmd['column_importances'] is None:
+    if lmd['column_importances'] is None or len(lmd['column_importances']) < 2:
         important_cols = [col for col in lmd['columns'] if col not in lmd['prredict_columns']]
         useless_cols = []
     else:

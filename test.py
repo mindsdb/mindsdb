@@ -4,7 +4,7 @@ import sys
 
 mdb = Predictor(name='sensor123')
 
-mdb.learn(to_predict='output',from_data="https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/sensor_data.csv",use_gpu=True,stop_training_in_x_seconds=40)
+mdb.learn(to_predict='output',from_data="https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/sensor_data.csv",use_gpu=False,stop_training_in_x_seconds=40)
 
 p_arr = mdb.predict(when_data='https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/sensor_data.csv')
 

@@ -9,7 +9,7 @@ def explain_prediction(lmd, prediction_row, confidence, pred_col):
         :return: A, hopefully human readable, string containing the explaination
     '''
     if len(lmd['column_importances']) < 2 or lmd['column_importances'] is None:
-        important_cols = [col in lmd['columns'] if col not in lmd['prredict_columns']]
+        important_cols = [col for col in lmd['columns'] if col not in lmd['prredict_columns']]
         useless_cols = []
     else:
         top_20_val = np.percentile(list(lmd['column_importances'].values()),80)

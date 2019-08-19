@@ -63,6 +63,7 @@ class TransactionOutputRow:
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" lies between {range_pretty_start} and {range_end_start}'
                     })
                 else:
+                    explaination = explain_prediction(self.transaction_output.transaction.lmd, prediction_row, cluster['confidence'], pred_col)
                     answers[pred_col].append({
                         'value': predicted_value,
                         'confidence': cluster['middle_confidence'],

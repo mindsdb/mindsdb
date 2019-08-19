@@ -132,12 +132,18 @@ class LightwoodBackend():
 
         return config
 
+    @staticmethod
+    def callback_on_iter(epoch, mix_error, test_error, delta_mean):
+        self.transaction.log.debug(epoch, mix_error, test_error, delta_mean)
+
     def train(self):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
 
         if self.transaction.lmd['model_order_by'] is not None and len(self.transaction.lmd['model_order_by']) > 0:
+            self.transaction.log.debug('Reshaping data into timeseries format, this may take a while !')
             train_df = self._create_timeseries_df(self.transaction.input_data.train_df)
             test_df = self._create_timeseries_df(self.transaction.input_data.test_df)
+            self.transaction.log.debug('Done reshaping data into timeseries format !')
         else:
             train_df = self.transaction.input_data.train_df
             test_df = self.transaction.input_data.test_df
@@ -150,9 +156,9 @@ class LightwoodBackend():
             self.predictor = lightwood.Predictor(lightwood_config)
 
             if self.transaction.lmd['stop_training_in_x_seconds'] is None:
-                self.predictor.learn(from_data=train_df, test_data=test_df)
+                self.predictor.learn(from_data=train_df, test_data=test_df, callback_on_iter=self.callback_on_iter)
             else:
-                self.predictor.learn(from_data=train_df, test_data=test_df, stop_training_after_seconds=self.transaction.lmd['stop_training_in_x_seconds'])
+                self.predictor.learn(from_data=train_df, test_data=test_df, stop_training_after_seconds=self.transaction.lmd['stop_training_in_x_seconds'], callback_on_iter=self.callback_on_iter)
 
             self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 

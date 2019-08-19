@@ -132,9 +132,9 @@ class LightwoodBackend():
 
         return config
 
-    @staticmethod
-    def callback_on_iter(epoch, mix_error, test_error, delta_mean):
-        self.transaction.log.debug(epoch, mix_error, test_error, delta_mean)
+    def callback_on_iter(self, epoch, mix_error, test_error, delta_mean):
+        for attr in [epoch, mix_error, test_error, delta_mean]:
+            self.transaction.log.debug(attr)
 
     def train(self):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']

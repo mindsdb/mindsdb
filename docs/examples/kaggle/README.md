@@ -1,4 +1,4 @@
-[<Back to Table of Contents](../../../README.md)
+[<Back to Table of Contents](../README.md)
 
 # Using MindsDB with Kaggle
 Kaggle allows users to find and publish data sets, explore and build models in a web-based data-science environment.

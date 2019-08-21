@@ -1,6 +1,4 @@
-[<Back to Table of Contents](../../../README.md)
-
-[<More Kaggle examples](../README.md)
+[<Back to Table of Contents](../README.md)
 
 ## House prices dataset
 For this example we will use [house prices dataset.](https://www.kaggle.com/lespin/house-prices-dataset)

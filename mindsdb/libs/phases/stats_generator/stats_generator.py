@@ -390,7 +390,7 @@ class StatsGenerator(BaseModule):
                 col_stats['variability_score_warning'] = None
 
             # Some scores are meaningful on their own, and the user should be warnned if they fall bellow a certain threshold
-            if col_stats['empty_cells_score'] < 3:
+            if col_stats['empty_cells_score'] < 8:
                 empty_cells_percentage = col_stats['empty_percentage']
                 w = f'{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate your data is of poor quality.'
                 self.log.warning(w)
@@ -398,7 +398,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['empty_cells_score_warning'] = None
 
-            if col_stats['data_type_distribution_score'] < 3:
+            if col_stats['data_type_distribution_score'] < 7:
                 #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
                 percentage_of_data_not_of_principal_type = col_stats['data_type_distribution_score'] * 100
                 principal_data_type = col_stats['data_type']
@@ -408,7 +408,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['data_type_distribution_score_warning'] = None
 
-            if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] < 4:
+            if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] < 6:
                 percentage_of_outliers = col_stats['z_test_based_outlier_score']*100
                 w = f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means there might
                 be too much randomness in this column for us to make an accurate prediction based on it."""
@@ -426,7 +426,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['lof_based_outlier_score_warning'] = None
 
-            if col_stats['value_distribution_score'] < 9:
+            if col_stats['value_distribution_score'] < 3:
                 max_probability_key = col_stats['max_probability_key']
                 w = f"""Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !"""
                 self.log.warning(w)

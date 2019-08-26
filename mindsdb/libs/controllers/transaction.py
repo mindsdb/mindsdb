@@ -230,7 +230,7 @@ class Transaction:
                 features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']['names']]
 
                 # Create the probabilsitic evaluation
-                prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value, self.lmd['always_use_model_prediction'])
+                prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value, always_use_model_prediction=self.lmd['always_use_model_prediction'])
 
                 output_data[predicted_col][row_number] = prediction_evaluation.final_value
                 output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability

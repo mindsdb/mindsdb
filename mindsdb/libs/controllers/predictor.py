@@ -524,6 +524,11 @@ class Predictor:
         else:
             light_transaction_metadata['skip_stats_generation'] = False
 
+        if 'always_use_model_prediction' in unstable_parameters_dict:
+            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
+        else:
+            light_transaction_metadata['always_use_model_prediction'] = False
+
         if rebuild_model is False:
             old_lmd = {}
             for k in light_transaction_metadata: old_lmd[k] = light_transaction_metadata[k]
@@ -545,7 +550,7 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
-    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False):
+    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False, unstable_parameters_dict={}):
         """
         You have a mind trained already and you want to make a prediction
 
@@ -577,6 +582,11 @@ class Predictor:
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
 
+        if 'always_use_model_prediction' in unstable_parameters_dict:
+            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
+        else:
+            light_transaction_metadata['always_use_model_prediction'] = False
+            
         transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata)
 
         return transaction.output_data

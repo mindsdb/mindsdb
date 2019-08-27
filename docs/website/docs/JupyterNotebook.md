@@ -25,7 +25,7 @@ You will then see Python command line
 
 ## Installing mindsdb and running
 
-In the command line type: `!pip install mindsdb --user;` then press the `Run` button in the top bar and wait for the install to finish.
+In the command line type: `!pip install mindsdb --user --no-cache-dir;` then press the `Run` button in the top bar and wait for the install to finish.
 
 ![](https://imgur.com/MNkPyy3)
 

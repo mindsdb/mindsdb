@@ -45,7 +45,7 @@ Remember that depending on your dataset, these variables might change. Just reme
 ```python
 mdb = Predictor(name='reading_score_predictor')
 
-mdb.learn(print(predictions)
+mdb.learn(
   from_data=file, # call file from google drive
   to_predict='reading_score'
 )

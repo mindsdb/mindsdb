@@ -421,7 +421,7 @@ class Predictor:
             print(e)
             return False
 
-    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary, unstable_parameters_dict={}):
+    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict={}):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 

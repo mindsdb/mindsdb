@@ -123,12 +123,17 @@ class DataTransformer(BaseModule):
                     ciclying_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = 0
                     occurance_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = self.transaction.lmd['column_stats'][column]['histogram']['y'][i]
 
-                print(len(input_data.train_df))
-                print(len(input_data.test_df))
-                print(len(input_data.validation_df))
-                print(len(input_data.data_frame))
-
                 max_val_occurances = max(occurance_map.values())
+
+                if self.transaction.lmd['model_backend'] in ('lightwood'):
+                    lightwood_weight_map = {}
+                    for val in occurance_map:
+                        lightwood_weight_map[val] = occurance_map[val]/max_val_occurances
+
+                        if 'lightwood_weight_map' not in self.transaction.lmd:
+                            self.transaction.lmd['lightwood_weight_map'] = {}
+
+                        self.transaction.lmd['lightwood_weight_map'][column] = lightwood_weight_map
 
                 for val in occurance_map:
                     copied_rows_train = []
@@ -193,8 +198,3 @@ class DataTransformer(BaseModule):
                     if len(copied_rows_validate) > 0:
                         input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
                         input_data.train_df = input_data.validation_df.append(copied_rows_validate)
-
-                print(len(input_data.train_df))
-                print(len(input_data.test_df))
-                print(len(input_data.validation_df))
-                print(len(input_data.data_frame))

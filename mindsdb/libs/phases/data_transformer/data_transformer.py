@@ -148,7 +148,7 @@ class DataTransformer(BaseModule):
                     valid_rows = input_data.data_frame[input_data.data_frame[colum] == val]
 
                     while occurance_map[val] < max_val_occurances:
-                        if ciclying_map[val] >= len(valid_rows.index):
+                        if ciclying_map[val] >= len(valid_rows.index) - 1:
                             input_data.data_frame = input_data.data_frame.append(copied_rows_train)
                             input_data.train_df = input_data.train_df.append(copied_rows_train)
 
@@ -165,7 +165,7 @@ class DataTransformer(BaseModule):
                             ciclying_map[val] = 0
 
                         index = list(valid_rows.index)[ciclying_map[val]]
-                        
+
                         if index in self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] and not column_is_weighted_in_train:
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]

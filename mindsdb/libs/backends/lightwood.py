@@ -124,8 +124,8 @@ class LightwoodBackend():
                 'type': lightwood_data_type
             }
 
-            if col_name in self.transaction.lmd['lightwood_weight_map']:
-                col_config['weights'] = self.transaction.lmd['lightwood_weight_map'][col_name]
+            if col_name in self.transaction.lmd['weight_map']:
+                col_config['weights'] = self.transaction.lmd['weight_map'][col_name]
 
             col_config.update(other_keys)
 

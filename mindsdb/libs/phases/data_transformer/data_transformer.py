@@ -130,10 +130,10 @@ class DataTransformer(BaseModule):
                     for val in occurance_map:
                         lightwood_weight_map[val] = occurance_map[val]/max_val_occurances
 
-                        if 'lightwood_weight_map' not in self.transaction.lmd:
-                            self.transaction.lmd['lightwood_weight_map'] = {}
+                        if 'weight_map' not in self.transaction.lmd:
+                            self.transaction.lmd['weight_map'] = {}
 
-                        self.transaction.lmd['lightwood_weight_map'][column] = lightwood_weight_map
+                        self.transaction.lmd['weight_map'][column] = lightwood_weight_map
                     continue
 
                 for val in occurance_map:

@@ -508,6 +508,7 @@ class Predictor:
         light_transaction_metadata['validation_set_accuracy'] = None
         light_transaction_metadata['lightwood_data'] = {}
         light_transaction_metadata['ludwig_data'] = {}
+        light_transaction_metadata['weight_map'] = {}
 
         if 'balance_target_category' in unstable_parameters_dict:
             light_transaction_metadata['balance_target_category'] = unstable_parameters_dict['balance_target_category']
@@ -586,7 +587,7 @@ class Predictor:
             light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
         else:
             light_transaction_metadata['always_use_model_prediction'] = False
-            
+
         transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata)
 
         return transaction.output_data

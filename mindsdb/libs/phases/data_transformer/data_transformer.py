@@ -149,7 +149,7 @@ class DataTransformer(BaseModule):
                     copied_rows_validate = []
 
                     data_frame_length = len(input_data.data_frame)
-                    valid_rows = input_data.data_frame[input_data.data_frame[colum] == val]
+                    valid_rows = input_data.data_frame[input_data.data_frame[column] == val]
 
                     while occurance_map[val] < max_val_occurances:
                         if ciclying_map[val] >= len(valid_rows.index) - 1:

@@ -134,11 +134,7 @@ class DataTransformer(BaseModule):
 
 
                 column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
-
-                print(len(input_data.data_frame))
-                print(len(input_data.train_df))
-                print(len(input_data.validation_df))
-
+                
                 for val in occurance_map:
                     copied_rows_train = []
                     copied_rows_test = []
@@ -149,11 +145,13 @@ class DataTransformer(BaseModule):
 
                     while occurance_map[val] < max_val_occurances:
                         if ciclying_map[val] >= len(valid_rows.index) - 1:
-                            input_data.data_frame = input_data.data_frame.append(copied_rows_train)
-                            input_data.train_df = input_data.train_df.append(copied_rows_train)
+                            if len(copied_rows_train) > 0:
+                                input_data.data_frame = input_data.data_frame.append(copied_rows_train)
+                                input_data.train_df = input_data.train_df.append(copied_rows_train)
 
-                            input_data.data_frame = input_data.data_frame.append(copied_rows_test)
-                            input_data.test_df = input_data.test_df.append(copied_rows_test)
+                            if len(copied_rows_test) > 0:
+                                input_data.data_frame = input_data.data_frame.append(copied_rows_test)
+                                input_data.test_df = input_data.test_df.append(copied_rows_test)
 
                             input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
                             input_data.validation_df = input_data.validation_df.append(copied_rows_validate)
@@ -207,9 +205,3 @@ class DataTransformer(BaseModule):
                     if len(copied_rows_validate) > 0:
                         input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
                         input_data.train_df = input_data.validation_df.append(copied_rows_validate)
-
-                print('============')
-                print(len(input_data.data_frame))
-                print(len(input_data.train_df))
-                print(len(input_data.validation_df))
-                print('%%%%%%%%%%%%%')

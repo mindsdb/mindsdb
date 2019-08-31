@@ -134,6 +134,7 @@ class DataTransformer(BaseModule):
                             self.transaction.lmd['lightwood_weight_map'] = {}
 
                         self.transaction.lmd['lightwood_weight_map'][column] = lightwood_weight_map
+                    continue
 
                 for val in occurance_map:
                     copied_rows_train = []

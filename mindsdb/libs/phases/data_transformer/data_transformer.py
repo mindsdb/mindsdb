@@ -132,11 +132,11 @@ class DataTransformer(BaseModule):
                     for val in occurance_map:
                         lightwood_weight_map[val] = 1 - occurance_map[val]/sum_val_occurances
 
-                        if column in light_transaction_metadata['output_categories_importance_dictionar']:
-                            if val in light_transaction_metadata['output_categories_importance_dictionar'][column]:
-                                lightwood_weight_map[val] = lightwood_weight_map[val] * light_transaction_metadata['output_categories_importance_dictionar'][column][val]
-                            elif '<default>' in light_transaction_metadata['output_categories_importance_dictionar'][column]:
-                                lightwood_weight_map[val] = lightwood_weight_map[val] * light_transaction_metadata['output_categories_importance_dictionar'][column]['<default>']
+                        if column in self.transaction.lmd['output_categories_importance_dictionar']:
+                            if val in self.transaction.lmd['output_categories_importance_dictionar'][column]:
+                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionar'][column][val]
+                            elif '<default>' in self.transaction.lmd['output_categories_importance_dictionar'][column]:
+                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionar'][column]['<default>']
 
                         self.transaction.lmd['weight_map'][column] = lightwood_weight_map
 

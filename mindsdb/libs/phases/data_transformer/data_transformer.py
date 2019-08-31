@@ -124,17 +124,19 @@ class DataTransformer(BaseModule):
                     occurance_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = self.transaction.lmd['column_stats'][column]['histogram']['y'][i]
 
                 max_val_occurances = max(occurance_map.values())
+                min_val_occurances = min(occurance_map.values())
+                sum_val_occurances = sum(occurance_map.values())
 
                 if self.transaction.lmd['model_backend'] in ('lightwood'):
                     lightwood_weight_map = {}
                     for val in occurance_map:
-                        lightwood_weight_map[val] = occurance_map[val]/max_val_occurances
+                        lightwood_weight_map[val] = 1 - occurance_map[val]/sum_val_occurances
 
                         self.transaction.lmd['weight_map'][column] = lightwood_weight_map
 
 
                 column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
-                
+
                 for val in occurance_map:
                     copied_rows_train = []
                     copied_rows_test = []

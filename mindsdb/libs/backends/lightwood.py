@@ -127,6 +127,9 @@ class LightwoodBackend():
             if col_name in self.transaction.lmd['weight_map']:
                 col_config['weights'] = self.transaction.lmd['weight_map'][col_name]
 
+                print(col_name)
+                print(col_config['weights'])
+
             col_config.update(other_keys)
 
             if col_name not in self.transaction.lmd['predict_columns']:

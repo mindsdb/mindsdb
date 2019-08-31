@@ -150,7 +150,8 @@ class DataTransformer(BaseModule):
                     while occurance_map[val] < max_val_occurances:
                         try:
                             index = list(valid_rows.index)[ciclying_map[val]]
-                            
+                            print(index)
+
                             if index in self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] and not column_is_weighted_in_train:
                                 data_frame_length = data_frame_length + 1
                                 copied_row = valid_rows.iloc[ciclying_map[val]]
@@ -177,10 +178,6 @@ class DataTransformer(BaseModule):
                                 self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
 
                                 copied_rows_validate.append(copied_row)
-
-                            else:
-                                self.transaction.log.error('Somethig went wrong when balancing dataset !')
-                                sys.exit()
 
                             occurance_map[val] += 1
                             ciclying_map[val] += 1

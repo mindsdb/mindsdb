@@ -131,7 +131,9 @@ class DataTransformer(BaseModule):
                         lightwood_weight_map[val] = occurance_map[val]/max_val_occurances
 
                         self.transaction.lmd['weight_map'][column] = lightwood_weight_map
-                    continue
+
+
+                column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
 
                 for val in occurance_map:
                     copied_rows_train = []
@@ -148,11 +150,11 @@ class DataTransformer(BaseModule):
                             copied_row = valid_rows.iloc[ciclying_map[val]]
                             index = list(valid_rows.index)[ciclying_map[val]]
 
-                            if index in self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]:
+                            if index in self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] and not column_is_weighted_in_train:
                                 self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
                                 copied_rows_train.append(copied_row)
 
-                            elif index in self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]:
+                            elif index in self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY] and not column_is_weighted_in_train:
                                 self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
                                 copied_rows_test.append(copied_row)
 
@@ -183,6 +185,7 @@ class DataTransformer(BaseModule):
                             copied_rows_test = []
                             copied_rows_validate = []
 
+                            ciclying_map[val] = 0
                             valid_rows = input_data.data_frame[input_data.data_frame[colum] == val]
 
                     if len(copied_rows_train) > 0:

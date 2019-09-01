@@ -99,9 +99,12 @@ class DataExtractor(BaseModule):
         groups = df.columns.to_series().groupby(df.dtypes).groups
 
         boolean_dictionary = {True: 'True', False: 'False'}
+        numeric_dictionary = {True: 1, False: 0}
         for column in df:
-            if isinstance(column, bool):
-                df = df.replace(boolean_dictionary)
+            if is_numeric_dtype(df[column]):
+                df[column] = df[column].replace(numeric_dictionary)
+            else:
+                df[column] = df[column].replace(boolean_dictionary)
 
         if np.dtype('datetime64[ns]') in groups:
             for colname in groups[np.dtype('datetime64[ns]')]:

@@ -113,6 +113,7 @@ class DataTransformer(BaseModule):
                     self._aply_to_all_data(input_data, column, self._lightwood_datetime_processing)
                     self._aply_to_all_data(input_data, column, self._handle_nan)
 
+        for col in
         # Un-bias dataset for training
         for column in self.transaction.lmd['predict_columns']:
             if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['equal_accuracy_for_all_output_categories'] == True and mode == 'train':
@@ -132,11 +133,11 @@ class DataTransformer(BaseModule):
                     for val in occurance_map:
                         lightwood_weight_map[val] = 1 - occurance_map[val]/sum_val_occurances
 
-                        if column in self.transaction.lmd['output_categories_importance_dictionar']:
-                            if val in self.transaction.lmd['output_categories_importance_dictionar'][column]:
-                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionar'][column][val]
-                            elif '<default>' in self.transaction.lmd['output_categories_importance_dictionar'][column]:
-                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionar'][column]['<default>']
+                        if column in self.transaction.lmd['output_categories_importance_dictionary']:
+                            if val in self.transaction.lmd['output_categories_importance_dictionary'][column]:
+                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionary'][column][val]
+                            elif '<default>' in self.transaction.lmd['output_categories_importance_dictionary'][column]:
+                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionary'][column]['<default>']
 
                         self.transaction.lmd['weight_map'][column] = lightwood_weight_map
 

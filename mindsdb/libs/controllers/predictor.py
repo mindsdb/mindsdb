@@ -510,7 +510,7 @@ class Predictor:
         light_transaction_metadata['ludwig_data'] = {}
         light_transaction_metadata['weight_map'] = {}
         light_transaction_metadata['equal_accuracy_for_all_output_categories'] = equal_accuracy_for_all_output_categories
-        light_transaction_metadata['output_categories_importance_dictionar'] = output_categories_importance_dictionary if output_categories_importance_dictionary is not None else {}
+        light_transaction_metadata['output_categories_importance_dictionary'] = output_categories_importance_dictionary if output_categories_importance_dictionary is not None else {}
 
         if 'skip_model_training' in unstable_parameters_dict:
             light_transaction_metadata['skip_model_training'] = unstable_parameters_dict['skip_model_training']

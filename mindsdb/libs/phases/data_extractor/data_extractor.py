@@ -4,6 +4,7 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.helpers.text_helpers import hashtext
 from mindsdb.external_libs.stats import calculate_sample_size
+from pandas.api.types import is_numeric_dtype
 
 import random
 import traceback
@@ -99,7 +100,12 @@ class DataExtractor(BaseModule):
         groups = df.columns.to_series().groupby(df.dtypes).groups
 
         boolean_dictionary = {True: 'True', False: 'False'}
-        df = df.replace(boolean_dictionary)
+        numeric_dictionary = {True: 1, False: 0}
+        for column in df:
+            if is_numeric_dtype(df[column]):
+                df[column] = df[column].replace(numeric_dictionary)
+            else:
+                df[column] = df[column].replace(boolean_dictionary)
 
         if np.dtype('datetime64[ns]') in groups:
             for colname in groups[np.dtype('datetime64[ns]')]:

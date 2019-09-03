@@ -421,7 +421,7 @@ class Predictor:
             print(e)
             return False
 
-    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, unstable_parameters_dict={}):
+    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict={}):
         """
         Tells the mind to learn to predict a column or columns from the data in 'from_data'
 
@@ -508,11 +508,9 @@ class Predictor:
         light_transaction_metadata['validation_set_accuracy'] = None
         light_transaction_metadata['lightwood_data'] = {}
         light_transaction_metadata['ludwig_data'] = {}
-
-        if 'balance_target_category' in unstable_parameters_dict:
-            light_transaction_metadata['balance_target_category'] = unstable_parameters_dict['balance_target_category']
-        else:
-            light_transaction_metadata['balance_target_category'] = False
+        light_transaction_metadata['weight_map'] = {}
+        light_transaction_metadata['equal_accuracy_for_all_output_categories'] = equal_accuracy_for_all_output_categories
+        light_transaction_metadata['output_categories_importance_dictionary'] = output_categories_importance_dictionary if output_categories_importance_dictionary is not None else {}
 
         if 'skip_model_training' in unstable_parameters_dict:
             light_transaction_metadata['skip_model_training'] = unstable_parameters_dict['skip_model_training']
@@ -586,7 +584,7 @@ class Predictor:
             light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
         else:
             light_transaction_metadata['always_use_model_prediction'] = False
-            
+
         transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata)
 
         return transaction.output_data

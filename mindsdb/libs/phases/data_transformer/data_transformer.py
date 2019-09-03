@@ -113,9 +113,12 @@ class DataTransformer(BaseModule):
                     self._aply_to_all_data(input_data, column, self._lightwood_datetime_processing)
                     self._aply_to_all_data(input_data, column, self._handle_nan)
 
+        # Initialize this here, will be overwritten if `equal_accuracy_for_all_output_categories` is specified to be True in order to account for it
+        self.transaction.lmd['weight_map'] = self.transaction.lmd['output_categories_importance_dictionary']
+
         # Un-bias dataset for training
-        for colum in self.transaction.lmd['predict_columns']:
-            if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['balance_target_category'] == True and mode == 'train':
+        for column in self.transaction.lmd['predict_columns']:
+            if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['equal_accuracy_for_all_output_categories'] == True and mode == 'train':
                 occurance_map = {}
                 ciclying_map = {}
 
@@ -123,12 +126,25 @@ class DataTransformer(BaseModule):
                     ciclying_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = 0
                     occurance_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = self.transaction.lmd['column_stats'][column]['histogram']['y'][i]
 
-                print(len(input_data.train_df))
-                print(len(input_data.test_df))
-                print(len(input_data.validation_df))
-                print(len(input_data.data_frame))
-
                 max_val_occurances = max(occurance_map.values())
+                min_val_occurances = min(occurance_map.values())
+                sum_val_occurances = sum(occurance_map.values())
+
+                if self.transaction.lmd['model_backend'] in ('lightwood'):
+                    lightwood_weight_map = {}
+                    for val in occurance_map:
+                        lightwood_weight_map[val] = 1 - occurance_map[val]/sum_val_occurances
+
+                        if column in self.transaction.lmd['output_categories_importance_dictionary']:
+                            if val in self.transaction.lmd['output_categories_importance_dictionary'][column]:
+                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionary'][column][val]
+                            elif '<default>' in self.transaction.lmd['output_categories_importance_dictionary'][column]:
+                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionary'][column]['<default>']
+
+                        self.transaction.lmd['weight_map'][column] = lightwood_weight_map
+
+
+                column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
 
                 for val in occurance_map:
                     copied_rows_train = []
@@ -136,42 +152,17 @@ class DataTransformer(BaseModule):
                     copied_rows_validate = []
 
                     data_frame_length = len(input_data.data_frame)
-                    valid_rows = input_data.data_frame[input_data.data_frame[colum] == val]
+                    valid_rows = input_data.data_frame[input_data.data_frame[column] == val]
 
                     while occurance_map[val] < max_val_occurances:
-                        data_frame_length = data_frame_length + 1
+                        if ciclying_map[val] >= len(valid_rows.index) - 1:
+                            if len(copied_rows_train) > 0:
+                                input_data.data_frame = input_data.data_frame.append(copied_rows_train)
+                                input_data.train_df = input_data.train_df.append(copied_rows_train)
 
-                        try:
-                            copied_row = valid_rows.iloc[ciclying_map[val]]
-                            index = list(valid_rows.index)[ciclying_map[val]]
-
-                            if index in self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]:
-                                self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-                                copied_rows_train.append(copied_row)
-
-                            elif index in self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]:
-                                self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-                                copied_rows_test.append(copied_row)
-
-                            elif index in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
-                                self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-                                copied_rows_validate.append(copied_row)
-                            else:
-                                self.transaction.log.error('Somethig went wrong when balancing dataset !')
-                                sys.exit()
-
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-
-                            occurance_map[val] += 1
-                            ciclying_map[val] += 1
-                        except:
-                            # If there is no next row to copy, append all the previously coppied rows so that we start cycling throug them
-
-                            input_data.data_frame = input_data.data_frame.append(copied_rows_train)
-                            input_data.train_df = input_data.train_df.append(copied_rows_train)
-
-                            input_data.data_frame = input_data.data_frame.append(copied_rows_test)
-                            input_data.test_df = input_data.test_df.append(copied_rows_test)
+                            if len(copied_rows_test) > 0:
+                                input_data.data_frame = input_data.data_frame.append(copied_rows_test)
+                                input_data.test_df = input_data.test_df.append(copied_rows_test)
 
                             input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
                             input_data.validation_df = input_data.validation_df.append(copied_rows_validate)
@@ -180,7 +171,39 @@ class DataTransformer(BaseModule):
                             copied_rows_test = []
                             copied_rows_validate = []
 
-                            valid_rows = input_data.data_frame[input_data.data_frame[colum] == val]
+                            ciclying_map[val] = 0
+
+                        index = list(valid_rows.index)[ciclying_map[val]]
+
+                        if index in self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] and not column_is_weighted_in_train:
+                            data_frame_length = data_frame_length + 1
+                            copied_row = valid_rows.iloc[ciclying_map[val]]
+
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                            self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+
+                            copied_rows_train.append(copied_row)
+
+                        elif index in self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY] and not column_is_weighted_in_train:
+                            data_frame_length = data_frame_length + 1
+                            copied_row = valid_rows.iloc[ciclying_map[val]]
+
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                            self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+
+                            copied_rows_test.append(copied_row)
+
+                        elif index in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
+                            data_frame_length = data_frame_length + 1
+                            copied_row = valid_rows.iloc[ciclying_map[val]]
+
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                            self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+
+                            copied_rows_validate.append(copied_row)
+
+                        occurance_map[val] += 1
+                        ciclying_map[val] += 1
 
                     if len(copied_rows_train) > 0:
                         input_data.data_frame = input_data.data_frame.append(copied_rows_train)
@@ -193,8 +216,3 @@ class DataTransformer(BaseModule):
                     if len(copied_rows_validate) > 0:
                         input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
                         input_data.train_df = input_data.validation_df.append(copied_rows_validate)
-
-                print(len(input_data.train_df))
-                print(len(input_data.test_df))
-                print(len(input_data.validation_df))
-                print(len(input_data.data_frame))

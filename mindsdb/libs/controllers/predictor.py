@@ -1,14 +1,12 @@
 import shutil
 import zipfile
 import os
-import _thread
 import uuid
 import traceback
 import pickle
 
 from mindsdb.libs.data_types.mindsdb_logger import MindsdbLogger
 from mindsdb.libs.helpers.multi_data_source import getDS
-from mindsdb.libs.helpers.general_helpers import check_for_updates
 from mindsdb.__about__ import __version__
 
 from mindsdb.config import CONFIG
@@ -36,9 +34,6 @@ class Predictor:
         self.uuid = str(uuid.uuid1())
         # initialize log
         self.log = MindsdbLogger(log_level=log_level, uuid=self.uuid)
-
-        # check for updates
-        _thread.start_new_thread(check_for_updates, ())
 
         # set the mindsdb storage folder
         storage_ok = True  # default state

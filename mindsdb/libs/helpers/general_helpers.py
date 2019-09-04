@@ -81,58 +81,6 @@ def convert_snake_to_cammelcase_string(snake_str, first_lower = False):
     else:
         return ''.join(x.title() for x in components)
 
-def check_for_updates():
-    """
-    Check for updates of mindsdb
-    it will ask the mindsdb server if there are new versions, if there are it will log a message
-
-    :return: None
-    """
-
-    # tmp files
-    uuid_file = CONFIG.MINDSDB_STORAGE_PATH + '/../uuid.mdb_base'
-    mdb_file = CONFIG.MINDSDB_STORAGE_PATH + '/start.mdb_base'
-
-    uuid_file_path = Path(uuid_file)
-    if uuid_file_path.is_file():
-        uuid_str = open(uuid_file).read()
-    else:
-        uuid_str = str(uuid.uuid4())
-        try:
-            open(uuid_file, 'w').write(uuid_str)
-        except:
-            log.warning('Cannot store token, Please add write permissions to file:' + uuid_file)
-            uuid_str = uuid_str + '.NO_WRITE'
-
-    file_path = Path(mdb_file)
-    if file_path.is_file():
-        token = open(mdb_file).read()
-    else:
-        token = '{system}|{version}|{uid}'.format(system=platform.system(), version=__version__, uid=uuid_str)
-        try:
-            open(mdb_file,'w').write(token)
-        except:
-            log.warning('Cannot store token, Please add write permissions to file:'+mdb_file)
-            token = token+'.NO_WRITE'
-    extra = urllib.parse.quote_plus(token)
-    try:
-        r = requests.get('http://mindsdb.com/updates/check/{extra}'.format(extra=extra), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)})
-    except:
-        log.warning('Could not check for updates')
-        return
-    try:
-        # TODO: Extract version, compare with version in version.py
-        ret = r.json()
-
-        if 'version' in ret and ret['version']!= __version__:
-            pass
-            #log.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
-        else:
-            log.debug('MindsDB is up to date!')
-
-    except:
-        log.warning('could not check for MindsDB updates')
-
 def pickle_obj(object_to_pickle):
     """
     Returns a version of self that can be serialized into mongodb or tinydb

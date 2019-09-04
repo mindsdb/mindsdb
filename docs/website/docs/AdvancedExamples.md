@@ -19,7 +19,7 @@ import mindsdb
 mdb = mindsdb.Predictor(name='multilabel_real_estate_model')
 mdb.learn(
     from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",
-    to_predict=['location','neighborhood'] # Array with the names of the columns we can to predict
+    to_predict=['location','neighborhood'] # Array with the names of the columns we want to predict
 )
 ```
 

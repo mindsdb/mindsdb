@@ -522,6 +522,11 @@ class Predictor:
         else:
             light_transaction_metadata['always_use_model_prediction'] = False
 
+        if 'optimize_model' in unstable_parameters_dict:
+            light_transaction_metadata['optimize_model'] = unstable_parameters_dict['always_use_model_prediction']
+        else:
+            light_transaction_metadata['optimize_model'] = False
+
         if rebuild_model is False:
             old_lmd = {}
             for k in light_transaction_metadata: old_lmd[k] = light_transaction_metadata[k]

@@ -126,13 +126,16 @@ class LightwoodBackend():
 
             if col_name in self.transaction.lmd['weight_map']:
                 col_config['weights'] = self.transaction.lmd['weight_map'][col_name]
-                
+
             col_config.update(other_keys)
 
             if col_name not in self.transaction.lmd['predict_columns']:
                 config['input_features'].append(col_config)
             else:
                 config['output_features'].append(col_config)
+
+        if self.transaction.lmd['optimize_model']:
+            config['optimizer'] = lightwood.model_building.BasicAxOptimizer
 
         return config
 

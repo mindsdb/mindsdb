@@ -523,7 +523,7 @@ class Predictor:
             light_transaction_metadata['always_use_model_prediction'] = False
 
         if 'optimize_model' in unstable_parameters_dict:
-            light_transaction_metadata['optimize_model'] = unstable_parameters_dict['always_use_model_prediction']
+            light_transaction_metadata['optimize_model'] = unstable_parameters_dict['optimize_model']
         else:
             light_transaction_metadata['optimize_model'] = False
 

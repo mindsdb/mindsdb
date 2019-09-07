@@ -140,8 +140,8 @@ class LightwoodBackend():
         return config
 
     def callback_on_iter(self, epoch, mix_error, test_error, delta_mean):
-        test_error_pct = round(test_error * 100,2)
-        self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an error of {test_error_pct}% on the testing dataset')
+        test_error_rounded = round(test_error,4)
+        self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an error of {test_error_rounded} on the testing dataset')
 
     def train(self):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']

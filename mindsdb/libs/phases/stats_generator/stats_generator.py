@@ -28,7 +28,7 @@ class StatsGenerator(BaseModule):
     """
     # The stats generator phase is responsible for generating the insights we need about the data in order to vectorize it
     # Additionally, the stats generator also provides the user with some extra meaningful information about his data,
-    thoguh this functionality may be moved to a different step (after vectorization) in the future
+    though this functionality may be moved to a different step (after vectorization) in the future
     """
 
     phase_name = PHASE_STATS_GENERATOR
@@ -84,7 +84,7 @@ class StatsGenerator(BaseModule):
 
     def _get_text_type(self, data):
         """
-        Takes in column data and defiens if its categorical or full_text
+        Takes in column data and defines if its categorical or full_text
 
         :param data: a list of cells in a column
         :return: DATA_TYPES.CATEGORICAL or DATA_TYPES.FULL_TEXT
@@ -124,7 +124,7 @@ class StatsGenerator(BaseModule):
 
     def _get_column_data_type(self, data, data_frame, col_name):
         """
-        Provided the column data, define it its numeric, data or class
+        Provided the column data, define if its numeric, data or class
 
         :param data: a list containing each of the cells in a column
 
@@ -138,7 +138,7 @@ class StatsGenerator(BaseModule):
 
         # calculate type_dist
         if len(data) < 1:
-            self.log.warning(f'Column {col_name} has not data in it. Please remove {col_name} from the training file or fill in some of the values !')
+            self.log.warning(f'Column {col_name} has no data in it. Please remove {col_name} from the training file or fill in some of the values !')
             return None, None, None, None, None, 'Column empty'
 
         for element in data:
@@ -203,10 +203,10 @@ class StatsGenerator(BaseModule):
         curr_data_subtype = 'Unknown'
         max_data_type = 0
 
-        # assume that the type is the one with the most prevelant type_dist
+        # assume that the type is the one with the most prevalent type_dist
         for data_type in type_dist:
             # If any of the members are Unknown, use that data type (later to be turned into CATEGORICAL or SEQUENTIAL), since otherwise the model will crash when casting
-            # @TODO consider removing rows where data type is unknown in the future, might just be corrupt data... a bit hard to impl currently
+            # @TODO consider removing rows where data type is unknown in the future, might just be corrupt data... a bit hard to imply currently
             if data_type == 'Unknown':
                 curr_data_type = 'Unknown'
                 break
@@ -356,10 +356,10 @@ class StatsGenerator(BaseModule):
             # Overall quality
             if col_stats['quality_score'] < 6:
                 # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
-                self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decission will be listed bellow')
+                self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decision will be listed below')
                 if 'duplicates_score' in col_stats and col_stats['duplicates_score'] < 6:
                     duplicates_percentage = col_stats['duplicates_percentage']
-                    w = f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate your data is of poor quality.'
+                    w = f'{duplicates_percentage}% of the values in column {col_name} seem to be repeated, this might indicate that your data is of poor quality.'
                     self.log.warning(w)
                     col_stats['duplicates_score_warning'] = w
                 else:
@@ -369,30 +369,30 @@ class StatsGenerator(BaseModule):
 
             #Compound scores
             if col_stats['consistency_score'] < 3:
-                w = f'The values in column {col_name} rate poorly in terms of consistency. This means the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs bellow for more info'
+                w = f'The values in column {col_name} rate poorly in terms of consistency. This means that the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs below for more info'
                 self.log.warning(w)
                 col_stats['consistency_score_warning'] = w
             else:
                 col_stats['consistency_score_warning'] = None
 
             if col_stats['redundancy_score'] < 5:
-                w = f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs bellow for more info'
+                w = f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs below for more info'
                 self.log.warning(w)
                 col_stats['redundancy_score_warning'] = w
             else:
                 col_stats['redundancy_score_warning'] = None
 
             if col_stats['variability_score'] < 6:
-                w = f'The data in the column {col_name} seems to have too contain too much noise/randomness based on the value variability. That is too say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs bellow for more info.'
+                w = f'The data in the column {col_name} seems to contain too much noise/randomness based on the value variability. That is to say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs below for more info.'
                 self.log.warning(w)
                 col_stats['variability_score_warning'] = w
             else:
                 col_stats['variability_score_warning'] = None
 
-            # Some scores are meaningful on their own, and the user should be warnned if they fall bellow a certain threshold
+            # Some scores are meaningful on their own, and the user should be warnned if they fall below a certain threshold
             if col_stats['empty_cells_score'] < 8:
                 empty_cells_percentage = col_stats['empty_percentage']
-                w = f'{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate your data is of poor quality.'
+                w = f'{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate that your data is of poor quality.'
                 self.log.warning(w)
                 col_stats['empty_cells_score_warning'] = w
             else:
@@ -402,7 +402,7 @@ class StatsGenerator(BaseModule):
                 #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
                 percentage_of_data_not_of_principal_type = col_stats['data_type_distribution_score'] * 100
                 principal_data_type = col_stats['data_type']
-                w = f'{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate your data is of poor quality.'
+                w = f'{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate that your data is of poor quality.'
                 self.log.warning(w)
                 col_stats['data_type_distribution_score_warning'] = w
             else:
@@ -410,7 +410,7 @@ class StatsGenerator(BaseModule):
 
             if 'z_test_based_outlier_score' in col_stats and col_stats['z_test_based_outlier_score'] < 6:
                 percentage_of_outliers = col_stats['z_test_based_outlier_score']*100
-                w = f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means there might
+                w = f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data is more than 3 standard deviations away from the mean, this means that there might
                 be too much randomness in this column for us to make an accurate prediction based on it."""
                 self.log.warning(w)
                 col_stats['z_test_based_outlier_score_warning'] = w
@@ -419,7 +419,7 @@ class StatsGenerator(BaseModule):
 
             if 'lof_based_outlier_score' in col_stats and col_stats['lof_based_outlier_score'] < 4:
                 percentage_of_outliers = col_stats['percentage_of_log_based_outliers']
-                w = f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data doesn't fit closely in any cluster using the KNN algorithm (20n) to cluster your data, this means there might
+                w = f"""Column {col_name} has a very high amount of outliers, {percentage_of_outliers}% of your data doesn't fit closely in any cluster using the KNN algorithm (20n) to cluster your data, this means that there might
                 be too much randomness in this column for us to make an accurate prediction based on it."""
                 self.log.warning(w)
                 col_stats['lof_based_outlier_score_warning'] = w
@@ -451,7 +451,7 @@ class StatsGenerator(BaseModule):
                 {col_name} and column {most_correlated_column}""")
             '''
 
-            # We might want to inform the user about a few stats regarding his column regardless of the score, this is done bellow
+            # We might want to inform the user about a few stats regarding his column regardless of the score, this is done below
             self.log.info('Data distribution for column "{}"'.format(col_name))
             self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
 
@@ -696,3 +696,4 @@ class StatsGenerator(BaseModule):
         self._log_interesting_stats(stats)
 
         return stats
+

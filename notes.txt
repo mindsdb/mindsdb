@@ -1,7 +1,7 @@
 Look into loss function               <----- Doesn't seem to be working
 Look into when to stop training       <----- Done
 Get 98% accuracy on rental price      <----- Doesn't seem to be working,  wait for Jorge to give more info
-Look into logging accuracy correctly  <----- On it today
+Look into logging accuracy correctly  <----- Done
 Look into confusion matrix for buckets <---- On it today
 analyse_dataset                       <----- One it today
 LSTM Timeseries encoder               <----- Do it tomorrow

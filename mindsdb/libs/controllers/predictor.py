@@ -426,6 +426,7 @@ class Predictor:
         transaction_type = TRANSACTION_ANALYSE
         sample_confidence_level = 1 - sample_margin_of_error
 
+        heavy_transaction_metadata = {}
         heavy_transaction_metadata['name'] = self.name
         heavy_transaction_metadata['from_data'] = from_ds
 
@@ -436,7 +437,7 @@ class Predictor:
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
         light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
-        
+
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict={}):

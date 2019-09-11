@@ -143,7 +143,7 @@ class LightwoodBackend():
         test_error_rounded = round(test_error,4)
         for col in accuracy:
             value = accuracy[col]['value']
-            if accuracy[col]['type'] == 'function':
+            if accuracy[col]['function'] == 'r2_score':
                 value_rounded = round(value,3)
                 self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an r2 score of {value_rounded} on the testing dataset')
             else:

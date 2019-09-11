@@ -288,6 +288,7 @@ class Predictor:
                         ,"y": []
                         ,'x_explained': []
                   }
+                  ,"confusion_matrix": lmd['confusion_matrices'][col]
                 }
 
                 # This is a check to see if model analysis has run on this data
@@ -306,9 +307,6 @@ class Predictor:
                 if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and lmd['column_importances'] is not None:
                     mao['accuracy_histogram']['x'] = [f'{x}' for x in lmd['accuracy_histogram'][col]['buckets']]
                     mao['accuracy_histogram']['y'] = lmd['accuracy_histogram'][col]['accuracies']
-
-                    print(mao['accuracy_histogram'])
-                    #exit()
 
                     for output_col_bucket in lmd['columns_buckets_importances'][col]:
                         x_explained_member = []
@@ -533,6 +531,7 @@ class Predictor:
         light_transaction_metadata['lightwood_data'] = {}
         light_transaction_metadata['ludwig_data'] = {}
         light_transaction_metadata['weight_map'] = {}
+        light_transaction_metadata['confusion_matrices'] = {}
         light_transaction_metadata['equal_accuracy_for_all_output_categories'] = equal_accuracy_for_all_output_categories
         light_transaction_metadata['output_categories_importance_dictionary'] = output_categories_importance_dictionary if output_categories_importance_dictionary is not None else {}
 

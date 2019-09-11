@@ -3,6 +3,7 @@ from mindsdb.libs.data_types.probability_evaluation import ProbabilityEvaluation
 from mindsdb.libs.helpers.general_helpers import get_value_bucket
 
 from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
+from sklearn.metrics import confusion_matrix
 import numpy as np
 
 
@@ -24,6 +25,8 @@ class ProbabilisticValidator():
         """
         self._X_buff = []
         self._Y_buff = []
+        self._predicted_buckets_buff = []
+        self._real_buckets_buff = []
 
         self.col_stats = col_stats
 
@@ -70,6 +73,8 @@ class ProbabilisticValidator():
             self._X_buff.append(X)
 
             self._Y_buff.append(real_value_b)
+            self._real_buckets_buff = self._Y_buff
+            self._predicted_buckets_buff.append(predicted_value_b)
 
             # If no column is ignored, compute the accuracy for this bucket
             nr_missing_features = len([x for x in features_existence if x is False or x is 0])
@@ -82,6 +87,8 @@ class ProbabilisticValidator():
             real_value_b = real_value
             self._X_buff.append(features_existence)
             self._Y_buff.append(real_value_b == predicted_value_b)
+            self._real_buckets_buff.append(real_value_b)
+            self._predicted_buckets_buff.append(predicted_value_b)
 
     def get_accuracy_histogram(self):
         x = []
@@ -131,6 +138,10 @@ class ProbabilisticValidator():
 
         self._X_buff= []
         self._Y_buff= []
+
+    def get_confusion_matrix(self):
+        matrix = confusion_matrix(self._real_buckets_buff,self._predicted_buckets_buff)
+        return matrix
 
     def evaluate_prediction_accuracy(self, features_existence, predicted_value, always_use_model_prediction):
         """

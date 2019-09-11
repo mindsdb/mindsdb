@@ -83,6 +83,8 @@ class ModelAnalyzer(BaseModule):
         # Pickle for later use
         self.transaction.hmd['probabilistic_validators'] = {}
         for col in probabilistic_validators:
+            confusion_matrix = probabilistic_validators[col].get_confusion_matrix()
+            self.transaction.lmd['confusion_matrices'][col] = confusion_matrix
             self.transaction.hmd['probabilistic_validators'][col] = pickle_obj(probabilistic_validators[col])
 
 def test():

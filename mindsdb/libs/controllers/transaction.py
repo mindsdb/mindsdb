@@ -129,6 +129,21 @@ class Transaction:
             self.lmd['is_active'] = False
 
 
+    def _execute_analyze(self):
+        self.lmd['current_phase'] = MODEL_STATUS_PREPARING
+        self.save_metadata()
+
+        self._call_phase_module(clean_exit=True, module_name='DataExtractor')
+        self.save_metadata()
+
+        self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
+        self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+        self.save_metadata()
+
+        self.lmd['current_phase'] = MODEL_STATUS_DONE
+        self.save_metadata()
+        return
+
     def _execute_learn(self):
         """
         :return:
@@ -260,6 +275,9 @@ class Transaction:
             else:
                 _thread.start_new_thread(self._execute_learn, ())
             return
+
+        if self.lmd['type'] == TRANSACTION_ANALYSE:
+            self._execute_analyze()
 
         elif self.lmd['type'] == TRANSACTION_PREDICT:
             self._execute_predict()

@@ -139,9 +139,16 @@ class LightwoodBackend():
 
         return config
 
-    def callback_on_iter(self, epoch, mix_error, test_error, delta_mean):
+    def callback_on_iter(self, epoch, mix_error, test_error, delta_mean, accuracy):
         test_error_rounded = round(test_error,4)
-        self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an error of {test_error_rounded} on the testing dataset')
+        for col in accuracy:
+            value = accuracy[col]['value']
+            if accuracy[col]['type'] == 'r2_score':
+                value_rounded = round(value,3)
+                self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an r2 score of {value_rounded} on the testing dataset')
+            else:
+                value_pct = round(value * 100,2)
+                self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an error of {value_pct}% on the testing dataset')
 
     def train(self):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']

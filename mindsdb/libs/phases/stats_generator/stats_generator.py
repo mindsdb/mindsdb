@@ -507,6 +507,7 @@ class StatsGenerator(BaseModule):
                 continue
 
             new_col_data = []
+
             if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP: #data_type == DATA_TYPES.DATE:
                 for element in col_data:
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
@@ -580,6 +581,7 @@ class StatsGenerator(BaseModule):
                     },
                     "percentage_buckets": xp
                 }
+
             elif data_type == DATA_TYPES.CATEGORICAL or curr_data_subtype == DATA_SUBTYPES.DATE:
                 histogram, _ = StatsGenerator.get_histogram(input_data.data_frame[col_name], data_type=data_type, data_subtype=curr_data_subtype)
 

@@ -5,7 +5,7 @@ import sys
 def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[]):
     # Create & Learn
     mdb = Predictor(name='home_rentals_price')
-    mdb.learn(to_predict='rental_price',from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend)
+    mdb.learn(to_predict='rental_price',from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend, stop_training_in_x_seconds=40)
 
     # Reload & Predict
     mdb = Predictor(name='home_rentals_price')

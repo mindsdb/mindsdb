@@ -438,6 +438,8 @@ class Predictor:
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
         light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
         light_transaction_metadata['model_is_time_series'] = False
+        light_transaction_metadata['model_group_by'] = []
+        light_transaction_metadata['model_order_by'] = []
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 

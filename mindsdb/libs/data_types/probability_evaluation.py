@@ -151,5 +151,4 @@ class ProbabilityEvaluation:
 
         # Return the prediction of the model
         if self.always_use_model_prediction:
-            print('HERE !')
             self.final_value = predicted_value

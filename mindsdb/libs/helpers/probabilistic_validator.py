@@ -97,13 +97,24 @@ class ProbabilisticValidator():
         total_correct = 0
         total_vals = 0
 
-        for bucket in self.bucket_accuracy:
-            total_correct += sum(self.bucket_accuracy[bucket])
-            total_vals += len(self.bucket_accuracy[bucket])
+        buckets_with_no_observations = []
+        for bucket in self.buckets:
+            try:
+                total_correct += sum(self.bucket_accuracy[bucket])
+                total_vals += len(self.bucket_accuracy[bucket])
+                y.append(sum(self.bucket_accuracy[bucket])/len(self.bucket_accuracy[bucket]))
+            except:
+                # If no observations were made for this bucket
+                buckets_with_no_observations.append(bucket)
+                y.append(None)
+
             x.append(bucket)
-            y.append(sum(self.bucket_accuracy[bucket])/len(self.bucket_accuracy[bucket]))
+
 
         validation_set_accuracy = total_correct/total_vals
+        for bucket in buckets_with_no_observations:
+            y[x.index(bucket)] = validation_set_accuracy
+
         return {
             'buckets': x
             ,'accuracies': y

@@ -98,7 +98,7 @@ class ProbabilisticValidator():
         total_vals = 0
 
         buckets_with_no_observations = []
-        for bucket in self.buckets:
+        for bucket in range(len(self.buckets)):
             try:
                 total_correct += sum(self.bucket_accuracy[bucket])
                 total_vals += len(self.bucket_accuracy[bucket])

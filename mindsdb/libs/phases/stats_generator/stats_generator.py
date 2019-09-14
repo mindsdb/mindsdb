@@ -579,7 +579,7 @@ class StatsGenerator(BaseModule):
                         "x": x,
                         "y": y
                     },
-                    "percentage_buckets": xp
+                    "percentage_buckets": histogram['x']#xp
                 }
 
             elif data_type == DATA_TYPES.CATEGORICAL or curr_data_subtype == DATA_SUBTYPES.DATE:

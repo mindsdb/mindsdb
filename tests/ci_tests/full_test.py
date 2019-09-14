@@ -1,4 +1,5 @@
 from tests import basic_test
+import torch
 
 use_gpu_settings = [False]
 if torch.cuda.is_available():

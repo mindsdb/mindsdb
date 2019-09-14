@@ -529,8 +529,6 @@ class StatsGenerator(BaseModule):
                 if len(col_data) < 1:
                     return None
 
-                xp = []
-
                 if len(col_data) > 0:
                     max_value = max(col_data)
                     min_value = min(col_data)
@@ -539,19 +537,6 @@ class StatsGenerator(BaseModule):
                     var = np.var(col_data)
                     skew = st.skew(col_data)
                     kurtosis = st.kurtosis(col_data)
-
-
-                    inc_rate = 0.1
-                    initial_step_size = abs(max_value-min_value)/100
-
-                    xp += [min_value]
-                    i = min_value + initial_step_size
-
-                    while i < max_value:
-
-                        xp += [i]
-                        i_inc = abs(i-min_value)*inc_rate
-                        i = i + i_inc
                 else:
                     max_value = 0
                     min_value = 0
@@ -560,7 +545,6 @@ class StatsGenerator(BaseModule):
                     var = 0
                     skew = 0
                     kurtosis = 0
-                    xp = []
 
                 is_float = True if max([1 if int(i) != i else 0 for i in col_data]) == 1 else False
 

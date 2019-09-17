@@ -288,6 +288,7 @@ class Predictor:
                         ,"y": []
                         ,'x_explained': []
                   }
+                  ,"confusion_matrix": lmd['confusion_matrices'][col]
                 }
 
                 # This is a check to see if model analysis has run on this data
@@ -306,7 +307,6 @@ class Predictor:
                 if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and lmd['column_importances'] is not None:
                     mao['accuracy_histogram']['x'] = [f'{x}' for x in lmd['accuracy_histogram'][col]['buckets']]
                     mao['accuracy_histogram']['y'] = lmd['accuracy_histogram'][col]['accuracies']
-
 
                     for output_col_bucket in lmd['columns_buckets_importances'][col]:
                         x_explained_member = []
@@ -416,9 +416,36 @@ class Predictor:
             print(e)
             return False
 
+    def analyse_dataset(self, from_data=None, test_from_data=None, sample_margin_of_error=CONFIG.DEFAULT_MARGIN_OF_ERROR):
+        """
+        Analyse the particular dataset being given
+        """
+        from_ds = getDS(from_data)
+        transaction_type = TRANSACTION_ANALYSE
+        sample_confidence_level = 1 - sample_margin_of_error
+
+        heavy_transaction_metadata = {}
+        heavy_transaction_metadata['name'] = self.name
+        heavy_transaction_metadata['from_data'] = from_ds
+
+        light_transaction_metadata = {}
+        light_transaction_metadata['version'] = str(__version__)
+        light_transaction_metadata['name'] = self.name
+        light_transaction_metadata['model_columns_map'] = from_ds._col_map
+        light_transaction_metadata['type'] = transaction_type
+        light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
+        light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
+        light_transaction_metadata['model_is_time_series'] = False
+        light_transaction_metadata['model_group_by'] = []
+        light_transaction_metadata['model_order_by'] = []
+        light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
+        light_transaction_metadata['data_preparation'] = {}
+
+        Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
+
     def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict={}):
         """
-        Tells the mind to learn to predict a column or columns from the data in 'from_data'
+        Learn to predict a column or columns from the data in 'from_data'
 
         Mandatory arguments:
         :param to_predict: what column or columns you want to predict
@@ -504,6 +531,7 @@ class Predictor:
         light_transaction_metadata['lightwood_data'] = {}
         light_transaction_metadata['ludwig_data'] = {}
         light_transaction_metadata['weight_map'] = {}
+        light_transaction_metadata['confusion_matrices'] = {}
         light_transaction_metadata['equal_accuracy_for_all_output_categories'] = equal_accuracy_for_all_output_categories
         light_transaction_metadata['output_categories_importance_dictionary'] = output_categories_importance_dictionary if output_categories_importance_dictionary is not None else {}
 
@@ -521,6 +549,11 @@ class Predictor:
             light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
         else:
             light_transaction_metadata['always_use_model_prediction'] = False
+
+        if 'optimize_model' in unstable_parameters_dict:
+            light_transaction_metadata['optimize_model'] = unstable_parameters_dict['optimize_model']
+        else:
+            light_transaction_metadata['optimize_model'] = False
 
         if rebuild_model is False:
             old_lmd = {}

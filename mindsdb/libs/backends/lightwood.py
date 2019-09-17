@@ -126,7 +126,7 @@ class LightwoodBackend():
 
             if col_name in self.transaction.lmd['weight_map']:
                 col_config['weights'] = self.transaction.lmd['weight_map'][col_name]
-                
+
             col_config.update(other_keys)
 
             if col_name not in self.transaction.lmd['predict_columns']:
@@ -134,11 +134,21 @@ class LightwoodBackend():
             else:
                 config['output_features'].append(col_config)
 
+        if self.transaction.lmd['optimize_model']:
+            config['optimizer'] = lightwood.model_building.BasicAxOptimizer
+
         return config
 
-    def callback_on_iter(self, epoch, mix_error, test_error, delta_mean):
-        test_error_pct = round(test_error * 100,2)
-        self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an error of {test_error_pct}% on the testing dataset')
+    def callback_on_iter(self, epoch, mix_error, test_error, delta_mean, accuracy):
+        test_error_rounded = round(test_error,4)
+        for col in accuracy:
+            value = accuracy[col]['value']
+            if accuracy[col]['function'] == 'r2_score':
+                value_rounded = round(value,3)
+                self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an r2 score of {value_rounded} on the testing dataset')
+            else:
+                value_pct = round(value * 100,2)
+                self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an error of {value_pct}% on the testing dataset')
 
     def train(self):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']

@@ -3,6 +3,7 @@ from mindsdb.libs.data_types.probability_evaluation import ProbabilityEvaluation
 from mindsdb.libs.helpers.general_helpers import get_value_bucket
 
 from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
+from sklearn.metrics import confusion_matrix
 import numpy as np
 
 
@@ -24,6 +25,8 @@ class ProbabilisticValidator():
         """
         self._X_buff = []
         self._Y_buff = []
+        self._predicted_buckets_buff = []
+        self._real_buckets_buff = []
 
         self.col_stats = col_stats
 
@@ -70,18 +73,22 @@ class ProbabilisticValidator():
             self._X_buff.append(X)
 
             self._Y_buff.append(real_value_b)
+            self._real_buckets_buff = self._Y_buff
+            self._predicted_buckets_buff.append(predicted_value_b)
 
             # If no column is ignored, compute the accuracy for this bucket
             nr_missing_features = len([x for x in features_existence if x is False or x is 0])
             if nr_missing_features == 0:
-                if predicted_value_b not in self.bucket_accuracy:
-                    self.bucket_accuracy[predicted_value_b] = []
-                self.bucket_accuracy[predicted_value_b].append(int(real_value_b == predicted_value_b))
+                if real_value_b not in self.bucket_accuracy:
+                    self.bucket_accuracy[real_value_b] = []
+                self.bucket_accuracy[real_value_b].append(int(real_value_b == predicted_value_b))
         else:
             predicted_value_b = predicted_value
             real_value_b = real_value
             self._X_buff.append(features_existence)
             self._Y_buff.append(real_value_b == predicted_value_b)
+            self._real_buckets_buff.append(real_value_b)
+            self._predicted_buckets_buff.append(predicted_value_b)
 
     def get_accuracy_histogram(self):
         x = []
@@ -90,13 +97,24 @@ class ProbabilisticValidator():
         total_correct = 0
         total_vals = 0
 
-        for bucket in self.bucket_accuracy:
-            total_correct += sum(self.bucket_accuracy[bucket])
-            total_vals += len(self.bucket_accuracy[bucket])
+        buckets_with_no_observations = []
+        for bucket in range(len(self.buckets)):
+            try:
+                total_correct += sum(self.bucket_accuracy[bucket])
+                total_vals += len(self.bucket_accuracy[bucket])
+                y.append(sum(self.bucket_accuracy[bucket])/len(self.bucket_accuracy[bucket]))
+            except:
+                # If no observations were made for this bucket
+                buckets_with_no_observations.append(bucket)
+                y.append(None)
+
             x.append(bucket)
-            y.append(sum(self.bucket_accuracy[bucket])/len(self.bucket_accuracy[bucket]))
+
 
         validation_set_accuracy = total_correct/total_vals
+        for bucket in buckets_with_no_observations:
+            y[x.index(bucket)] = validation_set_accuracy
+
         return {
             'buckets': x
             ,'accuracies': y
@@ -131,6 +149,10 @@ class ProbabilisticValidator():
 
         self._X_buff= []
         self._Y_buff= []
+
+    def get_confusion_matrix(self):
+        matrix = confusion_matrix(self._real_buckets_buff,self._predicted_buckets_buff)
+        return matrix
 
     def evaluate_prediction_accuracy(self, features_existence, predicted_value, always_use_model_prediction):
         """

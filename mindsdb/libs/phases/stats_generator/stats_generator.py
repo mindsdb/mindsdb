@@ -507,6 +507,7 @@ class StatsGenerator(BaseModule):
                 continue
 
             new_col_data = []
+
             if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP: #data_type == DATA_TYPES.DATE:
                 for element in col_data:
                     if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
@@ -528,8 +529,6 @@ class StatsGenerator(BaseModule):
                 if len(col_data) < 1:
                     return None
 
-                xp = []
-
                 if len(col_data) > 0:
                     max_value = max(col_data)
                     min_value = min(col_data)
@@ -538,19 +537,6 @@ class StatsGenerator(BaseModule):
                     var = np.var(col_data)
                     skew = st.skew(col_data)
                     kurtosis = st.kurtosis(col_data)
-
-
-                    inc_rate = 0.1
-                    initial_step_size = abs(max_value-min_value)/100
-
-                    xp += [min_value]
-                    i = min_value + initial_step_size
-
-                    while i < max_value:
-
-                        xp += [i]
-                        i_inc = abs(i-min_value)*inc_rate
-                        i = i + i_inc
                 else:
                     max_value = 0
                     min_value = 0
@@ -559,7 +545,6 @@ class StatsGenerator(BaseModule):
                     var = 0
                     skew = 0
                     kurtosis = 0
-                    xp = []
 
                 is_float = True if max([1 if int(i) != i else 0 for i in col_data]) == 1 else False
 
@@ -578,8 +563,9 @@ class StatsGenerator(BaseModule):
                         "x": x,
                         "y": y
                     },
-                    "percentage_buckets": xp
+                    "percentage_buckets": histogram['x']#xp
                 }
+
             elif data_type == DATA_TYPES.CATEGORICAL or curr_data_subtype == DATA_SUBTYPES.DATE:
                 histogram, _ = StatsGenerator.get_histogram(input_data.data_frame[col_name], data_type=data_type, data_subtype=curr_data_subtype)
 

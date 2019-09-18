@@ -1,20 +1,22 @@
 from mindsdb import Predictor
 import pandas as pd
+from sklearn import tree
 
 
 class CustomDTModel():
     def __init__(self):
-        pass
+        self.clf = tree.DecisionTreeClassifier()
 
     def set_transaction(self, transaction):
         self.transaction = transaction
-        self.predict_columns = self.transaction.lmd['predict_columns']
+        self.output_columns = self.transaction.lmd['predict_columns']
+        self.input_column = [x for x in self.transaction.lmd['columns'] if x not in self.output_columns]
         self.train_df = self.transaction.input_data.train_df
         self.test_dt = train_df = self.transaction.input_data.test_df
 
     def train(self):
         model.fit(train_df, train_df[predict_columns])
-        pass
+        self.clf = clf.fit(X, Y)
 
     def predict(self, mode='predict', ignore_columns=[]):
         pd.dataFrame()

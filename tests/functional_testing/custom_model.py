@@ -62,4 +62,4 @@ dt_model = CustomDTModel()
 
 predictor.learn(to_predict='rental_price',from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv", backend=dt_model)
 predictions = predictor.predict(when_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv", backend=dt_model)
-print(predictions)
+print(predictions[25])

@@ -504,7 +504,7 @@ class Predictor:
         light_transaction_metadata['version'] = str(__version__)
         light_transaction_metadata['name'] = self.name
         light_transaction_metadata['data_preparation'] = {}
-        light_transaction_metadata['model_backend'] = backend
+        heavy_transaction_metadata['model_backend'] = backend
         light_transaction_metadata['predict_columns'] = predict_columns
         light_transaction_metadata['model_columns_map'] = from_ds._col_map
         light_transaction_metadata['model_group_by'] = group_by
@@ -576,7 +576,7 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
-    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False, unstable_parameters_dict={}):
+    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False, unstable_parameters_dict={}, backend=None):
         """
         You have a mind trained already and you want to make a prediction
 
@@ -601,6 +601,9 @@ class Predictor:
             heavy_transaction_metadata['when_data'] = when_ds
         heavy_transaction_metadata['model_when_conditions'] = when
         heavy_transaction_metadata['name'] = self.name
+
+        if backend is not None:
+            heavy_transaction_metadata['model_backend'] = backend
 
         light_transaction_metadata = {}
         light_transaction_metadata['name'] = self.name

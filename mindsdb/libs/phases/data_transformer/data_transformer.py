@@ -107,7 +107,7 @@ class DataTransformer(BaseModule):
             if data_type == DATA_TYPES.CATEGORICAL:
                     self._cast_all_data(input_data, column, 'category')
 
-            if self.transaction.lmd['model_backend'] == 'lightwood':
+            if self.transaction.hmd['model_backend'] == 'lightwood':
                 if data_type == DATA_TYPES.DATE:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
                     self._aply_to_all_data(input_data, column, self._lightwood_datetime_processing)
@@ -130,7 +130,7 @@ class DataTransformer(BaseModule):
                 min_val_occurances = min(occurance_map.values())
                 sum_val_occurances = sum(occurance_map.values())
 
-                if self.transaction.lmd['model_backend'] in ('lightwood'):
+                if self.transaction.hmd['model_backend'] in ('lightwood'):
                     lightwood_weight_map = {}
                     for val in occurance_map:
                         lightwood_weight_map[val] = 1 - occurance_map[val]/sum_val_occurances

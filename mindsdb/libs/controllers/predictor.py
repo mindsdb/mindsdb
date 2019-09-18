@@ -590,7 +590,6 @@ class Predictor:
         transaction_type = TRANSACTION_PREDICT
         when_ds = None if when_data is None else getDS(when_data)
 
-
         # lets turn into lists: when
         when = [when] if type(when) in [type(None), type({})] else when
 

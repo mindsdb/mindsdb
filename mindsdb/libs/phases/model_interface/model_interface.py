@@ -21,7 +21,7 @@ class ModelInterface(BaseModule):
 
         if self.transaction.hmd['model_backend'] == 'ludwig':
             self.transaction.model_backend = LudwigBackend(self.transaction)
-        if self.transaction.hmd['model_backend'] == 'lightwood':
+        elif self.transaction.hmd['model_backend'] == 'lightwood':
             self.transaction.model_backend = LightwoodBackend(self.transaction)
         else:
             self.transaction.model_backend = self.transaction.hmd['model_backend']

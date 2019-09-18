@@ -148,7 +148,7 @@ class LightwoodBackend():
                 self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an r2 score of {value_rounded} on the testing dataset')
             else:
                 value_pct = round(value * 100,2)
-                self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an error of {value_pct}% on the testing dataset')
+                self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an accuracy of {value_pct}% on the testing dataset')
 
     def train(self):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']

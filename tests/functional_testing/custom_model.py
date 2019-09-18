@@ -22,14 +22,14 @@ class CustomDTModel():
         for col in [*self.output_columns, *self.input_columns]:
             self.le_arr[col] = preprocessing.LabelEncoder()
             self.le_arr[col].fit(self.transaction.input_data.data_frame[col])
+            print(self.transaction.input_data.data_frame[col])
 
         X = []
         for col in self.input_columns:
             X.append(self.le_arr[col].transform(self.transaction.input_data.train_df[col]))
 
-        Y = []
-        for col in self.output_columns:
-            Y.append(self.le_arr[col].transform(self.transaction.input_data.train_df[col]))
+        # Only works with one output column
+        Y = self.le_arr[self.output_columns[0]].transform(self.transaction.input_data.train_df[self.output_columns[0]])
 
         self.clf.fit(X, Y)
 

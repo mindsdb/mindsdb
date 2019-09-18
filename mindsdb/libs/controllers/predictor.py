@@ -499,12 +499,12 @@ class Predictor:
         heavy_transaction_metadata['test_from_data'] = test_from_ds
         heavy_transaction_metadata['bucketing_algorithms'] = {}
         heavy_transaction_metadata['predictions'] = None
+        heavy_transaction_metadata['model_backend'] = backend
 
         light_transaction_metadata = {}
         light_transaction_metadata['version'] = str(__version__)
         light_transaction_metadata['name'] = self.name
         light_transaction_metadata['data_preparation'] = {}
-        heavy_transaction_metadata['model_backend'] = backend
         light_transaction_metadata['predict_columns'] = predict_columns
         light_transaction_metadata['model_columns_map'] = from_ds._col_map
         light_transaction_metadata['model_group_by'] = group_by

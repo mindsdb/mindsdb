@@ -15,7 +15,7 @@ class CustomDTModel():
         self.test_dt = train_df = self.transaction.input_data.test_df
 
     def train(self):
-        self.clf = clf.fit(self.train_df[self.input_columns], self.train_df[self.output_columns])
+        self.clf.fit(self.train_df[self.input_columns], self.train_df[self.output_columns])
 
     def predict(self, mode='predict', ignore_columns=[]):
         pd.dataFrame()

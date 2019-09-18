@@ -10,13 +10,12 @@ class CustomDTModel():
     def set_transaction(self, transaction):
         self.transaction = transaction
         self.output_columns = self.transaction.lmd['predict_columns']
-        self.input_column = [x for x in self.transaction.lmd['columns'] if x not in self.output_columns]
+        self.input_columns = [x for x in self.transaction.lmd['columns'] if x not in self.output_columns]
         self.train_df = self.transaction.input_data.train_df
         self.test_dt = train_df = self.transaction.input_data.test_df
 
     def train(self):
-        model.fit(train_df, train_df[predict_columns])
-        self.clf = clf.fit(X, Y)
+        self.clf = clf.fit(self.train_df[self.input_columns], self.train_df[self.output_columns])
 
     def predict(self, mode='predict', ignore_columns=[]):
         pd.dataFrame()

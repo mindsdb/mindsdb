@@ -86,9 +86,12 @@ class Transaction:
 
         fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle')
         save_hmd = {}
-        null_out_fields = ['test_from_data', 'from_data', 'model_backend']
+        null_out_fields = ['test_from_data', 'from_data']
         for k in null_out_fields:
             save_hmd[k] = None
+
+        if type(save_hmd['model_backend']) != type(str()):
+            model_backend[k] = None
 
         for k in self.hmd:
             if k not in null_out_fields:

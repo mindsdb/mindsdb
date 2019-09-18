@@ -90,7 +90,7 @@ class Transaction:
         for k in null_out_fields:
             save_hmd[k] = None
 
-        if 'model_backend' in save_hmd and type(save_hmd['model_backend']) != type(str()):
+        if type(save_hmd['model_backend']) != type(str()):
             save_hmd['model_backend'] = None
 
         for k in self.hmd:

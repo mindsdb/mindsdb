@@ -4,6 +4,13 @@ import multiprocessing
 import os
 
 
+# Run the generated data tests
+for backend in ['ludwig', 'lightwood']:
+    test_one_label_prediction_wo_strings(backend)
+    test_timeseries(backend)
+    test_multilabel_prediction(backend)
+    test_one_label_prediction(backend)
+
 # Run the CI tests
 os.system('cd ..; cd ci_tests; python3 full_test.py')
 
@@ -41,12 +48,6 @@ for dataset in datasets:
         print(f'Example dataset {dataset_name}, ran with success')
         print(f'Got accuracy of {acc} !')
         print('\n\n\n==================================\n\n\n')
-
-# Run the generated data tests
-test_one_label_prediction_wo_strings()
-test_timeseries()
-test_multilabel_prediction()
-test_one_label_prediction()
 
 #with multiprocessing.Pool(max(len(datasets),6)) as pool:
 #    pool.map(run_example,datasets)

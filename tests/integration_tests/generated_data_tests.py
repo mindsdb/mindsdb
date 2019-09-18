@@ -38,7 +38,7 @@ def setup_testing_logger():
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
 
-def test_timeseries():
+def test_timeseries(backend='lightwood'):
     logger.info('Starting timeseries test !')
     ts_hours = 12
     separator = ','
@@ -94,7 +94,7 @@ def test_timeseries():
             ,window_size=3
             #,group_by = feature_headers[3]
             ,use_gpu=False
-            ,backend='lightwood'
+            ,backend=backend
         )
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:
@@ -135,7 +135,7 @@ def test_timeseries():
     logger.info('Timeseries test ran succesfully !')
 
 
-def test_one_label_prediction():
+def test_one_label_prediction(backend='lightwood'):
     logger.info('Starting one-label test')
     separator = ','
     train_file_name = 'train_data.csv'
@@ -177,7 +177,7 @@ def test_one_label_prediction():
 
 
     try:
-        mdb.learn(from_data=train_file_name, to_predict=label_headers)
+        mdb.learn(from_data=train_file_name, to_predict=label_headers, backend=backend)
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:
         print(traceback.format_exc())
@@ -213,7 +213,7 @@ def test_one_label_prediction():
 
     logger.info('One-label prediction test ran succesfully !')
 
-def test_one_label_prediction_wo_strings():
+def test_one_label_prediction_wo_strings(backend='lightwood'):
     logger.info('Starting one-label test')
     separator = ','
     train_file_name = 'train_data.csv'
@@ -255,7 +255,7 @@ def test_one_label_prediction_wo_strings():
 
 
     try:
-        mdb.learn(from_data=train_file_name, to_predict=label_headers)
+        mdb.learn(from_data=train_file_name, to_predict=label_headers, backend=backend)
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:
         print(traceback.format_exc())
@@ -291,7 +291,7 @@ def test_one_label_prediction_wo_strings():
 
     logger.info('One-label prediction test ran succesfully !')
 
-def test_multilabel_prediction():
+def test_multilabel_prediction(backend='lightwood'):
     logger.info('Starting multilabel prediction test')
     separator = ','
     train_file_name = 'train_data.csv'
@@ -336,7 +336,7 @@ def test_multilabel_prediction():
 
 
     try:
-        mdb.learn(from_data=train_file_name, to_predict=label_headers)
+        mdb.learn(from_data=train_file_name, to_predict=label_headers, backend=backend)
         logger.info(f'--------------- Learning ran succesfully ---------------')
     except:
         print(traceback.format_exc())

@@ -23,6 +23,11 @@ class ModelInterface(BaseModule):
             self.transaction.model_backend = LudwigBackend(self.transaction)
         if self.transaction.lmd['model_backend'] == 'lightwood':
             self.transaction.model_backend = LightwoodBackend(self.transaction)
+        else:
+            self.transaction.model_backend = self.transaction.lmd['model_backend']
+
+        if hasattr(self.transaction.model_backend, 'set_transaction'):
+            self.transaction.model_backend.set_transaction(self.transaction)
 
         if mode == 'train':
             self.transaction.model_backend.train()

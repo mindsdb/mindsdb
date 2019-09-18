@@ -3,7 +3,10 @@ import pandas as pd
 
 
 class CustomDTModel():
-    def __init__(self, transaction):
+    def __init__(self):
+        pass
+
+    def set_transaction(self, transaction):
         self.transaction = transaction
         self.predict_columns = self.transaction.lmd['predict_columns']
         self.train_df = self.transaction.input_data.train_df

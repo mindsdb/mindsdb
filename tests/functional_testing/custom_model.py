@@ -1,5 +1,6 @@
 from mindsdb import Predictor
 import pandas as pd
+import numpy as np
 from sklearn import tree
 from sklearn import preprocessing
 
@@ -27,6 +28,8 @@ class CustomDTModel():
         X = []
         for col in self.input_columns:
             X.append(self.le_arr[col].transform(self.transaction.input_data.train_df[col]))
+
+        X = np.swapaxes(X,1,0)
 
         # Only works with one output column
         Y = self.le_arr[self.output_columns[0]].transform(self.transaction.input_data.train_df[self.output_columns[0]])

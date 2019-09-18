@@ -22,4 +22,7 @@ class CustomDTModel():
 
 
 predictor = Predictor(name='custom_model_test_predictor')
-predictor.learn(to_predict='rental_price',from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=CustomDTModel)
+
+dt_model = CustomDTModel()
+
+predictor.learn(to_predict='rental_price',from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=dt_model)

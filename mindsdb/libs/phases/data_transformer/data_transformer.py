@@ -164,8 +164,9 @@ class DataTransformer(BaseModule):
                                 input_data.data_frame = input_data.data_frame.append(copied_rows_test)
                                 input_data.test_df = input_data.test_df.append(copied_rows_test)
 
-                            input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
-                            input_data.validation_df = input_data.validation_df.append(copied_rows_validate)
+                            if len(copied_rows_validate) > 0:
+                                input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
+                                input_data.validation_df = input_data.validation_df.append(copied_rows_validate)
 
                             copied_rows_train = []
                             copied_rows_test = []

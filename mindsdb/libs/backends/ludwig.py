@@ -205,6 +205,8 @@ class LudwigBackend():
             custom_logic_continue = False
 
             for row_ind in indexes:
+                print(row_ind)
+                print(len(self.transaction.input_data.data_frame))
                 if ludwig_dtype == 'order_by_col':
                     ts_data_point = self.transaction.input_data.data_frame[col][row_ind]
 

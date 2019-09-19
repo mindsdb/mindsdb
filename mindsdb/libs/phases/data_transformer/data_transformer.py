@@ -145,7 +145,7 @@ class DataTransformer(BaseModule):
 
 
                 column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
-                
+
                 for val in occurance_map:
                     copied_rows_train = []
                     copied_rows_test = []
@@ -180,8 +180,8 @@ class DataTransformer(BaseModule):
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]
 
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-                            self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
+                            self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
 
                             copied_rows_train.append(copied_row)
 
@@ -189,8 +189,8 @@ class DataTransformer(BaseModule):
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]
 
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-                            self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
+                            self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
 
                             copied_rows_test.append(copied_row)
 
@@ -198,8 +198,8 @@ class DataTransformer(BaseModule):
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]
 
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-                            self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
+                            self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
 
                             copied_rows_validate.append(copied_row)
 

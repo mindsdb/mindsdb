@@ -32,10 +32,16 @@ if sys_platform == 'linux' or sys_platform.startswith('linux'):
 # OSX specific requirements
 elif sys_platform == 'darwin':
     requirements = requirements
+    requirements = remove_requirements(requirements, 'tensorflow', 'tensorflow==0.13.1')
+    requirements = remove_requirements(requirements, 'tensorflow-estimator', 'tensorflow-estimator==0.13.10')
+    requirements = remove_requirements(requirements, 'tensorflow', 'ludwig==0.1.2')
 
 # Windows specific requirements
 elif sys_platform in ['win32','cygwin','windows']:
     requirements = ['cwrap',*requirements]
+    requirements = remove_requirements(requirements, 'tensorflow-estimator')
+    requirements = remove_requirements(requirements, 'tensorflow', 'tensorflow==0.13.1')
+    requirements = remove_requirements(requirements, 'tensorflow', 'ludwig==0.1.2')
     requirements = remove_requirements(requirements, 'tensorflow-estimator')
     requirements = remove_requirements(requirements,'wheel', replace='wheel == 0.26.0')
     requirements = remove_requirements(requirements,'lightwood', replace='lightwood @ git+https://github.com/mindsdb/lightwood.git@master')

@@ -205,8 +205,6 @@ class LudwigBackend():
             custom_logic_continue = False
 
             for row_ind in indexes:
-                print(row_ind)
-                print(len(self.transaction.input_data.data_frame))
                 if ludwig_dtype == 'order_by_col':
                     ts_data_point = self.transaction.input_data.data_frame[col].iloc[row_ind]
 
@@ -320,7 +318,7 @@ class LudwigBackend():
                 model_definition['input_features'].append(input_def)
             else:
                 output_def = {
-                    'name': col
+                    'name': tf_col
                     ,'type': ludwig_dtype
                 }
                 model_definition['output_features'].append(output_def)
@@ -353,7 +351,7 @@ class LudwigBackend():
             return gpu_indices
 
     def train(self):
-        training_dataframe, model_definition, timeseries_cols, has_heavy_data, col_map = self._create_ludwig_dataframe('train')
+        training_dataframe, model_definition, timeseries_cols, has_heavy_data, self.transaction.lmd['ludwig_tf_self_col_map'] = self._create_ludwig_dataframe('train')
 
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
@@ -428,15 +426,15 @@ class LudwigBackend():
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}
 
     def predict(self, mode='predict', ignore_columns=[]):
-        predict_dataframe, model_definition, timeseries_cols, has_heavy_data, col_map = self._create_ludwig_dataframe(mode)
+        predict_dataframe, model_definition, timeseries_cols, has_heavy_data, _ = self._create_ludwig_dataframe(mode)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
 
         if len(timeseries_cols) > 0:
             predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)
 
         for ignore_col in ignore_columns:
-            for tf_col in col_map:
-                if ignore_col == col_map[tf_col]:
+            for tf_col in self.transaction.lmd['ludwig_tf_self_col_map']:
+                if ignore_col == self.transaction.lmd['ludwig_tf_self_col_map'][tf_col]:
                     ignore_col = tf_col
             try:
                 predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
@@ -451,8 +449,8 @@ class LudwigBackend():
 
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')
-            if col_name_normalized in col_map:
-                col_name_normalized = col_map[col_name_normalized]
+            if col_name_normalized in self.transaction.lmd['ludwig_tf_self_col_map']:
+                col_name_normalized = self.transaction.lmd['ludwig_tf_self_col_map'][col_name_normalized]
             predictions = predictions.rename(columns = {col_name: col_name_normalized})
 
         return predictions

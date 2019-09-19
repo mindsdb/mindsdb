@@ -145,7 +145,7 @@ class DataTransformer(BaseModule):
 
 
                 column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
-
+                
                 for val in occurance_map:
                     copied_rows_train = []
                     copied_rows_test = []

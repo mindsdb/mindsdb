@@ -208,7 +208,7 @@ class LudwigBackend():
                 print(row_ind)
                 print(len(self.transaction.input_data.data_frame))
                 if ludwig_dtype == 'order_by_col':
-                    ts_data_point = self.transaction.input_data.data_frame[col][row_ind]
+                    ts_data_point = self.transaction.input_data.data_frame[col].iloc[row_ind]
 
                     try:
                         ts_data_point = float(ts_data_point)
@@ -217,7 +217,7 @@ class LudwigBackend():
                     data[tf_col].append(ts_data_point)
 
                 elif ludwig_dtype == 'sequence':
-                    arr_str = self.transaction.input_data.data_frame[col][row_ind]
+                    arr_str = self.transaction.input_data.data_frame[col].iloc[row_ind]
                     if arr_str is not None:
                         arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.lmd['column_stats'][col]['separator'])))
                     else:
@@ -245,7 +245,7 @@ class LudwigBackend():
                             ,'type': 'numerical'
                         })
 
-                    date = parse_datetime(self.transaction.input_data.data_frame[col][row_ind])
+                    date = parse_datetime(self.transaction.input_data.data_frame[col].iloc[row_ind])
 
                     data[tf_col + '_year'].append(date.year)
                     data[tf_col + '_month'].append(date.month)
@@ -260,32 +260,32 @@ class LudwigBackend():
                         timeseries_cols.append(col + '_year')
 
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
-                    if self.transaction.input_data.data_frame[col][row_ind] is None:
+                    if self.transaction.input_data.data_frame[col].iloc[row_ind] is None:
                         unix_ts = 0
                     else:
-                        unix_ts = parse_datetime(self.transaction.input_data.data_frame[col][row_ind]).timestamp()
+                        unix_ts = parse_datetime(self.transaction.input_data.data_frame[col].iloc[row_ind]).timestamp()
 
                     data[tf_col].append(unix_ts)
 
                 elif data_subtype in (DATA_SUBTYPES.FLOAT):
-                    if type(self.transaction.input_data.data_frame[col][row_ind]) == str:
-                        data[tf_col].append(float(str(self.transaction.input_data.data_frame[col][row_ind]).replace(',','.')))
+                    if type(self.transaction.input_data.data_frame[col].iloc[row_ind]) == str:
+                        data[tf_col].append(float(str(self.transaction.input_data.data_frame[col].iloc[row_ind]).replace(',','.')))
                     else:
-                        data[tf_col].append(self.transaction.input_data.data_frame[col][row_ind])
+                        data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
 
                 elif data_subtype in (DATA_SUBTYPES.INT):
-                    if type(self.transaction.input_data.data_frame[col][row_ind]) == str:
-                        data[tf_col].append(round(float(str(self.transaction.input_data.data_frame[col][row_ind]).replace(',','.'))))
+                    if type(self.transaction.input_data.data_frame[col].iloc[row_ind]) == str:
+                        data[tf_col].append(round(float(str(self.transaction.input_data.data_frame[col].iloc[row_ind]).replace(',','.'))))
                     else:
-                        data[tf_col].append(self.transaction.input_data.data_frame[col][row_ind])
+                        data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
 
                 elif data_subtype in (DATA_SUBTYPES.IMAGE):
-                    if os.path.isabs(self.transaction.input_data.data_frame[col][row_ind]):
-                        data[tf_col].append(self.transaction.input_data.data_frame[col][row_ind])
+                    if os.path.isabs(self.transaction.input_data.data_frame[col].iloc[row_ind]):
+                        data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
                     else:
-                        data[tf_col].append(os.path.join(os.getcwd(), self.transaction.input_data.data_frame[col][row_ind]))
+                        data[tf_col].append(os.path.join(os.getcwd(), self.transaction.input_data.data_frame[col].iloc[row_ind]))
                 else:
-                    data[tf_col].append(self.transaction.input_data.data_frame[col][row_ind])
+                    data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
 
             if custom_logic_continue:
                 continue

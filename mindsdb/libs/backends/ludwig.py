@@ -206,7 +206,7 @@ class LudwigBackend():
 
             for row_ind in indexes:
                 if ludwig_dtype == 'order_by_col':
-                    ts_data_point = self.transaction.input_data.data_frame[col][row_ind]
+                    ts_data_point = self.transaction.input_data.data_frame[col].iloc[row_ind]
 
                     try:
                         ts_data_point = float(ts_data_point)
@@ -215,7 +215,7 @@ class LudwigBackend():
                     data[tf_col].append(ts_data_point)
 
                 elif ludwig_dtype == 'sequence':
-                    arr_str = self.transaction.input_data.data_frame[col][row_ind]
+                    arr_str = self.transaction.input_data.data_frame[col].iloc[row_ind]
                     if arr_str is not None:
                         arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.lmd['column_stats'][col]['separator'])))
                     else:
@@ -243,7 +243,7 @@ class LudwigBackend():
                             ,'type': 'numerical'
                         })
 
-                    date = parse_datetime(self.transaction.input_data.data_frame[col][row_ind])
+                    date = parse_datetime(self.transaction.input_data.data_frame[col].iloc[row_ind])
 
                     data[tf_col + '_year'].append(date.year)
                     data[tf_col + '_month'].append(date.month)
@@ -258,32 +258,32 @@ class LudwigBackend():
                         timeseries_cols.append(col + '_year')
 
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
-                    if self.transaction.input_data.data_frame[col][row_ind] is None:
+                    if self.transaction.input_data.data_frame[col].iloc[row_ind] is None:
                         unix_ts = 0
                     else:
-                        unix_ts = parse_datetime(self.transaction.input_data.data_frame[col][row_ind]).timestamp()
+                        unix_ts = parse_datetime(self.transaction.input_data.data_frame[col].iloc[row_ind]).timestamp()
 
                     data[tf_col].append(unix_ts)
 
                 elif data_subtype in (DATA_SUBTYPES.FLOAT):
-                    if type(self.transaction.input_data.data_frame[col][row_ind]) == str:
-                        data[tf_col].append(float(str(self.transaction.input_data.data_frame[col][row_ind]).replace(',','.')))
+                    if type(self.transaction.input_data.data_frame[col].iloc[row_ind]) == str:
+                        data[tf_col].append(float(str(self.transaction.input_data.data_frame[col].iloc[row_ind]).replace(',','.')))
                     else:
-                        data[tf_col].append(self.transaction.input_data.data_frame[col][row_ind])
+                        data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
 
                 elif data_subtype in (DATA_SUBTYPES.INT):
-                    if type(self.transaction.input_data.data_frame[col][row_ind]) == str:
-                        data[tf_col].append(round(float(str(self.transaction.input_data.data_frame[col][row_ind]).replace(',','.'))))
+                    if type(self.transaction.input_data.data_frame[col].iloc[row_ind]) == str:
+                        data[tf_col].append(round(float(str(self.transaction.input_data.data_frame[col].iloc[row_ind]).replace(',','.'))))
                     else:
-                        data[tf_col].append(self.transaction.input_data.data_frame[col][row_ind])
+                        data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
 
                 elif data_subtype in (DATA_SUBTYPES.IMAGE):
-                    if os.path.isabs(self.transaction.input_data.data_frame[col][row_ind]):
-                        data[tf_col].append(self.transaction.input_data.data_frame[col][row_ind])
+                    if os.path.isabs(self.transaction.input_data.data_frame[col].iloc[row_ind]):
+                        data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
                     else:
-                        data[tf_col].append(os.path.join(os.getcwd(), self.transaction.input_data.data_frame[col][row_ind]))
+                        data[tf_col].append(os.path.join(os.getcwd(), self.transaction.input_data.data_frame[col].iloc[row_ind]))
                 else:
-                    data[tf_col].append(self.transaction.input_data.data_frame[col][row_ind])
+                    data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
 
             if custom_logic_continue:
                 continue
@@ -318,7 +318,7 @@ class LudwigBackend():
                 model_definition['input_features'].append(input_def)
             else:
                 output_def = {
-                    'name': col
+                    'name': tf_col
                     ,'type': ludwig_dtype
                 }
                 model_definition['output_features'].append(output_def)
@@ -351,7 +351,7 @@ class LudwigBackend():
             return gpu_indices
 
     def train(self):
-        training_dataframe, model_definition, timeseries_cols, has_heavy_data, col_map = self._create_ludwig_dataframe('train')
+        training_dataframe, model_definition, timeseries_cols, has_heavy_data, self.transaction.lmd['ludwig_tf_self_col_map'] = self._create_ludwig_dataframe('train')
 
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
@@ -426,15 +426,15 @@ class LudwigBackend():
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}
 
     def predict(self, mode='predict', ignore_columns=[]):
-        predict_dataframe, model_definition, timeseries_cols, has_heavy_data, col_map = self._create_ludwig_dataframe(mode)
+        predict_dataframe, model_definition, timeseries_cols, has_heavy_data, _ = self._create_ludwig_dataframe(mode)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
 
         if len(timeseries_cols) > 0:
             predict_dataframe, model_definition =  self._translate_df_to_timeseries_format(predict_dataframe, model_definition, timeseries_cols)
 
         for ignore_col in ignore_columns:
-            for tf_col in col_map:
-                if ignore_col == col_map[tf_col]:
+            for tf_col in self.transaction.lmd['ludwig_tf_self_col_map']:
+                if ignore_col == self.transaction.lmd['ludwig_tf_self_col_map'][tf_col]:
                     ignore_col = tf_col
             try:
                 predict_dataframe[ignore_col] = [None] * len(predict_dataframe[ignore_col])
@@ -449,8 +449,8 @@ class LudwigBackend():
 
         for col_name in predictions:
             col_name_normalized = col_name.replace('_predictions', '')
-            if col_name_normalized in col_map:
-                col_name_normalized = col_map[col_name_normalized]
+            if col_name_normalized in self.transaction.lmd['ludwig_tf_self_col_map']:
+                col_name_normalized = self.transaction.lmd['ludwig_tf_self_col_map'][col_name_normalized]
             predictions = predictions.rename(columns = {col_name: col_name_normalized})
 
         return predictions

@@ -1,11 +1,12 @@
 from mindsdb import Predictor
 import sys
+import os
 
 
 def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False):
     if run_extra:
-        mdb = Predictor(name='metapredictor')
-        mdb.analyse_dataset(from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv")
+        for py_file in [x for x in os.listdir('../functional_testing') if '.py' in x]:
+            os.system(f'python3 ../functional_testing/{py_file}')
 
     # Create & Learn
     mdb = Predictor(name='home_rentals_price')

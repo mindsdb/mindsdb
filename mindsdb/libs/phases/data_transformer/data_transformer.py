@@ -107,7 +107,7 @@ class DataTransformer(BaseModule):
             if data_type == DATA_TYPES.CATEGORICAL:
                     self._cast_all_data(input_data, column, 'category')
 
-            if self.transaction.lmd['model_backend'] == 'lightwood':
+            if self.transaction.hmd['model_backend'] == 'lightwood':
                 if data_type == DATA_TYPES.DATE:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime)
                     self._aply_to_all_data(input_data, column, self._lightwood_datetime_processing)
@@ -130,7 +130,7 @@ class DataTransformer(BaseModule):
                 min_val_occurances = min(occurance_map.values())
                 sum_val_occurances = sum(occurance_map.values())
 
-                if self.transaction.lmd['model_backend'] in ('lightwood'):
+                if self.transaction.hmd['model_backend'] in ('lightwood'):
                     lightwood_weight_map = {}
                     for val in occurance_map:
                         lightwood_weight_map[val] = 1 - occurance_map[val]/sum_val_occurances
@@ -164,8 +164,9 @@ class DataTransformer(BaseModule):
                                 input_data.data_frame = input_data.data_frame.append(copied_rows_test)
                                 input_data.test_df = input_data.test_df.append(copied_rows_test)
 
-                            input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
-                            input_data.validation_df = input_data.validation_df.append(copied_rows_validate)
+                            if len(copied_rows_validate) > 0:
+                                input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
+                                input_data.validation_df = input_data.validation_df.append(copied_rows_validate)
 
                             copied_rows_train = []
                             copied_rows_test = []
@@ -179,8 +180,8 @@ class DataTransformer(BaseModule):
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]
 
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-                            self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
+                            self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
 
                             copied_rows_train.append(copied_row)
 
@@ -188,8 +189,8 @@ class DataTransformer(BaseModule):
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]
 
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-                            self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
+                            self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
 
                             copied_rows_test.append(copied_row)
 
@@ -197,8 +198,8 @@ class DataTransformer(BaseModule):
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]
 
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
-                            self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].append(data_frame_length)
+                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
+                            self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
 
                             copied_rows_validate.append(copied_row)
 

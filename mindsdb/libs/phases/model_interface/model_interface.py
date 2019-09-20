@@ -19,10 +19,15 @@ class ModelInterface(BaseModule):
 
         phase_name = PHASE_MODEL_INTERFACE
 
-        if self.transaction.lmd['model_backend'] == 'ludwig':
+        if self.transaction.hmd['model_backend'] == 'ludwig':
             self.transaction.model_backend = LudwigBackend(self.transaction)
-        if self.transaction.lmd['model_backend'] == 'lightwood':
+        elif self.transaction.hmd['model_backend'] == 'lightwood':
             self.transaction.model_backend = LightwoodBackend(self.transaction)
+        else:
+            self.transaction.model_backend = self.transaction.hmd['model_backend']
+
+        if hasattr(self.transaction.model_backend, 'set_transaction'):
+            self.transaction.model_backend.set_transaction(self.transaction)
 
         if mode == 'train':
             self.transaction.model_backend.train()

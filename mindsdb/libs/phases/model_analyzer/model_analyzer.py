@@ -69,11 +69,6 @@ class ModelAnalyzer(BaseModule):
                 for i in range(len(self.transaction.input_data.validation_df[pcol])):
                     probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=ignore_col_predictions[pcol][i], hmd=self.transaction.hmd)
                     probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i], hmd=self.transaction.hmd)
-                    if normal_predictions[pcol][i] not in pv:
-                        pv[normal_predictions[pcol][i]] = 0
-                    pv[normal_predictions[pcol][i]] += 1
-            print(pv)
-            exit()
         self.transaction.lmd['accuracy_histogram'] = {}
 
         total_accuracy = 0

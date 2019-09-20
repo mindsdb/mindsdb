@@ -64,11 +64,6 @@ class ProbabilisticValidator():
         except:
             real_value = None
 
-        print('==================')
-        print(predicted_value)
-        print(real_value)
-        print('------------------')
-
         if self.buckets is not None:
             predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats, hmd)
             real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats, hmd)
@@ -105,8 +100,6 @@ class ProbabilisticValidator():
         buckets_with_no_observations = []
         for bucket in range(len(self.buckets)):
             try:
-                #print(self.bucket_accuracy)
-                #print(len(self.bucket_accuracy))
                 total_correct += sum(self.bucket_accuracy[bucket])
                 total_vals += len(self.bucket_accuracy[bucket])
                 y.append(sum(self.bucket_accuracy[bucket])/len(self.bucket_accuracy[bucket]))

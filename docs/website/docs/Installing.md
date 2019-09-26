@@ -34,7 +34,7 @@ Install Conda [download here](https://www.anaconda.com/download/#windows)
 and then run the **anaconda prompt**:
 
 ```bash
-pip install git+https://github.com/mindsdb/mindsdb.git@master
+pip install git+https://github.com/mindsdb/mindsdb.git@master --upgrade --force-reinstall
 ```
 # Build and run your docker container
 

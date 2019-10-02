@@ -8,7 +8,23 @@
 
 MindsDB's goal is to give developers easy access to the power of artificial neural networks for their projects.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
-* [Installing MindsDB](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
+MindsDB as project is made out of the following:
+
+
+- **[Mindsdb-native](https://github.com/mindsdb/mindsdb/)**: A python module that aims for auto-model building, training, testing in a single line of code, same to use. [mindsdb's GITHUB](https://github.com/mindsdb/mindsdb/)
+
+- **[Lightwood](https://github.com/mindsdb/lightwood/)**: a framework to streamline the work of gluing together building blocks for ML code that is built on PyTorch (mindsdb uses lightwood internally) [lightwood's GITHUB](https://github.com/mindsdb/lightwood/).
+
+- **MindsDB Scout**: a graphical user interface to work with mindsdb, with a focus on interpretability and explainability.
+
+  - for macOS: [Download](https://mindsdb-installer.s3-us-west-2.amazonaws.com/MindsDB-0.1.6.dmg)
+
+  - for Windows:  [Download](https://mindsdb-installer.s3-us-west-2.amazonaws.com/MindsDB-Setup-0.1.6-64bit.exe)
+
+  - for Linux: [Download](https://mindsdb-installer.s3-us-west-2.amazonaws.com/MindsDB-0.1.6.AppImage)
+  
+  
+* [Installing MindsDB Native](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 * [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 * [Frequently Asked Questions](https://mindsdb.github.io/mindsdb/docs/faq)
 * [Provide Feedback to Improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)

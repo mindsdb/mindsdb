@@ -23,6 +23,7 @@ MindsDB as project is made out of the following:
 
   - for Linux: [Download](https://mindsdb-installer.s3-us-west-2.amazonaws.com/MindsDB-0.1.6.AppImage)
   
+# MindsDB Native
   
 * [Installing MindsDB Native](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 * [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)

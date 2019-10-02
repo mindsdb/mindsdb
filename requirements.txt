@@ -15,6 +15,6 @@ tensorflow == 1.14.0
 tensorflow-estimator == 1.14.0
 ludwig ==  0.2
 xlrd >= 1.0.0
-ImageHash ==  4.0
-imageio ==  2.5.0
-lightwood >=  0.9.10
+ImageHash == 4.0
+imageio == 2.5.0
+lightwood >= 0.9.11

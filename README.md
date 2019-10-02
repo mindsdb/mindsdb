@@ -11,11 +11,11 @@ MindsDB's goal is to give developers easy access to the power of artificial neur
 MindsDB as project is made out of the following:
 
 
-- **[Mindsdb-native](https://github.com/mindsdb/mindsdb/)**: A python module that aims for auto-model building, training, testing in a single line of code, same to use. [mindsdb's GITHUB](https://github.com/mindsdb/mindsdb/)
+- **[Mindsdb-native](https://github.com/mindsdb/mindsdb/)**: This repository, which is a python module that aims for auto-model building, training, testing in a single line of code. 
 
-- **[Lightwood](https://github.com/mindsdb/lightwood/)**: a framework to streamline the work of gluing together building blocks for ML code that is built on PyTorch (mindsdb uses lightwood internally) [lightwood's GITHUB](https://github.com/mindsdb/lightwood/).
+- **[Lightwood](https://github.com/mindsdb/lightwood/)**: Under the hood of mindsdb native there is lightwood, a Pytorch based framework to streamline the work of gluing together building blocks for ML  [lightwood's GITHUB](https://github.com/mindsdb/lightwood/).
 
-- **MindsDB Scout**: a graphical user interface to work with mindsdb, with a focus on interpretability and explainability.
+- **MindsDB Scout**: A graphical user interface to work with MindsDB, with a focus on interpretability and explainability.
 
   - for macOS: [Download](https://mindsdb-installer.s3-us-west-2.amazonaws.com/MindsDB-0.1.6.dmg)
 

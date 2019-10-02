@@ -1,3 +1,4 @@
+lightwood >= 0.9.11
 scikit-image ==  0.14.2
 cython >= 0.29.2
 setuptools >= 21.2.1
@@ -17,4 +18,3 @@ ludwig ==  0.2
 xlrd >= 1.0.0
 ImageHash == 4.0
 imageio == 2.5.0
-lightwood >= 0.9.11

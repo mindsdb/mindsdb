@@ -1,9 +1,6 @@
 import os
 
-import boto3
-from botocore import UNSIGNED
-from botocore.client import Config
-
+import MySQLdb
 
 from mindsdb.libs.data_types.data_source import DataSource
 from mindsdb.libs.data_types.mindsdb_logger import log

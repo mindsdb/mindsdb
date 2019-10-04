@@ -1,13 +1,13 @@
 import os
 
 import pandas as pd
-import MySQLdb
+import psycopg2
 
 from mindsdb.libs.data_types.data_source import DataSource
 from mindsdb.libs.data_types.mindsdb_logger import log
 
 
-class MySqlDS(DataSource):
+class PostgresDS(DataSource):
 
     def _setup(self, query=None, host="localhost", user="root", password='', database='mysql', table=None):
 

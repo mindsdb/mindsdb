@@ -1,5 +1,6 @@
 import os
 
+import pandas as pd
 import MySQLdb
 
 from mindsdb.libs.data_types.data_source import DataSource
@@ -9,21 +10,20 @@ from mindsdb.libs.data_sources.file_ds import FileDS
 
 class MySqlDS(DataSource):
 
-    def _setup(self, bucket_name, file_path, access_key=None, secret_key=None, use_default_credentails=False):
-        if access_key is not None and secret_key is not None:
-            s3 = boto3.client('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
-        elif use_default_credentails:
-            s3 = boto3.client('s3')
-        else:
-            s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+    def _setup(self, query=None, host="localhost", user="root", password='', database='mysql', table=None):
 
-        self.tmp_file_name = '.tmp_mindsdb_data_file'
+        if query is None:
+            query = f'SELECT * FROM {table}'
 
-        with open(self.tmp_file_name, 'wb') as fw:
-            s3.download_fileobj(bucket_name, file_path, fw)
+        con = MySQLdb.connect(host, user, password, database)
+        df = pd.read_sql(query, con=con)
+        con.close()
 
-        file_ds = FileDS(self.tmp_file_name)
-        return file_ds._df, file_ds._col_map
+        col_map = {}
+        for col in df.columns:
+            col_map[col] = col
+
+        return df, col_map
 
 if __name__ == "__main__":
     con = MySQLdb.connect("localhost", "root", "", "mysql")
@@ -34,13 +34,7 @@ if __name__ == "__main__":
     for i in range(0,200):
         cur.execute(f'INSERT INTO test_mindsdb VALUES ("This is tring number {i}", {i}, {i % 2 == 0})')
     con.commit()
-
-    cur.execute('SELECT col_3, col_1, 6 as new_col FROM test_mindsdb LIMIT 1')
-    columns = [x[0] for x in cur.description]
-    print(columns)
-
     con.close()
 
-    exit()
-    ds = S3DS(bucket_name='mindsdb-example-data',file_path='home_rentals.csv', access_key=None, secret_key=None)
-    os.remove(ds.tmp_file_name)
+    mysql_ds = MySqlDS(table='test_mindsdb')
+    assert(len(mysql_ds._df) == 200)

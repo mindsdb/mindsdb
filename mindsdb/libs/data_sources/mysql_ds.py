@@ -31,6 +31,14 @@ if __name__ == "__main__":
 
     cur.execute('DROP TABLE IF EXISTS test_mindsdb')
     cur.execute('CREATE TABLE test_mindsdb(col_1 Text, col_2 BIGINT, col_3 BOOL)')
+    for i in range(0,200):
+        cur.execute(f'INSERT INTO test_mindsdb VALUES ("This is tring number {i}", {i}, {i % 2 == 0})')
+    con.commit()
+
+    cur.execute('SELECT col_3, col_1, 6 as new_col FROM test_mindsdb LIMIT 1')
+    columns = [x[0] for x in cur.description]
+    print(columns)
+
     con.close()
 
     exit()

@@ -26,5 +26,12 @@ class MySqlDS(DataSource):
         return file_ds._df, file_ds._col_map
 
 if __name__ == "__main__":
+    con = MySQLdb.connect("localhost", "root", "", "")
+    cur = con.cursor()
+
+    cur.execute('CREATE TABLE IF NOT EXISTS test_mindsdb(col_1 Text, col_2 BIGINT, col_3 BOOL)')
+    con.close()
+
+    exit()
     ds = S3DS(bucket_name='mindsdb-example-data',file_path='home_rentals.csv', access_key=None, secret_key=None)
     os.remove(ds.tmp_file_name)

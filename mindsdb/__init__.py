@@ -8,4 +8,8 @@ import mindsdb.libs.constants.mindsdb as CONST
 from mindsdb.__about__ import __package_name__ as name, __version__
 from mindsdb.libs.controllers.predictor import Predictor
 
+# Data Sources
+from mindsdb.libs.data_sources.file_ds import FileDS
+from mindsdb.libs.data_sources.s3_ds import S3DS
+
 MindsDB = Predictor

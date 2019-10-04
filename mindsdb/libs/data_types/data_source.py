@@ -6,7 +6,7 @@ class DataSource:
         self.log = log
         df, col_map = self._setup(*args, **kwargs)
         self.setDF(df, col_map)
-        slef._cleanup()
+        self._cleanup()
 
     def _setup(self, df):
         self._df = df

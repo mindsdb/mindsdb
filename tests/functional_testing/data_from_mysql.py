@@ -17,4 +17,4 @@ con.close()
 
 mdb = Predictor(name='analyse_dataset_test_predictor')
 mysql_ds = MySqlDS(query="SELECT * FROM test_mindsdb")
-mdb.analyse_dataset(from_data=s3_ds)
+mdb.analyse_dataset(from_data=mysql_ds)

@@ -69,7 +69,7 @@ setuptools.setup(
     install_requires=requirements,
     extra_require = {
         'extra_data_sources': extra_data_sources
-    }
+    },
     dependency_links=dependency_links,
     classifiers=(
         "Programming Language :: Python :: 3",

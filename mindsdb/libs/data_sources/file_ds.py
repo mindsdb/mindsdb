@@ -1,4 +1,3 @@
-import pandas
 import re
 from io import BytesIO, StringIO
 import csv
@@ -6,10 +5,12 @@ import codecs
 import json
 import traceback
 import codecs
+
+import pandas
+from pandas.io.json import json_normalize
 import requests
 
 from mindsdb.libs.data_types.data_source import DataSource
-from pandas.io.json import json_normalize
 from mindsdb.libs.data_types.mindsdb_logger import log
 
 

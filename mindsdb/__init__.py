@@ -11,5 +11,6 @@ from mindsdb.libs.controllers.predictor import Predictor
 # Data Sources
 from mindsdb.libs.data_sources.file_ds import FileDS
 from mindsdb.libs.data_sources.s3_ds import S3DS
+from mindsdb.libs.data_sources.s3_ds import MySqlDS
 
 MindsDB = Predictor

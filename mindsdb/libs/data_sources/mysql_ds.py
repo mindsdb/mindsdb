@@ -26,10 +26,11 @@ class MySqlDS(DataSource):
         return file_ds._df, file_ds._col_map
 
 if __name__ == "__main__":
-    con = MySQLdb.connect("localhost", "root", "", "")
+    con = MySQLdb.connect("localhost", "root", "", "mysql")
     cur = con.cursor()
 
-    cur.execute('CREATE TABLE IF NOT EXISTS test_mindsdb(col_1 Text, col_2 BIGINT, col_3 BOOL)')
+    cur.execute('DROP TABLE IF EXISTS test_mindsdb')
+    cur.execute('CREATE TABLE test_mindsdb(col_1 Text, col_2 BIGINT, col_3 BOOL)')
     con.close()
 
     exit()

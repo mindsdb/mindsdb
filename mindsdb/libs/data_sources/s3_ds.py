@@ -12,9 +12,11 @@ from mindsdb.libs.data_sources.file_ds import FileDS
 
 class S3DS(DataSource):
 
-    def _setup(self, bucket_name, file_path, access_key=None, secret_key=None):
+    def _setup(self, bucket_name, file_path, access_key=None, secret_key=None, use_default_credentails=False):
         if access_key is not None and secret_key is not None:
             s3 = boto3.client('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+        elif use_default_credentails:
+            s3 = boto3.client('s3')
         else:
             s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 

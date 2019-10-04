@@ -28,6 +28,8 @@ class S3DS(DataSource):
         file_ds = FileDS(self.tmp_file_name)
         return file_ds._df, file_ds._col_map
 
+    def _cleanup(self):
+        self.remove(ds.tmp_file_name)
+
 if __name__ == "__main__":
     ds = S3DS(bucket_name='mindsdb-example-data',file_path='home_rentals.csv', access_key=None, secret_key=None)
-    os.remove(ds.tmp_file_name)

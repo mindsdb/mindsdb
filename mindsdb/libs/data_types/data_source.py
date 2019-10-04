@@ -3,12 +3,16 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 class DataSource:
 
     def __init__(self, *args, **kwargs):
+        self.log = log
         df, col_map = self._setup(*args, **kwargs)
         self.setDF(df, col_map)
-        self.log = log
+        slef._cleanup()
 
     def _setup(self, df):
         self._df = df
+
+    def _cleanup(self):
+        pass
 
     @property
     def df(self):

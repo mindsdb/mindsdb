@@ -8,9 +8,9 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 def getDS(from_data):
     '''
     Get a datasource give the input
+
     :param input: a string or an object
     :return: a datasource
-
     '''
 
     if isinstance(from_data, DataSource):

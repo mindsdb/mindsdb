@@ -25,7 +25,7 @@ class PostgresDS(DataSource):
         return df, col_map
 
 if __name__ == "__main__":
-    con = MySQLdb.connect("localhost", "root", "", "mysql")
+    con = psycopg2.connect(dbname='postgres',user='postgres')
     cur = con.cursor()
 
     cur.execute('DROP TABLE IF EXISTS test_mindsdb')
@@ -35,5 +35,5 @@ if __name__ == "__main__":
     con.commit()
     con.close()
 
-    mysql_ds = MySqlDS(table='test_mindsdb')
+    mysql_ds = PostgresDS(table='test_mindsdb')
     assert(len(mysql_ds._df) == 200)

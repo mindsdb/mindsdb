@@ -9,12 +9,18 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 class PostgresDS(DataSource):
 
-    def _setup(self, query=None, host='localhost', user='postgres', password='', database='postgres', table=None):
+    dbname – the database name (database is a deprecated alias)
+    user – user name used to authenticate
+    password – password used to authenticate
+    host – database host address (defaults to UNIX socket if not provided)
+    port – connection port number (defaults to 5432 if not provided)
+
+    def _setup(self, query=None, host='localhost', user='postgres', password='', database='postgres', port=5432, table=None):
 
         if query is None:
             query = f'SELECT * FROM {table}'
 
-        con = psycopg2.connect(host, user, password, database)
+        con = psycopg2.connect(dbname=database, user=user, host=host, port=port)
         df = pd.read_sql(query, con=con)
         con.close()
 
@@ -29,7 +35,7 @@ if __name__ == "__main__":
     cur = con.cursor()
 
     cur.execute('DROP TABLE IF EXISTS test_mindsdb')
-    cur.execute('CREATE TABLE test_mindsdb(col_1 Text, col_2 BIGINT, col_3 BOOL)')
+    cur.execute('CREATE TABLE test_mindsdb(col_1 Text, col_2 Int, col_3 Boolean)')
     for i in range(0,200):
         cur.execute(f'INSERT INTO test_mindsdb VALUES ("This is tring number {i}", {i}, {i % 2 == 0})')
     con.commit()

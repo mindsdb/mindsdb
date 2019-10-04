@@ -9,12 +9,12 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 class MySqlDS(DataSource):
 
-    def _setup(self, query=None, host='localhost', user='root', password='', database='mysql', table=None):
+    def _setup(self, query=None, host='localhost', user='root', password='', database='mysql', port=3306, table=None):
 
         if query is None:
             query = f'SELECT * FROM {table}'
 
-        con = MySQLdb.connect(host, user, password, database)
+        con = MySQLdb.connect(host, user, password, database, port=port)
         df = pd.read_sql(query, con=con)
         con.close()
 

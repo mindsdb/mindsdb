@@ -49,6 +49,11 @@ elif sys_platform in ['win32','cygwin','windows']:
 else:
     print('\n\n====================\n\nError, platform {sys_platform} not recognized, proceeding to install anyway, but mindsdb might not work properly !\n\n====================\n\n')
 
+extra_data_sources = []
+with open('requirements_extra_data_sources.txt') as fp:
+    for line in fp:
+        extra_data_sources.append(line.rstrip('\n'))
+
 setuptools.setup(
     name=about['__title__'],
     version=about['__version__'],
@@ -62,6 +67,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     install_requires=requirements,
+    extra_require = {
+        'extra_data_sources': extra_data_sources
+    }
     dependency_links=dependency_links,
     classifiers=(
         "Programming Language :: Python :: 3",

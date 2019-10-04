@@ -67,7 +67,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     install_requires=requirements,
-    extra_require = {
+    extras_require = {
         'extra_data_sources': extra_data_sources
     },
     dependency_links=dependency_links,

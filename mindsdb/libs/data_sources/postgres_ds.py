@@ -9,18 +9,12 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 class PostgresDS(DataSource):
 
-    dbname – the database name (database is a deprecated alias)
-    user – user name used to authenticate
-    password – password used to authenticate
-    host – database host address (defaults to UNIX socket if not provided)
-    port – connection port number (defaults to 5432 if not provided)
-
     def _setup(self, query=None, host='localhost', user='postgres', password='', database='postgres', port=5432, table=None):
 
         if query is None:
             query = f'SELECT * FROM {table}'
 
-        con = psycopg2.connect(dbname=database, user=user, host=host, port=port)
+        con = psycopg2.connect(dbname=database, user=user, password=password, host=host, port=port)
         df = pd.read_sql(query, con=con)
         con.close()
 

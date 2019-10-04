@@ -3,8 +3,8 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 class DataSource:
 
     def __init__(self, *args, **kwargs):
-        self._col_map = {} # you can store here if there were some columns renamed
-        self._setup(*args, **kwargs)
+        df, col_map = self._setup(*args, **kwargs)
+        self.setDF(df, col_map)
         self.log = log
 
     def _setup(self, df):
@@ -14,8 +14,9 @@ class DataSource:
     def df(self):
         return self._df
 
-    def setDF(self, df):
+    def setDF(self, df, col_map):
         self._df = df
+        self._col_map = col_map
 
     def dropColumns(self, column_list):
         """
@@ -27,7 +28,7 @@ class DataSource:
 
         cols = [col if col not in self._col_map else self._col_map[col] for col in column_list]
         self._df = self._df.drop(columns=cols)
-        
+
     def __getattr__(self, item):
         """
         Map all other functions to the DataFrame

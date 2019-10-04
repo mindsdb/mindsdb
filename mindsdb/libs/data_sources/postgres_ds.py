@@ -31,7 +31,7 @@ if __name__ == "__main__":
     cur.execute('DROP TABLE IF EXISTS test_mindsdb')
     cur.execute('CREATE TABLE test_mindsdb(col_1 Text, col_2 Int, col_3 Boolean)')
     for i in range(0,200):
-        cur.execute(f'INSERT INTO test_mindsdb VALUES ("This is tring number {i}", {i}, {i % 2 == 0})')
+        cur.execute(f'INSERT INTO test_mindsdb VALUES (\'This is tring number {i}\', {i}, {i % 2 == 0})')
     con.commit()
     con.close()
 

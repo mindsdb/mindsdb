@@ -1,4 +1,3 @@
-import pandas
 import re
 from io import BytesIO, StringIO
 import csv
@@ -6,10 +5,12 @@ import codecs
 import json
 import traceback
 import codecs
+
+import pandas
+from pandas.io.json import json_normalize
 import requests
 
 from mindsdb.libs.data_types.data_source import DataSource
-from pandas.io.json import json_normalize
 from mindsdb.libs.data_types.mindsdb_logger import log
 
 
@@ -154,6 +155,7 @@ class FileDS(DataSource):
         :param custom_parser: if you want to parse the file with some custom parser
         """
 
+        col_map = {}
         # get file data io, format and dialect
         data, format, dialect = self._getDataIo(file)
         data.seek(0) # make sure we are at 0 in file pointer
@@ -183,7 +185,7 @@ class FileDS(DataSource):
             file_data = df.values.tolist()
 
         for col in header:
-            self._col_map[col] = col
+            col_map[col] = col
 
         if clean_rows == True:
             file_list_data = []
@@ -194,6 +196,6 @@ class FileDS(DataSource):
             file_list_data = file_data
 
         try:
-            self.setDF(pandas.DataFrame(file_list_data, columns=header))
+            return pandas.DataFrame(file_list_data, columns=header), col_map
         except:
-            self.setDF(pandas.read_csv(file))
+            return pandas.read_csv(file), col_map

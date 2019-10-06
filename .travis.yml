@@ -1,4 +1,6 @@
 language: python
+services:
+  - docker
 matrix:
   include:
     - name: "Python 3.7.3 on Ubuntu 16.0.4"
@@ -46,6 +48,10 @@ before_deploy:
   - npm install
   - npm run build
   - cd ../../..
+  - cd distributions/docker
+  - docker build -t docker-build .
+  - docker tag docker-build $REGISTRY_USER/mindsdb:latest
+  - cd ../..
 
 # deploy to pip
 deploy:
@@ -61,6 +67,12 @@ deploy:
     skip_cleanup: true
     github_token: $GITHUB_TOKEN
     local_dir: docs/website/website/build/mindsdb
+    on:
+      branch: master
+      condition: $DEPLOYMENT_ENV = "true"
+
+  - provider: script
+    script: docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS" && docker push $REGISTRY_USER/mindsdb && docker logout
     on:
       branch: master
       condition: $DEPLOYMENT_ENV = "true"

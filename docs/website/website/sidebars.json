@@ -11,6 +11,7 @@
       "advanced-mindsdb"
     ],
 		"Configuration": [
+			"interface",
       "config"
 		],
 		"Features": [

@@ -19,6 +19,7 @@
     ],
 		"Comparisons": [
 			"comparison-mindsdb"
+			"accuracy-comparison"
 		],
     "Contributing": [
       "faq",

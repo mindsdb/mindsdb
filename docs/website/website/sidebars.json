@@ -18,7 +18,7 @@
       "data-sources"
     ],
 		"Comparisons": [
-			"comparison-mindsdb"
+			"comparison-mindsdb",
 			"accuracy-comparison"
 		],
     "Contributing": [

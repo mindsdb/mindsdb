@@ -11,7 +11,7 @@
       "advanced-mindsdb"
     ],
 		"Configuration": [
-			"interface",
+			"predictor-interface",
       "config"
 		],
 		"Features": [

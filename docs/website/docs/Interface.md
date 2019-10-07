@@ -1,4 +1,0 @@
----
-id: interface
-title: Interface
----

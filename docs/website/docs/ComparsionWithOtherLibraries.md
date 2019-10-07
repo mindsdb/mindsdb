@@ -3,38 +3,43 @@ id: comparison-mindsdb
 title: Comparison with other Libraries
 ---
 
-How's MindsDB compared to other libraries, we will compare some of the libraries and show what differentiates Mindsdb from the rest.
+Let's compared Mindsdb with some popular deep learning and machine learning libraries to show what makes it different.
 
 ## Models
 
-With libraries such as Tensorflow, Sklearn, Pytorch you must have the expertise to build models from sratch and test them for accuracy.
+With libraries such as Tensorflow, Sklearn, Pytorch you must have the expertise to build models from scratch. Your models are also black boxes, you can't be sure how or why they work and you have to pre-process your data in a format that's suitable for the model and look for any errors in the data yourself.
 
-With Mindsdb anyone can build state of the art models, you do not need to know how to build models.
+With Mindsdb anyone can build state of the art models without any machine learning knowledge. Mindsdb also provides data extraction, analyses your input data and analyses the resulting model to try and understand what makes it work and what types of situations it works best in.
 
 ## Data Preprocessing
 
-Building models require most of the time for cleaning the data, normalizing the data, converting it into dataframes or tensors and making sure that you have checked for null values, categorical values.
+Building models require time for cleaning the data, normalizing the data, converting it into the format your library uses, determining the type of data in each column and a proper encoding for it
 
-Mindsdb can read data from csv, json, excel, url, dataframe or even a MySql table, tell it which colum(s) it should predict. It will automatically process the data for you and give insights about the data.
+Mindsdb can read data from csv, json, excel, file urls, s3 objects , dataframes and relational database tables or queries (currently there's native support for maraiadb, mysql and postgres), you just need to tell it which colum(s) it should predict. It will automatically process the data for you and give insights about the data.
 
-## Prediction
-
-Getting predictions from the model will require the data on which you want to predict, for getting accurate predictions the models should be trained well. The model should not overfit or underfit the training data.
-
-Getting predictions with Mindsdb is more like writing **queries** than to code the whole prediction system.
 
 ## Code Samples
 
-Here we are going to use **[home_rentals.csv](https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv)** dataset for comparison purpose. Our goal is to predict the rental_price of the house given the information we have in home_rental.csv
+We are going to use **[home_rentals.csv](https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv)** dataset for comparison purpose.
+
+Our goal is to predict the rental_price of the house given the information we have in `home_rental.csv`.
+
+We will look at doing this with Sklearn, Tensorflow, Ludwig and Mindsdb.
+
+* Sklearn is a generic easy-to-use machine learning library.
+* Tensorflow is the state of the art deep learning model building library from google.
+* Ludwig is a library from Uber that aims to help people build machine learning models without knowledge of machine learning (similar to mindsdb)
 
 ### Preprocessing
+
+*Note: This step is only required for Sklearn and Tensorflow, for Ludwig and mindsdb we will be using the raw csv file*
 
 When working with data we first have to see what type of data we are dealing with, in our case we have some numerical, categorical data. We first need to convert categorical data columns into numerical data.
 
 ```python
 # loading data
 import pandas as pd
-data = pd.read_csv("home_rentals .csv")
+data = pd.read_csv("home_rentals.csv")
 
 # dealing with categorical values
 data=pd.get_dummies(data, prefix=['condition','type'], columns=['location','neighborhood'])
@@ -50,9 +55,11 @@ del train_data['rental_price']
 del test_data['rental_price']
 ```
 
-Now we will check which type of model should be built. We will be going with simple linear regression.
+### Building the model
 
-### Tensorflow
+Now we will build the actual models to train on the training dataset and run some predictions on the testing dataset. For the purpose of this example, we'll build a simple linear regression with both Tensorflow and Sklearn, in order to keep the code to a minimum.
+
+#### Tensorflow
 
 ```python
 # placeholders for input data and label
@@ -91,7 +98,7 @@ predictions = weight* (test_data) + bias
 print(predictions)
 ```
 
-### Sklearn
+#### Sklearn
 
 ```python
 import sklearn
@@ -107,7 +114,7 @@ y_pred = regressor.predict(test_data)
 print(y_pred)
 ```
 
-### Ludwig
+#### Ludwig
 
 ```python
 from ludwig import LudwigModel
@@ -146,21 +153,13 @@ import mindsdb
 mdb = mindsdb.Predictor(name='real_estate_model')
 
 # We tell the Predictor what column or key we want to learn and from what data
-mdb.learn(
-    from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv", # the path to the file where we can learn from, (note: can be url)
-    to_predict='rental_price', # the column we want to learn to predict given all the data in the file
-)
+mdb.learn(from_data="home_rentals.csv" , to_predict='rental_price')
 
 mdb = mindsdb.Predictor(name='real_estate_model')
 
-# use the model to make predictions
-# Note: you can use the `when_data` argument if you want to use a file with one or more rows instead of a python dictionary
+# Predict a single data point
 result = mdb.predict(when={'number_of_rooms': 2,'number_of_bathrooms':1, 'sqft': 1190})
-
-# The result will be an array containing predictions for each data point (in this case only one), a confidence for said prediction and a few other extra informations
 print('The predicted price is ${price} with {conf} confidence'.format(price=result[0]['rental_price'], conf=result[0]['rental_price_confidence']))
 ```
 
-*Note: In the Mindsdb code sample we did not use the preprocessed data, we directly gave it a link where the data is stored.*
-
-Generally speaking, Mindsdb differentiates itself from other libraries by its **simplicity**. Lastly, it will provide you with the ability to visualize the insights that you get from training in an easy to understand way.
+Generally speaking, Mindsdb differentiates itself from other libraries by its **simplicity**. Lastly, Mindsdb scout provides you with an easy way to visiualize more insights about the model, this can also be done by calling `mdb.get_model_data('model_name')`, but it's easier to use Mindsdb-Scout to visualize the data, rather than looking at the raw json.

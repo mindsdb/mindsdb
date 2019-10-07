@@ -4,7 +4,7 @@
       "installing-mindsdb",
 			"google-colab",
       "jupyter-notebook",
-      "comparison-mindsdb"
+
     ],
     "Tutorials": [
       "basic-mindsdb",
@@ -17,6 +17,9 @@
 			"column-metrics",
       "data-sources"
     ],
+		"Comparisons": [
+			"comparison-mindsdb"
+		],
     "Contributing": [
       "faq",
 			"inside-mindsdb"

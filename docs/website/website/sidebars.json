@@ -3,8 +3,7 @@
 		"Getting started": [
       "installing-mindsdb",
 			"google-colab",
-      "jupyter-notebook",
-
+      "jupyter-notebook"
     ],
     "Tutorials": [
       "basic-mindsdb",

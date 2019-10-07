@@ -4,19 +4,24 @@
       "installing-mindsdb",
 			"google-colab",
       "jupyter-notebook",
-      "comparison-mindsdb"
+
     ],
     "Tutorials": [
       "basic-mindsdb",
       "advanced-mindsdb"
     ],
 		"Configuration": [
+			"predictor-interface",
       "config"
 		],
 		"Features": [
 			"column-metrics",
       "data-sources"
     ],
+		"Comparisons": [
+			"comparison-mindsdb"
+			"accuracy-comparison"
+		],
     "Contributing": [
       "faq",
 			"inside-mindsdb"

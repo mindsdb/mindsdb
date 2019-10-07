@@ -380,11 +380,11 @@ class Predictor:
             print(e)
             return False
 
-    def load(self, mindsdb_storage_dir='mindsdb_storage.zip'):
+    def load(self, mindsdb_storage_dir):
         """
         If you want to import a mindsdb instance storage from a file
 
-        :param mindsdb_storage_dir: this is the full_path that contains your mind
+        :param mindsdb_storage_dir: full_path that contains your mindsdb predictor zip file
         :return: bool (True/False) True if mind was importerd successfully
         """
         shutil.unpack_archive(mindsdb_storage_dir, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
@@ -397,7 +397,7 @@ class Predictor:
         :param model_archive_path: this is the path to the archive where your model resides
         :return: bool (True/False) True if mind was importerd successfully
         """
-        shutil.unpack_archive(model_archive_path, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
+        self.load(model_archive_path)
 
     def delete_model(self, model_name):
         """
@@ -416,7 +416,7 @@ class Predictor:
             print(e)
             return False
 
-    def analyse_dataset(self, from_data=None, test_from_data=None, sample_margin_of_error=CONFIG.DEFAULT_MARGIN_OF_ERROR):
+    def analyse_dataset(self, from_data, sample_margin_of_error=CONFIG.DEFAULT_MARGIN_OF_ERROR):
         """
         Analyse the particular dataset being given
         """
@@ -443,13 +443,13 @@ class Predictor:
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
-    def learn(self, to_predict, from_data = None, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict={}):
+    def learn(self, to_predict, from_data, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict={}):
         """
         Learn to predict a column or columns from the data in 'from_data'
 
         Mandatory arguments:
         :param to_predict: what column or columns you want to predict
-        :param from_data: the data that you want to learn from, this can be either a file, a pandas data frame, or url to a file
+        :param from_data: the data that you want to learn from, this can be either a file, a pandas data frame, or url or a mindsdb data source
 
         Optional arguments:
         :param test_from_data: If you would like to test this learning from a different data set
@@ -463,7 +463,7 @@ class Predictor:
         :param ignore_columns: it simply removes the columns from the data sources
 
         Optional sampling parameters:
-        :param sample_margin_error (DEFAULT 0): Maximum expected difference between the true population parameter, such as the mean, and the sample estimate.
+        :param sample_margin_of_error (DEFAULT 0): Maximum expected difference between the true population parameter, such as the mean, and the sample estimate.
 
         Optional debug arguments:
         :param stop_training_in_x_seconds: (default None), if set, you want training to finish in a given number of seconds

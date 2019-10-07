@@ -1,1 +1,2 @@
 include requirements.txt
+include requirements_extra_data_sources.txt

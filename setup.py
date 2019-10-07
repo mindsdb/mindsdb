@@ -20,9 +20,14 @@ with open("mindsdb/__about__.py") as fp:
 
 long_description = open('README.md', encoding='utf-8').read()
 
-with open('requirements.txt') as req_file:
+with open('requirements.txt', 'r') as req_file:
     requirements = [req.strip() for req in req_file.read().splitlines()]
 
+extra_data_sources = []
+with open('requirements_extra_data_sources.txt', 'r') as fp:
+    for line in fp:
+        extra_data_sources.append(line.rstrip('\n'))
+        
 dependency_links = []
 
 # Linux specific requirements
@@ -49,10 +54,6 @@ elif sys_platform in ['win32','cygwin','windows']:
 else:
     print('\n\n====================\n\nError, platform {sys_platform} not recognized, proceeding to install anyway, but mindsdb might not work properly !\n\n====================\n\n')
 
-extra_data_sources = []
-with open('requirements_extra_data_sources.txt') as fp:
-    for line in fp:
-        extra_data_sources.append(line.rstrip('\n'))
 
 setuptools.setup(
     name=about['__title__'],

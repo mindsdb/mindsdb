@@ -1,6 +1,6 @@
 from mindsdb import Predictor
 import sys
-
+import pandas as pd
 
 mdb = Predictor(name='sensor123')
 

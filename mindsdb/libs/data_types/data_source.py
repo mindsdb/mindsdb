@@ -9,7 +9,10 @@ class DataSource:
         self._cleanup()
 
     def _setup(self, df):
-        self._df = df
+        col_map = {}
+        for col in df.columns:
+            col_map[col] = col
+        return df, col_map
 
     def _cleanup(self):
         pass

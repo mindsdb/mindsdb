@@ -44,10 +44,10 @@ script:
   - cd ../..
 
 before_deploy:
-  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then cd docs/website/website; fi
-  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then npm install; fi
-  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then npm run build; fi
-  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then cd ../../..; fi
+  - if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then cd docs/website/website; fi
+  - if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then npm install; fi
+  - if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then npm run build; fi
+  - if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then cd ../../..; fi
 
 # deploy to pip and github pages
 deploy:
@@ -69,9 +69,9 @@ deploy:
 
 # after pip is deployed, we can deploy to dockerhub
 after_deploy:
-  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then sleep 15; fi
-  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then cd distributions/docker; fi
-  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then docker build -t docker-build .; fi
-  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then docker tag docker-build $REGISTRY_USER/mindsdb:latest; fi
-  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then cd ../..; fi
-  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS" && docker push $REGISTRY_USER/mindsdb && docker logout; fi
+  -  if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then sleep 15; fi
+  -  if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then cd distributions/docker; fi
+  -  if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then docker build -t docker-build .; fi
+  -  if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then docker tag docker-build $REGISTRY_USER/mindsdb:latest; fi
+  -  if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then cd ../..; fi
+  -  if [ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]; then docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS" && docker push $REGISTRY_USER/mindsdb && docker logout; fi

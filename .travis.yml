@@ -44,15 +44,11 @@ script:
   - cd ../..
 
 before_deploy:
-  - cd docs/website/website
-  - npm install
-  - npm run build
-  - cd ../../..
-#  - cd distributions/docker
-#  - docker build -t docker-build .
-#  - docker tag docker-build $REGISTRY_USER/mindsdb:latest
-#  - cd ../..
-
+  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then cd docs/website/website; fi
+  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then npm install; fi
+  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then npm run build; fi
+  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then cd ../../..; fi
+  
 # deploy to pip
 deploy:
   - provider: pypi
@@ -71,8 +67,12 @@ deploy:
       branch: master
       condition: $DEPLOYMENT_ENV = "true"
 
-#  - provider: script
-#    script: docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS" && docker push $REGISTRY_USER/mindsdb && docker logout
-#    on:
+after_deploy:
+#  - cd distributions/docker
+#  - docker build -t docker-build .
+#  - docker tag docker-build $REGISTRY_USER/mindsdb:latest
+#  - cd ../..
+#  - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS" && docker push $REGISTRY_USER/mindsdb && docker logout
+#    if:
 #      branch: master
 #      condition: $DEPLOYMENT_ENV = "true"

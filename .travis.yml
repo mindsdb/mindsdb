@@ -49,7 +49,7 @@ before_deploy:
   - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then npm run build; fi
   - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then cd ../../..; fi
 
-# deploy to pip
+# deploy to pip and github pages
 deploy:
   - provider: pypi
     user: "mindsdb_sysadmin"
@@ -67,6 +67,7 @@ deploy:
       branch: master
       condition: $DEPLOYMENT_ENV = "true"
 
+# after pip is deployed, we can deploy to dockerhub
 #after_deploy:
 #  - cd distributions/docker
 #  - docker build -t docker-build .

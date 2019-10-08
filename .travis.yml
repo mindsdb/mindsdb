@@ -44,10 +44,10 @@ script:
   - cd ../..
 
 before_deploy:
-  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then cd docs/website/website; fi
-  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then npm install; fi
-  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then npm run build; fi
-  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH == "master" ]; then cd ../../..; fi
+  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then cd docs/website/website; fi
+  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then npm install; fi
+  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then npm run build; fi
+  - if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then cd ../../..; fi
 
 # deploy to pip and github pages
 deploy:

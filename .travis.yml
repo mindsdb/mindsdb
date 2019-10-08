@@ -68,12 +68,10 @@ deploy:
       condition: $DEPLOYMENT_ENV = "true"
 
 # after pip is deployed, we can deploy to dockerhub
-#after_deploy:
-#  - cd distributions/docker
-#  - docker build -t docker-build .
-#  - docker tag docker-build $REGISTRY_USER/mindsdb:latest
-#  - cd ../..
-#  - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS" && docker push $REGISTRY_USER/mindsdb && docker logout
-#    if:
-#      branch: master
-#      condition: $DEPLOYMENT_ENV = "true"
+after_deploy:
+  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then sleep 15; fi
+  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then cd distributions/docker; fi
+  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then docker build -t docker-build .; fi
+  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then docker tag docker-build $REGISTRY_USER/mindsdb:latest; fi
+  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then cd ../..; fi
+  -  if [ $DEPLOYMENT_ENV = "true" && $TRAVIS_BRANCH = "master" ]; then docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS" && docker push $REGISTRY_USER/mindsdb && docker logout; fi

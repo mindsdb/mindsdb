@@ -64,7 +64,7 @@ class Predictor:
                     amd = self.get_model_data(model_name)
                     model = {}
                     for k in ['name', 'version', 'is_active', 'data_source', 'predict',
-                    'status', 'train_end_at', 'updated_at', 'created_at','current_phase']:
+                    'status', 'train_end_at', 'updated_at', 'created_at','current_phase', 'accuracy']:
                         if k in amd:
                             model[k] = amd[k]
                         else:

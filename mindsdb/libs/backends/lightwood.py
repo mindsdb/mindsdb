@@ -86,7 +86,7 @@ class LightwoodBackend():
         config['output_features'] = []
 
         for col_name in self.transaction.input_data.columns:
-            if col_name in self.transaction.lmd['malformed_columns']['names']:
+            if col_name in self.transaction.lmd['malformed_columns']:
                 continue
 
             col_stats = self.transaction.lmd['column_stats'][col_name]

@@ -142,7 +142,7 @@ class LudwigBackend():
             col_map[tf_col] = col
 
             # Handle malformed columns
-            if col in self.transaction.lmd['malformed_columns']['names']:
+            if col in self.transaction.lmd['malformed_columns']:
                 continue
 
             data[tf_col] = []

@@ -241,7 +241,7 @@ class Predictor:
         amd['model_analysis'] = []
 
         for col in lmd['model_columns_map'].keys():
-            if col in lmd['malformed_columns']['names']:
+            if col in lmd['malformed_columns']:
                 continue
 
             try:
@@ -322,7 +322,7 @@ class Predictor:
                         mao['accuracy_histogram']['x_explained'].append(x_explained_member)
 
                     for icol in lmd['model_columns_map'].keys():
-                        if icol in lmd['malformed_columns']['names']:
+                        if icol in lmd['malformed_columns']:
                             continue
                         if icol not in lmd['predict_columns']:
                             try:

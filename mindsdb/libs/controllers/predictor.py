@@ -73,6 +73,7 @@ class Predictor:
                     models.append(model)
                 except Exception as e:
                     print(e)
+                    print(traceback.format_exc())
                     print(f"Can't adapt metadata for model: '{model_name}' when calling `get_models()`")
 
         return models

@@ -266,7 +266,7 @@ class Predictor:
                     icm['importance_score'] = None
                 amd['data_analysis']['target_columns_metadata'].append(icm)
 
-                if 'confusion_matrices' in lmd and col in lmd['confusion_matrices']
+                if 'confusion_matrices' in lmd and col in lmd['confusion_matrices']:
                     confusion_matrix = lmd['confusion_matrices'][col]
                 # Model analysis building for each of the predict columns
                 mao = {

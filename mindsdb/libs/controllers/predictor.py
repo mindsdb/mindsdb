@@ -443,7 +443,7 @@ class Predictor:
         light_transaction_metadata['model_is_time_series'] = False
         light_transaction_metadata['model_group_by'] = []
         light_transaction_metadata['model_order_by'] = []
-        light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
+        light_transaction_metadata['malformed_columns'] = []
         light_transaction_metadata['data_preparation'] = {}
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
@@ -530,7 +530,7 @@ class Predictor:
         light_transaction_metadata['columnless_prediction_distribution'] = None
         light_transaction_metadata['all_columns_prediction_distribution'] = None
         light_transaction_metadata['use_gpu'] = use_gpu
-        light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
+        light_transaction_metadata['malformed_columns'] = []
         light_transaction_metadata['disable_optional_analysis'] = disable_optional_analysis
         light_transaction_metadata['validation_set_accuracy'] = None
         light_transaction_metadata['lightwood_data'] = {}

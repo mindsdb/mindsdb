@@ -503,6 +503,7 @@ class StatsGenerator(BaseModule):
             if column_status == 'Column empty':
                 if modify_light_metadata:
                     self.transaction.lmd['malformed_columns'].append(col_name)
+                    print(self.transaction.lmd['malformed_columns'])
                 continue
 
             new_col_data = []

@@ -517,7 +517,6 @@ class Predictor:
         light_transaction_metadata['model_is_time_series'] = is_time_series
         light_transaction_metadata['data_source'] = from_data
         light_transaction_metadata['type'] = transaction_type
-        light_transaction_metadata['ignore_columns'] = ignore_columns
         light_transaction_metadata['window_size'] = window_size
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
         light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
@@ -530,7 +529,7 @@ class Predictor:
         light_transaction_metadata['columnless_prediction_distribution'] = None
         light_transaction_metadata['all_columns_prediction_distribution'] = None
         light_transaction_metadata['use_gpu'] = use_gpu
-        light_transaction_metadata['malformed_columns'] = []
+        light_transaction_metadata['malformed_columns'] = ignore_columns
         light_transaction_metadata['disable_optional_analysis'] = disable_optional_analysis
         light_transaction_metadata['validation_set_accuracy'] = None
         light_transaction_metadata['lightwood_data'] = {}

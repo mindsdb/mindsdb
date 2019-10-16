@@ -494,6 +494,9 @@ class StatsGenerator(BaseModule):
         col_data_dict = {}
 
         for col_name in all_sampled_data.columns.values:
+            if col_name in self.transaction.lmd['malformed_columns']:
+                continue
+
             col_data = all_sampled_data[col_name].dropna()
             full_col_data = all_sampled_data[col_name]
 

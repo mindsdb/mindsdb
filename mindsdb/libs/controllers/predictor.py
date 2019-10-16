@@ -465,7 +465,7 @@ class Predictor:
         :param window_size: The number of samples to learn from in the time series
 
         Optional data transformation arguments:
-        :param ignore_columns: it simply removes the columns from the data sources
+        :param ignore_columns: mindsdb will ignore this column
 
         Optional sampling parameters:
         :param sample_margin_of_error (DEFAULT 0): Maximum expected difference between the true population parameter, such as the mean, and the sample estimate.
@@ -583,7 +583,7 @@ class Predictor:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
                 heavy_transaction_metadata= pickle.load(fp)
 
-            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'ignore_columns', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:
+            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'malformed_columns', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:
                 if old_lmd[k] is not None: light_transaction_metadata[k] = old_lmd[k]
 
             for k in ['from_data', 'test_from_data']:

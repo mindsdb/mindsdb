@@ -560,6 +560,17 @@ class Predictor:
         else:
             light_transaction_metadata['optimize_model'] = False
 
+        if 'force_disable_cache' in unstable_parameters_dict:
+            light_transaction_metadata['force_disable_cache'] = unstable_parameters_dict['force_disable_cache']
+        else:
+            light_transaction_metadata['force_disable_cache'] = False
+
+        if 'force_categorical_encoding' in unstable_parameters_dict:
+            light_transaction_metadata['force_categorical_encoding'] = unstable_parameters_dict['force_categorical_encoding']
+        else:
+            light_transaction_metadata['force_categorical_encoding'] = []
+
+
         if rebuild_model is False:
             old_lmd = {}
             for k in light_transaction_metadata: old_lmd[k] = light_transaction_metadata[k]
@@ -619,6 +630,11 @@ class Predictor:
             light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
         else:
             light_transaction_metadata['always_use_model_prediction'] = False
+
+        if 'force_disable_cache' in unstable_parameters_dict:
+            light_transaction_metadata['force_disable_cache'] = unstable_parameters_dict['force_disable_cache']
+        else:
+            light_transaction_metadata['force_disable_cache'] = False
 
         transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata)
 

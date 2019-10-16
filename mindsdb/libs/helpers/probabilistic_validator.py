@@ -61,7 +61,7 @@ class ProbabilisticValidator():
             predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
         except:
             predicted_value = None
-            
+
         try:
             real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(str(real_value).replace(',','.'))
         except:
@@ -159,7 +159,7 @@ class ProbabilisticValidator():
 
     def evaluate_prediction_accuracy(self, features_existence, predicted_value, always_use_model_prediction):
         """
-        # Fit the probabilistic validator on an observation    def evaluate_prediction_accuracy(self, features_existence, predicted_value):
+        # Fit the probabilistic validator on an observation
         :param features_existence: A vector of 0 and 1 representing the existence of all the features (0 == not exists, 1 == exists)
         :param predicted_value: The predicted value/label
         :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)

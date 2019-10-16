@@ -15,13 +15,9 @@ MindsDB as project is made out of the following:
 
 - **[Lightwood](https://github.com/mindsdb/lightwood/)**: Under the hood of mindsdb native there is lightwood, a Pytorch based framework to streamline the work of gluing together building blocks for ML  [lightwood's GITHUB](https://github.com/mindsdb/lightwood/).
 
-- **MindsDB Scout**: A graphical user interface to work with MindsDB, with a focus on interpretability and explainability.
+- **[MindsDB Scout](http://mindsdb.com/product)**: A graphical user interface to work with MindsDB, with a focus on interpretability and explainability.
 
-  - for macOS: [Download](https://mindsdb-installer.s3-us-west-2.amazonaws.com/MindsDB-0.1.6.dmg)
-
-  - for Windows:  [Download](https://mindsdb-installer.s3-us-west-2.amazonaws.com/MindsDB-Setup-0.1.6-64bit.exe)
-
-  - for Linux: [Download](https://mindsdb-installer.s3-us-west-2.amazonaws.com/MindsDB-0.1.6.AppImage)
+ 
   
 # MindsDB Native
   

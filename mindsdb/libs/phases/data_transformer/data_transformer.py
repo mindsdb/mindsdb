@@ -84,7 +84,7 @@ class DataTransformer(BaseModule):
     def run(self, input_data, mode=None):
         for column in input_data.columns:
 
-            if column in self.transaction.lmd['malformed_columns']['names']:
+            if column in self.transaction.lmd['malformed_columns']:
                 continue
 
             data_type = self.transaction.lmd['column_stats'][column]['data_type']

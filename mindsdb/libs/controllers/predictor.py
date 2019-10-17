@@ -241,7 +241,7 @@ class Predictor:
         amd['model_analysis'] = []
 
         for col in lmd['model_columns_map'].keys():
-            if col in lmd['malformed_columns']['names']:
+            if col in lmd['malformed_columns']:
                 continue
 
             try:
@@ -322,7 +322,7 @@ class Predictor:
                         mao['accuracy_histogram']['x_explained'].append(x_explained_member)
 
                     for icol in lmd['model_columns_map'].keys():
-                        if icol in lmd['malformed_columns']['names']:
+                        if icol in lmd['malformed_columns']:
                             continue
                         if icol not in lmd['predict_columns']:
                             try:
@@ -443,7 +443,7 @@ class Predictor:
         light_transaction_metadata['model_is_time_series'] = False
         light_transaction_metadata['model_group_by'] = []
         light_transaction_metadata['model_order_by'] = []
-        light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
+        light_transaction_metadata['malformed_columns'] = []
         light_transaction_metadata['data_preparation'] = {}
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
@@ -465,7 +465,7 @@ class Predictor:
         :param window_size: The number of samples to learn from in the time series
 
         Optional data transformation arguments:
-        :param ignore_columns: it simply removes the columns from the data sources
+        :param ignore_columns: mindsdb will ignore this column
 
         Optional sampling parameters:
         :param sample_margin_of_error (DEFAULT 0): Maximum expected difference between the true population parameter, such as the mean, and the sample estimate.
@@ -517,7 +517,6 @@ class Predictor:
         light_transaction_metadata['model_is_time_series'] = is_time_series
         light_transaction_metadata['data_source'] = from_data
         light_transaction_metadata['type'] = transaction_type
-        light_transaction_metadata['ignore_columns'] = ignore_columns
         light_transaction_metadata['window_size'] = window_size
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
         light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
@@ -530,7 +529,7 @@ class Predictor:
         light_transaction_metadata['columnless_prediction_distribution'] = None
         light_transaction_metadata['all_columns_prediction_distribution'] = None
         light_transaction_metadata['use_gpu'] = use_gpu
-        light_transaction_metadata['malformed_columns'] = {'names': [], 'indices': []}
+        light_transaction_metadata['malformed_columns'] = ignore_columns
         light_transaction_metadata['disable_optional_analysis'] = disable_optional_analysis
         light_transaction_metadata['validation_set_accuracy'] = None
         light_transaction_metadata['lightwood_data'] = {}
@@ -560,6 +559,17 @@ class Predictor:
         else:
             light_transaction_metadata['optimize_model'] = False
 
+        if 'force_disable_cache' in unstable_parameters_dict:
+            light_transaction_metadata['force_disable_cache'] = unstable_parameters_dict['force_disable_cache']
+        else:
+            light_transaction_metadata['force_disable_cache'] = False
+
+        if 'force_categorical_encoding' in unstable_parameters_dict:
+            light_transaction_metadata['force_categorical_encoding'] = unstable_parameters_dict['force_categorical_encoding']
+        else:
+            light_transaction_metadata['force_categorical_encoding'] = []
+
+
         if rebuild_model is False:
             old_lmd = {}
             for k in light_transaction_metadata: old_lmd[k] = light_transaction_metadata[k]
@@ -573,7 +583,7 @@ class Predictor:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
                 heavy_transaction_metadata= pickle.load(fp)
 
-            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'ignore_columns', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:
+            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'malformed_columns', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:
                 if old_lmd[k] is not None: light_transaction_metadata[k] = old_lmd[k]
 
             for k in ['from_data', 'test_from_data']:
@@ -619,6 +629,11 @@ class Predictor:
             light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
         else:
             light_transaction_metadata['always_use_model_prediction'] = False
+
+        if 'force_disable_cache' in unstable_parameters_dict:
+            light_transaction_metadata['force_disable_cache'] = unstable_parameters_dict['force_disable_cache']
+        else:
+            light_transaction_metadata['force_disable_cache'] = False
 
         transaction = Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata)
 

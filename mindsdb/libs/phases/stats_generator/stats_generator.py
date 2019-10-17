@@ -494,6 +494,9 @@ class StatsGenerator(BaseModule):
         col_data_dict = {}
 
         for col_name in all_sampled_data.columns.values:
+            if col_name in self.transaction.lmd['malformed_columns']:
+                continue
+
             col_data = all_sampled_data[col_name].dropna()
             full_col_data = all_sampled_data[col_name]
 
@@ -502,8 +505,8 @@ class StatsGenerator(BaseModule):
 
             if column_status == 'Column empty':
                 if modify_light_metadata:
-                    self.transaction.lmd['malformed_columns']['names'].append(col_name)
-                    self.transaction.lmd['malformed_columns']['indices'].append(i)
+                    self.transaction.lmd['malformed_columns'].append(col_name)
+
                 continue
 
             new_col_data = []
@@ -629,7 +632,7 @@ class StatsGenerator(BaseModule):
             col_data_dict[col_name] = col_data
 
         for col_name in all_sampled_data.columns:
-            if col_name in self.transaction.lmd['malformed_columns']['names']:
+            if col_name in self.transaction.lmd['malformed_columns']:
                 continue
 
             # Use the multiprocessing pool for computing scores which take a very long time to compute
@@ -680,6 +683,4 @@ class StatsGenerator(BaseModule):
         '''
 
         self._log_interesting_stats(stats)
-
         return stats
-

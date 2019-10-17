@@ -17,8 +17,7 @@ class ModelAnalyzer(BaseModule):
         """
 
         output_columns = self.transaction.lmd['predict_columns']
-        input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns and col not in self.transaction.lmd['malformed_columns']['names']]
-
+        input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns and col not in self.transaction.lmd['malformed_columns']]
         # Test some hypotheses about our columns
 
         if self.transaction.lmd['disable_optional_analysis'] is False:

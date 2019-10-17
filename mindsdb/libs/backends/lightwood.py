@@ -86,7 +86,7 @@ class LightwoodBackend():
         config['output_features'] = []
 
         for col_name in self.transaction.input_data.columns:
-            if col_name in self.transaction.lmd['malformed_columns']['names']:
+            if col_name in self.transaction.lmd['malformed_columns']:
                 continue
 
             col_stats = self.transaction.lmd['column_stats'][col_name]
@@ -110,7 +110,10 @@ class LightwoodBackend():
                 other_keys['encoder_attrs']['aim'] = 'balance'
 
             elif data_subtype in (DATA_SUBTYPES.TEXT):
-                lightwood_data_type = 'text'
+                if col_name in self.transaction.lmd['force_categorical_encoding']:
+                    lightwood_data_type = 'categorical'
+                else:
+                    lightwood_data_type = 'text'
 
             else:
                 self.transaction.log.error(f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
@@ -153,6 +156,13 @@ class LightwoodBackend():
     def train(self):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
 
+        use_cache = True
+        # @TODO Some code to set the value of `use_cache` based on dataframe size
+        if self.transaction.lmd['force_disable_cache'] is True:
+            use_cache = False
+
+        lightwood.config.config.CONFIG.USE_CACHE = use_cache
+
         if self.transaction.lmd['model_order_by'] is not None and len(self.transaction.lmd['model_order_by']) > 0:
             self.transaction.log.debug('Reshaping data into timeseries format, this may take a while !')
             train_df = self._create_timeseries_df(self.transaction.input_data.train_df)
@@ -181,6 +191,11 @@ class LightwoodBackend():
 
     def predict(self, mode='predict', ignore_columns=[]):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
+
+        use_cache = True
+        # @TODO Some code to set the value of `use_cache` based on dataframe size
+        if self.transaction.lmd['force_disable_cache'] is True:
+            use_cache = False
 
         if mode == 'predict':
             # Doing it here since currently data cleanup is included in this, in the future separate data cleanup

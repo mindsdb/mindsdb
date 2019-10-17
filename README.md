@@ -31,19 +31,38 @@ MindsDB as project is made out of the following:
 
 ### Installation
 
-You can use MindsDb on your own computer in under a minute, simply follow the [installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb) or, if you already have a python environment setup, just run:
+### Installation
+
+★ Desktop  
+
+You can use MindsDb on your own computer in under a minute, if you already have a python environment setup, just run:
 
 ```bash
  pip3 install mindsdb --user
 ```
+otherwise simply follow the [installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb).
 
-You can try MindsDb on [Google Colab](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
+★ Google Colab   
 
-You can also use Docker to run mindsdb: `sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/build-docker.sh)"`
+[![MindsDB](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
 
-If you'd prefer to watch a video tutorial, you can find it [here](https://www.youtube.com/watch?v=a49CvkoOdfY). (Note: Please manually set it to 720p or greater to have the text appear clearly)
+★ Docker  
 
-Having problems ? Please tell us about them with [an issue on github](https://github.com/mindsdb/mindsdb/issues/new/choose)
+```bash
+sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/build-docker.sh)"
+```
+
+★ Video Tutorial
+
+Please click on the image below to load the tutorial:
+[![here](https://img.youtube.com/vi/a49CvkoOdfY/0.jpg)](https://www.youtube.com/watch?v=a49CvkoOdfY)  
+(Note: Please manually set it to 720p or greater to have the text appear clearly)
+
+★ Problems  
+
+Please tell us about them with [an issue on github](https://github.com/mindsdb/mindsdb/issues/new/choose)
+
+
 
 ### Usage
 

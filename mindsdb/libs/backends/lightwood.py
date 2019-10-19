@@ -179,10 +179,20 @@ class LightwoodBackend():
         else:
             self.predictor = lightwood.Predictor(lightwood_config)
 
+            # Evaluate less often for larger datasets and vice-versa
+            eval_every_x_epochs = int(round(1 * pow(10,6) * (1/len(train_df))))
+
+            # Within some limits
+            if eval_every_x_epochs > 200:
+                eval_every_x_epochs = 200
+            if eval_every_x_epochs < 3:
+                eval_every_x_epochs = 3
+
+
             if self.transaction.lmd['stop_training_in_x_seconds'] is None:
-                self.predictor.learn(from_data=train_df, test_data=test_df, callback_on_iter=self.callback_on_iter)
+                self.predictor.learn(from_data=train_df, test_data=test_df, callback_on_iter=self.callback_on_iter, eval_every_x_epochs=eval_every_x_epochs)
             else:
-                self.predictor.learn(from_data=train_df, test_data=test_df, stop_training_after_seconds=self.transaction.lmd['stop_training_in_x_seconds'], callback_on_iter=self.callback_on_iter)
+                self.predictor.learn(from_data=train_df, test_data=test_df, stop_training_after_seconds=self.transaction.lmd['stop_training_in_x_seconds'], callback_on_iter=self.callback_on_iter, eval_every_x_epochs=eval_every_x_epochs)
 
             self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 

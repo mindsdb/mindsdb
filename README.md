@@ -31,8 +31,6 @@ MindsDB as project is made out of the following:
 
 ### Installation
 
-### Installation
-
 ★ Desktop  
 
 You can use MindsDb on your own computer in under a minute, if you already have a python environment setup, just run:
@@ -51,17 +49,6 @@ otherwise simply follow the [installation instructions](https://mindsdb.github.i
 ```bash
 sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/build-docker.sh)"
 ```
-
-★ Video Tutorial
-
-Please click on the image below to load the tutorial:
-[![here](https://img.youtube.com/vi/a49CvkoOdfY/0.jpg)](https://www.youtube.com/watch?v=a49CvkoOdfY)  
-(Note: Please manually set it to 720p or greater to have the text appear clearly)
-
-★ Problems  
-
-Please tell us about them with [an issue on github](https://github.com/mindsdb/mindsdb/issues/new/choose)
-
 
 
 ### Usage
@@ -99,6 +86,15 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 ```
 
 Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
+
+## Video Tutorial
+
+Please click on the image below to load the tutorial:
+
+[![here](https://img.youtube.com/vi/a49CvkoOdfY/0.jpg)](https://www.youtube.com/watch?v=a49CvkoOdfY)  
+
+(Note: Please manually set it to 720p or greater to have the text appear clearly)
+
 
 ## Contributing
 

@@ -12,6 +12,7 @@ import MySQLdb
 import requests
 import mindsdb
 import lightwood
+import ludwig
 
 
 def setup_logger():
@@ -61,6 +62,8 @@ def main():
         ,ended                  Datetime
         ,mindsdb_version        Text
         ,lightwood_version      Text
+        ,ludwig_version         Text
+        ,backend                Text
     ) ENGINE=InnoDB""")
 
     batch_id = uuid.uuid4().hex
@@ -71,7 +74,7 @@ def main():
     except:
         pass
 
-    TESTS = ['default_of_credit']
+    TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'imdb_movie_review'] # cifar_100
 
     test_data_arr = []
     for test_name in TESTS:
@@ -101,6 +104,7 @@ def main():
         accuracy = accuracy_data['accuracy']
         accuracy_function = accuracy_data['accuracy_function'] if 'accuracy_function' in accuracy_data else 'accuracy_score'
         accuracy_description = accuracy_data['accuracy_description'] if 'accuracy_description' in accuracy_data else ''
+        backend_used = accuracy_data['backend'] if 'backend' in accuracy_data else 'unknown'
 
         test_data_arr.append({
             'test_name': test_name
@@ -111,13 +115,14 @@ def main():
             ,'started': started
             ,'ended': ended
             ,'runtime': (ended - started).total_seconds()
+            ,'backend_used': backend_used
         })
 
     for test_data in test_data_arr:
-        cur.execute("""INSERT INTO mindsdb_accuracy.tests VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",(
+        cur.execute("""INSERT INTO mindsdb_accuracy.tests VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",(
             batch_id, batch_started, test_data['test_name'], test_data['dataset_name'],test_data['accuracy'],
-            test_data['accuracy_function'], test_data['accuracy_description'],test_data['runtime'],
-            test_data['started'], test_data['ended'], mindsdb.__version__, lightwood.__version__
+            test_data['accuracy_function'], test_data['accuracy_description'],test_data['runtime'], test_data['started'],
+            test_data['ended'], mindsdb.__version__, lightwood.__version__, ludwig.__version__, test_data['backend_used']
         ))
         con.commit()
 

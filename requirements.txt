@@ -1,4 +1,4 @@
-lightwood >= 0.10.0
+lightwood >= 0.10.2
 scikit-image ==  0.14.2
 cython >= 0.29.2
 setuptools >= 21.2.1

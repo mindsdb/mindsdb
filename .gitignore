@@ -91,3 +91,4 @@ l_insurance.py
 model_definition.yaml
 .~lock.insu_train_indep_dep.csv#
 mlp_img
+tmp_downloads

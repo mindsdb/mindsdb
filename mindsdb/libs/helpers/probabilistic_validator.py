@@ -183,12 +183,16 @@ class ProbabilisticValidator():
             distribution = [x if x > (mean - std) else 0 for x in distribution]
 
             sum_dist = sum(distribution)
+            # Avoid divison by zero in certain edge cases
+            sum_dist = 0.00001 if sum_dist == 0 else sum_dist
             distribution = [x/sum_dist for x in distribution]
 
             min_val = min([x for x in distribution if x > 0.001])
             distribution = [x - min_val if x > min_val else 0 for x in distribution]
 
             sum_dist = sum(distribution)
+            # Avoid divison by zero in certain edge cases
+            sum_dist = 0.00001 if sum_dist == 0 else sum_dist
             distribution = [x/sum_dist for x in distribution]
             # @HACK
         else:

@@ -1,4 +1,3 @@
-import logging
 import json
 import sys
 import uuid
@@ -7,45 +6,17 @@ import shutil
 import importlib
 import datetime
 
-from colorlog import ColoredFormatter
-import MySQLdb
 import requests
 import mindsdb
 import lightwood
+import ludwig
+
+from helpers import *
 
 
-def setup_logger():
-    formatter = ColoredFormatter(
-        "%(log_color)s%(levelname)-8s%(reset)s %(log_color)s%(message)s",
-        datefmt=None,
-        reset=True,
-        log_colors={
-            'DEBUG':    'white',
-            'INFO':     'green',
-            'WARNING':  'yellow',
-            'ERROR':    'red',
-            'CRITICAL': 'red',
-        }
-    )
-
-    logger = logging.getLogger('test-logger')
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
-    return logger
-
-
-def main():
+def run_benchmarks():
     logger = setup_logger()
-    if len(sys.argv) > 1:
-        with open(sys.argv[1], 'rb') as fp:
-            cfg = json.load(fp)
-    else:
-        with open('config.json', 'rb') as fp:
-            cfg = json.load(fp)
-    con = MySQLdb.connect(cfg['mysql']['host'], cfg['mysql']['user'], cfg['mysql']['password'], cfg['mysql']['database'])
-    cur = con.cursor()
+    con, cur, cfg = get_mysql(sys.argv[1])
 
     cur.execute("""CREATE DATABASE IF NOT EXISTS mindsdb_accuracy""")
     cur.execute("""CREATE TABLE IF NOT EXISTS mindsdb_accuracy.tests (
@@ -61,6 +32,8 @@ def main():
         ,ended                  Datetime
         ,mindsdb_version        Text
         ,lightwood_version      Text
+        ,ludwig_version         Text
+        ,backend                Text
     ) ENGINE=InnoDB""")
 
     batch_id = uuid.uuid4().hex
@@ -71,8 +44,8 @@ def main():
     except:
         pass
 
-    TESTS = ['default_of_credit']
-
+    TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'imdb_movie_review'] # cifar_100
+    #TESTS = ['cancer50']
     test_data_arr = []
     for test_name in TESTS:
         '''
@@ -83,6 +56,7 @@ def main():
             Download accuracy data and add it to the test_data_arr
             (await) Shut down machine
         '''
+        logger.debug(f'\n\n=================================\nRunning test: {test_name}\n=================================\n\n')
         r = requests.get(f'https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/{test_name}.tar.gz')
         with open(f'tmp_downloads/{test_name}.tar.gz', 'wb') as fp:
             fp.write(r.content)
@@ -101,6 +75,7 @@ def main():
         accuracy = accuracy_data['accuracy']
         accuracy_function = accuracy_data['accuracy_function'] if 'accuracy_function' in accuracy_data else 'accuracy_score'
         accuracy_description = accuracy_data['accuracy_description'] if 'accuracy_description' in accuracy_data else ''
+        backend_used = accuracy_data['backend'] if 'backend' in accuracy_data else 'unknown'
 
         test_data_arr.append({
             'test_name': test_name
@@ -111,13 +86,14 @@ def main():
             ,'started': started
             ,'ended': ended
             ,'runtime': (ended - started).total_seconds()
+            ,'backend_used': backend_used
         })
 
     for test_data in test_data_arr:
-        cur.execute("""INSERT INTO mindsdb_accuracy.tests VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",(
+        cur.execute("""INSERT INTO mindsdb_accuracy.tests VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",(
             batch_id, batch_started, test_data['test_name'], test_data['dataset_name'],test_data['accuracy'],
-            test_data['accuracy_function'], test_data['accuracy_description'],test_data['runtime'],
-            test_data['started'], test_data['ended'], mindsdb.__version__, lightwood.__version__
+            test_data['accuracy_function'], test_data['accuracy_description'],test_data['runtime'], test_data['started'],
+            test_data['ended'], mindsdb.__version__, lightwood.__version__, ludwig.__version__, test_data['backend_used']
         ))
         con.commit()
 
@@ -126,4 +102,5 @@ def main():
     con.commit()
     con.close()
 
-main()
+if __name__ == "__main__":
+    run_benchmarks()

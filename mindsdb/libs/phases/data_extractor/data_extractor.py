@@ -203,6 +203,11 @@ class DataExtractor(BaseModule):
         self.transaction.input_data.train_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]].copy()
         self.transaction.input_data.test_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]].copy()
         self.transaction.input_data.validation_df = self.transaction.input_data.data_frame.iloc[self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]].copy()
+
+        self.transaction.lmd['data_preparation']['test_row_count'] = len(self.transaction.input_data.test_df)
+        self.transaction.lmd['data_preparation']['train_row_count'] = len(self.transaction.input_data.train_df)
+        self.transaction.lmd['data_preparation']['validation_row_count'] = len(self.transaction.input_data.validation_df)
+
         # @TODO: Consider deleting self.transaction.input_data.data_frame here
 
         # log some stats

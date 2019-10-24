@@ -7,9 +7,4 @@ class TransactionData():
         self.test_df = None
         self.validation_df = None
 
-        self.train_indexes = {}
-        self.test_indexes = {}
-        self.validation_indexes = {}
-        self.all_indexes = {}
-
         self.columns = []

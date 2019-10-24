@@ -673,9 +673,9 @@ class StatsGenerator(BaseModule):
 
             self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
             self.transaction.lmd['data_preparation']['used_row_count'] = sample_size
-            self.transaction.lmd['data_preparation']['test_row_count'] = len(input_data.test_indexes[KEY_NO_GROUP_BY])
-            self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_indexes[KEY_NO_GROUP_BY])
-            self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_indexes[KEY_NO_GROUP_BY])
+            self.transaction.lmd['data_preparation']['test_row_count'] = len(input_data.test_df)
+            self.transaction.lmd['data_preparation']['train_row_count'] = len(input_data.train_df)
+            self.transaction.lmd['data_preparation']['validation_row_count'] = len(input_data.validation_df)
 
         ''' @TODO Uncomment when we need multiprocessing, possibly disable on OSX
         pool.close()

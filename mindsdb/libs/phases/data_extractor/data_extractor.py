@@ -59,7 +59,7 @@ class DataExtractor(BaseModule):
 
         elif self.transaction.lmd['type'] == TRANSACTION_LEARN:
             # if its not a time series, randomize the input data and we are learning
-            df = df.sample(frac=1)
+            df = df.sample(frac=1, random_state=len(df))
 
         return df
 
@@ -153,8 +153,6 @@ class DataExtractor(BaseModule):
         group_by = self.transaction.lmd['model_group_by']
 
         # create a list of the column numbers (indexes) that make the group by, this is so that we can greate group by hashes for each row
-        if len(group_by)>0:
-            group_by_col_indexes = [columns.index(group_by_column) for group_by_column in group_by]
 
         # create all indexes by group by, that is all the rows that belong to each group by
         self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY] = []
@@ -164,7 +162,7 @@ class DataExtractor(BaseModule):
         for i, row in self.transaction.input_data.data_frame.iterrows():
 
             if len(group_by) > 0:
-                group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in group_by_col_indexes])
+                group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in [columns.index(group_by_column) for group_by_column in group_by]])
 
                 if group_by_value not in self.transaction.input_data.all_indexes:
                     self.transaction.input_data.all_indexes[group_by_value] = []
@@ -181,10 +179,6 @@ class DataExtractor(BaseModule):
 
             length = len(self.transaction.input_data.all_indexes[key])
             if self.transaction.lmd['type'] == TRANSACTION_LEARN:
-                sample_size = int(calculate_sample_size(population_size=length,
-                                                        margin_error=self.transaction.lmd['sample_margin_of_error'],
-                                                        confidence_level=self.transaction.lmd['sample_confidence_level']))
-
                 # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
                 should_split_by_group = type(group_by) == list and len(group_by) > 0
 

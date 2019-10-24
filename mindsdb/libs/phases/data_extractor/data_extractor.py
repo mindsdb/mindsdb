@@ -154,6 +154,11 @@ class DataExtractor(BaseModule):
         KEY_NO_GROUP_BY = '{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}##ALL_ROWS_NO_GROUP_BY##{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}'
 
         # create all indexes by group by, that is all the rows that belong to each group by
+        all_indexes = {}
+        train_indexes = {}
+        test_indexes = {}
+        validation_indexes = {}
+
         all_indexes[KEY_NO_GROUP_BY] = []
         train_indexes[KEY_NO_GROUP_BY] = []
         test_indexes[KEY_NO_GROUP_BY] = []

@@ -176,31 +176,20 @@ class DataTransformer(BaseModule):
 
                         index = list(valid_rows.index)[ciclying_map[val]]
 
-                        if index in self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY] and not column_is_weighted_in_train:
+                        if index in self.train_df.index and not column_is_weighted_in_train:
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]
-
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
-                            self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
-
                             copied_rows_train.append(copied_row)
 
-                        elif index in self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY] and not column_is_weighted_in_train:
+                        elif index in self.test_df.index and not column_is_weighted_in_train:
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]
-
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
-                            self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
 
                             copied_rows_test.append(copied_row)
 
-                        elif index in self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]:
+                        elif index in sself.validation_df.index:
                             data_frame_length = data_frame_length + 1
                             copied_row = valid_rows.iloc[ciclying_map[val]]
-
-                            self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
-                            self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY].append(data_frame_length - 1)
-
                             copied_rows_validate.append(copied_row)
 
                         occurance_map[val] += 1

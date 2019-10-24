@@ -9,8 +9,6 @@ TRANSACTION_DROP_MODEL ='drop_model'
 STOP_TRAINING = 'stop_training'
 KILL_TRAINING = 'kill_training'
 
-KEY_NO_GROUP_BY = 'ALL_ROWS_NO_GROUP_BY'
-
 
 class DATA_SUBTYPES:
     # Numeric

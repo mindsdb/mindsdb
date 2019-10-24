@@ -151,8 +151,7 @@ class DataExtractor(BaseModule):
 
         is_time_series = self.transaction.lmd['model_is_time_series']
         group_by = self.transaction.lmd['model_group_by']
-
-        # create a list of the column numbers (indexes) that make the group by, this is so that we can greate group by hashes for each row
+        KEY_NO_GROUP_BY = '{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}##ALL_ROWS_NO_GROUP_BY##{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}'
 
         # create all indexes by group by, that is all the rows that belong to each group by
         self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY] = []

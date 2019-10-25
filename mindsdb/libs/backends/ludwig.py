@@ -114,17 +114,13 @@ class LudwigBackend():
         col_map = {}
 
         if mode == 'train':
-            indexes = self.transaction.input_data.train_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd['columns'])]
+            df = self.transaction.input_data.train_df
         elif mode == 'predict':
-            indexes = self.transaction.input_data.all_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd['columns']) if col not in self.transaction.lmd['predict_columns']]
+            df = self.transaction.input_data.data_frame
         elif mode == 'validate':
-            indexes = self.transaction.input_data.validation_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd['columns'])]  #if col not in self.transaction.lmd['predict_columns']]
+            df = self.transaction.input_data.validation_df
         elif mode == 'test':
-            indexes = self.transaction.input_data.test_indexes[KEY_NO_GROUP_BY]
-            columns = [[col, col_ind] for col_ind, col in enumerate(self.transaction.lmd['columns'])] #if col not in self.transaction.lmd['predict_columns']]
+            df = self.transaction.input_data.test_df
         else:
             raise Exception(f'Unknown mode specified: "{mode}"')
         model_definition = {'input_features': [], 'output_features': []}
@@ -135,9 +131,7 @@ class LudwigBackend():
         else:
             timeseries_cols = list(map(lambda x: x[0], self.transaction.lmd['model_order_by']))
 
-        for ele in columns:
-            col = ele[0]
-            col_ind = ele[1]
+        for col in df.columns:
             tf_col = get_tensorflow_colname(col)
             col_map[tf_col] = col
 
@@ -204,9 +198,9 @@ class LudwigBackend():
 
             custom_logic_continue = False
 
-            for row_ind in indexes:
+            for index, row in df.iterrows():
                 if ludwig_dtype == 'order_by_col':
-                    ts_data_point = self.transaction.input_data.data_frame[col].iloc[row_ind]
+                    ts_data_point = row[col]
 
                     try:
                         ts_data_point = float(ts_data_point)
@@ -215,7 +209,7 @@ class LudwigBackend():
                     data[tf_col].append(ts_data_point)
 
                 elif ludwig_dtype == 'sequence':
-                    arr_str = self.transaction.input_data.data_frame[col].iloc[row_ind]
+                    arr_str = row[col]
                     if arr_str is not None:
                         arr = list(map(float,arr_str.rstrip(']').lstrip('[').split(self.transaction.lmd['column_stats'][col]['separator'])))
                     else:
@@ -243,7 +237,7 @@ class LudwigBackend():
                             ,'type': 'numerical'
                         })
 
-                    date = parse_datetime(self.transaction.input_data.data_frame[col].iloc[row_ind])
+                    date = parse_datetime(row[col])
 
                     data[tf_col + '_year'].append(date.year)
                     data[tf_col + '_month'].append(date.month)
@@ -258,32 +252,32 @@ class LudwigBackend():
                         timeseries_cols.append(col + '_year')
 
                 elif data_subtype in (DATA_SUBTYPES.TIMESTAMP):
-                    if self.transaction.input_data.data_frame[col].iloc[row_ind] is None:
+                    if row[col] is None:
                         unix_ts = 0
                     else:
-                        unix_ts = parse_datetime(self.transaction.input_data.data_frame[col].iloc[row_ind]).timestamp()
+                        unix_ts = parse_datetime(row[col]).timestamp()
 
                     data[tf_col].append(unix_ts)
 
                 elif data_subtype in (DATA_SUBTYPES.FLOAT):
-                    if type(self.transaction.input_data.data_frame[col].iloc[row_ind]) == str:
-                        data[tf_col].append(float(str(self.transaction.input_data.data_frame[col].iloc[row_ind]).replace(',','.')))
+                    if type(row[col]) == str:
+                        data[tf_col].append(float(str(row[col]).replace(',','.')))
                     else:
-                        data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
+                        data[tf_col].append(row[col])
 
                 elif data_subtype in (DATA_SUBTYPES.INT):
-                    if type(self.transaction.input_data.data_frame[col].iloc[row_ind]) == str:
-                        data[tf_col].append(round(float(str(self.transaction.input_data.data_frame[col].iloc[row_ind]).replace(',','.'))))
+                    if type(row[col]) == str:
+                        data[tf_col].append(round(float(str(row[col]).replace(',','.'))))
                     else:
-                        data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
+                        data[tf_col].append(row[col])
 
                 elif data_subtype in (DATA_SUBTYPES.IMAGE):
-                    if os.path.isabs(self.transaction.input_data.data_frame[col].iloc[row_ind]):
-                        data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
+                    if os.path.isabs(row[col]):
+                        data[tf_col].append(row[col])
                     else:
-                        data[tf_col].append(os.path.join(os.getcwd(), self.transaction.input_data.data_frame[col].iloc[row_ind]))
+                        data[tf_col].append(os.path.join(os.getcwd(), row[col]))
                 else:
-                    data[tf_col].append(self.transaction.input_data.data_frame[col].iloc[row_ind])
+                    data[tf_col].append(row[col])
 
             if custom_logic_continue:
                 continue

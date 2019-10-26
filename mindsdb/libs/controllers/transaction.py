@@ -270,9 +270,6 @@ class Transaction:
             return
 
         if self.lmd['type'] == TRANSACTION_LEARN:
-            self.output_data.data_frame = [['Model ' + self.lmd['name'] + ' training.']]
-            self.output_data.columns = ['Status']
-
             if CONFIG.EXEC_LEARN_IN_THREAD == False:
                 self._execute_learn()
             else:

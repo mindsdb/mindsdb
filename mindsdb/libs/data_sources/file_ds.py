@@ -124,8 +124,10 @@ class FileDS(DataSource):
             first_few_lines = []
             i = 0
             for line in data:
-                i += 1
+                if line in ['\r\n','\n']:
+                    continue
                 first_few_lines.append(line)
+                i += 1
                 if i > 0:
                     break
 

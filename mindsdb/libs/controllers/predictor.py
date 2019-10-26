@@ -417,7 +417,7 @@ class Predictor:
         if old_model_name == new_model_name:
             return True
 
-        for extension in ['_lightwood_data', '_ludwig_data']:
+        for extension in ['_lightwood_data.pickle', '_ludwig_data.pickle']:
             shutil.move(old_model_name + extension, new_model_name + extension)
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'), 'rb') as fp:
@@ -429,7 +429,7 @@ class Predictor:
         lmd['name'] = new_model_name
         hmd['name'] = new_model_name
 
-        
+
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, new_model_name + '_light_model_metadata.pickle'), 'wb') as fp:
             pickle.dump(lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
 

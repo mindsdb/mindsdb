@@ -426,9 +426,19 @@ class Predictor:
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_heavy_model_metadata.pickle'), 'rb') as fp:
             hmd =pickle.load(fp)
 
-
         lmd['name'] = new_model_name
         hmd['name'] = new_model_name
+
+        
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, new_model_name + '_light_model_metadata.pickle'), 'wb') as fp:
+            pickle.dump(lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, new_model_name + '_heavy_model_metadata.pickle'), 'wb') as fp:
+            pickle.dump(hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
+
+
+
+
 
         os.remove(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'))
         os.remove(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_heavy_model_metadata.pickle'))

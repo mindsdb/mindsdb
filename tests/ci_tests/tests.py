@@ -13,7 +13,8 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False)
     mdb.learn(to_predict='rental_price',from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend, stop_training_in_x_seconds=20,use_gpu=use_gpu)
 
     # Reload & Predict
-    mdb = Predictor(name='home_rentals_price')
+    mdb.rename_model('home_rentals_price', 'home_rentals_price_renamed')
+    mdb = Predictor(name='home_rentals_price_renamed')
     prediction = mdb.predict(when={'sqft':300}, use_gpu=use_gpu)
 
     # Test all different forms of output
@@ -41,6 +42,6 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False)
     print('\n\n')
 
     # See if we can get the adapted metadata
-    amd = mdb.get_model_data('home_rentals_price')
+    amd = mdb.get_model_data('home_rentals_price_renamed')
     # Make some simple assertions about it
     assert(5 < len(list(amd.keys())))

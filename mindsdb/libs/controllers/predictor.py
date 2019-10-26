@@ -4,6 +4,7 @@ import os
 import uuid
 import traceback
 import pickle
+import shutil
 
 from mindsdb.libs.data_types.mindsdb_logger import MindsdbLogger
 from mindsdb.libs.helpers.multi_data_source import getDS
@@ -403,6 +404,36 @@ class Predictor:
         :return: bool (True/False) True if mind was importerd successfully
         """
         self.load(model_archive_path)
+
+    def rename_model(self, old_model_name, new_model_name):
+        """
+        If you want to export a model to a file
+
+        :param old_model_name: this is the name of the model you wish to rename
+        :param new_model_name: this is the new name of the model
+        :return: bool (True/False) True if mind was exported successfully
+        """
+
+        if old_model_name == new_model_name:
+            return True
+
+        for extension in ['_lightwood_data', '_ludwig_data']:
+            shutil.move(old_model_name + extension, new_model_name + extension)
+
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'), 'rb') as fp:
+            lmd =pickle.load(fp)
+
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_heavy_model_metadata.pickle'), 'rb') as fp:
+            hmd =pickle.load(fp)
+
+
+        lmd['name'] = new_model_name
+        hmd['name'] = new_model_name
+
+        os.remove(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'))
+        os.remove(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_heavy_model_metadata.pickle'))
+        return True
+
 
     def delete_model(self, model_name):
         """

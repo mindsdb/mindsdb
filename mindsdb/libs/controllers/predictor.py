@@ -417,8 +417,16 @@ class Predictor:
         if old_model_name == new_model_name:
             return True
 
-        for extension in ['_lightwood_data.pickle', '_ludwig_data.pickle']:
-            shutil.move(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + extension), os.path.join(CONFIG.MINDSDB_STORAGE_PATH, new_model_name + extension))
+        moved_a_backend = False
+        for extension in ['_lightwood_data', '_ludwig_data']:
+            try:
+                shutil.move(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + extension), os.path.join(CONFIG.MINDSDB_STORAGE_PATH, new_model_name + extension))
+                moved_a_backend = True
+            except:
+                pass
+
+        if not moved_a_backend:
+            return False
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'), 'rb') as fp:
             lmd =pickle.load(fp)
@@ -429,6 +437,21 @@ class Predictor:
         lmd['name'] = new_model_name
         hmd['name'] = new_model_name
 
+        renamed_one_backend = False
+        try:
+            lmd['ludwig_data']['ludwig_save_path'] = lmd['ludwig_data']['ludwig_save_path'].replace(old_model_name, new_model_name)
+            renamed_one_backend = True
+        except:
+            pass
+
+        try:
+            lmd['lightwood_data']['save_path'] = lmd['lightwood_data']['save_path'].replace(old_model_name, new_model_name)
+            renamed_one_backend = True
+        except:
+            pass
+
+        if not renamed_one_backend:
+            return False
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, new_model_name + '_light_model_metadata.pickle'), 'wb') as fp:
             pickle.dump(lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)

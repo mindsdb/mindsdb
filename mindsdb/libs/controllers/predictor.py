@@ -418,7 +418,7 @@ class Predictor:
             return True
 
         for extension in ['_lightwood_data.pickle', '_ludwig_data.pickle']:
-            shutil.move(old_model_name + extension, new_model_name + extension)
+            shutil.move(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + extension), os.path.join(CONFIG.MINDSDB_STORAGE_PATH, new_model_name + extension))
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'), 'rb') as fp:
             lmd =pickle.load(fp)

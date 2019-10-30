@@ -72,7 +72,7 @@ class TransactionOutputRow:
                     })
 
                     if self.transaction_output.input_confidence_arr is not None:
-                        answers[pred_col][-1]['confidence_influence_scores'] = self.transaction_output.input_confidence_arr[self.row_index]
+                        answers[pred_col][-1]['confidence_influence_scores'] = self.transaction_output.input_confidence_arr[self.row_index][pred_col]
 
             answers[pred_col] = sorted(answers[pred_col], key=lambda x: x['confidence'], reverse=True)
 

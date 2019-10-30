@@ -98,14 +98,8 @@ class ColumnEvaluator():
                             col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False, print_logs=False)
                         buckets_stats[output_column][bucket].update(col_buckets_stats)
                     except Exception as e:
-                        print('-----')
-                        print(e)
-                        print('--------')
                         pass
-                        # @TODO Is this worth informing the user about ?
-                        #print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
-        print(buckets_stats)
-        exit()
+
         return column_importance_dict, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution
 
     def get_column_influence(self):

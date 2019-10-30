@@ -663,16 +663,22 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
-    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False, unstable_parameters_dict={}, backend=None):
+    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False, unstable_parameters_dict={}, backend=None, run_confidence_variation_analysis=False):
         """
         You have a mind trained already and you want to make a prediction
 
         :param when: use this if you have certain conditions for a single prediction
         :param when_data: (optional) use this when you have data in either a file, a pandas data frame, or url to a file that you want to predict from
         :param update_cached_model: (optional, default:False) when you run predict for the first time, it loads the latest model in memory, you can force it to do this on this run by flipping it to True
+        :param run_confidence_variation_analysis: Run a confidence variation analysis on each of the given input column, currently only works when making single predictions via `when`
 
         :return: TransactionOutputData object
         """
+
+        if run_confidence_variation_analysis is True and when_data is not None:
+            self.log.error('run_confidence_variation_analysis=True is a valid option only when predicting a single data point via `when`')
+            sys.exit(1)
+
 
         transaction_type = TRANSACTION_PREDICT
         when_ds = None if when_data is None else getDS(when_data)
@@ -696,6 +702,7 @@ class Predictor:
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
+        light_transaction_metadata['run_confidence_variation_analysis'] = run_confidence_variation_analysis
 
         if 'always_use_model_prediction' in unstable_parameters_dict:
             light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']

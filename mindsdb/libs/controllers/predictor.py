@@ -297,6 +297,7 @@ class Predictor:
                   ,"confusion_matrix": confusion_matrix
                 }
 
+
                 # This is a check to see if model analysis has run on this data
                 if 'model_accuracy' in lmd and lmd['model_accuracy'] is not None and 'train' in lmd['model_accuracy'] and 'combined' in lmd['model_accuracy']['train'] and lmd['model_accuracy']['train']['combined'] is not None:
                     train_acc = lmd['model_accuracy']['train']['combined']
@@ -562,6 +563,13 @@ class Predictor:
 
         is_time_series = True if len(order_by) > 0 else False
 
+        '''
+        We don't implement "name" as a concept in mindsdbd data sources, this is only available for files,
+        the server doesn't handle non-file data sources at the moment, so this shouldn't prove an issue,
+        once we want to support datasources such as s3 and databases for the server we need to add name as a concept (or, preferably, before that)
+        '''
+        data_source_name = from_data if type(from_data) == str else 'Unkown'
+
         heavy_transaction_metadata = {}
         heavy_transaction_metadata['name'] = self.name
         heavy_transaction_metadata['from_data'] = from_ds
@@ -579,7 +587,7 @@ class Predictor:
         light_transaction_metadata['model_group_by'] = group_by
         light_transaction_metadata['model_order_by'] = order_by
         light_transaction_metadata['model_is_time_series'] = is_time_series
-        light_transaction_metadata['data_source'] = from_data
+        light_transaction_metadata['data_source'] = data_source_name
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['window_size'] = window_size
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
@@ -655,16 +663,22 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
-    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False, unstable_parameters_dict={}, backend=None):
+    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False, unstable_parameters_dict={}, backend=None, run_confidence_variation_analysis=False):
         """
         You have a mind trained already and you want to make a prediction
 
         :param when: use this if you have certain conditions for a single prediction
         :param when_data: (optional) use this when you have data in either a file, a pandas data frame, or url to a file that you want to predict from
         :param update_cached_model: (optional, default:False) when you run predict for the first time, it loads the latest model in memory, you can force it to do this on this run by flipping it to True
+        :param run_confidence_variation_analysis: Run a confidence variation analysis on each of the given input column, currently only works when making single predictions via `when`
 
         :return: TransactionOutputData object
         """
+
+        if run_confidence_variation_analysis is True and when_data is not None:
+            self.log.error('run_confidence_variation_analysis=True is a valid option only when predicting a single data point via `when`')
+            sys.exit(1)
+
 
         transaction_type = TRANSACTION_PREDICT
         when_ds = None if when_data is None else getDS(when_data)
@@ -688,6 +702,7 @@ class Predictor:
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
+        light_transaction_metadata['run_confidence_variation_analysis'] = run_confidence_variation_analysis
 
         if 'always_use_model_prediction' in unstable_parameters_dict:
             light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']

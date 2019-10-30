@@ -71,6 +71,9 @@ class TransactionOutputRow:
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
                     })
 
+                    if self.transaction_output.input_confidence_arr is not None:
+                        answers[pred_col][-1]['confidence_influence_scores'] = self.transaction_output.input_confidence_arr[self.row_index][pred_col]
+
             answers[pred_col] = sorted(answers[pred_col], key=lambda x: x['confidence'], reverse=True)
 
         return answers

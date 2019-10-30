@@ -15,7 +15,9 @@ import copy
 import pickle
 import datetime
 import sys
-
+from copy import deepcopy
+import pandas as pd
+import numpy as np
 
 class Transaction:
 
@@ -223,38 +225,81 @@ class Transaction:
             self.log.error('No input data provided !')
             return
 
-        self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
 
-        self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='predict')
+        # @TODO Maybe move to a separate "PredictionAnalysis" phase ?
+        if self.lmd['run_confidence_variation_analysis']:
+            nulled_out_data = []
+            nulled_out_columns = []
+            for column in self.input_data.data_frame.columns:
+                # Only adapted for a single `when`
+                if self.input_data.data_frame.iloc[0][column] is not None:
+                    nulled_out_data.append(self.input_data.data_frame.iloc[0].copy())
+                    nulled_out_data[-1][column] = None
+                    nulled_out_columns.append(column)
 
-        output_data = {col: [] for col in self.lmd['columns']}
-        evaluations = {}
+            nulled_out_data = pd.DataFrame(nulled_out_data)
+            nulled_out_predictions = []
 
-        for column in self.input_data.data_frame.columns:
-            output_data[column] = list(self.input_data.data_frame[column])
+        for mode in ['predict', 'analyze_confidence']:
+            if mode == 'analyze_confidence':
+                if not self.lmd['run_confidence_variation_analysis']:
+                    continue
+                else:
+                    self.input_data.data_frame = nulled_out_data
 
-        for predicted_col in self.lmd['predict_columns']:
-            output_data[predicted_col] = list(self.hmd['predictions'][predicted_col])
+            self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
 
-            probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
-            confidence_column_name = f'{predicted_col}_confidence'
-            output_data[confidence_column_name] = [None] * len(output_data[predicted_col])
-            evaluations[predicted_col] = [None] * len(output_data[predicted_col])
+            self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='predict')
 
-            for row_number, predicted_value in enumerate(output_data[predicted_col]):
+            output_data = {col: [] for col in self.lmd['columns']}
+            evaluations = {}
 
-                # Compute the feature existance vector
-                input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
-                features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']]
+            for column in self.input_data.data_frame.columns:
+                output_data[column] = list(self.input_data.data_frame[column])
 
-                # Create the probabilsitic evaluation
-                prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value, always_use_model_prediction=self.lmd['always_use_model_prediction'])
+            for predicted_col in self.lmd['predict_columns']:
+                output_data[predicted_col] = list(self.hmd['predictions'][predicted_col])
 
-                output_data[predicted_col][row_number] = prediction_evaluation.final_value
-                output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
-                evaluations[predicted_col][row_number] = prediction_evaluation
+                probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
+                confidence_column_name = f'{predicted_col}_confidence'
+                output_data[confidence_column_name] = [None] * len(output_data[predicted_col])
+                evaluations[predicted_col] = [None] * len(output_data[predicted_col])
 
-        self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
+                for row_number, predicted_value in enumerate(output_data[predicted_col]):
+
+                    # Compute the feature existance vector
+                    input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
+                    features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']]
+
+                    # Create the probabilsitic evaluation
+                    prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value, always_use_model_prediction=self.lmd['always_use_model_prediction'])
+
+                    output_data[predicted_col][row_number] = prediction_evaluation.final_value
+                    output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
+                    evaluations[predicted_col][row_number] = prediction_evaluation
+            if mode == 'predict':
+                self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
+            else:
+                nulled_out_predictions.append(PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations))
+
+        if self.lmd['run_confidence_variation_analysis']:
+            input_confidence_arr = [{}]
+
+            for predicted_col in self.lmd['predict_columns']:
+                input_confidence_arr[0][predicted_col] = {'column_names': [], 'confidence_variation': []}
+                actual_confidence = self.output_data[0].explain()[predicted_col][0]['confidence']
+                for i in range(len(nulled_out_columns)):
+                    nulled_confidence = nulled_out_predictions[0][i].explain()[predicted_col][0]['confidence']
+                    nulled_col_name = nulled_out_columns[i]
+                    confidence_variation = actual_confidence - nulled_confidence
+
+                    input_confidence_arr[0][predicted_col]['column_names'].append(nulled_col_name)
+                    input_confidence_arr[0][predicted_col]['confidence_variation'].append(confidence_variation)
+
+                input_confidence_arr[0][predicted_col]['confidence_variation_score'] = list(np.interp(input_confidence_arr[0][predicted_col]['confidence_variation'], (np.min(input_confidence_arr[0][predicted_col]['confidence_variation']), np.max(input_confidence_arr[0][predicted_col]['confidence_variation'])), (-100, 100)))
+
+            self.output_data.input_confidence_arr = input_confidence_arr
+
         return
 
 

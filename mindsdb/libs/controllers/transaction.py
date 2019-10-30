@@ -17,7 +17,7 @@ import datetime
 import sys
 from copy import deepcopy
 import pandas as pd
-
+import numpy as np
 
 class Transaction:
 
@@ -296,8 +296,10 @@ class Transaction:
                     input_confidence_arr[0][predicted_col]['column_names'].append(nulled_col_name)
                     input_confidence_arr[0][predicted_col]['confidence_variation'].append(confidence_variation)
 
+                input_confidence_arr[0][predicted_col]['confidence_variation_score'] = list(np.interp(input_confidence_arr[0][predicted_col]['confidence_variation'], (np.min(input_confidence_arr[0][predicted_col]['confidence_variation']), np.max(input_confidence_arr[0][predicted_col]['confidence_variation'])), (-100, 100)))
+
             self.output_data.input_confidence_arr = input_confidence_arr
-        
+
         return
 
 

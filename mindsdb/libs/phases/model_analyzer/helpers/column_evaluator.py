@@ -63,7 +63,6 @@ class ColumnEvaluator():
                 if output_column not in columnless_prediction_distribution:
                     columnless_prediction_distribution[output_column] = {}
 
-                # @TODO: Running stats generator just to get the histogram is very inefficient, change this
                 col_missing_output_histogram, _ = StatsGenerator.get_histogram(col_missing_predictions[output_column], data_type=stats[output_column]['data_type'],data_subtype=stats[output_column]['data_subtype'])
 
                 if col_missing_output_histogram is not None:
@@ -98,11 +97,15 @@ class ColumnEvaluator():
                         with disable_console_output():
                             col_buckets_stats = stats_generator.run(input_data=input_data, modify_light_metadata=False, print_logs=False)
                         buckets_stats[output_column][bucket].update(col_buckets_stats)
-                    except:
+                    except Exception as e:
+                        print('-----')
+                        print(e)
+                        print('--------')
                         pass
                         # @TODO Is this worth informing the user about ?
                         #print('Cloud not generate bucket stats for sub-bucket: {}'.format(bucket))
-
+        print(buckets_stats)
+        exit()
         return column_importance_dict, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution
 
     def get_column_influence(self):

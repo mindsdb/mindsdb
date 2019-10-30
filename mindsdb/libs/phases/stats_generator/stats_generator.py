@@ -399,7 +399,6 @@ class StatsGenerator(BaseModule):
                 col_stats['empty_cells_score_warning'] = None
 
             if col_stats['data_type_distribution_score'] < 7:
-                #self.log.infoChart(stats[col_name]['data_type_dist'], type='list', uid='Dubious Data Type Distribution for column "{}"'.format(col_name))
                 percentage_of_data_not_of_principal_type = col_stats['data_type_distribution_score'] * 100
                 principal_data_type = col_stats['data_type']
                 w = f'{percentage_of_data_not_of_principal_type}% of your data is not of type {principal_data_type}, which was detected to be the data type for column {col_name}, this might indicate that your data is of poor quality.'
@@ -453,8 +452,11 @@ class StatsGenerator(BaseModule):
 
             # We might want to inform the user about a few stats regarding his column regardless of the score, this is done below
             self.log.info('Data distribution for column "{}"'.format(col_name))
-            self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
-
+            try:
+                self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
+            except:
+                # Functionality is specific to mindsdb logger
+                pass
 
     def run(self, input_data, modify_light_metadata, hmd=None, print_logs=True):
         """

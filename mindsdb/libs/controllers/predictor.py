@@ -294,7 +294,7 @@ class Predictor:
                         ,"y": []
                         ,'x_explained': []
                   }
-                  ,"confusion_matrix": [[int(y) for y in x] for x in confusion_matrix]
+                  ,"confusion_matrix": confusion_matrix
                 }
 
 
@@ -563,6 +563,13 @@ class Predictor:
 
         is_time_series = True if len(order_by) > 0 else False
 
+        '''
+        We don't implement "name" as a concept in mindsdbd data sources, this is only available for files,
+        the server doesn't handle non-file data sources at the moment, so this shouldn't prove an issue,
+        once we want to support datasources such as s3 and databases for the server we need to add name as a concept (or, preferably, before that)
+        '''
+        data_source_name = from_data if type(from_data) == str else 'Unkown'
+
         heavy_transaction_metadata = {}
         heavy_transaction_metadata['name'] = self.name
         heavy_transaction_metadata['from_data'] = from_ds
@@ -580,7 +587,7 @@ class Predictor:
         light_transaction_metadata['model_group_by'] = group_by
         light_transaction_metadata['model_order_by'] = order_by
         light_transaction_metadata['model_is_time_series'] = is_time_series
-        light_transaction_metadata['data_source'] = from_data
+        light_transaction_metadata['data_source'] = data_source_name
         light_transaction_metadata['type'] = transaction_type
         light_transaction_metadata['window_size'] = window_size
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error

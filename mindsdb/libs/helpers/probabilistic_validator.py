@@ -154,8 +154,16 @@ class ProbabilisticValidator():
         self._Y_buff= []
 
     def get_confusion_matrix(self):
-        matrix = confusion_matrix(self._real_buckets_buff,self._predicted_buckets_buff)
-        return matrix
+        # The rows represent predicted values
+        # The "columns" represent real values
+        labels= list(set(self._real_buckets_buff))
+        matrix = confusion_matrix(self._real_buckets_buff, self._predicted_buckets_buff, labels=labels)
+        confusion_matrix_obj = {
+            'matrix': [[int(y) for y in x] for x in matrix],
+            'predicted': [str(self.buckets[x]) for x in labels],
+            'real': [str(self.buckets[x]) for x in labels]
+        }
+        return confusion_matrix_obj
 
     def evaluate_prediction_accuracy(self, features_existence, predicted_value, always_use_model_prediction):
         """

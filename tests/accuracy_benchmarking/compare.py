@@ -49,10 +49,10 @@ def compare():
 
 
             # There's going to be some variation within accuracy, so we only really need to worry if the grap is bigger than 1%
-            if old_accuracy > accuracy*0.05:
+            if old_accuracy > accuracy*1.05:
                 worseness_prefix = 'significantly'
                 func = logger.error
-            elif old_accuracy > accuracy*0.01:
+            elif old_accuracy > accuracy*1.01:
                 worseness_prefix = ''
                 func = logger.warning
             else:

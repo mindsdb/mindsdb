@@ -25,7 +25,7 @@ def run_benchmarks():
         ,test_name              Text
         ,dataset_name           Text
         ,accuracy               Float
-        ,accuracy_function         Text
+        ,accuracy_function      Text
         ,accuracy_description   Text
         ,runtime                BIGINT
         ,started                Datetime

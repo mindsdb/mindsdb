@@ -235,8 +235,8 @@ class Transaction:
             nulled_out_columns = []
             for column in self.input_data.data_frame.columns:
                 # Only adapted for a single `when`
-                if self.input_data.data_frame.iloc[0][column] is not None:
-                    nulled_out_data.append(self.input_data.data_frame.iloc[0].copy())
+                if self.input_data.data_frame.loc[0][column] is not None:
+                    nulled_out_data.append(self.input_data.data_frame.loc[0].copy())
                     nulled_out_data[-1][column] = None
                     nulled_out_columns.append(column)
 

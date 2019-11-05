@@ -329,7 +329,7 @@ class StatsGenerator(BaseModule):
                 similarities = list(map(lambda x: sum(x), similarities))
 
                 index_of_most_similar = similarities.index(max(similarities))
-                x.append(data.iloc[index_of_most_similar])
+                x.append(data.loc[index_of_most_similar])
 
             indices = kmeans.predict(image_hashes)
             for index in indices:
@@ -474,8 +474,6 @@ class StatsGenerator(BaseModule):
             self.log.propagate = False
 
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
-        print(type(input_data.data_frame))
-        exit()
         population_size = len(input_data.data_frame)
 
         if population_size < 50:
@@ -489,7 +487,7 @@ class StatsGenerator(BaseModule):
         input_data_sample_indexes = random.sample(range(population_size), sample_size)
         self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
 
-        all_sampled_data = input_data.data_frame.iloc[input_data_sample_indexes]
+        all_sampled_data = input_data.data_frame.loc[input_data_sample_indexes]
 
         stats = {}
         col_data_dict = {}

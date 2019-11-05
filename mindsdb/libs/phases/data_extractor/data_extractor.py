@@ -32,7 +32,6 @@ class DataExtractor(BaseModule):
             when_conditions_list.append(cond_list)
 
         result = pd.DataFrame(when_conditions_list, columns=self.transaction.lmd['columns'])
-        #df = dd.from_pandas(result, npartitions=7)
         return result
 
 
@@ -71,20 +70,25 @@ class DataExtractor(BaseModule):
         if 'from_data' in self.transaction.hmd and self.transaction.hmd['from_data'] is not None:
             # make sure we build a dataframe that has all the columns we need
             df = self.transaction.hmd['from_data']
-            #df = df.where((pd.notnull(df)), None)
+            # @TODO This gets converted to a pandas Datafram from a mindsdb DataSource , not sure why
+            df = df.where((pd.notnull(df)), None)
 
         # if this is a predict statement, create use model_when_conditions to shape the dataframe
         if  self.transaction.lmd['type'] == TRANSACTION_PREDICT:
             if self.transaction.hmd['when_data'] is not None:
                 df = self.transaction.hmd['when_data']
-                #df = df.where((pd.notnull(df)), None)
+                # @TODO This gets converted to a pandas Datafram from a mindsdb DataSource here, not sure why
+                df = df.where((pd.notnull(df)), None)
 
             elif self.transaction.hmd['model_when_conditions'] is not None:
 
                 # if no data frame yet, make one
                 df = self._get_data_frame_from_when_conditions()
 
-
+        df = df.reset_index()
+        df = dd.from_pandas(df, npartitions=7)
+        #df = df.reset_index().compute()
+        print(type(df))
         # if by now there is no DF, throw an error
         if df is None:
             error = 'Could not create a data frame for transaction'
@@ -97,7 +101,8 @@ class DataExtractor(BaseModule):
 
         boolean_dictionary = {True: 'True', False: 'False'}
         numeric_dictionary = {True: 1, False: 0}
-        for column in df:
+
+        for column in df.columns:
             if is_numeric_dtype(df[column]):
                 df[column] = df[column].replace(numeric_dictionary)
             else:
@@ -114,7 +119,7 @@ class DataExtractor(BaseModule):
         """
         :return:
         """
-        if self.transaction.input_data.data_frame.shape[0] <= 0:
+        if len(self.transaction.input_data.data_frame) <= 0:
             error = 'Input Data has no rows, please verify from_data or when_conditions'
             self.log.error(error)
             raise ValueError(error)

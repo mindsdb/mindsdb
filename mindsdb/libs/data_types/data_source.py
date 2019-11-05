@@ -1,5 +1,4 @@
 from mindsdb.libs.data_types.mindsdb_logger import log
-import dask.dataframe as dd
 
 class DataSource:
 
@@ -13,7 +12,6 @@ class DataSource:
         col_map = {}
         for col in df.columns:
             col_map[col] = col
-        #df = dd.from_pandas(df, npartitions=7)
         return df, col_map
 
     def _cleanup(self):

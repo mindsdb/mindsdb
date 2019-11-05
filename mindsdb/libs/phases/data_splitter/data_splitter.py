@@ -71,9 +71,9 @@ class DataSplitter(BaseModule):
                     test_indexes[key] = all_indexes[key][test_window[0]:test_window[1]]
                     validation_indexes[key] = all_indexes[key][validation_window[0]:validation_window[1]]
 
-        self.transaction.input_data.train_df = self.transaction.input_data.data_frame.iloc[train_indexes[KEY_NO_GROUP_BY]].copy()
-        self.transaction.input_data.test_df = self.transaction.input_data.data_frame.iloc[test_indexes[KEY_NO_GROUP_BY]].copy()
-        self.transaction.input_data.validation_df = self.transaction.input_data.data_frame.iloc[validation_indexes[KEY_NO_GROUP_BY]].copy()
+        self.transaction.input_data.train_df = self.transaction.input_data.data_frame.loc[train_indexes[KEY_NO_GROUP_BY]].copy()
+        self.transaction.input_data.test_df = self.transaction.input_data.data_frame.loc[test_indexes[KEY_NO_GROUP_BY]].copy()
+        self.transaction.input_data.validation_df = self.transaction.input_data.data_frame.loc[validation_indexes[KEY_NO_GROUP_BY]].copy()
 
         self.transaction.lmd['data_preparation']['test_row_count'] = len(self.transaction.input_data.test_df)
         self.transaction.lmd['data_preparation']['train_row_count'] = len(self.transaction.input_data.train_df)

@@ -383,7 +383,7 @@ class LudwigBackend():
                 while i < df_len + split_by:
                     end = i + split_by
                     self.transaction.log.info(f'Training with batch from index {i} to index {end}')
-                    training_sample = training_dataframe.iloc[i:end]
+                    training_sample = training_dataframe.loc[i:end]
                     training_sample = training_sample.reset_index()
                     train_stats = model.train(data_df=training_sample, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
                     i = end

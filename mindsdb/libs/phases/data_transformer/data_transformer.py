@@ -177,18 +177,18 @@ class DataTransformer(BaseModule):
 
                         if index in input_data.train_df.index and not column_is_weighted_in_train:
                             data_frame_length = data_frame_length + 1
-                            copied_row = valid_rows.iloc[ciclying_map[val]]
+                            copied_row = valid_rows.loc[ciclying_map[val]]
                             copied_rows_train.append(copied_row)
 
                         elif index in input_data.test_df.index and not column_is_weighted_in_train:
                             data_frame_length = data_frame_length + 1
-                            copied_row = valid_rows.iloc[ciclying_map[val]]
+                            copied_row = valid_rows.loc[ciclying_map[val]]
 
                             copied_rows_test.append(copied_row)
 
                         elif index in input_data.validation_df.index:
                             data_frame_length = data_frame_length + 1
-                            copied_row = valid_rows.iloc[ciclying_map[val]]
+                            copied_row = valid_rows.loc[ciclying_map[val]]
                             copied_rows_validate.append(copied_row)
 
                         occurance_map[val] += 1

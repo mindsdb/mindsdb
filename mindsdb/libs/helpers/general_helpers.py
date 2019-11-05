@@ -1,15 +1,12 @@
 import platform
 import re
-import urllib
-import uuid
-from pathlib import Path
 import pickle
+import urllib
 import requests
+from pathlib import Path
+import uuid
 from contextlib import contextmanager
-import ctypes
-import io
 import os, sys
-import tempfile
 
 
 from mindsdb.__about__ import __version__
@@ -20,12 +17,53 @@ import imagehash
 from PIL import Image
 
 
-def get_key_for_val(key, dict_map):
-    for orig_col in dict_map:
-        if dict_map[orig_col] == key:
-            return orig_col
+def check_for_updates():
+    """
+    Check for updates of mindsdb
+    it will ask the mindsdb server if there are new versions, if there are it will log a message
 
-    return key
+    :return: None
+    """
+
+    # tmp files
+    uuid_file = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, '..', 'uuid.mdb_base')
+    mdb_file = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, 'start.mdb_base')
+
+    if Path(uuid_file).is_file():
+        uuid_str = open(uuid_file).read()
+    else:
+        uuid_str = str(uuid.uuid4())
+        try:
+            with open(uuid_file, 'w') as fp:
+                fp.write(uuid_str)
+        except:
+            log.warning(f'Cannot store token, Please add write permissions to file: {uuid_file}')
+            uuid_str = f'{token}.NO_WRITE'
+
+    if Path(mdb_file).is_file():
+        token = open(mdb_file, 'r').read()
+    else:
+        token = '{system}|{version}|{uid}'.format(system=platform.system(), version=__version__, uid=uuid_str)
+        try:
+            open(mdb_file,'w').write(token)
+        except:
+            log.warning(f'Cannot store token, Please add write permissions to file: {mdb_file}')
+            token = f'{token}.NO_WRITE'
+
+    try:
+        ret = requests.get('http://mindsdb.com/updates/check/{token}'.format(token=token), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)}).json()
+    except:
+        log.warning('Could not check for updates')
+        return
+        
+    try:
+        if 'version' in ret and ret['version']!= __version__:
+            log.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
+        else:
+            log.debug('MindsDB is up to date!')
+    except:
+        log.warning('could not check for MindsDB updates')
+
 
 def convert_cammelcase_to_snake_string(cammel_string):
     """
@@ -38,48 +76,6 @@ def convert_cammelcase_to_snake_string(cammel_string):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', cammel_string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
-
-def get_label_index_for_value(value, labels):
-    """
-    This will define what index interval does a value belong to given a list of labels
-
-    :param value: value to evaluate
-    :param labels: the labels to compare against
-    :return: an index value
-    """
-    if  value is None:
-        return 0 # Todo: Add another index for None values
-
-    if type(value) == type(''):
-        try:
-            index = labels.index(value)
-        except:
-            index = 0
-    else:
-        for index, compare_to in enumerate(labels):
-            if value < compare_to:
-                index = index
-                break
-
-    return index
-
-def convert_snake_to_cammelcase_string(snake_str, first_lower = False):
-    """
-    Converts snake to cammelcase
-
-    :param snake_str: as described
-    :param first_lower: if you want to start the string with lowercase as_said -> asSaid
-    :return: cammelcase string
-    """
-
-    components = snake_str.split('_')
-
-    if first_lower == True:
-        # We capitalize the first letter of each component except the first one
-        # with the 'title' method and join them together.
-        return components[0] + ''.join(x.title() for x in components[1:])
-    else:
-        return ''.join(x.title() for x in components)
 
 def pickle_obj(object_to_pickle):
     """
@@ -170,8 +166,8 @@ class suppress_stdout_stderr(object):
             # Open a pair of null files
             self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
             # Save the actual stdout (1) and stderr (2) file descriptors.
-            self.c_stdout = sys.stdout.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stdout'))
-            self.c_stderr = sys.stderr.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stderr'))
+            self.c_stdout = sys.stdout.fileno()
+            self.c_stderr = sys.stderr.fileno()
 
             self.save_fds = [os.dup(self.c_stdout), os.dup(self.c_stderr)]
         except:

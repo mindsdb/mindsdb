@@ -1,15 +1,10 @@
 import platform
 import re
-import urllib
-import uuid
-from pathlib import Path
 import pickle
+import urllib
 import requests
 from contextlib import contextmanager
-import ctypes
-import io
 import os, sys
-import tempfile
 
 
 from mindsdb.__about__ import __version__
@@ -121,8 +116,8 @@ class suppress_stdout_stderr(object):
             # Open a pair of null files
             self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
             # Save the actual stdout (1) and stderr (2) file descriptors.
-            self.c_stdout = sys.stdout.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stdout'))
-            self.c_stderr = sys.stderr.fileno() #int(ctypes.c_void_p.in_dll(ctypes.CDLL(None), 'stderr'))
+            self.c_stdout = sys.stdout.fileno()
+            self.c_stderr = sys.stderr.fileno()
 
             self.save_fds = [os.dup(self.c_stdout), os.dup(self.c_stderr)]
         except:

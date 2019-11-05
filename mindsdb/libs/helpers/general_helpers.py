@@ -3,6 +3,8 @@ import re
 import pickle
 import urllib
 import requests
+from pathlib import Path
+import uuid
 from contextlib import contextmanager
 import os, sys
 
@@ -13,6 +15,54 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.constants.mindsdb import *
 import imagehash
 from PIL import Image
+
+
+def check_for_updates():
+    """
+    Check for updates of mindsdb
+    it will ask the mindsdb server if there are new versions, if there are it will log a message
+
+    :return: None
+    """
+
+    # tmp files
+    uuid_file = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, '..', 'uuid.mdb_base')
+    mdb_file = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, 'start.mdb_base')
+
+    if Path(uuid_file).is_file():
+        uuid_str = open(uuid_file).read()
+    else:
+        uuid_str = str(uuid.uuid4())
+        try:
+            with open(uuid_file, 'w') as fp:
+                fp.write(uuid_str)
+        except:
+            log.warning(f'Cannot store token, Please add write permissions to file: {uuid_file}')
+            uuid_str = f'{token}.NO_WRITE'
+
+    if Path(mdb_file).is_file():
+        token = open(mdb_file, 'r').read()
+    else:
+        token = '{system}|{version}|{uid}'.format(system=platform.system(), version=__version__, uid=uuid_str)
+        try:
+            open(mdb_file,'w').write(token)
+        except:
+            log.warning(f'Cannot store token, Please add write permissions to file: {mdb_file}')
+            token = f'{token}.NO_WRITE'
+
+    try:
+        ret = requests.get('http://mindsdb.com/updates/check/{token}'.format(token=token), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)}).json()
+    except:
+        log.warning('Could not check for updates')
+        return
+        
+    try:
+        if 'version' in ret and ret['version']!= __version__:
+            log.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))
+        else:
+            log.debug('MindsDB is up to date!')
+    except:
+        log.warning('could not check for MindsDB updates')
 
 
 def convert_cammelcase_to_snake_string(cammel_string):

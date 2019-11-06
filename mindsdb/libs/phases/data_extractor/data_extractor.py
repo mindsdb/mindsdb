@@ -141,14 +141,22 @@ class DataExtractor(BaseModule):
 
 
     def run(self):
+        # --- Dataset gets randomized or sorted (if timeseries) --- #
         result = self._get_prepared_input_df()
+        # --- Dataset gets randomized or sorted (if timeseries) --- #
 
+        # --- Some information about the dataset gets transplanted into transaction level variables --- #
         self.transaction.input_data.columns = result.columns.values.tolist()
         self.transaction.lmd['columns'] = self.transaction.input_data.columns
         self.transaction.input_data.data_frame = result
+        # --- Some information about the dataset gets transplanted into transaction level variables --- #
 
+        # --- Some preliminary dataset integrity checks --- #
         self._validate_input_data_integrity()
+        # --- Some preliminary dataset integrity checks --- #
 
+
+        # --- Dataset split into train/test/validate --- #
         is_time_series = self.transaction.lmd['model_is_time_series']
         group_by = self.transaction.lmd['model_group_by']
         KEY_NO_GROUP_BY = '{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}##ALL_ROWS_NO_GROUP_BY##{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}'
@@ -240,3 +248,4 @@ class DataExtractor(BaseModule):
 
             self.log.info('We have split the input data into:')
             self.log.infoChart(data, type='pie')
+    # --- Dataset split into train/test/validate --- #

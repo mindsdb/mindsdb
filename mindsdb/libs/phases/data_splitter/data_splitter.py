@@ -12,12 +12,6 @@ import pandas
 import numpy as np
 from mindsdb.libs.constants.mindsdb import *
 
-'''
-        for col in self.transaction.lmd['predict_columns']:
-            print(self.transaction.lmd['column_stats'][col]['column_type'])
-        exit()
-'''
-
 class DataSplitter(BaseModule):
     def run(self):
         group_by = self.transaction.lmd['model_group_by']
@@ -51,7 +45,8 @@ class DataSplitter(BaseModule):
                 all_indexes[group_by_value] += [i]
 
             all_indexes[KEY_NO_GROUP_BY] += [i]
-
+        print(all_indexes)
+        exit()
         # move indexes to corresponding train, test, validation, etc and trim input data accordingly
         if self.transaction.lmd['type'] == TRANSACTION_LEARN:
             for key in all_indexes:

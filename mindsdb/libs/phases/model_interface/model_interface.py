@@ -16,9 +16,6 @@ class ModelInterface(BaseModule):
             from mindsdb.libs.backends.lightwood import LightwoodBackend
         except ImportError as e:
             self.transaction.log.warning(e)
-
-        phase_name = PHASE_MODEL_INTERFACE
-
         if self.transaction.hmd['model_backend'] == 'ludwig':
             self.transaction.model_backend = LudwigBackend(self.transaction)
         elif self.transaction.hmd['model_backend'] == 'lightwood':

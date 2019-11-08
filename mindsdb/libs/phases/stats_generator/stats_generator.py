@@ -30,9 +30,6 @@ class StatsGenerator(BaseModule):
     # Additionally, the stats generator also provides the user with some extra meaningful information about his data,
     though this functionality may be moved to a different step (after vectorization) in the future
     """
-
-    phase_name = PHASE_STATS_GENERATOR
-
     def _get_file_type(self, potential_path):
         could_be_fp = False
         for char in ('/', '\\', ':\\'):

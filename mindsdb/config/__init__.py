@@ -29,4 +29,6 @@ class Config:
     # If logs should be streamed to a server
     SEND_LOGS = ifEnvElse('SEND_LOGS', False)
 
+    CHECK_FOR_UPDATES = True
+
 CONFIG = Config()

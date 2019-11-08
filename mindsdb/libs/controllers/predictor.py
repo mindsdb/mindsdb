@@ -36,7 +36,9 @@ class Predictor:
         # initialize log
         self.log = MindsdbLogger(log_level=log_level, uuid=self.uuid)
 
-        check_for_updates()
+        if CONFIG.CHECK_FOR_UPDATES:
+            check_for_updates()
+
         # set the mindsdb storage folder
         storage_ok = True  # default state
 

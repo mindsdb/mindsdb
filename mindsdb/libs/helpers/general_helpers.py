@@ -38,7 +38,7 @@ def check_for_updates():
                 fp.write(uuid_str)
         except:
             log.warning(f'Cannot store token, Please add write permissions to file: {uuid_file}')
-            uuid_str = f'{token}.NO_WRITE'
+            uuid_str = f'{uuid_str}.NO_WRITE'
 
     if Path(mdb_file).is_file():
         token = open(mdb_file, 'r').read()

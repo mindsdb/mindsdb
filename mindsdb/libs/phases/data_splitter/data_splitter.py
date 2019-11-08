@@ -14,6 +14,8 @@ import numpy as np
 
 class DataSplitter(BaseModule):
     def run(self):
+        print(self.transaction.lmd['predict_columns'])
+        
         is_time_series = self.transaction.lmd['model_is_time_series']
         group_by = self.transaction.lmd['model_group_by']
         KEY_NO_GROUP_BY = '{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}##ALL_ROWS_NO_GROUP_BY##{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}'

@@ -13,7 +13,7 @@ from mindsdb.__about__ import __version__
 from mindsdb.config import CONFIG
 from mindsdb.libs.controllers.transaction import Transaction
 from mindsdb.libs.constants.mindsdb import *
-from mindsdb.helpers.general_helpers import check_for_updates
+from mindsdb.libs.helpers.general_helpers import check_for_updates
 
 from pathlib import Path
 
@@ -35,7 +35,7 @@ class Predictor:
         self.uuid = str(uuid.uuid1())
         # initialize log
         self.log = MindsdbLogger(log_level=log_level, uuid=self.uuid)
-        
+
         check_for_updates()
         # set the mindsdb storage folder
         storage_ok = True  # default state

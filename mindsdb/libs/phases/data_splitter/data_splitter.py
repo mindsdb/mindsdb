@@ -10,6 +10,7 @@ import random
 import traceback
 import pandas
 import numpy as np
+from mindsdb.libs.constants.mindsdb import *
 
 '''
         for col in self.transaction.lmd['predict_columns']:
@@ -19,8 +20,14 @@ import numpy as np
 
 class DataSplitter(BaseModule):
     def run(self):
-        is_time_series = self.transaction.lmd['model_is_time_series']
         group_by = self.transaction.lmd['model_group_by']
+        if group_by is None or len(group_by) == 0:
+            group_by = []
+            for col in self.transaction.lmd['predict_columns']:
+                self.transaction.lmd['column_stats'][col]['column_type'] == DATA_TYPES.CATEGORICAL:
+                    group_by.append(col)
+            df = df.sort_values(group_by)
+
         KEY_NO_GROUP_BY = '{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}##ALL_ROWS_NO_GROUP_BY##{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}'
 
         # create all indexes by group by, that is all the rows that belong to each group by
@@ -36,7 +43,7 @@ class DataSplitter(BaseModule):
         for i, row in self.transaction.input_data.data_frame.iterrows():
 
             if len(group_by) > 0:
-                group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in [columns.index(group_by_column) for group_by_column in group_by]])
+                group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in [columns.index(group_by_col) for group_by_col in group_by]])
 
                 if group_by_value not in all_indexes:
                     all_indexes[group_by_value] = []

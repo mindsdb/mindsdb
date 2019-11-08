@@ -20,7 +20,8 @@ class DataSplitter(BaseModule):
             for col in self.transaction.lmd['predict_columns']:
                 if self.transaction.lmd['column_stats'][col]['data_type'] == DATA_TYPES.CATEGORICAL:
                     group_by.append(col)
-            self.transaction.input_data.data_frame = self.transaction.input_data.data_frame.sort_values(group_by)
+            if len(group_by) > 0:
+                self.transaction.input_data.data_frame = self.transaction.input_data.data_frame.sort_values(group_by)
 
         KEY_NO_GROUP_BY = '{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}##ALL_ROWS_NO_GROUP_BY##{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}'
 

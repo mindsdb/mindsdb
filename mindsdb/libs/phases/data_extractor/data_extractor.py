@@ -22,15 +22,15 @@ class DataExtractor(BaseModule):
         when_conditions_list = []
         # here we want to make a list of the type  ( ValueForField1, ValueForField2,..., ValueForFieldN ), ...
         for when_condition in when_conditions:
-            cond_list = [None] * len(columns)  # empty list with blanks for values
+            cond_list = [None] * len(self.transaction.lmd['columns'])  # empty list with blanks for values
 
             for condition_col in when_condition:
-                col_index = columns.index(condition_col)
+                col_index = self.transaction.lmd['columns'].index(condition_col)
                 cond_list[col_index] = when_condition[condition_col]
 
             when_conditions_list.append(cond_list)
 
-        result = pandas.DataFrame(when_conditions_list, columns=columns)
+        result = pandas.DataFrame(when_conditions_list, columns=self.transaction.lmd['columns'])
 
         return result
 

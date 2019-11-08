@@ -511,6 +511,7 @@ class Predictor:
         light_transaction_metadata['model_order_by'] = []
         light_transaction_metadata['malformed_columns'] = []
         light_transaction_metadata['data_preparation'] = {}
+        light_transaction_metadata['predict_columns'] = []
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)

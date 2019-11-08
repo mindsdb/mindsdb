@@ -51,11 +51,11 @@ def check_for_updates():
             token = f'{token}.NO_WRITE'
 
     try:
-        ret = requests.get('http://mindsdb.com/updates/check/{token}'.format(token=token), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)}).json()
+        ret = requests.get('https://public.api.mindsdb.com/updates/check/{token}'.format(token=token), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)}).json()
     except:
         log.warning('Could not check for updates')
         return
-        
+
     try:
         if 'version' in ret and ret['version']!= __version__:
             log.warning("There is a new version of MindsDB {version}, please do:\n    pip3 uninstall mindsdb\n    pip3 install mindsdb --user".format(version=ret['version']))

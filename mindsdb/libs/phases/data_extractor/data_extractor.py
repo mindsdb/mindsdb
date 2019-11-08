@@ -13,9 +13,6 @@ import numpy as np
 
 
 class DataExtractor(BaseModule):
-
-    phase_name = PHASE_DATA_EXTRACTOR
-
     def _get_data_frame_from_when_conditions(self):
         """
         :return:

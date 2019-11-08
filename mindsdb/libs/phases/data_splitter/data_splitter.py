@@ -11,11 +11,14 @@ import traceback
 import pandas
 import numpy as np
 
+'''
+        for col in self.transaction.lmd['predict_columns']:
+            print(self.transaction.lmd['column_stats'][col]['column_type'])
+        exit()
+'''
 
 class DataSplitter(BaseModule):
     def run(self):
-        print(self.transaction.lmd['predict_columns'])
-        
         is_time_series = self.transaction.lmd['model_is_time_series']
         group_by = self.transaction.lmd['model_group_by']
         KEY_NO_GROUP_BY = '{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}##ALL_ROWS_NO_GROUP_BY##{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}'
@@ -43,16 +46,16 @@ class DataSplitter(BaseModule):
             all_indexes[KEY_NO_GROUP_BY] += [i]
 
         # move indexes to corresponding train, test, validation, etc and trim input data accordingly
-        for key in all_indexes:
-            #If this is a group by, skip the `KEY_NO_GROUP_BY` key
-            if len(all_indexes) > 1 and key == KEY_NO_GROUP_BY:
-                continue
-
-            length = len(all_indexes[key])
-            if self.transaction.lmd['type'] == TRANSACTION_LEARN:
-                # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
+        if self.transaction.lmd['type'] == TRANSACTION_LEARN:
+            for key in all_indexes:
                 should_split_by_group = type(group_by) == list and len(group_by) > 0
 
+                #If this is a group by, skip the `KEY_NO_GROUP_BY` key
+                if should_split_by_group and key == KEY_NO_GROUP_BY:
+                    continue
+
+                length = len(all_indexes[key])
+                # this evals True if it should send the entire group data into test, train or validation as opposed to breaking the group into the subsets
                 if should_split_by_group:
                     train_indexes[key] = all_indexes[key][0:round(length - length*CONFIG.TEST_TRAIN_RATIO)]
                     train_indexes[KEY_NO_GROUP_BY].extend(train_indexes[key])
@@ -65,6 +68,7 @@ class DataSplitter(BaseModule):
 
                 else:
                     # make sure that the last in the time series are also the subset used for test
+
                     train_window = (0,int(length*(1-2*CONFIG.TEST_TRAIN_RATIO)))
                     train_indexes[key] = all_indexes[key][train_window[0]:train_window[1]]
                     validation_window = (train_window[1],train_window[1] + int(length*CONFIG.TEST_TRAIN_RATIO))

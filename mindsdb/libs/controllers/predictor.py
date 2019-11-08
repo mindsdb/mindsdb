@@ -206,9 +206,10 @@ class Predictor:
 
         return icm
 
-    def get_model_data(self, model_name):
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{model_name}_light_model_metadata.pickle'), 'rb') as fp:
-            lmd = pickle.load(fp)
+    def get_model_data(self, model_name, lmd=None):
+        if lmd is None:
+            with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{model_name}_light_model_metadata.pickle'), 'rb') as fp:
+                lmd = pickle.load(fp)
         # ADAPTOR CODE
         amd = {}
 
@@ -512,6 +513,7 @@ class Predictor:
         light_transaction_metadata['data_preparation'] = {}
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
+        return self.get_model_data(model_name=None, lmd=light_transaction_metadata)
 
     def learn(self, to_predict, from_data, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict={}):
         """

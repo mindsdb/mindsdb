@@ -18,9 +18,9 @@ class DataSplitter(BaseModule):
         if group_by is None or len(group_by) == 0:
             group_by = []
             for col in self.transaction.lmd['predict_columns']:
-                self.transaction.lmd['column_stats'][col]['column_type'] == DATA_TYPES.CATEGORICAL:
+                if self.transaction.lmd['column_stats'][col]['data_type'] == DATA_TYPES.CATEGORICAL:
                     group_by.append(col)
-            df = df.sort_values(group_by)
+            self.transaction.input_data.data_frame = self.transaction.input_data.data_frame.sort_values(group_by)
 
         KEY_NO_GROUP_BY = '{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}##ALL_ROWS_NO_GROUP_BY##{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}'
 
@@ -37,7 +37,7 @@ class DataSplitter(BaseModule):
         for i, row in self.transaction.input_data.data_frame.iterrows():
 
             if len(group_by) > 0:
-                group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in [columns.index(group_by_col) for group_by_col in group_by]])
+                group_by_value = '_'.join([str(row[group_by_index]) for group_by_index in [self.transaction.input_data.columns.index(group_by_col) for group_by_col in group_by]])
 
                 if group_by_value not in all_indexes:
                     all_indexes[group_by_value] = []
@@ -45,8 +45,7 @@ class DataSplitter(BaseModule):
                 all_indexes[group_by_value] += [i]
 
             all_indexes[KEY_NO_GROUP_BY] += [i]
-        print(all_indexes)
-        exit()
+
         # move indexes to corresponding train, test, validation, etc and trim input data accordingly
         if self.transaction.lmd['type'] == TRANSACTION_LEARN:
             for key in all_indexes:

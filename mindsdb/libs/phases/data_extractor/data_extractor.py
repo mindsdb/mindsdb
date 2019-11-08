@@ -17,8 +17,6 @@ class DataExtractor(BaseModule):
         """
         :return:
         """
-
-        columns = self.transaction.lmd['columns']
         when_conditions = self.transaction.hmd['model_when_conditions']
 
         when_conditions_list = []

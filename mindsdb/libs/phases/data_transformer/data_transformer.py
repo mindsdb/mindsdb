@@ -139,8 +139,7 @@ class DataTransformer(BaseModule):
                             elif '<default>' in self.transaction.lmd['output_categories_importance_dictionary'][column]:
                                 lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionary'][column]['<default>']
 
-                        self.transaction.lmd['weight_map'][column] = lightwood_weight_map
-
+                    self.transaction.lmd['weight_map'][column] = lightwood_weight_map
 
                 column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
 

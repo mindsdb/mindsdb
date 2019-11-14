@@ -131,7 +131,7 @@ class DataTransformer(BaseModule):
                 if self.transaction.hmd['model_backend'] in ('lightwood'):
                     lightwood_weight_map = {}
                     for val in occurance_map:
-                        lightwood_weight_map[val] = occurance_map[val]/sum(occurance_map.values())
+                        lightwood_weight_map[val] = 1/occurance_map[val] #sum(occurance_map.values())
 
                         if column in self.transaction.lmd['output_categories_importance_dictionary']:
                             if val in self.transaction.lmd['output_categories_importance_dictionary'][column]:

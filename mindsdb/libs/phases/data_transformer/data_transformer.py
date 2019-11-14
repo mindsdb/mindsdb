@@ -127,13 +127,11 @@ class DataTransformer(BaseModule):
                     occurance_map[self.transaction.lmd['column_stats'][column]['histogram']['x'][i]] = self.transaction.lmd['column_stats'][column]['histogram']['y'][i]
 
                 max_val_occurances = max(occurance_map.values())
-                min_val_occurances = min(occurance_map.values())
-                sum_val_occurances = sum(occurance_map.values())
 
                 if self.transaction.hmd['model_backend'] in ('lightwood'):
                     lightwood_weight_map = {}
                     for val in occurance_map:
-                        lightwood_weight_map[val] = 1 - occurance_map[val]/sum_val_occurances
+                        lightwood_weight_map[val] = occurance_map[val]/sum(occurance_map.values())
 
                         if column in self.transaction.lmd['output_categories_importance_dictionary']:
                             if val in self.transaction.lmd['output_categories_importance_dictionary'][column]:

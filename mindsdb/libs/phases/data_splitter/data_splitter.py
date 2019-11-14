@@ -113,4 +113,13 @@ class DataSplitter(BaseModule):
 
             self.log.info('We have split the input data into:')
             self.log.infoChart(data, type='pie')
-    # --- Dataset split into train/test/validate --- #
+        '''
+        print(len(self.transaction.input_data.train_df[self.transaction.input_data.train_df['default.payment.next.month'] == '1']))
+        print(len(self.transaction.input_data.train_df[self.transaction.input_data.train_df['default.payment.next.month'] == '0']))
+        print(len(self.transaction.input_data.test_df[self.transaction.input_data.test_df['default.payment.next.month'] == '1']))
+        print(len(self.transaction.input_data.test_df[self.transaction.input_data.test_df['default.payment.next.month'] == '0']))
+        print(len(self.transaction.input_data.validation_df[self.transaction.input_data.validation_df['default.payment.next.month'] == '1']))
+        print(len(self.transaction.input_data.validation_df[self.transaction.input_data.validation_df['default.payment.next.month'] == '0']))
+        exit()
+        '''
+        # --- Dataset split into train/test/validate --- #

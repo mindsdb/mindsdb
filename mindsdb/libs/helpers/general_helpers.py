@@ -54,8 +54,8 @@ def check_for_updates():
 
     try:
         ret = requests.get('https://public.api.mindsdb.com/updates/check/{token}'.format(token=token), headers={'referer': 'http://check.mindsdb.com/?token={token}'.format(token=token)}).json()
-    except:
-        log.warning('Could not check for updates')
+    except Exception as e:
+        log.warning(f'Could not check for updates, got excetpion {e}')
         return
 
     try:

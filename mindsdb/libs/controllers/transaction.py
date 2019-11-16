@@ -227,8 +227,6 @@ class Transaction:
             self.log.error('No input data provided !')
             return
 
-        self._call_phase_module(clean_exit=True, module_name='DataSplitter')
-
         # @TODO Maybe move to a separate "PredictionAnalysis" phase ?
         if self.lmd['run_confidence_variation_analysis']:
             nulled_out_data = []

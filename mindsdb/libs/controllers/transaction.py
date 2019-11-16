@@ -226,6 +226,8 @@ class Transaction:
         if self.input_data.data_frame.shape[0] <= 0:
             self.log.error('No input data provided !')
             return
+        if self.lmd['model_is_time_series']:
+            self._call_phase_module(clean_exit=True, module_name='DataSplitter')
 
         # @TODO Maybe move to a separate "PredictionAnalysis" phase ?
         if self.lmd['run_confidence_variation_analysis']:

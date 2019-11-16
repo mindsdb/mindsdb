@@ -48,16 +48,18 @@ def compare():
             old_backend = row[7]
 
 
-            # There's going to be some variation within accuracy, so we only really need to worry if the grap is bigger than 1%
+            # There's going to be some variation within accuracy, so le'ts only worry about somewhat sizeable gaps
             if old_accuracy > accuracy*1.05:
                 worseness_prefix = 'significantly'
                 func = logger.error
             elif old_accuracy > accuracy*1.01:
                 worseness_prefix = ''
                 func = logger.warning
-            else:
+            elif old_accuracy > accuracy*1.0001:
                 worseness_prefix = 'possibly'
                 func = logger.debug
+            else:
+                continue
 
             func(f'There was a previous test for {test_name} which yielded {worseness_prefix} better results than the current one. The results were:  \n * Accuracy: {old_accuracy} \n * Batch id: {old_batch_id} \n * Batch started: {old_batch_started} \n * Runtime: {old_runtime} \n * Backend: {old_backend} \n * System info when ran: (mindsdb_version: {old_mindsdb_version}, lightwood_version: {old_lightwood_version}, ludwig_version: {old_ludwig_version})\n')
 

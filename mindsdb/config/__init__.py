@@ -30,5 +30,6 @@ class Config:
     SEND_LOGS = ifEnvElse('SEND_LOGS', False)
 
     CHECK_FOR_UPDATES = True
+    IS_CI_TEST = False
 
 CONFIG = Config()

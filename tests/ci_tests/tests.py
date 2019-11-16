@@ -1,15 +1,16 @@
-from mindsdb import Predictor
+import mindsdb
 import sys
 import os
 
 
-def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False):
+def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False, IS_CI_TEST=False):
+    mindsdb.CONFIG.IS_CI_TEST = IS_CI_TEST
     if run_extra:
         for py_file in [x for x in os.listdir('../functional_testing') if '.py' in x]:
             os.system(f'python3 ../functional_testing/{py_file}')
 
     # Create & Learn
-    mdb = Predictor(name='home_rentals_price')
+    mdb = mindsdb.Predictor(name='home_rentals_price')
     mdb.learn(to_predict='rental_price',from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend, stop_training_in_x_seconds=20,use_gpu=use_gpu)
 
     # Reload & Predict
@@ -18,7 +19,7 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False)
         mdb.rename_model('home_rentals_price', 'home_rentals_price_renamed')
         model_name = 'home_rentals_price_renamed'
 
-    mdb = Predictor(name=model_name)
+    mdb = mindsdb.Predictor(name=model_name)
     prediction = mdb.predict(when={'sqft':300}, use_gpu=use_gpu)
 
     # Test all different forms of output

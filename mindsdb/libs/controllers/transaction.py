@@ -170,7 +170,7 @@ class Transaction:
 
             self._call_phase_module(clean_exit=True, module_name='DataSplitter')
 
-            self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data, mode='train')
+            self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
 
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
@@ -226,8 +226,8 @@ class Transaction:
         if self.input_data.data_frame.shape[0] <= 0:
             self.log.error('No input data provided !')
             return
-
-        self._call_phase_module(clean_exit=True, module_name='DataSplitter')
+        if self.lmd['model_is_time_series']:
+            self._call_phase_module(clean_exit=True, module_name='DataSplitter')
 
         # @TODO Maybe move to a separate "PredictionAnalysis" phase ?
         if self.lmd['run_confidence_variation_analysis']:

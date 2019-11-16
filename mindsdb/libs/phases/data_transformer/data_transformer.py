@@ -68,20 +68,22 @@ class DataTransformer(BaseModule):
             return None
 
     @staticmethod
-    def _aply_to_all_data(input_data, column, func):
+    def _aply_to_all_data(input_data, column, func, transaction_type):
         input_data.data_frame[column] = input_data.data_frame[column].apply(func)
-        input_data.train_df[column] = input_data.train_df[column].apply(func)
-        input_data.test_df[column] = input_data.test_df[column].apply(func)
-        input_data.validation_df[column] = input_data.validation_df[column].apply(func)
+        if transaction_type == TRANSACTION_LEARN:
+            input_data.train_df[column] = input_data.train_df[column].apply(func)
+            input_data.test_df[column] = input_data.test_df[column].apply(func)
+            input_data.validation_df[column] = input_data.validation_df[column].apply(func)
 
     @staticmethod
-    def _cast_all_data(input_data, column, cast_to_type):
+    def _cast_all_data(input_data, column, cast_to_type, transaction_type):
         input_data.data_frame[column] = input_data.data_frame[column].astype(cast_to_type)
-        input_data.train_df[column] = input_data.train_df[column].astype(cast_to_type)
-        input_data.test_df[column] = input_data.test_df[column].astype(cast_to_type)
-        input_data.validation_df[column] = input_data.validation_df[column].astype(cast_to_type)
+        if transaction_type == TRANSACTION_LEARN:
+            input_data.train_df[column] = input_data.train_df[column].astype(cast_to_type)
+            input_data.test_df[column] = input_data.test_df[column].astype(cast_to_type)
+            input_data.validation_df[column] = input_data.validation_df[column].astype(cast_to_type)
 
-    def run(self, input_data, mode=None):
+    def run(self, input_data):
         for column in input_data.columns:
 
             if column in self.transaction.lmd['malformed_columns']:
@@ -91,34 +93,34 @@ class DataTransformer(BaseModule):
             data_subtype = self.transaction.lmd['column_stats'][column]['data_subtype']
 
             if data_type == DATA_TYPES.NUMERIC:
-                self._aply_to_all_data(input_data, column, clean_float)
-                self._aply_to_all_data(input_data, column, self._handle_nan)
+                self._aply_to_all_data(input_data, column, clean_float, self.transaction.lmd['type'])
+                self._aply_to_all_data(input_data, column, self._handle_nan, self.transaction.lmd['type'])
 
                 if data_subtype == DATA_SUBTYPES.INT:
-                    self._aply_to_all_data(input_data, column, DataTransformer._try_round)
+                    self._aply_to_all_data(input_data, column, DataTransformer._try_round, self.transaction.lmd['type'])
 
             if data_type == DATA_TYPES.DATE:
                 if data_subtype == DATA_SUBTYPES.DATE:
-                    self._aply_to_all_data(input_data, column, self._standardize_date)
+                    self._aply_to_all_data(input_data, column, self._standardize_date, self.transaction.lmd['type'])
 
                 elif data_subtype == DATA_SUBTYPES.TIMESTAMP:
-                    self._aply_to_all_data(input_data, column, self._standardize_datetime)
+                    self._aply_to_all_data(input_data, column, self._standardize_datetime, self.transaction.lmd['type'])
 
             if data_type == DATA_TYPES.CATEGORICAL:
-                    self._cast_all_data(input_data, column, 'category')
+                    self._cast_all_data(input_data, column, 'category', self.transaction.lmd['type'])
 
             if self.transaction.hmd['model_backend'] == 'lightwood':
                 if data_type == DATA_TYPES.DATE:
-                    self._aply_to_all_data(input_data, column, self._standardize_datetime)
-                    self._aply_to_all_data(input_data, column, self._lightwood_datetime_processing)
-                    self._aply_to_all_data(input_data, column, self._handle_nan)
+                    self._aply_to_all_data(input_data, column, self._standardize_datetime, self.transaction.lmd['type'])
+                    self._aply_to_all_data(input_data, column, self._lightwood_datetime_processing, self.transaction.lmd['type'])
+                    self._aply_to_all_data(input_data, column, self._handle_nan, self.transaction.lmd['type'])
 
         # Initialize this here, will be overwritten if `equal_accuracy_for_all_output_categories` is specified to be True in order to account for it
         self.transaction.lmd['weight_map'] = self.transaction.lmd['output_categories_importance_dictionary']
 
         # Un-bias dataset for training
         for column in self.transaction.lmd['predict_columns']:
-            if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['equal_accuracy_for_all_output_categories'] == True and mode == 'train':
+            if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['equal_accuracy_for_all_output_categories'] == True and self.transaction.lmd['type'] == TRANSACTION_LEARN:
                 occurance_map = {}
                 ciclying_map = {}
 

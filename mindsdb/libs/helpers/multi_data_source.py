@@ -1,6 +1,7 @@
 from mindsdb.libs.data_types.data_source import DataSource
 from mindsdb.libs.data_sources.file_ds import FileDS
 from pandas import DataFrame
+import dask.dataframe as dd
 
 from mindsdb.libs.data_types.mindsdb_logger import log
 

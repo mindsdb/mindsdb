@@ -474,6 +474,8 @@ class StatsGenerator(BaseModule):
             self.log.propagate = False
 
         # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
+        print(type(input_data.data_frame))
+        exit()
         population_size = len(input_data.data_frame)
 
         if population_size < 50:

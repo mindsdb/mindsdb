@@ -177,7 +177,7 @@ class FileDS(DataSource):
         elif format in ['xlsx', 'xls']:
             data.seek(0)
             df = pd.read_excel(data)
-            df = dd.from_pandas(df, npartitions=1 + round(len(df)/5 * pow(10,4)))
+            #df = dd.from_pandas(df, npartitions=7)
             header = df.columns.values.tolist()
             file_data = df.values.tolist()
 
@@ -185,6 +185,7 @@ class FileDS(DataSource):
             data.seek(0)
             json_doc = json.loads(data.read())
             df = json_normalize(json_doc)
+            #df = dd.from_pandas(df, npartitions=7)
             header = df.columns.values.tolist()
             file_data = df.values.tolist()
 
@@ -200,6 +201,8 @@ class FileDS(DataSource):
             file_list_data = file_data
 
         try:
-            return dd.DataFrame(file_list_data, columns=header), col_map
+            #return dd.DataFrame(file_list_data, columns=header, npartitions=7), col_map
+            return pd.DataFrame(file_list_data, columns=header, npartitions=7), col_map
         except:
-            return dd.read_csv(file), col_map
+            #return dd.read_csv(file, npartitions=7), col_map
+            return pd.read_csv(file, npartitions=7), col_map

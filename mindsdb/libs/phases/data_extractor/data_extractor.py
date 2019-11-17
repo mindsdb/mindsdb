@@ -32,7 +32,7 @@ class DataExtractor(BaseModule):
             when_conditions_list.append(cond_list)
 
         result = pd.DataFrame(when_conditions_list, columns=self.transaction.lmd['columns'])
-        df = dd.from_pandas(result, npartitions=1 + round(len(result)/5 * pow(10,4)))
+        #df = dd.from_pandas(result, npartitions=7)
         return result
 
 
@@ -71,13 +71,13 @@ class DataExtractor(BaseModule):
         if 'from_data' in self.transaction.hmd and self.transaction.hmd['from_data'] is not None:
             # make sure we build a dataframe that has all the columns we need
             df = self.transaction.hmd['from_data']
-            df = df.where((pd.notnull(df)), None)
+            #df = df.where((pd.notnull(df)), None)
 
         # if this is a predict statement, create use model_when_conditions to shape the dataframe
         if  self.transaction.lmd['type'] == TRANSACTION_PREDICT:
             if self.transaction.hmd['when_data'] is not None:
                 df = self.transaction.hmd['when_data']
-                df = df.where((pd.notnull(df)), None)
+                #df = df.where((pd.notnull(df)), None)
 
             elif self.transaction.hmd['model_when_conditions'] is not None:
 

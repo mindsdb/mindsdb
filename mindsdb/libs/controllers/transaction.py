@@ -171,7 +171,7 @@ class Transaction:
             self._call_phase_module(clean_exit=True, module_name='DataSplitter')
 
             self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
-
+            exit()
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
             self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='train')

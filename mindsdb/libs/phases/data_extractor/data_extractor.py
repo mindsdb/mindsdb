@@ -4,7 +4,7 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.helpers.text_helpers import hashtext
 from mindsdb.external_libs.stats import calculate_sample_size
-from pd.api.types import is_numeric_dtype
+from pandas.api.types import is_numeric_dtype
 
 import random
 import traceback

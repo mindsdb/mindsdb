@@ -7,7 +7,8 @@ import traceback
 import codecs
 
 import pandas as pd
-from pd.io.json import json_normalize
+from pandas.io.json import json_normalize
+import dask.dataframe as dd
 import requests
 
 from mindsdb.libs.data_types.data_source import DataSource
@@ -176,6 +177,7 @@ class FileDS(DataSource):
         elif format in ['xlsx', 'xls']:
             data.seek(0)
             df = pd.read_excel(data)
+            df = dd.from_pandas(df, npartitions=1 + round(len(df)/5 * pow(10,4)))
             header = df.columns.values.tolist()
             file_data = df.values.tolist()
 
@@ -198,6 +200,6 @@ class FileDS(DataSource):
             file_list_data = file_data
 
         try:
-            return pd.DataFrame(file_list_data, columns=header), col_map
+            return dd.DataFrame(file_list_data, columns=header), col_map
         except:
-            return pd.read_csv(file), col_map
+            return dd.read_csv(file), col_map

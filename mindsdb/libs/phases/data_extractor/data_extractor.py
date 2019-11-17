@@ -9,6 +9,7 @@ from pd.api.types import is_numeric_dtype
 import random
 import traceback
 import pandas as pd
+import dask.dataframe as dd
 import numpy as np
 
 
@@ -31,7 +32,7 @@ class DataExtractor(BaseModule):
             when_conditions_list.append(cond_list)
 
         result = pd.DataFrame(when_conditions_list, columns=self.transaction.lmd['columns'])
-
+        df = dd.from_pandas(result, npartitions=1 + round(len(result)/5 * pow(10,4)))
         return result
 
 

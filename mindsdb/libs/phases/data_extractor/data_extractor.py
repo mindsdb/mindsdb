@@ -86,7 +86,7 @@ class DataExtractor(BaseModule):
                 df = self._get_data_frame_from_when_conditions()
 
         df = df.reset_index()
-        df = dd.from_pandas(df, npartitions=7)
+        df = dd.from_pandas(df, npartitions=1)
         #df = df.reset_index().compute()
         print(type(df))
         # if by now there is no DF, throw an error

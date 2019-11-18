@@ -198,6 +198,6 @@ class FileDS(DataSource):
             file_list_data = file_data
 
         try:
-            return pd.DataFrame(file_list_data, columns=header, npartitions=7), col_map
+            return pd.DataFrame(file_list_data, columns=header), col_map
         except:
-            return pd.read_csv(file, npartitions=7), col_map
+            return pd.read_csv(file), col_map

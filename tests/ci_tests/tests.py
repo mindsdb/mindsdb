@@ -49,4 +49,22 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False,
     # See if we can get the adapted metadata
     amd = mdb.get_model_data(model_name)
     # Make some simple assertions about it
-    assert(5 < len(list(amd.keys())))
+
+    # @TODO: Sometimes are None, not sure why: [, validation_set_accuracy, accuracy]
+    for k in ['status', 'name', 'version', 'is_active', 'data_source', 'predict', 'current_phase', 'updated_at', 'created_at', 'train_end_at']:
+        assert(type(amd[k]) == str)
+
+    for k in amd['data_preparation']:
+        assert(type(amd['data_preparation'][k]) == int or type(amd['data_preparation'][k]) == float)
+
+    assert(type(amd['validation_set_accuracy']) == float)
+    assert(type(amd['accuracy']) == float)
+
+    for k in amd['data_analysis']:
+        assert(len(amd['data_analysis'][k]) > 0)
+        assert(type(amd['data_analysis'][k][0]) == dict)
+
+    assert(len(amd['model_analysis']) > 0)
+    assert(type(amd['model_analysis'][0]) == dict)
+
+    

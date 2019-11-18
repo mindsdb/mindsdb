@@ -7,7 +7,7 @@ import traceback
 import codecs
 
 import pandas as pd
-from pd.io.json import json_normalize
+from pandas.io.json import json_normalize
 import requests
 
 from mindsdb.libs.data_types.data_source import DataSource

@@ -6,6 +6,8 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.constants.mindsdb import *
 
 class DataSplitter(BaseModule):
+    from memory_profiler import profile
+    @profile
     def run(self):
         group_by = self.transaction.lmd['model_group_by']
         if group_by is None or len(group_by) == 0:

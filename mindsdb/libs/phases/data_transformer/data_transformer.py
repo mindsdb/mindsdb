@@ -83,6 +83,9 @@ class DataTransformer(BaseModule):
             input_data.test_df[column] = input_data.test_df[column].astype(cast_to_type)
             input_data.validation_df[column] = input_data.validation_df[column].astype(cast_to_type)
 
+            
+    from memory_profiler import profile
+    @profile
     def run(self, input_data):
         for column in input_data.columns:
 

@@ -57,11 +57,12 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False,
     assert(type(amd['predict']) == list or type(amd['predict']) == str)
     assert(type(amd['is_active']) == bool)
 
+    for k in ['validation_set_accuracy', 'accuracy']:
+        assert(type(amd[k]) == float)
+
     for k in amd['data_preparation']:
         assert(type(amd['data_preparation'][k]) == int or type(amd['data_preparation'][k]) == float)
 
-    assert(type(amd['validation_set_accuracy']) == float)
-    assert(type(amd['accuracy']) == float)
 
     for k in amd['data_analysis']:
         assert(len(amd['data_analysis'][k]) > 0)

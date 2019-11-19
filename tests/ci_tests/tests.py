@@ -10,8 +10,9 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False,
             os.system(f'python3 ../functional_testing/{py_file}')
 
     # Create & Learn
+    to_predict = 'rental_price'
     mdb = mindsdb.Predictor(name='home_rentals_price')
-    mdb.learn(to_predict='rental_price',from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend, stop_training_in_x_seconds=20,use_gpu=use_gpu)
+    #mdb.learn(to_predict=to_predict,from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend, stop_training_in_x_seconds=20,use_gpu=use_gpu)
 
     # Reload & Predict
     model_name = 'home_rentals_price'
@@ -51,8 +52,10 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False,
     # Make some simple assertions about it
 
     # @TODO: Sometimes are None, not sure why: [, validation_set_accuracy, accuracy]
-    for k in ['status', 'name', 'version', 'is_active', 'data_source', 'predict', 'current_phase', 'updated_at', 'created_at', 'train_end_at']:
+    for k in ['status', 'name', 'version', 'data_source', 'current_phase', 'updated_at', 'created_at', 'train_end_at']:
         assert(type(amd[k]) == str)
+    assert(type(amd['predict']) == list or type(amd['predict']) == str)
+    assert(type(amd['is_active']) == bool)
 
     for k in amd['data_preparation']:
         assert(type(amd['data_preparation'][k]) == int or type(amd['data_preparation'][k]) == float)
@@ -67,4 +70,9 @@ def basic_test(backend='ludwig',use_gpu=True,ignore_columns=[], run_extra=False,
     assert(len(amd['model_analysis']) > 0)
     assert(type(amd['model_analysis'][0]) == dict)
 
-    
+    for k in amd['force_vectors'][to_predict]['normal_data_distribution']:
+        assert(len(amd['force_vectors'][to_predict]['normal_data_distribution'][k]) > 0)
+
+    for k in amd['force_vectors'][to_predict]['missing_data_distribution']:
+        for sk in amd['force_vectors'][to_predict]['missing_data_distribution'][k]:
+            assert(len(amd['force_vectors'][to_predict]['missing_data_distribution'][k][sk]) > 0)

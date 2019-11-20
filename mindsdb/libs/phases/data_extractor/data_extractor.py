@@ -134,8 +134,6 @@ class DataExtractor(BaseModule):
                     raise ValueError(err)
                     return
 
-    from memory_profiler import profile
-    #@profile
     def run(self):
         # --- Dataset gets randomized or sorted (if timeseries) --- #
         result = self._get_prepared_input_df()

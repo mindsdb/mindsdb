@@ -456,8 +456,6 @@ class StatsGenerator(BaseModule):
                 # Functionality is specific to mindsdb logger
                 pass
 
-    from memory_profiler import profile
-    #@profile
     def run(self, input_data, modify_light_metadata, hmd=None, print_logs=True):
         """
         # Runs the stats generation phase

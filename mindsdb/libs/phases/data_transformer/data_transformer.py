@@ -86,8 +86,6 @@ class DataTransformer(BaseModule):
         else:
             input_data.data_frame[column] = input_data.data_frame[column].astype(cast_to_type)
 
-    from memory_profiler import profile
-    #@profile
     def run(self, input_data):
         print_mem()
         for column in input_data.columns:

@@ -469,7 +469,6 @@ class StatsGenerator(BaseModule):
             no_processes = 1
         pool = multiprocessing.Pool(processes=no_processes)
         '''
-        print_mem()
         if print_logs == False:
             self.log = logging.getLogger('null-logger')
             self.log.propagate = False
@@ -656,7 +655,6 @@ class StatsGenerator(BaseModule):
 
                 fun_name = str(score_func)
                 run_duration = round(time.time() - start_time, 2)
-                #print(f'Running scoring function "{run_duration}" took {run_duration} seconds !')
 
             stats[col_name].update(compute_consistency_score(stats, col_name))
             stats[col_name].update(compute_redundancy_score(stats, col_name))

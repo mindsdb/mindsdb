@@ -18,3 +18,4 @@ ludwig ==  0.2.1
 xlrd >= 1.0.0
 ImageHash == 4.0
 imageio == 2.5.0
+psutil >= 2.0.0

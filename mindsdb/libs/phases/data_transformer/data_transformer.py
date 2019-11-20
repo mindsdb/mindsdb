@@ -87,7 +87,6 @@ class DataTransformer(BaseModule):
             input_data.data_frame[column] = input_data.data_frame[column].astype(cast_to_type)
 
     def run(self, input_data):
-        print_mem()
         for column in input_data.columns:
 
             if column in self.transaction.lmd['malformed_columns']:

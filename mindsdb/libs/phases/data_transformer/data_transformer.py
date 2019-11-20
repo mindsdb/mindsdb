@@ -151,18 +151,19 @@ class DataTransformer(BaseModule):
 
                 column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
 
-                for val in occurance_map:
-                    if column_is_weighted_in_train:
-                        dfs = ['input_data.validation_df']
-                    else:
-                        dfs = ['input_data.train_df','input_data.test_df','input_data.validation_df']
-
-                    for dfn in dfs:
+                if column_is_weighted_in_train:
+                    dfs = ['input_data.validation_df']
+                else:
+                    dfs = ['input_data.train_df','input_data.test_df','input_data.validation_df']
+                # Since pandas doesn't support append in-place we'll just do some eval-based hacks
+                for dfn in dfs:
+                    max_val_occurances_in_set = int(round(max_val_occurances* (len(eval(dfn))/ (len(input_data.train_df) + len(input_data.test_df) + len(input_data.validation_df)) )))
+                    for val in occurance_map:
                         valid_rows = eval(dfn)[eval(dfn)[column] == val]
 
-                        while max_val_occurances > len(valid_rows) + len(eval(dfn)):
-                            eval(dfn) = eval(dfn).append(valid_rows)
-                        eval(dfn) = eval(dfn).append(valid_rows[0:int(max_val_occurances - (len(valid_rows) + len(eval(dfn))))])
+                        while max_val_occurances_in_set > len(valid_rows) + len(eval(dfn)):
+                            exec(f'{dfn} = {dfn}.append(valid_rows)')
+                        exec(f'{dfn} = {dfn}.append(valid_rows[0:int(max_val_occurances_in_set - (len(valid_rows) + len(eval(dfn))))])')
 
                 print('\n\n-----------------\n\n')
                 for df in [input_data.train_df, input_data.test_df, input_data.validation_df]:

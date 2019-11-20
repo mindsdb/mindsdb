@@ -90,7 +90,7 @@ class ColumnEvaluator():
                     buckets_stats[output_column][bucket] = {}
                     input_data = TransactionData()
                     input_data.data_frame = full_dataset.loc[bucket_indexes[bucket]]
-                    input_data.columns = input_data.data_frame.columns
+                    input_data.columns = input_data.columns
 
                     stats_generator = StatsGenerator(session=None, transaction=self.transaction)
                     try:

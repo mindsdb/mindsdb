@@ -233,7 +233,7 @@ class Transaction:
         if self.lmd['run_confidence_variation_analysis']:
             nulled_out_data = []
             nulled_out_columns = []
-            for column in self.input_data.data_frame.columns:
+            for column in self.input_data.columns:
                 # Only adapted for a single `when`
                 if self.input_data.data_frame.iloc[0][column] is not None:
                     nulled_out_data.append(self.input_data.data_frame.iloc[0].copy())
@@ -257,7 +257,7 @@ class Transaction:
             output_data = {col: [] for col in self.lmd['columns']}
             evaluations = {}
 
-            for column in self.input_data.data_frame.columns:
+            for column in self.input_data.columns:
                 output_data[column] = list(self.input_data.data_frame[column])
 
             for predicted_col in self.lmd['predict_columns']:

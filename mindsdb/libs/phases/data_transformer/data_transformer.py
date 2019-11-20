@@ -70,20 +70,21 @@ class DataTransformer(BaseModule):
 
     @staticmethod
     def _aply_to_all_data(input_data, column, func, transaction_type):
-        input_data.data_frame[column] = input_data.data_frame[column].apply(func)
         if transaction_type == TRANSACTION_LEARN:
             input_data.train_df[column] = input_data.train_df[column].apply(func)
             input_data.test_df[column] = input_data.test_df[column].apply(func)
             input_data.validation_df[column] = input_data.validation_df[column].apply(func)
+        else:
+            input_data.data_frame[column] = input_data.data_frame[column].apply(func)
 
     @staticmethod
     def _cast_all_data(input_data, column, cast_to_type, transaction_type):
-        input_data.data_frame[column] = input_data.data_frame[column].astype(cast_to_type)
         if transaction_type == TRANSACTION_LEARN:
             input_data.train_df[column] = input_data.train_df[column].astype(cast_to_type)
             input_data.test_df[column] = input_data.test_df[column].astype(cast_to_type)
             input_data.validation_df[column] = input_data.validation_df[column].astype(cast_to_type)
-
+        else:
+            input_data.data_frame[column] = input_data.data_frame[column].astype(cast_to_type)
 
     from memory_profiler import profile
     #@profile
@@ -151,62 +152,29 @@ class DataTransformer(BaseModule):
                 column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
 
                 for val in occurance_map:
-                    copied_rows_train = []
-                    copied_rows_test = []
-                    copied_rows_validate = []
+                    if column_is_weighted_in_train:
+                        data_frames_to_weight = [ input_data.validation_df]
+                    else:
+                        data_frames_to_weight = [input_data.train_df, input_data.test_df, input_data.validation_df]
 
-                    data_frame_length = len(input_data.data_frame)
-                    valid_rows = input_data.data_frame[input_data.data_frame[column] == val]
+                    for df in data_frames_to_weight:
+                        copied_rows = []
 
-                    while occurance_map[val] < max_val_occurances:
-                        if ciclying_map[val] >= len(valid_rows.index) - 1:
-                            if len(copied_rows_train) > 0:
-                                input_data.data_frame = input_data.data_frame.append(copied_rows_train)
-                                input_data.train_df = input_data.train_df.append(copied_rows_train)
+                        data_frame_length = len(df)
+                        valid_rows = df[df[column] == val]
 
-                            if len(copied_rows_test) > 0:
-                                input_data.data_frame = input_data.data_frame.append(copied_rows_test)
-                                input_data.test_df = input_data.test_df.append(copied_rows_test)
+                        while occurance_map[val] < max_val_occurances:
+                            if ciclying_map[val] >= len(valid_rows.index) - 1:
+                                df = df.append(copied_rows)
 
-                            if len(copied_rows_validate) > 0:
-                                input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
-                                input_data.validation_df = input_data.validation_df.append(copied_rows_validate)
+                                copied_rows = []
+                                ciclying_map[val] = 0
 
-                            copied_rows_train = []
-                            copied_rows_test = []
-                            copied_rows_validate = []
-
-                            ciclying_map[val] = 0
-
-                        index = list(valid_rows.index)[ciclying_map[val]]
-
-                        if index in input_data.train_df.index and not column_is_weighted_in_train:
-                            data_frame_length = data_frame_length + 1
+                            index = list(valid_rows.index)[ciclying_map[val]]
                             copied_row = valid_rows.iloc[ciclying_map[val]]
-                            copied_rows_train.append(copied_row)
+                            copied_rows.append(copied_row)
 
-                        elif index in input_data.test_df.index and not column_is_weighted_in_train:
-                            data_frame_length = data_frame_length + 1
-                            copied_row = valid_rows.iloc[ciclying_map[val]]
+                            occurance_map[val] += 1
+                            ciclying_map[val] += 1
 
-                            copied_rows_test.append(copied_row)
-
-                        elif index in input_data.validation_df.index:
-                            data_frame_length = data_frame_length + 1
-                            copied_row = valid_rows.iloc[ciclying_map[val]]
-                            copied_rows_validate.append(copied_row)
-
-                        occurance_map[val] += 1
-                        ciclying_map[val] += 1
-
-                    if len(copied_rows_train) > 0:
-                        input_data.data_frame = input_data.data_frame.append(copied_rows_train)
-                        input_data.train_df = input_data.train_df.append(copied_rows_train)
-
-                    if len(copied_rows_test) > 0:
-                        input_data.data_frame = input_data.data_frame.append(copied_rows_test)
-                        input_data.test_df = input_data.test_df.append(copied_rows_test)
-
-                    if len(copied_rows_validate) > 0:
-                        input_data.data_frame = input_data.data_frame.append(copied_rows_validate)
-                        input_data.validation_df = input_data.validation_df.append(copied_rows_validate)
+                        df = df.append(copied_rows)

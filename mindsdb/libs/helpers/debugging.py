@@ -1,3 +1,7 @@
+import os
+import psutil
+
+
 def print_key_and_type(d, nl=''):
     for k in d:
         print(nl + str(k))
@@ -15,3 +19,8 @@ def print_key_and_type(d, nl=''):
             print('Empty list for key: ' + k)
     else:
         print(nl + str(type(d[k])))
+
+
+def print_mem():
+    process = psutil.Process(os.getpid())
+    print('Memory usage of: ' + str(round(process.memory_info().rss/pow(10,6))) + ' MB')

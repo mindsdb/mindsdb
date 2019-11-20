@@ -1,12 +1,13 @@
 from dateutil.parser import parse as parse_datetime
 import datetime
 import math
+import sys
 
 import pandas as pd
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import clean_float
-import sys
+from mindsdb.libs.helpers.debugging import *
 
 
 class DataTransformer(BaseModule):
@@ -83,10 +84,11 @@ class DataTransformer(BaseModule):
             input_data.test_df[column] = input_data.test_df[column].astype(cast_to_type)
             input_data.validation_df[column] = input_data.validation_df[column].astype(cast_to_type)
 
-            
+
     from memory_profiler import profile
-    @profile
+    #@profile
     def run(self, input_data):
+        print_mem()
         for column in input_data.columns:
 
             if column in self.transaction.lmd['malformed_columns']:

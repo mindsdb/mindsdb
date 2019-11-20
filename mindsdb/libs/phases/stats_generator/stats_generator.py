@@ -19,6 +19,7 @@ from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, cast_string_to_python_type
+from mindsdb.libs.helpers.debugging import *
 from mindsdb.external_libs.stats import calculate_sample_size
 from mindsdb.libs.phases.stats_generator.scores import *
 
@@ -454,9 +455,9 @@ class StatsGenerator(BaseModule):
             except:
                 # Functionality is specific to mindsdb logger
                 pass
-                
+
     from memory_profiler import profile
-    @profile
+    #@profile
     def run(self, input_data, modify_light_metadata, hmd=None, print_logs=True):
         """
         # Runs the stats generation phase
@@ -470,7 +471,7 @@ class StatsGenerator(BaseModule):
             no_processes = 1
         pool = multiprocessing.Pool(processes=no_processes)
         '''
-
+        print_mem()
         if print_logs == False:
             self.log = logging.getLogger('null-logger')
             self.log.propagate = False

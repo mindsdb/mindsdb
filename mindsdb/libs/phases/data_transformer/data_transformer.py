@@ -163,18 +163,6 @@ class DataTransformer(BaseModule):
                         data_frame_length = len(df)
                         valid_rows = df[df[column] == val]
 
-                        while occurance_map[val] < max_val_occurances:
-                            if ciclying_map[val] >= len(valid_rows.index) - 1:
-                                df = df.append(copied_rows)
-
-                                copied_rows = []
-                                ciclying_map[val] = 0
-
-                            index = list(valid_rows.index)[ciclying_map[val]]
-                            copied_row = valid_rows.iloc[ciclying_map[val]]
-                            copied_rows.append(copied_row)
-
-                            occurance_map[val] += 1
-                            ciclying_map[val] += 1
-
-                        df = df.append(copied_rows)
+                        while max_val_occurances > len(valid_rows) + len(df):
+                            df = df.append(valid_rows)
+                        df = df.append(valid_rows[0:int(max_val_occurances - (len(valid_rows) + len(df)))])

@@ -6,7 +6,7 @@ import json
 import traceback
 import codecs
 
-import pandas
+import pandas as pd
 from pandas.io.json import json_normalize
 import requests
 
@@ -175,7 +175,7 @@ class FileDS(DataSource):
 
         elif format in ['xlsx', 'xls']:
             data.seek(0)
-            df = pandas.read_excel(data)
+            df = pd.read_excel(data)
             header = df.columns.values.tolist()
             file_data = df.values.tolist()
 
@@ -198,6 +198,6 @@ class FileDS(DataSource):
             file_list_data = file_data
 
         try:
-            return pandas.DataFrame(file_list_data, columns=header), col_map
+            return pd.DataFrame(file_list_data, columns=header), col_map
         except:
-            return pandas.read_csv(file), col_map
+            return pd.read_csv(file), col_map

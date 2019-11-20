@@ -4,11 +4,11 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.helpers.text_helpers import hashtext
 from mindsdb.external_libs.stats import calculate_sample_size
-from pandas.api.types import is_numeric_dtype
 
+from pandas.api.types import is_numeric_dtype
 import random
 import traceback
-import pandas
+import pandas as pd
 import numpy as np
 
 
@@ -30,7 +30,7 @@ class DataExtractor(BaseModule):
 
             when_conditions_list.append(cond_list)
 
-        result = pandas.DataFrame(when_conditions_list, columns=self.transaction.lmd['columns'])
+        result = pd.DataFrame(when_conditions_list, columns=self.transaction.lmd['columns'])
 
         return result
 
@@ -70,13 +70,13 @@ class DataExtractor(BaseModule):
         if 'from_data' in self.transaction.hmd and self.transaction.hmd['from_data'] is not None:
             # make sure we build a dataframe that has all the columns we need
             df = self.transaction.hmd['from_data']
-            df = df.where((pandas.notnull(df)), None)
+            df = df.where((pd.notnull(df)), None)
 
         # if this is a predict statement, create use model_when_conditions to shape the dataframe
         if  self.transaction.lmd['type'] == TRANSACTION_PREDICT:
             if self.transaction.hmd['when_data'] is not None:
                 df = self.transaction.hmd['when_data']
-                df = df.where((pandas.notnull(df)), None)
+                df = df.where((pd.notnull(df)), None)
 
             elif self.transaction.hmd['model_when_conditions'] is not None:
 
@@ -133,7 +133,6 @@ class DataExtractor(BaseModule):
                     self.transaction.errorMsg = err
                     raise ValueError(err)
                     return
-
 
     def run(self):
         # --- Dataset gets randomized or sorted (if timeseries) --- #

@@ -2,14 +2,7 @@ from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.helpers.text_helpers import hashtext
-from mindsdb.external_libs.stats import calculate_sample_size
-from pandas.api.types import is_numeric_dtype
 
-import random
-import traceback
-import pandas
-import numpy as np
 from mindsdb.libs.constants.mindsdb import *
 
 class DataSplitter(BaseModule):
@@ -78,30 +71,18 @@ class DataSplitter(BaseModule):
                     test_indexes[key] = all_indexes[key][test_window[0]:test_window[1]]
                     validation_indexes[key] = all_indexes[key][validation_window[0]:validation_window[1]]
 
-        self.transaction.input_data.train_df = self.transaction.input_data.data_frame.iloc[train_indexes[KEY_NO_GROUP_BY]].copy()
-        self.transaction.input_data.test_df = self.transaction.input_data.data_frame.iloc[test_indexes[KEY_NO_GROUP_BY]].copy()
-        self.transaction.input_data.validation_df = self.transaction.input_data.data_frame.iloc[validation_indexes[KEY_NO_GROUP_BY]].copy()
+            self.transaction.input_data.train_df = self.transaction.input_data.data_frame.iloc[train_indexes[KEY_NO_GROUP_BY]].copy()
+            self.transaction.input_data.test_df = self.transaction.input_data.data_frame.iloc[test_indexes[KEY_NO_GROUP_BY]].copy()
+            self.transaction.input_data.validation_df = self.transaction.input_data.data_frame.iloc[validation_indexes[KEY_NO_GROUP_BY]].copy()
 
-        self.transaction.lmd['data_preparation']['test_row_count'] = len(self.transaction.input_data.test_df)
-        self.transaction.lmd['data_preparation']['train_row_count'] = len(self.transaction.input_data.train_df)
-        self.transaction.lmd['data_preparation']['validation_row_count'] = len(self.transaction.input_data.validation_df)
+            self.transaction.input_data.data_frame = None
 
-        # @TODO: Consider deleting self.transaction.input_data.data_frame here
+            self.transaction.lmd['data_preparation']['test_row_count'] = len(self.transaction.input_data.test_df)
+            self.transaction.lmd['data_preparation']['train_row_count'] = len(self.transaction.input_data.train_df)
+            self.transaction.lmd['data_preparation']['validation_row_count'] = len(self.transaction.input_data.validation_df)
 
         # log some stats
         if self.transaction.lmd['type'] == TRANSACTION_LEARN:
-            # @TODO I don't think the above works, fix at some point or just remove `sample_margin_of_error` option from the interface
-            if len(self.transaction.input_data.data_frame) != sum([len(self.transaction.input_data.train_df),len(self.transaction.input_data.test_df),len(self.transaction.input_data.validation_df)]):
-                self.log.info('You requested to sample with a *margin of error* of {sample_margin_of_error} and a *confidence level* of {sample_confidence_level}. Therefore:'.format(sample_confidence_level=self.transaction.lmd['sample_confidence_level'], sample_margin_of_error= self.transaction.lmd['sample_margin_of_error']))
-                self.log.info('Using a [Cochran\'s sample size calculator](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/find-sample-size/) we got the following sample sizes:')
-                data = {
-                    'total': [total_rows_in_input, 'Total number of rows in input'],
-                    'subsets': [[total_rows_used, 'Total number of rows used']],
-                    'label': 'Sample size for margin of error of ({sample_margin_of_error}) and a confidence level of ({sample_confidence_level})'.format(sample_confidence_level=self.transaction.lmd['sample_confidence_level'], sample_margin_of_error= self.transaction.lmd['sample_margin_of_error'])
-                }
-                self.log.infoChart(data, type='pie')
-            # @TODO Bad code ends here (see @TODO above)
-
             data = {
                 'subsets': [
                     [len(self.transaction.input_data.train_df), 'Train'],
@@ -113,13 +94,3 @@ class DataSplitter(BaseModule):
 
             self.log.info('We have split the input data into:')
             self.log.infoChart(data, type='pie')
-        '''
-        print(len(self.transaction.input_data.train_df[self.transaction.input_data.train_df['default.payment.next.month'] == '1']))
-        print(len(self.transaction.input_data.train_df[self.transaction.input_data.train_df['default.payment.next.month'] == '0']))
-        print(len(self.transaction.input_data.test_df[self.transaction.input_data.test_df['default.payment.next.month'] == '1']))
-        print(len(self.transaction.input_data.test_df[self.transaction.input_data.test_df['default.payment.next.month'] == '0']))
-        print(len(self.transaction.input_data.validation_df[self.transaction.input_data.validation_df['default.payment.next.month'] == '1']))
-        print(len(self.transaction.input_data.validation_df[self.transaction.input_data.validation_df['default.payment.next.month'] == '0']))
-        exit()
-        '''
-        # --- Dataset split into train/test/validate --- #

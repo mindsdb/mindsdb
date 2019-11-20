@@ -159,11 +159,16 @@ class DataTransformer(BaseModule):
                 for dfn in dfs:
                     max_val_occurances_in_set = int(round(max_val_occurances* (len(eval(dfn))/ (len(input_data.train_df) + len(input_data.test_df) + len(input_data.validation_df)) )))
                     for val in occurance_map:
+                        print(val)
                         valid_rows = eval(dfn)[eval(dfn)[column] == val]
 
-                        while max_val_occurances_in_set > len(valid_rows) + len(eval(dfn)):
+                        appended_times = 0
+                        while max_val_occurances_in_set > len(valid_rows) * (2 + appended_times):
                             exec(f'{dfn} = {dfn}.append(valid_rows)')
+                            appended_times += 1
+
                         exec(f'{dfn} = {dfn}.append(valid_rows[0:int(max_val_occurances_in_set - (len(valid_rows) + len(eval(dfn))))])')
+                        print(len(eval(dfn)))
 
                 print('\n\n-----------------\n\n')
                 for df in [input_data.train_df, input_data.test_df, input_data.validation_df]:

@@ -150,7 +150,7 @@ class DataTransformer(BaseModule):
                     self.transaction.lmd['weight_map'][column] = lightwood_weight_map
 
                 column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
-
+                column_is_weighted_in_train = False
                 if column_is_weighted_in_train:
                     dfs = ['input_data.validation_df']
                 else:
@@ -159,16 +159,13 @@ class DataTransformer(BaseModule):
                 for dfn in dfs:
                     max_val_occurances_in_set = int(round(max_val_occurances* (len(eval(dfn))/ (len(input_data.train_df) + len(input_data.test_df) + len(input_data.validation_df)) )))
                     for val in occurance_map:
-                        print(val)
                         valid_rows = eval(dfn)[eval(dfn)[column] == val]
 
                         appended_times = 0
                         while max_val_occurances_in_set > len(valid_rows) * (2 + appended_times):
                             exec(f'{dfn} = {dfn}.append(valid_rows)')
                             appended_times += 1
-
-                        exec(f'{dfn} = {dfn}.append(valid_rows[0:int(max_val_occurances_in_set - (len(valid_rows) + len(eval(dfn))))])')
-                        print(len(eval(dfn)))
+                        exec(f'{dfn} = {dfn}.append(valid_rows[0:int(max_val_occurances_in_set - len(valid_rows) * (1 + appended_times))])')
 
                 print('\n\n-----------------\n\n')
                 for df in [input_data.train_df, input_data.test_df, input_data.validation_df]:

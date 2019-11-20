@@ -153,16 +153,18 @@ class DataTransformer(BaseModule):
 
                 for val in occurance_map:
                     if column_is_weighted_in_train:
-                        data_frames_to_weight = [ input_data.validation_df]
+                        dfs = [ input_data.validation_df]
                     else:
-                        data_frames_to_weight = [input_data.train_df, input_data.test_df, input_data.validation_df]
+                        dfs = [input_data.train_df, input_data.test_df, input_data.validation_df]
 
-                    for df in data_frames_to_weight:
-                        copied_rows = []
+                    for i in range(len(dfs)):
+                        valid_rows = dfs[i][dfs[i][column] == val]
 
-                        data_frame_length = len(df)
-                        valid_rows = df[df[column] == val]
+                        while max_val_occurances > len(valid_rows) + len(dfs[i]):
+                            dfs[i] = dfs[i].append(valid_rows)
+                        dfs[i] = dfs[i].append(valid_rows[0:int(max_val_occurances - (len(valid_rows) + len(dfs[i])))])
 
-                        while max_val_occurances > len(valid_rows) + len(df):
-                            df = df.append(valid_rows)
-                        df = df.append(valid_rows[0:int(max_val_occurances - (len(valid_rows) + len(df)))])
+                print('\n\n-----------------\n\n')
+                for df in [input_data.train_df, input_data.test_df, input_data.validation_df]:
+                    print(len(df[df['default.payment.next.month'] == '0']))
+                    print(len(df[df['default.payment.next.month'] == '1']))

@@ -74,8 +74,7 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
     prediction = mdb.predict(when={'sqft':300}, use_gpu=use_gpu)
 
     # Test all different forms of output
-    # No need to print them, we're just doing so for debugging purposes, we just want to see if the interface will crash or not
-
+    # No need to print them in order to run these checks, we're just doing so for quick-debugging purposes, we just want to see if the interfaces will crash when we call them
     print(prediction)
     print(prediction[0])
 
@@ -101,5 +100,5 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
     amd = mdb.get_model_data(model_name)
 
 
-if name == "__main__":
+if __name__ == "__main__":
     basic_test()

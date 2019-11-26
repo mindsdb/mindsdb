@@ -71,6 +71,8 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
         model_name = 'home_rentals_price_renamed'
 
     mdb = mindsdb.Predictor(name=model_name)
+    # Try predicting from a file and from a dictionary
+    prediction = mdb.predict(when_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv", use_gpu=use_gpu)
     prediction = mdb.predict(when={'sqft':300}, use_gpu=use_gpu)
 
     # Test all different forms of output
@@ -98,7 +100,7 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
 
     # See if we can get the adapted model data
     amd = mdb.get_model_data(model_name)
-
+    test_adapted_model_data(amd, to_predict)
 
 if __name__ == "__main__":
     basic_test()

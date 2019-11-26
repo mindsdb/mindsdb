@@ -1,8 +1,13 @@
-from tests import basic_test
+from tests import BasicTest
 import torch
+import tests
+import unittest
 
-# Test with a few basic options
-
-if __name__ == "__main__":
-    basic_test(backend='lightwood',use_gpu=torch.cuda.is_available(),ignore_columns=[], IS_CI_TEST=True)
-    print('\n\n=============[Success]==============\n     Finished running quick test !\n=============[Success]==============\n\n')
+BasicTest.backend = 'lightwood'
+BasicTest.use_gpu = torch.cuda.is_available()
+BasicTest.ignore_columns = []
+BasicTest.IS_CI_TEST = True
+suite = unittest.TestLoader().loadTestsFromModule(tests)
+unittest.TextTestRunner(verbosity=2).run(suite)
+unittest.main(argv=['fast-test'], exit=False)
+print( '\n\n=============[Success]==============\n     Finished running quick test !\n=============[Success]==============\n\n')

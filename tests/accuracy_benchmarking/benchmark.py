@@ -34,6 +34,7 @@ def run_benchmarks():
         ,lightwood_version      Text
         ,ludwig_version         Text
         ,backend                Text
+        ,label                  Text
     ) ENGINE=InnoDB""")
 
     batch_id = uuid.uuid4().hex
@@ -45,6 +46,7 @@ def run_benchmarks():
         pass
 
     TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review']
+    #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars']
     test_data_arr = []
     for test_name in TESTS:
         '''
@@ -89,10 +91,11 @@ def run_benchmarks():
         })
 
     for test_data in test_data_arr:
-        cur.execute("""INSERT INTO mindsdb_accuracy.tests VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",(
+        cur.execute("""INSERT INTO mindsdb_accuracy.tests VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",(
             batch_id, batch_started, test_data['test_name'], test_data['dataset_name'],test_data['accuracy'],
             test_data['accuracy_function'], test_data['accuracy_description'],test_data['runtime'], test_data['started'],
-            test_data['ended'], mindsdb.__version__, lightwood.__version__, ludwig.__version__, test_data['backend_used']
+            test_data['ended'], mindsdb.__version__, lightwood.__version__, ludwig.__version__, test_data['backend_used'],
+            sys.argv[2]
         ))
         con.commit()
 

@@ -6,10 +6,12 @@
 [![PyPI version](https://badge.fury.io/py/MindsDB.svg)](https://badge.fury.io/py/MindsDB)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/mindsdb)
 
-MindsDB's is an Explainable AutoML framework for developers. With it you can build, train and use state of the art ML models in as simple as one line of code.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
+MindsDB's is an Explainable AutoML framework for developers.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
 
 # MindsDB Native
+
+With MindsDB Native you can build, train and use state of the art ML models in as simple as one line of code.
   
 * [Installing MindsDB Native](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 * [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
@@ -22,20 +24,15 @@ MindsDB's is an Explainable AutoML framework for developers. With it you can bui
 
 ### Installation
 
-★ Desktop  
 
-You can use MindsDb on your own computer in under a minute, if you already have a python environment setup, just run:
+
+* **Desktop**: You can use MindsDb on your own computer in under a minute, if you already have a python environment setup, just run the following command, otherwise simply follow the [installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb).
 
 ```bash
  pip3 install mindsdb --user
 ```
-otherwise simply follow the [installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb).
 
-★ Google Colab   
-
-[![MindsDB](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
-
-★ Docker  
+★ **Docker**: If you would like to run it all in a container simply:  
 
 ```bash
 sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/build-docker.sh)"
@@ -80,6 +77,9 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 
 Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 
+* **Google Colab**: You can also try MindsDB straight in [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
+ 
+
 ## Video Tutorial
 
 Please click on the image below to load the tutorial:
@@ -90,7 +90,7 @@ Please click on the image below to load the tutorial:
 
 ## MindsDB Lightwood: Machine Learning Lego Blocks
 
-Under the hood of mindsdb there is lightwood, a Pytorch based framework that breaks down machine learning problems into smaller blocks that can be glued together seamleasly. If you are leaning more into   [lightwood's GITHUB](https://github.com/mindsdb/lightwood/).
+Under the hood of mindsdb there is lightwood, a Pytorch based framework that breaks down machine learning problems into smaller blocks that can be glued together seamleasly. More info about   [MindsDB lightwood's on GITHUB](https://github.com/mindsdb/lightwood/).
 
 ## Contributing
 

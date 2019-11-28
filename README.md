@@ -26,7 +26,7 @@ With MindsDB Native you can build, train and use state of the art ML models in a
 
 
 
-* **Desktop**: You can use MindsDb on your own computer in under a minute, if you already have a python environment setup, just run the following command, otherwise simply follow the [installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb).
+* **Desktop**: You can use MindsDB on your own computer in under a minute, if you already have a python environment setup, just run the following command, otherwise simply follow the [installation instructions Complete Manual](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb).
 
 ```bash
  pip3 install mindsdb --user

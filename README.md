@@ -15,8 +15,8 @@ With MindsDB Native you can build, train and use state of the art ML models in a
   
 * [Installing MindsDB Native](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 * [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
-* [Frequently Asked Questions](https://mindsdb.github.io/mindsdb/docs/faq)
 * [MindsDB Explainability GUI](http://mindsdb.com/product) 
+* [Frequently Asked Questions](https://mindsdb.github.io/mindsdb/docs/faq)
 * [Provide Feedback to Improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
 
 

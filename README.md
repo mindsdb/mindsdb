@@ -32,7 +32,7 @@ With MindsDB Native you can build, train and use state of the art ML models in a
  pip3 install mindsdb --user
 ```
 
-★ **Docker**: If you would like to run it all in a container simply:  
+* **Docker**: If you would like to run it all in a container simply:  
 
 ```bash
 sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/build-docker.sh)"
@@ -43,7 +43,7 @@ sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/dist
 
 Once you have MindsDB installed, you can use it as follows:
 
-**Import MindsDB**:
+Import **MindsDB**:
 
 ```python
 
@@ -77,7 +77,7 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 
 Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 
-* **Google Colab**: You can also try MindsDB straight in [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
+* **Google Colab**: You can also try MindsDB straight here [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
  
 
 ## Video Tutorial

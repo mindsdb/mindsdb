@@ -10,7 +10,7 @@ python-dateutil >= 2.7.3
 pytz >= 2018.5
 requests >= 2.20.0
 scipy >= 1.1.0
-scikit-learn >= 0.20.3
+scikit-learn >= 0.20,<0.22
 colorlog >= 4.0.2
 tensorflow == 1.14.0
 tensorflow-estimator == 1.14.0

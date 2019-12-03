@@ -117,7 +117,7 @@ Teach the predictor to make predictions on a given dataset, extract information 
 
 
 ## Predict
-`predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False, unstable_parameters_dict={}, backend=None):`
+`predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=False, unstable_parameters_dict={}, backend=None, run_confidence_variation_analysis=False):`
 
 `predictor.predict(from_data=a_data_source)`
 
@@ -134,6 +134,9 @@ Make a prediction about a given dataset.
 * unstable_parameters_dict -- A dictionary of unstable parameters that haven't made it to the final interface. If you are interested in using these but are unsure of how they work, please shot us an email or create a github issue detailing your problem. Generally speaking, these are meant to be used by the mindsdb team and developers/contributors and will make it to the public interface once they are ready for prime-time. Thus, they aren't throughly documented since they and their behavior changes often.
 
 * backend -- The machine learning backend to use in order to train the model. This can be a string equal to `lightwood` (default) or `ludwig`, this can also be a custom model object, for an example of those this works, please see [this example](https://github.com/mindsdb/mindsdb/blob/master/tests/functional_testing/custom_model.py). Note, you shouldn't use a different backend than the one you used to train the model, this will result in undefined behavior in the worst case scenario and most likely lead to a weired error. This defaults to whatever backend was last used when calling `learn` on this predictor.
+
+* run_confidence_variation_analysis -- Run a confidence variation analysis on each of the given input column, currently only works when making single predictions via `when`. It provides some more in-depth analysis of a given prediction, by specifying how the confidence would increase/decrease based on which of the columns in the prediction were not present (had null, None or empty values).
+
 
 ## DataSources
 

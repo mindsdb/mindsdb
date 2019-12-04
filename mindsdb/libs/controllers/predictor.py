@@ -685,7 +685,6 @@ class Predictor:
             self.log.error('run_confidence_variation_analysis=True is a valid option only when predicting a single data point via `when`')
             sys.exit(1)
 
-
         transaction_type = TRANSACTION_PREDICT
         when_ds = None if when_data is None else getDS(when_data)
 

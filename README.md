@@ -11,7 +11,7 @@ MindsDB's is an Explainable AutoML framework for developers.[![Tweet](https://im
 
 # MindsDB Native
 
-With MindsDB Native you can build, train and use state of the art ML models in as simple as one line of code.
+With MindsDB you can build, train and use state of the art ML models in as simple as one line of code.
   
 * [Installing MindsDB Native](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 * [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)

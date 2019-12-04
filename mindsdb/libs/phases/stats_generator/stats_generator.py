@@ -132,7 +132,7 @@ class StatsGenerator(BaseModule):
 
         type_dist = {}
         subtype_dist = {}
-        additional_info = {}
+        additional_info = {'other_potential_subtypes': [], 'other_potential_types': []}
 
         # calculate type_dist
         if len(data) < 1:
@@ -237,8 +237,8 @@ class StatsGenerator(BaseModule):
             nr_distinct_vals = len(all_distinct_vals)
 
             if nr_vals/20 > nr_distinct_vals and (curr_data_type not in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] or nr_distinct_vals < 20) and nr_distinct_vals < 2000:
-                additional_info['potential_subtypes'] = [curr_data_type]
-                additional_info['potential_types'] = [curr_data_subtype]
+                additional_info['other_potential_subtypes'].append(curr_data_type)
+                additional_info['other_potential_types'].append(curr_data_subtype)
                 curr_data_type = DATA_TYPES.CATEGORICAL
                 if len(all_distinct_vals) < 3:
                     curr_data_subtype = DATA_SUBTYPES.SINGLE
@@ -347,7 +347,7 @@ class StatsGenerator(BaseModule):
 
     @staticmethod
     def is_foreign_key(column_name, column_stats, data):
-        foregin_key_type = DATA_SUBTYPES.INT in column_stats['potential_subtypes'] or DATA_SUBTYPES.INT in column_stats['subtype']
+        foregin_key_type = DATA_SUBTYPES.INT in column_stats['other_potential_subtypes'] or DATA_SUBTYPES.INT == column_stats['data_subtype']
 
         data_looks_like_id = True
 
@@ -702,14 +702,9 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(compute_variability_score(stats, col_name))
             stats[col_name].update(compute_data_quality_score(stats, col_name))
 
-            stats[col_name]['is_foreign_key'] = is_foreign_key(col_name, stats[col_name], col_data_dict[col_name])
+            stats[col_name]['is_foreign_key'] = self.is_foreign_key(col_name, stats[col_name], col_data_dict[col_name])
             if stats[col_name]['is_foreign_key'] and self.transaction.lmd['handle_foreign_keys']:
                 self.transaction.lmd['columns_to_ignore'].append(col_name)
-
-        for col in stats:
-            print(stats[col]['is_foreign_key'])
-        print(self.transaction.lmd['columns_to_ignore'])
-        exit()
 
         total_rows = len(input_data.data_frame)
 

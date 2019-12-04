@@ -647,6 +647,12 @@ class Predictor:
         else:
             light_transaction_metadata['force_categorical_encoding'] = []
 
+        if 'handle_foreign_keys' in unstable_parameters_dict:
+            light_transaction_metadata['handle_foreign_keys'] = unstable_parameters_dict['handle_foreign_keys']
+        else:
+            light_transaction_metadata['handle_foreign_keys'] = False
+
+
 
         if rebuild_model is False:
             old_lmd = {}

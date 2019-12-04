@@ -652,6 +652,11 @@ class Predictor:
         else:
             light_transaction_metadata['handle_foreign_keys'] = False
 
+        if 'handle_text_as_categorical' in unstable_parameters_dict:
+            light_transaction_metadata['handle_text_as_categorical'] = unstable_parameters_dict['handle_text_as_categorical']
+        else:
+            light_transaction_metadata['handle_text_as_categorical'] = False
+
 
 
         if rebuild_model is False:

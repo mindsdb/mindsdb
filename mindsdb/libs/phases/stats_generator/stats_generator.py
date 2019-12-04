@@ -236,7 +236,7 @@ class StatsGenerator(BaseModule):
             nr_vals = len(all_values)
             nr_distinct_vals = len(all_distinct_vals)
 
-            if nr_vals/20 > nr_distinct_vals and (curr_data_type not in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] or nr_distinct_vals < 20):
+            if ( nr_vals/20 > nr_distinct_vals and (curr_data_type not in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] or nr_distinct_vals < 20) ) or (curr_data_subtype == DATA_SUBTYPES.TEXT and self.transaction.lmd['handle_text_as_categorical']):
                 additional_info['other_potential_subtypes'].append(curr_data_type)
                 additional_info['other_potential_types'].append(curr_data_subtype)
                 curr_data_type = DATA_TYPES.CATEGORICAL

@@ -236,7 +236,9 @@ class StatsGenerator(BaseModule):
             nr_vals = len(all_values)
             nr_distinct_vals = len(all_distinct_vals)
 
-            if nr_vals/20 > nr_distinct_vals and (curr_data_type not in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] or nr_distinct_vals < 20) and nr_distinct_vals < 400:
+            if nr_vals/20 > nr_distinct_vals and (curr_data_type not in [DATA_TYPES.NUMERIC, DATA_TYPES.DATE] or nr_distinct_vals < 20) and nr_distinct_vals < 2000:
+                additional_info['potential_subtypes'] = [curr_data_type]
+                additional_info['potential_types'] = [curr_data_subtype]
                 curr_data_type = DATA_TYPES.CATEGORICAL
                 if len(all_distinct_vals) < 3:
                     curr_data_subtype = DATA_SUBTYPES.SINGLE
@@ -342,6 +344,44 @@ class StatsGenerator(BaseModule):
             }, kmeans.cluster_centers_
         else:
             return None, None
+
+    @staticmethod
+    def is_foreign_key(column_name, column_stats, data):
+        foregin_key_type = DATA_SUBTYPES.INT in column_stats['potential_subtypes'] or DATA_SUBTYPES.INT in column_stats['subtype']
+
+        data_looks_like_id = True
+
+        # No need to run this check if the type already indicates a foreign key like value
+        if not foregin_key_type:
+            val_length = None
+            for val in data:
+                is_uuid = True
+                is_same_length = False
+
+                for char in str(val):
+                    if char not in ['0', '1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','-']:
+                        is_uuid = False
+
+                if val_length is not False:
+                    if val_length is None:
+                        val_length = len(str(val))
+                    if len(str(val)) == val_length:
+                        is_same_length = True
+
+                if not is_uuid and not is_same_length:
+                    data_looks_like_id = False
+                    break
+
+        foreign_key_name = False
+        for endings in ['-id', '_id', 'ID', 'Id']:
+            if column_name.endswith(endings):
+                foreign_key_name = True
+        for keyword in ['account', 'uuid', 'identifier', 'user']:
+            if keyword in column_name:
+                foreign_key_name = True
+
+        return foreign_key_name and (foregin_key_type or data_looks_like_id)
+
 
     def _log_interesting_stats(self, stats):
         """
@@ -493,7 +533,7 @@ class StatsGenerator(BaseModule):
         col_data_dict = {}
 
         for col_name in all_sampled_data.columns.values:
-            if col_name in self.transaction.lmd['malformed_columns']:
+            if col_name in self.transaction.lmd['columns_to_ignore']:
                 continue
 
             col_data = all_sampled_data[col_name].dropna()
@@ -504,7 +544,7 @@ class StatsGenerator(BaseModule):
 
             if column_status == 'Column empty':
                 if modify_light_metadata:
-                    self.transaction.lmd['malformed_columns'].append(col_name)
+                    self.transaction.lmd['columns_to_ignore'].append(col_name)
 
                 continue
 
@@ -626,12 +666,13 @@ class StatsGenerator(BaseModule):
 
             stats[col_name]['empty_cells'] = empty_count
             stats[col_name]['empty_percentage'] = empty_count * 100 / len(full_col_data)
-            if 'separator' in additional_info:
-                stats[col_name]['separator'] = additional_info['separator']
+            for k in additional_info:
+                stats[col_name][k] = additional_info[k]
+
             col_data_dict[col_name] = col_data
 
         for col_name in all_sampled_data.columns:
-            if col_name in self.transaction.lmd['malformed_columns']:
+            if col_name in self.transaction.lmd['columns_to_ignore']:
                 continue
 
             # Use the multiprocessing pool for computing scores which take a very long time to compute
@@ -659,8 +700,16 @@ class StatsGenerator(BaseModule):
             stats[col_name].update(compute_consistency_score(stats, col_name))
             stats[col_name].update(compute_redundancy_score(stats, col_name))
             stats[col_name].update(compute_variability_score(stats, col_name))
-
             stats[col_name].update(compute_data_quality_score(stats, col_name))
+
+            stats[col_name]['is_foreign_key'] = is_foreign_key(col_name, stats[col_name], col_data_dict[col_name])
+            if stats[col_name]['is_foreign_key'] and self.transaction.lmd['handle_foreign_keys']:
+                self.transaction.lmd['columns_to_ignore'].append(col_name)
+
+        for col in stats:
+            print(stats[col]['is_foreign_key'])
+        print(self.transaction.lmd['columns_to_ignore'])
+        exit()
 
         total_rows = len(input_data.data_frame)
 

@@ -246,7 +246,7 @@ class Predictor:
         amd['model_analysis'] = []
 
         for col in lmd['model_columns_map'].keys():
-            if col in lmd['malformed_columns']:
+            if col in lmd['columns_to_ignore']:
                 continue
 
             try:
@@ -328,7 +328,7 @@ class Predictor:
                         mao['accuracy_histogram']['x_explained'].append(x_explained_member)
 
                     for icol in lmd['model_columns_map'].keys():
-                        if icol in lmd['malformed_columns']:
+                        if icol in lmd['columns_to_ignore']:
                             continue
                         if icol not in lmd['predict_columns']:
                             try:
@@ -512,7 +512,7 @@ class Predictor:
         light_transaction_metadata['model_is_time_series'] = False
         light_transaction_metadata['model_group_by'] = []
         light_transaction_metadata['model_order_by'] = []
-        light_transaction_metadata['malformed_columns'] = []
+        light_transaction_metadata['columns_to_ignore'] = []
         light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['predict_columns'] = []
 
@@ -607,7 +607,7 @@ class Predictor:
         light_transaction_metadata['columnless_prediction_distribution'] = None
         light_transaction_metadata['all_columns_prediction_distribution'] = None
         light_transaction_metadata['use_gpu'] = use_gpu
-        light_transaction_metadata['malformed_columns'] = ignore_columns
+        light_transaction_metadata['columns_to_ignore'] = ignore_columns
         light_transaction_metadata['disable_optional_analysis'] = disable_optional_analysis
         light_transaction_metadata['validation_set_accuracy'] = None
         light_transaction_metadata['lightwood_data'] = {}
@@ -661,7 +661,7 @@ class Predictor:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
                 heavy_transaction_metadata= pickle.load(fp)
 
-            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'malformed_columns', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:
+            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'columns_to_ignore', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:
                 if old_lmd[k] is not None: light_transaction_metadata[k] = old_lmd[k]
 
             for k in ['from_data', 'test_from_data']:

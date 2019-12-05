@@ -271,7 +271,7 @@ class Transaction:
 
                     # Compute the feature existance vector
                     input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
-                    features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns if col not in self.lmd['malformed_columns']]
+                    features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns if col not in self.lmd['columns_to_ignore']]
 
                     # Create the probabilsitic evaluation
                     prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value, always_use_model_prediction=self.lmd['always_use_model_prediction'])

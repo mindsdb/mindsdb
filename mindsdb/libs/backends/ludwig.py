@@ -350,7 +350,7 @@ class LudwigBackend():
         if len(timeseries_cols) > 0:
             training_dataframe, model_definition =  self._translate_df_to_timeseries_format(training_dataframe, model_definition, timeseries_cols, 'train')
 
-        with disable_console_output(False):
+        with disable_console_output(True):
             # <---- Ludwig currently broken, since mode can't be initialized without train_set_metadata and train_set_metadata can't be obtained without running train... see this issue for any updates on the matter: https://github.com/uber/ludwig/issues/295
             #model.initialize_model(train_set_metadata={})
             #train_stats = model.train_online(data_df=training_dataframe) # ??Where to add model_name?? ----> model_name=self.transaction.lmd['name']
@@ -374,27 +374,23 @@ class LudwigBackend():
                 model = LudwigModel.load(model_dir=self._get_model_dir())
 
 
-            split_by = int(5 * pow(10,6))
+            split_by = int(20 * pow(10,6))
             if has_heavy_data:
                 split_by = 40
             df_len = len(training_dataframe[training_dataframe.columns[0]])
             if df_len > split_by:
                 i = 0
-                while i < df_len + split_by:
+                while i < df_len:
                     end = i + split_by
                     self.transaction.log.info(f'Training with batch from index {i} to index {end}')
                     training_sample = training_dataframe.iloc[i:end]
                     training_sample = training_sample.reset_index()
 
-                    print(training_sample)
                     if len(training_sample) < 1:
                         continue
 
                     train_stats = model.train(data_df=training_sample, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
                     i = end
-
-                    for k in train_stats['train']:
-                        print(train_stats['train'][k]['accuracy'])
             else:
                 train_stats = model.train(data_df=training_dataframe, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
 

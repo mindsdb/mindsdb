@@ -374,17 +374,21 @@ class LudwigBackend():
                 model = LudwigModel.load(model_dir=self._get_model_dir())
 
 
-            split_by = 50 * 1000
+            split_by = int(20 * pow(10,6))
             if has_heavy_data:
                 split_by = 40
             df_len = len(training_dataframe[training_dataframe.columns[0]])
             if df_len > split_by:
                 i = 0
-                while i < df_len + split_by:
+                while i < df_len:
                     end = i + split_by
                     self.transaction.log.info(f'Training with batch from index {i} to index {end}')
                     training_sample = training_dataframe.iloc[i:end]
                     training_sample = training_sample.reset_index()
+
+                    if len(training_sample) < 1:
+                        continue
+
                     train_stats = model.train(data_df=training_sample, model_name=self.transaction.lmd['name'], skip_save_model=ludwig_save_is_working, skip_save_progress=True, gpus=self._get_useable_gpus())
                     i = end
             else:

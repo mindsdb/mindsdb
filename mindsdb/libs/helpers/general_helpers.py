@@ -232,3 +232,4 @@ def value_isnan(value):
         isnan = False
     except:
         isnan = True
+    return isnan

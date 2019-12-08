@@ -223,3 +223,13 @@ def disable_console_output(activate=True):
             yield
     finally:
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = old_tf_loglevel
+
+
+def value_isnan(value):
+    try:
+        if type(value) == float:
+            a = int(value)
+        isnan = False
+    except:
+        isnan = True
+    return isnan

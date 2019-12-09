@@ -159,7 +159,7 @@ class LightwoodBackend():
     def train(self):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
 
-        lightwood.config.config.CONFIG.USE_CACHE = True if not self.transaction.lmd['force_disable_cache'] else False
+        lightwood.config.config.CONFIG.CACHE_ENCODED_DATA = True if not self.transaction.lmd['force_disable_cache'] else False
 
         if self.transaction.lmd['model_order_by'] is not None and len(self.transaction.lmd['model_order_by']) > 0:
             self.transaction.log.debug('Reshaping data into timeseries format, this may take a while !')
@@ -200,7 +200,7 @@ class LightwoodBackend():
     def predict(self, mode='predict', ignore_columns=[]):
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
 
-        lightwood.config.config.CONFIG.USE_CACHE = True if not self.transaction.lmd['force_disable_cache'] else False
+        lightwood.config.config.CONFIG.CACHE_ENCODED_DATA = True if not self.transaction.lmd['force_disable_cache'] else False
 
         if mode == 'predict':
             # Doing it here since currently data cleanup is included in this, in the future separate data cleanup

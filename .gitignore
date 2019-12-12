@@ -29,7 +29,8 @@ data/*
 mindsdb.egg-info
 clean_data
 .pypirc
-
+docs/video_docs/*.mp4
+docs/video_docs/*.kdenlive
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

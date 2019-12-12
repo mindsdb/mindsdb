@@ -27,6 +27,8 @@ class ProbabilisticValidator():
         self._Y_buff = []
         self._predicted_buckets_buff = []
         self._real_buckets_buff = []
+        self._original_real_buckets_buff = []
+        self._original_predicted_buckets_buff = []
 
         self.col_stats = col_stats
 
@@ -48,7 +50,7 @@ class ProbabilisticValidator():
         self.bucket_accuracy = {}
 
 
-    def register_observation(self, features_existence, real_value, predicted_value, hmd=None):
+    def register_observation(self, features_existence, real_value, predicted_value, is_original_data=False, hmd=None):
         """
         # Register an observation in the validator's internal buffers
 
@@ -73,11 +75,16 @@ class ProbabilisticValidator():
             X = [False] * (len(self.buckets) + 1)
             X[predicted_value_b] = True
             X = X + features_existence
-            self._X_buff.append(X)
 
+            self._X_buff.append(X)
             self._Y_buff.append(real_value_b)
             self._real_buckets_buff = self._Y_buff
             self._predicted_buckets_buff.append(predicted_value_b)
+
+            if is_original_data:
+                self._original_real_buckets_buff.append(real_value_b)
+                self._original_predicted_buckets_buff.append(predicted_value_b)
+
 
             # If no column is ignored, compute the accuracy for this bucket
             nr_missing_features = len([x for x in features_existence if x is False or x is 0])
@@ -92,6 +99,10 @@ class ProbabilisticValidator():
             self._Y_buff.append(real_value_b == predicted_value_b)
             self._real_buckets_buff.append(real_value_b)
             self._predicted_buckets_buff.append(predicted_value_b)
+
+            if is_original_data:
+                self._original_real_buckets_buff.append(real_value_b)
+                self._original_predicted_buckets_buff.append(predicted_value_b)
 
     def get_accuracy_histogram(self):
         x = []
@@ -156,8 +167,9 @@ class ProbabilisticValidator():
     def get_confusion_matrix(self):
         # The rows represent predicted values
         # The "columns" represent real values
-        labels= list(set(self._real_buckets_buff))
-        matrix = confusion_matrix(self._real_buckets_buff, self._predicted_buckets_buff, labels=labels)
+        labels= list(set(self._original_real_buckets_buff))
+
+        matrix = confusion_matrix(self._original_real_buckets_buff, self._original_predicted_buckets_buff, labels=labels)
         confusion_matrix_obj = {
             'matrix': [[int(y) for y in x] for x in matrix],
             'predicted': [str(self.buckets[x]) for x in labels],

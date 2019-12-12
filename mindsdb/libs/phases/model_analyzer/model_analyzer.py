@@ -48,9 +48,10 @@ class ModelAnalyzer(BaseModule):
         if len(ignorable_input_columns) == 0:
             for pcol in output_columns:
                 for i in range(len(self.transaction.input_data.validation_df[pcol])):
-                    probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i], hmd=self.transaction.hmd)
+                    probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i], is_original_data=True, hmd=self.transaction.hmd)
 
         # Run on the validation set multiple times, each time with one of the column blanked out
+        is_original_data = True
         for column_name in ignorable_input_columns:
             ignore_columns = []
             ignore_columns.append(column_name)
@@ -63,8 +64,13 @@ class ModelAnalyzer(BaseModule):
             pv = {}
             for pcol in output_columns:
                 for i in range(len(self.transaction.input_data.validation_df[pcol])):
-                    probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=ignore_col_predictions[pcol][i], hmd=self.transaction.hmd)
-                    probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i], hmd=self.transaction.hmd)
+
+                    probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=ignore_col_predictions[pcol][i], is_original_data=False, hmd=self.transaction.hmd)
+
+                    probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i], is_original_data=is_original_data, hmd=self.transaction.hmd)
+                    # Only register the original data once !
+                is_original_data = False
+
         self.transaction.lmd['accuracy_histogram'] = {}
 
         total_accuracy = 0

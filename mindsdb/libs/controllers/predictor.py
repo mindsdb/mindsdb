@@ -657,10 +657,10 @@ class Predictor:
         else:
             light_transaction_metadata['handle_text_as_categorical'] = False
 
-        if 'user_selfaware_model' in unstable_parameters_dict:
-            light_transaction_metadata['user_selfaware_model'] = unstable_parameters_dict['user_selfaware_model']
+        if 'use_selfaware_model' in unstable_parameters_dict:
+            light_transaction_metadata['use_selfaware_model'] = unstable_parameters_dict['use_selfaware_model']
         else:
-            light_transaction_metadata['user_selfaware_model'] = False
+            light_transaction_metadata['use_selfaware_model'] = True
 
 
         if rebuild_model is False:

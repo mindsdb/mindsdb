@@ -1,4 +1,5 @@
 from tests import basic_test
+import lightwood
 import torch
 import mindsdb
 

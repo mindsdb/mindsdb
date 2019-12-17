@@ -1,7 +1,7 @@
-from tests import basic_test
 import lightwood
 import torch
 import mindsdb
+from tests import basic_test
 
 
 if __name__ == "__main__":

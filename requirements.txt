@@ -6,7 +6,6 @@ wheel >= 0.32.2
 attrs >= 18.2.0
 numpy >= 1.15.2
 pandas >= 0.23.4
-python-dateutil >= 2.7.3
 pytz >= 2018.5
 requests >= 2.20.0
 scipy >= 1.1.0
@@ -19,3 +18,4 @@ xlrd >= 1.0.0
 ImageHash == 4.0
 imageio == 2.5.0
 psutil >= 2.0.0
+python-dateutil<2.8.1,>=2.1

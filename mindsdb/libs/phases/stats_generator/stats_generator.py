@@ -292,8 +292,9 @@ class StatsGenerator(BaseModule):
             return StatsGenerator.get_words_histogram(data, is_full_text), None
         elif data_type == DATA_TYPES.NUMERIC or data_subtype == DATA_SUBTYPES.TIMESTAMP:
             data = StatsGenerator.clean_int_and_date_data(data)
-            y, x = np.histogram(data, 50, density=False)
-            x = (x + np.roll(x, -1))[:-1] / 2.0
+            y, x = np.histogram(data, bins=50, range=(min(data),max(data)), density=False)
+            x = x[:-1]
+            #x = (x + np.roll(x, -1))[:-1] / 2.0 <--- original code, was causing weird bucket values when we had outliers
             x = x.tolist()
             y = y.tolist()
             return {

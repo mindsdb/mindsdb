@@ -2,6 +2,12 @@ import sys
 if sys.version_info < (3,6):
     sys.exit('Sorry, For MindsDB Python < 3.6 is not supported')
 
+# @TODO: FIND A WAY TO ACTUALLY SOLVE THIS ASAP !!!
+# HORRIBLE HACK TO AVOID SEGFAULT
+import lightwood
+# HORRIBLE HACK TO AVOID SEGFAULT
+# @TODO: FIND A WAY TO ACTUALLY SOLVE THIS ASAP !!!
+
 from mindsdb.config import CONFIG
 import mindsdb.libs.constants.mindsdb as CONST
 
@@ -26,5 +32,5 @@ try:
     from mindsdb.libs.data_sources.postgres_ds import PostgresDS
 except:
     pass
-    
+
 MindsDB = Predictor

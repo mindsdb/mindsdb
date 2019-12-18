@@ -209,7 +209,7 @@ class Predictor:
 
         return icm
 
-    def get_model_data(self, model_name, lmd=None):
+    def get_model_dataq(self, model_name, lmd=None):
         if lmd is None:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{model_name}_light_model_metadata.pickle'), 'rb') as fp:
                 lmd = pickle.load(fp)

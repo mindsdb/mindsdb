@@ -69,7 +69,7 @@ class ModelAnalyzer(BaseModule):
 
                     probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i], is_original_data=is_original_data, hmd=self.transaction.hmd)
                     # Only register the original data once !
-                is_original_data = False
+            is_original_data = False
 
         self.transaction.lmd['accuracy_histogram'] = {}
 

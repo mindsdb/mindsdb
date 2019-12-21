@@ -84,9 +84,16 @@ Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/b
 
 Please click on the image below to load the tutorial:
 
-[![here](https://img.youtube.com/vi/a49CvkoOdfY/0.jpg)](https://www.youtube.com/watch?v=a49CvkoOdfY)  
+[![here](https://img.youtube.com/vi/a49CvkoOdfY/0.jpg)](https://youtu.be/yr7fgqt9cfU)  
 
 (Note: Please manually set it to 720p or greater to have the text appear clearly)
+
+## MindsDB Graphical user interface
+
+You can also work with mindsdb via its graphical useer interface [donload here](http://mindsdb.com/product)
+
+[![here](https://img.youtube.com/vi/fOwdv4j26CA/1.jpg)](https://youtu.be/fOwdv4j26CA)  
+
 
 ## MindsDB Lightwood: Machine Learning Lego Blocks
 

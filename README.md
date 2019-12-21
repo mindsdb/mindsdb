@@ -88,10 +88,10 @@ Please click on the image below to load the tutorial:
 
 (Note: Please manually set it to 720p or greater to have the text appear clearly)
 
-## MindsDB Graphical user interface
+## MindsDB Graphical User Interface
 
-You can also work with mindsdb via its graphical useer interface [download here](http://mindsdb.com/product)
-
+You can also work with mindsdb via its graphical useer interface ([download here](http://mindsdb.com/product))
+Please click on the image below to load the tutorial:
 [![here](https://img.youtube.com/vi/fOwdv4j26CA/0.jpg)](https://youtu.be/fOwdv4j26CA)  
 
 

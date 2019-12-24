@@ -2,9 +2,10 @@
 ![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/assets/logo_gh.png "MindsDB")
 #
 
-[![Build Status](https://travis-ci.org/mindsdb/mindsdb.svg?branch=master)](https://travis-ci.org/mindsdb/mindsdb)
+[![Build Status](https://img.shields.io/travis/mindsdb/mindsdb?branch=master&logo=travis)](https://travis-ci.org/mindsdb/mindsdb)
 [![PyPI version](https://badge.fury.io/py/MindsDB.svg)](https://badge.fury.io/py/MindsDB)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/mindsdb)
+![Website](https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F)
 
 MindsDB's is an Explainable AutoML framework for developers.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
@@ -90,7 +91,7 @@ Please click on the image below to load the tutorial:
 
 ## MindsDB Graphical User Interface
 
-You can also work with mindsdb via its graphical useer interface ([download here](http://mindsdb.com/product)).
+You can also work with mindsdb via its graphical user interface ([download here](http://mindsdb.com/product)).
 Please click on the image below to load the tutorial:
 
 [![here](https://img.youtube.com/vi/fOwdv4j26CA/0.jpg)](https://youtu.be/fOwdv4j26CA)  
@@ -98,7 +99,7 @@ Please click on the image below to load the tutorial:
 
 ## MindsDB Lightwood: Machine Learning Lego Blocks
 
-Under the hood of mindsdb there is lightwood, a Pytorch based framework that breaks down machine learning problems into smaller blocks that can be glued together seamleasly. More info about   [MindsDB lightwood's on GITHUB](https://github.com/mindsdb/lightwood/).
+Under the hood of mindsdb there is lightwood, a Pytorch based framework that breaks down machine learning problems into smaller blocks that can be glued together seamlessly. More info about [MindsDB lightwood's on GITHUB](https://github.com/mindsdb/lightwood/).
 
 ## Contributing
 
@@ -112,6 +113,5 @@ Once you have specific changes you want to merge into master, feel free to make 
 
 ## Report Issues
 
-Please help us by reporting any issues you may have while using MindsDB.
+Please help us by [reporting any issues](https://github.com/mindsdb/mindsdb/issues/new/choose) you may have while using MindsDB.
 
-https://github.com/mindsdb/mindsdb/issues/new/choose

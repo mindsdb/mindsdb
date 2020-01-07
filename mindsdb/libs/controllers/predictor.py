@@ -398,25 +398,29 @@ class Predictor:
         :param mindsdb_storage_dir: full_path that contains your mindsdb predictor zip file
         :return: bool (True/False) True if mind was importerd successfully
         """
-        previous_models = os.listidr(CONFIG.MINDSDB_STORAGE_PATH)
+        previous_models = os.listdir(CONFIG.MINDSDB_STORAGE_PATH)
         shutil.unpack_archive(model_archive_path, extract_dir=CONFIG.MINDSDB_STORAGE_PATH)
-        
-        new_model_files = set(os.listidr(CONFIG.MINDSDB_STORAGE_PATH)) - set(previous_models)
+
+        new_model_files = set(os.listdir(CONFIG.MINDSDB_STORAGE_PATH)) - set(previous_models)
+        model_names = []
         for file in new_model_files:
             if '_light_model_metadata.pickle' in file:
                 model_name = file.replace('_light_model_metadata.pickle', '')
+                model_names.append(model_name)
 
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name + '_light_model_metadata.pickle'), 'rb') as fp:
-            lmd = pickle.load(fp)
 
-        if 'ludwig_data' in lmd and 'ludwig_save_path' in lmd['ludwig_save_path']:
-            lmd['ludwig_data']['ludwig_save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH),os.path.basename(lmd['ludwig_data']['ludwig_save_path']))
+        for moel_name in model_names:
+            with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name + '_light_model_metadata.pickle'), 'rb') as fp:
+                lmd = pickle.load(fp)
 
-        if 'lightwood_data' in lmd and 'save_path' in lmd['lightwood_data']:
-            lmd['lightwood_data']['save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH),os.path.basename(lmdlmd['lightwood_data']['save_path']))
+            if 'ludwig_data' in lmd and 'ludwig_save_path' in lmd['ludwig_data']:
+                lmd['ludwig_data']['ludwig_save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH),os.path.basename(lmd['ludwig_data']['ludwig_save_path']))
 
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name + '_light_model_metadata.pickle'), 'wb') as fp:
-            pickle.dump(lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
+            if 'lightwood_data' in lmd and 'save_path' in lmd['lightwood_data']:
+                lmd['lightwood_data']['save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH),os.path.basename(lmdlmd['lightwood_data']['save_path']))
+
+            with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name + '_light_model_metadata.pickle'), 'wb') as fp:
+                pickle.dump(lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
 
 
     def load_model(self, model_archive_path=None):

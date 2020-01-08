@@ -1,3 +1,11 @@
+before_install:
+ - |
+   if ! git diff --name-only $TRAVIS_COMMIT_RANGE | grep -qvE '(.md)|^(LICENSE)'
+   then
+     echo "CI build skipped since only Docs were changed."
+     exit
+   fi
+
 language: python
 services:
   - docker

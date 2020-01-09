@@ -283,16 +283,17 @@ class Transaction:
                     output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
                     evaluations[predicted_col][row_number] = prediction_evaluation
 
-                # Scale model confidence between the confidences of the probabilsitic validator
-                mc_arr = np.array(output_data[f'{predicted_col}_model_confidence'])
+                if f'{predicted_col}_model_confidence' in output_data:
+                    # Scale model confidence between the confidences of the probabilsitic validator
+                    mc_arr = np.array(output_data[f'{predicted_col}_model_confidence'])
 
-                normalized_model_confidences = ( (mc_arr - np.min(mc_arr)) / (np.max(mc_arr) - np.min(mc_arr)) ) * (np.max(output_data[confidence_column_name]) - np.min(output_data[confidence_column_name])) + np.min(output_data[confidence_column_name])
+                    normalized_model_confidences = ( (mc_arr - np.min(mc_arr)) / (np.max(mc_arr) - np.min(mc_arr)) ) * (np.max(output_data[confidence_column_name]) - np.min(output_data[confidence_column_name])) + np.min(output_data[confidence_column_name])
 
-                # In case the model confidence is smaller than that yielded after scaling, use the model confidence directly, replaced negative numbers with zero confidence
-                for i in range(len(output_data[f'{predicted_col}_model_confidence'])):
-                    if output_data[f'{predicted_col}_model_confidence'][i] < 0:
-                        output_data[f'{predicted_col}_model_confidence'][i] = 0
-                    output_data[f'{predicted_col}_model_confidence'][i] = min(output_data[f'{predicted_col}_model_confidence'][i],normalized_model_confidences[i])
+                    # In case the model confidence is smaller than that yielded after scaling, use the model confidence directly, replaced negative numbers with zero confidence
+                    for i in range(len(output_data[f'{predicted_col}_model_confidence'])):
+                        if output_data[f'{predicted_col}_model_confidence'][i] < 0:
+                            output_data[f'{predicted_col}_model_confidence'][i] = 0
+                        output_data[f'{predicted_col}_model_confidence'][i] = min(output_data[f'{predicted_col}_model_confidence'][i],normalized_model_confidences[i])
 
             if mode == 'predict':
                 self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)

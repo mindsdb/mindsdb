@@ -13,20 +13,24 @@ def ifEnvElse(env_var, else_value):
     return else_value if env_var not in os.environ else os.environ[env_var]
 
 
+def create_directory(path):
+    if not os.path.exists(path):
+        try:
+            print(f'{path} does not exist, creating it now')
+            path = Path(path)
+            path.mkdir(mode=0o777, exist_ok=True, parents=True)
+        except:
+            print(traceback.format_exc())
+            print(f'MindsDB storage foldler: {path} does not exist and could not be created')
 
 def get_and_create_default_storage_path():
     mindsdb_path = os.path.abspath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/../../')
     path = os.path.abspath(f'{mindsdb_path}/mindsdb_storage/{__version__.replace('.', '_')}')
 
-    # if it does not exist try to create it
-    if not os.path.exists(path):
-        try:
-            self.log.info(f'{path} does not exist, creating it now')
-            path = Path(path)
-            path.mkdir(exist_ok=True, parents=True)
-        except:
-            self.log.error(traceback.format_exc())
-            self.log.error(f'MindsDB storage foldler: {path} does not exist and could not be created')
+    create_directory(path)
+    if not os.access(path, os.W_OK):
+        home = os.path.expanduser('~')
+        path = os.path.join(home, '.mindsdb_storage')
+        create_directory(path)
 
-
-    if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK):
+    return path

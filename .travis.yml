@@ -1,6 +1,5 @@
 language: python
-services:
-  - docker
+
 matrix:
   include:
     - name: "Python 3.7.3 on Ubuntu 16.0.4"
@@ -11,7 +10,9 @@ matrix:
       sudo: true
       env:
         DEPLOYMENT_ENV="true"
-
+      services:
+        - docker
+        
     - name: "Python 3.7.2 on OSX"
       os: osx
       language: shell

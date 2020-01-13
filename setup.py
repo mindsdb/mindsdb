@@ -1,5 +1,4 @@
 import setuptools
-import subprocess
 import sys
 import os
 
@@ -85,18 +84,3 @@ setuptools.setup(
     ),
     python_requires=">=3.6"
 )
-
-try:
-    subprocess.call(['python3','-m','spacy','download','en_core_web_sm'])
-except:
-    try:
-        subprocess.call(['python','-m','spacy','download','en_core_web_sm'])
-    except:
-        print('Can\'t download spacy vocabulary, ludwig backend may fail when processing text input')
-try:
-    subprocess.call(['python3','-m','spacy','download','en'])
-except:
-    try:
-        subprocess.call(['python','-m','spacy','download','en'])
-    except:
-        print('Can\'t download spacy vocabulary, ludwig backend may fail when processing text input')

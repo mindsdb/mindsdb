@@ -133,7 +133,6 @@ class Transaction:
         finally:
             self.lmd['is_active'] = False
 
-
     def _execute_analyze(self):
         self.lmd['current_phase'] = MODEL_STATUS_PREPARING
         self.save_metadata()

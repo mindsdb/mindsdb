@@ -24,7 +24,7 @@ def create_directory(path):
             print(f'MindsDB storage directory: {path} does not exist and could not be created')
 
 def get_and_create_default_storage_path():
-    mindsdb_path = os.path.abspath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/../../')
+    mindsdb_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))), '/../../'))
     path = os.path.abspath(f'{mindsdb_path}/mindsdb_storage/{__version__.replace('.', '_')}')
 
     create_directory(path)

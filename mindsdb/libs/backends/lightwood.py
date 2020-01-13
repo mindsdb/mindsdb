@@ -225,7 +225,6 @@ class LightwoodBackend():
         else:
             run_df = df
 
-        print(list(run_df['rental_price']))
         predictions = self.predictor.predict(when_data=run_df)
 
         formated_predictions = {}

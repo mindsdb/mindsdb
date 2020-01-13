@@ -5,7 +5,7 @@ from pathlib import Path
 from mindsdb.__about__ import __version__
 
 
-def ifEnvElse(env_var, else_value):
+def if_env_else(env_var, else_value):
     """
     return else_value if env_var is not set in environment variables
     :return:

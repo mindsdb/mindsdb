@@ -1,10 +1,11 @@
-from mindsdb.libs.constants.mindsdb import *
-from mindsdb.config import *
-from mindsdb.libs.helpers.general_helpers import disable_console_output, get_tensorflow_colname
-
 from dateutil.parser import parse as parse_datetime
 import os, sys
 import shutil
+import subprocess
+
+from mindsdb.libs.constants.mindsdb import *
+from mindsdb.config import *
+from mindsdb.libs.helpers.general_helpers import disable_console_output, get_tensorflow_colname
 
 from tensorflow.python.client import device_lib
 from ludwig.api import LudwigModel
@@ -17,6 +18,21 @@ from imageio import imread
 class LudwigBackend():
 
     def __init__(self, transaction):
+        try:
+            subprocess.call(['python3','-m','spacy','download','en_core_web_sm'])
+        except:
+            try:
+                subprocess.call(['python','-m','spacy','download','en_core_web_sm'])
+            except:
+                print('Can\'t download spacy vocabulary, ludwig backend may fail when processing text input')
+        try:
+            subprocess.call(['python3','-m','spacy','download','en'])
+        except:
+            try:
+                subprocess.call(['python','-m','spacy','download','en'])
+            except:
+                print('Can\'t download spacy vocabulary, ludwig backend may fail when processing text input')
+
         self.transaction = transaction
 
     def _translate_df_to_timeseries_format(self, df, model_definition, timeseries_cols, mode='predict'):

@@ -230,7 +230,6 @@ class LightwoodBackend():
         formated_predictions = {}
         for k in predictions:
             formated_predictions[k] = predictions[k]['predictions']
-            if 'confidences' in predictions[k]:
-                formated_predictions[f'{k}_confidences'] = predictions[k]['confidences']
+            #formated_predictions[f'{k}_confidence'] = predictions[k]['confidences']
 
         return formated_predictions

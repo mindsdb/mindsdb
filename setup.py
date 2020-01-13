@@ -1,6 +1,6 @@
 import setuptools
-import subprocess
 import sys
+import os
 
 
 def remove_requirements(requirements, name, replace=None):
@@ -23,31 +23,35 @@ long_description = open('README.md', encoding='utf-8').read()
 with open('requirements.txt', 'r') as req_file:
     requirements = [req.strip() for req in req_file.read().splitlines()]
 
-extra_data_sources = []
-with open('requirements_extra_data_sources.txt', 'r') as fp:
+extra_data_sources_requirements = []
+with open('optional_requirements_extra_data_sources.txt', 'r') as fp:
     for line in fp:
-        extra_data_sources.append(line.rstrip('\n'))
-        
+        extra_data_sources_requirements.append(line.rstrip('\n'))
+
+ludwig_model_requirements = []
+with open('optional_requirements_ludwig_model.txt', 'r') as fp:
+    for line in fp:
+        ludwig_model_requirements.append(line.rstrip('\n'))
+
 dependency_links = []
 
 # Linux specific requirements
 if sys_platform == 'linux' or sys_platform.startswith('linux'):
-    requirements = remove_requirements(requirements, 'tensorflow-estimator')
+    ludwig_model_requirements = remove_requirements(ludwig_model_requirements, 'tensorflow-estimator')
 
 # OSX specific requirements
 elif sys_platform == 'darwin':
     requirements = requirements
-    requirements = remove_requirements(requirements, 'tensorflow', 'tensorflow == 1.13.1')
-    requirements = remove_requirements(requirements, 'tensorflow-estimator', 'tensorflow-estimator == 1.13.0')
-    requirements = remove_requirements(requirements, 'ludwig', 'ludwig == 0.1.2')
+    ludwig_model_requirements = remove_requirements(ludwig_model_requirements, 'tensorflow', 'tensorflow == 1.13.1')
+    ludwig_model_requirements = remove_requirements(ludwig_model_requirements, 'tensorflow-estimator', 'tensorflow-estimator == 1.13.0')
+    ludwig_model_requirements = remove_requirements(ludwig_model_requirements, 'ludwig', 'ludwig == 0.1.2')
 
 # Windows specific requirements
 elif sys_platform in ['win32','cygwin','windows']:
     requirements = ['cwrap',*requirements]
-    requirements = remove_requirements(requirements, 'tensorflow-estimator')
-    requirements = remove_requirements(requirements, 'tensorflow', 'tensorflow == 1.13.1')
-    requirements = remove_requirements(requirements, 'ludwig', 'ludwig == 0.1.2')
-    requirements = remove_requirements(requirements, 'tensorflow-estimator')
+    ludwig_model_requirements = remove_requirements(ludwig_model_requirements, 'tensorflow', 'tensorflow == 1.13.1')
+    ludwig_model_requirements = remove_requirements(ludwig_model_requirements, 'ludwig', 'ludwig == 0.1.2')
+    ludwig_model_requirements = remove_requirements(ludwig_model_requirements, 'tensorflow-estimator')
     requirements = remove_requirements(requirements,'wheel', replace='wheel == 0.26.0')
     requirements = remove_requirements(requirements,'lightwood', replace='lightwood @ git+https://github.com/mindsdb/lightwood.git@master')
 
@@ -69,7 +73,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=requirements,
     extras_require = {
-        'extra_data_sources': extra_data_sources
+        'extra_data_sources': extra_data_sources_requirements
+        ,'ludwig_model': ludwig_model_requirements
     },
     dependency_links=dependency_links,
     classifiers=(
@@ -79,18 +84,3 @@ setuptools.setup(
     ),
     python_requires=">=3.6"
 )
-
-try:
-    subprocess.call(['python3','-m','spacy','download','en_core_web_sm'])
-except:
-    try:
-        subprocess.call(['python','-m','spacy','download','en_core_web_sm'])
-    except:
-        print('Can\'t download spacy vocabulary, ludwig backend may fail when processing text input')
-try:
-    subprocess.call(['python3','-m','spacy','download','en'])
-except:
-    try:
-        subprocess.call(['python','-m','spacy','download','en'])
-    except:
-        print('Can\'t download spacy vocabulary, ludwig backend may fail when processing text input')

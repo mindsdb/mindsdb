@@ -1,0 +1,3 @@
+tensorflow == 1.14.0
+tensorflow-estimator == 1.14.0
+ludwig ==  0.2.1

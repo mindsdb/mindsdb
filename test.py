@@ -7,14 +7,26 @@ import time
 
 mdb = Predictor(name='test_predictor')
 #'rental_price',
-mdb.learn(to_predict=['neighborhood'],from_data="https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/home_rentals.csv",use_gpu=True,stop_training_in_x_seconds=33, backend='lightwood', unstable_parameters_dict={'use_selfaware_model':False})
+mdb.learn(to_predict=['neighborhood'],from_data="https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/home_rentals.csv",use_gpu=False,stop_training_in_x_seconds=3000, backend='lightwood', unstable_parameters_dict={'use_selfaware_model':True})
 
-p_arr = mdb.predict(when_data='https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/home_rentals.csv')
+p_arr = mdb.predict(when_data='https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/home_rentals.csv', use_gpu=True)
 
-#print(mdb.predict(when={'number_of_rooms': 3, 'number_of_bathrooms': 2, 'neighborhood': 'south_side', 'sqft':2411}, run_confidence_variation_analysis=True)[0].explain())
+for p in p_arr:
+    print(p.explain()['neighborhood'][0]['model_result'])
+
+'''
+p = mdb.predict(when={'number_of_rooms': 3, 'number_of_bathrooms': 2, 'neighborhood': 'south_side', 'sqft':2411}, run_confidence_variation_analysis=True, use_gpu=True)
+
+print(p)
+print(p[0])
+print(p[0].epitomize())
+print(p[0].explain)
+print(list(p))
 
 print(mdb.get_model_data('test_predictor'))
-exit()
+
+'''
+
 for p in p_arr:
     exp_s = p.epitomize()
     exp = p.explain()

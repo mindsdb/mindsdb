@@ -24,12 +24,12 @@ with open('requirements.txt', 'r') as req_file:
     requirements = [req.strip() for req in req_file.read().splitlines()]
 
 extra_data_sources_requirements = []
-with open('requirements_extra_data_sources.txt', 'r') as fp:
+with open('optional_requirements_extra_data_sources.txt', 'r') as fp:
     for line in fp:
         extra_data_sources_requirements.append(line.rstrip('\n'))
 
 ludwig_model_requirements = []
-with open('requirements_ludwig_model.txt', 'r') as fp:
+with open('optional_requirements_ludwig_model.txt', 'r') as fp:
     for line in fp:
         ludwig_model_requirements.append(line.rstrip('\n'))
 

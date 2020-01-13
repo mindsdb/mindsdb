@@ -1,6 +1,7 @@
 import inspect
 import os
 from pathlib import Path
+import traceback
 
 from mindsdb.__about__ import __version__
 
@@ -25,7 +26,8 @@ def create_directory(path):
 
 def get_and_create_default_storage_path():
     mindsdb_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))), '/../../'))
-    path = os.path.abspath(f'{mindsdb_path}/mindsdb_storage/{__version__.replace('.', '_')}')
+    version_path = __version__.replace('.', '_')
+    path = os.path.abspath(f'{mindsdb_path}/mindsdb_storage/{version_path}')
 
     create_directory(path)
     if not os.access(path, os.W_OK):

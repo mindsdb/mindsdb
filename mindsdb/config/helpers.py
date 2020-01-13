@@ -21,7 +21,7 @@ def create_directory(path):
             path.mkdir(mode=0o777, exist_ok=True, parents=True)
         except:
             print(traceback.format_exc())
-            print(f'MindsDB storage foldler: {path} does not exist and could not be created')
+            print(f'MindsDB storage directory: {path} does not exist and could not be created')
 
 def get_and_create_default_storage_path():
     mindsdb_path = os.path.abspath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/../../')

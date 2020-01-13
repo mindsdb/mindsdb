@@ -42,23 +42,8 @@ class Predictor:
             except:
                 self.log.warning('Could not check for updates !')
 
-        # set the mindsdb storage folder
-        storage_ok = True  # default state
-
-        # if it does not exist try to create it
-        if not os.path.exists(CONFIG.MINDSDB_STORAGE_PATH):
-            try:
-                self.log.info('{folder} does not exist, creating it now'.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
-                path = Path(CONFIG.MINDSDB_STORAGE_PATH)
-                path.mkdir(exist_ok=True, parents=True)
-            except:
-                self.log.info(traceback.format_exc())
-                storage_ok = False
-                self.log.error('MindsDB storage foldler: {folder} does not exist and could not be created'.format(
-                    folder=CONFIG.MINDSDB_STORAGE_PATH))
-
         # If storage path is not writable, raise an exception as this can no longer be
-        if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK) or storage_ok == False:
+        if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK):
             error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
             raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
@@ -652,6 +637,11 @@ class Predictor:
         else:
             light_transaction_metadata['skip_stats_generation'] = False
 
+        if 'always_use_model_prediction' in unstable_parameters_dict:
+            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
+        else:
+            light_transaction_metadata['always_use_model_prediction'] = False
+
         if 'optimize_model' in unstable_parameters_dict:
             light_transaction_metadata['optimize_model'] = unstable_parameters_dict['optimize_model']
         else:
@@ -743,6 +733,11 @@ class Predictor:
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['run_confidence_variation_analysis'] = run_confidence_variation_analysis
+
+        if 'always_use_model_prediction' in unstable_parameters_dict:
+            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
+        else:
+            light_transaction_metadata['always_use_model_prediction'] = False
 
         if 'force_disable_cache' in unstable_parameters_dict:
             light_transaction_metadata['force_disable_cache'] = unstable_parameters_dict['force_disable_cache']

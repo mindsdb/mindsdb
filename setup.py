@@ -1,6 +1,7 @@
 import setuptools
 import subprocess
 import sys
+import os
 
 
 def remove_requirements(requirements, name, replace=None):
@@ -27,7 +28,7 @@ extra_data_sources = []
 with open('requirements_extra_data_sources.txt', 'r') as fp:
     for line in fp:
         extra_data_sources.append(line.rstrip('\n'))
-        
+
 dependency_links = []
 
 # Linux specific requirements
@@ -78,6 +79,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ),
     python_requires=">=3.6"
+    package_data=
 )
 
 try:

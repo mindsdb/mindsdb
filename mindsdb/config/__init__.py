@@ -11,7 +11,7 @@ import  mindsdb.libs.constants.mindsdb as CONST
 
 class Config:
     # These are the paths for storing data regarding mindsdb models and model info
-    MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', getMindsDBStoragePath())
+    MINDSDB_STORAGE_PATH = ifEnvElse('MINDSDB_STORAGE_PATH', get_and_create_default_storage_path())
 
     # What percentage of data do we want to keep as test, and what as train default 10% is test
     TEST_TRAIN_RATIO = ifEnvElse('TEST_TRAIN_RATIO', 0.1)

@@ -14,8 +14,19 @@ def ifEnvElse(env_var, else_value):
 
 
 
-def getMindsDBStoragePath():
-    return os.path.abspath('{mindsdb_path}/mindsdb_storage/{version}'.format(mindsdb_path=getMindsDBPath(),
-                                                                         version=__version__.replace('.', '_')))
-def getMindsDBPath():
-    return os.path.abspath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/../../')
+def get_and_create_default_storage_path():
+    mindsdb_path = os.path.abspath(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/../../')
+    path = os.path.abspath(f'{mindsdb_path}/mindsdb_storage/{__version__.replace('.', '_')}')
+
+    # if it does not exist try to create it
+    if not os.path.exists(path):
+        try:
+            self.log.info(f'{path} does not exist, creating it now')
+            path = Path(path)
+            path.mkdir(exist_ok=True, parents=True)
+        except:
+            self.log.error(traceback.format_exc())
+            self.log.error(f'MindsDB storage foldler: {path} does not exist and could not be created')
+
+
+    if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK):

@@ -74,14 +74,6 @@ class TransactionOutputRow:
                 if self.transaction_output.input_confidence_arr is not None:
                     answers[pred_col][-1]['confidence_influence_scores'] = self.transaction_output.input_confidence_arr[self.row_index][pred_col]
 
-                model_result = {
-                    'value': prediction_row[pred_col]
-                }
-                if f'{pred_col}_model_confidence' in prediction_row:
-                    model_result['confidence'] = prediction_row[f'{pred_col}_model_confidence']
-
-                answers[pred_col][-1]['model_result'] = model_result
-
             answers[pred_col] = sorted(answers[pred_col], key=lambda x: x['confidence'], reverse=True)
 
         return answers

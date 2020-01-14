@@ -18,7 +18,7 @@ class LightwoodBackend():
     def _get_group_by_key(self, group_by, row):
         gb_lookup_key = '!!@@!!'
         for column in group_by:
-            gb_lookup_key += column + '_' + row[column] + '!!@@!!'
+            gb_lookup_key += f'{column}_{row[column]}_!!@@!!'
         return gb_lookup_key
 
     def _create_timeseries_df(self, original_df):

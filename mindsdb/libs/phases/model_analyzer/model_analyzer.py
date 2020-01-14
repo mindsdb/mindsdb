@@ -1,4 +1,4 @@
-from mindsdb.libs.helpers.general_helpers import pickle_obj
+from mindsdb.libs.helpers.general_helpers import pickle_obj, disable_console_output
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.probabilistic_validator import ProbabilisticValidator

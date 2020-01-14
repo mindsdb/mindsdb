@@ -22,7 +22,7 @@ class CustomDTModel():
         self.le_arr = {}
         for col in [*self.output_columns, *self.input_columns]:
             self.le_arr[col] = preprocessing.LabelEncoder()
-            self.le_arr[col].fit(self.transaction.input_data.data_frame[col])
+            self.le_arr[col].fit(self.transaction.input_data.train_df[col])
 
         X = []
         for col in self.input_columns:
@@ -37,7 +37,7 @@ class CustomDTModel():
 
     def predict(self, mode='predict', ignore_columns=[]):
         if mode == 'predict':
-            df = self.transaction.input_data.data_frame
+            df = self.transaction.input_data.train_df
         if mode == 'validate':
             df = self.transaction.input_data.validation_df
         elif mode == 'test':

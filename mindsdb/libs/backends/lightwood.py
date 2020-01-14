@@ -186,11 +186,6 @@ class LightwoodBackend():
             if eval_every_x_epochs < 3:
                 eval_every_x_epochs = 3
 
-
-            print(train_df)
-            print(test_df)
-            print(len(train_df))
-            print(len(test_df))
             if self.transaction.lmd['stop_training_in_x_seconds'] is None:
                 self.predictor.learn(from_data=train_df, test_data=test_df, callback_on_iter=self.callback_on_iter, eval_every_x_epochs=eval_every_x_epochs)
             else:

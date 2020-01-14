@@ -197,7 +197,10 @@ class Predictor:
 
         return icm
 
-    def get_model_data(self, model_name, lmd=None):
+    def get_model_data(self, model_name=None, lmd=None):
+        if model_name is None:
+            model_name = self.name
+            
         if lmd is None:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{model_name}_light_model_metadata.pickle'), 'rb') as fp:
                 lmd = pickle.load(fp)
@@ -347,7 +350,7 @@ class Predictor:
         except:
             return False
 
-    def export_model(self, model_name):
+    def export_model(self, model_name=None):
         """
         If you want to export a model to a file
 
@@ -483,7 +486,7 @@ class Predictor:
         return True
 
 
-    def delete_model(self, model_name):
+    def delete_model(self, model_name=None):
         """
         If you want to export a model to a file
 

@@ -55,7 +55,9 @@ class ModelAnalyzer(BaseModule):
             ignore_columns = []
             ignore_columns.append(column_name)
 
-            ignore_col_predictions = self.transaction.model_backend.predict('validate', ignore_columns)
+            # Silence logging since otherwise lightwood and ludwig will complain too much about None values
+            with disable_console_output(True):
+                ignore_col_predictions = self.transaction.model_backend.predict('validate', ignore_columns)
 
             # create a vector that has True for each feature that was passed to the model tester and False if it was blanked
             features_existence = [True if np_col not in ignore_columns else False for np_col in input_columns]

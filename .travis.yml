@@ -39,10 +39,10 @@ install:
 before_script: cd tests/ci_tests
 # run tests
 script:
-  - travis_wait set -e
+  - set -e
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python fast_test.py; fi
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 full_test.py; fi
-  - travis_wait cd ../..
+  - cd ../..
 
 before_deploy:
   - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]]; then cd docs/website/website; fi

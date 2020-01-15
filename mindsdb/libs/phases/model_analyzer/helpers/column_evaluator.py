@@ -21,7 +21,8 @@ class ColumnEvaluator():
         columnless_prediction_distribution = {}
         all_columns_prediction_distribution = {}
 
-        normal_predictions = model.predict('validate')
+        with disable_console_output(True):
+            normal_predictions = model.predict('validate')
         normal_accuracy = evaluate_accuracy(normal_predictions, full_dataset, stats, output_columns)
         column_importance_dict = {}
         buckets_stats = {}
@@ -42,12 +43,14 @@ class ColumnEvaluator():
         for input_column in ignorable_input_columns:
             # See what happens with the accuracy of the outputs if only this column is present
             ignore_columns = [col for col in ignorable_input_columns if col != input_column]
-            col_only_predictions = model.predict('validate', ignore_columns)
+            with disable_console_output(True):
+                col_only_predictions = model.predict('validate', ignore_columns)
             col_only_accuracy = evaluate_accuracy(col_only_predictions, full_dataset, stats, output_columns)
 
             # See what happens with the accuracy if all columns but this one are present
             ignore_columns = [input_column]
-            col_missing_predictions = model.predict('validate', ignore_columns)
+            with disable_console_output(True):
+                col_missing_predictions = model.predict('validate', ignore_columns)
             col_missing_accuracy = evaluate_accuracy(col_missing_predictions, full_dataset, stats, output_columns)
 
             combined_column_accuracy = ((normal_accuracy - col_missing_accuracy) + col_only_accuracy)/2

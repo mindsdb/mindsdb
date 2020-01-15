@@ -165,7 +165,7 @@ def evaluate_accuracy(predictions, full_dataset, col_stats, output_columns, hmd=
         score = 0.00000001
     return score
 
-@contextmanager
+
 class suppress_stdout_stderr(object):
     def __init__(self):
         try:

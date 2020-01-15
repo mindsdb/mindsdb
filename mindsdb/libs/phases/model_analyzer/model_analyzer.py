@@ -41,7 +41,8 @@ class ModelAnalyzer(BaseModule):
             if self.transaction.lmd['column_stats'][input_column]['data_type'] != DATA_TYPES.FILE_PATH and input_column not in [x[0] for x in self.transaction.lmd['model_order_by']]:
                 ignorable_input_columns.append(input_column)
 
-        normal_predictions = self.transaction.model_backend.predict('validate')
+        with disable_console_output():
+            normal_predictions = self.transaction.model_backend.predict('validate')
 
         # Single observation on the validation dataset when we have no ignorable column
         if len(ignorable_input_columns) == 0:
@@ -56,7 +57,7 @@ class ModelAnalyzer(BaseModule):
             ignore_columns.append(column_name)
 
             # Silence logging since otherwise lightwood and ludwig will complain too much about None values
-            with suppress_stdout_stderr():
+            with disable_console_output():
                 ignore_col_predictions = self.transaction.model_backend.predict('validate', ignore_columns)
 
             # create a vector that has True for each feature that was passed to the model tester and False if it was blanked

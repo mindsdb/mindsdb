@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from dateutil.parser import parse as parse_datetime
 
 from mindsdb.libs.constants.mindsdb import *
@@ -186,6 +187,7 @@ class LightwoodBackend():
             if eval_every_x_epochs < 3:
                 eval_every_x_epochs = 3
 
+            logging.getLogger().setLevel(logging.DEBUG)
             if self.transaction.lmd['stop_training_in_x_seconds'] is None:
                 self.predictor.learn(from_data=train_df, test_data=test_df, callback_on_iter=self.callback_on_iter, eval_every_x_epochs=eval_every_x_epochs)
             else:

@@ -12,7 +12,6 @@ class ModelInterface(BaseModule):
         except ImportError as e:
             # Ludwig is optional, so this is fine
             pass
-            #self.transaction.log.warning(e)
 
         try:
             from mindsdb.libs.backends.lightwood import LightwoodBackend

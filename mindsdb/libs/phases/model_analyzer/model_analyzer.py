@@ -1,4 +1,4 @@
-from mindsdb.libs.helpers.general_helpers import pickle_obj, disable_console_output
+from mindsdb.libs.helpers.general_helpers import pickle_obj, disable_console_output, suppress_stdout_stderr
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.probabilistic_validator import ProbabilisticValidator
@@ -56,7 +56,7 @@ class ModelAnalyzer(BaseModule):
             ignore_columns.append(column_name)
 
             # Silence logging since otherwise lightwood and ludwig will complain too much about None values
-            with disable_console_output(True):
+            with suppress_stdout_stderr():
                 ignore_col_predictions = self.transaction.model_backend.predict('validate', ignore_columns)
 
             # create a vector that has True for each feature that was passed to the model tester and False if it was blanked

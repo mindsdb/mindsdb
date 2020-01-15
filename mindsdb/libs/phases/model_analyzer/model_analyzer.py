@@ -1,4 +1,4 @@
-from mindsdb.libs.helpers.general_helpers import pickle_obj
+from mindsdb.libs.helpers.general_helpers import pickle_obj, disable_console_output
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.probabilistic_validator import ProbabilisticValidator
@@ -41,7 +41,8 @@ class ModelAnalyzer(BaseModule):
             if self.transaction.lmd['column_stats'][input_column]['data_type'] != DATA_TYPES.FILE_PATH and input_column not in [x[0] for x in self.transaction.lmd['model_order_by']]:
                 ignorable_input_columns.append(input_column)
 
-        normal_predictions = self.transaction.model_backend.predict('validate')
+        with disable_console_output():
+            normal_predictions = self.transaction.model_backend.predict('validate')
 
         # Single observation on the validation dataset when we have no ignorable column
         if len(ignorable_input_columns) == 0:
@@ -55,7 +56,9 @@ class ModelAnalyzer(BaseModule):
             ignore_columns = []
             ignore_columns.append(column_name)
 
-            ignore_col_predictions = self.transaction.model_backend.predict('validate', ignore_columns)
+            # Silence logging since otherwise lightwood and ludwig will complain too much about None values
+            with disable_console_output():
+                ignore_col_predictions = self.transaction.model_backend.predict('validate', ignore_columns)
 
             # create a vector that has True for each feature that was passed to the model tester and False if it was blanked
             features_existence = [True if np_col not in ignore_columns else False for np_col in input_columns]

@@ -18,7 +18,7 @@ class LightwoodBackend():
     def _get_group_by_key(self, group_by, row):
         gb_lookup_key = '!!@@!!'
         for column in group_by:
-            gb_lookup_key += column + '_' + row[column] + '!!@@!!'
+            gb_lookup_key += f'{column}_{row[column]}_!!@@!!'
         return gb_lookup_key
 
     def _create_timeseries_df(self, original_df):
@@ -185,7 +185,6 @@ class LightwoodBackend():
                 eval_every_x_epochs = 200
             if eval_every_x_epochs < 3:
                 eval_every_x_epochs = 3
-
 
             if self.transaction.lmd['stop_training_in_x_seconds'] is None:
                 self.predictor.learn(from_data=train_df, test_data=test_df, callback_on_iter=self.callback_on_iter, eval_every_x_epochs=eval_every_x_epochs)

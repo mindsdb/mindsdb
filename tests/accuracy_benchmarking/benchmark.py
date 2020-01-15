@@ -45,8 +45,8 @@ def run_benchmarks():
     except:
         pass
 
-    #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review']
-    TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars']
+    TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review']
+    #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars']
     test_data_arr = []
     for test_name in TESTS:
         '''

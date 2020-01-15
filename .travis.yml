@@ -34,10 +34,8 @@ cache: pip
 # install dependencies
 install:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait pip3 install --upgrade pip; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait pip3 install setuptools --upgrade; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait pip install --no-cache-dir -e .; fi
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait pip3 install --no-cache-dir -e .; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait pip3 install -r optional_requirements_ludwig_model.txt; fi
 before_script: cd tests/ci_tests
 # run tests
 script:

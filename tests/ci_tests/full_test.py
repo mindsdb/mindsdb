@@ -14,7 +14,7 @@ if __name__ == "__main__":
     ran_extra = True
 
     # Cycle through a few options:
-    for backend in ['lightwood','ludwig']:
+    for backend in ['lightwood']: #,'ludwig'
         for use_gpu in use_gpu_settings:
             print(f'use_gpu is set to {use_gpu}, backend is set to {backend}')
             if run_extra:

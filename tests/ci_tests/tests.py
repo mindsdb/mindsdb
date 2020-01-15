@@ -68,7 +68,7 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
     # Create & Learn
     to_predict = 'rental_price'
     mdb = mindsdb.Predictor(name='home_rentals_price')
-    mdb.learn(to_predict=to_predict,from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend, stop_training_in_x_seconds=8,use_gpu=use_gpu)
+    mdb.learn(to_predict=to_predict,from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend, stop_training_in_x_seconds=30,use_gpu=use_gpu)
 
     # Reload & Predict
     model_name = 'home_rentals_price'

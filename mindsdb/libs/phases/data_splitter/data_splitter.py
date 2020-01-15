@@ -14,7 +14,15 @@ class DataSplitter(BaseModule):
                 if self.transaction.lmd['column_stats'][col]['data_type'] == DATA_TYPES.CATEGORICAL:
                     group_by.append(col)
             if len(group_by) > 0:
-                self.transaction.input_data.data_frame = self.transaction.input_data.data_frame.sort_values(group_by)
+                try:
+                    self.transaction.input_data.data_frame = self.transaction.input_data.data_frame.sort_values(group_by)
+                except Exception as e:
+                    # If categories can't be sroted because of various issues, that's fine, no need for the prediction logic to fail
+                    if len(self.transaction.lmd['model_group_by']) == 0:
+                        group_by = []
+                    else:
+                        raise Exception(e)
+
 
         KEY_NO_GROUP_BY = '{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}##ALL_ROWS_NO_GROUP_BY##{PLEASE_DONT_TELL_ME_ANYONE_WOULD_CALL_A_COLUMN_THIS}'
 

@@ -37,7 +37,7 @@ class CustomDTModel():
 
     def predict(self, mode='predict', ignore_columns=[]):
         if mode == 'predict':
-            df = self.transaction.input_data.train_df
+            df = self.transaction.input_data.data_frame
         if mode == 'validate':
             df = self.transaction.input_data.validation_df
         elif mode == 'test':

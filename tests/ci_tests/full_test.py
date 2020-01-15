@@ -11,7 +11,7 @@ if __name__ == "__main__":
     use_gpu_settings.append(False)
 
     # Try ignoring some columns and running only the stats generator
-    ran_extra = True
+    run_extra = True
 
     # Cycle through a few options:
     for backend in ['lightwood']: #,'ludwig'

@@ -33,15 +33,15 @@ notifications:
 cache: pip
 # install dependencies
 install:
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait pip3 install --upgrade pip; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait pip install --no-cache-dir -e .; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait pip3 install --no-cache-dir -e .; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --upgrade pip; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -e .; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -e .; fi
 before_script: cd tests/ci_tests
 # run tests
 script:
   - set -e
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 60 python fast_test.py; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 60 python3 full_test.py; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 60 python fast_test.py; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 60 python3 full_test.py; fi
   - cd ../..
 
 before_deploy:

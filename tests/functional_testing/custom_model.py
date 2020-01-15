@@ -22,7 +22,7 @@ class CustomDTModel():
         self.le_arr = {}
         for col in [*self.output_columns, *self.input_columns]:
             self.le_arr[col] = preprocessing.LabelEncoder()
-            self.le_arr[col].fit(pd.concat(self.transaction.input_data.train_df,self.transaction.input_data.test_ds,self.transaction.input_data.validation_df)[col])
+            self.le_arr[col].fit(pd.concat(self.transaction.input_data.train_df,self.transaction.input_data.test_df,self.transaction.input_data.validation_df)[col])
 
         X = []
         for col in self.input_columns:

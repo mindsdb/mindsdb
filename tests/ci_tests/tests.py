@@ -61,7 +61,9 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
             # @TODO: Figure out a way to make travis install required dependencies on osx
             if 'all_data_sources' in py_file:
                 continue
-            os.system(f'python3 ../functional_testing/{py_file}')
+            code = os.system(f'python3 ../functional_testing/{py_file}')
+            if code != 0:
+                raise Exception(f'Test failed with status code: {code} !')
 
     # Create & Learn
     to_predict = 'rental_price'

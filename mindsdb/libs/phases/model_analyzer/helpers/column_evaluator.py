@@ -72,7 +72,6 @@ class ColumnEvaluator():
                     columnless_prediction_distribution[output_column][input_column] = col_missing_output_histogram
 
         # @TODO should be go back to generating this information based on the buckets of the input columns ? Or just keep doing the stats generation for the input columns based on the indexes of the buckets for the output column
-
         for output_column in output_columns:
                 buckets_stats[output_column] = {}
 

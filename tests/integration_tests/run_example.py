@@ -4,7 +4,6 @@ import os
 import shutil
 import tarfile
 import atexit
-import sys
 
 
 def cleanup(name):

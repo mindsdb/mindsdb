@@ -4,7 +4,6 @@ import os
 import uuid
 import traceback
 import pickle
-import shutil
 
 from mindsdb.libs.data_types.mindsdb_logger import MindsdbLogger
 from mindsdb.libs.helpers.multi_data_source import getDS
@@ -532,7 +531,7 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)
 
-    def learn(self, to_predict, from_data, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict={}):
+    def learn(self, to_predict, from_data, test_from_data=None, group_by = None, window_size = None, order_by=None, sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns=None, stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict=None):
         """
         Learn to predict a column or columns from the data in 'from_data'
 
@@ -559,6 +558,15 @@ class Predictor:
 
         :return:
         """
+
+        if order_by is None:
+            order_by = []
+
+        if ignore_columns is None:
+            ignore_columns = []
+
+        if unstable_parameters_dict is None:
+            unstable_parameters_dict = {}
 
         from_ds = getDS(from_data)
         test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
@@ -697,7 +705,7 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
-    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=None, unstable_parameters_dict={}, backend=None, run_confidence_variation_analysis=False):
+    def predict(self, when=None, when_data = None, update_cached_model = False, use_gpu=None, unstable_parameters_dict=None, backend=None, run_confidence_variation_analysis=False):
         """
         You have a mind trained already and you want to make a prediction
 
@@ -708,6 +716,12 @@ class Predictor:
 
         :return: TransactionOutputData object
         """
+
+        if when is None:
+            when = {}
+
+        if unstable_parameters_dict is None:
+            unstable_parameters_dict = {}
 
         if run_confidence_variation_analysis is True and when_data is not None:
             self.log.error('run_confidence_variation_analysis=True is a valid option only when predicting a single data point via `when`')

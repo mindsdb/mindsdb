@@ -198,7 +198,9 @@ class LightwoodBackend():
         self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data')
         self.predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])
 
-    def predict(self, mode='predict', ignore_columns=[]):
+    def predict(self, mode='predict', ignore_columns=None):
+        if ignore_columns is None:
+            ignore_columns = []
         lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
         lightwood.config.config.CONFIG.CACHE_ENCODED_DATA = not self.transaction.lmd['force_disable_cache']
         lightwood.config.config.CONFIG.SELFAWARE = self.transaction.lmd['use_selfaware_model']

@@ -3,7 +3,6 @@ from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.data_types.mindsdb_logger import log
 
-from mindsdb.libs.constants.mindsdb import *
 
 class DataSplitter(BaseModule):
     def run(self):

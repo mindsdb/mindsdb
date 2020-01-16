@@ -304,7 +304,7 @@ class StatsGenerator(BaseModule):
         elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE :
             histogram = Counter(data)
             return {
-                'x': list(histogram.keys()),
+                'x': list(map(str,histogram.keys())),
                 'y': list(histogram.values())
             }, None
         elif data_subtype == DATA_SUBTYPES.IMAGE:

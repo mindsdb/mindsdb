@@ -91,7 +91,7 @@ class DataTransformer(BaseModule):
 
             if column in self.transaction.lmd['columns_to_ignore']:
                 continue
-            
+
             data_type = self.transaction.lmd['column_stats'][column]['data_type']
             data_subtype = self.transaction.lmd['column_stats'][column]['data_subtype']
 
@@ -110,7 +110,8 @@ class DataTransformer(BaseModule):
                     self._aply_to_all_data(input_data, column, self._standardize_datetime, self.transaction.lmd['type'])
 
             if data_type == DATA_TYPES.CATEGORICAL:
-                    self._cast_all_data(input_data, column, 'category', self.transaction.lmd['type'])
+                self._aply_to_all_data(input_data, column, str, self.transaction.lmd['type'])
+                self._cast_all_data(input_data, column, 'category', self.transaction.lmd['type'])
 
             if self.transaction.hmd['model_backend'] == 'lightwood':
                 if data_type == DATA_TYPES.DATE:

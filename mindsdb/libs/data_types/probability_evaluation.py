@@ -141,6 +141,7 @@ class ProbabilityEvaluation:
             else:
                 bucket_margin_left = self.buckets[max_prob_index - 1]
                 self.most_likely_value = (bucket_margin_right + bucket_margin_left)/2
+                #predicted_value = type(bucket_margin_right)(predicted_value)
                 if predicted_value is not None and bucket_margin_left is None and predicted_value <= bucket_margin_right:
                     self.final_value = predicted_value
                 elif predicted_value is not None and predicted_value <= bucket_margin_right and predicted_value >= bucket_margin_left:

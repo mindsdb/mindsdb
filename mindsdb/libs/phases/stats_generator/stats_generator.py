@@ -490,7 +490,7 @@ class StatsGenerator(BaseModule):
             '''
 
             # We might want to inform the user about a few stats regarding his column regardless of the score, this is done below
-            self.log.info('Data distribution for column "{}"'.format(col_name))
+            self.log.info(f"""Data distribution for column "{col_name}" of type "{stats[col_name]['data_type']}" and subtype  "{stats[col_name]['data_subtype']}""")
             try:
                 self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
             except:

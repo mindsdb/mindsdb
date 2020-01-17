@@ -131,3 +131,13 @@ def _get_params_as_dictionary(self, params):
 #                                       exc_traceback)
 #             return False
 #     return False
+
+# Bool to number and vice-versa
+
+boolean_dictionary = {True: 'True', False: 'False'}
+numeric_dictionary = {True: 1, False: 0}
+for column in df:
+    if is_numeric_dtype(df[column]):
+        df[column] = df[column].replace(numeric_dictionary)
+    else:
+        df[column] = df[column].replace(boolean_dictionary)

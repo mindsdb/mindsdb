@@ -111,10 +111,7 @@ class LightwoodBackend():
                 other_keys['encoder_attrs']['aim'] = 'balance'
 
             elif data_subtype in (DATA_SUBTYPES.TEXT):
-                if col_name in self.transaction.lmd['force_categorical_encoding']:
-                    lightwood_data_type = 'categorical'
-                else:
-                    lightwood_data_type = 'text'
+                lightwood_data_type = 'text'
 
             elif data_subtype in (DATA_SUBTYPES.ARRAY):
                 lightwood_data_type = 'time_series'
@@ -123,6 +120,10 @@ class LightwoodBackend():
                 self.transaction.log.error(f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
                 raise Exception('Failed to build data definition for Lightwood model backend')
 
+
+            if col_name in self.transaction.lmd['force_categorical_encoding']:
+                lightwood_data_type = 'categorical'
+                
             if col_name in [x[0] for x in self.transaction.lmd['model_order_by']]:
                 lightwood_data_type = 'time_series'
 

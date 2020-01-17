@@ -26,7 +26,7 @@ def clean_float(val):
     val = val.replace(',','.')
     val = val.rstrip('"').lstrip('"')
 
-    if val == '' or val == 'None':
+    if val == '' or val == 'None' or val == 'nan':
         return None
 
     return float(val)

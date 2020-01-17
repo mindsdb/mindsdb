@@ -41,7 +41,7 @@ before_script: cd tests/ci_tests
 script:
   - set -e
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python fast_test.py; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 full_test.py; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 fast_test.py; fi
   - cd ../..
 
 before_deploy:

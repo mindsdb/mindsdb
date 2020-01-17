@@ -200,7 +200,7 @@ class Predictor:
     def get_model_data(self, model_name=None, lmd=None):
         if model_name is None:
             model_name = self.name
-            
+
         if lmd is None:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{model_name}_light_model_metadata.pickle'), 'rb') as fp:
                 lmd = pickle.load(fp)
@@ -507,6 +507,7 @@ class Predictor:
         """
         Analyse the particular dataset being given
         """
+
         from_ds = getDS(from_data)
         transaction_type = TRANSACTION_ANALYSE
         sample_confidence_level = 1 - sample_margin_of_error
@@ -528,6 +529,8 @@ class Predictor:
         light_transaction_metadata['columns_to_ignore'] = []
         light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['predict_columns'] = []
+
+        light_transaction_metadata['handle_foreign_keys'] = True
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)

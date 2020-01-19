@@ -123,7 +123,7 @@ class LightwoodBackend():
 
             if col_name in self.transaction.lmd['force_categorical_encoding']:
                 lightwood_data_type = 'categorical'
-                
+
             if col_name in [x[0] for x in self.transaction.lmd['model_order_by']]:
                 lightwood_data_type = 'time_series'
 
@@ -232,6 +232,7 @@ class LightwoodBackend():
         formated_predictions = {}
         for k in predictions:
             formated_predictions[k] = predictions[k]['predictions']
-            #formated_predictions[f'{k}_confidence'] = predictions[k]['confidences']
+            if 'confidences' in predictions[k]:
+                formated_predictions[f'{k}_confidences'] = predictions[k]['confidences']
 
         return formated_predictions

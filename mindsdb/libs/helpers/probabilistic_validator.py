@@ -185,7 +185,7 @@ class ProbabilisticValidator():
         }
         return confusion_matrix_obj
 
-    def evaluate_prediction_accuracy(self, features_existence, predicted_value, always_use_model_prediction):
+    def evaluate_prediction_accuracy(self, features_existence, predicted_value):
         """
         # Fit the probabilistic validator on an observation
         :param features_existence: A vector of 0 and 1 representing the existence of all the features (0 == not exists, 1 == exists)
@@ -227,7 +227,7 @@ class ProbabilisticValidator():
             pass
 
 
-        return ProbabilityEvaluation(self.buckets, distribution, predicted_value, always_use_model_prediction)
+        return ProbabilityEvaluation(self.buckets, distribution, predicted_value)
 
 
 

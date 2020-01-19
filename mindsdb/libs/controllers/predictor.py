@@ -643,11 +643,6 @@ class Predictor:
         else:
             light_transaction_metadata['skip_stats_generation'] = False
 
-        if 'always_use_model_prediction' in unstable_parameters_dict:
-            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
-        else:
-            light_transaction_metadata['always_use_model_prediction'] = False
-
         if 'optimize_model' in unstable_parameters_dict:
             light_transaction_metadata['optimize_model'] = unstable_parameters_dict['optimize_model']
         else:
@@ -739,11 +734,6 @@ class Predictor:
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['run_confidence_variation_analysis'] = run_confidence_variation_analysis
-
-        if 'always_use_model_prediction' in unstable_parameters_dict:
-            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
-        else:
-            light_transaction_metadata['always_use_model_prediction'] = False
 
         if 'force_disable_cache' in unstable_parameters_dict:
             light_transaction_metadata['force_disable_cache'] = unstable_parameters_dict['force_disable_cache']

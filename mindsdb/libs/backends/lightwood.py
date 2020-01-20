@@ -120,10 +120,6 @@ class LightwoodBackend():
                 self.transaction.log.error(f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
                 raise Exception('Failed to build data definition for Lightwood model backend')
 
-
-            if col_name in self.transaction.lmd['force_categorical_encoding']:
-                lightwood_data_type = 'categorical'
-
             if col_name in [x[0] for x in self.transaction.lmd['model_order_by']]:
                 lightwood_data_type = 'time_series'
 

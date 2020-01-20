@@ -75,7 +75,7 @@ class TransactionOutputRow:
                     answers[pred_col][-1]['confidence_influence_scores'] = self.transaction_output.input_confidence_arr[self.row_index][pred_col]
 
                 model_result = {
-                    'value': prediction_row[pred_col]
+                    'value': prediction_row[f'model_{pred_col}']
                 }
                 if f'{pred_col}_model_confidence' in prediction_row:
                     model_result['confidence'] = prediction_row[f'{pred_col}_model_confidence']

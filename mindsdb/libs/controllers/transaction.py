@@ -268,6 +268,7 @@ class Transaction:
                 output_data[confidence_column_name] = [None] * len(output_data[predicted_col])
                 evaluations[predicted_col] = [None] * len(output_data[predicted_col])
 
+                output_data[f'model_{predicted_col}'] = deepcopy(output_data[predicted_col])
                 for row_number, predicted_value in enumerate(output_data[predicted_col]):
 
                     # Compute the feature existance vector

@@ -531,7 +531,8 @@ class Predictor:
         light_transaction_metadata['predict_columns'] = []
 
         light_transaction_metadata['handle_foreign_keys'] = True
-
+        light_transaction_metadata['force_categorical_encoding'] = []
+        
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)
 

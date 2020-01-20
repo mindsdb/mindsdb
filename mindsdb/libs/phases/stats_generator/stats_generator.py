@@ -250,6 +250,12 @@ class StatsGenerator(BaseModule):
                 type_dist[curr_data_type] = len(data)
                 subtype_dist[curr_data_subtype] = len(data)
 
+        if col_name in self.transaction.lmd['force_categorical_encoding']:
+            curr_data_type = DATA_TYPES.CATEGORICAL
+            curr_data_subtype = DATA_SUBTYPES.MULTIPLE
+            type_dist[curr_data_type] = len(data)
+            subtype_dist[curr_data_subtype] = len(data)
+
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
 
     @staticmethod

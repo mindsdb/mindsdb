@@ -531,7 +531,8 @@ class Predictor:
         light_transaction_metadata['predict_columns'] = []
 
         light_transaction_metadata['handle_foreign_keys'] = True
-
+        light_transaction_metadata['force_categorical_encoding'] = []
+        
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)
 
@@ -643,11 +644,6 @@ class Predictor:
         else:
             light_transaction_metadata['skip_stats_generation'] = False
 
-        if 'always_use_model_prediction' in unstable_parameters_dict:
-            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
-        else:
-            light_transaction_metadata['always_use_model_prediction'] = False
-
         if 'optimize_model' in unstable_parameters_dict:
             light_transaction_metadata['optimize_model'] = unstable_parameters_dict['optimize_model']
         else:
@@ -739,11 +735,6 @@ class Predictor:
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['run_confidence_variation_analysis'] = run_confidence_variation_analysis
-
-        if 'always_use_model_prediction' in unstable_parameters_dict:
-            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
-        else:
-            light_transaction_metadata['always_use_model_prediction'] = False
 
         if 'force_disable_cache' in unstable_parameters_dict:
             light_transaction_metadata['force_disable_cache'] = unstable_parameters_dict['force_disable_cache']

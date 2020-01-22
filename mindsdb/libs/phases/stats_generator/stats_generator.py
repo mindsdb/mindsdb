@@ -551,8 +551,9 @@ class StatsGenerator(BaseModule):
 
             if column_status == 'Column empty':
                 if modify_light_metadata:
+                    self.transaction.lmd['empty_columns'].append(col_name)
+                    logging.warning(f'The "{col_name}" column is empty, it will be ignored, please make sure the data in the column is correct !')
                     self.transaction.lmd['columns_to_ignore'].append(col_name)
-
                 continue
 
             new_col_data = []

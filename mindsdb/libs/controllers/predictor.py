@@ -529,10 +529,11 @@ class Predictor:
         light_transaction_metadata['columns_to_ignore'] = []
         light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['predict_columns'] = []
-
+        light_transaction_metadata['empty_columns'] = []
+        
         light_transaction_metadata['handle_foreign_keys'] = True
         light_transaction_metadata['force_categorical_encoding'] = []
-        
+
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)
 
@@ -631,6 +632,8 @@ class Predictor:
         light_transaction_metadata['ludwig_data'] = {}
         light_transaction_metadata['weight_map'] = {}
         light_transaction_metadata['confusion_matrices'] = {}
+        light_transaction_metadata['empty_columns'] = []
+
         light_transaction_metadata['equal_accuracy_for_all_output_categories'] = equal_accuracy_for_all_output_categories
         light_transaction_metadata['output_categories_importance_dictionary'] = output_categories_importance_dictionary if output_categories_importance_dictionary is not None else {}
 

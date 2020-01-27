@@ -47,6 +47,7 @@ def run_benchmarks():
 
     TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review']
     #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars']
+
     test_data_arr = []
     for test_name in TESTS:
         '''
@@ -58,13 +59,11 @@ def run_benchmarks():
             (await) Shut down machine
         '''
         logger.debug(f'\n\n=================================\nRunning test: {test_name}\n=================================\n\n')
-        r = requests.get(f'https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/{test_name}.tar.gz')
-        with open(f'tmp_downloads/{test_name}.tar.gz', 'wb') as fp:
-            fp.write(r.content)
-        os.system(f'cd tmp_downloads && tar -xvf {test_name}.tar.gz && cd ..')
-        os.remove(f'tmp_downloads/{test_name}.tar.gz')
 
-        os.chdir(f'tmp_downloads/{test_name}')
+        os.chdir(f'tmp_downloads')
+        os.system('git clone https://github.com/mindsdb/mindsdb-examples')
+        os.chdir(f'mindsdb-examples/{test_name}')
+
         run_test = importlib.import_module(f'tmp_downloads.{test_name}.mindsdb_acc').run
 
         started = datetime.datetime.now()

@@ -36,10 +36,6 @@ class DataTransformer(BaseModule):
                 date = datetime.datetime.utcfromtimestamp(date_str)
             except:
                 return None
-        # Uncomment if we want to work internally date type
-        #return date.date()
-
-        # Uncomment if we want to work internally with string type
         return date.strftime('%Y-%m-%d')
 
     @staticmethod

@@ -14,10 +14,10 @@ MindsDB is an Explainable AutoML framework for developers.[![Tweet](https://img.
 # MindsDB Native
 
 With MindsDB you can build, train and use state of the art ML models in as simple as one line of code.
-  
+
 * [Installing MindsDB Native](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 * [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
-* [MindsDB Explainability GUI](http://mindsdb.com/product) 
+* [MindsDB Explainability GUI](http://mindsdb.com/product)
 * [Frequently Asked Questions](https://mindsdb.github.io/mindsdb/docs/faq)
 * [Provide Feedback to Improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
 
@@ -28,11 +28,15 @@ With MindsDB you can build, train and use state of the art ML models in as simpl
 
 
 
-* **Desktop**: You can use MindsDB on your own computer in under a minute, if you already have a python environment setup, just run the following command, otherwise simply follow the [installation instructions Complete Manual](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb).
+* **Desktop**: You can use MindsDB on your own computer in under a minute, if you already have a python environment setup, just run the following command:
 
 ```bash
- pip3 install mindsdb --user
+ pip install mindsdb --user
 ```
+
+*Note: depending on your environment, you might have to use `pip3` instead of `pip` in the above command.*
+
+  If for some reason this fail, don't worry, simply follow the [complete installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb) which will lead you through a more thorough procedure which should fix most issues.
 
 * **Docker**: If you would like to run it all in a container simply:  
 
@@ -80,7 +84,7 @@ print('The predicted price is ${price} with {conf} confidence'.format(price=resu
 Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 
 * **Google Colab**: You can also try MindsDB straight here [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
- 
+
 
 ## Video Tutorial
 
@@ -115,4 +119,3 @@ Once you have specific changes you want to merge into master, feel free to make 
 ## Report Issues
 
 Please help us by [reporting any issues](https://github.com/mindsdb/mindsdb/issues/new/choose) you may have while using MindsDB.
-

@@ -24,7 +24,6 @@ from mindsdb.external_libs.stats import calculate_sample_size
 from mindsdb.libs.phases.stats_generator.scores import *
 
 
-
 class StatsGenerator(BaseModule):
     """
     # The stats generator phase is responsible for generating the insights we need about the data in order to vectorize it
@@ -42,7 +41,9 @@ class StatsGenerator(BaseModule):
 
         try:
             is_img = imghdr.what(potential_path)
-            if is_img is not None:
+            if is_img is None:
+                return False
+            else:
                 return DATA_SUBTYPES.IMAGE
         except:
             # Not a file or file doesn't exist

@@ -45,6 +45,10 @@ class Predictor:
         # If storage path is not writable, raise an exception as this can no longer be
         if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK):
             error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
+
+        # If storage path is not writable, raise an exception as this can no longer be
+        if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.R_OK):
+            error_message = '''Cannot read from storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
             raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
     def get_models(self):

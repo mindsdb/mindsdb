@@ -15,7 +15,6 @@ def if_env_else(env_var, else_value):
 
 
 def create_directory(path):
-    print(f'{path} does not exist, creating it now')
     path = Path(path)
     path.mkdir(mode=0o777, exist_ok=True, parents=True)
 

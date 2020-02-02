@@ -414,7 +414,7 @@ class Predictor:
                 lmd['ludwig_data']['ludwig_save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH),os.path.basename(lmd['ludwig_data']['ludwig_save_path']))
 
             if 'lightwood_data' in lmd and 'save_path' in lmd['lightwood_data']:
-                lmd['lightwood_data']['save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH),os.path.basename(lmdlmd['lightwood_data']['save_path']))
+                lmd['lightwood_data']['save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH),os.path.basename(lmd['lightwood_data']['save_path']))
 
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name + '_light_model_metadata.pickle'), 'wb') as fp:
                 pickle.dump(lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)

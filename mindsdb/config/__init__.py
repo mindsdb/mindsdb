@@ -32,4 +32,8 @@ class Config:
     CHECK_FOR_UPDATES = True
     IS_CI_TEST = False
 
+    # Default options for unning on sagemaker
+    SAGEMAKER = False
+
+
 CONFIG = Config()

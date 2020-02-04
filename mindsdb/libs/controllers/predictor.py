@@ -42,16 +42,19 @@ class Predictor:
             except:
                 self.log.warning('Could not check for updates !')
 
-        # If storage path is not writable, raise an exception as this can no longer be
-        if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK):
-            error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
-            self.log.warning(error_message)
+        if not CONFIG.SAGEMAKER:
+            # If storage path is not writable, raise an exception as this can no longer be
+            if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK):
+                error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
+                self.log.warning(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
-        # If storage path is not writable, raise an exception as this can no longer be
-        if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.R_OK):
-            error_message = '''Cannot read from storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
-            self.log.warning(error_message)
-            raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+
+            # If storage path is not writable, raise an exception as this can no longer be
+            if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.R_OK):
+                error_message = '''Cannot read from storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
+                self.log.warning(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
     def get_models(self):
         models = []

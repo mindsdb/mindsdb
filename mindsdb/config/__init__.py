@@ -22,11 +22,11 @@ class Config:
     # LOG Config settings
     DEFAULT_LOG_LEVEL = if_env_else('DEFAULT_LOG_LEVEL', CONST.DEBUG_LOG_LEVEL)
 
-    CHECK_FOR_UPDATES = True
-    IS_CI_TEST = False
+    CHECK_FOR_UPDATES = if_env_else('CHECK_FOR_UPDATES', True)
+    IS_CI_TEST = if_env_else('IS_CI_TEST', False)
 
     # Default options for unning on sagemaker
-    SAGEMAKER = False
+    SAGEMAKER = if_env_else('SAGEMAKER', False)
 
 
 CONFIG = Config()

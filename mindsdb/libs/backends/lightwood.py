@@ -158,7 +158,8 @@ class LightwoodBackend():
                 self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an accuracy of {value_pct}% on the testing dataset')
 
     def train(self):
-        lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
+        if self.transaction.lmd['use_gpu'] is not None:
+            lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
         lightwood.config.config.CONFIG.CACHE_ENCODED_DATA = not self.transaction.lmd['force_disable_cache']
         lightwood.config.config.CONFIG.SELFAWARE = self.transaction.lmd['use_selfaware_model']
 
@@ -199,7 +200,8 @@ class LightwoodBackend():
         self.predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])
 
     def predict(self, mode='predict', ignore_columns=[]):
-        lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
+        if self.transaction.lmd['use_gpu'] is not None:
+            lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
         lightwood.config.config.CONFIG.CACHE_ENCODED_DATA = not self.transaction.lmd['force_disable_cache']
         lightwood.config.config.CONFIG.SELFAWARE = self.transaction.lmd['use_selfaware_model']
 

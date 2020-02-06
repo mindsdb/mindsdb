@@ -70,7 +70,7 @@ def run_benchmarks():
         accuracy_data = run_test(False)
         ended = datetime.datetime.now()
 
-        os.chdir('../..')
+        os.chdir('../../..')
 
         accuracy = accuracy_data['accuracy']
         accuracy_function = accuracy_data['accuracy_function'] if 'accuracy_function' in accuracy_data else 'accuracy_score'

@@ -62,9 +62,9 @@ def run_benchmarks():
         '''
         logger.debug(f'\n\n=================================\nRunning test: {test_name}\n=================================\n\n')
 
-        os.chdir(f'tmp_downloads/{test_name}')
+        os.chdir(f'tmp_downloads/benchmarks/{test_name}')
 
-        run_test = importlib.import_module(f'tmp_downloads.{test_name}.mindsdb_acc').run
+        run_test = importlib.import_module(f'tmp_downloads.benchmarks.{test_name}.mindsdb_acc').run
 
         started = datetime.datetime.now()
         accuracy_data = run_test(False)

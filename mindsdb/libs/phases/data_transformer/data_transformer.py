@@ -121,6 +121,7 @@ class DataTransformer(BaseModule):
         # Un-bias dataset for training
         for column in self.transaction.lmd['predict_columns']:
             if self.transaction.lmd['column_stats'][column]['data_type'] == DATA_TYPES.CATEGORICAL and self.transaction.lmd['equal_accuracy_for_all_output_categories'] == True and self.transaction.lmd['type'] == TRANSACTION_LEARN:
+                
                 occurance_map = {}
                 ciclying_map = {}
 
@@ -137,9 +138,9 @@ class DataTransformer(BaseModule):
 
                         if column in self.transaction.lmd['output_categories_importance_dictionary']:
                             if val in self.transaction.lmd['output_categories_importance_dictionary'][column]:
-                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionary'][column][val]
+                                lightwood_weight_map[val] = self.transaction.lmd['output_categories_importance_dictionary'][column][val]
                             elif '<default>' in self.transaction.lmd['output_categories_importance_dictionary'][column]:
-                                lightwood_weight_map[val] = lightwood_weight_map[val] * self.transaction.lmd['output_categories_importance_dictionary'][column]['<default>']
+                                lightwood_weight_map[val] = self.transaction.lmd['output_categories_importance_dictionary'][column]['<default>']
 
                     self.transaction.lmd['weight_map'][column] = lightwood_weight_map
 

@@ -512,7 +512,7 @@ class Predictor:
             print(e)
             return False
 
-    def analyse_dataset(self, from_data, sample_margin_of_error=CONFIG.DEFAULT_MARGIN_OF_ERROR):
+    def analyse_dataset(self, from_data, sample_margin_of_error=0.005):
         """
         Analyse the particular dataset being given
         """
@@ -547,7 +547,7 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)
 
-    def learn(self, to_predict, from_data, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict={}):
+    def learn(self, to_predict, from_data, test_from_data=None, group_by = None, window_size = None, order_by = [], sample_margin_of_error = 0.005, ignore_columns = [], stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=None, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=True, output_categories_importance_dictionary=None, unstable_parameters_dict={}):
         """
         Learn to predict a column or columns from the data in 'from_data'
 
@@ -627,7 +627,6 @@ class Predictor:
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
         light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
         light_transaction_metadata['stop_training_in_x_seconds'] = stop_training_in_x_seconds
-        light_transaction_metadata['stop_training_in_accuracy'] = stop_training_in_accuracy
         light_transaction_metadata['rebuild_model'] = rebuild_model
         light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
         light_transaction_metadata['column_importances'] = None
@@ -701,7 +700,7 @@ class Predictor:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
                 heavy_transaction_metadata= pickle.load(fp)
 
-            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'columns_to_ignore', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:
+            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'columns_to_ignore', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds']:
                 if old_lmd[k] is not None: light_transaction_metadata[k] = old_lmd[k]
 
             for k in ['from_data', 'test_from_data']:
@@ -709,7 +708,7 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
-    def predict(self, when={}, when_data = None, update_cached_model = False, use_gpu=None, unstable_parameters_dict={}, backend=None, run_confidence_variation_analysis=False):
+    def predict(self, when={}, when_data=None, update_cached_model = False, use_gpu=None, unstable_parameters_dict={}, backend=None, run_confidence_variation_analysis=False):
         """
         You have a mind trained already and you want to make a prediction
 

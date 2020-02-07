@@ -45,7 +45,7 @@ def run_benchmarks():
     except:
         pass
 
-    TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review']
+    TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review', 'german_credit_data'] #, 'wine_quality']
     #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars']
 
     os.system('git clone https://github.com/mindsdb/mindsdb-examples tmp_downloads')
@@ -62,15 +62,15 @@ def run_benchmarks():
         '''
         logger.debug(f'\n\n=================================\nRunning test: {test_name}\n=================================\n\n')
 
-        os.chdir(f'tmp_downloads/{test_name}')
+        os.chdir(f'tmp_downloads/benchmarks/{test_name}')
 
-        run_test = importlib.import_module(f'tmp_downloads.{test_name}.mindsdb_acc').run
+        run_test = importlib.import_module(f'tmp_downloads.benchmarks.{test_name}.mindsdb_acc').run
 
         started = datetime.datetime.now()
         accuracy_data = run_test(False)
         ended = datetime.datetime.now()
 
-        os.chdir('../..')
+        os.chdir('../../..')
 
         accuracy = accuracy_data['accuracy']
         accuracy_function = accuracy_data['accuracy_function'] if 'accuracy_function' in accuracy_data else 'accuracy_score'

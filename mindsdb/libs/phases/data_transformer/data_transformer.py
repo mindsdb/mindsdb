@@ -143,8 +143,9 @@ class DataTransformer(BaseModule):
 
                     self.transaction.lmd['weight_map'][column] = lightwood_weight_map
 
+                #print(self.transaction.lmd['weight_map'])
                 column_is_weighted_in_train = column in self.transaction.lmd['weight_map']
-                column_is_weighted_in_train = False
+
                 if column_is_weighted_in_train:
                     dfs = ['input_data.validation_df']
                 else:
@@ -152,10 +153,13 @@ class DataTransformer(BaseModule):
 
                 total_len = (len(input_data.train_df) + len(input_data.test_df) + len(input_data.validation_df))
                 # Since pandas doesn't support append in-place we'll just do some eval-based hacks
+
                 for dfn in dfs:
                     max_val_occurances_in_set = int(round(max_val_occurances * len(eval(dfn))/total_len))
                     for val in occurance_map:
                         valid_rows = eval(dfn)[eval(dfn)[column] == val]
+                        if len(valid_rows) == 0:
+                            continue
 
                         appended_times = 0
                         while max_val_occurances_in_set > len(valid_rows) * (2 + appended_times):

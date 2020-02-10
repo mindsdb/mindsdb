@@ -2,9 +2,9 @@ language: python
 
 matrix:
   include:
-    - name: "Python 3.7.3 on Ubuntu 16.0.4"
+    - name: "Python 3.7 on Ubuntu 16.0.4"
       os: linux
-      python: 3.7.3
+      python: 3.7
       node: 11.15.0
       dist: xenial
       sudo: true
@@ -12,6 +12,18 @@ matrix:
         DEPLOYMENT_ENV="true"
       services:
         - docker
+
+    - name: "Python 3.6 on Ubuntu 16.0.4"
+      os: linux
+      python: 3.6
+      node: 11.15.0
+      dist: xenial
+
+    - name: "Python 3.8 on Ubuntu 16.0.4"
+      os: linux
+      python: 3.8
+      node: 11.15.0
+      dist: xenial
 
     - name: "Python 3.7.2 on OSX"
       os: osx

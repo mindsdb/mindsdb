@@ -87,10 +87,10 @@ class TransactionOutputRow:
         simple_answers = []
 
         for pred_col in answers:
-            col_answers = answers[pred_col]
-            simple_col_answers = [x['simple'] for x in col_answers]
-            simple_col_answers = ' and '.join(simple_col_answers) + '.\n'
-            simple_answers.append(simple_col_answers)
+            confidence = answers[pred_col]['confidence']
+            value = answers[pred_col]['predicted_value']
+            simple_col_answer = f'We are {confidence}% confident the value of "{pred_col}" is {value}'
+            simple_answers.append(simple_col_answer)
 
         return '* ' + '\n* '.join(simple_answers)
 

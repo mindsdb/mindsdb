@@ -239,7 +239,6 @@ class Transaction:
                     nulled_out_columns.append(column)
 
             nulled_out_data = pd.DataFrame(nulled_out_data)
-            nulled_out_predictions = []
 
         for mode in ['predict', 'analyze_confidence']:
             if mode == 'analyze_confidence':
@@ -298,26 +297,28 @@ class Transaction:
             if mode == 'predict':
                 self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
             else:
-                nulled_out_predictions.append(PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations))
+                nulled_out_predictions = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
 
         if self.lmd['run_confidence_variation_analysis']:
-            input_confidence_arr = [{}]
+            input_confidence = {}
+            extra_insights = {}
 
             for predicted_col in self.lmd['predict_columns']:
-                input_confidence_arr[0][predicted_col] = {'column_names': [], 'confidence_variation': []}
-                actual_confidence = self.output_data[0].explain()[predicted_col][0]['confidence']
-                for i in range(len(nulled_out_columns)):
-                    nulled_confidence = nulled_out_predictions[0][i].explain()[predicted_col][0]['confidence']
-                    nulled_col_name = nulled_out_columns[i]
+                input_confidence[predicted_col] = []
+                extra_insights[predicted_col] = {'if_missing':[]}
+
+                actual_confidence = self.output_data[0].explain()[predicted_col]['confidence']
+
+                for i, nulled_col_name in enumerate(nulled_out_columns):
+                    nulled_out_predicted_value = nulled_out_predictions[i].explain()[predicted_col]['predicted_value']
+                    nulled_confidence = nulled_out_predictions[i].explain()[predicted_col]['confidence']
                     confidence_variation = actual_confidence - nulled_confidence
 
-                    input_confidence_arr[0][predicted_col]['column_names'].append(nulled_col_name)
-                    input_confidence_arr[0][predicted_col]['confidence_variation'].append(confidence_variation)
+                    input_confidence[predicted_col].append({nulled_col_name: round(confidence_variation)})
+                    extra_insights[predicted_col]['if_missing'].append({nulled_col_name: nulled_out_predicted_value})
 
-                input_confidence_arr[0][predicted_col]['confidence_variation_score'] = list(np.interp(input_confidence_arr[0][predicted_col]['confidence_variation'], (np.min(input_confidence_arr[0][predicted_col]['confidence_variation']), np.max(input_confidence_arr[0][predicted_col]['confidence_variation'])), (-100, 100)))
-
-            self.output_data.input_confidence_arr = input_confidence_arr
-
+            self.output_data.input_confidence = input_confidence
+            self.output_data.extra_insights = extra_insights
         return
 
 

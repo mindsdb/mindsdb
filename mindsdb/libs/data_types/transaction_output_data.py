@@ -15,7 +15,8 @@ class PredictTransactionOutputData():
         self.data = data
         self.evaluations = evaluations
         self.transaction = transaction
-        self.input_confidence_arr = None
+        self.input_confidence = None
+        self.extra_insights = None
 
     def __iter__(self):
         for i, value in enumerate(self.data[self.transaction.lmd['columns'][0]]):

@@ -100,7 +100,7 @@ class TransactionOutputRow:
 
     def as_list(self):
         #Note that here we will not output the confidence columns
-        return [self.data[col][self.row_index] for col in list(self.data.keys()) if not key.startswith('model_')]
+        return [self.data[col][self.row_index] for col in list(self.data.keys()) if not col.startswith('model_')]
 
     def raw_predictions(self):
         return {key: self.data[key][self.row_index] for key in list(self.data.keys()) if key.startswith('model_')}

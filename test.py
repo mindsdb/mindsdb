@@ -25,6 +25,6 @@ for p in p_arr:
     exp = p.explain()
     print(exp_s)
 
-print(p.as_dict())
-print(p.as_list())
-print(p.raw_predictions())
+    print(p.as_dict())
+    print(p.as_list())
+    print(p.raw_predictions())

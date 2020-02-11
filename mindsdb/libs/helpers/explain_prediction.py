@@ -5,7 +5,7 @@ from mindsdb.libs.helpers.general_helpers import value_isnan
 
 def get_important_missing_cols(lmd, prediction_row, pred_col):
     if lmd['column_importances'] is None or len(lmd['column_importances']) < 2:
-        important_cols = [col for col in lmd['columns'] if col not in lmd['predict_columns'] and 'model_' not in col]
+        important_cols = [col for col in lmd['columns'] if col not in lmd['predict_columns'] and not col.startswith('model_')]
     else:
         top_30_val = np.percentile(list(lmd['column_importances'].values()),70)
         important_cols = [col for col in lmd['column_importances'] if lmd['column_importances'][col] >= top_30_val]

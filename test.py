@@ -24,3 +24,7 @@ for p in p_arr:
     exp_s = p.epitomize()
     exp = p.explain()
     print(exp_s)
+
+print(p.as_dict())
+print(p.as_list())
+print(p.raw_predictions())

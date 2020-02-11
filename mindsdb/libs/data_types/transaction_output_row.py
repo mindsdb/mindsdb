@@ -34,8 +34,6 @@ class TransactionOutputRow:
             if f'{pred_col}_model_confidence' in prediction_row:
                 answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 100 + answers[pred_col]['confidence'])/2)
 
-            answers[pred_col]['model_predicted_value'] = prediction_row[f'model_{pred_col}']
-
             if answers[pred_col]['confidence'] > 70:
                 quality = 'high certainty'
             elif answers[pred_col]['confidence'] > 35:
@@ -98,11 +96,14 @@ class TransactionOutputRow:
         return str(self.epitomize())
 
     def as_dict(self):
-        return {key: self.data[key][self.row_index] for key in list(self.data.keys())}
+        return {key: self.data[key][self.row_index] for key in list(self.data.keys()) if not key.startswith('model_')}
 
     def as_list(self):
         #Note that here we will not output the confidence columns
-        return [self.data[col][self.row_index] for col in list(self.data.keys())]
+        return [self.data[col][self.row_index] for col in list(self.data.keys()) if not key.startswith('model_')]
+
+    def raw_predictions(self):
+        return {key: self.data[key][self.row_index] for key in list(self.data.keys()) if key.startswith('model_')}
 
     @property
     def _predicted_values(self):

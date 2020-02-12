@@ -307,11 +307,11 @@ class Transaction:
                 input_confidence[predicted_col] = []
                 extra_insights[predicted_col] = {'if_missing':[]}
 
-                actual_confidence = self.output_data[0].explaination[predicted_col]['confidence']
+                actual_confidence = self.output_data[0].explanation[predicted_col]['confidence']
 
                 for i, nulled_col_name in enumerate(nulled_out_columns):
-                    nulled_out_predicted_value = nulled_out_predictions[i].explaination[predicted_col]['predicted_value']
-                    nulled_confidence = nulled_out_predictions[i].explaination[predicted_col]['confidence']
+                    nulled_out_predicted_value = nulled_out_predictions[i].explanation[predicted_col]['predicted_value']
+                    nulled_confidence = nulled_out_predictions[i].explanation[predicted_col]['confidence']
                     confidence_variation = actual_confidence - nulled_confidence
 
                     input_confidence[predicted_col].append({nulled_col_name: round(confidence_variation)})

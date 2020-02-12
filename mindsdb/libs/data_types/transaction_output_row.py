@@ -9,7 +9,7 @@ class TransactionOutputRow:
         self.col_stats = self.transaction_output.transaction.lmd['column_stats']
         self.data = self.transaction_output.data
         self.evaluations = self.transaction_output.evaluations
-        self.explaination = self.new_explain()
+        self.explanation = self.new_explain()
 
     def __getitem__(self, item):
         return self.data[item][self.row_index]
@@ -121,21 +121,21 @@ class TransactionOutputRow:
                     elif range_end_start > pow(10,-3):
                         range_end_start = round(range_end_start,6)
 
-                    explaination = explain_prediction(self.transaction_output.transaction.lmd, prediction_row, cluster['confidence'], pred_col)
+                    explanation = explain_prediction(self.transaction_output.transaction.lmd, prediction_row, cluster['confidence'], pred_col)
 
                     answers[pred_col].append({
                         'value': predicted_value,
                         'range': value_range,
                         'confidence': cluster['confidence'],
-                        'explaination': explaination,
+                        'explanation': explanation,
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" lies between {range_pretty_start} and {range_end_start}'
                     })
                 else:
-                    explaination = explain_prediction(self.transaction_output.transaction.lmd, prediction_row, cluster['confidence'], pred_col)
+                    explanation = explain_prediction(self.transaction_output.transaction.lmd, prediction_row, cluster['confidence'], pred_col)
                     answers[pred_col].append({
                         'value': predicted_value,
                         'confidence': cluster['middle_confidence'],
-                        'explaination': explaination,
+                        'explanation': explanation,
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
                     })
 

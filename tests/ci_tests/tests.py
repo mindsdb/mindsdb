@@ -102,7 +102,7 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
 
     print('\n\n========================\n\n')
     print(prediction[0].explain())
-    print(prediction[0].explaination)
+    print(prediction[0].explanation)
     print(prediction[0].raw_predictions())
     print('\n\n')
 

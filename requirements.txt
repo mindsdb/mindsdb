@@ -1,4 +1,4 @@
-lightwood >= 0.15.5
+lightwood >= 0.16.0
 scikit-image ==  0.14.2
 cython >= 0.29.2
 setuptools >= 21.2.1
@@ -9,7 +9,7 @@ pandas >= 0.23.4
 pytz >= 2018.5
 requests >= 2.20.0
 scipy >= 1.1.0
-scikit-learn == 0.20.0
+scikit-learn >=  0.22.1
 colorlog >= 4.0.2
 xlrd >= 1.0.0
 ImageHash == 4.0

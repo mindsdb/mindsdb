@@ -139,6 +139,11 @@ class TransactionOutputRow:
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
                     })
 
+                answers[pred_col][-1]['confidence_influence_scores'] = {
+                    'confidence_variation_score': []
+                    ,'column_names': []
+                }
+
                 model_result = {
                     'value': prediction_row[f'model_{pred_col}']
                 }

@@ -29,6 +29,7 @@ with open('optional_requirements_extra_data_sources.txt', 'r') as fp:
         extra_data_sources_requirements.append(line.rstrip('\n'))
 
 ludwig_model_requirements = []
+beta_requirements = []
 with open('optional_requirements_ludwig_model.txt', 'r') as fp:
     for line in fp:
         ludwig_model_requirements.append(line.rstrip('\n'))
@@ -74,6 +75,7 @@ setuptools.setup(
     extras_require = {
         'extra_data_sources': extra_data_sources_requirements
         ,'ludwig_model': ludwig_model_requirements
+        ,'beta': beta_requirements
     },
     dependency_links=dependency_links,
     classifiers=(

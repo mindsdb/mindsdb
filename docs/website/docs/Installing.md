@@ -7,36 +7,46 @@ title: Installing MindsDB
 
 Before you begin, you need [**python>=3.7**](https://realpython.com/installing-python/) or [**Conda Python3**](https://www.anaconda.com/download/), and make sure you have the **latest pip3**.
 
+To install python & pip:
+
 ```bash
 curl https://bootstrap.pypa.io/get-pip.py | python3
 pip3 install --upgrade pip
 ```
 
-Once you have those, you can install MindsDB.
+To install conda (only required on some windows environments) [download conda from here](https://www.anaconda.com/download/#windows)
+Once that's done run the **anaconda prompt**.
 
-## On Mac or Linux or any other operating system
+
+Once that's done, you can install mindsdb from your terminal or from the **anaconda prompt**.
+
+## Standard installation
 
 Install MindsDB:
 
 ```bash
-pip3 install mindsdb --user --no-cache-dir
+pip install mindsdb
 ```
 
-It might be needed that you need to install `tkinter` from your package manager in certain situations.
+## What to do if installation fails
+
+1. Try using `pip3` instead of `pip` (`pip3 install mindsdb`) and try installing for your current user only (`pip install mindsdb --user`)
+
+2. Try manually installing pytorch following the simple instructions on their official website: https://pytorch.org/get-started/locally/
+
+3. If you are using linux install `tkinter` from your package manager in certain situations.
 
 - Ubuntu/Debian: `sudo apt-get install python3-tk tk`
 - Fedora: `sudo dnf -y install python3-tkinter`
 - Arch: `sudo pacman -S tk`
 
-## On Windows 10
+4. If you are using windows, but are not using Conda, try installing conda and running the installation from the **anaconda prompt**.
 
-Install Conda [download here](https://www.anaconda.com/download/#windows)
-and then run the **anaconda prompt**:
+5. If you've previously installed mindsdb and are having issues upgrading to a new version, try installing with the command: `pip install mindsdb --upgrade`, if that still fails, try: `pip install mindsdb --no-cache-dir --force-reinstall`.
 
-```bash
-pip install git+https://github.com/mindsdb/mindsdb.git@master --upgrade --force-reinstall
-```
-# Build and run your docker container
+6. If none of this works, try installing mindsdb using the docker container and create an issue with the installation errors you got on: https://github.com/mindsdb/mindsdb/issues, we'll try to review it within a few hours.
+
+## Build and run your docker container
 
 Alternatively, you can also run MindsDB in a docker container. Assuming that you have [docker](https://docs.docker.com/install/) installed in your computer.
 On your terminal, you can do the following:
@@ -46,7 +56,7 @@ sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/dist
 
 ```
 
-# Hardware
+## Hardware
 
 Due to the fact that pytorch only supports certain instruction sets, mindsdb can only use certain types of GPUs.
 Currently, on AWS, `g3` and `p3` instance types should be fine, but `p2` and `g2` instances are not supported

@@ -29,6 +29,7 @@ with open('optional_requirements_extra_data_sources.txt', 'r') as fp:
         extra_data_sources_requirements.append(line.rstrip('\n'))
 
 ludwig_model_requirements = []
+beta_requirements = []
 with open('optional_requirements_ludwig_model.txt', 'r') as fp:
     for line in fp:
         ludwig_model_requirements.append(line.rstrip('\n'))
@@ -53,7 +54,6 @@ elif sys_platform in ['win32','cygwin','windows']:
     ludwig_model_requirements = remove_requirements(ludwig_model_requirements, 'ludwig', 'ludwig == 0.1.2')
     ludwig_model_requirements = remove_requirements(ludwig_model_requirements, 'tensorflow-estimator')
     requirements = remove_requirements(requirements,'wheel', replace='wheel == 0.26.0')
-    requirements = remove_requirements(requirements,'lightwood', replace='lightwood @ git+https://github.com/mindsdb/lightwood.git@master')
 
 else:
     print('\n\n====================\n\nError, platform {sys_platform} not recognized, proceeding to install anyway, but mindsdb might not work properly !\n\n====================\n\n')
@@ -75,6 +75,7 @@ setuptools.setup(
     extras_require = {
         'extra_data_sources': extra_data_sources_requirements
         ,'ludwig_model': ludwig_model_requirements
+        ,'beta': beta_requirements
     },
     dependency_links=dependency_links,
     classifiers=(

@@ -41,10 +41,19 @@ class Predictor:
             except:
                 self.log.warning('Could not check for updates !')
 
-        # If storage path is not writable, raise an exception as this can no longer be
-        if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK):
-            error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
-            raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+        if not CONFIG.SAGEMAKER:
+            # If storage path is not writable, raise an exception as this can no longer be
+            if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.W_OK):
+                error_message = '''Cannot write into storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
+                self.log.warning(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+
+
+            # If storage path is not writable, raise an exception as this can no longer be
+            if not os.access(CONFIG.MINDSDB_STORAGE_PATH, os.R_OK):
+                error_message = '''Cannot read from storage path, please either set the config variable mindsdb.config.set('MINDSDB_STORAGE_PATH',<path>) or give write access to {folder}'''
+                self.log.warning(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
+                raise ValueError(error_message.format(folder=CONFIG.MINDSDB_STORAGE_PATH))
 
     def get_models(self):
         models = []
@@ -199,7 +208,7 @@ class Predictor:
     def get_model_data(self, model_name=None, lmd=None):
         if model_name is None:
             model_name = self.name
-            
+
         if lmd is None:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{model_name}_light_model_metadata.pickle'), 'rb') as fp:
                 lmd = pickle.load(fp)
@@ -404,10 +413,10 @@ class Predictor:
                 lmd = pickle.load(fp)
 
             if 'ludwig_data' in lmd and 'ludwig_save_path' in lmd['ludwig_data']:
-                lmd['ludwig_data']['ludwig_save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH),os.path.basename(lmd['ludwig_data']['ludwig_save_path']))
+                lmd['ludwig_data']['ludwig_save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH,os.path.basename(lmd['ludwig_data']['ludwig_save_path'])))
 
             if 'lightwood_data' in lmd and 'save_path' in lmd['lightwood_data']:
-                lmd['lightwood_data']['save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH),os.path.basename(lmdlmd['lightwood_data']['save_path']))
+                lmd['lightwood_data']['save_path'] = str(os.path.join(CONFIG.MINDSDB_STORAGE_PATH,os.path.basename(lmd['lightwood_data']['save_path'])))
 
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name + '_light_model_metadata.pickle'), 'wb') as fp:
                 pickle.dump(lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
@@ -502,10 +511,11 @@ class Predictor:
             print(e)
             return False
 
-    def analyse_dataset(self, from_data, sample_margin_of_error=CONFIG.DEFAULT_MARGIN_OF_ERROR):
+    def analyse_dataset(self, from_data, sample_margin_of_error=0.005):
         """
         Analyse the particular dataset being given
         """
+
         from_ds = getDS(from_data)
         transaction_type = TRANSACTION_ANALYSE
         sample_confidence_level = 1 - sample_margin_of_error
@@ -527,11 +537,17 @@ class Predictor:
         light_transaction_metadata['columns_to_ignore'] = []
         light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['predict_columns'] = []
+        light_transaction_metadata['empty_columns'] = []
+
+        light_transaction_metadata['handle_foreign_keys'] = True
+        light_transaction_metadata['force_categorical_encoding'] = []
+        light_transaction_metadata['handle_text_as_categorical'] = False
 
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)
 
-    def learn(self, to_predict, from_data, test_from_data=None, group_by = None, window_size = None, order_by=None, sample_margin_of_error = CONFIG.DEFAULT_MARGIN_OF_ERROR, ignore_columns=None, stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=False, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=False, output_categories_importance_dictionary=None, unstable_parameters_dict=None):
+
+    def learn(self, to_predict, from_data, test_from_data=None, group_by = None, window_size = None, order_by = None, sample_margin_of_error = 0.005, ignore_columns = None, stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=None, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=True, output_categories_importance_dictionary=None, unstable_parameters_dict=None):
         """
         Learn to predict a column or columns from the data in 'from_data'
 
@@ -620,7 +636,6 @@ class Predictor:
         light_transaction_metadata['sample_margin_of_error'] = sample_margin_of_error
         light_transaction_metadata['sample_confidence_level'] = sample_confidence_level
         light_transaction_metadata['stop_training_in_x_seconds'] = stop_training_in_x_seconds
-        light_transaction_metadata['stop_training_in_accuracy'] = stop_training_in_accuracy
         light_transaction_metadata['rebuild_model'] = rebuild_model
         light_transaction_metadata['model_accuracy'] = {'train': {}, 'test': {}}
         light_transaction_metadata['column_importances'] = None
@@ -635,6 +650,8 @@ class Predictor:
         light_transaction_metadata['ludwig_data'] = {}
         light_transaction_metadata['weight_map'] = {}
         light_transaction_metadata['confusion_matrices'] = {}
+        light_transaction_metadata['empty_columns'] = []
+
         light_transaction_metadata['equal_accuracy_for_all_output_categories'] = equal_accuracy_for_all_output_categories
         light_transaction_metadata['output_categories_importance_dictionary'] = output_categories_importance_dictionary if output_categories_importance_dictionary is not None else {}
 
@@ -647,11 +664,6 @@ class Predictor:
             light_transaction_metadata['skip_stats_generation'] = unstable_parameters_dict['skip_stats_generation']
         else:
             light_transaction_metadata['skip_stats_generation'] = False
-
-        if 'always_use_model_prediction' in unstable_parameters_dict:
-            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
-        else:
-            light_transaction_metadata['always_use_model_prediction'] = False
 
         if 'optimize_model' in unstable_parameters_dict:
             light_transaction_metadata['optimize_model'] = unstable_parameters_dict['optimize_model']
@@ -697,7 +709,7 @@ class Predictor:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, heavy_transaction_metadata['name'] + '_heavy_model_metadata.pickle'), 'rb') as fp:
                 heavy_transaction_metadata= pickle.load(fp)
 
-            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'columns_to_ignore', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds', 'stop_training_in_accuracy']:
+            for k in ['data_preparation', 'rebuild_model', 'data_source', 'type', 'columns_to_ignore', 'sample_margin_of_error', 'sample_confidence_level', 'stop_training_in_x_seconds']:
                 if old_lmd[k] is not None: light_transaction_metadata[k] = old_lmd[k]
 
             for k in ['from_data', 'test_from_data']:
@@ -705,7 +717,7 @@ class Predictor:
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
 
-    def predict(self, when=None, when_data = None, update_cached_model = False, use_gpu=None, unstable_parameters_dict=None, backend=None, run_confidence_variation_analysis=False):
+    def predict(self, when=None, when_data=None, update_cached_model = False, use_gpu=None, unstable_parameters_dict=None, backend=None, run_confidence_variation_analysis=False):
         """
         You have a mind trained already and you want to make a prediction
 
@@ -750,11 +762,6 @@ class Predictor:
         light_transaction_metadata['use_gpu'] = use_gpu
         light_transaction_metadata['data_preparation'] = {}
         light_transaction_metadata['run_confidence_variation_analysis'] = run_confidence_variation_analysis
-
-        if 'always_use_model_prediction' in unstable_parameters_dict:
-            light_transaction_metadata['always_use_model_prediction'] = unstable_parameters_dict['always_use_model_prediction']
-        else:
-            light_transaction_metadata['always_use_model_prediction'] = False
 
         if 'force_disable_cache' in unstable_parameters_dict:
             light_transaction_metadata['force_disable_cache'] = unstable_parameters_dict['force_disable_cache']

@@ -24,7 +24,6 @@ from mindsdb.external_libs.stats import calculate_sample_size
 from mindsdb.libs.phases.stats_generator.scores import *
 
 
-
 class StatsGenerator(BaseModule):
     """
     # The stats generator phase is responsible for generating the insights we need about the data in order to vectorize it
@@ -42,7 +41,9 @@ class StatsGenerator(BaseModule):
 
         try:
             is_img = imghdr.what(potential_path)
-            if is_img is not None:
+            if is_img is None:
+                return False
+            else:
                 return DATA_SUBTYPES.IMAGE
         except:
             # Not a file or file doesn't exist
@@ -250,6 +251,12 @@ class StatsGenerator(BaseModule):
                 type_dist[curr_data_type] = len(data)
                 subtype_dist[curr_data_subtype] = len(data)
 
+        if col_name in self.transaction.lmd['force_categorical_encoding']:
+            curr_data_type = DATA_TYPES.CATEGORICAL
+            curr_data_subtype = DATA_SUBTYPES.MULTIPLE
+            type_dist[curr_data_type] = len(data)
+            subtype_dist[curr_data_subtype] = len(data)
+
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
 
     @staticmethod
@@ -304,7 +311,7 @@ class StatsGenerator(BaseModule):
         elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE :
             histogram = Counter(data)
             return {
-                'x': list(histogram.keys()),
+                'x': list(map(str,histogram.keys())),
                 'y': list(histogram.values())
             }, None
         elif data_subtype == DATA_SUBTYPES.IMAGE:
@@ -490,7 +497,7 @@ class StatsGenerator(BaseModule):
             '''
 
             # We might want to inform the user about a few stats regarding his column regardless of the score, this is done below
-            self.log.info('Data distribution for column "{}"'.format(col_name))
+            self.log.info(f"""Data distribution for column "{col_name}" of type "{stats[col_name]['data_type']}" and subtype  "{stats[col_name]['data_subtype']}""")
             try:
                 self.log.infoChart(stats[col_name]['data_subtype_dist'], type='list', uid='Data Type Distribution for column "{}"'.format(col_name))
             except:
@@ -545,8 +552,9 @@ class StatsGenerator(BaseModule):
 
             if column_status == 'Column empty':
                 if modify_light_metadata:
+                    self.transaction.lmd['empty_columns'].append(col_name)
+                    logging.warning(f'The "{col_name}" column is empty, it will be ignored, please make sure the data in the column is correct !')
                     self.transaction.lmd['columns_to_ignore'].append(col_name)
-
                 continue
 
             new_col_data = []

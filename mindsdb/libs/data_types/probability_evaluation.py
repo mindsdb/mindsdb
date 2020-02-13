@@ -3,14 +3,13 @@ from mindsdb.libs.constants.mindsdb import *
 
 class ProbabilityEvaluation:
 
-    def __init__(self, buckets, evaluation_distribution, predicted_value, always_use_model_prediction):
+    def __init__(self, buckets, evaluation_distribution, predicted_value):
         self.distribution = evaluation_distribution
         self.predicted_value = predicted_value
         self.buckets = buckets
         self.most_likely_value = None
         self.most_likely_probability = None
         self.final_value = None
-        self.always_use_model_prediction = always_use_model_prediction
 
         if evaluation_distribution is not None:
             self.update(evaluation_distribution, predicted_value)
@@ -141,13 +140,10 @@ class ProbabilityEvaluation:
             else:
                 bucket_margin_left = self.buckets[max_prob_index - 1]
                 self.most_likely_value = (bucket_margin_right + bucket_margin_left)/2
+                #predicted_value = type(bucket_margin_right)(predicted_value)
                 if predicted_value is not None and bucket_margin_left is None and predicted_value <= bucket_margin_right:
                     self.final_value = predicted_value
                 elif predicted_value is not None and predicted_value <= bucket_margin_right and predicted_value >= bucket_margin_left:
                     self.final_value = predicted_value
                 else:
                     self.final_value = self.most_likely_value
-
-        # Return the prediction of the model
-        if self.always_use_model_prediction:
-            self.final_value = predicted_value

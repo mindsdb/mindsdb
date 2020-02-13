@@ -37,7 +37,7 @@ class BaseModule():
         '''
         self.kwargs = kwargs
         self.session = session
-        self.transaction = transaction # type: controllers.transaction_controller.TransactionController
+        self.transaction = transaction
         self.output = {}
         self.setup(**kwargs)
         self.log = self.transaction.log

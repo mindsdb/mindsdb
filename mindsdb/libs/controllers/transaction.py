@@ -239,7 +239,6 @@ class Transaction:
                     nulled_out_columns.append(column)
 
             nulled_out_data = pd.DataFrame(nulled_out_data)
-            nulled_out_predictions = []
 
         for mode in ['predict', 'analyze_confidence']:
             if mode == 'analyze_confidence':
@@ -260,13 +259,15 @@ class Transaction:
 
             for predicted_col in self.lmd['predict_columns']:
                 output_data[predicted_col] = list(self.hmd['predictions'][predicted_col])
-                #output_data[f'{predicted_col}_selfaware_confidence'] = list(self.hmd['confidences'][predicted_col])
+                if f'{predicted_col}_confidences' in self.hmd['predictions']:
+                    output_data[f'{predicted_col}_model_confidence'] = self.hmd['predictions'][f'{predicted_col}_confidences']
 
                 probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
                 confidence_column_name = f'{predicted_col}_confidence'
                 output_data[confidence_column_name] = [None] * len(output_data[predicted_col])
                 evaluations[predicted_col] = [None] * len(output_data[predicted_col])
 
+                output_data[f'model_{predicted_col}'] = deepcopy(output_data[predicted_col])
                 for row_number, predicted_value in enumerate(output_data[predicted_col]):
 
                     # Compute the feature existance vector
@@ -274,11 +275,12 @@ class Transaction:
                     features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns if col not in self.lmd['columns_to_ignore']]
 
                     # Create the probabilsitic evaluation
-                    prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value, always_use_model_prediction=self.lmd['always_use_model_prediction'])
+                    prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
 
                     output_data[predicted_col][row_number] = prediction_evaluation.final_value
                     output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
                     evaluations[predicted_col][row_number] = prediction_evaluation
+
 
                 if f'{predicted_col}_model_confidence' in output_data:
                     # Scale model confidence between the confidences of the probabilsitic validator
@@ -295,26 +297,28 @@ class Transaction:
             if mode == 'predict':
                 self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
             else:
-                nulled_out_predictions.append(PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations))
+                nulled_out_predictions = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
 
         if self.lmd['run_confidence_variation_analysis']:
-            input_confidence_arr = [{}]
+            input_confidence = {}
+            extra_insights = {}
 
             for predicted_col in self.lmd['predict_columns']:
-                input_confidence_arr[0][predicted_col] = {'column_names': [], 'confidence_variation': []}
-                actual_confidence = self.output_data[0].explain()[predicted_col][0]['confidence']
-                for i in range(len(nulled_out_columns)):
-                    nulled_confidence = nulled_out_predictions[0][i].explain()[predicted_col][0]['confidence']
-                    nulled_col_name = nulled_out_columns[i]
+                input_confidence[predicted_col] = []
+                extra_insights[predicted_col] = {'if_missing':[]}
+
+                actual_confidence = self.output_data[0].explanation[predicted_col]['confidence']
+
+                for i, nulled_col_name in enumerate(nulled_out_columns):
+                    nulled_out_predicted_value = nulled_out_predictions[i].explanation[predicted_col]['predicted_value']
+                    nulled_confidence = nulled_out_predictions[i].explanation[predicted_col]['confidence']
                     confidence_variation = actual_confidence - nulled_confidence
 
-                    input_confidence_arr[0][predicted_col]['column_names'].append(nulled_col_name)
-                    input_confidence_arr[0][predicted_col]['confidence_variation'].append(confidence_variation)
+                    input_confidence[predicted_col].append({nulled_col_name: round(confidence_variation)})
+                    extra_insights[predicted_col]['if_missing'].append({nulled_col_name: nulled_out_predicted_value})
 
-                input_confidence_arr[0][predicted_col]['confidence_variation_score'] = list(np.interp(input_confidence_arr[0][predicted_col]['confidence_variation'], (np.min(input_confidence_arr[0][predicted_col]['confidence_variation']), np.max(input_confidence_arr[0][predicted_col]['confidence_variation'])), (-100, 100)))
-
-            self.output_data.input_confidence_arr = input_confidence_arr
-
+            self.output_data.input_confidence = input_confidence
+            self.output_data.extra_insights = extra_insights
         return
 
 

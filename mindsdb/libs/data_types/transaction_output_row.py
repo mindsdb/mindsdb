@@ -128,6 +128,7 @@ class TransactionOutputRow:
                         'range': value_range,
                         'confidence': cluster['confidence'],
                         'explanation': explanation,
+                        'explaination': explanation,
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" lies between {range_pretty_start} and {range_end_start}'
                     })
                 else:
@@ -136,17 +137,24 @@ class TransactionOutputRow:
                         'value': predicted_value,
                         'confidence': cluster['middle_confidence'],
                         'explanation': explanation,
+                        'explaination': explanation,
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
                     })
 
-                answers[pred_col][-1]['confidence_influence_scores'] = {
-                    'confidence_variation_score': []
-                    ,'column_names': []
-                }
+                if self.transaction_output.input_confidence is not None:
+                    for i in range(len(answers[pred_col])):
+                        answers[pred_col][i]['confidence_influence_scores'] = {
+                            'confidence_variation_score': []
+                            ,'column_names': []
+                        }
+                        for c in self.transaction_output.input_confidence:
+                            answers[pred_col][i]['confidence_influence_scores']['confidence_variation_score'].append(self.transaction_output.input_confidence[c])
+                            answers[pred_col][i]['confidence_influence_scores']['column_names'].append(str(c))
 
                 model_result = {
                     'value': prediction_row[f'model_{pred_col}']
                 }
+
                 if f'{pred_col}_model_confidence' in prediction_row:
                     model_result['confidence'] = prediction_row[f'{pred_col}_model_confidence']
 

@@ -439,7 +439,10 @@ class LudwigBackend():
         self.transaction.lmd['ludwig_data'] = {'ludwig_save_path': ludwig_model_savepath}
         self.transaction.hmd['ludwig_data'] = {'model_definition': model_definition}
 
-    def predict(self, mode='predict', ignore_columns=[]):
+    def predict(self, mode='predict', ignore_columns=None):
+        if ignore_columns is None:
+            ignore_columns = []
+
         predict_dataframe, model_definition, timeseries_cols, has_heavy_data, _ = self._create_ludwig_dataframe(mode)
         model_definition = self.transaction.hmd['ludwig_data']['model_definition']
 

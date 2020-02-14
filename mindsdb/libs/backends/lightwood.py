@@ -200,6 +200,8 @@ class LightwoodBackend():
         self.predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])
 
     def predict(self, mode='predict', ignore_columns=[]):
+        if ignore_columns is None:
+            ignore_columns = []
         if self.transaction.lmd['use_gpu'] is not None:
             lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
         lightwood.config.config.CONFIG.CACHE_ENCODED_DATA = not self.transaction.lmd['force_disable_cache']

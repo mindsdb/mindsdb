@@ -4,7 +4,6 @@ import csv
 import codecs
 import json
 import traceback
-import codecs
 
 import pandas as pd
 from pandas.io.json import json_normalize

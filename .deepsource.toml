@@ -1,0 +1,16 @@
+version = 1
+
+test_patterns = [
+  "tests/**",
+]
+
+exclude_patterns = [
+    "mindsdb/scraps.py",
+]
+
+[[analyzers]]
+name = "python"
+enabled = true
+
+  [analyzers.meta]
+  runtime_version = "3.x.x"

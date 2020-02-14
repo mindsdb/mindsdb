@@ -199,7 +199,7 @@ class LightwoodBackend():
         self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data')
         self.predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])
 
-    def predict(self, mode='predict', ignore_columns=[]):
+    def predict(self, mode='predict', ignore_columns=None):
         if ignore_columns is None:
             ignore_columns = []
         if self.transaction.lmd['use_gpu'] is not None:

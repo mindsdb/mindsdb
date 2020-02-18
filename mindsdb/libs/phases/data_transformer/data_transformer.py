@@ -9,6 +9,7 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import clean_float
 from mindsdb.libs.helpers.debugging import *
 
+
 class DataTransformer(BaseModule):
 
     @staticmethod

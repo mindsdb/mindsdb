@@ -1,4 +1,4 @@
-psutil<=5.6.7 
+psutil>=5.7.0
 lightwood >= 0.16.0
 scikit-image ==  0.14.2
 cython >= 0.29.2

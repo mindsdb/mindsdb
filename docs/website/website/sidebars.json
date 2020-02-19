@@ -1,29 +1,40 @@
 {
-	"docs": {
-		"Getting started": [
-      "installing-mindsdb",
-			"google-colab",
-      "jupyter-notebook"
-    ],
-    "Tutorials": [
-      "basic-mindsdb",
-      "advanced-mindsdb"
-    ],
-		"Configuration": [
-			"predictor-interface",
-      "config"
+    "docs": {
+        "Getting started": [
+            "installing-mindsdb",
+            "google-colab",
+            "jupyter-notebook"
+        ],
+        "Tutorials": [
+            "basic-mindsdb",
+            "advanced-mindsdb"
+        ],
+        "Configuration": [
+            "predictor-interface",
+            "config"
+        ],
+        "Features": [
+            "column-metrics",
+            "data-sources"
+        ],
+        "Comparisons": [
+            "comparison-mindsdb",
+            "accuracy-comparison"
+        ],        
+        "Integrations": [
+            "aws-sageMaker",{
+				"type": "subcategory",
+        		"label": "Bring your own container",
+				"ids": [
+				"mindsdb-container",
+				"use-mindsdb-in-sage",
+				"call-sage-endpoint"
+				]
+			}
 		],
-		"Features": [
-			"column-metrics",
-      "data-sources"
-    ],
-		"Comparisons": [
-			"comparison-mindsdb",
-			"accuracy-comparison"
-		],
-    "Contributing": [
-      "faq",
-			"inside-mindsdb"
-		]
-	}
+		"Contributing": [
+            "faq",
+            "inside-mindsdb"
+        ]
+    }
 }

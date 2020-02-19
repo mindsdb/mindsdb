@@ -400,7 +400,7 @@ class StatsGenerator(BaseModule):
         for col_name in stats:
             col_stats = stats[col_name]
             # Overall quality
-            if col_stats['quality_score'] < 6:
+            if 'quality_score' in col_stats and col_stats['quality_score'] < 6:
                 # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.
                 self.log.warning('Column "{}" is considered of low quality, the scores that influenced this decision will be listed below')
                 if 'duplicates_score' in col_stats and col_stats['duplicates_score'] < 6:
@@ -414,21 +414,21 @@ class StatsGenerator(BaseModule):
                 col_stats['duplicates_score_warning'] = None
 
             #Compound scores
-            if col_stats['consistency_score'] < 3:
+            if 'consistency_score' in col_stats and  col_stats['consistency_score'] < 3:
                 w = f'The values in column {col_name} rate poorly in terms of consistency. This means that the data has too many empty values, values with a hard to determine type and duplicate values. Please see the detailed logs below for more info'
                 self.log.warning(w)
                 col_stats['consistency_score_warning'] = w
             else:
                 col_stats['consistency_score_warning'] = None
 
-            if col_stats['redundancy_score'] < 5:
+            if 'redundancy_score' in col_stats and  col_stats['redundancy_score'] < 5:
                 w = f'The data in the column {col_name} is likely somewhat redundant, any insight it can give us can already by deduced from your other columns. Please see the detailed logs below for more info'
                 self.log.warning(w)
                 col_stats['redundancy_score_warning'] = w
             else:
                 col_stats['redundancy_score_warning'] = None
 
-            if col_stats['variability_score'] < 6:
+            if 'variability_score' in col_stats and  col_stats['variability_score'] < 6:
                 w = f'The data in the column {col_name} seems to contain too much noise/randomness based on the value variability. That is to say, the data is too unevenly distributed and has too many outliers. Please see the detailed logs below for more info.'
                 self.log.warning(w)
                 col_stats['variability_score_warning'] = w
@@ -471,7 +471,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['lof_based_outlier_score_warning'] = None
 
-            if col_stats['value_distribution_score'] < 3:
+            if 'value_distribution_score' in col_stats and col_stats['value_distribution_score'] < 3:
                 max_probability_key = col_stats['max_probability_key']
                 w = f"""Column {col_name} is very biased towards the value {max_probability_key}, please make sure that the data in this column is correct !"""
                 self.log.warning(w)
@@ -479,7 +479,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['value_distribution_score_warning'] = None
 
-            if col_stats['similarity_score'] < 6:
+            if 'similarity_score' in col_stats and col_stats['similarity_score'] < 6:
                 similar_percentage = col_stats['max_similarity'] * 100
                 similar_col_name = col_stats['most_similar_column_name']
                 w = f'Column {col_name} and {similar_col_name} are {similar_percentage}% the same, please make sure these represent two distinct features of your data !'
@@ -548,7 +548,6 @@ class StatsGenerator(BaseModule):
             full_col_data = all_sampled_data[col_name]
 
             data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
-
 
             if column_status == 'Column empty':
                 if modify_light_metadata:
@@ -637,6 +636,14 @@ class StatsGenerator(BaseModule):
                     'histogram': histogram
                 }
 
+            elif curr_data_subtype == DATA_SUBTYPES.ARRAY:
+                col_stats = {
+                    'data_type': data_type,
+                    'data_subtype': curr_data_subtype,
+                    'percentage_buckets': None,
+                    'histogram': None
+                }
+
             # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word
@@ -698,18 +705,23 @@ class StatsGenerator(BaseModule):
 
             for score_func in [compute_duplicates_score, compute_empty_cells_score, compute_data_type_dist_score, compute_z_score, compute_lof_score, compute_similariy_score, compute_value_distribution_score]:
                 start_time = time.time()
-                if 'compute_z_score' in str(score_func) or 'compute_lof_score' in str(score_func):
-                    stats[col_name].update(score_func(stats, col_data_dict, col_name))
-                else:
-                    stats[col_name].update(score_func(stats, all_sampled_data, col_name))
+
+                try:
+                    if 'compute_z_score' in str(score_func) or 'compute_lof_score' in str(score_func):
+                        stats[col_name].update(score_func(stats, col_data_dict, col_name))
+                    else:
+                        stats[col_name].update(score_func(stats, all_sampled_data, col_name))
+                except Exception as e:
+                    self.log.warning(e)
 
                 fun_name = str(score_func)
                 run_duration = round(time.time() - start_time, 2)
 
-            stats[col_name].update(compute_consistency_score(stats, col_name))
-            stats[col_name].update(compute_redundancy_score(stats, col_name))
-            stats[col_name].update(compute_variability_score(stats, col_name))
-            stats[col_name].update(compute_data_quality_score(stats, col_name))
+            for score_func in [compute_consistency_score, compute_redundancy_score, compute_variability_score, compute_data_quality_score]:
+                try:
+                    stats[col_name].update(score_func(stats, col_name))
+                except Exception as e:
+                    self.log.warning(e)
 
             stats[col_name]['is_foreign_key'] = self.is_foreign_key(col_name, stats[col_name], col_data_dict[col_name])
             if stats[col_name]['is_foreign_key'] and self.transaction.lmd['handle_foreign_keys']:

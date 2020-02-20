@@ -1,8 +1,10 @@
 ---
 id: accuracy-comparison
-title: Comparing Mindsdb accuracy with state-of-the-art models
+title: Comparing Mindsdb accuracy 
+hide_title: true
 ---
 
+# Comparing Mindsdb accuracy with state-of-the-art models
 We have a few example datasets where we try to compare the accuracy obtained by Mindsdb with that of the best models we could find.
 
 It should be noted, Mindsdb accuracy doesn't always beat or match stat-of-the-art models, but the main goal of Mindsdb is to learn quickly, be very easy to use and be adaptable on any dataset.

@@ -147,21 +147,21 @@ class StatsGenerator(BaseModule):
             current_type_guess = 'Unknown'
 
             # Check if Nr
-            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
+            if current_subtype_guess == 'Unknown' or current_type_guess == 'Unknown':
                 subtype = self._is_number(element)
                 if subtype is not False:
                     current_type_guess = DATA_TYPES.NUMERIC
                     current_subtype_guess = subtype
 
             # Check if date
-            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
+            if current_subtype_guess == 'Unknown' or current_type_guess == 'Unknown':
                 subtype = self._get_date_type(element)
                 if subtype is not False:
                     current_type_guess = DATA_TYPES.DATE
                     current_subtype_guess = subtype
 
             # Check if sequence
-            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
+            if current_subtype_guess == 'Unknown' or current_type_guess == 'Unknown':
                 for char in [',','\t','|',' ']:
                     try:
                         all_nr = True
@@ -179,7 +179,7 @@ class StatsGenerator(BaseModule):
                         break
 
             # Check if file
-            if current_subtype_guess is 'Unknown' or current_type_guess is 'Unknown':
+            if current_subtype_guess == 'Unknown' or current_type_guess == 'Unknown':
                 subtype = self._get_file_type(element)
                 if subtype is not False:
                     current_type_guess = DATA_TYPES.FILE_PATH

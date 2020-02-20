@@ -52,7 +52,7 @@ def getColPermutations(possible_columns, max_num_of_perms = 100):
                 break
 
      ret = [perm.split(':') for perm in list(permutations.keys())]
-    return ret
+     return ret
 
 
 

@@ -3,6 +3,9 @@ This file contains bits of codes that we might want to keep for later use,
 , but that are are currently not used anywhere in the codebase.
 '''
 
+# flake8: noqa
+
+
 # Previously in: mindsdb/libs/helpers/train_helpers.py
 def getAllButOnePermutations(possible_columns):
 

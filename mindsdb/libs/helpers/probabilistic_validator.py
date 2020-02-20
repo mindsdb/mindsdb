@@ -87,7 +87,7 @@ class ProbabilisticValidator():
 
 
             # If no column is ignored, compute the accuracy for this bucket
-            nr_missing_features = len([x for x in features_existence if x is False or x is 0])
+            nr_missing_features = len([x for x in features_existence if x in (False, 0)])
             if nr_missing_features == 0:
                 if real_value_b not in self.bucket_accuracy:
                     self.bucket_accuracy[real_value_b] = []

@@ -4,6 +4,7 @@ import math
 import sys
 
 import pandas as pd
+
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import clean_float

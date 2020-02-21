@@ -414,7 +414,7 @@ class LudwigBackend():
                 if k not in self.transaction.lmd['model_accuracy']['train']:
                     self.transaction.lmd['model_accuracy']['train'][k] = []
                     self.transaction.lmd['model_accuracy']['test'][k] = []
-                elif k is not 'combined':
+                elif k != 'combined':
                     # We should be adding the accuracy here but we only have it for combined, so, for now use that, will only affect multi-output scenarios anyway
                     pass
                 else:

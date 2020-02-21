@@ -1,4 +1,4 @@
-
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 test = """
 

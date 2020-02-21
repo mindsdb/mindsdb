@@ -128,8 +128,7 @@ class Transaction:
             if clean_exit:
                 sys.exit(1)
             else:
-                raise ValueError(error)
-                return None
+                raise Exception(error)
         finally:
             self.lmd['is_active'] = False
 
@@ -156,7 +155,7 @@ class Transaction:
             self.lmd['current_phase'] = MODEL_STATUS_PREPARING
             self.save_metadata()
 
-            self._call_phase_module(clean_exit=True, module_name='DataExtractor')
+            self._call_phase_module(clean_exit=False, module_name='DataExtractor')
             self.save_metadata()
 
             self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
@@ -164,19 +163,19 @@ class Transaction:
                 self.load_metadata()
             else:
                 self.save_metadata()
-                self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+                self._call_phase_module(clean_exit=False, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
                 self.save_metadata()
 
-            self._call_phase_module(clean_exit=True, module_name='DataSplitter')
+            self._call_phase_module(clean_exit=False, module_name='DataSplitter')
 
-            self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
+            self._call_phase_module(clean_exit=False, module_name='DataTransformer', input_data=self.input_data)
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
-            self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='train')
+            self._call_phase_module(clean_exit=False, module_name='ModelInterface', mode='train')
 
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
             self.save_metadata()
-            self._call_phase_module(clean_exit=True, module_name='ModelAnalyzer')
+            self._call_phase_module(clean_exit=False, module_name='ModelAnalyzer')
 
             self.lmd['current_phase'] = MODEL_STATUS_TRAINED
             self.save_metadata()

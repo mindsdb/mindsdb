@@ -14,7 +14,6 @@ import pandas as pd
 from imageio import imread
 
 
-# @TODO: Define generci interface, similar to 'base_module' in the phases
 class LudwigBackend():
 
     def __init__(self, transaction):

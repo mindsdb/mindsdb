@@ -210,7 +210,6 @@ def get_tensorflow_colname(col):
     return col
 
 @contextmanager
-# @TODO: Make it work with mindsdb logger/log levels... maybe
 def disable_console_output(activate=True):
     try:
         try:

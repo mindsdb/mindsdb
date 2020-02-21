@@ -225,11 +225,6 @@ class StatsGenerator(BaseModule):
             type_dist[curr_data_type] = type_dist.pop('Unknown')
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
-
-        # @TODO: Extremely slow for large datasets, make it faster
-        import time
-        a = round(time.time(),3)
-        print(f"Started at: {a}")
         if curr_data_type != DATA_TYPES.CATEGORICAL and curr_data_subtype != DATA_SUBTYPES.DATE:
             all_values = data_frame[col_name]
             all_distinct_vals = set(all_values)
@@ -251,9 +246,6 @@ class StatsGenerator(BaseModule):
 
                 type_dist[curr_data_type] = len(data)
                 subtype_dist[curr_data_subtype] = len(data)
-        b = round(time.time() - a,3)
-        print(f"Ended at: {b}")
-        exit()
 
         if col_name in self.transaction.lmd['force_categorical_encoding']:
             curr_data_type = DATA_TYPES.CATEGORICAL

@@ -78,6 +78,10 @@ class DataExtractor(BaseModule):
                 df = self.transaction.hmd['when_data']
                 df = df.where((pd.notnull(df)), None)
 
+                for col in self.transaction.lmd['columns']:
+                    if col not in df.columns:
+                        df[col] = [None] * len(df)
+
             elif self.transaction.hmd['model_when_conditions'] is not None:
 
                 # if no data frame yet, make one

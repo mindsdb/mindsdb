@@ -52,7 +52,7 @@ class Transaction:
 
         self.run()
 
-    # @TODO Make it more generic, move to general helpers, use inside predictor instead of linline loading
+
     def load_metadata(self):
         try:
             import resource
@@ -76,7 +76,7 @@ class Transaction:
         except:
             self.log.error(f'Could not load mindsdb heavy metadata in the file: {fn}')
 
-    # @TODO Make it more generic, move to general helpers
+
     def save_metadata(self):
         fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle')
         self.lmd['updated_at'] = str(datetime.datetime.now())

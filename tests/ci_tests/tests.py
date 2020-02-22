@@ -35,7 +35,6 @@ def test_force_vectors(amd, to_predict):
 
 def test_adapted_model_data(amd, to_predict):
     amd = amd
-    # @TODO: Sometimes are None, not sure why: [, validation_set_accuracy, accuracy]
     for k in ['status', 'name', 'version', 'data_source', 'current_phase', 'updated_at', 'created_at',
               'train_end_at']:
         assert (type(amd[k]) == str)

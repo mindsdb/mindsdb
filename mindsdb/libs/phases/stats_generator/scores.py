@@ -199,11 +199,7 @@ def compute_similariy_score(stats, columns, col_name):
         if other_col_name == col_name:
             continue
         else:
-            # @TODO Figure out why computing matthews_corrcoef is so slow, possibly find a better implementation and replace it with that
-            #try:
-            #    similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
-            #    similarities.append((other_col_name,similarity))
-            #except:
+            # @TODO Figure out why computing matthews_corrcoef is so slow, possibly find a better implementation and replace it with that. Matthews corrcoef code was: similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
             similarity = 0
             X1 = list(map(str,col_data))
             X2 = list(map(str,columns[other_col_name]))

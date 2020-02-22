@@ -142,7 +142,7 @@ class StatsGenerator(BaseModule):
 
         for element in data:
             # Maybe use list of functions in the future
-            element = element
+            element = str(element)
             current_subtype_guess = 'Unknown'
             current_type_guess = 'Unknown'
 
@@ -185,8 +185,6 @@ class StatsGenerator(BaseModule):
                     current_type_guess = DATA_TYPES.FILE_PATH
                     current_subtype_guess = subtype
 
-            # If nothing works, assume it's categorical or sequential and determine type later (based on all the data in the column)
-
             if current_type_guess not in type_dist:
                 type_dist[current_type_guess] = 1
             else:
@@ -205,7 +203,7 @@ class StatsGenerator(BaseModule):
         # assume that the type is the one with the most prevalent type_dist
         for data_type in type_dist:
             # If any of the members are Unknown, use that data type (later to be turned into CATEGORICAL or SEQUENTIAL), since otherwise the model will crash when casting
-            # @TODO consider removing rows where data type is unknown in the future, might just be corrupt data... a bit hard to imply currently
+            # @TODO consider removing or flagging rows where data type is unknown in the future, might just be corrupt data... a bit hard to imply currently
             if data_type == 'Unknown':
                 curr_data_type = 'Unknown'
                 break
@@ -227,8 +225,6 @@ class StatsGenerator(BaseModule):
             type_dist[curr_data_type] = type_dist.pop('Unknown')
             subtype_dist[curr_data_subtype] = subtype_dist.pop('Unknown')
 
-
-        # @TODO: Extremely slow for large datasets, make it faster
         if curr_data_type != DATA_TYPES.CATEGORICAL and curr_data_subtype != DATA_SUBTYPES.DATE:
             all_values = data_frame[col_name]
             all_distinct_vals = set(all_values)

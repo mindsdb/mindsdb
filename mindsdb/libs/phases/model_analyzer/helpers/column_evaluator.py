@@ -29,7 +29,6 @@ class ColumnEvaluator():
 
         # Histogram for when all columns are present, in order to plot the force vectors
         for output_column in output_columns:
-            # @TODO: Running stats generator just to get the histogram is very inefficient, change this
             validation_set_output_column_histogram, _ = StatsGenerator.get_histogram(normal_predictions[output_column], data_type=stats[output_column]['data_type'],data_subtype=stats[output_column]['data_subtype'])
 
             if validation_set_output_column_histogram is not None:

@@ -22,7 +22,6 @@ def generate_timeseries(length, bounds=(0,1852255420), _type='timestamp',period=
 
 def rand_str(length=random.randrange(4,120)):
     # Create a list of unicode characters within the range 0000-D7FF
-    # @TODO Copy pasted the 0xD7FF value, not 100% sure it returns all uncideo chars, maybe check that
     random_unicodes = [chr(random.randrange(0xD7FF)) for _ in range(0, length)]
     return u"".join(random_unicodes)
 
@@ -79,7 +78,7 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
 
         for n in range(length):
             val = gen_fun()
-            # @TODO Maybe escpae the separator rather than replace
+            # @TODO: Maybe escpae the separator rather than replace them
             if type(val) == str:
                 val = val.replace(separator,'_').replace('\n','_').replace('\r','_')
             columns[-1].append(val)

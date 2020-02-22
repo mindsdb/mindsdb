@@ -49,11 +49,7 @@ class DataTransformer(BaseModule):
                 dt = datetime.datetime.utcfromtimestamp(date_str)
             except:
                 return None
-        # Uncomment if we want to work internally date type
-        #return dt
 
-        # Uncomment if we want to work internally with string type
-        # @TODO Decide if we ever need/want the milliseconds
         return dt.strftime('%Y-%m-%d %H:%M:%S')
 
     @staticmethod
@@ -62,7 +58,6 @@ class DataTransformer(BaseModule):
         try:
             return dt.timestamp()
         except:
-            # @TODO Return `None` after appropriate changes in lightwood
             return None
 
     @staticmethod

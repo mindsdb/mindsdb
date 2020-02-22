@@ -31,6 +31,7 @@ class LightwoodBackend():
 
         for _, row in original_df.iterrows():
             gb_lookup_key = self._get_group_by_key(group_by, row)
+            print(f'\n\n{gb_lookup_key}\n\n')
             if gb_lookup_key not in group_by_ts_map:
                 group_by_ts_map[gb_lookup_key] = []
 

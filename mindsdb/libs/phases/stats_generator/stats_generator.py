@@ -142,7 +142,7 @@ class StatsGenerator(BaseModule):
 
         for element in data:
             # Maybe use list of functions in the future
-            element = element
+            element = str(element)
             current_subtype_guess = 'Unknown'
             current_type_guess = 'Unknown'
 

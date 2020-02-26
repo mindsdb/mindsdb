@@ -1,7 +1,4 @@
-import os
 import sys
-import logging
-from dateutil.parser import parse as parse_datetime
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.config import *
@@ -31,7 +28,6 @@ class LightwoodBackend():
 
         for _, row in original_df.iterrows():
             gb_lookup_key = self._get_group_by_key(group_by, row)
-            print(f'\n\n{gb_lookup_key}\n\n')
             if gb_lookup_key not in group_by_ts_map:
                 group_by_ts_map[gb_lookup_key] = []
 
@@ -44,7 +40,8 @@ class LightwoodBackend():
                     try:
                         row[col] = float(row[col].timestamp())
                     except:
-                        self.transaction.log.error(f'Backend Lightwood does not support ordering by the column: {col} !, Faulty value: {row[col]}')
+                        self.transaction.log.error(
+                            f'Backend Lightwood does not support ordering by the column: {col} !, Faulty value: {row[col]}')
                         sys.exit()
 
             group_by_ts_map[gb_lookup_key].append(row)
@@ -54,9 +51,8 @@ class LightwoodBackend():
             group_by_ts_map[k] = group_by_ts_map[k].sort_values(by=order_by)
 
             for order_col in order_by:
-                for i in range(0,len(group_by_ts_map[k])):
+                for i in range(0, len(group_by_ts_map[k])):
                     group_by_ts_map[k][order_col] = group_by_ts_map[k][order_col].astype(object)
-
 
                     numerical_value = float(group_by_ts_map[k][order_col].iloc[i])
                     arr_val = [str(numerical_value)]
@@ -68,7 +64,8 @@ class LightwoodBackend():
                     previous_indexes.reverse()
 
                     for prev_i in previous_indexes:
-                        group_by_ts_map[k].iloc[i][order_col].append(group_by_ts_map[k][order_col].iloc[prev_i].split(' ')[-1])
+                        group_by_ts_map[k].iloc[i][order_col].append(
+                            group_by_ts_map[k][order_col].iloc[prev_i].split(' ')[-1])
 
                     while len(group_by_ts_map[k].iloc[i][order_col]) <= nr_samples:
                         group_by_ts_map[k].iloc[i][order_col].append('0')
@@ -82,7 +79,7 @@ class LightwoodBackend():
     def _create_lightwood_config(self):
         config = {}
 
-        #config['name'] = 'lightwood_predictor_' + self.transaction.lmd['name']
+        # config['name'] = 'lightwood_predictor_' + self.transaction.lmd['name']
 
         config['input_features'] = []
         config['output_features'] = []
@@ -121,7 +118,8 @@ class LightwoodBackend():
                 lightwood_data_type = 'time_series'
 
             else:
-                self.transaction.log.error(f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
+                self.transaction.log.error(
+                    f'The lightwood model backend is unable to handle data of type {data_type} and subtype {data_subtype} !')
                 raise Exception('Failed to build data definition for Lightwood model backend')
 
             if col_name in [x[0] for x in self.transaction.lmd['model_order_by']]:
@@ -148,15 +146,17 @@ class LightwoodBackend():
         return config
 
     def callback_on_iter(self, epoch, mix_error, test_error, delta_mean, accuracy):
-        test_error_rounded = round(test_error,4)
+        test_error_rounded = round(test_error, 4)
         for col in accuracy:
             value = accuracy[col]['value']
             if accuracy[col]['function'] == 'r2_score':
-                value_rounded = round(value,3)
-                self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an r2 score of {value_rounded} on the testing dataset')
+                value_rounded = round(value, 3)
+                self.transaction.log.debug(
+                    f'We\'ve reached training epoch nr {epoch} with an r2 score of {value_rounded} on the testing dataset')
             else:
-                value_pct = round(value * 100,2)
-                self.transaction.log.debug(f'We\'ve reached training epoch nr {epoch} with an accuracy of {value_pct}% on the testing dataset')
+                value_pct = round(value * 100, 2)
+                self.transaction.log.debug(
+                    f'We\'ve reached training epoch nr {epoch} with an accuracy of {value_pct}% on the testing dataset')
 
     def train(self):
         if self.transaction.lmd['use_gpu'] is not None:
@@ -176,12 +176,14 @@ class LightwoodBackend():
         lightwood_config = self._create_lightwood_config()
 
         if self.transaction.lmd['skip_model_training'] == True:
-            self.predictor = lightwood.Predictor(load_from_path=os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data'))
+            self.predictor = lightwood.Predictor(load_from_path=os.path.join(CONFIG.MINDSDB_STORAGE_PATH,
+                                                                             self.transaction.lmd[
+                                                                                 'name'] + '_lightwood_data'))
         else:
             self.predictor = lightwood.Predictor(lightwood_config)
 
             # Evaluate less often for larger datasets and vice-versa
-            eval_every_x_epochs = int(round(1 * pow(10,6) * (1/len(train_df))))
+            eval_every_x_epochs = int(round(1 * pow(10, 6) * (1 / len(train_df))))
 
             # Within some limits
             if eval_every_x_epochs > 20:
@@ -191,13 +193,18 @@ class LightwoodBackend():
 
             logging.getLogger().setLevel(logging.DEBUG)
             if self.transaction.lmd['stop_training_in_x_seconds'] is None:
-                self.predictor.learn(from_data=train_df, test_data=test_df, callback_on_iter=self.callback_on_iter, eval_every_x_epochs=eval_every_x_epochs)
+                self.predictor.learn(from_data=train_df, test_data=test_df, callback_on_iter=self.callback_on_iter,
+                                     eval_every_x_epochs=eval_every_x_epochs)
             else:
-                self.predictor.learn(from_data=train_df, test_data=test_df, stop_training_after_seconds=self.transaction.lmd['stop_training_in_x_seconds'], callback_on_iter=self.callback_on_iter, eval_every_x_epochs=eval_every_x_epochs)
+                self.predictor.learn(from_data=train_df, test_data=test_df,
+                                     stop_training_after_seconds=self.transaction.lmd['stop_training_in_x_seconds'],
+                                     callback_on_iter=self.callback_on_iter, eval_every_x_epochs=eval_every_x_epochs)
 
             self.transaction.log.info('Training accuracy of: {}'.format(self.predictor.train_accuracy))
 
-        self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.transaction.lmd['name'] + '_lightwood_data')
+        self.transaction.lmd['lightwood_data']['save_path'] = os.path.join(CONFIG.MINDSDB_STORAGE_PATH,
+                                                                           self.transaction.lmd[
+                                                                               'name'] + '_lightwood_data')
         self.predictor.save(path_to=self.transaction.lmd['lightwood_data']['save_path'])
 
     def predict(self, mode='predict', ignore_columns=None):
@@ -224,7 +231,7 @@ class LightwoodBackend():
             self.predictor = lightwood.Predictor(load_from_path=self.transaction.lmd['lightwood_data']['save_path'])
 
         # not the most efficient but least prone to bug and should be fast enough
-        if len(ignore_columns)  > 0:
+        if len(ignore_columns) > 0:
             run_df = df.copy(deep=True)
             for col_name in ignore_columns:
                 run_df[col_name] = [None] * len(run_df[col_name])

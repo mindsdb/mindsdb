@@ -3,7 +3,7 @@ id: jupyter-notebook
 title: Running on Jupyter Notebook
 ---
 
-## Create a notbook
+## Create a notebook
 
 Go here - https://jupyter.org/
 

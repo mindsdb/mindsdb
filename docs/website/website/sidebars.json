@@ -27,7 +27,8 @@
         		"label": "Bring your own container",
 				"ids": [
 				"mindsdb-container",
-				"use-mindsdb-in-sage",
+                "use-mindsdb-in-sage",
+                "use-sage-sdk",
 				"call-sage-endpoint"
 				]
 			}

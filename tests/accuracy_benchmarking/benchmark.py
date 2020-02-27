@@ -39,8 +39,10 @@ def run_benchmarks():
 
     batch_id = uuid.uuid4().hex
     batch_started = datetime.datetime.now()
-
-    shutil.rmtree('tmp_downloads')
+    try:
+        shutil.rmtree('tmp_downloads')
+    except:
+        pass
 
     TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review', 'german_credit_data'] #, 'wine_quality']
     #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'german_credit_data']

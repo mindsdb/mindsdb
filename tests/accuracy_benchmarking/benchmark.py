@@ -40,15 +40,15 @@ def run_benchmarks():
     batch_id = uuid.uuid4().hex
     batch_started = datetime.datetime.now()
 
-    try:
-        os.mkdir('tmp_downloads')
-    except:
-        pass
+    shutil.rmtree('tmp_downloads')
 
     TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review', 'german_credit_data'] #, 'wine_quality']
-    #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars']
+    #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'german_credit_data']
 
-    os.system('git clone https://github.com/mindsdb/mindsdb-examples tmp_downloads')
+    status = os.system('cp -r ~/mindsdb_examples tmp_downloads')
+
+    if str(status) != '0':
+        os.system('git clone https://github.com/mindsdb/mindsdb-examples tmp_downloads')
 
     test_data_arr = []
     for test_name in TESTS:

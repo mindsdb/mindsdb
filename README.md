@@ -14,7 +14,7 @@ MindsDB is an Explainable AutoML framework for developers, built on top of Pytor
 
 With MindsDB you can build, train and use state of the art ML models in as simple as one line of code.
 
-* [Installing MindsDB Native](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
+* [Installing MindsDB](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 * [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 * [MindsDB Explainability GUI](http://mindsdb.com/product)
 * [Frequently Asked Questions](https://mindsdb.github.io/mindsdb/docs/faq)
@@ -118,3 +118,7 @@ Once you have specific changes you want to merge into master, feel free to make 
 ## Report Issues
 
 Please help us by [reporting any issues](https://github.com/mindsdb/mindsdb/issues/new/choose) you may have while using MindsDB.
+
+## License
+
+* [MindsDB License](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)

@@ -10,7 +10,7 @@
 
 MindsDB is an Explainable AutoML framework for developers, built on top of Pytorch.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
-![what](https://docs.google.com/drawings/d/e/2PACX-1vTCxeP5PNfKBH-DOsRBNFCEiklpGzCGO_Htt7Q2D9GGbAQQwwI-5hvlRnEYE187Fy8k88pkXihquTuX/pub?w=700)
+![what](https://docs.google.com/drawings/d/e/2PACX-1vTCxeP5PNfKBH-DOsRBNFCEiklpGzCGO_Htt7Q2D9GGbAQQwwI-5hvlRnEYE187Fy8k88pkXihquTuX/pub?w=672&h=434)
 
 With MindsDB you can build, train and use state of the art ML models in as simple as one line of code.
 

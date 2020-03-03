@@ -8,10 +8,7 @@
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/mindsdb)
 ![Website](https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F)
 
-MindsDB is an Explainable AutoML framework for developers.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
-
-
-# MindsDB Native
+MindsDB is an Explainable AutoML framework for developers, built on top of Pytorch.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
 With MindsDB you can build, train and use state of the art ML models in as simple as one line of code.
 

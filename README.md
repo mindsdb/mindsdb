@@ -8,14 +8,13 @@
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/mindsdb)
 ![Website](https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F)
 
-MindsDB is an Explainable AutoML framework for developers.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
+MindsDB is an Explainable AutoML framework for developers, built on top of Pytorch.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
-
-# MindsDB Native
+![what](https://docs.google.com/drawings/d/e/2PACX-1vTCxeP5PNfKBH-DOsRBNFCEiklpGzCGO_Htt7Q2D9GGbAQQwwI-5hvlRnEYE187Fy8k88pkXihquTuX/pub?w=672&h=434)
 
 With MindsDB you can build, train and use state of the art ML models in as simple as one line of code.
 
-* [Installing MindsDB Native](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
+* [Installing MindsDB](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 * [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
 * [MindsDB Explainability GUI](http://mindsdb.com/product)
 * [Frequently Asked Questions](https://mindsdb.github.io/mindsdb/docs/faq)
@@ -119,3 +118,7 @@ Once you have specific changes you want to merge into master, feel free to make 
 ## Report Issues
 
 Please help us by [reporting any issues](https://github.com/mindsdb/mindsdb/issues/new/choose) you may have while using MindsDB.
+
+## License
+
+* [MindsDB License](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)

@@ -319,7 +319,7 @@ def compute_redundancy_score(stats, col_name):
     redundancy_score = (col_stats['similarity_score'])/1
     return {'redundancy_score': redundancy_score
         ,'redundancy_score_description':"""
-        A high value in this score indicates the data in this column is highly redundant for making any sort of prediction, you should make sure that values heavily related to this column are no already expressed in another column (e.g. if this column is a timestamp, make sure you don't have another column representing the exact same time in ISO datetime format).
+        A high value in this score indicates the data in this column is highly redundant for making any sort of prediction, you should make sure that values heavily related to this column are not already expressed in another column (e.g. if this column is a timestamp, make sure you don't have another column representing the exact same time in ISO datetime format).
         The value is based in equal part on the Similarity Score and the Correlation Score.
         """}
 

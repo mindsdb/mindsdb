@@ -178,8 +178,10 @@ class ProbabilisticValidator():
             except:
                 value_labels.append('UNKNOWN')
 
+        matrix = [[int(y) if str(y) != 'nan' else 0 for y in x] for x in matrix]
+
         confusion_matrix_obj = {
-            'matrix': [[int(y) for y in x] for x in matrix],
+            'matrix': matrix,
             'predicted': value_labels,
             'real': value_labels
         }

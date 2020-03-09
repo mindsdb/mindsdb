@@ -455,10 +455,10 @@ class Predictor:
             return False
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'), 'rb') as fp:
-            lmd =pickle.load(fp)
+            lmd = pickle.load(fp)
 
         with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_heavy_model_metadata.pickle'), 'rb') as fp:
-            hmd =pickle.load(fp)
+            hmd = pickle.load(fp)
 
         lmd['name'] = new_model_name
         hmd['name'] = new_model_name
@@ -486,9 +486,6 @@ class Predictor:
             pickle.dump(hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
 
 
-
-
-
         os.remove(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'))
         os.remove(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_heavy_model_metadata.pickle'))
         return True
@@ -501,6 +498,20 @@ class Predictor:
         :param model_name: this is the name of the model you wish to export (defaults to the name of the current Predictor)
         :return: bool (True/False) True if mind was exported successfully
         """
+
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'), 'rb') as fp:
+            lmd = pickle.load(fp)
+
+            try:
+                os.remove(lmd['lightwood_data']['save_path'])
+            except:
+                pass
+
+            try:
+                shutil.rmtree(lmd['ludwig_data']['ludwig_save_path'])
+            except:
+                pass
+
         if model_name is None:
             model_name = self.name
         try:

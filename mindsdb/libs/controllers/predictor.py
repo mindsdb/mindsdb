@@ -408,7 +408,7 @@ class Predictor:
                 model_names.append(model_name)
 
 
-        for moel_name in model_names:
+        for model_name in model_names:
             with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name + '_light_model_metadata.pickle'), 'rb') as fp:
                 lmd = pickle.load(fp)
 

@@ -1,6 +1,8 @@
-
-![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/assets/logo_gh.png "MindsDB")
-#
+<h1 align="center">
+	<img width="600" src="https://github.com/mindsdb/mindsdb/blob/master/assets/mindsdb_logo.png?raw=true" alt="MindsDB">
+	<br>
+	<br>
+</h1>
 
 [![Build Status](https://img.shields.io/travis/mindsdb/mindsdb?branch=master&logo=travis)](https://travis-ci.org/mindsdb/mindsdb)
 ![](https://img.shields.io/badge/python-3.6%20|%203.7-brightgreen.svg)

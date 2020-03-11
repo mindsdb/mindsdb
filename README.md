@@ -37,14 +37,13 @@ With MindsDB you can build, train and use state of the art ML models in as simpl
 ### Installation
 
 
-
 * **Desktop**: You can use MindsDB on your own computer in under a minute, if you already have a python environment setup, just run the following command:
 
 ```bash
  pip install mindsdb --user
 ```
 
-*Note: depending on your environment, you might have to use `pip3` instead of `pip` in the above command.*
+>Note: Python 64 bit version is required. Depending on your environment, you might have to use `pip3` instead of `pip` in the above command.*
 
   If for some reason this fail, don't worry, simply follow the [complete installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb) which will lead you through a more thorough procedure which should fix most issues.
 

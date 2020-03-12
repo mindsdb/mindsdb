@@ -22,14 +22,13 @@ class TransactionOutputRow:
         for pred_col in self.evaluations:
             answers[pred_col] = {}
 
-            prediction_row = {col: self.data[col][self.row_index] for col in list(self.data.keys())}
+            prediction_row = {col: self.data[col][self.row_index] for col in list(set(self.data.keys()) - set('confidence_range'))}
+
+            answers[pred_col]['predicted_value'] = prediction_row[pred_col][pred_col]
 
             evaluation = self.evaluations[pred_col][self.row_index]
             clusters = evaluation.explain(self.transaction_output.transaction.lmd['column_stats'][pred_col])
-
             cluster = clusters[0]
-
-            answers[pred_col]['predicted_value'] = cluster['value']
 
             if f'{pred_col}_model_confidence' in prediction_row:
                 answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 2 + cluster['confidence'] * 1)/3, 4) * 100
@@ -49,27 +48,10 @@ class TransactionOutputRow:
             }
 
             if self.col_stats[pred_col]['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
-                value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
-
-                range_pretty_start = value_range[0]
-                if range_pretty_start > 1000:
-                    range_pretty_start = round(range_pretty_start)
-                if range_pretty_start > 100:
-                    range_pretty_start = round(range_pretty_start,2)
-                if range_pretty_start > 10:
-                    range_pretty_start = round(range_pretty_start,1)
-                elif range_pretty_start > pow(10,-3):
-                    range_pretty_start = round(range_pretty_start,6)
-
-                range_end_start = value_range[-1]
-                if range_end_start > 1000:
-                    range_end_start = round(range_end_start)
-                if range_end_start > 100:
-                    range_end_start = round(range_end_start,2)
-                if range_end_start > 10:
-                    range_end_start = round(range_end_start,1)
-                elif range_end_start > pow(10,-3):
-                    range_end_start = round(range_end_start,6)
+                if 'confidence_range' in self.data[pred_col]:
+                    value_range = [(1 - self.data[pred_col]['confidence_range']) * answers[pred_col]['predicted_value'], (1 + self.data[pred_col]['confidence_range']) * answers[pred_col]['predicted_value']]
+                else:
+                    value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
 
                 answers[pred_col]['explanation']['confidence_interval'] = [range_pretty_start, range_end_start]
 
@@ -81,6 +63,9 @@ class TransactionOutputRow:
 
             if self.transaction_output.extra_insights is not None:
                 answers[pred_col]['explanation']['extra_insights'] = self.transaction_output.extra_insights[pred_col]
+
+        for col in answers:
+            print(answers[col]['confidence'])
         return answers
 
     def explain(self):

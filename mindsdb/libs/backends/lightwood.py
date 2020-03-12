@@ -250,6 +250,7 @@ class LightwoodBackend():
                     confidences[-1] = sum(confidences[-1])/len(confidences[-1])
                 formated_predictions[f'{k}_confidences'] = confidences
 
-        print(formated_predictions[f'{k}_confidences'])
-        
+            if 'confidence_range' in predictions[k]:
+                formated_predictions[f'{k}_confidence_range'] = predictions[k]['confidence_range']
+
         return formated_predictions

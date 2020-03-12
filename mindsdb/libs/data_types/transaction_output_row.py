@@ -30,10 +30,9 @@ class TransactionOutputRow:
             cluster = clusters[0]
 
             answers[pred_col]['predicted_value'] = cluster['value']
-            answers[pred_col]['confidence'] = round(cluster['confidence'] * 100)
 
             if f'{pred_col}_model_confidence' in prediction_row:
-                answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 100 + answers[pred_col]['confidence'])/2)
+                answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 2 + cluster['confidence'] * 1)/3, 4) * 100
 
             quality = 'very confident'
             if answers[pred_col]['confidence'] < 80:

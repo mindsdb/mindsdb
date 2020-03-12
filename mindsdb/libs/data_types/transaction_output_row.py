@@ -24,7 +24,7 @@ class TransactionOutputRow:
 
             prediction_row = {col: self.data[col][self.row_index] for col in list(set(self.data.keys()) - set('confidence_range'))}
 
-            answers[pred_col]['predicted_value'] = prediction_row[pred_col][pred_col]
+            answers[pred_col]['predicted_value'] = prediction_row[pred_col]
 
             evaluation = self.evaluations[pred_col][self.row_index]
             clusters = evaluation.explain(self.transaction_output.transaction.lmd['column_stats'][pred_col])
@@ -64,8 +64,6 @@ class TransactionOutputRow:
             if self.transaction_output.extra_insights is not None:
                 answers[pred_col]['explanation']['extra_insights'] = self.transaction_output.extra_insights[pred_col]
 
-        for col in answers:
-            print(answers[col]['confidence'])
         return answers
 
     def explain(self):

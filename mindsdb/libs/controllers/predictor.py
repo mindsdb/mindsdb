@@ -499,7 +499,7 @@ class Predictor:
         :return: bool (True/False) True if mind was exported successfully
         """
 
-        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + '_light_model_metadata.pickle'), 'rb') as fp:
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, model_name + '_light_model_metadata.pickle'), 'rb') as fp:
             lmd = pickle.load(fp)
 
             try:

@@ -22,7 +22,7 @@ class TransactionOutputRow:
         for pred_col in self.evaluations:
             answers[pred_col] = {}
 
-            prediction_row = {col: self.data[col][self.row_index] for col in list(set(self.data.keys()) - set('confidence_range'))}
+            prediction_row = {col: self.data[col][self.row_index] for col in self.data.keys()}
 
             answers[pred_col]['predicted_value'] = prediction_row[pred_col]
 
@@ -50,8 +50,8 @@ class TransactionOutputRow:
             }
 
             if self.col_stats[pred_col]['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
-                if 'confidence_range' in self.data[pred_col]:
-                    value_range = [(1 - self.data[pred_col]['confidence_range']) * answers[pred_col]['predicted_value'], (1 + self.data[pred_col]['confidence_range']) * answers[pred_col]['predicted_value']]
+                if f'{pred_col}_confidence_range' in prediction_row:
+                    value_range = [(1 - prediction_row['{pred_col}_confidence_range']) * answers[pred_col]['predicted_value'], (1 + prediction_row['{pred_col}_confidence_range']) * answers[pred_col]['predicted_value']]
                 else:
                     value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
 

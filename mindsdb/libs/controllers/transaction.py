@@ -258,8 +258,9 @@ class Transaction:
 
             for predicted_col in self.lmd['predict_columns']:
                 output_data[predicted_col] = list(self.hmd['predictions'][predicted_col])
-                if f'{predicted_col}_confidences' in self.hmd['predictions']:
-                    output_data[f'{predicted_col}_model_confidence'] = self.hmd['predictions'][f'{predicted_col}_confidences']
+                for extra_column in [f'{predicted_col}_confidences', f'{predicted_col}_confidences_range']:
+                    if extra_column in self.hmd['predictions']:
+                        output_data[extra_column] = self.hmd['predictions'][extra_column]
 
                 probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
                 confidence_column_name = f'{predicted_col}_confidence'

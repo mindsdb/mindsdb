@@ -1,12 +1,23 @@
+<h1 align="center">
+	<img width="600" src="https://github.com/mindsdb/mindsdb/blob/master/assets/mindsdb_logo.png?raw=true" alt="MindsDB">
+	<br>
+	<br>
+</h1>
 
-![MindsDB](https://raw.githubusercontent.com/mindsdb/mindsdb/master/assets/logo_gh.png "MindsDB")
-#
+<p align="center">
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.6%20|%203.7|%203.8-brightgreen.svg" alt="Python supported"></a>
+   <a href="https://pypi.org/project/MindsDB/"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>
+  <a href="https://pypi.org/project/MindsDB/"><img src="https://img.shields.io/pypi/dm/mindsdb" alt="PyPi Downloads"></a>
+  <a href="https://community.mindsdb.com/"><img src="https://img.shields.io/discourse/posts?server=https%3A%2F%2Fcommunity.mindsdb.com%2F" alt="MindsDB Community"></a>
+  <a href="https://www.mindsdb.com/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F" alt="MindsDB Website"></a>
+</p>
 
-[![Build Status](https://img.shields.io/travis/mindsdb/mindsdb?branch=master&logo=travis)](https://travis-ci.org/mindsdb/mindsdb)
-![](https://img.shields.io/badge/python-3.6%20|%203.7-brightgreen.svg)
-[![PyPI version](https://badge.fury.io/py/MindsDB.svg)](https://badge.fury.io/py/MindsDB)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/mindsdb)
-![Website](https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F)
+---
+
+<img alt="Linux build" src="https://www.screenconnect.com/Images/LogoLinux.png" align="center" height="30" width="30" /><br />Linux                    | <img alt="Windows build" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg/414px-Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg.png" align="center" height="30" width="30" /><br />Windows | <img alt="macOS build" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/245px-Apple_logo_black.svg.png" align="center" height="30" width="30" /><br />macOS |
+| :----------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| [![Linux build status](https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=linux)](https://travis-ci.com/mindsdb/mindsdb) | [![Windows build status](https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=windows)](https://travis-ci.com/mindsdb/mindsdb) | [![macOS build status](https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=osx)](https://travis-ci.com/mindsdb/mindsdb)   
+
 
 MindsDB is an Explainable AutoML framework for developers, built on top of Pytorch.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
@@ -26,14 +37,13 @@ With MindsDB you can build, train and use state of the art ML models in as simpl
 ### Installation
 
 
-
 * **Desktop**: You can use MindsDB on your own computer in under a minute, if you already have a python environment setup, just run the following command:
 
 ```bash
  pip install mindsdb --user
 ```
 
-*Note: depending on your environment, you might have to use `pip3` instead of `pip` in the above command.*
+>Note: Python 64 bit version is required. Depending on your environment, you might have to use `pip3` instead of `pip` in the above command.*
 
   If for some reason this fail, don't worry, simply follow the [complete installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb) which will lead you through a more thorough procedure which should fix most issues.
 

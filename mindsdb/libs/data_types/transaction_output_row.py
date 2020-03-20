@@ -31,7 +31,7 @@ class TransactionOutputRow:
             cluster = clusters[0]
 
             if f'{pred_col}_model_confidence' in prediction_row:
-                answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 2 + cluster['confidence'] * 1)/3, 4) * 100
+                answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 3 + cluster['confidence'] * 1)/4, 4) * 100
             else:
                 answers[pred_col]['confidence'] = cluster['confidence'] * 100
 

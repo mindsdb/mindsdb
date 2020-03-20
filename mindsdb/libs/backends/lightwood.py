@@ -237,7 +237,7 @@ class LightwoodBackend():
             formated_predictions[k] = predictions[k]['predictions']
 
             confidence_arr = []
-            for confidence_name in ['selfaware_confidences','loss_confidences']:
+            for confidence_name in ['selfaware_confidences','loss_confidences', 'quantile_confidences']:
                 if confidence_name in predictions[k]:
                     confidence_arr.append(predictions[k][confidence_name])
 
@@ -248,7 +248,7 @@ class LightwoodBackend():
                     for i in range(len(confidence_arr)):
                         confidences[-1].append(confidence_arr[i][n])
                     confidences[-1] = sum(confidences[-1])/len(confidences[-1])
-                formated_predictions[f'{k}_confidences'] = confidences
+                formated_predictions[f'{k}_model_confidence'] = confidences
 
             if 'confidence_range' in predictions[k]:
                 formated_predictions[f'{k}_confidence_range'] = predictions[k]['confidence_range']

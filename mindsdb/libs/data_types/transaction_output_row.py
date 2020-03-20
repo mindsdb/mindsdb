@@ -53,11 +53,9 @@ class TransactionOutputRow:
                 if f'{pred_col}_confidence_range' in prediction_row:
                     value_range = prediction_row[f'{pred_col}_confidence_range']
                 else:
-                    print(prediction_row)
-                    print('HERE')
-                    exit()
                     value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
-                    answers[pred_col]['explanation']['confidence_interval'] = value_range
+                    
+                answers[pred_col]['explanation']['confidence_interval'] = value_range
 
             important_missing_cols = get_important_missing_cols(self.transaction_output.transaction.lmd, prediction_row, pred_col)
             answers[pred_col]['explanation']['important_missing_information'] = important_missing_cols

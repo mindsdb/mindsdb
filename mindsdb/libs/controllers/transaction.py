@@ -258,7 +258,7 @@ class Transaction:
 
             for predicted_col in self.lmd['predict_columns']:
                 output_data[predicted_col] = list(self.hmd['predictions'][predicted_col])
-                for extra_column in [f'{predicted_col}_model_confidence', f'{predicted_col}_confidences_range']:
+                for extra_column in [f'{predicted_col}_model_confidence', f'{predicted_col}_confidence_range']:
                     if extra_column in self.hmd['predictions']:
                         output_data[extra_column] = self.hmd['predictions'][extra_column]
 

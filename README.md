@@ -1,6 +1,7 @@
 <h1 align="center">
 	<img width="300" src="https://github.com/mindsdb/mindsdb/blob/master/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB"> 
 	<br>
+	<br>
 	<img width="600" src="https://github.com/mindsdb/mindsdb/blob/master/assets/Terminal .png?raw=true" alt="MindsDB"> 
 	<br>
 	<br>

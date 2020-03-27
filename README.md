@@ -1,5 +1,5 @@
 <h1 align="center">
-	<img width="300" src="https://github.com/mindsdb/mindsdb/blob/master/assets/mindsdb_logo.png?raw=true" alt="MindsDB">
+	<img width="300" src="https://github.com/mindsdb/mindsdb/blob/master/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
 	<br>
 	<br>
 </h1>

@@ -16,9 +16,26 @@
 
 
 
-With MindsDB you can build, train and use state of the art ML models in as simple as one line of code.
+MindsDB is an Explainable AutoML framework for developers built on top of Pytorch. It enables you to build, train and test state of the art ML models in as simple as one line of code. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
-<img width="600" src="https://github.com/mindsdb/mindsdb/blob/master/assets/Terminal .png?raw=true" alt="MindsDB">
+<table border="0" style=" border: 0px solid white;">
+<tr>
+	<td>
+		<img width="600" src="https://github.com/mindsdb/mindsdb/blob/master/assets/Terminal .png?raw=true" alt="MindsDB">
+	</td>
+	<td>
+		<img alt="Linux build" src="https://www.screenconnect.com/Images/LogoLinux.png" align="center" height="30" width="30" />  <a href="https://travis-ci.com/mindsdb/mindsdb">
+		<img src="https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=linux"/>
+		</a><hr/>
+		<img alt="Windows build" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg/414px-Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg.png" align="center" height="30" width="30" /> <a href="https://travis-ci.com/mindsdb/mindsdb">
+		<img src="https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=windows"/>
+		</a><hr/>
+		<img alt="macOS build" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/245px-Apple_logo_black.svg.png"  align="center" height="30" width="30" /> <a href="https://travis-ci.com/mindsdb/mindsdb">
+		<img src="https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=osx"/>
+		</a>
+	</td>	
+</tr>
+</table>
 
 
 
@@ -27,7 +44,7 @@ With MindsDB you can build, train and use state of the art ML models in as simpl
 | [![Linux build status](https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=linux)](https://travis-ci.com/mindsdb/mindsdb) | [![Windows build status](https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=windows)](https://travis-ci.com/mindsdb/mindsdb) | [![macOS build status](https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=osx)](https://travis-ci.com/mindsdb/mindsdb)   
 
 
-MindsDB is an Explainable AutoML framework for developers, built on top of Pytorch.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
+
 
 * [Installing MindsDB](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
 * [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)

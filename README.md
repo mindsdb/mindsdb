@@ -19,12 +19,12 @@
 MindsDB is an Explainable AutoML framework for developers built on top of Pytorch. It enables you to build, train and test state of the art ML models in as simple as one line of code. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
 <table border="0" style=" border: 0px solid white;">
-	<tbody border="0">
-<tr border="0">
-	<td border="0">
+	<tbody border="0" style="border:0px">
+<tr border="0" style="border:0px">
+	<td border="0" style="border:0px">
 		<img width="600" src="https://github.com/mindsdb/mindsdb/blob/master/assets/Terminal .png?raw=true" alt="MindsDB">
 	</td>
-	<td border="0">
+	<td border="0" style="border:0px">
 		<img alt="Linux build" src="https://www.screenconnect.com/Images/LogoLinux.png" align="center" height="30" width="30" />  <a href="https://travis-ci.com/mindsdb/mindsdb">
 		<img src="https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=linux"/>
 		</a><hr/>

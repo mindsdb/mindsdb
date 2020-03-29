@@ -2,9 +2,7 @@
 	<img width="300" src="https://github.com/mindsdb/mindsdb/blob/master/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB"> 
 	<br>
 	<br>
-	<img width="600" src="https://github.com/mindsdb/mindsdb/blob/master/assets/Terminal .png?raw=true" alt="MindsDB"> 
-	<br>
-	<br>
+	
 </h1>
 
 <p align="center">
@@ -16,15 +14,15 @@
 </p>
 
 ---
-
+<p align="center">
 <img alt="Linux build" src="https://www.screenconnect.com/Images/LogoLinux.png" align="center" height="30" width="30" /><br />Linux                    | <img alt="Windows build" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg/414px-Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg.png" align="center" height="30" width="30" /><br />Windows | <img alt="macOS build" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/245px-Apple_logo_black.svg.png" align="center" height="30" width="30" /><br />macOS |
 | :----------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 | [![Linux build status](https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=linux)](https://travis-ci.com/mindsdb/mindsdb) | [![Windows build status](https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=windows)](https://travis-ci.com/mindsdb/mindsdb) | [![macOS build status](https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=osx)](https://travis-ci.com/mindsdb/mindsdb)   
-
+</p>
 
 MindsDB is an Explainable AutoML framework for developers, built on top of Pytorch.[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
-![what](https://docs.google.com/drawings/d/e/2PACX-1vTCxeP5PNfKBH-DOsRBNFCEiklpGzCGO_Htt7Q2D9GGbAQQwwI-5hvlRnEYE187Fy8k88pkXihquTuX/pub?w=672&h=434)
+![what](https://github.com/mindsdb/mindsdb/blob/master/assets/Terminal.png?raw=true)
 
 With MindsDB you can build, train and use state of the art ML models in as simple as one line of code.
 

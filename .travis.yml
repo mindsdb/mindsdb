@@ -39,7 +39,7 @@ matrix:
       before_install:
         - choco install python --version=3.7.3
         - python -m pip install --upgrade pip
-      env: 
+      env:
         PATH=/c/Python37:/c/Python37/Scripts:$PATH
         BADGE=windows
 
@@ -64,7 +64,7 @@ script:
   - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
 before_deploy:
-  - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]]; then cd docs/website/website; fi
+  - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIoptimize_modelS_BRANCH" = "master" ]]; then cd docs/website/website; fi
   - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]]; then npm install; fi
   - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]]; then npm run build; fi
   - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]]; then cd ../../..; fi

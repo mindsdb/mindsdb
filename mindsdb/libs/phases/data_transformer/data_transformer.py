@@ -105,6 +105,9 @@ class DataTransformer(BaseModule):
                 self._aply_to_all_data(input_data, column, str, self.transaction.lmd['type'])
                 self._cast_all_data(input_data, column, 'category', self.transaction.lmd['type'])
 
+            if data_subtype == DATA_SUBTYPES.TEXT:
+                self._aply_to_all_data(input_data, column, str, self.transaction.lmd['type'])
+
             if self.transaction.hmd['model_backend'] == 'lightwood':
                 if data_type == DATA_TYPES.DATE:
                     self._aply_to_all_data(input_data, column, self._standardize_datetime, self.transaction.lmd['type'])

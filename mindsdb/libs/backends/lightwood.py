@@ -183,8 +183,8 @@ class LightwoodBackend():
             eval_every_x_epochs = int(round(1 * pow(10,6) * (1/len(train_df))))
 
             # Within some limits
-            if eval_every_x_epochs > 20:
-                eval_every_x_epochs = 20
+            if eval_every_x_epochs > 200:
+                eval_every_x_epochs = 200
             if eval_every_x_epochs < 3:
                 eval_every_x_epochs = 3
 

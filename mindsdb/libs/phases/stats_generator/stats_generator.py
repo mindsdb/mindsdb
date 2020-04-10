@@ -270,7 +270,7 @@ class StatsGenerator(BaseModule):
                 try:
                     cleaned_data_new.append(clean_float(ele))
                 except:
-                    cleaned_data_new.append(parse_datetime(str(ele)))
+                    cleaned_data_new.append(parse_datetime(str(ele)).timestamp())
 
         return cleaned_data_new
 

@@ -211,6 +211,15 @@ class StatsGenerator(BaseModule):
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
 
+        # If a mix of dates and numbers interpret all as dates
+        if DATA_TYPES.DATE in type_dist and len(set(type_dist.keys()) - set(DATA_TYPES.NUMERIC)) == 1:
+            type_dist[DATA_TYPES.DATE] += type_dist[DATA_TYPES.NUMERIC]
+            del type_dist[DATA_TYPES.NUMERIC]
+
+            subtype_dist[DATA_SUBTYPES.TIMESTAMP] += (subtype_dist[DATA_SUBTYPES.FLOAT] + subtype_dist[DATA_SUBTYPES.INT])
+            del subtype_dist[DATA_SUBTYPES.FLOAT]
+            del subtype_dist[DATA_SUBTYPES.INT]
+
         # Set subtype
         max_data_subtype = 0
         if curr_data_type != 'Unknown':

@@ -12,7 +12,6 @@
 from mindsdb.libs.constants.mindsdb import *
 import json
 import hashlib
-from dateutil.parser import parse as parse_datetime
 import numpy
 
 def clean_float(val):

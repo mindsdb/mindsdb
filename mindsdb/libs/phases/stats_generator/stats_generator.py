@@ -263,8 +263,16 @@ class StatsGenerator(BaseModule):
             if value != '' and value != '\r' and value != '\n':
                 cleaned_data.append(value)
 
-        cleaned_data = [clean_float(i) for i in cleaned_data if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
-        return cleaned_data
+        cleaned_data_new = []
+
+        for ele in cleaned_data:
+            if str(ele) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
+                try:
+                    cleaned_data_new.append(clean_float(ele))
+                except:
+                    cleaned_data_new.append(parse_datetime(str(ele)))
+
+        return cleaned_data_new
 
     @staticmethod
     def get_words_histogram(data, is_full_text=False):

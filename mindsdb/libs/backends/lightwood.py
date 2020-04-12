@@ -239,10 +239,8 @@ class LightwoodBackend():
             confidence_arr = []
             for confidence_name in ['selfaware_confidences','loss_confidences', 'quantile_confidences']:
                 if confidence_name in predictions[k]:
-                    conf = predictions[k][confidence_name]
-                    if conf < 0:
-                        conf = 0
-                    confidence_arr.append(conf)
+                    conf_arr = [x if x > 0 else 0 for x in predictions[k][confidence_name]]
+                    confidence_arr.append(conf_arr)
 
             if len(confidence_arr) > 0:
                 confidences = []

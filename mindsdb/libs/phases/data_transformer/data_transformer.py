@@ -80,7 +80,6 @@ class DataTransformer(BaseModule):
 
     def run(self, input_data):
         for column in input_data.columns:
-
             if column in self.transaction.lmd['columns_to_ignore']:
                 continue
 

@@ -211,6 +211,21 @@ class StatsGenerator(BaseModule):
                 curr_data_type = data_type
                 max_data_type = type_dist[data_type]
 
+        # If a mix of dates and numbers interpret all as dates
+        if DATA_TYPES.DATE in type_dist and len(set(type_dist.keys()) - set([DATA_TYPES.NUMERIC])) == 1:
+            type_dist[DATA_TYPES.DATE] += type_dist[DATA_TYPES.NUMERIC]
+            del type_dist[DATA_TYPES.NUMERIC]
+
+            if DATA_SUBTYPES.FLOAT in subtype_dist:
+                subtype_dist[DATA_SUBTYPES.TIMESTAMP] += subtype_dist[DATA_SUBTYPES.FLOAT]
+                del subtype_dist[DATA_SUBTYPES.FLOAT]
+
+            if DATA_SUBTYPES.INT in subtype_dist:
+                subtype_dist[DATA_SUBTYPES.TIMESTAMP] += subtype_dist[DATA_SUBTYPES.INT]
+                del subtype_dist[DATA_SUBTYPES.INT]
+
+            curr_data_type = DATA_TYPES.DATE
+
         # Set subtype
         max_data_subtype = 0
         if curr_data_type != 'Unknown':
@@ -263,8 +278,16 @@ class StatsGenerator(BaseModule):
             if value != '' and value != '\r' and value != '\n':
                 cleaned_data.append(value)
 
-        cleaned_data = [clean_float(i) for i in cleaned_data if str(i) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']]
-        return cleaned_data
+        cleaned_data_new = []
+
+        for ele in cleaned_data:
+            if str(ele) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
+                try:
+                    cleaned_data_new.append(clean_float(ele))
+                except:
+                    cleaned_data_new.append(parse_datetime(str(ele)).timestamp())
+
+        return cleaned_data_new
 
     @staticmethod
     def get_words_histogram(data, is_full_text=False):

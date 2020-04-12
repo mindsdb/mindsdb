@@ -31,9 +31,9 @@ class TransactionOutputRow:
             cluster = clusters[0]
 
             if f'{pred_col}_model_confidence' in prediction_row:
-                answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 3 + cluster['confidence'] * 1)/4, 4) * 100
+                answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 3 + cluster['confidence'] * 1)/4, 4)
             else:
-                answers[pred_col]['confidence'] = cluster['confidence'] * 100
+                answers[pred_col]['confidence'] = cluster['confidence']
 
             quality = 'very confident'
             if answers[pred_col]['confidence'] < 80:
@@ -54,7 +54,7 @@ class TransactionOutputRow:
                     value_range = prediction_row[f'{pred_col}_confidence_range']
                 else:
                     value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
-                    
+
                 answers[pred_col]['explanation']['confidence_interval'] = value_range
 
             important_missing_cols = get_important_missing_cols(self.transaction_output.transaction.lmd, prediction_row, pred_col)
@@ -81,6 +81,11 @@ class TransactionOutputRow:
             for cluster in clusters:
                 pct_confidence = round(cluster['confidence'] * 100)
                 predicted_value = cluster['value']
+
+                if f'{pred_col}_model_confidence' in prediction_row:
+                    new_conf = round((prediction_row[f'{pred_col}_model_confidence'] * 3 + cluster['confidence'] * 1)/4, 4)
+                else:
+                    new_conf = cluster['confidence']
 
                 if self.col_stats[pred_col]['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
                     value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
@@ -110,7 +115,7 @@ class TransactionOutputRow:
                     answers[pred_col].append({
                         'value': predicted_value,
                         'range': value_range,
-                        'confidence': cluster['confidence'],
+                        'confidence': new_conf,
                         'explanation': explanation,
                         'explaination': explanation,
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" lies between {range_pretty_start} and {range_end_start}'
@@ -119,7 +124,7 @@ class TransactionOutputRow:
                     explanation = explain_prediction(self.transaction_output.transaction.lmd, prediction_row, cluster['confidence'], pred_col)
                     answers[pred_col].append({
                         'value': predicted_value,
-                        'confidence': cluster['middle_confidence'],
+                        'confidence': new_conf,
                         'explanation': explanation,
                         'explaination': explanation,
                         'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'

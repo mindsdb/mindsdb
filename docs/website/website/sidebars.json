@@ -32,7 +32,18 @@
 				"call-sage-endpoint"
 				]
 			}
-		],
+        ],
+        "Use Cases": [
+           {
+                "type": "subcategory",
+                "label": "Retail & Online",
+                "ids": [
+                    "customer-lifetime",
+                    "fraud-detection"
+                ]
+            }
+
+        ],
 		"Contributing": [
             "faq",
             "inside-mindsdb"

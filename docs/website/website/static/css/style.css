@@ -1,7 +1,5 @@
 body {
-  font-family: FreightSans, Helvetica Neue, Helvetica, Arial, sans-serif;
-  font-weight: 400;
- }
+  font-family: "futura-pt", sans-serif; }
 
 @media (max-width: 1200px) {
   .wrapper {
@@ -17,12 +15,11 @@ body {
 
 .wrapper .gridBlock .fourByGridBlock {
   flex: 1 0 20%;
-  margin: 0 2rem 2em 0;
+  margin: 0 2rem 2rem 0;
   background-color: #ffffff;
-  padding: 3rem 3.33333rem;
+  padding: 5rem 3.33333rem;
   box-shadow: 0px 0px 50px -5px rgba(0, 0, 0, 0.15);
-  background-size: 35px;
-}
+  background-size: 35px; }
   @media (max-width: 768px) {
     .wrapper .gridBlock .fourByGridBlock {
       flex: 1 0 20%; } }
@@ -41,6 +38,9 @@ h2
 .blockContent p {
   hyphens: auto;
   text-align: justify; }
+
+.blockImage img {
+  width: 50%; }
 
 .fourByGridBlock {
   padding: 4rem 1rem 4rem 1rem; }
@@ -69,33 +69,31 @@ h2
 .imageAlignTop .blockImage {
   max-width: 100px; }
 
-.blockImage img{
-  width: 50%;
-}
-
 .toc .toggleNav ul li a {
   font-size: inherit; }
 
-a {
-    color: #4a148c;
-}
-
 .section-title {
-  color: #4a148c;
+  color: "#00b06d";
   letter-spacing: 0.7px;
   font-size: 2.5rem;
   font-weight: 700;
   margin-top: 1rem; }
 
 .nav-footer {
-  color: white;
   letter-spacing: 0.5px;
   padding: 2rem; }
+
+.nav-footer a {
+  color: white !important; }
+
+.nav-footer a:hover {
+  text-decoration: underline; }
 
 .copyright {
   margin-top: 4rem;
   border-top: 1px solid white !important;
-  padding-top: 1rem; }
+  padding-top: 1rem;
+  color: #fff !important; }
 
 .copyright a {
   color: white; }
@@ -103,7 +101,15 @@ a {
 .headerTitleWithLogo {
   display: none !important; }
 
-a:hover,
-a:focus,
-a:visited {
-  text-decoration: underline  !important; }
+.mindsdb-primary {
+  background-color: #00b06d; }
+
+.mindsdb-secondary {
+  color: white !important; }
+
+@font-face {
+  font-family: 'Open Sans';
+  font-srtyle: normal;
+  font-weight: 300;
+  src: local("Open Sans Light"), local("OpenSans-Light"), url(http://fonts.gstatic.com/s/opensans/v15/mem5YaGs126MiZpBA-UN_r8OX-hpOqc.woff2) format("woff2");
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }

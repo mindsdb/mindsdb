@@ -24,7 +24,7 @@ class Footer extends React.Component {
   render() {
     const currentYear = new Date().getFullYear();
     return (
-      <footer className="nav-footer" id="footer">
+      <footer className="nav-footer mindsdb-primary" id="footer">
         <section className="sitemap">
           <a href={this.props.config.baseUrl} className="nav-home">
             {this.props.config.footerIcon && (
@@ -32,6 +32,7 @@ class Footer extends React.Component {
                 src={this.props.config.baseUrl + this.props.config.footerIcon}
                 alt={this.props.config.title}
                 width="66"
+                className="mindsdb-secondary"
                 height="58"
               />
             )}

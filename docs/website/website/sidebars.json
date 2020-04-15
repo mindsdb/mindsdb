@@ -41,6 +41,19 @@
                     "customer-lifetime",
                     "fraud-detection"
                 ]
+            },
+            {
+                "type": "subcategory",
+                "label": "Financial Services",
+                "ids": [
+                    "credit-scoring"
+                ]
+            },
+            {
+                "type": "subcategory",
+                "label": "High-Tech & Manufacturing",
+                "ids": [
+                ]
             }
 
         ],

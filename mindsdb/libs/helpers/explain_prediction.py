@@ -12,7 +12,7 @@ def get_important_missing_cols(lmd, prediction_row, pred_col):
 
     important_missing_cols = []
     for col in important_cols:
-        if col not in prediction_row or prediction_row[col] is None or str(prediction_row[col]) == '' or value_isnan(prediction_row[col]):
+        if col not in prediction_row or prediction_row[col] is None or str(prediction_row[col]) == ''  or str(prediction_row[col]) == 'None' or value_isnan(prediction_row[col]):
                 important_missing_cols.append(col)
 
     return important_missing_cols

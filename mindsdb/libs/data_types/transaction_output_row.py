@@ -36,13 +36,13 @@ class TransactionOutputRow:
                 answers[pred_col]['confidence'] = cluster['confidence']
 
             quality = 'very confident'
-            if answers[pred_col]['confidence'] < 80:
+            if answers[pred_col]['confidence'] < 0.8:
                 quality = 'confident'
-            if answers[pred_col]['confidence'] < 60:
+            if answers[pred_col]['confidence'] < 0.6:
                 quality = 'somewhat confident'
-            if answers[pred_col]['confidence'] < 40:
+            if answers[pred_col]['confidence'] < 0.4:
                 quality = 'not very confident'
-            if answers[pred_col]['confidence'] < 20:
+            if answers[pred_col]['confidence'] < 0.2:
                 quality = 'not confident'
 
             answers[pred_col]['explanation'] = {
@@ -61,10 +61,13 @@ class TransactionOutputRow:
             answers[pred_col]['explanation']['important_missing_information'] = important_missing_cols
 
             if self.transaction_output.input_confidence is not None:
-                answers[pred_col]['explanation']['confidence_composition'] = self.transaction_output.input_confidence[pred_col]
+                answers[pred_col]['explanation']['confidence_composition'] = {k:v for (k,v) in self.transaction_output.input_confidence[pred_col].items() if v > 0}
 
             if self.transaction_output.extra_insights is not None:
                 answers[pred_col]['explanation']['extra_insights'] = self.transaction_output.extra_insights[pred_col]
+
+            for k in answers[pred_col]['explanation']:
+                answers[pred_col][k] = answers[pred_col]['explanation'][k]
 
         return answers
 

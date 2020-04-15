@@ -291,7 +291,7 @@ class Transaction:
             extra_insights = {}
 
             for predicted_col in self.lmd['predict_columns']:
-                input_confidence[predicted_col] = []
+                input_confidence[predicted_col] = {}
                 extra_insights[predicted_col] = {'if_missing':[]}
 
                 actual_confidence = self.output_data[0].explanation[predicted_col]['confidence']
@@ -299,9 +299,10 @@ class Transaction:
                 for i, nulled_col_name in enumerate(nulled_out_columns):
                     nulled_out_predicted_value = nulled_out_predictions[i].explanation[predicted_col]['predicted_value']
                     nulled_confidence = nulled_out_predictions[i].explanation[predicted_col]['confidence']
+                    print(actual_confidence - nulled_confidence, actual_confidence, nulled_confidence)
                     confidence_variation = actual_confidence - nulled_confidence
 
-                    input_confidence[predicted_col].append({nulled_col_name: round(confidence_variation)})
+                    input_confidence[predicted_col][nulled_col_name] = round(confidence_variation,3)
                     extra_insights[predicted_col]['if_missing'].append({nulled_col_name: nulled_out_predicted_value})
 
             self.output_data.input_confidence = input_confidence

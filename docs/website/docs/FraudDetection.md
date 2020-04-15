@@ -90,13 +90,557 @@ if __name__ == '__main__':
 
 | Accuraccy       | Backend  | Last run | MindsDB Version | Latest Version|
 |----------------|--------------------|----------------------|-----------------|--------------|
-| 0.64880952380 | Lightwood | 15 April 2020 | [![MindsDB](https://img.shields.io/badge/pypi--package-1.16.0-green)](https://pypi.org/project/MindsDB/1.16.0/)|   <a href="https://pypi.org/project/MindsDB/"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>|
+| 0.921724518459069 | Lightwood | 16 April 2020 | [![MindsDB](https://img.shields.io/badge/pypi--package-1.16.0-green)](https://pypi.org/project/MindsDB/1.16.0/)|   <a href="https://pypi.org/project/MindsDB/"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>|
 
 
 <details>
   <summary>Click to expand MindsDB's explanation for each row:</summary>
 
 ```json
-
+{
+    'accuracy': 0.921724518459069,
+    'backend': 'lightwood',
+    'additional info': [{
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9957,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9956,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9958,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9956,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9954,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9953,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9957,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9955,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9957,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9955,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9958,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9918,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }, {
+                'Class': {
+                    'predicted_value': '0',
+                    'confidence': 0.9959,
+                    'explanation': {
+                        'prediction_quality': 'very confident',
+                        'important_missing_information': []
+                    },
+                    'prediction_quality': 'very confident',
+                    'important_missing_information': []
+                }
+            }
+    ]
+}
 ```
 </details>

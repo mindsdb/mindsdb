@@ -54,6 +54,13 @@
                 "label": "High-Tech & Manufacturing",
                 "ids": [
                 ]
+            },
+            {
+                "type": "subcategory",
+                "label": "Health Care",
+                "ids": [
+                    "patient-health"
+                ]
             }
 
         ],

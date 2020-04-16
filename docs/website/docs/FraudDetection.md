@@ -67,7 +67,7 @@ def run():
     predictions = mdb.predict(when_data='processed_data/test.csv')
 
     pred_val = [int(x['Class']) for x in predictions]
-    real_val = [int(x) for x in list(pd.read_csv(open('processed_data/test.csv', 'r'))['Class'])]
+    real_val = [int(x) for x in list(pd.read_csv('processed_data/test.csv'))['Class'])]
 
     accuracy = balanced_accuracy_score(real_val, pred_val)
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
 | Accuraccy       | Backend  | Last run | MindsDB Version | Latest Version|
 |----------------|--------------------|----------------------|-----------------|--------------|
-| 0.921724518459069 | Lightwood | 16 April 2020 | [![MindsDB](https://img.shields.io/badge/pypi--package-1.16.0-green)](https://pypi.org/project/MindsDB/1.16.0/)|   <a href="https://pypi.org/project/MindsDB/"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>|
+| 0.921724518459069 | Lightwood | 16 April 2020 | [![MindsDB](https://img.shields.io/badge/pypi--package-1.16.0-green)](https://pypi.org/project/MindsDB/1.16.0/)| <a href="https://pypi.org/project/MindsDB/"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a> |
 
 
 <details>

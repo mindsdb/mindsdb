@@ -89,14 +89,22 @@ font-weight: 700;
 margin-top: $spacer - 9;
 }
 .nav-footer {
-    color: white;
     letter-spacing: 0.5px;
     padding: 2rem;   
 }
+.nav-footer a{
+    color: white !important;
+}
+.nav-footer a:hover{
+    text-decoration: underline;
+}
+
 .copyright {
     margin-top: 4rem;
     border-top: 1px solid white !important;
     padding-top: 1rem;
+    color: #fff !important;
+
 }
 .copyright a {
     color: white;
@@ -105,9 +113,10 @@ margin-top: $spacer - 9;
     display: none !important;
 }
 
-a:hover,
-a:focus,
-a:visited {
-    background-color: #208C58 !important;
+.mindsdb-primary{
+    background-color: #00b06d;
 }
-  
+
+.mindsdb-secondary{
+    color: white !important;
+}

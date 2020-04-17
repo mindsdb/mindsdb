@@ -32,7 +32,38 @@
 				"call-sage-endpoint"
 				]
 			}
-		],
+        ],
+        "Use Cases": [
+           {
+                "type": "subcategory",
+                "label": "Retail & Online",
+                "ids": [
+                    "customer-lifetime",
+                    "fraud-detection"
+                ]
+            },
+            {
+                "type": "subcategory",
+                "label": "Financial Services",
+                "ids": [
+                    "credit-scoring"
+                ]
+            },
+            {
+                "type": "subcategory",
+                "label": "High-Tech & Manufacturing",
+                "ids": [
+                ]
+            },
+            {
+                "type": "subcategory",
+                "label": "Health Care",
+                "ids": [
+                    "patient-health"
+                ]
+            }
+
+        ],
 		"Contributing": [
             "faq",
             "inside-mindsdb"

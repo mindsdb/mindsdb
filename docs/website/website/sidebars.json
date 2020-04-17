@@ -61,6 +61,13 @@
                 "ids": [
                     "patient-health"
                 ]
+            },
+            {
+                "type": "subcategory",
+                "label": "Travel",
+                "ids": [
+                    "booking-cancelation"
+                ]
             }
 
         ],

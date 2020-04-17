@@ -68,6 +68,13 @@
                 "ids": [
                     "booking-cancelation"
                 ]
+            },
+            {
+                "type": "subcategory",
+                "label": "Telecommunications",
+                "ids": [
+                    "churn-reduction"
+                ]
             }
 
         ],

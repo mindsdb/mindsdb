@@ -1,6 +1,6 @@
 ---
 id: churn-reduction
-title: Churn Reduction 
+title: Customer Churn Reduction 
 ---
 
 | Industry       | Department | Role               |

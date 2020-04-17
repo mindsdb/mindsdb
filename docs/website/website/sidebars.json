@@ -59,7 +59,8 @@
                 "type": "subcategory",
                 "label": "Health Care",
                 "ids": [
-                    "patient-health"
+                    "patient-health",
+                    "medical-diagnosis"
                 ]
             },
             {

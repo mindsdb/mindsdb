@@ -66,14 +66,16 @@ class Transaction:
         try:
             with open(fn, 'rb') as fp:
                 self.lmd = pickle.load(fp)
-        except:
+        except Exception as e:
+            self.log.error(e)
             self.log.error(f'Could not load mindsdb light metadata from the file: {fn}')
 
         fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle')
         try:
             with open(fn, 'rb') as fp:
                 self.hmd = pickle.load(fp)
-        except:
+        except Exception as e:
+            self.log.error(e)
             self.log.error(f'Could not load mindsdb heavy metadata in the file: {fn}')
 
 
@@ -83,8 +85,9 @@ class Transaction:
         try:
             with open(fn, 'wb') as fp:
                 pickle.dump(self.lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
-        except:
-            self.log.error(f'Could not save mindsdb heavy metadata in the file: {fn}')
+        except Exception as e:
+            self.log.error(e)
+            self.log.error(f'Could not save mindsdb light metadata in the file: {fn}')
 
         fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle')
         save_hmd = {}
@@ -103,8 +106,9 @@ class Transaction:
             with open(fn, 'wb') as fp:
                 # Don't save data for now
                 pickle.dump(save_hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
-        except:
-            self.log.error(f'Could not save mindsdb light metadata in the file: {fn}')
+        except Exception as e:
+            self.log.error(e)
+            self.log.error(f'Could not save mindsdb heavy metadata in the file: {fn}')
 
     def _call_phase_module(self, clean_exit, module_name, **kwargs):
         """

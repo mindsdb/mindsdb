@@ -20,17 +20,7 @@ class ProbabilisticValidator():
         """
         Chose the algorithm to use for the rest of the model
         As of right now we go with BernoulliNB¶
-        """
-        self._X_buff = []
-        self._Y_buff = []
-        self._predicted_buckets_buff = []
-        self._real_buckets_buff = []
-        self._original_real_buckets_buff = []
-        self._original_predicted_buckets_buff = []
-
-        
-        self.real_values_bucketized = []
-        self.normal_predictions_bucketized = []
+        """    
         self.col_stats = col_stats
         self.col_name = col_name
         self.input_columns = input_columns
@@ -39,8 +29,6 @@ class ProbabilisticValidator():
             self.buckets = col_stats['percentage_buckets']
 
         self._probabilistic_model = BernoulliNB()
-
-        self.bucket_accuracy = {}
 
     def fit(self, real_df, predictions_arr, missing_col_arr, hmd=None):
         """
@@ -52,6 +40,8 @@ class ProbabilisticValidator():
 
 
         """
+        self.real_values_bucketized = []
+        self.normal_predictions_bucketized = []
 
         column_indexes = {}
         for i, col in enumerate(self.input_columns):
@@ -143,7 +133,7 @@ class ProbabilisticValidator():
                 bucket_acc_counts[bucket] = []
             bucket_acc_counts[bucket].append(1 if bucket == self.real_values_bucketized[i] else 0)
         
-        for bucket in self.bucket_accuracy:
+        for bucket in bucket_accuracy:
             bucket_accuracy[bucket] = sum(bucket_acc_counts[bucket])/len(bucket_acc_counts[bucket])
 
         accuracy_count = []
@@ -163,8 +153,8 @@ class ProbabilisticValidator():
                 bucket_accuracy[bucket] = overall_accuracy
 
         accuracy_histogram = {
-            'buckets': self.bucket_accuracy.keys()
-            ,'accuracies': self.bucket_accuracy.values()
+            'buckets': list(bucket_accuracy.keys())
+            ,'accuracies': list(bucket_accuracy.values())
         }
 
         labels= list(set(self.real_values_bucketized))

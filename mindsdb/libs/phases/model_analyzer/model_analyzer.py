@@ -57,7 +57,6 @@ class ModelAnalyzer(BaseModule):
             self.transaction.hmd['probabilistic_validators'][col] = pickle_obj(pval)
         
         self.transaction.lmd['validation_set_accuracy'] = sum(overall_accuracy_arr)/len(overall_accuracy_arr)
-        
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

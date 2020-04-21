@@ -131,6 +131,7 @@ class ProbabilisticValidator():
         for i, bucket in enumerate(self.normal_predictions_bucketized):
             if bucket not in bucket_acc_counts:
                 bucket_acc_counts[bucket] = []
+                
             bucket_acc_counts[bucket].append(1 if bucket == self.real_values_bucketized[i] else 0)
         
         for bucket in bucket_accuracy:
@@ -139,6 +140,7 @@ class ProbabilisticValidator():
         accuracy_count = []
         for counts in list(bucket_acc_counts.values()):
             accuracy_count += counts
+
         overall_accuracy = sum(accuracy_count)/len(accuracy_count)
 
         for bucket in range(len(self.buckets)):
@@ -163,8 +165,8 @@ class ProbabilisticValidator():
         bucket_values = [self.buckets[x] if x in self.buckets else None for x in labels]
         cm = {
             'matrix': matrix,
-            'predicted': labels,
-            'real': labels
+            'predicted': bucket_values,
+            'real': bucket_values
         }
         
         return overall_accuracy, accuracy_histogram, cm 

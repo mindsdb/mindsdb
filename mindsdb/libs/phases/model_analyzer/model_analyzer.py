@@ -7,6 +7,7 @@ from mindsdb.libs.phases.model_analyzer.helpers.column_evaluator import ColumnEv
 import pandas as pd
 import numpy as np
 
+
 class ModelAnalyzer(BaseModule):
     def run(self):
         np.seterr(divide='warn', invalid='warn')
@@ -16,8 +17,27 @@ class ModelAnalyzer(BaseModule):
 
         output_columns = self.transaction.lmd['predict_columns']
         input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns and col not in self.transaction.lmd['columns_to_ignore']]
-        # Test some hypotheses about our columns
 
+        # Make predictions on the validation dataset normally and with various columns missing
+        normal_predictions = self.transaction.model_backend.predict('validate')
+        normal_accuracy = evaluate_accuracy(normal_predictions, self.transaction.input_data.validation_df, self.transaction.lmd['column_stats'], output_columns)
+
+        empty_input_predictions = {}
+        empty_inpurt_accuracy = {}
+
+        ignorable_input_columns = [x for x in input_columns if stats[x]['data_type'] != DATA_TYPES.FILE_PATH and x not in [y[0] for y in self.transaction.lmd['model_order_by']]]
+        for col in ignorable_input_columns:
+            empty_input_predictions[col] = self.transaction.model_backend.predict('validate', ignore_columns=[col])
+            empty_inpurt_accuracy[col] = evaluate_accuracy(empty_input_predictions[col], self.transaction.input_data.validation_df, self.transaction.lmd['column_stats'], output_columns)
+
+        # Get some information about the importance of each column
+        self.transaction.lmd['column_importances'] = {}
+        for col in ignorable_input_columns:
+            column_importance = (1 - empty_inpurt_accuracy[col]/normal_accuracy)
+            column_importance = np.ceil(10*column_importance)
+            self.transaction.lmd['column_importances'][col] = 10 if column_importance > 10 else column_importance
+
+        # Compute the overall accuracy on the validation dataset
         if self.transaction.lmd['disable_optional_analysis'] is False:
             column_evaluator = ColumnEvaluator(self.transaction)
             column_importances, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns, full_dataset=self.transaction.input_data.validation_df, stats=self.transaction.lmd['column_stats'])

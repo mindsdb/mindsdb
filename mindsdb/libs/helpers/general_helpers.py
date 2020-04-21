@@ -140,7 +140,7 @@ def get_value_bucket(value, buckets, col_stats, hmd=None):
     return bucket
 
 
-def evaluate_accuracy(predictions, full_dataset, col_stats, output_columns, hmd=):
+def evaluate_accuracy(predictions, full_dataset, col_stats, output_columns, hmd=None):
     score = 0
     for output_column in output_columns:
         cummulative_scores = 0

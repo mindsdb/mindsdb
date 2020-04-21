@@ -115,7 +115,6 @@ class ProbabilisticValidator():
         self._probabilistic_model.fit(X, Y)
         np.seterr(divide=log_types['divide'])
 
-
     def evaluate_prediction_accuracy(self, features_existence, predicted_value):
         """
         # Fit the probabilistic validator on an observation
@@ -136,7 +135,7 @@ class ProbabilisticValidator():
 
 
     def get_accuracy_stats(self):
-        
+
         bucket_accuracy = {}
         bucket_acc_counts = {}
         for i, bucket in enumerate(self.normal_predictions_bucketized):

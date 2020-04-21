@@ -17,7 +17,7 @@ class ProbabilisticValidator():
     _Y_buff = None
 
 
-    def __init__(self, col_stats, col_name, input_columns, data_type=None):
+    def __init__(self, col_stats, col_name, input_columns):
         """
         Chose the algorithm to use for the rest of the model
         As of right now we go with BernoulliNB¶
@@ -70,7 +70,7 @@ class ProbabilisticValidator():
         Y = []
         for n in range(len(predictions_arr)):
             for m, row in real_df.iterrows():
-                predicted_value = predictions_arr[n][m]
+                predicted_value = predictions_arr[n][m][self.col_name]
                 real_value = row[self.col_name]
                 try:
                     predicted_value = predicted_value if self.col_stats['data_type'] != DATA_TYPES.NUMERIC else float(predicted_value)
@@ -136,15 +136,7 @@ class ProbabilisticValidator():
 
 
     def get_accuracy_stats(self):
-        x = []
-        y = []
-
-        total_correct = 0
-        total_vals = 0
-
-        self.real_values_bucketized
-        self.normal_predictions_bucketized
-
+        
         bucket_accuracy = {}
         bucket_acc_counts = {}
         for i, bucket in enumerate(self.normal_predictions_bucketized):
@@ -169,55 +161,27 @@ class ProbabilisticValidator():
                 # If it wasn't seen either in the real values or in the predicted values, assume average confidence (maybe should be 0 instead ?)
                 bucket_accuracy[bucket] = overall_accuracy
 
+        bucket_indexes = []
+        accuracies = []
+        for index, bucket in self.buckets:
+            bucket_indexes.append(index)
+            accuracies.append(self.bucket_accuracy[bucket])
+
         accuracy_histogram = {
-            'buckets': list(self.bucket_accuracy.keys())
-            ,'accuracies': list(self.bucket_accuracy.keys())
+            'buckets': bucket_indexes
+            ,'accuracies': accuracies
         }
 
         labels= list(set(self.real_values_bucketized))
         matrix = confusion_matrix(self.real_values_bucketized, self.normal_predictions_bucketized, labels=labels)
 
-        value_labels = []
-        for label in labels:
-            try:
-                value_labels.append(str(self.buckets[label]))
-            except:
-                value_labels.append('UNKNOWN')
-
-        matrix = [[int(y) if str(y) != 'nan' else 0 for y in x] for x in matrix]
-
-        confusion_matrix_obj = {
+        cm = {
             'matrix': matrix,
-            'predicted': value_labels,
-            'real': value_labels
+            'predicted': labels,
+            'real': labels
         }
-        return confusion_matrix_obj
         
         return overall_accuracy, accuracy_histogram, cm 
-
-    def get_confusion_matrix(self):
-        # The rows represent predicted values
-        # The "columns" represent real values
-        labels= list(set(self._original_real_buckets_buff))
-
-        matrix = confusion_matrix(self._original_real_buckets_buff, self._original_predicted_buckets_buff, labels=labels)
-
-        value_labels = []
-        for label in labels:
-            try:
-                value_labels.append(str(self.buckets[label]))
-            except:
-                value_labels.append('UNKNOWN')
-
-        matrix = [[int(y) if str(y) != 'nan' else 0 for y in x] for x in matrix]
-
-        confusion_matrix_obj = {
-            'matrix': matrix,
-            'predicted': value_labels,
-            'real': value_labels
-        }
-        return confusion_matrix_obj
-
 
 if __name__ == "__main__":
     import random

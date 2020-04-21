@@ -89,9 +89,6 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
         print(item)
 
 
-    print(type(list(prediction.evaluations.values())[0][0]))
-    assert('ProbabilityEvaluation' in str(type(list(prediction.evaluations.values())[0][0])))
-
     for p in prediction:
         print(p)
     print(prediction[0].as_dict())

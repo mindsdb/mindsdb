@@ -2,7 +2,7 @@ from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.data_types.probability_evaluation import ProbabilityEvaluation
 from mindsdb.libs.helpers.general_helpers import get_value_bucket
 
-from sklearn.naive_bayes import GaussianNB, ComplementNB, MultinomialNB
+from sklearn.naive_bayes import BernoulliNB
 from sklearn.metrics import confusion_matrix
 import numpy as np
 
@@ -12,7 +12,6 @@ class ProbabilisticValidator():
     # The probabilistic validator is a quick to train model used for validating the predictions of our main model
     # It is fit to the results our model gets on the validation set
     """
-    _smoothing_factor = 0.5
     _probabilistic_model = None
     _X_buff = None
     _Y_buff = None
@@ -21,7 +20,7 @@ class ProbabilisticValidator():
     def __init__(self, col_stats, col_name, input_columns, data_type=None):
         """
         Chose the algorithm to use for the rest of the model
-        As of right now we go with ComplementNB
+        As of right now we go with BernoulliNB¶
         """
         self._X_buff = []
         self._Y_buff = []
@@ -38,7 +37,7 @@ class ProbabilisticValidator():
             self.buckets = col_stats['percentage_buckets']
             self.bucket_keys = [i for i in range(len(self.buckets))]
 
-        self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
+        self._probabilistic_model = BernoulliNB()
 
         self.data_type = col_stats['data_type']
 
@@ -105,7 +104,7 @@ class ProbabilisticValidator():
         log_types = np.seterr()
         np.seterr(divide='ignore')
 
-        self._probabilistic_model.fir(X, Y, classes=[True, False])
+        self._probabilistic_model.fit(X, Y)
 
         np.seterr(divide=log_types['divide'])
 
@@ -118,41 +117,15 @@ class ProbabilisticValidator():
         """
         if self.buckets is not None:
             predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
-            X = [False] * (len(self.buckets) + 1)
-            X[predicted_value_b] = True
+            X = [0] * (len(self.buckets) + 1)
+            X[predicted_value_b] = 1
             X = [X + features_existence]
         else:
             X = [features_existence]
 
-        distribution = self._probabilistic_model.predict_proba(np.array(X))[0]
-        distribution = distribution.tolist()
+        probability_true_prediction = self._probabilistic_model.predict_proba(np.array(X))[0][self._probabilistic_model.classes_.tolist().index(True)]
+        return probability_true_prediction
 
-        if len([x for x in distribution if x > 0.01]) > 4:
-            # @HACK
-            mean = np.mean(distribution)
-            std = np.std(distribution)
-
-            distribution = [x if x > (mean - std) else 0 for x in distribution]
-
-            sum_dist = sum(distribution)
-            # Avoid divison by zero in certain edge cases
-            sum_dist = 0.00001 if sum_dist == 0 else sum_dist
-            distribution = [x/sum_dist for x in distribution]
-
-            min_val = min([x for x in distribution if x > 0.001])
-            distribution = [x - min_val if x > min_val else 0 for x in distribution]
-
-            sum_dist = sum(distribution)
-            # Avoid divison by zero in certain edge cases
-            sum_dist = 0.00001 if sum_dist == 0 else sum_dist
-            distribution = [x/sum_dist for x in distribution]
-            # @HACK
-        else:
-            pass
-
-
-        return ProbabilityEvaluation(self.buckets, distribution, predicted_value)
-        
 
     def register_observation(self, features_existence, real_value, predicted_value, is_original_data=False, hmd=None):
         """

@@ -49,7 +49,7 @@ def test_adapted_model_data(amd, to_predict):
         assert (type(amd['data_preparation'][k]) == int or type(amd['data_preparation'][k]) == float)
     test_data_analysis(amd, to_predict)
     test_model_analysis(amd, to_predict)
-    test_force_vectors(amd, to_predict)
+    #test_force_vectors(amd, to_predict)
 
 
 def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=False, IS_CI_TEST=False):

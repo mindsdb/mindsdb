@@ -144,6 +144,12 @@ class LightwoodBackend():
         if self.transaction.lmd['optimize_model']:
             config['optimizer'] = lightwood.model_building.BasicAxOptimizer
 
+        config['data_source'] = {}
+        config['data_source']['cache_transformed_data'] = not self.transaction.lmd['force_disable_cache']
+
+        config['mixer'] = {}
+        config['mixer']['selfaware'] = self.transaction.lmd['use_selfaware_model']
+
         return config
 
     def callback_on_iter(self, epoch, mix_error, test_error, delta_mean, accuracy):
@@ -160,8 +166,6 @@ class LightwoodBackend():
     def train(self):
         if self.transaction.lmd['use_gpu'] is not None:
             lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
-        lightwood.config.config.CONFIG.CACHE_ENCODED_DATA = not self.transaction.lmd['force_disable_cache']
-        lightwood.config.config.CONFIG.SELFAWARE = self.transaction.lmd['use_selfaware_model']
 
         if self.transaction.lmd['model_order_by'] is not None and len(self.transaction.lmd['model_order_by']) > 0:
             self.transaction.log.debug('Reshaping data into timeseries format, this may take a while !')
@@ -204,12 +208,8 @@ class LightwoodBackend():
             ignore_columns = []
         if self.transaction.lmd['use_gpu'] is not None:
             lightwood.config.config.CONFIG.USE_CUDA = self.transaction.lmd['use_gpu']
-        lightwood.config.config.CONFIG.CACHE_ENCODED_DATA = not self.transaction.lmd['force_disable_cache']
-        lightwood.config.config.CONFIG.SELFAWARE = self.transaction.lmd['use_selfaware_model']
 
         if mode == 'predict':
-            # Doing it here since currently data cleanup is included in this, in the future separate data cleanup
-            lightwood_config = self._create_lightwood_config()
             df = self.transaction.input_data.data_frame
         if mode == 'validate':
             df = self.transaction.input_data.validation_df

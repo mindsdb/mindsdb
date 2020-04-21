@@ -36,7 +36,7 @@ class ModelAnalyzer(BaseModule):
             for col in ignorable_input_columns:
                 column_importance = (1 - empty_inpurt_accuracy[col]/normal_accuracy)
                 column_importance = np.ceil(10*column_importance)
-                self.transaction.lmd['column_importances'][col] = 10 if column_importance > 10 else column_importance
+                self.transaction.lmd['column_importances'][col] = float(10 if column_importance > 10 else column_importance)
         
         # Run Probabilistic Validator
         overall_accuracy_arr = []

@@ -262,8 +262,7 @@ class Transaction:
                         output_data[extra_column] = self.hmd['predictions'][extra_column]
 
                 probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
-                confidence_column_name = f'{predicted_col}_confidence'
-                output_data[confidence_column_name] = [None] * len(output_data[predicted_col])
+                output_data[f'{predicted_col}_confidence'] = [None] * len(output_data[predicted_col])
 
                 output_data[f'model_{predicted_col}'] = deepcopy(output_data[predicted_col])
                 for row_number, predicted_value in enumerate(output_data[predicted_col]):
@@ -275,7 +274,7 @@ class Transaction:
                     # Create the probabilsitic evaluation
                     probability_true_prediction = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
 
-                    output_data[confidence_column_name][row_number] = probability_true_prediction
+                    output_data[f'{predicted_col}_confidence'][row_number] = probability_true_prediction
 
             if mode == 'predict':
                 self.output_data = PredictTransactionOutputData(transaction=self, data=output_data)

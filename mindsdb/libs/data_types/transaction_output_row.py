@@ -5,10 +5,10 @@ from mindsdb.libs.constants.mindsdb import *
 class TransactionOutputRow:
     def __init__(self, transaction_output, row_index):
         self.transaction_output = transaction_output
+        self.predict_columns = self.transaction_output.transaction.lmd['predict_columns']
         self.row_index = row_index
         self.col_stats = self.transaction_output.transaction.lmd['column_stats']
         self.data = self.transaction_output.data
-        self.evaluations = self.transaction_output.evaluations
         self.explanation = self.new_explain()
 
     def __getitem__(self, item):
@@ -19,21 +19,17 @@ class TransactionOutputRow:
 
     def new_explain(self):
         answers = {}
-        for pred_col in self.evaluations:
+        for pred_col in self.predict_columns:
             answers[pred_col] = {}
 
             prediction_row = {col: self.data[col][self.row_index] for col in self.data.keys()}
 
             answers[pred_col]['predicted_value'] = prediction_row[pred_col]
 
-            evaluation = self.evaluations[pred_col][self.row_index]
-            clusters = evaluation.explain(self.transaction_output.transaction.lmd['column_stats'][pred_col])
-            cluster = clusters[0]
-
             if f'{pred_col}_model_confidence' in prediction_row:
-                answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 3 + cluster['confidence'] * 1)/4, 4)
+                answers[pred_col]['confidence'] = round((prediction_row[f'{pred_col}_model_confidence'] * 3 + prediction_row[f'{pred_col}_confidence'] * 1)/4, 4)
             else:
-                answers[pred_col]['confidence'] = cluster['confidence']
+                answers[pred_col]['confidence'] = prediction_row[f'{pred_col}_confidence']
 
             quality = 'very confident'
             if answers[pred_col]['confidence'] < 0.8:
@@ -52,8 +48,6 @@ class TransactionOutputRow:
             if self.col_stats[pred_col]['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
                 if f'{pred_col}_confidence_range' in prediction_row:
                     value_range = prediction_row[f'{pred_col}_confidence_range']
-                else:
-                    value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
 
                 answers[pred_col]['explanation']['confidence_interval'] = value_range
 
@@ -73,13 +67,12 @@ class TransactionOutputRow:
 
     def explain(self):
         answers = {}
-        for pred_col in self.evaluations:
+        for pred_col in self.predict_columns:
             answers[pred_col] = []
 
             prediction_row = {col: self.data[col][self.row_index] for col in list(self.data.keys())}
 
-            evaluation = self.evaluations[pred_col][self.row_index]
-            clusters = evaluation.explain(self.transaction_output.transaction.lmd['column_stats'][pred_col])
+            clusters = [{'value': prediction_row[pred_col], 'confidence': prediction_row[f'{pred_col}_confidence']}]
 
             for cluster in clusters:
                 pct_confidence = round(cluster['confidence'] * 100)
@@ -90,48 +83,14 @@ class TransactionOutputRow:
                 else:
                     new_conf = cluster['confidence']
 
-                if self.col_stats[pred_col]['data_type'] in (DATA_TYPES.NUMERIC, DATA_TYPES.DATE):
-                    value_range = [cluster['buckets'][0],cluster['buckets'][-1]]
-
-                    range_pretty_start = value_range[0]
-                    if range_pretty_start > 1000:
-                        range_pretty_start = round(range_pretty_start)
-                    if range_pretty_start > 100:
-                        range_pretty_start = round(range_pretty_start,2)
-                    if range_pretty_start > 10:
-                        range_pretty_start = round(range_pretty_start,1)
-                    elif range_pretty_start > pow(10,-3):
-                        range_pretty_start = round(range_pretty_start,6)
-
-                    range_end_start = value_range[-1]
-                    if range_end_start > 1000:
-                        range_end_start = round(range_end_start)
-                    if range_end_start > 100:
-                        range_end_start = round(range_end_start,2)
-                    if range_end_start > 10:
-                        range_end_start = round(range_end_start,1)
-                    elif range_end_start > pow(10,-3):
-                        range_end_start = round(range_end_start,6)
-
-                    explanation = explain_prediction(self.transaction_output.transaction.lmd, prediction_row, cluster['confidence'], pred_col)
-
-                    answers[pred_col].append({
-                        'value': predicted_value,
-                        'range': value_range,
-                        'confidence': new_conf,
-                        'explanation': explanation,
-                        'explaination': explanation,
-                        'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" lies between {range_pretty_start} and {range_end_start}'
-                    })
-                else:
-                    explanation = explain_prediction(self.transaction_output.transaction.lmd, prediction_row, cluster['confidence'], pred_col)
-                    answers[pred_col].append({
-                        'value': predicted_value,
-                        'confidence': new_conf,
-                        'explanation': explanation,
-                        'explaination': explanation,
-                        'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
-                    })
+                explanation = explain_prediction(self.transaction_output.transaction.lmd, prediction_row, cluster['confidence'], pred_col)
+                answers[pred_col].append({
+                    'value': predicted_value,
+                    'confidence': new_conf,
+                    'explanation': explanation,
+                    'explaination': explanation,
+                    'simple': f'We are {pct_confidence}% confident the value of "{pred_col}" is {predicted_value}'
+                })
 
                 if self.transaction_output.input_confidence is not None:
                     for i in range(len(answers[pred_col])):

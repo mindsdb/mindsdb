@@ -11,9 +11,8 @@ class TrainTransactionOutputData():
 
 
 class PredictTransactionOutputData():
-    def __init__(self, transaction, data, evaluations):
+    def __init__(self, transaction, data):
         self.data = data
-        self.evaluations = evaluations
         self.transaction = transaction
         self.input_confidence = None
         self.extra_insights = None

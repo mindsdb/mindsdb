@@ -39,19 +39,22 @@ class ModelAnalyzer(BaseModule):
                 self.transaction.lmd['column_importances'][col] = 10 if column_importance > 10 else column_importance
         
         # Run Probabilistic Validator
-        probabilistic_validators = {}
         overall_accuracy_arr = []
+        self.transaction.lmd['accuracy_histogram'] = {}
+        self.transaction.lmd['confusion_matrices'][col] = {}
+        self.transaction.hmd['probabilistic_validators'][col] = {}
+
         for col in output_columns:
-            probabilistic_validators[col] = ProbabilisticValidator(col_stats=self.transaction.lmd['column_stats'][col], col_name=col, input_columns=input_columns)
+            pval = ProbabilisticValidator(col_stats=self.transaction.lmd['column_stats'][col], col_name=col, input_columns=input_columns)
             predictions_arr = [normal_predictions] + [empty_input_predictions[col] for col in ignorable_input_columns]
 
-            probabilistic_validators[col].fit(self.transaction.input_data.validation_df, predictions_arr, ignorable_input_columns)
-            overall_accuracy, accuracy_histogram, cm = probabilistic_validators[col].get_accuracy_stats()
+            pval.fit(self.transaction.input_data.validation_df, predictions_arr, [[x] for x in ignorable_input_columns])
+            overall_accuracy, accuracy_histogram, cm = pval.get_accuracy_stats()
             overall_accuracy_arr.append(overall_accuracy)
 
             self.transaction.lmd['accuracy_histogram'][col] = accuracy_histogram
             self.transaction.lmd['confusion_matrices'][col] = cm
-            self.transaction.hmd['probabilistic_validators'][col] = pickle_obj(probabilistic_validators[col])
+            self.transaction.hmd['probabilistic_validators'][col] = pickle_obj(pval)
         
         self.transaction.lmd['validation_set_accuracy'] = sum(overall_accuracy_arr)/len(overall_accuracy_arr)
         

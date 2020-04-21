@@ -54,7 +54,7 @@ class ProbabilisticValidator():
         """
 
         column_indexes = {}
-        for i, col in self.input_columns:
+        for i, col in enumerate(self.input_columns):
             column_indexes[col] = i
 
         real_present_inputs_arr = []
@@ -68,8 +68,9 @@ class ProbabilisticValidator():
         X = []
         Y = []
         for n in range(len(predictions_arr)):
-            for m, row in real_df.iterrows():
-                predicted_value = predictions_arr[n][m][self.col_name]
+            for m in range(len(real_df)):
+                row = real_df.iloc[m]
+                predicted_value = predictions_arr[n][self.col_name][m]
                 real_value = row[self.col_name]
                 try:
                     predicted_value = predicted_value if self.col_stats['data_type'] != DATA_TYPES.NUMERIC else float(predicted_value)
@@ -138,6 +139,8 @@ class ProbabilisticValidator():
         bucket_accuracy = {}
         bucket_acc_counts = {}
         for i, bucket in enumerate(self.normal_predictions_bucketized):
+            if bucket not in bucket_acc_counts:
+                bucket_acc_counts[bucket] = []
             bucket_acc_counts[bucket].append(1 if bucket == self.real_values_bucketized[i] else 0)
         
         for bucket in self.bucket_accuracy:
@@ -159,20 +162,15 @@ class ProbabilisticValidator():
                 # If it wasn't seen either in the real values or in the predicted values, assume average confidence (maybe should be 0 instead ?)
                 bucket_accuracy[bucket] = overall_accuracy
 
-        bucket_indexes = []
-        accuracies = []
-        for index, bucket in self.buckets:
-            bucket_indexes.append(index)
-            accuracies.append(self.bucket_accuracy[bucket])
-
         accuracy_histogram = {
-            'buckets': bucket_indexes
-            ,'accuracies': accuracies
+            'buckets': self.bucket_accuracy.keys()
+            ,'accuracies': self.bucket_accuracy.values()
         }
 
         labels= list(set(self.real_values_bucketized))
         matrix = confusion_matrix(self.real_values_bucketized, self.normal_predictions_bucketized, labels=labels)
 
+        bucket_values = [self.buckets[x] if x in self.buckets else None for x in labels]
         cm = {
             'matrix': matrix,
             'predicted': labels,

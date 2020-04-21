@@ -12,13 +12,13 @@ class ProbabilisticValidator():
     # The probabilistic validator is a quick to train model used for validating the predictions of our main model
     # It is fit to the results our model gets on the validation set
     """
-    _smoothing_factor = 0.5 # TODO: Autodetermine smotthing factor depending on the info we know about the dataset
+    _smoothing_factor = 0.5
     _probabilistic_model = None
     _X_buff = None
     _Y_buff = None
 
 
-    def __init__(self, col_stats, data_type=None):
+    def __init__(self, col_stats, col_name, input_columns, data_type=None):
         """
         Chose the algorithm to use for the rest of the model
         As of right now we go with ComplementNB
@@ -31,24 +31,128 @@ class ProbabilisticValidator():
         self._original_predicted_buckets_buff = []
 
         self.col_stats = col_stats
+        self.col_name = col_name
+        self.input_columns = input_columns
 
         if 'percentage_buckets' in col_stats:
-            self._probabilistic_model = MultinomialNB(alpha=self._smoothing_factor)
-
             self.buckets = col_stats['percentage_buckets']
             self.bucket_keys = [i for i in range(len(self.buckets))]
 
-            if len(self.buckets) < 3:
-                self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
-        else:
-            self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
-
-            self.buckets = None
+        self._probabilistic_model = ComplementNB(alpha=self._smoothing_factor)
 
         self.data_type = col_stats['data_type']
 
         self.bucket_accuracy = {}
 
+    def fit(self, real_df, predictions_arr, missing_col_arr, hmd=None):
+        """
+        # Fit the probabilistic validator
+
+        :param real_df: A dataframe with the real inputs and outputs for every row
+        :param predictions_arr: An array containing arrays of predictions, one containing the "normal" predictions and the rest containing predictions with various missing column
+        :param missing_col_arr: The missing columns for each of the prediction arrays, same order as the arrays in `predictions_arr`, starting from the second element of `predictions_arr` (The first is assumed to have no missing columns)
+
+
+        """
+
+        column_indexes = {}
+        for i, col in self.input_columns:
+            column_indexes[col] = i
+
+        real_present_inputs_arr = []
+        for _, row in real_df.iterrows():
+            present_inputs = [1] * len(self.input_columns)
+            for i, col in enumerate(self.input_columns):
+                if str(row[col]) in ('None', 'nan', '', 'Nan', 'NAN', 'NaN'):
+                    present_inputs[i] = 0
+            real_present_inputs_arr.append(present_inputs)
+
+        X = []
+        Y = []
+        for n in range(len(predictions_arr)):
+            for m, row in real_df.iterrows():
+                predicted_value = predictions_arr[n][m]
+                real_value = row[self.col_name]
+                try:
+                    predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
+                except:
+                    predicted_value = None
+
+                try:
+                    real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(str(real_value).replace(',','.'))
+                except:
+                    real_value = None
+
+                if self.buckets is not None: 
+                    predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats, hmd)
+                    real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats, hmd)
+
+                    X.append([0] * (len(self.buckets) + 1))
+                    X[-1][predicted_value_b] = 1
+
+                    Y.append(real_value_b == predicted_value_b)
+                else:
+                    X.append([])
+                    Y.append(real_value == predicted_value)
+
+                feature_existance = real_present_inputs_arr[m]
+                if n > 0:
+                    for missing_col in missing_col_arr[n - 1]:
+                        feature_existance[self.input_columns.index(missing_col)] = 0
+
+                X[-1] += feature_existance
+
+        log_types = np.seterr()
+        np.seterr(divide='ignore')
+
+        self._probabilistic_model.fir(X, Y, classes=[True, False])
+
+        np.seterr(divide=log_types['divide'])
+
+    def evaluate_prediction_accuracy(self, features_existence, predicted_value):
+        """
+        # Fit the probabilistic validator on an observation
+        :param features_existence: A vector of 0 and 1 representing the existence of all the features (0 == not exists, 1 == exists)
+        :param predicted_value: The predicted value/label
+        :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
+        """
+        if self.buckets is not None:
+            predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
+            X = [False] * (len(self.buckets) + 1)
+            X[predicted_value_b] = True
+            X = [X + features_existence]
+        else:
+            X = [features_existence]
+
+        distribution = self._probabilistic_model.predict_proba(np.array(X))[0]
+        distribution = distribution.tolist()
+
+        if len([x for x in distribution if x > 0.01]) > 4:
+            # @HACK
+            mean = np.mean(distribution)
+            std = np.std(distribution)
+
+            distribution = [x if x > (mean - std) else 0 for x in distribution]
+
+            sum_dist = sum(distribution)
+            # Avoid divison by zero in certain edge cases
+            sum_dist = 0.00001 if sum_dist == 0 else sum_dist
+            distribution = [x/sum_dist for x in distribution]
+
+            min_val = min([x for x in distribution if x > 0.001])
+            distribution = [x - min_val if x > min_val else 0 for x in distribution]
+
+            sum_dist = sum(distribution)
+            # Avoid divison by zero in certain edge cases
+            sum_dist = 0.00001 if sum_dist == 0 else sum_dist
+            distribution = [x/sum_dist for x in distribution]
+            # @HACK
+        else:
+            pass
+
+
+        return ProbabilityEvaluation(self.buckets, distribution, predicted_value)
+        
 
     def register_observation(self, features_existence, real_value, predicted_value, is_original_data=False, hmd=None):
         """

@@ -1,8 +1,8 @@
 from mindsdb.libs.helpers.general_helpers import pickle_obj, disable_console_output
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
+from mindsdb.libs.helpers.general_helpers import evaluate_accuracy
 from mindsdb.libs.helpers.probabilistic_validator import ProbabilisticValidator
-from mindsdb.libs.phases.model_analyzer.helpers.column_evaluator import ColumnEvaluator
 
 import pandas as pd
 import numpy as np
@@ -36,16 +36,7 @@ class ModelAnalyzer(BaseModule):
             column_importance = (1 - empty_inpurt_accuracy[col]/normal_accuracy)
             column_importance = np.ceil(10*column_importance)
             self.transaction.lmd['column_importances'][col] = 10 if column_importance > 10 else column_importance
-
-        # Compute the overall accuracy on the validation dataset
-        if self.transaction.lmd['disable_optional_analysis'] is False:
-            column_evaluator = ColumnEvaluator(self.transaction)
-            column_importances, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns, full_dataset=self.transaction.input_data.validation_df, stats=self.transaction.lmd['column_stats'])
-
-            self.transaction.lmd['column_importances'] = column_importances
-            self.transaction.lmd['columns_buckets_importances'] = buckets_stats
-            self.transaction.lmd['columnless_prediction_distribution'] = columnless_prediction_distribution
-            self.transaction.lmd['all_columns_prediction_distribution'] = all_columns_prediction_distribution
+        
 
         # Create the probabilistic validators for each of the predict column
         probabilistic_validators = {}

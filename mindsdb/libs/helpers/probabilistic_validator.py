@@ -1,5 +1,4 @@
 from mindsdb.libs.constants.mindsdb import *
-from mindsdb.libs.data_types.probability_evaluation import ProbabilityEvaluation
 from mindsdb.libs.helpers.general_helpers import get_value_bucket
 
 from sklearn.naive_bayes import BernoulliNB

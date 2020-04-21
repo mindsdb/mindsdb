@@ -41,8 +41,8 @@ class ModelAnalyzer(BaseModule):
         # Run Probabilistic Validator
         overall_accuracy_arr = []
         self.transaction.lmd['accuracy_histogram'] = {}
-        self.transaction.lmd['confusion_matrices'][col] = {}
-        self.transaction.hmd['probabilistic_validators'][col] = {}
+        self.transaction.lmd['confusion_matrices'] = {}
+        self.transaction.hmd['probabilistic_validators'] = {}
 
         for col in output_columns:
             pval = ProbabilisticValidator(col_stats=self.transaction.lmd['column_stats'][col], col_name=col, input_columns=input_columns)

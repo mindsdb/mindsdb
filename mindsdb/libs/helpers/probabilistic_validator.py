@@ -29,17 +29,17 @@ class ProbabilisticValidator():
         self._original_real_buckets_buff = []
         self._original_predicted_buckets_buff = []
 
+        
+        self.real_values_bucketized = []
+        self.normal_predictions_bucketized = []
         self.col_stats = col_stats
         self.col_name = col_name
         self.input_columns = input_columns
 
         if 'percentage_buckets' in col_stats:
             self.buckets = col_stats['percentage_buckets']
-            self.bucket_keys = [i for i in range(len(self.buckets))]
 
         self._probabilistic_model = BernoulliNB()
-
-        self.data_type = col_stats['data_type']
 
         self.bucket_accuracy = {}
 
@@ -73,12 +73,12 @@ class ProbabilisticValidator():
                 predicted_value = predictions_arr[n][m]
                 real_value = row[self.col_name]
                 try:
-                    predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
+                    predicted_value = predicted_value if self.col_stats['data_type'] != DATA_TYPES.NUMERIC else float(predicted_value)
                 except:
                     predicted_value = None
 
                 try:
-                    real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(str(real_value).replace(',','.'))
+                    real_value = real_value if self.col_stats['data_type'] != DATA_TYPES.NUMERIC else float(str(real_value).replace(',','.'))
                 except:
                     real_value = None
 
@@ -89,10 +89,18 @@ class ProbabilisticValidator():
                     X.append([0] * (len(self.buckets) + 1))
                     X[-1][predicted_value_b] = 1
 
-                    Y.append(real_value_b == predicted_value_b)
+                    
                 else:
+                    predicted_value_b = predicted_value
+                    real_value_b = real_value_b
+                
                     X.append([])
-                    Y.append(real_value == predicted_value)
+                
+                Y.append(real_value_b == predicted_value_b)
+
+                if n == 0:
+                    self.real_values_bucketized.append(real_value_b)
+                    self.normal_predictions_bucketized.append(predicted_value_b)
 
                 feature_existance = real_present_inputs_arr[m]
                 if n > 0:
@@ -100,13 +108,13 @@ class ProbabilisticValidator():
                         feature_existance[self.input_columns.index(missing_col)] = 0
 
                 X[-1] += feature_existance
+                
 
         log_types = np.seterr()
         np.seterr(divide='ignore')
-
         self._probabilistic_model.fit(X, Y)
-
         np.seterr(divide=log_types['divide'])
+
 
     def evaluate_prediction_accuracy(self, features_existence, predicted_value):
         """
@@ -127,119 +135,65 @@ class ProbabilisticValidator():
         return probability_true_prediction
 
 
-    def register_observation(self, features_existence, real_value, predicted_value, is_original_data=False, hmd=None):
-        """
-        # Register an observation in the validator's internal buffers
-
-        :param features_existence: A vector of 0 and 1 representing the existence of all the features (0 == not exists, 1 == exists)
-        :param real_value: The real value/label for this prediction
-        :param predicted_value: The predicted value/label
-        :param histogram: The histogram for the predicted column, which allows us to bucketize the `predicted_value` and `real_value`
-        """
-        try:
-            predicted_value = predicted_value if self.data_type != DATA_TYPES.NUMERIC else float(predicted_value)
-        except:
-            predicted_value = None
-
-        try:
-            real_value = real_value if self.data_type != DATA_TYPES.NUMERIC else float(str(real_value).replace(',','.'))
-        except:
-            real_value = None
-
-        if self.buckets is not None:
-            predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats, hmd)
-            real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats, hmd)
-            X = [False] * (len(self.buckets) + 1)
-            X[predicted_value_b] = True
-            X = X + features_existence
-
-            self._X_buff.append(X)
-            self._Y_buff.append(real_value_b)
-            self._real_buckets_buff = self._Y_buff
-            self._predicted_buckets_buff.append(predicted_value_b)
-
-            if is_original_data:
-                self._original_real_buckets_buff.append(real_value_b)
-                self._original_predicted_buckets_buff.append(predicted_value_b)
-
-
-            # If no column is ignored, compute the accuracy for this bucket
-            nr_missing_features = len([x for x in features_existence if x in (False, 0)])
-            if nr_missing_features == 0:
-                if real_value_b not in self.bucket_accuracy:
-                    self.bucket_accuracy[real_value_b] = []
-                self.bucket_accuracy[real_value_b].append(int(real_value_b == predicted_value_b))
-        else:
-            predicted_value_b = predicted_value
-            real_value_b = real_value
-            self._X_buff.append(features_existence)
-            self._Y_buff.append(real_value_b == predicted_value_b)
-            self._real_buckets_buff.append(real_value_b)
-            self._predicted_buckets_buff.append(predicted_value_b)
-
-            if is_original_data:
-                self._original_real_buckets_buff.append(real_value_b)
-                self._original_predicted_buckets_buff.append(predicted_value_b)
-
-    def get_accuracy_histogram(self):
+    def get_accuracy_stats(self):
         x = []
         y = []
 
         total_correct = 0
         total_vals = 0
 
-        buckets_with_no_observations = []
+        self.real_values_bucketized
+        self.normal_predictions_bucketized
+
+        bucket_accuracy = {}
+        bucket_acc_counts = {}
+        for i, bucket in enumerate(self.normal_predictions_bucketized):
+            bucket_acc_counts[bucket].append(1 if bucket == self.real_values_bucketized[i] else 0)
+        
+        for bucket in self.bucket_accuracy:
+            bucket_accuracy[bucket] = sum(bucket_acc_counts[bucket])/len(bucket_acc_counts[bucket])
+
+        accuracy_count = []
+        for counts in list(bucket_acc_counts.values()):
+            accuracy_count += counts
+        overall_accuracy = sum(accuracy_count)/len(accuracy_count)
+
         for bucket in range(len(self.buckets)):
+            if bucket not in bucket_accuracy:
+                if bucket in self.real_values_bucketized:
+                    # If it was never predicted, but it did exist as a real value, then assume 0% confidence when it does get predicted
+                    bucket_accuracy[bucket] = 0
+
+        for bucket in range(len(self.buckets)):
+            if bucket not in bucket_accuracy:
+                # If it wasn't seen either in the real values or in the predicted values, assume average confidence (maybe should be 0 instead ?)
+                bucket_accuracy[bucket] = overall_accuracy
+
+        accuracy_histogram = {
+            'buckets': list(self.bucket_accuracy.keys())
+            ,'accuracies': list(self.bucket_accuracy.keys())
+        }
+
+        labels= list(set(self.real_values_bucketized))
+        matrix = confusion_matrix(self.real_values_bucketized, self.normal_predictions_bucketized, labels=labels)
+
+        value_labels = []
+        for label in labels:
             try:
-                total_correct += sum(self.bucket_accuracy[bucket])
-                total_vals += len(self.bucket_accuracy[bucket])
-                y.append(sum(self.bucket_accuracy[bucket])/len(self.bucket_accuracy[bucket]))
+                value_labels.append(str(self.buckets[label]))
             except:
-                # If no observations were made for this bucket
-                buckets_with_no_observations.append(bucket)
-                y.append(None)
+                value_labels.append('UNKNOWN')
 
-            x.append(bucket)
+        matrix = [[int(y) if str(y) != 'nan' else 0 for y in x] for x in matrix]
 
-
-        validation_set_accuracy = total_correct/total_vals
-        for bucket in buckets_with_no_observations:
-            y[x.index(bucket)] = validation_set_accuracy
-
-        return {
-            'buckets': x
-            ,'accuracies': y
-        }, validation_set_accuracy
-
-
-    def partial_fit(self):
-        """
-        # Fit the probabilistic validator on all observations recorder that haven't been taken into account yet
-        """
-        log_types = np.seterr()
-        np.seterr(divide='ignore')
-
-        if self.buckets is not None:
-            self._probabilistic_model.partial_fit(self._X_buff, self._Y_buff, classes=self.bucket_keys)
-        else:
-            self._probabilistic_model.partial_fit(self._X_buff, self._Y_buff, classes=[True, False])
-
-        np.seterr(divide=log_types['divide'])
-
-        self._X_buff= []
-        self._Y_buff= []
-
-    def fit(self):
-        """
-        # Fit the probabilistic validator on all observations recorder that haven't been taken into account yet
-        """
-        log_types = np.seterr()
-        np.seterr(divide='ignore')
-        self._probabilistic_model.fit(self._X_buff, self._Y_buff)
-        np.seterr(divide=log_types['divide'])
-
-        self._X_buff= []
-        self._Y_buff= []
+        confusion_matrix_obj = {
+            'matrix': matrix,
+            'predicted': value_labels,
+            'real': value_labels
+        }
+        return confusion_matrix_obj
+        
+        return overall_accuracy, accuracy_histogram, cm 
 
     def get_confusion_matrix(self):
         # The rows represent predicted values
@@ -263,51 +217,6 @@ class ProbabilisticValidator():
             'real': value_labels
         }
         return confusion_matrix_obj
-
-    def evaluate_prediction_accuracy(self, features_existence, predicted_value):
-        """
-        # Fit the probabilistic validator on an observation
-        :param features_existence: A vector of 0 and 1 representing the existence of all the features (0 == not exists, 1 == exists)
-        :param predicted_value: The predicted value/label
-        :return: The probability (from 0 to 1) of our prediction being accurate (within the same histogram bucket as the real value)
-        """
-        if self.buckets is not None:
-            predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats)
-            X = [False] * (len(self.buckets) + 1)
-            X[predicted_value_b] = True
-            X = [X + features_existence]
-        else:
-            X = [features_existence]
-
-        distribution = self._probabilistic_model.predict_proba(np.array(X))[0]
-        distribution = distribution.tolist()
-
-        if len([x for x in distribution if x > 0.01]) > 4:
-            # @HACK
-            mean = np.mean(distribution)
-            std = np.std(distribution)
-
-            distribution = [x if x > (mean - std) else 0 for x in distribution]
-
-            sum_dist = sum(distribution)
-            # Avoid divison by zero in certain edge cases
-            sum_dist = 0.00001 if sum_dist == 0 else sum_dist
-            distribution = [x/sum_dist for x in distribution]
-
-            min_val = min([x for x in distribution if x > 0.001])
-            distribution = [x - min_val if x > min_val else 0 for x in distribution]
-
-            sum_dist = sum(distribution)
-            # Avoid divison by zero in certain edge cases
-            sum_dist = 0.00001 if sum_dist == 0 else sum_dist
-            distribution = [x/sum_dist for x in distribution]
-            # @HACK
-        else:
-            pass
-
-
-        return ProbabilityEvaluation(self.buckets, distribution, predicted_value)
-
 
 
 if __name__ == "__main__":

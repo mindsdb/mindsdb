@@ -131,7 +131,7 @@ class ProbabilisticValidator():
         for i, bucket in enumerate(self.normal_predictions_bucketized):
             if bucket not in bucket_acc_counts:
                 bucket_acc_counts[bucket] = []
-                
+
             bucket_acc_counts[bucket].append(1 if bucket == self.real_values_bucketized[i] else 0)
         
         for bucket in bucket_accuracy:
@@ -161,6 +161,7 @@ class ProbabilisticValidator():
 
         labels= list(set(self.real_values_bucketized))
         matrix = confusion_matrix(self.real_values_bucketized, self.normal_predictions_bucketized, labels=labels)
+        matrix = [[int(y) if str(y) != 'nan' else 0 for y in x] for x in matrix]
 
         bucket_values = [self.buckets[x] if x in self.buckets else None for x in labels]
         cm = {

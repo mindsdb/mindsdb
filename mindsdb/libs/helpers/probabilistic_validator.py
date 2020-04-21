@@ -163,7 +163,8 @@ class ProbabilisticValidator():
         matrix = confusion_matrix(self.real_values_bucketized, self.normal_predictions_bucketized, labels=labels)
         matrix = [[int(y) if str(y) != 'nan' else 0 for y in x] for x in matrix]
 
-        bucket_values = [self.buckets[x] if x in self.buckets else None for x in labels]
+        bucket_values = [self.buckets[i] if i < len(labels) else None for i in labels]
+
         cm = {
             'matrix': matrix,
             'predicted': bucket_values,
@@ -173,39 +174,5 @@ class ProbabilisticValidator():
         return overall_accuracy, accuracy_histogram, cm 
 
 if __name__ == "__main__":
-    import random
-
-    values = [2,2,2,3,5,2,2,2,3,5]
-    predictions = [2,2,2,3,2,2,2,2,3,2]
-
-    feature_rows = [
-        [bool(random.getrandbits(1)), bool(random.getrandbits(1)), bool(random.getrandbits(1))]
-        for i in values
-    ]
-
-    pbv = ProbabilisticValidator(col_stats={'percentage_buckets':[1,2,3,4,5], 'data_type':DATA_TYPES.NUMERIC, 'data_subtype': ''})
-
-    for i in range(len(feature_rows)):
-        pbv.register_observation(feature_rows[i],values[i], predictions[i])
-
-    pbv.partial_fit()
-    print(pbv.evaluate_prediction_accuracy([True,True,True], 2))
-
-    # Now test text tokens
-    values = ['2', '2', '2', '3', '5', '2', '2', '2', '3', '5']
-    predictions = ['2', '2', '2', '3', '2', '2', '2', '2', '3', '2']
-
-    feature_rows = [
-        [bool(random.getrandbits(1)), bool(random.getrandbits(1)), bool(random.getrandbits(1))]
-        for i in values
-    ]
-
-    print(feature_rows)
-
-    pbv = ProbabilisticValidator(col_stats={'percentage_buckets':[1,2,3,4,5], 'data_type':DATA_TYPES.CATEGORICAL, 'data_subtype': ''})
-
-    for i in range(len(feature_rows)):
-        pbv.register_observation(feature_rows[i], values[i], predictions[i])
-
-    pbv.partial_fit()
-    print(pbv.evaluate_prediction_accuracy([True, True, True], '2'))
+    pass
+    # Removing test for now, as tets for the new one stand-alone would require the creation of a bunch of dataframes mimicking those inputed into mindsdb and those predicted by lightwood.

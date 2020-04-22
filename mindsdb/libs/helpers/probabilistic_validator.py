@@ -120,7 +120,17 @@ class ProbabilisticValidator():
         else:
             X = [features_existence]
 
-        probability_true_prediction = self._probabilistic_model.predict_proba(np.array(X))[0][self._probabilistic_model.classes_.tolist().index(True)]
+        try:
+            true_index = self._probabilistic_model.classes_.tolist().index(True)
+        except:
+            print('Only got classes: ', str(self._probabilistic_model.classes_.tolist()), ' in the probabilistic model\'s Y vector !')
+            true_index = None
+
+        if true_index is None:
+            probability_true_prediction = 0
+        else:
+            probability_true_prediction = self._probabilistic_model.predict_proba(np.array(X))[0][true_index]
+        
         return probability_true_prediction
 
 

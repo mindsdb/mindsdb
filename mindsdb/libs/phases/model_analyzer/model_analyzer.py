@@ -1,11 +1,12 @@
 from mindsdb.libs.helpers.general_helpers import pickle_obj, disable_console_output
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
+from mindsdb.libs.helpers.general_helpers import evaluate_accuracy
 from mindsdb.libs.helpers.probabilistic_validator import ProbabilisticValidator
-from mindsdb.libs.phases.model_analyzer.helpers.column_evaluator import ColumnEvaluator
 
 import pandas as pd
 import numpy as np
+
 
 class ModelAnalyzer(BaseModule):
     def run(self):
@@ -16,80 +17,46 @@ class ModelAnalyzer(BaseModule):
 
         output_columns = self.transaction.lmd['predict_columns']
         input_columns = [col for col in self.transaction.lmd['columns'] if col not in output_columns and col not in self.transaction.lmd['columns_to_ignore']]
-        # Test some hypotheses about our columns
 
-        if self.transaction.lmd['disable_optional_analysis'] is False:
-            column_evaluator = ColumnEvaluator(self.transaction)
-            column_importances, buckets_stats, columnless_prediction_distribution, all_columns_prediction_distribution = column_evaluator.get_column_importance(model=self.transaction.model_backend, output_columns=output_columns, input_columns=input_columns, full_dataset=self.transaction.input_data.validation_df, stats=self.transaction.lmd['column_stats'])
+        # Make predictions on the validation dataset normally and with various columns missing
+        normal_predictions = self.transaction.model_backend.predict('validate')
+        normal_accuracy = evaluate_accuracy(normal_predictions, self.transaction.input_data.validation_df, self.transaction.lmd['column_stats'], output_columns)
 
-            self.transaction.lmd['column_importances'] = column_importances
-            self.transaction.lmd['columns_buckets_importances'] = buckets_stats
-            self.transaction.lmd['columnless_prediction_distribution'] = columnless_prediction_distribution
-            self.transaction.lmd['all_columns_prediction_distribution'] = all_columns_prediction_distribution
+        empty_input_predictions = {}
+        empty_inpurt_accuracy = {}
 
-        # Create the probabilistic validators for each of the predict column
-        probabilistic_validators = {}
-        for col in output_columns:
-            if 'percentage_buckets' in self.transaction.lmd['column_stats'][col]:
-                probabilistic_validators[col] = ProbabilisticValidator(
-                    col_stats=self.transaction.lmd['column_stats'][col])
-            else:
-                probabilistic_validators[col] = ProbabilisticValidator(
-                    col_stats=self.transaction.lmd['column_stats'][col])
+        ignorable_input_columns = [x for x in input_columns if self.transaction.lmd['column_stats'][x]['data_type'] != DATA_TYPES.FILE_PATH and x not in [y[0] for y in self.transaction.lmd['model_order_by']]]
+        for col in ignorable_input_columns:
+            empty_input_predictions[col] = self.transaction.model_backend.predict('validate', ignore_columns=[col])
+            empty_inpurt_accuracy[col] = evaluate_accuracy(empty_input_predictions[col], self.transaction.input_data.validation_df, self.transaction.lmd['column_stats'], output_columns)
 
-        ignorable_input_columns = []
-        for input_column in input_columns:
-            if self.transaction.lmd['column_stats'][input_column]['data_type'] != DATA_TYPES.FILE_PATH and input_column not in [x[0] for x in self.transaction.lmd['model_order_by']]:
-                ignorable_input_columns.append(input_column)
-
-        with disable_console_output():
-            normal_predictions = self.transaction.model_backend.predict('validate')
-
-        # Single observation on the validation dataset when we have no ignorable column
-        if len(ignorable_input_columns) == 0:
-            for pcol in output_columns:
-                for i in range(len(self.transaction.input_data.validation_df[pcol])):
-                    probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i], is_original_data=True, hmd=self.transaction.hmd)
-
-        # Run on the validation set multiple times, each time with one of the column blanked out
-        is_original_data = True
-        for column_name in ignorable_input_columns:
-            ignore_columns = []
-            ignore_columns.append(column_name)
-
-            # Silence logging since otherwise lightwood and ludwig will complain too much about None values
-            with disable_console_output():
-                ignore_col_predictions = self.transaction.model_backend.predict('validate', ignore_columns)
-
-            # create a vector that has True for each feature that was passed to the model tester and False if it was blanked
-            features_existence = [True if np_col not in ignore_columns else False for np_col in input_columns]
-
-            pv = {}
-            for pcol in output_columns:
-                for i in range(len(self.transaction.input_data.validation_df[pcol])):
-
-                    probabilistic_validators[pcol].register_observation(features_existence=features_existence, real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=ignore_col_predictions[pcol][i], is_original_data=False, hmd=self.transaction.hmd)
-
-                    probabilistic_validators[pcol].register_observation(features_existence=[True for col in input_columns], real_value=self.transaction.input_data.validation_df[pcol].iloc[i], predicted_value=normal_predictions[pcol][i], is_original_data=is_original_data, hmd=self.transaction.hmd)
-                    # Only register the original data once !
-            is_original_data = False
-
+        # Get some information about the importance of each column
+        if not self.transaction.lmd['disable_optional_analysis']:
+            self.transaction.lmd['column_importances'] = {}
+            for col in ignorable_input_columns:
+                column_importance = (1 - empty_inpurt_accuracy[col]/normal_accuracy)
+                column_importance = np.ceil(10*column_importance)
+                self.transaction.lmd['column_importances'][col] = float(10 if column_importance > 10 else column_importance)
+        
+        # Run Probabilistic Validator
+        overall_accuracy_arr = []
         self.transaction.lmd['accuracy_histogram'] = {}
-
-        total_accuracy = 0
-        for pcol in output_columns:
-            probabilistic_validators[pcol].partial_fit()
-            accuracy_histogram, validation_set_accuracy = probabilistic_validators[pcol].get_accuracy_histogram()
-            self.transaction.lmd['accuracy_histogram'][pcol] = accuracy_histogram
-            total_accuracy += validation_set_accuracy
-        self.transaction.lmd['validation_set_accuracy'] = total_accuracy/len(output_columns)
-
-        # Pickle for later use
+        self.transaction.lmd['confusion_matrices'] = {}
         self.transaction.hmd['probabilistic_validators'] = {}
-        for col in probabilistic_validators:
-            confusion_matrix = probabilistic_validators[col].get_confusion_matrix()
-            self.transaction.lmd['confusion_matrices'][col] = confusion_matrix
-            self.transaction.hmd['probabilistic_validators'][col] = pickle_obj(probabilistic_validators[col])
+
+        for col in output_columns:
+            pval = ProbabilisticValidator(col_stats=self.transaction.lmd['column_stats'][col], col_name=col, input_columns=input_columns)
+            predictions_arr = [normal_predictions] + [empty_input_predictions[col] for col in ignorable_input_columns]
+
+            pval.fit(self.transaction.input_data.validation_df, predictions_arr, [[x] for x in ignorable_input_columns])
+            overall_accuracy, accuracy_histogram, cm = pval.get_accuracy_stats()
+            overall_accuracy_arr.append(overall_accuracy)
+
+            self.transaction.lmd['accuracy_histogram'][col] = accuracy_histogram
+            self.transaction.lmd['confusion_matrices'][col] = cm
+            self.transaction.hmd['probabilistic_validators'][col] = pickle_obj(pval)
+        
+        self.transaction.lmd['validation_set_accuracy'] = sum(overall_accuracy_arr)/len(overall_accuracy_arr)
 
 def test():
     from mindsdb.libs.controllers.predictor import Predictor

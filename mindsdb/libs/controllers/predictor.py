@@ -318,13 +318,14 @@ class Predictor:
                     mao['accuracy_histogram']['x'] = [f'{x}' for x in lmd['accuracy_histogram'][col]['buckets']]
                     mao['accuracy_histogram']['y'] = lmd['accuracy_histogram'][col]['accuracies']
 
-                    for output_col_bucket in lmd['columns_buckets_importances'][col]:
-                        x_explained_member = []
-                        for input_col in lmd['columns_buckets_importances'][col][output_col_bucket]:
-                            stats = lmd['columns_buckets_importances'][col][output_col_bucket][input_col]
-                            adapted_sub_incol = self._adapt_column(stats, input_col)
-                            x_explained_member.append(adapted_sub_incol)
-                        mao['accuracy_histogram']['x_explained'].append(x_explained_member)
+                    if lmd['columns_buckets_importances'] is not None and col in lmd['columns_buckets_importances']:
+                        for output_col_bucket in lmd['columns_buckets_importances'][col]:
+                            x_explained_member = []
+                            for input_col in lmd['columns_buckets_importances'][col][output_col_bucket]:
+                                stats = lmd['columns_buckets_importances'][col][output_col_bucket][input_col]
+                                adapted_sub_incol = self._adapt_column(stats, input_col)
+                                x_explained_member.append(adapted_sub_incol)
+                            mao['accuracy_histogram']['x_explained'].append(x_explained_member)
 
                     for icol in lmd['model_columns_map'].keys():
                         if icol in lmd['columns_to_ignore']:

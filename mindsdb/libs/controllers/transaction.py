@@ -66,14 +66,16 @@ class Transaction:
         try:
             with open(fn, 'rb') as fp:
                 self.lmd = pickle.load(fp)
-        except:
+        except Exception as e:
+            self.log.error(e)
             self.log.error(f'Could not load mindsdb light metadata from the file: {fn}')
 
         fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle')
         try:
             with open(fn, 'rb') as fp:
                 self.hmd = pickle.load(fp)
-        except:
+        except Exception as e:
+            self.log.error(e)
             self.log.error(f'Could not load mindsdb heavy metadata in the file: {fn}')
 
 
@@ -83,8 +85,9 @@ class Transaction:
         try:
             with open(fn, 'wb') as fp:
                 pickle.dump(self.lmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
-        except:
-            self.log.error(f'Could not save mindsdb heavy metadata in the file: {fn}')
+        except Exception as e:
+            self.log.error(e)
+            self.log.error(f'Could not save mindsdb light metadata in the file: {fn}')
 
         fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.hmd['name'] + '_heavy_model_metadata.pickle')
         save_hmd = {}
@@ -103,8 +106,9 @@ class Transaction:
             with open(fn, 'wb') as fp:
                 # Don't save data for now
                 pickle.dump(save_hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
-        except:
-            self.log.error(f'Could not save mindsdb light metadata in the file: {fn}')
+        except Exception as e:
+            self.log.error(e)
+            self.log.error(f'Could not save mindsdb heavy metadata in the file: {fn}')
 
     def _call_phase_module(self, clean_exit, module_name, **kwargs):
         """
@@ -251,7 +255,6 @@ class Transaction:
             self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='predict')
 
             output_data = {col: [] for col in self.lmd['columns']}
-            evaluations = {}
 
             for column in self.input_data.columns:
                 output_data[column] = list(self.input_data.data_frame[column])
@@ -263,28 +266,24 @@ class Transaction:
                         output_data[extra_column] = self.hmd['predictions'][extra_column]
 
                 probabilistic_validator = unpickle_obj(self.hmd['probabilistic_validators'][predicted_col])
-                confidence_column_name = f'{predicted_col}_confidence'
-                output_data[confidence_column_name] = [None] * len(output_data[predicted_col])
-                evaluations[predicted_col] = [None] * len(output_data[predicted_col])
+                output_data[f'{predicted_col}_confidence'] = [None] * len(output_data[predicted_col])
 
                 output_data[f'model_{predicted_col}'] = deepcopy(output_data[predicted_col])
                 for row_number, predicted_value in enumerate(output_data[predicted_col]):
 
                     # Compute the feature existance vector
                     input_columns = [col for col in self.input_data.columns if col not in self.lmd['predict_columns']]
-                    features_existance_vector = [False if output_data[col][row_number] is None else True for col in input_columns if col not in self.lmd['columns_to_ignore']]
+                    features_existance_vector = [False if  str(output_data[col][row_number]) in ('None', 'nan', '', 'Nan', 'NAN', 'NaN') else True for col in input_columns if col not in self.lmd['columns_to_ignore']]
 
                     # Create the probabilsitic evaluation
-                    prediction_evaluation = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
+                    probability_true_prediction = probabilistic_validator.evaluate_prediction_accuracy(features_existence=features_existance_vector, predicted_value=predicted_value)
 
-                    output_data[predicted_col][row_number] = prediction_evaluation.final_value
-                    output_data[confidence_column_name][row_number] = prediction_evaluation.most_likely_probability
-                    evaluations[predicted_col][row_number] = prediction_evaluation
+                    output_data[f'{predicted_col}_confidence'][row_number] = probability_true_prediction
 
             if mode == 'predict':
-                self.output_data = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
+                self.output_data = PredictTransactionOutputData(transaction=self, data=output_data)
             else:
-                nulled_out_predictions = PredictTransactionOutputData(transaction=self, data=output_data, evaluations=evaluations)
+                nulled_out_predictions = PredictTransactionOutputData(transaction=self, data=output_data)
 
         if self.lmd['run_confidence_variation_analysis']:
             input_confidence = {}

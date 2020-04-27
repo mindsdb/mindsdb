@@ -1,6 +1,6 @@
 import sys
 if sys.version_info < (3,6):
-    sys.exit('Sorry, For MindsDB Python < 3.6 is not supported')
+    raise Exception('Sorry, For MindsDB Python < 3.6 is not supported')
 
 # @TODO: FIND A WAY TO ACTUALLY SOLVE THIS ASAP !!!
 # HORRIBLE HACK TO AVOID SEGFAULT

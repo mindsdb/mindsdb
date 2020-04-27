@@ -748,8 +748,9 @@ class Predictor:
             unstable_parameters_dict = {}
 
         if run_confidence_variation_analysis is True and when_data is not None:
-            self.log.error('run_confidence_variation_analysis=True is a valid option only when predicting a single data point via `when`')
-            sys.exit(1)
+            error_msg = 'run_confidence_variation_analysis=True is a valid option only when predicting a single data point via `when`'
+            self.log.error(error_msg)
+            raise ValueError(error_msg)
 
         transaction_type = TRANSACTION_PREDICT
         when_ds = None if when_data is None else getDS(when_data)

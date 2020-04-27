@@ -110,7 +110,7 @@ class Transaction:
             self.log.error(e)
             self.log.error(f'Could not save mindsdb heavy metadata in the file: {fn}')
 
-    def _call_phase_module(self, clean_exit, module_name, **kwargs):
+    def _call_phase_module(self, module_name, **kwargs):
         """
         Loads the module and runs it
 
@@ -129,10 +129,7 @@ class Transaction:
             error = 'Could not load module {module_name}'.format(module_name=module_name)
             self.log.error('Could not load module {module_name}'.format(module_name=module_name))
             self.log.error(traceback.format_exc())
-            if clean_exit:
-                sys.exit(1)
-            else:
-                raise Exception(error)
+            raise Exception(error)
         finally:
             self.lmd['is_active'] = False
 
@@ -140,11 +137,11 @@ class Transaction:
         self.lmd['current_phase'] = MODEL_STATUS_PREPARING
         self.save_metadata()
 
-        self._call_phase_module(clean_exit=True, module_name='DataExtractor')
+        self._call_phase_module(module_name='DataExtractor')
         self.save_metadata()
 
         self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
-        self._call_phase_module(clean_exit=True, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+        self._call_phase_module(module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
         self.save_metadata()
 
         self.lmd['current_phase'] = MODEL_STATUS_DONE
@@ -159,7 +156,7 @@ class Transaction:
             self.lmd['current_phase'] = MODEL_STATUS_PREPARING
             self.save_metadata()
 
-            self._call_phase_module(clean_exit=False, module_name='DataExtractor')
+            self._call_phase_module(module_name='DataExtractor')
             self.save_metadata()
 
             self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
@@ -167,19 +164,19 @@ class Transaction:
                 self.load_metadata()
             else:
                 self.save_metadata()
-                self._call_phase_module(clean_exit=False, module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+                self._call_phase_module(module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
                 self.save_metadata()
 
-            self._call_phase_module(clean_exit=False, module_name='DataSplitter')
+            self._call_phase_module(module_name='DataSplitter')
 
-            self._call_phase_module(clean_exit=False, module_name='DataTransformer', input_data=self.input_data)
+            self._call_phase_module(module_name='DataTransformer', input_data=self.input_data)
             self.lmd['current_phase'] = MODEL_STATUS_TRAINING
             self.save_metadata()
-            self._call_phase_module(clean_exit=False, module_name='ModelInterface', mode='train')
+            self._call_phase_module(module_name='ModelInterface', mode='train')
 
             self.lmd['current_phase'] = MODEL_STATUS_ANALYZING
             self.save_metadata()
-            self._call_phase_module(clean_exit=False, module_name='ModelAnalyzer')
+            self._call_phase_module(module_name='ModelAnalyzer')
 
             self.lmd['current_phase'] = MODEL_STATUS_TRAINED
             self.save_metadata()
@@ -222,13 +219,13 @@ class Transaction:
             self.log.error('No metadata found for this model')
             return
 
-        self._call_phase_module(clean_exit=True, module_name='DataExtractor')
+        self._call_phase_module(module_name='DataExtractor')
 
         if self.input_data.data_frame.shape[0] <= 0:
             self.log.error('No input data provided !')
             return
         if self.lmd['model_is_time_series']:
-            self._call_phase_module(clean_exit=True, module_name='DataSplitter')
+            self._call_phase_module(module_name='DataSplitter')
 
         # @TODO Maybe move to a separate "PredictionAnalysis" phase ?
         if self.lmd['run_confidence_variation_analysis']:
@@ -250,9 +247,9 @@ class Transaction:
                 else:
                     self.input_data.data_frame = nulled_out_data
 
-            self._call_phase_module(clean_exit=True, module_name='DataTransformer', input_data=self.input_data)
+            self._call_phase_module(module_name='DataTransformer', input_data=self.input_data)
 
-            self._call_phase_module(clean_exit=True, module_name='ModelInterface', mode='predict')
+            self._call_phase_module(module_name='ModelInterface', mode='predict')
 
             output_data = {col: [] for col in self.lmd['columns']}
 

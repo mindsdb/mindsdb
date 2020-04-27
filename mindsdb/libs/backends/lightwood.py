@@ -1,5 +1,4 @@
 import os
-import sys
 import logging
 from dateutil.parser import parse as parse_datetime
 
@@ -43,8 +42,9 @@ class LightwoodBackend():
                     try:
                         row[col] = float(row[col].timestamp())
                     except:
-                        self.transaction.log.error(f'Backend Lightwood does not support ordering by the column: {col} !, Faulty value: {row[col]}')
-                        sys.exit()
+                        error_msg = f'Backend Lightwood does not support ordering by the column: {col} !, Faulty value: {row[col]}'
+                        self.transaction.log.error(error_msg)
+                        raise ValueError(error_msg)
 
             group_by_ts_map[gb_lookup_key].append(row)
 

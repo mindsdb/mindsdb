@@ -15,7 +15,7 @@ const siteConfig = {
   title: "Mindsdb" /* title for your website */,
   tagline: "Create AI based apps in a few lines of code",
   url: "https://docs.mindsdb.com" /* your website url */,
-  baseUrl: "/mindsdb/" /* base url for your project */,
+  baseUrl: "/" /* base url for your project */,
   projectName: "mindsdb",
   organizationName: "mindsdb",
   twitter: false,

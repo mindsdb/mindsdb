@@ -20,7 +20,7 @@ const siteConfig = {
   organizationName: "mindsdb",
   twitter: false,
   twitterUsername: "Mindsdb",
-  cname: "mindsdb.github.io",
+  cname: "docs.mindsdb.com",
   //gaTrackingId: '',
   //ogImage: '',
   headerLinks: [

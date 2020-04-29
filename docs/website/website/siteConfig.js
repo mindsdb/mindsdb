@@ -25,7 +25,7 @@ const siteConfig = {
   //ogImage: '',
   headerLinks: [
     {
-      doc: "installing-mindsdb",
+      doc: "docs",
       label: "Docs"
     },
     {

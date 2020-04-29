@@ -14,13 +14,13 @@ const users = [];
 const siteConfig = {
   title: "Mindsdb" /* title for your website */,
   tagline: "Create AI based apps in a few lines of code",
-  url: "https://mindsdb.github.io" /* your website url */,
+  url: "https://docs.mindsdb.com" /* your website url */,
   baseUrl: "/mindsdb/" /* base url for your project */,
   projectName: "mindsdb",
-  organizationName: "mindsdb",
+  organizationName: "MindsDB",
   twitter: false,
   twitterUsername: "Mindsdb",
-  cname: "mindsdb.github.io",
+  cname: "docs.mindsdb.com",
   //gaTrackingId: '',
   //ogImage: '',
   headerLinks: [

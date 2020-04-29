@@ -7,34 +7,8 @@
         ],
         "Tutorials": [
             "basic-mindsdb",
-            "advanced-mindsdb"
-        ],
-        "Configuration": [
-            "predictor-interface",
-            "config"
-        ],
-        "Features": [
-            "column-metrics",
-            "data-sources"
-        ],
-        "Comparisons": [
-            "comparison-mindsdb",
-            "accuracy-comparison"
-        ],        
-        "Integrations": [
-            "aws-sageMaker",{
-				"type": "subcategory",
-        		"label": "Bring your own container",
-				"ids": [
-				"mindsdb-container",
-                "use-mindsdb-in-sage",
-                "use-sage-sdk",
-				"call-sage-endpoint"
-				]
-			}
-        ],
-        "Use Cases": [
-           {
+            "advanced-mindsdb",
+            {
                 "type": "subcategory",
                 "label": "Retail & Online",
                 "ids": [
@@ -79,6 +53,30 @@
             }
 
         ],
+        "Configuration": [
+            "predictor-interface",
+            "config"
+        ],
+        "Features": [
+            "column-metrics",
+            "data-sources"
+        ],
+        "Comparisons": [
+            "comparison-mindsdb",
+            "accuracy-comparison"
+        ],        
+        "Integrations": [
+            "aws-sageMaker",{
+				"type": "subcategory",
+        		"label": "Bring your own container",
+				"ids": [
+				"mindsdb-container",
+                "use-mindsdb-in-sage",
+                "use-sage-sdk",
+				"call-sage-endpoint"
+				]
+			}
+        ],   
 		"Contributing": [
             "faq",
             "inside-mindsdb"

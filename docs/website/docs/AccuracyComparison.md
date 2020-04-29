@@ -13,10 +13,10 @@ If you have the time and know-how to build a model that performs better than Min
 
 You can find an up to date list of accuracy comparisons here:
 
-https://mindsdb-example-data.s3.eu-west-2.amazonaws.com/list.html
+https://github.com/mindsdb/mindsdb-examples/tree/master/benchmarks
 
-Simply ungzip the files and read the `README.md` to see the accuracies and the models we compared mindsdb with, or run `mindsdb_acc.py` to run mindsdb on the dataset.
+Each directory containes different examples, datasets and `README.md`. To see the accuracies and the models, simply run `mindsdb_acc.py` to run mindsdb on the dataset.
 
 At some point we might keep a more easy to read list of these comparisons, but for now the results change to often and there are too many models to make this practical to maintain.
 
-We invite anyone with an interesting dataset and a well performing models to send it to use so that we can see how mindsdb stands up to it (or try it themselves and tell us the results they got).
+We invite anyone with an interesting dataset and a well performing models to send it to us, or contribute to this repository, so that we can see how mindsdb stands up to it (or try it themselves and tell us the results they got).

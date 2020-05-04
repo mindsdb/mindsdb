@@ -44,10 +44,10 @@ MindsDB is an Explainable AutoML framework for developers built on top of Pytorc
 
 ## Try it out
 
-* [Installing MindsDB](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb)
-* [Learning from Examples](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
+* [Installing MindsDB](https://docs.mindsdb.com/Installing/)
+* [Learning from Examples](https://docs.mindsdb.com/tutorials/BasicExample/)
 * [MindsDB Explainability GUI](http://mindsdb.com/product)
-* [Frequently Asked Questions](https://mindsdb.github.io/mindsdb/docs/faq)
+* [Frequently Asked Questions](https://docs.mindsdb.com/FAQ/)
 * [Provide Feedback to Improve MindsDB](https://mindsdb.typeform.com/to/c3CEtj)
 
 
@@ -64,7 +64,7 @@ MindsDB is an Explainable AutoML framework for developers built on top of Pytorc
 
 >Note: Python 64 bit version is required. Depending on your environment, you might have to use `pip3` instead of `pip` in the above command.*
 
-  If for some reason this fail, don't worry, simply follow the [complete installation instructions](https://mindsdb.github.io/mindsdb/docs/installing-mindsdb) which will lead you through a more thorough procedure which should fix most issues.
+  If for some reason this fail, don't worry, simply follow the [complete installation instructions](https://docs.mindsdb.com/Installing/) which will lead you through a more thorough procedure which should fix most issues.
 
 * **Docker**: If you would like to run it all in a container simply:  
 
@@ -109,7 +109,7 @@ print('The predicted price is between ${price} with {conf} confidence'.format(pr
 
 ```
 
-Visit the documentation to [learn more](https://mindsdb.github.io/mindsdb/docs/basic-mindsdb)
+Visit the documentation to [learn more](https://docs.mindsdb.com/)
 
 * **Google Colab**: You can also try MindsDB straight here [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
 

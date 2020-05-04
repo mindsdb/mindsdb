@@ -63,33 +63,12 @@ script:
   - pip install flake8
   - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-before_deploy:
-  - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]]; then cd docs/website/website; fi
-  - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]]; then npm install; fi
-  - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]]; then npm run build; fi
-  - if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "master" ]]; then cd ../../..; fi
-  - |
-    if ! git diff --name-only $TRAVIS_COMMIT_RANGE | grep -qvE '(.md)|^(.travis.yml)|^(LICENSE)'
-    then
-      echo "CI build skipped since only Docs were changed."
-      exit
-    fi
-
-
 # deploy to pip and github pages
 deploy:
   - provider: pypi
     user: "mindsdb_sysadmin"
     password: $PYPI_SYSADMIN_PASSWORD
     distributions: "sdist"
-    on:
-      branch: master
-      condition: $DEPLOYMENT_ENV = "true"
-
-  - provider: pages
-    skip_cleanup: true
-    github_token: $GITHUB_TOKEN
-    local_dir: docs/website/website/build/mindsdb
     on:
       branch: master
       condition: $DEPLOYMENT_ENV = "true"

@@ -22,12 +22,10 @@ def run_benchmarks():
     con, cur, cfg = get_mysql(sys.argv[1])
 
     try:
-        print(str(sys.argv[3]))
         is_remote = True if str(sys.argv[3]) == 'True' else False
-        print(is_remote)
     except:
         is_remote = False
-    exit()
+
     cur.execute("""CREATE DATABASE IF NOT EXISTS mindsdb_accuracy""")
     cur.execute("""CREATE TABLE IF NOT EXISTS mindsdb_accuracy.tests (
         batch_id                Text

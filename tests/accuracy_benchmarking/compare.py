@@ -30,7 +30,7 @@ def compare():
         lightwood_version = entity[5]
         ludwig_version = entity[6]
         backend = entity[7]
-        label = entity[7]
+        label = entity[8]
 
         logger.info(f'\nRunning checks for test {test_name} in batch {batch_id}, the test took {runtime} seconds and had an accuracy of {accuracy} using {accuracy_function} and training on backend {backend}\nSystem info when ran: (mindsdb_version: {mindsdb_version}, lightwood_version: {lightwood_version}, ludwig_version: {ludwig_version}, label: {label})\n')
 

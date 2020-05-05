@@ -22,7 +22,7 @@ def run_benchmarks():
     con, cur, cfg = get_mysql(sys.argv[1])
 
     try:
-        is_remote = bool(sys.argv[3])
+        is_remote = True if str(sys.argv[3]) == 'True'
     except:
         is_remote = False
 

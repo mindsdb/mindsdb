@@ -100,11 +100,16 @@ def run_benchmarks():
             ,'backend_used': backend_used
         })
 
+    try:
+        ludwig_version = ludwig.__version__
+    except:
+        ludwig_version = 'not installed'
+        
     for test_data in test_data_arr:
         cur.execute("""INSERT INTO mindsdb_accuracy.tests VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",(
             batch_id, batch_started, test_data['test_name'], test_data['dataset_name'],test_data['accuracy'],
             test_data['accuracy_function'], test_data['accuracy_description'],test_data['runtime'], test_data['started'],
-            test_data['ended'], mindsdb.__version__, lightwood.__version__, ludwig.__version__, test_data['backend_used'],
+            test_data['ended'], mindsdb.__version__, lightwood.__version__, ludwig_version, test_data['backend_used'],
             sys.argv[2]
         ))
         con.commit()

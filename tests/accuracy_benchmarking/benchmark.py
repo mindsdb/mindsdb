@@ -9,7 +9,10 @@ import datetime
 import requests
 import mindsdb
 import lightwood
-import ludwig
+try:
+    import ludwig
+except:
+    pass
 
 from helpers import *
 
@@ -104,7 +107,7 @@ def run_benchmarks():
         ludwig_version = ludwig.__version__
     except:
         ludwig_version = 'not installed'
-        
+
     for test_data in test_data_arr:
         cur.execute("""INSERT INTO mindsdb_accuracy.tests VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",(
             batch_id, batch_started, test_data['test_name'], test_data['dataset_name'],test_data['accuracy'],

@@ -4,4 +4,4 @@ cd /var/benchmarks/lightwood && git stash && git pull --all && git checkout $1 &
 cd /var/benchmarks/mindsdb && git stash && git pull --all && git checkout $2 && git pull origin $2 && pip3 install -r requirements.txt &&
 cd /var/benchmarks/mindsdb/tests/accuracy_benchmarking &&
 python3 benchmark.py ../../../benchmark_cfg.json "$3";
-shutdown 30
+shutdown 0;

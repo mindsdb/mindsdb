@@ -74,11 +74,11 @@ def run_benchmarks():
         logger.debug(f'\n\n=================================\nRunning test: {test_name}\n=================================\n\n')
 
         if is_remote:
-            os.chdir('/var/benchmarks/mindsdb-examples')
+            os.chdir('/var/benchmarks/mindsdb_examples')
+            run_test = importlib.import_module(f'mindsdb_examples.benchmarks.{test_name}.mindsdb_acc').run
         else:
             os.chdir(f'tmp_downloads/benchmarks/{test_name}')
-
-        run_test = importlib.import_module(f'tmp_downloads.benchmarks.{test_name}.mindsdb_acc').run
+            run_test = importlib.import_module(f'tmp_downloads.benchmarks.{test_name}.mindsdb_acc').run
 
         started = datetime.datetime.now()
         accuracy_data = run_test(False)

@@ -17,7 +17,7 @@ def compare():
         cur.execute('SELECT batch_id FROM mindsdb_accuracy.tests WHERE batch_started=(SELECT max(batch_started) FROM mindsdb_accuracy.tests)')
         batch_id = cur.fetchall()[0][0]
 
-    cur.execute('SELECT test_name, accuracy_function, accuracy, runtime, mindsdb_version, lightwood_version, ludwig_version, backend FROM mindsdb_accuracy.tests WHERE batch_id=%s', [batch_id])
+    cur.execute('SELECT test_name, accuracy_function, accuracy, runtime, mindsdb_version, lightwood_version, ludwig_version, backend, label FROM mindsdb_accuracy.tests WHERE batch_id=%s', [batch_id])
     batch_tests_arr = cur.fetchall()
 
     for entity in batch_tests_arr:
@@ -30,8 +30,9 @@ def compare():
         lightwood_version = entity[5]
         ludwig_version = entity[6]
         backend = entity[7]
+        label = entity[7]
 
-        logger.info(f'\nRunning checks for test {test_name} in batch {batch_id}, the test took {runtime} seconds and had an accuracy of {accuracy} using {accuracy_function} and training on backend {backend}\nSystem info when ran: (mindsdb_version: {mindsdb_version}, lightwood_version: {lightwood_version}, ludwig_version: {ludwig_version})\n')
+        logger.info(f'\nRunning checks for test {test_name} in batch {batch_id}, the test took {runtime} seconds and had an accuracy of {accuracy} using {accuracy_function} and training on backend {backend}\nSystem info when ran: (mindsdb_version: {mindsdb_version}, lightwood_version: {lightwood_version}, ludwig_version: {ludwig_version}, label: {label})\n')
 
         cur.execute('SELECT accuracy, batch_id, batch_started, runtime, mindsdb_version, lightwood_version, ludwig_version, backend FROM mindsdb_accuracy.tests WHERE test_name=%s AND accuracy_function=%s AND (accuracy - 0.0000001) > %s', [test_name,accuracy_function,accuracy])
         better_tests = cur.fetchall()

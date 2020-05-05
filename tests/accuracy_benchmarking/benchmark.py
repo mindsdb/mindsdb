@@ -47,8 +47,8 @@ def run_benchmarks():
     except:
         pass
 
-    TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review', 'german_credit_data', 'wine_quality']
-    #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'german_credit_data']
+    #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review', 'german_credit_data', 'wine_quality']
+    TESTS = ['cancer50', 'pulsar_stars']
 
     status = os.system('cp -r ~/mindsdb_examples tmp_downloads')
 

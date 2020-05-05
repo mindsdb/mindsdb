@@ -18,6 +18,11 @@ def run_benchmarks():
     logger = setup_logger()
     con, cur, cfg = get_mysql(sys.argv[1])
 
+    try:
+        is_remote = bool(sys.argv[3])
+    else:
+        is_remote = False
+
     cur.execute("""CREATE DATABASE IF NOT EXISTS mindsdb_accuracy""")
     cur.execute("""CREATE TABLE IF NOT EXISTS mindsdb_accuracy.tests (
         batch_id                Text
@@ -47,10 +52,11 @@ def run_benchmarks():
     TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'cifar_100', 'imdb_movie_review', 'german_credit_data', 'wine_quality']
     #TESTS = ['default_of_credit', 'cancer50', 'pulsar_stars', 'german_credit_data']
 
-    status = os.system('cp -r ~/mindsdb_examples tmp_downloads')
+    if not is_remote:
+        status = os.system('cp -r ~/mindsdb_examples tmp_downloads')
 
-    if str(status) != '0':
-        os.system('git clone https://github.com/mindsdb/mindsdb-examples tmp_downloads')
+        if str(status) != '0':
+            os.system('git clone https://github.com/mindsdb/mindsdb-examples tmp_downloads')
 
     test_data_arr = []
     for test_name in TESTS:
@@ -64,7 +70,10 @@ def run_benchmarks():
         '''
         logger.debug(f'\n\n=================================\nRunning test: {test_name}\n=================================\n\n')
 
-        os.chdir(f'tmp_downloads/benchmarks/{test_name}')
+        if is_remote:
+            os.chidr('../../../mindsdb_examples')
+        else:
+            os.chdir(f'tmp_downloads/benchmarks/{test_name}')
 
         run_test = importlib.import_module(f'tmp_downloads.benchmarks.{test_name}.mindsdb_acc').run
 

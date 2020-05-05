@@ -74,7 +74,7 @@ def run_benchmarks():
         logger.debug(f'\n\n=================================\nRunning test: {test_name}\n=================================\n\n')
 
         if is_remote:
-            os.chidr('/var/benchmarks/mindsdb_examples')
+            os.chdir('/var/benchmarks/mindsdb_examples')
         else:
             os.chdir(f'tmp_downloads/benchmarks/{test_name}')
 

@@ -20,7 +20,7 @@ def run_benchmarks():
 
     try:
         is_remote = bool(sys.argv[3])
-    else:
+    except:
         is_remote = False
 
     cur.execute("""CREATE DATABASE IF NOT EXISTS mindsdb_accuracy""")

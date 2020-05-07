@@ -728,6 +728,28 @@ class Predictor:
                 if old_hmd[k] is not None: heavy_transaction_metadata[k] = old_hmd[k]
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
+    def test(self, when_data, accuracy_score_functions, score_using='predicted_value', predict_args=None):
+        if predict_args is None:
+            predict_args = {}
+
+        predictions = self.predict(when_data=when_data, **predict_args)
+
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{self.name}_light_model_metadata.pickle'), 'rb') as fp:
+            lmd = pickle.load(fp)
+
+        accuracy_dict = {}
+        for col in lmd['predict_columns']:
+            if type(accuracy_score_functions) == type({}):
+                acc_f = accuracy_score_functions[col]
+            else:
+                acc_f = accuracy_score_functions
+
+            accuracy_dict[col] = acc_f[col]([x[f'__observed_{col}'] for x in predictions], [x.explanation[col][score_using] for x in predictions])
+
+        if len(accuracy_dict) == 1:
+            return list(accuracy_dict.values())[0]
+        return accuracy_dict
+
 
     def predict(self, when=None, when_data=None, update_cached_model = False, use_gpu=None, unstable_parameters_dict=None, backend=None, run_confidence_variation_analysis=False):
         """

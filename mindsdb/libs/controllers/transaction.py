@@ -254,7 +254,10 @@ class Transaction:
             output_data = {col: [] for col in self.lmd['columns']}
 
             for column in self.input_data.columns:
-                output_data[column] = list(self.input_data.data_frame[column])
+                if column in self.lmd['predict_columns']:
+                    output_data[f'__observed_{column}'] = list(self.input_data.data_frame[column])
+                else:
+                    output_data[column] = list(self.input_data.data_frame[column])
 
             for predicted_col in self.lmd['predict_columns']:
                 output_data[predicted_col] = list(self.hmd['predictions'][predicted_col])

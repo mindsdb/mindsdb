@@ -744,10 +744,8 @@ class Predictor:
             else:
                 acc_f = accuracy_score_functions
 
-            accuracy_dict[col] = acc_f[col]([x[f'__observed_{col}'] for x in predictions], [x.explanation[col][score_using] for x in predictions])
+            accuracy_dict[f'{col}_accuracy'] = acc_f([x[f'__observed_{col}'] for x in predictions], [x.explanation[col][score_using] for x in predictions])
 
-        if len(accuracy_dict) == 1:
-            return list(accuracy_dict.values())[0]
         return accuracy_dict
 
 

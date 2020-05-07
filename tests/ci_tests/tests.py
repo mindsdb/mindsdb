@@ -67,7 +67,7 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
     # Create & Learn
     to_predict = 'rental_price'
     mdb = mindsdb.Predictor(name='home_rentals_price')
-    #mdb.learn(to_predict=to_predict,from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend, stop_training_in_x_seconds=30,use_gpu=use_gpu)
+    mdb.learn(to_predict=to_predict,from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",backend=backend, stop_training_in_x_seconds=30,use_gpu=use_gpu)
 
     # Reload & Predict
     model_name = 'home_rentals_price'
@@ -79,7 +79,7 @@ def basic_test(backend='lightwood',use_gpu=True,ignore_columns=[], run_extra=Fal
     # Try predicting from a file and from a dictionary
     prediction = mdb.predict(when_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv", use_gpu=use_gpu)
 
-    print(mdb.test(when_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",accuracy_score_functions=r2_score))
+    print(mdb.test(when_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",accuracy_score_functions=r2_score,predict_args={'use_gpu': use_gpu}))
     exit()
 
     prediction = mdb.predict(when={'sqft':300}, use_gpu=use_gpu)

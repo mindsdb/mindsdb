@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import json
 from subprocess import Popen, PIPE
 
 instance_id = 'i-0d6aa6ae788b28ccb'

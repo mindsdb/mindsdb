@@ -20,7 +20,7 @@ class ProbabilisticValidator():
         """
         Chose the algorithm to use for the rest of the model
         As of right now we go with BernoulliNB¶
-        """    
+        """
         self.col_stats = col_stats
         self.col_name = col_name
         self.input_columns = input_columns
@@ -72,20 +72,20 @@ class ProbabilisticValidator():
                 except:
                     real_value = None
 
-                if self.buckets is not None: 
+                if self.buckets is not None:
                     predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats, hmd)
                     real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats, hmd)
 
                     X.append([0] * (len(self.buckets) + 1))
                     X[-1][predicted_value_b] = 1
 
-                    
+
                 else:
                     predicted_value_b = predicted_value
                     real_value_b = real_value_b
-                
+
                     X.append([])
-                
+
                 Y.append(real_value_b == predicted_value_b)
 
                 if n == 0:
@@ -98,7 +98,7 @@ class ProbabilisticValidator():
                         feature_existance[self.input_columns.index(missing_col)] = 0
 
                 X[-1] += feature_existance
-                
+
 
         log_types = np.seterr()
         np.seterr(divide='ignore')
@@ -130,7 +130,7 @@ class ProbabilisticValidator():
             probability_true_prediction = 0
         else:
             probability_true_prediction = self._probabilistic_model.predict_proba(np.array(X))[0][true_index]
-        
+
         return probability_true_prediction
 
 
@@ -143,7 +143,7 @@ class ProbabilisticValidator():
                 bucket_acc_counts[bucket] = []
 
             bucket_acc_counts[bucket].append(1 if bucket == self.real_values_bucketized[i] else 0)
-        
+
         for bucket in bucket_accuracy:
             bucket_accuracy[bucket] = sum(bucket_acc_counts[bucket])/len(bucket_acc_counts[bucket])
 
@@ -180,8 +180,8 @@ class ProbabilisticValidator():
             'predicted': bucket_values,
             'real': bucket_values
         }
-        
-        return overall_accuracy, accuracy_histogram, cm 
+
+        return overall_accuracy, accuracy_histogram, cm
 
 if __name__ == "__main__":
     pass

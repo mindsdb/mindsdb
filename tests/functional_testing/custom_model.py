@@ -3,11 +3,11 @@ import pandas as pd
 import numpy as np
 from sklearn import tree
 from sklearn import preprocessing
-
+from sklearn.linear_model import LinearRegression
 
 class CustomDTModel():
     def __init__(self):
-        self.clf = tree.DecisionTreeClassifier()
+        self.clf = LinearRegression()
         le = preprocessing.LabelEncoder()
 
     def set_transaction(self, transaction):
@@ -62,4 +62,3 @@ dt_model = CustomDTModel()
 
 predictor.learn(to_predict='rental_price',from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv", backend=dt_model)
 predictions = predictor.predict(when_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv", backend=dt_model)
-print(predictions[25])

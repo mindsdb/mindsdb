@@ -728,13 +728,41 @@ class Predictor:
                 if old_hmd[k] is not None: heavy_transaction_metadata[k] = old_hmd[k]
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
 
+    def test(self, when_data, accuracy_score_functions, score_using='predicted_value', predict_args=None):
+        """
+        :param when_data: use this when you have data in either a file, a pandas data frame, or url to a file that you want to predict from
+        :param accuracy_score_functions: a single function or  a dictionary for the form `{f'{target_name}': acc_func}` for when we have multiple targets
+        :param score_using: what values from the `explanation` of the target to use in the score function, defaults to the
+        :param predict_args: dictionary of arguments to be passed to `predict`, e.g: `predict_args={'use_gpu': True}`
+
+        :return: a dictionary for the form `{f'{target_name}_accuracy': accuracy_func_return}`, e.g. {'rental_price_accuracy':0.99}
+        """
+        if predict_args is None:
+            predict_args = {}
+
+        predictions = self.predict(when_data=when_data, **predict_args)
+
+        with open(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, f'{self.name}_light_model_metadata.pickle'), 'rb') as fp:
+            lmd = pickle.load(fp)
+
+        accuracy_dict = {}
+        for col in lmd['predict_columns']:
+            if type(accuracy_score_functions) == type({}):
+                acc_f = accuracy_score_functions[col]
+            else:
+                acc_f = accuracy_score_functions
+
+            accuracy_dict[f'{col}_accuracy'] = acc_f([x[f'__observed_{col}'] for x in predictions], [x.explanation[col][score_using] for x in predictions])
+
+        return accuracy_dict
+
 
     def predict(self, when=None, when_data=None, update_cached_model = False, use_gpu=None, unstable_parameters_dict=None, backend=None, run_confidence_variation_analysis=False):
         """
         You have a mind trained already and you want to make a prediction
 
         :param when: use this if you have certain conditions for a single prediction
-        :param when_data: (optional) use this when you have data in either a file, a pandas data frame, or url to a file that you want to predict from
+        :param when_data: use this when you have data in either a file, a pandas data frame, or url to a file that you want to predict from
         :param update_cached_model: (optional, default:False) when you run predict for the first time, it loads the latest model in memory, you can force it to do this on this run by flipping it to True
         :param run_confidence_variation_analysis: Run a confidence variation analysis on each of the given input column, currently only works when making single predictions via `when`
 

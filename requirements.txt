@@ -1,5 +1,5 @@
 psutil>=5.7.0
-lightwood >= 0.21.2
+lightwood >= 0.25.0
 cython >= 0.29.2
 setuptools >= 21.2.1
 wheel >= 0.32.2

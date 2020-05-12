@@ -559,7 +559,7 @@ class Predictor:
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)
 
 
-    def learn(self, to_predict, from_data, test_from_data=None, group_by = None, window_size = None, order_by = None, sample_margin_of_error = 0.005, ignore_columns = None, stop_training_in_x_seconds = None, stop_training_in_accuracy = None, backend='lightwood', rebuild_model=True, use_gpu=None, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=True, output_categories_importance_dictionary=None, unstable_parameters_dict=None):
+    def learn(self, to_predict, from_data, test_from_data=None, group_by=None, window_size=None, order_by=None, sample_margin_of_error=0.005, ignore_columns=None, stop_training_in_x_seconds=None, stop_training_in_accuracy=None, backend='lightwood', rebuild_model=True, use_gpu=None, disable_optional_analysis=False, equal_accuracy_for_all_output_categories=True, output_categories_importance_dictionary=None, unstable_parameters_dict=None):
         """
         Learn to predict a column or columns from the data in 'from_data'
 
@@ -587,34 +587,30 @@ class Predictor:
         :return:
         """
 
-        if order_by is None:
-            order_by = []
+        # lets turn into lists: predict, ignore, group_by, order_by
+        predict_columns = to_predict if isinstance(to_predict, list) else [to_predict] if to_predict else []
+        ignore_columns = ignore_columns if isinstance(ignore_columns, list) else [ignore_columns] if ignore_columns else []
+        group_by = group_by if isinstance(group_by, list) else [group_by] if group_by else []
+        order_by = order_by if isinstance(order_by, list) else [order_by] if order_by else []
 
-        if ignore_columns is None:
-            ignore_columns = []
+        # lets turn order by into list of tuples if not already
+        # each element ('column_name', 'boolean_for_ascending <default=true>')
+        order_by = [col_name if isinstance(col_name, tuple) else (col_name, True) for col_name in order_by]
 
         if unstable_parameters_dict is None:
             unstable_parameters_dict = {}
 
         from_ds = getDS(from_data)
-        test_from_ds = test_from_data if test_from_data is None else getDS(test_from_data)
+
+        test_from_ds = None if test_from_data is None else getDS(test_from_data)
 
         transaction_type = TRANSACTION_LEARN
-        sample_confidence_level = 1 - sample_margin_of_error
-
-        # lets turn into lists: predict, order_by and group by
-        predict_columns = to_predict if isinstance(to_predict, list) else [to_predict]
-        group_by = group_by if isinstance(group_by, list) else [group_by] if group_by else []
-        order_by = order_by if isinstance(order_by, list) else [order_by] if order_by else []
+        sample_confidence_level = 1 - sample_margin_of_error        
 
         if len(predict_columns) == 0:
             error = 'You need to specify a column to predict'
             self.log.error(error)
             raise ValueError(error)
-
-        # lets turn order by into tuples if not already
-        # each element ('column_name', 'boolean_for_ascending <default=true>')
-        order_by = [col_name if isinstance(col_name, tuple) else (col_name, True) for col_name in order_by]
 
         is_time_series = True if len(order_by) > 0 else False
 

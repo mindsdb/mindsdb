@@ -228,7 +228,7 @@ def disable_console_output(activate=True):
 
 def value_isnan(value):
     try:
-        if type(value) == float:
+        if isinstance(value, float):
             a = int(value)
         isnan = False
     except:

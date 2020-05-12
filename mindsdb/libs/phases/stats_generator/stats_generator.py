@@ -294,7 +294,7 @@ class StatsGenerator(BaseModule):
     def get_words_histogram(data, is_full_text=False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
 
-        splitter = lambda w, t: [wi.split(t) for wi in w] if type(w) == type([]) else splitter(w,t)
+        splitter = lambda w, t: [wi.split(t) for wi in w] if isinstance(w, list) else splitter(w, t)
 
         if is_full_text:
             # get all words in every cell and then calculate histograms

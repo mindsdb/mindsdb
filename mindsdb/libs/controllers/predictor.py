@@ -603,9 +603,9 @@ class Predictor:
         sample_confidence_level = 1 - sample_margin_of_error
 
         # lets turn into lists: predict, order_by and group by
-        predict_columns = [to_predict] if type(to_predict) != type([]) else to_predict
-        group_by = group_by if type(group_by) == type([]) else [group_by] if group_by else []
-        order_by = order_by if type(order_by) == type([]) else [order_by] if order_by else []
+        predict_columns = to_predict if isinstance(to_predict, list) else [to_predict]
+        group_by = group_by if isinstance(group_by, list) else [group_by] if group_by else []
+        order_by = order_by if isinstance(order_by, list) else [order_by] if order_by else []
 
         if len(predict_columns) == 0:
             error = 'You need to specify a column to predict'
@@ -614,7 +614,7 @@ class Predictor:
 
         # lets turn order by into tuples if not already
         # each element ('column_name', 'boolean_for_ascending <default=true>')
-        order_by = [(col_name, True) if type(col_name) != type(()) else col_name for col_name in order_by]
+        order_by = [col_name if isinstance(col_name, tuple) else (col_name, True) for col_name in order_by]
 
         is_time_series = True if len(order_by) > 0 else False
 
@@ -623,7 +623,7 @@ class Predictor:
         the server doesn't handle non-file data sources at the moment, so this shouldn't prove an issue,
         once we want to support datasources such as s3 and databases for the server we need to add name as a concept (or, preferably, before that)
         '''
-        data_source_name = from_data if type(from_data) == str else 'Unkown'
+        data_source_name = from_data if isinstance(from_data, str) else 'Unkown'
 
         heavy_transaction_metadata = {}
         heavy_transaction_metadata['name'] = self.name
@@ -747,7 +747,7 @@ class Predictor:
 
         accuracy_dict = {}
         for col in lmd['predict_columns']:
-            if type(accuracy_score_functions) == type({}):
+            if isinstance(accuracy_score_functions, dict):
                 acc_f = accuracy_score_functions[col]
             else:
                 acc_f = accuracy_score_functions
@@ -784,7 +784,7 @@ class Predictor:
         when_ds = None if when_data is None else getDS(when_data)
 
         # lets turn into lists: when
-        when = [when] if type(when) in [type(None), type({})] else when
+        when = [when] if isinstance(when, (type(None), dict)) else when
 
         heavy_transaction_metadata = {}
         if when_ds is None:

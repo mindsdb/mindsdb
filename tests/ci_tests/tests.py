@@ -66,7 +66,7 @@ def basic_test(backend='lightwood',use_gpu=True, run_extra=False, IS_CI_TEST=Fal
             if ctn:
                 continue
             
-            code = os.system(f'py ../functional_testing/{py_file}')
+            code = os.system(f'python3 ../functional_testing/{py_file}')
             if code != 0:
                 raise Exception(f'Test failed with status code: {code} !')
 

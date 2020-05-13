@@ -765,9 +765,6 @@ class Predictor:
         :return: TransactionOutputData object
         """
 
-        if when is None:
-            when = {}
-
         if unstable_parameters_dict is None:
             unstable_parameters_dict = {}
 
@@ -780,7 +777,7 @@ class Predictor:
         when_ds = None if when_data is None else getDS(when_data)
 
         # lets turn into lists: when
-        when = [when] if isinstance(when, (type(None), dict)) else when
+        when = [when] if isinstance(when, dict) else when if when is not None else []
 
         heavy_transaction_metadata = {}
         if when_ds is None:

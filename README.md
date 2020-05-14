@@ -26,13 +26,13 @@ MindsDB is an Explainable AutoML framework for developers built on top of Pytorc
 	</td>
 	<td border="0" style="border:0px">
 		<img alt="Linux build" src="https://www.screenconnect.com/Images/LogoLinux.png" align="center" height="30" width="30" />  <a href="https://travis-ci.com/mindsdb/mindsdb">
-		<img src="https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=linux"/>
+		<img src="https://badges.herokuapp.com/travis.com/mindsdb/mindsdb?branch=master&label=build&env=BADGE=linux"/>
 		</a><hr/>
 		<img alt="Windows build" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg/414px-Windows_logo_-_2012_%28dark_blue%2C_lines_thinner%29.svg.png" align="center" height="30" width="30" /> <a href="https://travis-ci.com/mindsdb/mindsdb">
-		<img src="https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=windows"/>
+		<img src="https://badges.herokuapp.com/travis.com/mindsdb/mindsdb?branch=master&label=build&env=BADGE=windows"/>
 		</a><hr/>
 		<img alt="macOS build" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/245px-Apple_logo_black.svg.png"  align="center" height="30" width="30" /> <a href="https://travis-ci.com/mindsdb/mindsdb">
-		<img src="https://badges.herokuapp.com/travis/mindsdb/mindsdb?branch=master&label=build&env=BADGE=osx"/>
+		<img src="https://badges.herokuapp.com/travis.com/mindsdb/mindsdb?branch=master&label=build&env=BADGE=osx"/>
 		</a>
 	</td>	
 </tr>

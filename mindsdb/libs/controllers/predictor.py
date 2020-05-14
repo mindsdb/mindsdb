@@ -587,11 +587,20 @@ class Predictor:
         :return:
         """
 
+        if ignore_columns is None:
+            ignore_columns = []
+        
+        if group_by is None:
+            group_by = []
+
+        if order_by is None:
+            order_by = []
+
         # lets turn into lists: predict, ignore, group_by, order_by
-        predict_columns = to_predict if isinstance(to_predict, list) else [to_predict] if to_predict else []
-        ignore_columns = ignore_columns if isinstance(ignore_columns, list) else [ignore_columns] if ignore_columns else []
-        group_by = group_by if isinstance(group_by, list) else [group_by] if group_by else []
-        order_by = order_by if isinstance(order_by, list) else [order_by] if order_by else []
+        predict_columns = to_predict if isinstance(to_predict, list) else [to_predict]
+        ignore_columns = ignore_columns if isinstance(ignore_columns, list) else [ignore_columns]
+        group_by = group_by if isinstance(group_by, list) else [group_by]
+        order_by = order_by if isinstance(order_by, list) else [order_by]
 
         # lets turn order by into list of tuples if not already
         # each element ('column_name', 'boolean_for_ascending <default=true>')

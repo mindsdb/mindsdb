@@ -275,14 +275,14 @@ class LudwigBackend():
                     data[tf_col].append(unix_ts)
 
                 elif data_subtype in (DATA_SUBTYPES.FLOAT):
-                    if type(row[col]) == str:
-                        data[tf_col].append(float(str(row[col]).replace(',','.')))
+                    if isinstance(row[col], str):
+                        data[tf_col].append(float(str(row[col]).replace(',', '.')))
                     else:
                         data[tf_col].append(row[col])
 
                 elif data_subtype in (DATA_SUBTYPES.INT):
-                    if type(row[col]) == str:
-                        data[tf_col].append(round(float(str(row[col]).replace(',','.'))))
+                    if isinstance(row[col], str):
+                        data[tf_col].append(round(float(str(row[col]).replace(',', '.'))))
                     else:
                         data[tf_col].append(row[col])
 

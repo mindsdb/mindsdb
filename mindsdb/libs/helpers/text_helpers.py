@@ -14,11 +14,12 @@ import json
 import hashlib
 import numpy
 
+
 def clean_float(val):
-    if type(val) in [type(int(1)), type(1.0)] :
+    if isinstance(val, (int, float)):
         return float(val)
 
-    if isinstance(val, (float, int, numpy.float64)):
+    if isinstance(val, numpy.float64):
         return val
 
     val = str(val)

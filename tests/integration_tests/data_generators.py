@@ -79,7 +79,7 @@ def generate_value_cols(types, length, separator=',', ts_period=48*3600):
         for n in range(length):
             val = gen_fun()
             # @TODO: Maybe escpae the separator rather than replace them
-            if type(val) == str:
+            if isinstance(val, str):
                 val = val.replace(separator,'_').replace('\n','_').replace('\r','_')
             columns[-1].append(val)
 
@@ -113,7 +113,7 @@ def generate_labels_2(columns, separator=','):
     for n in range(1, len(columns[-1])):
         value = 1
         for i in range(len(columns)):
-            if type(columns[i][n]) == str:
+            if isinstance(columns[i][n], str):
                 operand = len(columns[i][n])
             else:
                 operand = columns[i][n]

@@ -5,6 +5,8 @@ This file contains bits of codes that we might want to keep for later use,
 
 # flake8: noqa
 
+from itertools import combinations, permutations
+
 
 # Previously in: mindsdb/libs/helpers/train_helpers.py
 def getAllButOnePermutations(possible_columns):
@@ -22,40 +24,43 @@ def getAllButOnePermutations(possible_columns):
 
 
 # Previously in mindsdb/libs/phases/stats_generator.py
-def getColPermutations(possible_columns, max_num_of_perms = 100):
+# NOTE: This function used to confuse permutations & combinations,
+# so I made both get_col_combinations() and get_col_permutations()
+def get_col_combinations(columns, n=100):
     """
-    Get all possible combinations given a list of column names
-     :return: Given Input = [a,b,c]
-             Then, Output=  [ [a], [b], [c], [a,b], [a,c], [b,c] ]
+    Given a list of column names, finds first :param:n:
+    combinations (without replacement).
+    
+    :param columns: list of column names
+    :param n: max number of combinations
+    
+    :yields: example: [a, b, c] -> [[a], [b], [c], [a, b], [a, c], [b, c]]
     """
 
+    count = 0
+    for i in range(1, len(columns)):
+        for combo in combinations(columns, i):
+            if count < n:
+                count += 1
+                yield combo
 
-    permutations = {col: 1 for col in possible_columns}
 
-    for perm_size in range(len(possible_columns)-1):
+def get_col_permutations(columns, n=100):
+    """
+    Given a list of column names, finds first :param:n: permutations
+    
+    :param columns: list of column names
+    :param n: max number of permutations
+    
+    :yields: example: [a, b, c] -> [[a], [b], [c], [a, b], [b, a], [a, c], [c, a], [b, c], [c, b]]
+    """
 
-        for permutation in list(permutations.keys()):
-
-            tokens_in_perm = permutation.split(':')
-            if len(tokens_in_perm) == perm_size:
-                tokens_in_perm.sort()
-
-                for col in possible_columns:
-                    if col in tokens_in_perm:
-                        continue
-                    new_perm = tokens_in_perm + [col]
-                    new_perm.sort()
-                    new_perm_string = ':'.join(new_perm)
-                    permutations[new_perm_string] = 1
-
-                    if len(permutations) > max_num_of_perms:
-                        break
-
-            if len(permutations) > max_num_of_perms:
-                break
-
-    ret = [perm.split(':') for perm in list(permutations.keys())]
-    return ret
+    count = 0
+    for i in range(1, len(columns)):
+        for perm in permutations(columns, i):
+            if count < n:
+                count += 1
+                yield perm
 
 
 def getBestFitDistribution(self, data, bins=40):

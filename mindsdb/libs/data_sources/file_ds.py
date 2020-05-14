@@ -38,7 +38,7 @@ class FileDS(DataSource):
         data = BytesIO()
 
         # get data from either url or file load in memory
-        if file[:5] == 'http:' or file[:6] == 'https:':
+        if file.startswith('http:') or file.startswith('https:'):
             r = requests.get(file, stream=True)
             if r.status_code == 200:
                 for chunk in r:
@@ -108,7 +108,7 @@ class FileDS(DataSource):
         if len(text) > 0:
             text = text.strip()
             # it it looks like a json, then try to parse it
-            if text != "" and ((text[0] == "{") or (text[0] == "[")):
+            if text.startswith('{') or text.startswith('['):
                 try:
                     json.loads(data.read())
                     data.seek(0)

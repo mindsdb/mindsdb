@@ -51,7 +51,7 @@ class DataSplitter(BaseModule):
         # move indexes to corresponding train, test, validation, etc and trim input data accordingly
         if self.transaction.lmd['type'] == TRANSACTION_LEARN:
             for key in all_indexes:
-                should_split_by_group = type(group_by) == list and len(group_by) > 0
+                should_split_by_group = isinstance(group_by, list) and len(group_by) > 0
 
                 #If this is a group by, skip the `KEY_NO_GROUP_BY` key
                 if should_split_by_group and key == KEY_NO_GROUP_BY:

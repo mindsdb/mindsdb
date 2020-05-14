@@ -7,21 +7,21 @@ def test_data_analysis(amd, to_predict):
     data_analysis = amd['data_analysis']
     for k in data_analysis:
         assert (len(data_analysis[k]) > 0)
-        assert (type(data_analysis[k][0]) == dict)
+        assert isinstance(data_analysis[k][0], dict)
 
 def test_model_analysis(amd, to_predict):
     model_analysis = amd['model_analysis']
     assert (len(model_analysis) > 0)
-    assert (type(model_analysis[0]) == dict)
+    assert isinstance(model_analysis[0], dict)
     input_importance = model_analysis[0]["overall_input_importance"]
     assert (len(input_importance) > 0)
-    assert (type(input_importance) == dict)
+    assert isinstance(input_importance, dict)
 
     for column, importance in zip(input_importance["x"], input_importance["y"]):
-        assert (type(column) == str)
+        assert isinstance(column, str)
         assert (len(column) > 0)
 
-        assert (type(importance) == float or type(importance) == int)
+        assert isinstance(importance, (float, int))
         assert (importance > 0)
 
 def test_force_vectors(amd, to_predict):
@@ -37,16 +37,16 @@ def test_adapted_model_data(amd, to_predict):
     amd = amd
     for k in ['status', 'name', 'version', 'data_source', 'current_phase', 'updated_at', 'created_at',
               'train_end_at']:
-        assert (type(amd[k]) == str)
+        assert isinstance(amd[k], str)
 
-    assert (type(amd['predict']) == list or type(amd['predict']) == str)
-    assert (type(amd['is_active']) == bool)
+    assert isinstance(amd['predict'], (list, str))
+    assert isinstance(amd['is_active'], bool)
 
     for k in ['validation_set_accuracy', 'accuracy']:
-        assert (type(amd[k]) == float)
+        assert isinstance(amd[k], float)
 
     for k in amd['data_preparation']:
-        assert (type(amd['data_preparation'][k]) == int or type(amd['data_preparation'][k]) == float)
+        assert isinstance(amd['data_preparation'][k], (int, float))
     test_data_analysis(amd, to_predict)
     test_model_analysis(amd, to_predict)
     #test_force_vectors(amd, to_predict)

@@ -6,7 +6,6 @@ import datetime
 
 class ModelInterface(BaseModule):
     def run(self, mode='train'):
-
         try:
             from mindsdb.libs.backends.ludwig import LudwigBackend
         except ImportError as e:
@@ -16,7 +15,7 @@ class ModelInterface(BaseModule):
         try:
             from mindsdb.libs.backends.lightwood import LightwoodBackend
         except ImportError as e:
-            self.transaction.log.warning(e)
+            self.log.warning(e)
 
         if self.transaction.hmd['model_backend'] == 'ludwig':
             self.transaction.model_backend = LudwigBackend(self.transaction)

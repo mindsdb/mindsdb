@@ -5,7 +5,17 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 class DataSplitter(BaseModule):
-    def run(self):    
+    def _cleanup_w_missing_targets(self, df):
+        initial_len = len(df)
+        df = df.dropna(subset=self.transaction.lmd['predict_columns'])
+        no_dropped = len(df) - initial_len
+        if no_dropped > 0:
+            self.log.warning(f'Dropped {no_dropped} rows because they had null values in one or more of the columns that we are trying to predict. Please always provide non-null values in the columns you want to predict !')
+        return df
+
+    def run(self):
+        self.transaction.input_data.data_frame = self._cleanup_w_missing_targets(self.transaction.input_data.data_frame)
+
         group_by = self.transaction.lmd['model_group_by']
         if group_by is None or len(group_by) == 0:
             group_by = []
@@ -83,7 +93,14 @@ class DataSplitter(BaseModule):
             self.transaction.input_data.test_df = self.transaction.input_data.data_frame.iloc[test_indexes[KEY_NO_GROUP_BY]].copy()
             self.transaction.input_data.validation_df = self.transaction.input_data.data_frame.iloc[validation_indexes[KEY_NO_GROUP_BY]].copy()
 
-            self.transaction.input_data.data_frame = None
+            try:
+                self.transaction.input_data.data_frame = None
+                del self.transaction.input_data.data_frame
+                # Importing here on the off chance w'ere running on an interp where the gc can't be accessed directly
+                import gc
+                gc.collect()
+            except:
+                self.log.warning('Failed to cleanup memory after data splitting !')
 
             self.transaction.lmd['data_preparation']['test_row_count'] = len(self.transaction.input_data.test_df)
             self.transaction.lmd['data_preparation']['train_row_count'] = len(self.transaction.input_data.train_df)

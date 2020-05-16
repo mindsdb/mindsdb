@@ -192,7 +192,7 @@ class ProbabilisticValidator():
 
         accuracy_samples = None
         if len(self.numerical_samples_arr) > 0:
-            nr_samples = max(400,len(self.numerical_samples_arr))
+            nr_samples = min(400,len(self.numerical_samples_arr))
             sampled_numerical_samples_arr = random.sample(self.numerical_samples_arr, nr_samples)
             accuracy_samples = {
                 'y': [x[0] for x in sampled_numerical_samples_arr]

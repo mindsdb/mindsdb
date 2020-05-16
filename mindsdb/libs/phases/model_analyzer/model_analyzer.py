@@ -58,6 +58,7 @@ class ModelAnalyzer(BaseModule):
             self.transaction.lmd['accuracy_samples'][col] = accuracy_samples
             self.transaction.hmd['probabilistic_validators'][col] = pickle_obj(pval)
 
+        print(overall_accuracy_arr)
         self.transaction.lmd['validation_set_accuracy'] = sum(overall_accuracy_arr)/len(overall_accuracy_arr)
 
 def test():

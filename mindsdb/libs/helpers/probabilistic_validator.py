@@ -194,15 +194,14 @@ class ProbabilisticValidator():
             'real': bucket_values
         }
 
+        accuracy_samples = None
         if len(self.real_values_sampled) > 0:
-            cm['accuracy_samples'] = {
-                'x': self.normal_predictions_sampled
-                ,'y': self.real_values_sampled
+            accuracy_samples = {
+                'y': self.normal_predictions_sampled
+                ,'x': self.real_values_sampled
             }
 
-        print(cm)
-
-        return overall_accuracy, accuracy_histogram, cm
+        return overall_accuracy, accuracy_histogram, cm, accuracy_samples
 
 if __name__ == "__main__":
     pass

@@ -109,7 +109,8 @@ class ProbabilisticValidator():
                 X[-1] += feature_existance
 
 
-        sampling_tuples_arr = random.sample(sampling_tuples_arr,400)
+        if len(sampling_tuples_arr) > 400:
+            sampling_tuples_arr = random.sample(sampling_tuples_arr,400)
         self.real_values_sampled = [x[0] for x in sampling_tuples_arr]
         self.normal_predictions_sampled = [x[1] for x in sampling_tuples_arr]
 

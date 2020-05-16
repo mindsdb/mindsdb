@@ -4,6 +4,7 @@ from mindsdb.libs.helpers.general_helpers import get_value_bucket
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.metrics import confusion_matrix
 import numpy as np
+import random
 
 
 class ProbabilisticValidator():
@@ -43,6 +44,9 @@ class ProbabilisticValidator():
         self.real_values_bucketized = []
         self.normal_predictions_bucketized = []
 
+        self.real_values_sampled = []
+        self.normal_predictions_sampled = []
+
         column_indexes = {}
         for i, col in enumerate(self.input_columns):
             column_indexes[col] = i
@@ -57,10 +61,13 @@ class ProbabilisticValidator():
 
         X = []
         Y = []
+        sampling_tuples_arr = []
         for n in range(len(predictions_arr)):
             for m in range(len(real_df)):
                 row = real_df.iloc[m]
                 predicted_value = predictions_arr[n][self.col_name][m]
+                predicted_range = predictions_arr[n][f'{self.col_name}_confidence_range'][m]
+
                 real_value = row[self.col_name]
                 try:
                     predicted_value = predicted_value if self.col_stats['data_type'] != DATA_TYPES.NUMERIC else float(predicted_value)
@@ -75,22 +82,24 @@ class ProbabilisticValidator():
                 if self.buckets is not None:
                     predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats, hmd)
                     real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats, hmd)
-
                     X.append([0] * (len(self.buckets) + 1))
                     X[-1][predicted_value_b] = 1
-
-
                 else:
                     predicted_value_b = predicted_value
                     real_value_b = real_value_b
 
                     X.append([])
 
-                Y.append(real_value_b == predicted_value_b)
+                if self.col_stats['data_type'] == DATA_TYPES.NUMERIC:
+                    Y.append(predicted_range[0] < real_value < predicted_range[1])
+                else:
+                    Y.append(real_value_b == predicted_value_b)
 
                 if n == 0:
                     self.real_values_bucketized.append(real_value_b)
                     self.normal_predictions_bucketized.append(predicted_value_b)
+                    if self.col_stats['data_type'] == DATA_TYPES.NUMERIC:
+                        sampling_tuples_arr.append((real_value,predicted_range))
 
                 feature_existance = real_present_inputs_arr[m]
                 if n > 0:
@@ -99,6 +108,10 @@ class ProbabilisticValidator():
 
                 X[-1] += feature_existance
 
+
+        sampling_tuples_arr = random.sample(sampling_tuples_arr,400)
+        self.real_values_sampled = [x[0] for x in sampling_tuples_arr]
+        self.normal_predictions_sampled = [x[1] for x in sampling_tuples_arr]
 
         log_types = np.seterr()
         np.seterr(divide='ignore')
@@ -180,6 +193,14 @@ class ProbabilisticValidator():
             'predicted': bucket_values,
             'real': bucket_values
         }
+
+        if len(self.real_values_sampled) > 0:
+            cm['accuracy_samples'] = {
+                'x': self.normal_predictions_sampled
+                ,'y': self.real_values_sampled
+            }
+
+        print(cm)
 
         return overall_accuracy, accuracy_histogram, cm
 

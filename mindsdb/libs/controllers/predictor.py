@@ -274,6 +274,14 @@ class Predictor:
                     confusion_matrix = lmd['confusion_matrices'][col]
                 else:
                     confusion_matrix = None
+
+                if 'accuracy_samples' in lmd and col in lmd['accuracy_samples']:
+                    accuracy_samples = lmd['accuracy_samples'][col]
+                else:
+                    accuracy_samples = None
+
+
+
                 # Model analysis building for each of the predict columns
                 mao = {
                     'column_name': col
@@ -298,6 +306,7 @@ class Predictor:
                         ,'x_explained': []
                   }
                   ,"confusion_matrix": confusion_matrix
+                  ,"accuracy_samples": accuracy_samples
                 }
 
 
@@ -589,7 +598,7 @@ class Predictor:
 
         if ignore_columns is None:
             ignore_columns = []
-        
+
         if group_by is None:
             group_by = []
 
@@ -614,7 +623,7 @@ class Predictor:
         test_from_ds = None if test_from_data is None else getDS(test_from_data)
 
         transaction_type = TRANSACTION_LEARN
-        sample_confidence_level = 1 - sample_margin_of_error        
+        sample_confidence_level = 1 - sample_margin_of_error
 
         if len(predict_columns) == 0:
             error = 'You need to specify a column to predict'

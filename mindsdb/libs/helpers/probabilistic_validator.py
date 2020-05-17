@@ -4,6 +4,7 @@ from mindsdb.libs.helpers.general_helpers import get_value_bucket
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.metrics import confusion_matrix
 import numpy as np
+import random
 
 
 class ProbabilisticValidator():
@@ -42,6 +43,7 @@ class ProbabilisticValidator():
         """
         self.real_values_bucketized = []
         self.normal_predictions_bucketized = []
+        self.numerical_samples_arr = []
 
         column_indexes = {}
         for i, col in enumerate(self.input_columns):
@@ -57,10 +59,13 @@ class ProbabilisticValidator():
 
         X = []
         Y = []
+
         for n in range(len(predictions_arr)):
             for m in range(len(real_df)):
                 row = real_df.iloc[m]
                 predicted_value = predictions_arr[n][self.col_name][m]
+                predicted_range = predictions_arr[n][f'{self.col_name}_confidence_range'][m]
+
                 real_value = row[self.col_name]
                 try:
                     predicted_value = predicted_value if self.col_stats['data_type'] != DATA_TYPES.NUMERIC else float(predicted_value)
@@ -75,22 +80,24 @@ class ProbabilisticValidator():
                 if self.buckets is not None:
                     predicted_value_b = get_value_bucket(predicted_value, self.buckets, self.col_stats, hmd)
                     real_value_b = get_value_bucket(real_value, self.buckets, self.col_stats, hmd)
-
                     X.append([0] * (len(self.buckets) + 1))
                     X[-1][predicted_value_b] = 1
-
-
                 else:
                     predicted_value_b = predicted_value
                     real_value_b = real_value_b
 
                     X.append([])
 
-                Y.append(real_value_b == predicted_value_b)
+                if self.col_stats['data_type'] == DATA_TYPES.NUMERIC:
+                    Y.append(predicted_range[0] < real_value < predicted_range[1])
+                else:
+                    Y.append(real_value_b == predicted_value_b)
 
                 if n == 0:
                     self.real_values_bucketized.append(real_value_b)
                     self.normal_predictions_bucketized.append(predicted_value_b)
+                    if self.col_stats['data_type'] == DATA_TYPES.NUMERIC:
+                        self.numerical_samples_arr.append((real_value,predicted_range))
 
                 feature_existance = real_present_inputs_arr[m]
                 if n > 0:
@@ -98,7 +105,6 @@ class ProbabilisticValidator():
                         feature_existance[self.input_columns.index(missing_col)] = 0
 
                 X[-1] += feature_existance
-
 
         log_types = np.seterr()
         np.seterr(divide='ignore')
@@ -142,7 +148,10 @@ class ProbabilisticValidator():
             if bucket not in bucket_acc_counts:
                 bucket_acc_counts[bucket] = []
 
-            bucket_acc_counts[bucket].append(1 if bucket == self.real_values_bucketized[i] else 0)
+            if len(self.numerical_samples_arr) != 0:
+                bucket_acc_counts[bucket].append(self.numerical_samples_arr[i][1][0] < self.numerical_samples_arr[i][0] < self.numerical_samples_arr[i][1][1])
+            else:
+                bucket_acc_counts[bucket].append(1 if bucket == self.real_values_bucketized[i] else 0)
 
         for bucket in bucket_accuracy:
             bucket_accuracy[bucket] = sum(bucket_acc_counts[bucket])/len(bucket_acc_counts[bucket])
@@ -181,7 +190,16 @@ class ProbabilisticValidator():
             'real': bucket_values
         }
 
-        return overall_accuracy, accuracy_histogram, cm
+        accuracy_samples = None
+        if len(self.numerical_samples_arr) > 0:
+            nr_samples = min(400,len(self.numerical_samples_arr))
+            sampled_numerical_samples_arr = random.sample(self.numerical_samples_arr, nr_samples)
+            accuracy_samples = {
+                'y': [x[0] for x in sampled_numerical_samples_arr]
+                ,'x': [x[1] for x in sampled_numerical_samples_arr]
+            }
+
+        return overall_accuracy, accuracy_histogram, cm, accuracy_samples
 
 if __name__ == "__main__":
     pass

@@ -538,6 +538,7 @@ class StatsGenerator(BaseModule):
         '''
 
         stats = {}
+        stats_v2 = {}
         col_data_dict = {}
 
         if print_logs == False:
@@ -546,35 +547,43 @@ class StatsGenerator(BaseModule):
 
         sample_df = sample_data(input_data.data_frame, self.transaction.lmd['sample_margin_of_error'], self.transaction.lmd['sample_confidence_level'], self.log.info)
 
-        for col_name in sample_df.columns.values:
-            if col_name in self.transaction.lmd['columns_to_ignore']:
-                continue
+        for col_name in self.transaction.lmd['empty_columns']:
+            stats_v2[col_name]['empty'] = {'is_empty': True}
 
-            col_data = sample_df[col_name].dropna()
-            full_col_data = sample_df[col_name]
+        for col_name in sample_df.columns.values:
+            stats_v2[col_name] = {}
+
+            len_wo_nulls = len(input_data.data_frame[col_name].dropna())
+            len_w_nulls = len(input_data.data_frame[col_name])
+            stats_v2[col_name]['empty'] = {
+                'empty_cells': len_w_nulls - len_wo_nulls
+                ,'empty_percentage': 100 * round((len_w_nulls - len_wo_nulls)/len_w_nulls,3)
+                ,'is_empty': False
+            }
 
             data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
 
-            if column_status == 'Column empty':
-                if modify_light_metadata:
-                    self.transaction.lmd['empty_columns'].append(col_name)
-                    logging.warning(f'The "{col_name}" column is empty, it will be ignored, please make sure the data in the column is correct !')
-                    self.transaction.lmd['columns_to_ignore'].append(col_name)
-                continue
+            stats_v2[col_name]['typing'] = {
+                'data_type': data_type
+                ,'data_subtype': curr_data_subtype
+                ,'data_type_dist': data_type_dist
+                ,'data_subtype_dist': data_subtype_dist
+            }
 
-            new_col_data = []
+            col_data = sample_df[col_name].dropna()
 
-            if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP: #data_type == DATA_TYPES.DATE:
+            # Do some temporary processing for timestamp values
+            if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP
+                new_col_data = []
                 for element in col_data:
-                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
-                        new_col_data.append(None)
-                    else:
-                        try:
-                            new_col_data.append(int(parse_datetime(element).timestamp()))
-                        except:
-                            self.log.warning(f'Could not convert string from col "{col_name}" to date and it was expected, instead got: {element}')
-                            new_col_data.append(None)
+                    try:
+                        new_col_data.append(int(parse_datetime(element).timestamp()))
+                    except:
+                        self.log.warning(f'Could not convert string from col "{col_name}" to date and it was expected, instead got: {element}')
+                        new_col_data.append(0)
                 col_data = new_col_data
+
+            # Bellow this point OLD LOGIC lies (this will be slowly replaced by stats_v2)
             if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
                 histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
                 x = histogram['x']
@@ -684,10 +693,9 @@ class StatsGenerator(BaseModule):
             stats[col_name]['data_subtype_dist'] = data_subtype_dist
             stats[col_name]['column'] = col_name
 
-            empty_count = len(full_col_data) - len(col_data)
+            stats[col_name]['empty_cells'] = stats_v2[col_name]['empty']['empty_cells']
+            stats[col_name]['empty_percentage'] = stats_v2[col_name]['empty']['empty_percentage']
 
-            stats[col_name]['empty_cells'] = empty_count
-            stats[col_name]['empty_percentage'] = empty_count * 100 / len(full_col_data)
             for k in additional_info:
                 stats[col_name][k] = additional_info[k]
 

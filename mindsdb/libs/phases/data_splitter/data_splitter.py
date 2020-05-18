@@ -14,6 +14,12 @@ class DataSplitter(BaseModule):
         return df
 
     def _cleanup_ignored(self, df):
+        for col in df.columns.values:
+            if len(df[col].dropna()) < 1:
+                self.transaction.lmd['columns_to_ignore'].append(col)
+                self.transaction.lmd['empty_columns'].append(col_name)
+                self.log.warning(f'Column "{col}" is empty ! We\'ll go ahead and ignore it, please make sure you gave mindsdb the correct data.')
+
         df = df.drop(columns=self.transaction.lmd['columns_to_ignore'])
         return df
 

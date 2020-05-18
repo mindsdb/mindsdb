@@ -561,6 +561,8 @@ class StatsGenerator(BaseModule):
                 ,'is_empty': False
             }
 
+            col_data = sample_df[col_name].dropna()
+
             data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
 
             stats_v2[col_name]['typing'] = {
@@ -569,8 +571,6 @@ class StatsGenerator(BaseModule):
                 ,'data_type_dist': data_type_dist
                 ,'data_subtype_dist': data_subtype_dist
             }
-
-            col_data = sample_df[col_name].dropna()
 
             # Do some temporary processing for timestamp values
             if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:

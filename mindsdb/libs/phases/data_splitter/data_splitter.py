@@ -13,8 +13,13 @@ class DataSplitter(BaseModule):
             self.log.warning(f'Dropped {no_dropped} rows because they had null values in one or more of the columns that we are trying to predict. Please always provide non-null values in the columns you want to predict !')
         return df
 
+    def _cleanup_ignored(self, df):
+        df = df.drop(columns=self.transaction.lmd['columns_to_ignore'])
+        return df
+
     def run(self):
         self.transaction.input_data.data_frame = self._cleanup_w_missing_targets(self.transaction.input_data.data_frame)
+        self.transaction.input_data.data_frame = self._cleanup_ignored(self.transaction.input_data.data_frame)
 
         group_by = self.transaction.lmd['model_group_by']
         if group_by is None or len(group_by) == 0:

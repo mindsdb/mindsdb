@@ -20,9 +20,8 @@ from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, cast_string_to_python_type
 from mindsdb.libs.helpers.debugging import *
-from mindsdb.external_libs.stats import calculate_sample_size
 from mindsdb.libs.phases.stats_generator.scores import *
-
+from mindsdb.libs.phases.stats_generator.data_preparation import sample_data, cleanup_sample
 
 class StatsGenerator(BaseModule):
     """
@@ -537,35 +536,22 @@ class StatsGenerator(BaseModule):
             no_processes = 1
         pool = multiprocessing.Pool(processes=no_processes)
         '''
-        if print_logs == False:
-            self.log = logging.getLogger('null-logger')
-            self.log.propagate = False
-
-        # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
-        population_size = len(input_data.data_frame)
-
-        if population_size < 50:
-            sample_size = population_size
-        else:
-            sample_size = int(calculate_sample_size(population_size=population_size, margin_error=self.transaction.lmd['sample_margin_of_error'], confidence_level=self.transaction.lmd['sample_confidence_level']))
-            #if sample_size > 3000 and sample_size > population_size/8:
-            #    sample_size = min(round(population_size/8),3000)
-
-        # get the indexes of randomly selected rows given the population size
-        input_data_sample_indexes = random.sample(range(population_size), sample_size)
-        self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
-
-        all_sampled_data = input_data.data_frame.iloc[input_data_sample_indexes]
 
         stats = {}
         col_data_dict = {}
 
-        for col_name in all_sampled_data.columns.values:
+        if print_logs == False:
+            self.log = logging.getLogger('null-logger')
+            self.log.propagate = False
+
+        sample_df = sample_data(input_data.data_frame, self.transaction.lmd['sample_margin_of_error'], self.transaction.lmd['sample_confidence_level'], self.log.info)
+
+        for col_name in sample_df.columns.values:
             if col_name in self.transaction.lmd['columns_to_ignore']:
                 continue
 
-            col_data = all_sampled_data[col_name].dropna()
-            full_col_data = all_sampled_data[col_name]
+            col_data = sample_df[col_name].dropna()
+            full_col_data = sample_df[col_name]
 
             data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
 
@@ -707,7 +693,7 @@ class StatsGenerator(BaseModule):
 
             col_data_dict[col_name] = col_data
 
-        for col_name in all_sampled_data.columns:
+        for col_name in sample_df.columns:
             if col_name in self.transaction.lmd['columns_to_ignore']:
                 continue
 
@@ -716,7 +702,7 @@ class StatsGenerator(BaseModule):
             scores = []
 
             '''
-            scores.append(pool.apply_async(compute_clf_based_correlation_score, args=(stats, all_sampled_data, col_name)))
+            scores.append(pool.apply_async(compute_clf_based_correlation_score, args=(stats, sample_df, col_name)))
             '''
             for score_promise in scores:
                 # Wait for function on process to finish running
@@ -730,7 +716,7 @@ class StatsGenerator(BaseModule):
                     if 'compute_z_score' in str(score_func) or 'compute_lof_score' in str(score_func):
                         stats[col_name].update(score_func(stats, col_data_dict, col_name))
                     else:
-                        stats[col_name].update(score_func(stats, all_sampled_data, col_name))
+                        stats[col_name].update(score_func(stats, sample_df, col_name))
                 except Exception as e:
                     self.log.warning(e)
 

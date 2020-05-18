@@ -25,12 +25,13 @@ except:
 
 try:
     from mindsdb.libs.data_sources.mysql_ds import MySqlDS
-except:
-    pass
+except ImportError:
+    raise ImportError("MySQL Datasource is not avaiable by default. Please install mysqlclient or mindsdb[extra_data_sources]")
 
 try:
     from mindsdb.libs.data_sources.postgres_ds import PostgresDS
-except:
-    pass
+except ImportError:
+    raise ImportError("PostgresDS Datasource is not avaiable by default. Please install psycopg2 or mindsdb[extra_data_sources]")
+
 
 MindsDB = Predictor

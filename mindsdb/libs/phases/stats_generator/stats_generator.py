@@ -5,7 +5,6 @@ import imghdr
 import sndhdr
 import logging
 from collections import Counter
-#import multiprocessing
 
 import numpy as np
 import scipy.stats as st
@@ -523,19 +522,12 @@ class StatsGenerator(BaseModule):
                 # Functionality is specific to mindsdb logger
                 pass
 
-    def run(self, input_data, modify_light_metadata, hmd=None, print_logs=True):
+    def run(self, input_data, hmd=None, print_logs=True):
         """
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
-
-        ''' @TODO Uncomment when we need multiprocessing, possibly disable on OSX
-        no_processes = multiprocessing.cpu_count() - 2
-        if no_processes < 1:
-            no_processes = 1
-        pool = multiprocessing.Pool(processes=no_processes)
-        '''
 
         stats = {}
         stats_v2 = {}
@@ -705,13 +697,9 @@ class StatsGenerator(BaseModule):
             if col_name in self.transaction.lmd['columns_to_ignore']:
                 continue
 
-            # Use the multiprocessing pool for computing scores which take a very long time to compute
             # For now there's only one and computing it takes way too long, so this is not enabled
             scores = []
 
-            '''
-            scores.append(pool.apply_async(compute_clf_based_correlation_score, args=(stats, sample_df, col_name)))
-            '''
             for score_promise in scores:
                 # Wait for function on process to finish running
                 score = score_promise.get()
@@ -741,20 +729,12 @@ class StatsGenerator(BaseModule):
             if stats[col_name]['is_foreign_key'] and self.transaction.lmd['handle_foreign_keys']:
                 self.transaction.lmd['columns_to_ignore'].append(col_name)
 
-        total_rows = len(input_data.data_frame)
+        self.transaction.lmd['column_stats'] = stats
+        self.transaction.lmd['stats_v2'] = stats_v2
 
-        if modify_light_metadata:
-            self.transaction.lmd['column_stats'] = stats
+        self.transaction.lmd['data_preparation']['accepted_margin_of_error'] = self.transaction.lmd['sample_margin_of_error']
 
-            self.transaction.lmd['data_preparation']['accepted_margin_of_error'] = self.transaction.lmd['sample_margin_of_error']
-
-            self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
-            self.transaction.lmd['data_preparation']['used_row_count'] = sample_size
-
-        ''' @TODO Uncomment when we need multiprocessing, possibly disable on OSX
-        pool.close()
-        pool.join()
-        '''
+        self.transaction.lmd['data_preparation']['total_row_count'] = len(input_data.data_frame)
+        self.transaction.lmd['data_preparation']['used_row_count'] = len(sample_df)
 
         self._log_interesting_stats(stats)
-        return stats

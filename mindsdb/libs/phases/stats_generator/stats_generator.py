@@ -573,7 +573,7 @@ class StatsGenerator(BaseModule):
             col_data = sample_df[col_name].dropna()
 
             # Do some temporary processing for timestamp values
-            if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP
+            if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
                 new_col_data = []
                 for element in col_data:
                     try:

@@ -64,7 +64,9 @@ class ProbabilisticValidator():
             for m in range(len(real_df)):
                 row = real_df.iloc[m]
                 predicted_value = predictions_arr[n][self.col_name][m]
-                predicted_range = predictions_arr[n][f'{self.col_name}_confidence_range'][m]
+
+                if f'{self.col_name}_confidence_range' in predictions_arr[n]:
+                    predicted_range = predictions_arr[n][f'{self.col_name}_confidence_range'][m]
 
                 real_value = row[self.col_name]
                 try:

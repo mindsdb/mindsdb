@@ -1,20 +1,31 @@
-from mindsdb.config import CONFIG
-from mindsdb.libs.constants.mindsdb import *
-from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.data_types.mindsdb_logger import log
+from mindsdb.mindsdb.config import CONFIG
+from mindsdb.mindsdb.libs.constants.mindsdb import TRANSACTION_LEARN
+from mindsdb.mindsdb.libs.data_types.mindsdb_logger import log
+from mindsdb.mindsdb.libs.phases.base_module import BaseModule
 
 
 class DataSplitter(BaseModule):
     def _cleanup_w_missing_targets(self, df):
         initial_len = len(df)
         df = df.dropna(subset=self.transaction.lmd['predict_columns'])
-        no_dropped = len(df) - initial_len
+        final_len = len(df) 
+        no_dropped = final_len - initial_len
         if no_dropped > 0:
             self.log.warning(f'Dropped {no_dropped} rows because they had null values in one or more of the columns that we are trying to predict. Please always provide non-null values in the columns you want to predict !')
+        return df, final_len
+
+    def _deduplicate_data(self, df, df_len): 
+        df = df.drop_duplicates(keep='first', inplace=False)
+        final_len = len(df)
+        no_dropped = final_len - df_len
+        if no_dropped > 0: 
+            self.log.warning(f'Dropped {no_dropped} duplicate rows.')
         return df
 
+
     def run(self):
-        self.transaction.input_data.data_frame = self._cleanup_w_missing_targets(self.transaction.input_data.data_frame)
+        self.transaction.input_data.data_frame, dataframe_len = self._cleanup_w_missing_targets(self.transaction.input_data.data_frame)
+        self.transaction.input_data.data_frame = self._deduplicate_data(self.transaction.input_data.data_frame, dataframe_len) 
 
         group_by = self.transaction.lmd['model_group_by']
         if group_by is None or len(group_by) == 0:

@@ -1,7 +1,7 @@
-from mindsdb.mindsdb.config import CONFIG
-from mindsdb.mindsdb.libs.constants.mindsdb import TRANSACTION_LEARN
-from mindsdb.mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.mindsdb.libs.phases.base_module import BaseModule
+from mindsdb.config import CONFIG
+from mindsdb.libs.constants.mindsdb import TRANSACTION_LEARN
+from mindsdb.libs.data_types.mindsdb_logger import log
+from mindsdb.libs.phases.base_module import BaseModule
 
 
 class DataSplitter(BaseModule):

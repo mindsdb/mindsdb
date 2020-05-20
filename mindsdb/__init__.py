@@ -33,4 +33,6 @@ try:
 except:
     pass
 
+from mindsdb.libs.data_sources.clickhouse_ds import ClickhouseDS
+
 MindsDB = Predictor

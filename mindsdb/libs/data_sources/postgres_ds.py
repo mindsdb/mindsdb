@@ -4,7 +4,6 @@ import pandas as pd
 import psycopg2
 
 from mindsdb.libs.data_types.data_source import DataSource
-from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 class PostgresDS(DataSource):

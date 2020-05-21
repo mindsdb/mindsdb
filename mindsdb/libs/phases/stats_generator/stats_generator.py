@@ -7,7 +7,7 @@ import logging
 from collections import Counter
 
 import numpy as np
-import scipy.stats as st
+import scipy.stats as entropy
 from dateutil.parser import parse as parse_datetime
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import MiniBatchKMeans
@@ -551,12 +551,16 @@ class StatsGenerator(BaseModule):
             if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
                 col_data = clean_int_and_date_data(col_data)
 
-                histogram, percentage_buckets = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
+            hist_data = col_data
+            if data_type == DATA_TYPES.CATEGORICAL:
+                hist_data = input_data.data_frame[col_name]
+                
+            histogram, percentage_buckets = StatsGenerator.get_histogram(hist_data, data_type=data_type, data_subtype=curr_data_subtype)
 
-                stats[col_name]['histogram'] = histogram
-                stats[col_name]['percentage_buckets'] = percentage_buckets
-                stats_v2[col_name]['histogram'] = histogram
-                stats_v2[col_name]['percentage_buckets'] = percentage_buckets
+            stats[col_name]['histogram'] = histogram
+            stats[col_name]['percentage_buckets'] = percentage_buckets
+            stats_v2[col_name]['histogram'] = histogram
+            stats_v2[col_name]['percentage_buckets'] = percentage_buckets
 
             stats[col_name]['empty_cells'] = stats_v2[col_name]['empty']['empty_cells']
             stats[col_name]['empty_percentage'] = stats_v2[col_name]['empty']['empty_percentage']
@@ -568,6 +572,13 @@ class StatsGenerator(BaseModule):
             col_data_dict[col_name] = col_data
 
         for col_name in sample_df.columns:
+            col_data = sample_df[col_name]
+            if data_type in (DATA_TYPES.NUMERIC,DATA_TYPES.DATE,DATA_TYPES.CATEGORICAL,DATA_SUBTYPES.IMAGE):
+                total_values = sum(stats_v2[col_name]['histogram']['y'])
+                S = entropy([x/total_values for x in stats_v2[col_name]['histogram']['y']])
+
+
+
             # For now there's only one and computing it takes way too long, so this is not enabled
             scores = []
 

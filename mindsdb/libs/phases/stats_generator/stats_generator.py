@@ -20,7 +20,7 @@ from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, cast_string_to_python_type
 from mindsdb.libs.helpers.debugging import *
 from mindsdb.libs.phases.stats_generator.scores import *
-from mindsdb.libs.phases.stats_generator.data_preparation import sample_data, cleanup_sample
+from mindsdb.libs.phases.stats_generator.data_preparation import sample_data, clean_int_and_date_data
 
 class StatsGenerator(BaseModule):
     """
@@ -268,22 +268,6 @@ class StatsGenerator(BaseModule):
             subtype_dist[curr_data_subtype] = len(data)
 
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
-
-    @staticmethod
-    def clean_int_and_date_data(col_data):
-        cleaned_data = []
-
-        for ele in col_data:
-            if str(ele) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null'] and ele != '' and ele != '\r' and ele != '\n':
-                try:
-                    cleaned_data.append(clean_float(ele))
-                except:
-                    try:
-                        cleaned_data.append(parse_datetime(str(ele)).timestamp())
-                    except:
-                        cleaned_data.append(0)
-
-        return cleaned_data
 
     @staticmethod
     def get_words_histogram(data, is_full_text=False):
@@ -565,7 +549,7 @@ class StatsGenerator(BaseModule):
 
             # Do some temporary processing for timestamp and numerical values
             if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
-                col_data = StatsGenerator.clean_int_and_date_data(col_data)
+                col_data = clean_int_and_date_data(col_data)
 
                 histogram, percentage_buckets = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
 

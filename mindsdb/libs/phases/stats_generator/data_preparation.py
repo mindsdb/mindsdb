@@ -17,5 +17,18 @@ def sample_data(df, sample_margin_of_error, sample_confidence_level, log_fn):
 
     return df.iloc[input_data_sample_indexes]
 
-def cleanup_sample(col_data, data_type, data_subtype):
-    pass
+
+def clean_int_and_date_data(col_data):
+    cleaned_data = []
+
+    for ele in col_data:
+        if str(ele) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null'] and ele != '' and ele != '\r' and ele != '\n':
+            try:
+                cleaned_data.append(clean_float(ele))
+            except:
+                try:
+                    cleaned_data.append(parse_datetime(str(ele)).timestamp())
+                except:
+                    cleaned_data.append(0)
+
+    return cleaned_data

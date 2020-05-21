@@ -273,20 +273,17 @@ class StatsGenerator(BaseModule):
     def clean_int_and_date_data(col_data):
         cleaned_data = []
 
-        for value in col_data:
-            if value != '' and value != '\r' and value != '\n':
-                cleaned_data.append(value)
-
-        cleaned_data_new = []
-
-        for ele in cleaned_data:
-            if str(ele) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
+        for ele in col_data:
+            if str(ele) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null'] and ele != '' and ele != '\r' and ele != '\n':
                 try:
-                    cleaned_data_new.append(clean_float(ele))
+                    cleaned_data.append(clean_float(ele))
                 except:
-                    cleaned_data_new.append(parse_datetime(str(ele)).timestamp())
+                    try:
+                        cleaned_data.append(parse_datetime(str(ele)).timestamp())
+                    except:
+                        cleaned_data.append(0)
 
-        return cleaned_data_new
+        return cleaned_data
 
     @staticmethod
     def get_words_histogram(data, is_full_text=False):
@@ -316,7 +313,6 @@ class StatsGenerator(BaseModule):
             is_full_text = True if data_subtype == DATA_SUBTYPES.TEXT else False
             return StatsGenerator.get_words_histogram(data, is_full_text), None
         elif data_type == DATA_TYPES.NUMERIC or data_subtype == DATA_SUBTYPES.TIMESTAMP:
-            data = StatsGenerator.clean_int_and_date_data(data)
             y, x = np.histogram(data, bins=50, range=(min(data),max(data)), density=False)
             x = x[:-1]
             #x = (x + np.roll(x, -1))[:-1] / 2.0 <--- original code, was causing weird bucket values when we had outliers
@@ -325,13 +321,13 @@ class StatsGenerator(BaseModule):
             return {
                 'x': x
                 ,'y': y
-            }, None
+            }, x
         elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE :
             histogram = Counter(data)
             return {
                 'x': list(map(str,histogram.keys())),
                 'y': list(histogram.values())
-            }, None
+            }, list(histogram.values())
         elif data_subtype == DATA_SUBTYPES.IMAGE:
             image_hashes = []
             for img_path in data:
@@ -544,6 +540,7 @@ class StatsGenerator(BaseModule):
 
         for col_name in sample_df.columns.values:
             stats_v2[col_name] = {}
+            stats[col_name] = {}
 
             len_wo_nulls = len(input_data.data_frame[col_name].dropna())
             len_w_nulls = len(input_data.data_frame[col_name])
@@ -564,93 +561,19 @@ class StatsGenerator(BaseModule):
                 ,'data_subtype_dist': data_subtype_dist
             }
 
-            # Do some temporary processing for timestamp values
-            if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
-                new_col_data = []
-                for element in col_data:
-                    try:
-                        new_col_data.append(int(parse_datetime(element).timestamp()))
-                    except:
-                        self.log.warning(f'Could not convert string from col "{col_name}" to date and it was expected, instead got: {element}')
-                        new_col_data.append(0)
-                col_data = new_col_data
+            # Do some temporary processing for timestamp and numerical values
+            if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
+                col_data = StatsGenerator.clean_int_and_date_data(col_data)
+
+            if data_type in (DATA_TYPES.CATEGORICAL, DATA_TYPES.DATE, DATA_TYPES.NUMERIC) or curr_data_subtype == DATA_SUBTYPES.IMAGE:
+                histogram, percentage_buckets = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
+
+                stats[col_name]['histogram'] = histogram
+                stats[col_name]['percentage_buckets'] = percentage_buckets
+                stats_v2[col_name]['histogram'] = histogram
+                stats_v2[col_name]['percentage_buckets'] = percentage_buckets
 
             # Bellow this point OLD LOGIC lies (this will be slowly replaced by stats_v2)
-            if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
-                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
-                x = histogram['x']
-                y = histogram['y']
-
-                col_data = StatsGenerator.clean_int_and_date_data(col_data)
-                # This means the column is all nulls, which we don't handle at the moment
-                if len(col_data) < 1:
-                    return None
-
-                if len(col_data) > 0:
-                    max_value = max(col_data)
-                    min_value = min(col_data)
-                    mean = np.mean(col_data)
-                    median = np.median(col_data)
-                    var = np.var(col_data)
-                    skew = st.skew(col_data)
-                    kurtosis = st.kurtosis(col_data)
-                else:
-                    max_value = 0
-                    min_value = 0
-                    mean = 0
-                    median = 0
-                    var = 0
-                    skew = 0
-                    kurtosis = 0
-
-                is_float = True if max([1 if int(i) != i else 0 for i in col_data]) == 1 else False
-
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    "mean": mean,
-                    "median": median,
-                    "variance": var,
-                    "skewness": skew,
-                    "kurtosis": kurtosis,
-                    "max": max_value,
-                    "min": min_value,
-                    "is_float": is_float,
-                    "histogram": {
-                        "x": x,
-                        "y": y
-                    },
-                    "percentage_buckets": histogram['x']#xp
-                }
-
-            elif data_type == DATA_TYPES.CATEGORICAL or curr_data_subtype == DATA_SUBTYPES.DATE:
-                histogram, _ = StatsGenerator.get_histogram(input_data.data_frame[col_name], data_type=data_type, data_subtype=curr_data_subtype)
-
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    "histogram": histogram,
-                    "percentage_buckets": histogram['x']
-                }
-
-            elif curr_data_subtype == DATA_SUBTYPES.IMAGE:
-                histogram, percentage_buckets = StatsGenerator.get_histogram(col_data, data_subtype=curr_data_subtype)
-
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    'percentage_buckets': percentage_buckets,
-                    'histogram': histogram
-                }
-
-            elif curr_data_subtype == DATA_SUBTYPES.ARRAY:
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    'percentage_buckets': None,
-                    'histogram': None
-                }
-
             # @TODO This is probably wrong, look into it a bit later
             else:
                 # see if its a sentence or a word

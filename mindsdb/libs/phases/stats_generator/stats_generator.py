@@ -554,7 +554,7 @@ class StatsGenerator(BaseModule):
             hist_data = col_data
             if data_type == DATA_TYPES.CATEGORICAL:
                 hist_data = input_data.data_frame[col_name]
-                
+
             histogram, percentage_buckets = StatsGenerator.get_histogram(hist_data, data_type=data_type, data_subtype=curr_data_subtype)
 
             stats[col_name]['histogram'] = histogram
@@ -572,13 +572,6 @@ class StatsGenerator(BaseModule):
             col_data_dict[col_name] = col_data
 
         for col_name in sample_df.columns:
-            col_data = sample_df[col_name]
-            if data_type in (DATA_TYPES.NUMERIC,DATA_TYPES.DATE,DATA_TYPES.CATEGORICAL,DATA_SUBTYPES.IMAGE):
-                total_values = sum(stats_v2[col_name]['histogram']['y'])
-                S = entropy([x/total_values for x in stats_v2[col_name]['histogram']['y']])
-
-
-
             # For now there's only one and computing it takes way too long, so this is not enabled
             scores = []
 
@@ -610,6 +603,22 @@ class StatsGenerator(BaseModule):
             stats[col_name]['is_foreign_key'] = self.is_foreign_key(col_name, stats[col_name], col_data_dict[col_name])
             if stats[col_name]['is_foreign_key'] and self.transaction.lmd['handle_foreign_keys']:
                 self.transaction.lmd['columns_to_ignore'].append(col_name)
+
+            # New logic
+            col_data = sample_df[col_name]
+
+            if data_type in (DATA_TYPES.NUMERIC,DATA_TYPES.DATE,DATA_TYPES.CATEGORICAL,DATA_SUBTYPES.IMAGE):
+                nr_values = sum(stats_v2[col_name]['histogram']['y'])
+                S = entropy([x/nr_values for x in stats_v2[col_name]['histogram']['y']])
+                stats_v2[col_name]['information_content'] = {
+                    'entropy': S
+                }
+
+            if 'lof_outliers' in stats[col_name]:
+                stats_v2[col_name]['outliers'] = {
+                    'outlier_values': stats[col_name]['lof_outliers']
+                    ,'outlier_score': stats[col_name]['lof_based_outlier_score']
+                }
 
         self.transaction.lmd['column_stats'] = stats
         self.transaction.lmd['stats_v2'] = stats_v2

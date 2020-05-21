@@ -169,10 +169,11 @@ def compute_lof_score(stats, columns, col_name):
     np_col_data = np.array(columns[col_name]).reshape(-1, 1)
     lof = LocalOutlierFactor(contamination='auto')
     outlier_scores = lof.fit_predict(np_col_data)
-    outlier_indexes = [i for i in range(len(columns[col_name])) if outlier_scores[i] < -0.8]
+
+    outliers = [columns[col_name][i] for i in range(len(columns[col_name])) if outlier_scores[i] < -0.8]
 
     return {
-        'lof_outliers': outlier_indexes
+        'lof_outliers': outliers
         ,'lof_based_outlier_score': round(10 * (1 - len(outlier_indexes)/len(columns[col_name])))
         ,'percentage_of_log_based_outliers': (len(outlier_indexes)/len(columns[col_name])) * 100
         ,'lof_based_outlier_score_description':"""

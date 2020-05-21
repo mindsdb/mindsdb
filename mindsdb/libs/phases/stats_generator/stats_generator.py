@@ -561,11 +561,12 @@ class StatsGenerator(BaseModule):
                 ,'data_subtype_dist': data_subtype_dist
             }
 
+            for k  in stats_v2[col_name]['typing']: stats[col_name][k] = stats_v2[col_name]['typing'][k]
+
             # Do some temporary processing for timestamp and numerical values
             if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
                 col_data = StatsGenerator.clean_int_and_date_data(col_data)
 
-            if data_type in (DATA_TYPES.CATEGORICAL, DATA_TYPES.DATE, DATA_TYPES.NUMERIC) or curr_data_subtype == DATA_SUBTYPES.IMAGE:
                 histogram, percentage_buckets = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
 
                 stats[col_name]['histogram'] = histogram
@@ -573,53 +574,16 @@ class StatsGenerator(BaseModule):
                 stats_v2[col_name]['histogram'] = histogram
                 stats_v2[col_name]['percentage_buckets'] = percentage_buckets
 
-            # Bellow this point OLD LOGIC lies (this will be slowly replaced by stats_v2)
-            # @TODO This is probably wrong, look into it a bit later
-            else:
-                # see if its a sentence or a word
-                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
-                dictionary = list(histogram.keys())
-
-                # if no words, then no dictionary
-                if len(col_data) == 0:
-                    dictionary_available = False
-                    dictionary_lenght_percentage = 0
-                    dictionary = []
-                else:
-                    dictionary_available = True
-                    dictionary_lenght_percentage = len(
-                        dictionary) / len(col_data) * 100
-                    # if the number of uniques is too large then treat is a text
-                    is_full_text = True if curr_data_subtype == DATA_SUBTYPES.TEXT else False
-                    if dictionary_lenght_percentage > 10 and len(col_data) > 50 and is_full_text==False:
-                        dictionary = []
-                        dictionary_available = False
-
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    "dictionary": dictionary,
-                    "dictionaryAvailable": dictionary_available,
-                    "dictionaryLenghtPercentage": dictionary_lenght_percentage,
-                    "histogram": histogram
-                }
-            stats[col_name] = col_stats
-            stats[col_name]['data_type_dist'] = data_type_dist
-            stats[col_name]['data_subtype_dist'] = data_subtype_dist
-            stats[col_name]['column'] = col_name
-
             stats[col_name]['empty_cells'] = stats_v2[col_name]['empty']['empty_cells']
             stats[col_name]['empty_percentage'] = stats_v2[col_name]['empty']['empty_percentage']
 
+            stats_v2[col_name]['additional_info'] = additional_info
             for k in additional_info:
                 stats[col_name][k] = additional_info[k]
 
             col_data_dict[col_name] = col_data
 
         for col_name in sample_df.columns:
-            if col_name in self.transaction.lmd['columns_to_ignore']:
-                continue
-
             # For now there's only one and computing it takes way too long, so this is not enabled
             scores = []
 

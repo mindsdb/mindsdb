@@ -1,4 +1,5 @@
 import random
+import numpy as np
 
 from mindsdb.external_libs.stats import calculate_sample_size
 from mindsdb.libs.constants.mindsdb import *

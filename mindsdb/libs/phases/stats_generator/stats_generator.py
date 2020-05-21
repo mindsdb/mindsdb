@@ -7,7 +7,7 @@ import logging
 from collections import Counter
 
 import numpy as np
-import scipy.stats as entropy
+from scipy.stats import entropy
 from dateutil.parser import parse as parse_datetime
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import MiniBatchKMeans

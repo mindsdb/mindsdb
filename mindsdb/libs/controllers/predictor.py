@@ -216,7 +216,7 @@ class Predictor:
         amd = {}
 
         if 'stats_v2' in lmd:
-            amd['stats_v2'] = lmd['stats_v2']
+            amd['data_analysis_v2'] = lmd['stats_v2']
 
         if lmd['current_phase'] == MODEL_STATUS_TRAINED:
             amd['status'] = 'complete'

@@ -528,10 +528,17 @@ class StatsGenerator(BaseModule):
 
             len_wo_nulls = len(input_data.data_frame[col_name].dropna())
             len_w_nulls = len(input_data.data_frame[col_name])
+            len_unique = len(set(input_data.data_frame[col_name]))
+
             stats_v2[col_name]['empty'] = {
                 'empty_cells': len_w_nulls - len_wo_nulls
                 ,'empty_percentage': 100 * round((len_w_nulls - len_wo_nulls)/len_w_nulls,3)
                 ,'is_empty': False
+            }
+
+            stats_v2[col_name]['uniqe'] = {
+                'unique_values': len_unique
+                ,'unique_percentage': 100 * round((len_w_nulls - len_unique)/len_w_nulls,8)
             }
 
             col_data = sample_df[col_name].dropna()

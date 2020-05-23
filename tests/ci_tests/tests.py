@@ -20,9 +20,8 @@ def test_model_analysis(amd, to_predict):
     for column, importance in zip(input_importance["x"], input_importance["y"]):
         assert isinstance(column, str)
         assert (len(column) > 0)
-
         assert isinstance(importance, (float, int))
-        assert (importance >= 0 and importance <= 1)
+        assert (importance >= 0 and importance <= 10)
 
 def test_force_vectors(amd, to_predict):
     force_vectors = amd['force_vectors']

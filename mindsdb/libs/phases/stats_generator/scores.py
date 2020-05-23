@@ -174,8 +174,8 @@ def compute_lof_score(stats, columns, col_name):
 
     return {
         'lof_outliers': outliers
-        ,'lof_based_outlier_score': round(10 * (1 - len(outlier_indexes)/len(columns[col_name])))
-        ,'percentage_of_log_based_outliers': (len(outlier_indexes)/len(columns[col_name])) * 100
+        ,'lof_based_outlier_score': round(10 * (1 - len(outliers)/len(columns[col_name])))
+        ,'percentage_of_log_based_outliers': (len(outliers)/len(columns[col_name])) * 100
         ,'lof_based_outlier_score_description':"""
         The higher this score, the more outliers your dataset has. This is based on distance from the center of 20 clusters as constructed via KNN.
         """

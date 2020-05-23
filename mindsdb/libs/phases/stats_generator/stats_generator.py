@@ -610,9 +610,12 @@ class StatsGenerator(BaseModule):
             if data_type in (DATA_TYPES.NUMERIC,DATA_TYPES.DATE,DATA_TYPES.CATEGORICAL,DATA_SUBTYPES.IMAGE):
                 nr_values = sum(stats_v2[col_name]['histogram']['y'])
                 S = entropy([x/nr_values for x in stats_v2[col_name]['histogram']['y']],base=max(2,len(stats_v2[col_name]['histogram']['y'])))
-                stats_v2[col_name]['information_content'] = {
+                stats_v2[col_name]['bias'] = {
                     'entropy': S
                 }
+                if S < 0.25:
+                    pick_nr = -max(1, len(stats_v2[col_name]['histogram']['y'])/10)
+                    stats_v2[col_name]['bias']['biased_buckets'] = [stats_v2[col_name]['histogram']['x'][i] for i in np.array(stats_v2[col_name]['histogram']['y']).argsort()[pick_nr:]]
 
             if 'lof_outliers' in stats[col_name]:
                 stats_v2[col_name]['outliers'] = {

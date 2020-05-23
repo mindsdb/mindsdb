@@ -535,11 +535,6 @@ class StatsGenerator(BaseModule):
                 ,'is_empty': False
             }
 
-            stats_v2[col_name]['unique'] = {
-                'unique_values': len_unique
-                ,'unique_percentage': 100 * round((len_w_nulls - len_unique)/len_w_nulls,8)
-            }
-
             col_data = sample_df[col_name].dropna()
 
             data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
@@ -560,6 +555,10 @@ class StatsGenerator(BaseModule):
             hist_data = col_data
             if data_type == DATA_TYPES.CATEGORICAL:
                 hist_data = input_data.data_frame[col_name]
+                stats_v2[col_name]['unique'] = {
+                    'unique_values': len_unique
+                    ,'unique_percentage': 100 * round((len_w_nulls - len_unique)/len_w_nulls,8)
+                }
 
             histogram, percentage_buckets = StatsGenerator.get_histogram(hist_data, data_type=data_type, data_subtype=curr_data_subtype)
 

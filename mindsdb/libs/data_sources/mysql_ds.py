@@ -1,10 +1,7 @@
-import os
-
 import pandas as pd
 import MySQLdb
 
 from mindsdb.libs.data_types.data_source import DataSource
-from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 class MySqlDS(DataSource):

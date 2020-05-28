@@ -614,7 +614,7 @@ class StatsGenerator(BaseModule):
             # New logic
             col_data = sample_df[col_name]
 
-            if data_type in (DATA_TYPES.NUMERIC,DATA_TYPES.DATE,DATA_TYPES.CATEGORICAL,DATA_SUBTYPES.IMAGE):
+            if data_type in (DATA_TYPES.NUMERIC,DATA_TYPES.DATE,DATA_TYPES.CATEGORICAL) or data_subtype in (DATA_SUBTYPES.IMAGE):
                 nr_values = sum(stats_v2[col_name]['histogram']['y'])
                 S = entropy([x/nr_values for x in stats_v2[col_name]['histogram']['y']],base=max(2,len(stats_v2[col_name]['histogram']['y'])))
                 stats_v2[col_name]['bias'] = {
@@ -627,7 +627,7 @@ class StatsGenerator(BaseModule):
             if 'lof_outliers' in stats[col_name]:
                 if data_subtype in (DATA_SUBTYPES.INT):
                     stats[col_name]['lof_outliers'] = [int(x) for x in stats[col_name]['lof_outliers']]
-                    
+
                 stats_v2[col_name]['outliers'] = {
                     'outlier_values': stats[col_name]['lof_outliers']
                     ,'outlier_score': stats[col_name]['lof_based_outlier_score']

@@ -581,7 +581,7 @@ class StatsGenerator(BaseModule):
         for col_name in sample_df.columns:
             data_type = stats_v2[col_name]['typing']['data_type']
             data_subtype = stats_v2[col_name]['typing']['data_subtype']
-            
+
             # For now there's only one and computing it takes way too long, so this is not enabled
             scores = []
 
@@ -635,9 +635,6 @@ class StatsGenerator(BaseModule):
                     'outlier_values': stats[col_name]['lof_outliers']
                     ,'outlier_score': stats[col_name]['lof_based_outlier_score']
                 }
-
-        print(stats_v2)
-        exit()
 
         self.transaction.lmd['column_stats'] = stats
         self.transaction.lmd['stats_v2'] = stats_v2

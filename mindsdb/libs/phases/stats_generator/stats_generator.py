@@ -539,11 +539,11 @@ class StatsGenerator(BaseModule):
 
             col_data = sample_df[col_name].dropna()
 
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
+            data_type, data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
 
             stats_v2[col_name]['typing'] = {
                 'data_type': data_type
-                ,'data_subtype': curr_data_subtype
+                ,'data_subtype': data_subtype
                 ,'data_type_dist': data_type_dist
                 ,'data_subtype_dist': data_subtype_dist
             }
@@ -551,7 +551,7 @@ class StatsGenerator(BaseModule):
             for k  in stats_v2[col_name]['typing']: stats[col_name][k] = stats_v2[col_name]['typing'][k]
 
             # Do some temporary processing for timestamp and numerical values
-            if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
+            if data_type == DATA_TYPES.NUMERIC or data_subtype == DATA_SUBTYPES.TIMESTAMP:
                 col_data = clean_int_and_date_data(col_data, self.log)
 
             hist_data = col_data
@@ -562,7 +562,7 @@ class StatsGenerator(BaseModule):
                     ,'unique_percentage': 100 * round((len_w_nulls - len_unique)/len_w_nulls,8)
                 }
 
-            histogram, percentage_buckets = StatsGenerator.get_histogram(hist_data, data_type=data_type, data_subtype=curr_data_subtype)
+            histogram, percentage_buckets = StatsGenerator.get_histogram(hist_data, data_type=data_type, data_subtype=data_subtype)
 
             stats[col_name]['histogram'] = histogram
             stats[col_name]['percentage_buckets'] = percentage_buckets
@@ -579,6 +579,9 @@ class StatsGenerator(BaseModule):
             col_data_dict[col_name] = col_data
 
         for col_name in sample_df.columns:
+            data_type = stats_v2[col_name]['typing']['data_type']
+            data_subtype = stats_v2[col_name]['typing']['data_subtype']
+            
             # For now there's only one and computing it takes way too long, so this is not enabled
             scores = []
 

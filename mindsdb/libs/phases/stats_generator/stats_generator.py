@@ -17,7 +17,7 @@ from PIL import Image
 from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, cast_string_to_python_type
+from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float
 from mindsdb.libs.helpers.debugging import *
 from mindsdb.libs.phases.stats_generator.scores import *
 from mindsdb.libs.phases.stats_generator.data_preparation import sample_data, clean_int_and_date_data
@@ -297,15 +297,17 @@ class StatsGenerator(BaseModule):
             is_full_text = True if data_subtype == DATA_SUBTYPES.TEXT else False
             return StatsGenerator.get_words_histogram(data, is_full_text), None
         elif data_type == DATA_TYPES.NUMERIC or data_subtype == DATA_SUBTYPES.TIMESTAMP:
-            y, x = np.histogram(data, bins=50, range=(min(data),max(data)), density=False)
-            x = x[:-1]
+            Y, X = np.histogram(data, bins=min(50,len(set(data))), range=(min(data),max(data)), density=False)
+            if data_subtype == DATA_SUBTYPES.INT:
+                Y, X = np.histogram(data, bins=[int(round(x)) for x in X], density=False)
+
+            X = X[:-1]
             #x = (x + np.roll(x, -1))[:-1] / 2.0 <--- original code, was causing weird bucket values when we had outliers
-            x = x.tolist()
-            y = y.tolist()
+
             return {
-                'x': x
-                ,'y': y
-            }, x
+                'x': X.tolist()
+                ,'y': Y.tolist()
+            }, X
         elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE :
             histogram = Counter(data)
             return {
@@ -517,7 +519,7 @@ class StatsGenerator(BaseModule):
             self.log = logging.getLogger('null-logger')
             self.log.propagate = False
 
-        sample_df = sample_data(input_data.data_frame, self.transaction.lmd['sample_margin_of_error'], self.transaction.lmd['sample_confidence_level'], self.log.info)
+        sample_df = sample_data(input_data.data_frame, self.transaction.lmd['sample_margin_of_error'], self.transaction.lmd['sample_confidence_level'], self.log)
 
         for col_name in self.transaction.lmd['empty_columns']:
             stats_v2[col_name]['empty'] = {'is_empty': True}
@@ -550,7 +552,7 @@ class StatsGenerator(BaseModule):
 
             # Do some temporary processing for timestamp and numerical values
             if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
-                col_data = clean_int_and_date_data(col_data)
+                col_data = clean_int_and_date_data(col_data, self.log)
 
             hist_data = col_data
             if data_type == DATA_TYPES.CATEGORICAL:
@@ -623,10 +625,16 @@ class StatsGenerator(BaseModule):
                     stats_v2[col_name]['bias']['biased_buckets'] = [stats_v2[col_name]['histogram']['x'][i] for i in np.array(stats_v2[col_name]['histogram']['y']).argsort()[pick_nr:]]
 
             if 'lof_outliers' in stats[col_name]:
+                if data_subtype in (DATA_SUBTYPES.INT):
+                    stats[col_name]['lof_outliers'] = [int(x) for x in stats[col_name]['lof_outliers']]
+                    
                 stats_v2[col_name]['outliers'] = {
                     'outlier_values': stats[col_name]['lof_outliers']
                     ,'outlier_score': stats[col_name]['lof_based_outlier_score']
                 }
+
+        print(stats_v2)
+        exit()
 
         self.transaction.lmd['column_stats'] = stats
         self.transaction.lmd['stats_v2'] = stats_v2

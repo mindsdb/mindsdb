@@ -301,19 +301,21 @@ class StatsGenerator(BaseModule):
             if data_subtype == DATA_SUBTYPES.INT:
                 Y, X = np.histogram(data, bins=[int(round(x)) for x in X], density=False)
 
-            X = X[:-1]
-            #x = (x + np.roll(x, -1))[:-1] / 2.0 <--- original code, was causing weird bucket values when we had outliers
+            X = X[:-1].tolist()
+            Y = Y.tolist()
 
             return {
-                'x': X.tolist()
-                ,'y': Y.tolist()
+                'x': X
+                ,'y': Y
             }, X
         elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE :
             histogram = Counter(data)
+            X = list(map(str,histogram.keys()))
+            Y = list(histogram.values())
             return {
-                'x': list(map(str,histogram.keys())),
-                'y': list(histogram.values())
-            }, list(histogram.values())
+                'x': X,
+                'y': Y
+            }, Y
         elif data_subtype == DATA_SUBTYPES.IMAGE:
             image_hashes = []
             for img_path in data:
@@ -349,7 +351,7 @@ class StatsGenerator(BaseModule):
             return {
                 'x': x,
                 'y': y
-            }, kmeans.cluster_centers_
+            }, list(kmeans.cluster_centers_)
         else:
             return None, None
 

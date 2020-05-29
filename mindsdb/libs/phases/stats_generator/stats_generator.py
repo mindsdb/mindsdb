@@ -5,10 +5,9 @@ import imghdr
 import sndhdr
 import logging
 from collections import Counter
-#import multiprocessing
 
 import numpy as np
-import scipy.stats as st
+from scipy.stats import entropy
 from dateutil.parser import parse as parse_datetime
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import MiniBatchKMeans
@@ -18,11 +17,10 @@ from PIL import Image
 from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
-from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float, cast_string_to_python_type
+from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float
 from mindsdb.libs.helpers.debugging import *
-from mindsdb.external_libs.stats import calculate_sample_size
 from mindsdb.libs.phases.stats_generator.scores import *
-
+from mindsdb.libs.phases.stats_generator.data_preparation import sample_data, clean_int_and_date_data
 
 class StatsGenerator(BaseModule):
     """
@@ -272,25 +270,6 @@ class StatsGenerator(BaseModule):
         return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
 
     @staticmethod
-    def clean_int_and_date_data(col_data):
-        cleaned_data = []
-
-        for value in col_data:
-            if value != '' and value != '\r' and value != '\n':
-                cleaned_data.append(value)
-
-        cleaned_data_new = []
-
-        for ele in cleaned_data:
-            if str(ele) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
-                try:
-                    cleaned_data_new.append(clean_float(ele))
-                except:
-                    cleaned_data_new.append(parse_datetime(str(ele)).timestamp())
-
-        return cleaned_data_new
-
-    @staticmethod
     def get_words_histogram(data, is_full_text=False):
         """ Returns an array of all the words that appear in the dataset and the number of times each word appears in the dataset """
 
@@ -318,22 +297,25 @@ class StatsGenerator(BaseModule):
             is_full_text = True if data_subtype == DATA_SUBTYPES.TEXT else False
             return StatsGenerator.get_words_histogram(data, is_full_text), None
         elif data_type == DATA_TYPES.NUMERIC or data_subtype == DATA_SUBTYPES.TIMESTAMP:
-            data = StatsGenerator.clean_int_and_date_data(data)
-            y, x = np.histogram(data, bins=50, range=(min(data),max(data)), density=False)
-            x = x[:-1]
-            #x = (x + np.roll(x, -1))[:-1] / 2.0 <--- original code, was causing weird bucket values when we had outliers
-            x = x.tolist()
-            y = y.tolist()
+            Y, X = np.histogram(data, bins=min(50,len(set(data))), range=(min(data),max(data)), density=False)
+            if data_subtype == DATA_SUBTYPES.INT:
+                Y, X = np.histogram(data, bins=[int(round(x)) for x in X], density=False)
+
+            X = X[:-1].tolist()
+            Y = Y.tolist()
+
             return {
-                'x': x
-                ,'y': y
-            }, None
+                'x': X
+                ,'y': Y
+            }, X
         elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE :
             histogram = Counter(data)
+            X = list(map(str,histogram.keys()))
+            Y = list(histogram.values())
             return {
-                'x': list(map(str,histogram.keys())),
-                'y': list(histogram.values())
-            }, None
+                'x': X,
+                'y': Y
+            }, Y
         elif data_subtype == DATA_SUBTYPES.IMAGE:
             image_hashes = []
             for img_path in data:
@@ -369,7 +351,7 @@ class StatsGenerator(BaseModule):
             return {
                 'x': x,
                 'y': y
-            }, kmeans.cluster_centers_
+            }, list(kmeans.cluster_centers_)
         else:
             return None, None
 
@@ -524,200 +506,87 @@ class StatsGenerator(BaseModule):
                 # Functionality is specific to mindsdb logger
                 pass
 
-    def run(self, input_data, modify_light_metadata, hmd=None, print_logs=True):
+    def run(self, input_data, hmd=None, print_logs=True):
         """
         # Runs the stats generation phase
         # This shouldn't alter the columns themselves, but rather provide the `stats` metadata object and update the types for each column
         # A lot of information about the data distribution and quality will  also be logged to the server in this phase
         """
 
-        ''' @TODO Uncomment when we need multiprocessing, possibly disable on OSX
-        no_processes = multiprocessing.cpu_count() - 2
-        if no_processes < 1:
-            no_processes = 1
-        pool = multiprocessing.Pool(processes=no_processes)
-        '''
+        stats = {}
+        stats_v2 = {}
+        col_data_dict = {}
+
         if print_logs == False:
             self.log = logging.getLogger('null-logger')
             self.log.propagate = False
 
-        # we dont need to generate statistic over all of the data, so we subsample, based on our accepted margin of error
-        population_size = len(input_data.data_frame)
+        sample_df = sample_data(input_data.data_frame, self.transaction.lmd['sample_margin_of_error'], self.transaction.lmd['sample_confidence_level'], self.log)
 
-        if population_size < 50:
-            sample_size = population_size
-        else:
-            sample_size = int(calculate_sample_size(population_size=population_size, margin_error=self.transaction.lmd['sample_margin_of_error'], confidence_level=self.transaction.lmd['sample_confidence_level']))
-            #if sample_size > 3000 and sample_size > population_size/8:
-            #    sample_size = min(round(population_size/8),3000)
+        for col_name in self.transaction.lmd['empty_columns']:
+            stats_v2[col_name]['empty'] = {'is_empty': True}
 
-        # get the indexes of randomly selected rows given the population size
-        input_data_sample_indexes = random.sample(range(population_size), sample_size)
-        self.log.info('population_size={population_size},  sample_size={sample_size}  {percent:.2f}%'.format(population_size=population_size, sample_size=sample_size, percent=(sample_size/population_size)*100))
+        for col_name in sample_df.columns.values:
+            stats_v2[col_name] = {}
+            stats[col_name] = {}
 
-        all_sampled_data = input_data.data_frame.iloc[input_data_sample_indexes]
+            len_wo_nulls = len(input_data.data_frame[col_name].dropna())
+            len_w_nulls = len(input_data.data_frame[col_name])
+            len_unique = len(set(input_data.data_frame[col_name]))
+            stats_v2[col_name]['empty'] = {
+                'empty_cells': len_w_nulls - len_wo_nulls
+                ,'empty_percentage': 100 * round((len_w_nulls - len_wo_nulls)/len_w_nulls,3)
+                ,'is_empty': False
+            }
 
-        stats = {}
-        col_data_dict = {}
+            col_data = sample_df[col_name].dropna()
 
-        for col_name in all_sampled_data.columns.values:
-            if col_name in self.transaction.lmd['columns_to_ignore']:
-                continue
+            data_type, data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
 
-            col_data = all_sampled_data[col_name].dropna()
-            full_col_data = all_sampled_data[col_name]
+            stats_v2[col_name]['typing'] = {
+                'data_type': data_type
+                ,'data_subtype': data_subtype
+                ,'data_type_dist': data_type_dist
+                ,'data_subtype_dist': data_subtype_dist
+            }
 
-            data_type, curr_data_subtype, data_type_dist, data_subtype_dist, additional_info, column_status = self._get_column_data_type(col_data, input_data.data_frame, col_name)
+            for k  in stats_v2[col_name]['typing']: stats[col_name][k] = stats_v2[col_name]['typing'][k]
 
-            if column_status == 'Column empty':
-                if modify_light_metadata:
-                    self.transaction.lmd['empty_columns'].append(col_name)
-                    logging.warning(f'The "{col_name}" column is empty, it will be ignored, please make sure the data in the column is correct !')
-                    self.transaction.lmd['columns_to_ignore'].append(col_name)
-                continue
+            # Do some temporary processing for timestamp and numerical values
+            if data_type == DATA_TYPES.NUMERIC or data_subtype == DATA_SUBTYPES.TIMESTAMP:
+                col_data = clean_int_and_date_data(col_data, self.log)
 
-            new_col_data = []
-
-            if curr_data_subtype == DATA_SUBTYPES.TIMESTAMP: #data_type == DATA_TYPES.DATE:
-                for element in col_data:
-                    if str(element) in [str(''), str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null']:
-                        new_col_data.append(None)
-                    else:
-                        try:
-                            new_col_data.append(int(parse_datetime(element).timestamp()))
-                        except:
-                            self.log.warning(f'Could not convert string from col "{col_name}" to date and it was expected, instead got: {element}')
-                            new_col_data.append(None)
-                col_data = new_col_data
-            if data_type == DATA_TYPES.NUMERIC or curr_data_subtype == DATA_SUBTYPES.TIMESTAMP:
-                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
-                x = histogram['x']
-                y = histogram['y']
-
-                col_data = StatsGenerator.clean_int_and_date_data(col_data)
-                # This means the column is all nulls, which we don't handle at the moment
-                if len(col_data) < 1:
-                    return None
-
-                if len(col_data) > 0:
-                    max_value = max(col_data)
-                    min_value = min(col_data)
-                    mean = np.mean(col_data)
-                    median = np.median(col_data)
-                    var = np.var(col_data)
-                    skew = st.skew(col_data)
-                    kurtosis = st.kurtosis(col_data)
-                else:
-                    max_value = 0
-                    min_value = 0
-                    mean = 0
-                    median = 0
-                    var = 0
-                    skew = 0
-                    kurtosis = 0
-
-                is_float = True if max([1 if int(i) != i else 0 for i in col_data]) == 1 else False
-
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    "mean": mean,
-                    "median": median,
-                    "variance": var,
-                    "skewness": skew,
-                    "kurtosis": kurtosis,
-                    "max": max_value,
-                    "min": min_value,
-                    "is_float": is_float,
-                    "histogram": {
-                        "x": x,
-                        "y": y
-                    },
-                    "percentage_buckets": histogram['x']#xp
+            hist_data = col_data
+            if data_type == DATA_TYPES.CATEGORICAL:
+                hist_data = input_data.data_frame[col_name]
+                stats_v2[col_name]['unique'] = {
+                    'unique_values': len_unique
+                    ,'unique_percentage': 100 * round((len_w_nulls - len_unique)/len_w_nulls,8)
                 }
 
-            elif data_type == DATA_TYPES.CATEGORICAL or curr_data_subtype == DATA_SUBTYPES.DATE:
-                histogram, _ = StatsGenerator.get_histogram(input_data.data_frame[col_name], data_type=data_type, data_subtype=curr_data_subtype)
+            histogram, percentage_buckets = StatsGenerator.get_histogram(hist_data, data_type=data_type, data_subtype=data_subtype)
 
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    "histogram": histogram,
-                    "percentage_buckets": histogram['x']
-                }
+            stats[col_name]['histogram'] = histogram
+            stats[col_name]['percentage_buckets'] = percentage_buckets
+            stats_v2[col_name]['histogram'] = histogram
+            stats_v2[col_name]['percentage_buckets'] = percentage_buckets
 
-            elif curr_data_subtype == DATA_SUBTYPES.IMAGE:
-                histogram, percentage_buckets = StatsGenerator.get_histogram(col_data, data_subtype=curr_data_subtype)
+            stats[col_name]['empty_cells'] = stats_v2[col_name]['empty']['empty_cells']
+            stats[col_name]['empty_percentage'] = stats_v2[col_name]['empty']['empty_percentage']
 
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    'percentage_buckets': percentage_buckets,
-                    'histogram': histogram
-                }
-
-            elif curr_data_subtype == DATA_SUBTYPES.ARRAY:
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    'percentage_buckets': None,
-                    'histogram': None
-                }
-
-            # @TODO This is probably wrong, look into it a bit later
-            else:
-                # see if its a sentence or a word
-                histogram, _ = StatsGenerator.get_histogram(col_data, data_type=data_type, data_subtype=curr_data_subtype)
-                dictionary = list(histogram.keys())
-
-                # if no words, then no dictionary
-                if len(col_data) == 0:
-                    dictionary_available = False
-                    dictionary_lenght_percentage = 0
-                    dictionary = []
-                else:
-                    dictionary_available = True
-                    dictionary_lenght_percentage = len(
-                        dictionary) / len(col_data) * 100
-                    # if the number of uniques is too large then treat is a text
-                    is_full_text = True if curr_data_subtype == DATA_SUBTYPES.TEXT else False
-                    if dictionary_lenght_percentage > 10 and len(col_data) > 50 and is_full_text==False:
-                        dictionary = []
-                        dictionary_available = False
-
-                col_stats = {
-                    'data_type': data_type,
-                    'data_subtype': curr_data_subtype,
-                    "dictionary": dictionary,
-                    "dictionaryAvailable": dictionary_available,
-                    "dictionaryLenghtPercentage": dictionary_lenght_percentage,
-                    "histogram": histogram
-                }
-            stats[col_name] = col_stats
-            stats[col_name]['data_type_dist'] = data_type_dist
-            stats[col_name]['data_subtype_dist'] = data_subtype_dist
-            stats[col_name]['column'] = col_name
-
-            empty_count = len(full_col_data) - len(col_data)
-
-            stats[col_name]['empty_cells'] = empty_count
-            stats[col_name]['empty_percentage'] = empty_count * 100 / len(full_col_data)
+            stats_v2[col_name]['additional_info'] = additional_info
             for k in additional_info:
                 stats[col_name][k] = additional_info[k]
 
             col_data_dict[col_name] = col_data
 
-        for col_name in all_sampled_data.columns:
-            if col_name in self.transaction.lmd['columns_to_ignore']:
-                continue
+        for col_name in sample_df.columns:
+            data_type = stats_v2[col_name]['typing']['data_type']
+            data_subtype = stats_v2[col_name]['typing']['data_subtype']
 
-            # Use the multiprocessing pool for computing scores which take a very long time to compute
             # For now there's only one and computing it takes way too long, so this is not enabled
             scores = []
 
-            '''
-            scores.append(pool.apply_async(compute_clf_based_correlation_score, args=(stats, all_sampled_data, col_name)))
-            '''
             for score_promise in scores:
                 # Wait for function on process to finish running
                 score = score_promise.get()
@@ -730,7 +599,7 @@ class StatsGenerator(BaseModule):
                     if 'compute_z_score' in str(score_func) or 'compute_lof_score' in str(score_func):
                         stats[col_name].update(score_func(stats, col_data_dict, col_name))
                     else:
-                        stats[col_name].update(score_func(stats, all_sampled_data, col_name))
+                        stats[col_name].update(score_func(stats, sample_df, col_name))
                 except Exception as e:
                     self.log.warning(e)
 
@@ -747,20 +616,34 @@ class StatsGenerator(BaseModule):
             if stats[col_name]['is_foreign_key'] and self.transaction.lmd['handle_foreign_keys']:
                 self.transaction.lmd['columns_to_ignore'].append(col_name)
 
-        total_rows = len(input_data.data_frame)
+            # New logic
+            col_data = sample_df[col_name]
 
-        if modify_light_metadata:
-            self.transaction.lmd['column_stats'] = stats
+            if data_type in (DATA_TYPES.NUMERIC,DATA_TYPES.DATE,DATA_TYPES.CATEGORICAL) or data_subtype in (DATA_SUBTYPES.IMAGE):
+                nr_values = sum(stats_v2[col_name]['histogram']['y'])
+                S = entropy([x/nr_values for x in stats_v2[col_name]['histogram']['y']],base=max(2,len(stats_v2[col_name]['histogram']['y'])))
+                stats_v2[col_name]['bias'] = {
+                    'entropy': S
+                }
+                if S < 0.25:
+                    pick_nr = -max(1, int(len(stats_v2[col_name]['histogram']['y'])/10))
+                    stats_v2[col_name]['bias']['biased_buckets'] = [stats_v2[col_name]['histogram']['x'][i] for i in np.array(stats_v2[col_name]['histogram']['y']).argsort()[pick_nr:]]
 
-            self.transaction.lmd['data_preparation']['accepted_margin_of_error'] = self.transaction.lmd['sample_margin_of_error']
+            if 'lof_outliers' in stats[col_name]:
+                if data_subtype in (DATA_SUBTYPES.INT):
+                    stats[col_name]['lof_outliers'] = [int(x) for x in stats[col_name]['lof_outliers']]
 
-            self.transaction.lmd['data_preparation']['total_row_count'] = total_rows
-            self.transaction.lmd['data_preparation']['used_row_count'] = sample_size
+                stats_v2[col_name]['outliers'] = {
+                    'outlier_values': stats[col_name]['lof_outliers']
+                    ,'outlier_score': stats[col_name]['lof_based_outlier_score']
+                }
 
-        ''' @TODO Uncomment when we need multiprocessing, possibly disable on OSX
-        pool.close()
-        pool.join()
-        '''
+        self.transaction.lmd['column_stats'] = stats
+        self.transaction.lmd['stats_v2'] = stats_v2
+
+        self.transaction.lmd['data_preparation']['accepted_margin_of_error'] = self.transaction.lmd['sample_margin_of_error']
+
+        self.transaction.lmd['data_preparation']['total_row_count'] = len(input_data.data_frame)
+        self.transaction.lmd['data_preparation']['used_row_count'] = len(sample_df)
 
         self._log_interesting_stats(stats)
-        return stats

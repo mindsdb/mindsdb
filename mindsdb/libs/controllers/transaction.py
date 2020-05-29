@@ -140,8 +140,11 @@ class Transaction:
         self._call_phase_module(module_name='DataExtractor')
         self.save_metadata()
 
+        self._call_phase_module(module_name='DataCleaner', stage=0)
+        self.save_metadata()
+
         self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
-        self._call_phase_module(module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
+        self._call_phase_module(module_name='StatsGenerator', input_data=self.input_data, hmd=self.hmd)
         self.save_metadata()
 
         self.lmd['current_phase'] = MODEL_STATUS_DONE
@@ -159,14 +162,16 @@ class Transaction:
             self._call_phase_module(module_name='DataExtractor')
             self.save_metadata()
 
-            self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
-            if 'skip_stats_generation' in self.lmd and self.lmd['skip_stats_generation'] == True:
-                self.load_metadata()
-            else:
-                self.save_metadata()
-                self._call_phase_module(module_name='StatsGenerator', input_data=self.input_data, modify_light_metadata=True, hmd=self.hmd)
-                self.save_metadata()
+            self._call_phase_module(module_name='DataCleaner', stage=0)
+            self.save_metadata()
 
+            self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
+            self._call_phase_module(module_name='StatsGenerator', input_data=self.input_data, hmd=self.hmd)
+            self.save_metadata()
+
+            self._call_phase_module(module_name='DataCleaner', stage=0)
+            self.save_metadata()
+            
             self._call_phase_module(module_name='DataSplitter')
 
             self._call_phase_module(module_name='DataTransformer', input_data=self.input_data)

@@ -20,9 +20,8 @@ def test_model_analysis(amd, to_predict):
     for column, importance in zip(input_importance["x"], input_importance["y"]):
         assert isinstance(column, str)
         assert (len(column) > 0)
-
         assert isinstance(importance, (float, int))
-        assert (importance > 0)
+        assert (importance >= 0 and importance <= 10)
 
 def test_force_vectors(amd, to_predict):
     force_vectors = amd['force_vectors']
@@ -65,7 +64,7 @@ def basic_test(backend='lightwood',use_gpu=True, run_extra=False, IS_CI_TEST=Fal
                     ctn = True
             if ctn:
                 continue
-            
+
             code = os.system(f'python3 ../functional_testing/{py_file}')
             if code != 0:
                 raise Exception(f'Test failed with status code: {code} !')

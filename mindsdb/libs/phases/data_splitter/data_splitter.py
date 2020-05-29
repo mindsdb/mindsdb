@@ -5,17 +5,7 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 class DataSplitter(BaseModule):
-    def _cleanup_w_missing_targets(self, df):
-        initial_len = len(df)
-        df = df.dropna(subset=self.transaction.lmd['predict_columns'])
-        no_dropped = len(df) - initial_len
-        if no_dropped > 0:
-            self.log.warning(f'Dropped {no_dropped} rows because they had null values in one or more of the columns that we are trying to predict. Please always provide non-null values in the columns you want to predict !')
-        return df
-
     def run(self):
-        self.transaction.input_data.data_frame = self._cleanup_w_missing_targets(self.transaction.input_data.data_frame)
-
         group_by = self.transaction.lmd['model_group_by']
         if group_by is None or len(group_by) == 0:
             group_by = []

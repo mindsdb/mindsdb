@@ -23,7 +23,7 @@ def clean_int_and_date_data(col_data, log):
     cleaned_data = []
 
     for ele in col_data:
-        if str(ele) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null'] and (not ele or not ele.isspace()):
+        if str(ele) not in ['', str(None), str(False), str(np.nan), 'NaN', 'nan', 'NA', 'null'] and (not ele or not str(ele).isspace()):
             try:
                 cleaned_data.append(clean_float(ele))
             except Exception as e1:

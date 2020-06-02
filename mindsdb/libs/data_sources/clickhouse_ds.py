@@ -14,7 +14,7 @@ class ClickhouseDS(DataSource):
             log.error(err_msg)
             raise Exception(err_msg)
         
-        query = f'{query} FORMAT JSON'
+        query = f'{query.rstrip(" ;")} FORMAT JSON'
         log.info(f'Getting data via the query: "{query}""')
 
         params = {'user': user}

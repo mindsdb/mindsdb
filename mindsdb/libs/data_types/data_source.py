@@ -36,7 +36,8 @@ class DataSource:
                     log.warning(f'Column {col} not present in your data, ignoring the "{data_subtypes[col]}" subtype you specified for it')
 
             self.data_subtypes = data_subtypes
-            for col_subtype in self.data_subtypes:
+            for col in self.data_subtypes:
+                col_subtype = self.data_subtypes[col]
                 if col_subtype not in [getattr(DATA_SUBTYPES,x) for x in DATA_SUBTYPES.__dict__ if '__' not in x]:
                     raise Exception(f'Invalid data subtype: {col_subtype}')
 

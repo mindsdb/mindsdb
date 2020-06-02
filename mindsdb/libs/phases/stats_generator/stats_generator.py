@@ -133,6 +133,14 @@ class StatsGenerator(BaseModule):
         subtype_dist = {}
         additional_info = {'other_potential_subtypes': [], 'other_potential_types': []}
 
+
+        if col_name in self.transaction.lmd['data_subtypes']:
+            curr_data_type = self.transaction.lmd['data_types'][col_name]
+            curr_data_subtype = self.transaction.lmd['data_subtypes'][col_name]
+            type_dist[curr_data_type] = len(data)
+            subtype_dist[curr_data_subtype] = len(data)
+            return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
+
         # calculate type_dist
         if len(data) < 1:
             self.log.warning(f'Column {col_name} has no data in it. Please remove {col_name} from the training file or fill in some of the values !')

@@ -58,11 +58,8 @@ def basic_test(backend='lightwood',use_gpu=True, run_extra=False, IS_CI_TEST=Fal
             # Skip data source tests since installing dependencies is annoying
             # @TODO: Figure out a way to make travis install required dependencies on osx
 
-            ctn = False
-            for name in ['all_data_sources', 'custom_model']:
-                if name in py_file:
-                    ctn = True
-            if ctn:
+            if any(x in py_file for x in ['all_data_sources', 'custom_model']):
+                print(py_file)
                 continue
 
             code = os.system(f'python3 ../functional_testing/{py_file}')

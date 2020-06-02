@@ -1,6 +1,5 @@
 import os
 import logging
-from dateutil.parser import parse as parse_datetime
 
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.config import *

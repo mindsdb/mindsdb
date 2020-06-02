@@ -1,9 +1,12 @@
 import random
+
 import numpy as np
+from dateutil.parser import parse as parse_datetime
 
 from mindsdb.external_libs.stats import calculate_sample_size
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.text_helpers import clean_float
+
 
 def sample_data(df, sample_margin_of_error, sample_confidence_level, log):
     population_size = len(df)

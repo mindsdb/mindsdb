@@ -139,6 +139,7 @@ class StatsGenerator(BaseModule):
             curr_data_subtype = self.transaction.lmd['data_subtypes'][col_name]
             type_dist[curr_data_type] = len(data)
             subtype_dist[curr_data_subtype] = len(data)
+            self.log.info(f'Manually setting the types for column {col_name} to {curr_data_type}->{curr_data_subtype}')
             return curr_data_type, curr_data_subtype, type_dist, subtype_dist, additional_info, 'Column ok'
 
         # calculate type_dist

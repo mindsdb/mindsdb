@@ -6,7 +6,7 @@ data_source = FileDS('https://raw.githubusercontent.com/mindsdb/mindsdb-examples
 data_source.set_subtypes({})
 
 data_source_mod = FileDS('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/german_credit_data/processed_data/test.csv')
-data_source_mod.set_subtypes({'credit_usage': 'Int', 'Average_Credit_Balance': 'Text','existing credits': 'Binary Category'})
+data_source_mod.set_subtypes({'credit_usage': 'Int', 'Average_Credit_Balance': 'Text','existing_credits': 'Binary Category'})
 
 import mindsdb
 analysis = mindsdb.Predictor('analyzer1').analyse_dataset(data_source)
@@ -26,6 +26,6 @@ assert(a1['Average_Credit_Balance']['typing']['data_subtype'] != a2['Average_Cre
 assert(a2['Average_Credit_Balance']['typing']['data_subtype'] == DATA_SUBTYPES.Text)
 assert(a2['Average_Credit_Balance']['typing']['data_type'] == DATA_TYPES.SEQUENTIAL)
 
-assert(a1['existing credits']['typing']['data_type'] == a2['existing credits']['typing']['data_type'])
-assert(a1['existing credits']['typing']['data_subtype'] != a2['existing credits']['typing']['data_subtype'])
-assert(a2['existing credits']['typing']['data_subtype'] == DATA_SUBTYPES.SINGLE)
+assert(a1['existing_credits']['typing']['data_type'] == a2['existing_credits']['typing']['data_type'])
+assert(a1['existing_credits']['typing']['data_subtype'] != a2['existing_credits']['typing']['data_subtype'])
+assert(a2['existing_credits']['typing']['data_subtype'] == DATA_SUBTYPES.SINGLE)

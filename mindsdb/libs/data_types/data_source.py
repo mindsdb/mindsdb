@@ -4,15 +4,15 @@ from mindsdb.libs.constants.mindsdb import DATA_TYPES_SUBTYPES
 
 class DataSource:
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs, data_subtypes=None):
         self.log = log
         self.data_types = {}
         self.data_subtypes = {}
         df, col_map = self._setup(*args, **kwargs)
-        self.setDF(df, col_map, **kwargs)
+        self.setDF(df, col_map, data_subtypes)
         self._cleanup()
 
-    def _setup(self, df):
+    def _setup(self, df, **kwargs):
         col_map = {}
 
         for col in df.columns:
@@ -27,7 +27,7 @@ class DataSource:
     def df(self):
         return self._df
 
-    def setDF(self, df, col_map, data_subtypes=None):
+    def setDF(self, df, col_map, data_subtypes):
         if data_subtypes is not None:
             self.data_types = {}
             for col in data_subtypes:

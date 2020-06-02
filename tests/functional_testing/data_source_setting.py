@@ -9,7 +9,7 @@ data_source_mod = FileDS('https://raw.githubusercontent.com/mindsdb/mindsdb-exam
 data_source_mod.set_subtypes({'credit_usage': 'Int', 'Average_Credit_Balance': 'Text','existing_credits': 'Binary Category'})
 
 import mindsdb
-#analysis = mindsdb.Predictor('analyzer1').analyse_dataset(data_source)
+analysis = mindsdb.Predictor('analyzer1').analyse_dataset(data_source)
 analysis_mod = mindsdb.Predictor('analyzer2').analyse_dataset(data_source_mod)
 
 a1 = analysis['data_analysis_v2']

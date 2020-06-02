@@ -131,7 +131,7 @@ class DataExtractor(BaseModule):
                     return
 
     def _set_user_data_subtypes(self):
-        if 'from_data' in self.transaction.hmd:
+        if 'from_data' in self.transaction.hmd and self.transaction.hmd['from_data'] is not None:
             for col in self.transaction.hmd['from_data'].data_subtypes:
                 self.transaction.lmd['data_types'][col] = self.transaction.hmd['from_data'].data_types[col]
                 self.transaction.lmd['data_subtypes'][col] = self.transaction.hmd['from_data'].data_subtypes[col]

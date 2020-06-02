@@ -131,13 +131,10 @@ class DataExtractor(BaseModule):
                     return
 
     def _set_user_data_subtypes(self):
-        if 'from_data' in self.transaction.lmd:
-            if len(self.transaction.lmd['from_data'].data_subtypes) > 0:
-                for col in self.transaction.lmd['from_data'].data_subtypes:
-                    self.transaction.lmd['data_types'][col] = self.transaction.lmd['from_data'].data_types[col]
-                    self.transaction.lmd['data_subtypes'][col] = self.transaction.lmd['from_data'].data_subtypes[col]
-
-
+        if 'from_data' in self.transaction.hmd:
+            for col in self.transaction.hmd['from_data'].data_subtypes:
+                self.transaction.lmd['data_types'][col] = self.transaction.hmd['from_data'].data_types[col]
+                self.transaction.lmd['data_subtypes'][col] = self.transaction.hmd['from_data'].data_subtypes[col]
 
     def run(self):
         # --- Dataset gets randomized or sorted (if timeseries) --- #
@@ -149,6 +146,8 @@ class DataExtractor(BaseModule):
         self.transaction.lmd['columns'] = self.transaction.input_data.columns
         self.transaction.input_data.data_frame = result
         # --- Some information about the dataset gets transplanted into transaction level variables --- #
+
+        self._set_user_data_subtypes()
 
         # --- Some preliminary dataset integrity checks --- #
         self._validate_input_data_integrity()

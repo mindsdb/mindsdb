@@ -29,7 +29,6 @@ class DataSource:
 
     def set_subtypes(self, data_subtypes):
         if data_subtypes is not None:
-            self.data_types = {}
             for col in data_subtypes:
                 if col not in self._col_map:
                     del data_subtypes[col]

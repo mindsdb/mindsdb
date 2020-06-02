@@ -133,7 +133,8 @@ class StatsGenerator(BaseModule):
         subtype_dist = {}
         additional_info = {'other_potential_subtypes': [], 'other_potential_types': []}
 
-
+        print(self.transaction.lmd['data_subtypes'])
+        exit()
         if col_name in self.transaction.lmd['data_subtypes']:
             curr_data_type = self.transaction.lmd['data_types'][col_name]
             curr_data_subtype = self.transaction.lmd['data_subtypes'][col_name]

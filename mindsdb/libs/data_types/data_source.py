@@ -1,4 +1,6 @@
 from mindsdb.libs.data_types.mindsdb_logger import log
+from mindsdb.libs.constants.mindsdb import DATA_TYPES_SUBTYPES
+
 
 class DataSource:
 
@@ -8,10 +10,25 @@ class DataSource:
         self.setDF(df, col_map)
         self._cleanup()
 
-    def _setup(self, df):
+    def _setup(self, df, data_subtypes=None):
         col_map = {}
+
         for col in df.columns:
             col_map[col] = col
+
+        if data_subtypes is not None:
+            self.data_types = {}
+            for col in data_subtypes:
+                if col not in col_map:
+                    del data_subtypes[col]
+                    log.warning(f'Column {col} not present in your data, ignoring the "{data_subtypes[col]}" subtype you specified for it')
+
+            self.data_subtypes = data_subtypes
+            for col_subtype in self.data_subtypes:
+                for col_type in DATA_TYPES_SUBTYPES.subtypes:
+                    if col_subtype in DATA_TYPES_SUBTYPES.subtypes[col_type]:
+                        self.data_types[col] = col_type
+
         return df, col_map
 
     def _cleanup(self):

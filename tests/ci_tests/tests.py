@@ -59,7 +59,6 @@ def basic_test(backend='lightwood',use_gpu=True, run_extra=False, IS_CI_TEST=Fal
             # @TODO: Figure out a way to make travis install required dependencies on osx
 
             if any(x in py_file for x in ['all_data_sources', 'custom_model']):
-                print(py_file)
                 continue
 
             code = os.system(f'python3 ../functional_testing/{py_file}')

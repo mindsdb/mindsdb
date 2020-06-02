@@ -17,14 +17,13 @@ a2 = analysis_mod['data_analysis_v2']
 assert(len(a1) == len(a2))
 assert(a1['over_draft']['typing']['data_type'] == a2['over_draft']['typing']['data_type'])
 
-print(a2['Average_Credit_Balance']['typing']['data_subtype'], a2['Average_Credit_Balance']['typing']['data_type'])
 assert(a1['credit_usage']['typing']['data_type'] == a2['credit_usage']['typing']['data_type'])
 assert(a1['credit_usage']['typing']['data_subtype'] != a2['credit_usage']['typing']['data_subtype'])
 assert(a2['credit_usage']['typing']['data_subtype'] == DATA_SUBTYPES.INT)
 
 assert(a1['Average_Credit_Balance']['typing']['data_type'] != a2['Average_Credit_Balance']['typing']['data_type'])
 assert(a1['Average_Credit_Balance']['typing']['data_subtype'] != a2['Average_Credit_Balance']['typing']['data_subtype'])
-assert(a2['Average_Credit_Balance']['typing']['data_subtype'] == DATA_SUBTYPES.Text)
+assert(a2['Average_Credit_Balance']['typing']['data_subtype'] == DATA_SUBTYPES.TEXT)
 assert(a2['Average_Credit_Balance']['typing']['data_type'] == DATA_TYPES.SEQUENTIAL)
 
 assert(a1['existing_credits']['typing']['data_type'] == a2['existing_credits']['typing']['data_type'])

@@ -25,7 +25,6 @@ class Predictor:
         :param name: the namespace you want to identify this mind instance with
         :param root_folder: the folder where you want to store this mind or load from
         :param log_level: the desired log level
-
         """
 
         # initialize variables
@@ -567,6 +566,9 @@ class Predictor:
         light_transaction_metadata['force_categorical_encoding'] = []
         light_transaction_metadata['handle_text_as_categorical'] = False
 
+        light_transaction_metadata['data_types'] = {}
+        light_transaction_metadata['data_subtypes'] = {}
+
         Transaction(session=self, light_transaction_metadata=light_transaction_metadata, heavy_transaction_metadata=heavy_transaction_metadata, logger=self.log)
         return self.get_model_data(model_name=None, lmd=light_transaction_metadata)
 
@@ -680,7 +682,9 @@ class Predictor:
         light_transaction_metadata['weight_map'] = {}
         light_transaction_metadata['confusion_matrices'] = {}
         light_transaction_metadata['empty_columns'] = []
-
+        light_transaction_metadata['data_types'] = {}
+        light_transaction_metadata['data_subtypes'] = {}
+        
         light_transaction_metadata['equal_accuracy_for_all_output_categories'] = equal_accuracy_for_all_output_categories
         light_transaction_metadata['output_categories_importance_dictionary'] = output_categories_importance_dictionary if output_categories_importance_dictionary is not None else {}
 
@@ -723,7 +727,6 @@ class Predictor:
             light_transaction_metadata['use_selfaware_model'] = unstable_parameters_dict['use_selfaware_model']
         else:
             light_transaction_metadata['use_selfaware_model'] = True
-
 
         if rebuild_model is False:
             old_lmd = {}

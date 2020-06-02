@@ -6,16 +6,28 @@ class DataSource:
 
     def __init__(self, *args, **kwargs):
         self.log = log
+        self.data_types = {}
+        self.data_subtypes = {}
         df, col_map = self._setup(*args, **kwargs)
-        self.setDF(df, col_map)
+        self.setDF(df, col_map, **kwargs)
         self._cleanup()
 
-    def _setup(self, df, data_subtypes=None):
+    def _setup(self, df):
         col_map = {}
 
         for col in df.columns:
             col_map[col] = col
 
+        return df, col_map
+
+    def _cleanup(self):
+        pass
+
+    @property
+    def df(self):
+        return self._df
+
+    def setDF(self, df, col_map, data_subtypes=None):
         if data_subtypes is not None:
             self.data_types = {}
             for col in data_subtypes:
@@ -28,17 +40,6 @@ class DataSource:
                 for col_type in DATA_TYPES_SUBTYPES.subtypes:
                     if col_subtype in DATA_TYPES_SUBTYPES.subtypes[col_type]:
                         self.data_types[col] = col_type
-
-        return df, col_map
-
-    def _cleanup(self):
-        pass
-
-    @property
-    def df(self):
-        return self._df
-
-    def setDF(self, df, col_map):
         self._df = df
         self._col_map = col_map
 

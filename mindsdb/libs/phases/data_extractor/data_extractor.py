@@ -130,6 +130,15 @@ class DataExtractor(BaseModule):
                     raise ValueError(err)
                     return
 
+    def _set_user_data_subtypes(self):
+        if 'from_data' in self.transaction.lmd:
+            if len(self.transaction.lmd['from_data'].data_subtypes) > 0:
+                for col in self.transaction.lmd['from_data'].data_subtypes:
+                    self.transaction.lmd['data_types'][col] = self.transaction.lmd['from_data'].data_types[col]
+                    self.transaction.lmd['data_subtypes'][col] = self.transaction.lmd['from_data'].data_subtypes[col]
+
+
+
     def run(self):
         # --- Dataset gets randomized or sorted (if timeseries) --- #
         result = self._get_prepared_input_df()

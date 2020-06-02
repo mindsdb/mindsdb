@@ -171,7 +171,7 @@ class Transaction:
 
             self._call_phase_module(module_name='DataCleaner', stage=0)
             self.save_metadata()
-            
+
             self._call_phase_module(module_name='DataSplitter')
 
             self._call_phase_module(module_name='DataTransformer', input_data=self.input_data)

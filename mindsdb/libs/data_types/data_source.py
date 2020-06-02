@@ -27,7 +27,7 @@ class DataSource:
     def df(self):
         return self._df
 
-    def set_subtypes(data_subtypes):
+    def set_subtypes(self, data_subtypes):
         if data_subtypes is not None:
             self.data_types = {}
             for col in data_subtypes:

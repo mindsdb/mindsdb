@@ -1,15 +1,15 @@
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.constants.mindsdb import DATA_TYPES_SUBTYPES
+from mindsdb.libs.constants.mindsdb import DATA_TYPES_SUBTYPES, DATA_TYPES, DATA_SUBTYPES
 
 
 class DataSource:
 
-    def __init__(self, *args, **kwargs, data_subtypes=None):
+    def __init__(self, *args, **kwargs):
         self.log = log
         self.data_types = {}
         self.data_subtypes = {}
         df, col_map = self._setup(*args, **kwargs)
-        self.setDF(df, col_map, data_subtypes)
+        self._set_df(df, col_map)
         self._cleanup()
 
     def _setup(self, df, **kwargs):
@@ -27,19 +27,25 @@ class DataSource:
     def df(self):
         return self._df
 
-    def setDF(self, df, col_map, data_subtypes):
+    def set_subtypes(data_subtypes):
         if data_subtypes is not None:
             self.data_types = {}
             for col in data_subtypes:
-                if col not in col_map:
+                if col not in self._col_map:
                     del data_subtypes[col]
                     log.warning(f'Column {col} not present in your data, ignoring the "{data_subtypes[col]}" subtype you specified for it')
 
             self.data_subtypes = data_subtypes
             for col_subtype in self.data_subtypes:
+                if col_subtype not in [getattr(DATA_SUBTYPES,x) for x in DATA_SUBTYPES.__dict__ if '__' not in x]:
+                    raise Exception(f'Invalid data subtype: {col_subtype}')
+
                 for col_type in DATA_TYPES_SUBTYPES.subtypes:
                     if col_subtype in DATA_TYPES_SUBTYPES.subtypes[col_type]:
                         self.data_types[col] = col_type
+
+    def _set_df(self, df, col_map):
+
         self._df = df
         self._col_map = col_map
 

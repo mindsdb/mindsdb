@@ -29,9 +29,6 @@ class DATA_SUBTYPES:
     VIDEO = 'Video'
     AUDIO = 'Audio'
 
-    # URL
-    # How do we detect the tpye here... maybe setup async download for random sample an stats ?
-
     # SEQUENTIAL
     TEXT = 'Text'
     ARRAY = 'Array' # Do we even want to support arrays / structs / nested ... etc ?
@@ -41,7 +38,6 @@ class DATA_TYPES:
     DATE = 'Date'
     CATEGORICAL = 'Categorical'
     FILE_PATH = 'File Path'
-    URL = 'Url'
     SEQUENTIAL = 'Sequential'
 
 class DATA_TYPES_SUBTYPES:
@@ -50,7 +46,6 @@ class DATA_TYPES_SUBTYPES:
         ,DATA_TYPES.DATE:(DATA_SUBTYPES.DATE, DATA_SUBTYPES.TIMESTAMP)
         ,DATA_TYPES.CATEGORICAL:(DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE)
         ,DATA_TYPES.FILE_PATH:(DATA_SUBTYPES.IMAGE, DATA_SUBTYPES.VIDEO, DATA_SUBTYPES.AUDIO)
-        ,DATA_TYPES.URL:()
         ,DATA_TYPES.SEQUENTIAL:(DATA_SUBTYPES.TEXT, DATA_SUBTYPES.ARRAY)
     }
 

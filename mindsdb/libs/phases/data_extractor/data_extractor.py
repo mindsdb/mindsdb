@@ -114,12 +114,6 @@ class DataExtractor(BaseModule):
             self.log.error(error)
             raise ValueError(error)
 
-        # make sure that the column we are trying to predict is on the input_data
-        # else fail, because we cannot predict data we dont have
-
-        #if self.transaction.lmd['model_is_time_series'] or self.transaction.lmd['type'] == TRANSACTION_LEARN:
-        # ^ How did this even make sense before ? Why did it not crash tests ? Pressumably because the predict col was loaded into `input_data` as an empty col
-
         if self.transaction.lmd['type'] == TRANSACTION_LEARN:
             for col_target in self.transaction.lmd['predict_columns']:
                 if col_target not in self.transaction.input_data.columns:
@@ -129,6 +123,12 @@ class DataExtractor(BaseModule):
                     self.transaction.errorMsg = err
                     raise ValueError(err)
                     return
+
+    def _set_user_data_subtypes(self):
+        if 'from_data' in self.transaction.hmd and self.transaction.hmd['from_data'] is not None:
+            for col in self.transaction.hmd['from_data'].data_subtypes:
+                self.transaction.lmd['data_types'][col] = self.transaction.hmd['from_data'].data_types[col]
+                self.transaction.lmd['data_subtypes'][col] = self.transaction.hmd['from_data'].data_subtypes[col]
 
     def run(self):
         # --- Dataset gets randomized or sorted (if timeseries) --- #
@@ -140,6 +140,8 @@ class DataExtractor(BaseModule):
         self.transaction.lmd['columns'] = self.transaction.input_data.columns
         self.transaction.input_data.data_frame = result
         # --- Some information about the dataset gets transplanted into transaction level variables --- #
+
+        self._set_user_data_subtypes()
 
         # --- Some preliminary dataset integrity checks --- #
         self._validate_input_data_integrity()

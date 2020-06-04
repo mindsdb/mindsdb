@@ -558,7 +558,7 @@ class StatsGenerator(BaseModule):
                 ,'description': 'TBD'
             }
 
-            if nr_missing > 0:
+            if nr_missing_values > 0:
                 stats_v2[col_name]['empty']['warning'] = f'Your column has {nr_missing_values} values missing'
 
             col_data = sample_df[col_name].dropna()

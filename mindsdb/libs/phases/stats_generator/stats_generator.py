@@ -640,9 +640,6 @@ class StatsGenerator(BaseModule):
                 stats_v2[col_name]['bias'] = {
                     'entropy': S
                 }
-                if S < 0.25:
-                    pick_nr = -max(1, int(len(stats_v2[col_name]['histogram']['y'])/10))
-                    stats_v2[col_name]['bias']['biased_buckets'] = [stats_v2[col_name]['histogram']['x'][i] for i in np.array(stats_v2[col_name]['histogram']['y']).argsort()[pick_nr:]]
 
             if 'lof_outliers' in stats[col_name]:
                 if data_subtype in (DATA_SUBTYPES.INT):

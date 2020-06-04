@@ -318,12 +318,19 @@ class StatsGenerator(BaseModule):
             }, X
         elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE :
             histogram = Counter(data)
-            X = list(map(str,histogram.keys()))
-            Y = list(histogram.values())
+            X = np.array([str(x) for x in histogram.keys()])
+            Y = np.array(list(histogram.values()))
+
+            sorted_idx = np.argsort(Y)[::-1]
+
+            X = list(X[sorted_idx])
+            Y = list(Y[sorted_idx])
+
             return {
                 'x': X,
                 'y': Y
             }, Y
+
         elif data_subtype == DATA_SUBTYPES.IMAGE:
             image_hashes = []
             for img_path in data:

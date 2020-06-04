@@ -561,7 +561,7 @@ class StatsGenerator(BaseModule):
                 hist_data = input_data.data_frame[col_name]
                 stats_v2[col_name]['unique'] = {
                     'unique_values': len_unique
-                    ,'unique_percentage': 100 * round((len_w_nulls - len_unique)/len_w_nulls,8)
+                    ,'unique_percentage': 100 * round(len_unique/len_w_nulls,8)
                 }
 
             histogram, percentage_buckets = StatsGenerator.get_histogram(hist_data, data_type=data_type, data_subtype=data_subtype)

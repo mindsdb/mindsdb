@@ -668,8 +668,8 @@ class StatsGenerator(BaseModule):
                     ,'outlier_score': stats[col_name]['lof_based_outlier_score']
                     ,'description': 'TBD'
                 }
-
-            stats_v2[col_name]['nr_warnings'] = sum([1 for x in stats_v2[col_name].values() if 'warning' in x and x['warning'] is not None])
+                
+            stats_v2[col_name]['nr_warnings'] = sum([1 for x in stats_v2[col_name].values() if isinstance(x, dict) and 'warning' in x and x['warning'] is not None])
 
         self.transaction.lmd['column_stats'] = stats
         self.transaction.lmd['stats_v2'] = stats_v2

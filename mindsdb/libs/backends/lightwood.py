@@ -242,6 +242,8 @@ class LightwoodBackend():
                     conf_arr = [x if x < 1 else 1 for x in conf_arr]
                     confidence_arr.append(conf_arr)
 
+            print(confidence_arr)
+            
             if len(confidence_arr) > 0:
                 confidences = []
                 for n in range(len(confidence_arr[0])):

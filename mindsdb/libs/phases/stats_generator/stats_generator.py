@@ -4,7 +4,7 @@ import warnings
 import imghdr
 import sndhdr
 import logging
-from collections import Counter
+from collections import Counter, defaultdict
 
 import numpy as np
 from scipy.stats import entropy
@@ -18,6 +18,7 @@ from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float
+from mindsdb.libs.helpers.general_helpers import get_value_bucket
 from mindsdb.libs.helpers.debugging import *
 from mindsdb.libs.phases.stats_generator.scores import *
 from mindsdb.libs.phases.stats_generator.data_preparation import sample_data, clean_int_and_date_data
@@ -669,6 +670,36 @@ class StatsGenerator(BaseModule):
                     ,'outlier_score': stats[col_name]['lof_based_outlier_score']
                     ,'description': 'TBD'
                 }
+
+                # map each bucket to list of outliers in it
+                bucket_outliers = defaultdict(list)
+                for value in stats_v2[col_name]['outliers']['outlier_values']:
+                    vb_index = get_value_bucket(value, stats_v2[col_name]['percentage_buckets'], stats[col_name])
+                    vb = stats_v2[col_name]['percentage_buckets'][vb_index]
+                    bucket_outliers[vb].append(value)
+                
+                # Filter out buckets without outliers,
+                # then sort by number of outliers in ascending order
+                buckets_with_outliers = sorted(filter(
+                    lambda kv: len(kv[1]) > 0, bucket_outliers.items()
+                ), key=lambda kv: len(kv[1]))
+
+                stats_v2[col_name]['outliers']['outlier_buckets'] = []
+
+                for i, (bucket, outlier_values) in enumerate(buckets_with_outliers):
+                    bucket_index = stats_v2[col_name]['histogram']['x'].index(bucket)
+
+                    bucket_values_num = stats_v2[col_name]['histogram']['y'][bucket_index]
+                    bucket_outliers_num = len(outlier_values)
+
+                    # Is the bucket in the 95th percentile by number of outliers?
+                    percentile_outlier = ((i + 1) / len(buckets_with_outliers)) >= 0.95
+
+                    # Are half of values in the bucket outliers?
+                    predominantly_outlier = (bucket_outliers_num / bucket_values_num) > 0.5
+                    
+                    if predominantly_outlier or percentile_outlier:
+                        stats_v2[col_name]['outliers']['outlier_buckets'].append(bucket)
 
             stats_v2[col_name]['nr_warnings'] = len([1 for x in stats_v2[col_name].values() if isinstance(x, dict) and 'warning' in x and x['warning'] is not None])
 

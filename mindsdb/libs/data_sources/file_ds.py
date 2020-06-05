@@ -158,32 +158,32 @@ class FileDS(DataSource):
 
         col_map = {}
         # get file data io, format and dialect
-        data, format, dialect = self._getDataIo(file)
+        data, fmt, dialect = self._getDataIo(file)
         data.seek(0) # make sure we are at 0 in file pointer
 
-        if format is None:
-            log.error('Could not laod file into any format, supported formats are csv, json, xls, xslx')
-
         if custom_parser:
-            header, file_data = custom_parser(data, format)
+            header, file_data = custom_parser(data, fmt)
 
-        elif format == 'csv':
+        elif fmt == 'csv':
             csv_reader = list(csv.reader(data, dialect))
             header = csv_reader[0]
             file_data =  csv_reader[1:]
 
-        elif format in ['xlsx', 'xls']:
+        elif fmt in ['xlsx', 'xls']:
             data.seek(0)
             df = pd.read_excel(data)
             header = df.columns.values.tolist()
             file_data = df.values.tolist()
 
-        elif format == 'json':
+        elif fmt == 'json':
             data.seek(0)
             json_doc = json.loads(data.read())
             df = json_normalize(json_doc)
             header = df.columns.values.tolist()
             file_data = df.values.tolist()
+        
+        else:
+            raise ValueError('Could not load file into any format, supported formats are csv, json, xls, xslx')
 
         for col in header:
             col_map[col] = col

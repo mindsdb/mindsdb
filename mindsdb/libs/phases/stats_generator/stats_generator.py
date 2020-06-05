@@ -664,12 +664,13 @@ class StatsGenerator(BaseModule):
                     total_outliers_num = len(stats_v2[col_name]['outliers']['outlier_values'])
                     
                     # Are half of values in the bucket outliers?
-                    a = (bucket_outliers_num / bucket_values_num) > 0.5
+                    predominantly_outlier = bucket_values_num > 0 and (bucket_outliers_num / bucket_values_num) > 0.5
 
                     # Does number of outliers in the bucket make 95% of outliers
                     # among all buckets?
-                    b = bucket_outliers_num > 0 and (bucket_outliers_num / total_outliers_num) > (1 - 0.05)
-                    if a or b:
+                    percentile_outlier = bucket_outliers_num > 0 and total_outliers_num > 0 and (bucket_outliers_num / total_outliers_num) > (1 - 0.05)
+
+                    if predominantly_outlier or percentile_outlier:
                         stats_v2[col_name]['outliers']['outlier_buckets'].append(bucket)
 
         self.transaction.lmd['column_stats'] = stats

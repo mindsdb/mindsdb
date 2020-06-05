@@ -23,6 +23,7 @@ from mindsdb.libs.helpers.debugging import *
 from mindsdb.libs.phases.stats_generator.scores import *
 from mindsdb.libs.phases.stats_generator.data_preparation import sample_data, clean_int_and_date_data
 
+
 class StatsGenerator(BaseModule):
     """
     # The stats generator phase is responsible for generating the insights we need about the data in order to vectorize it
@@ -319,12 +320,19 @@ class StatsGenerator(BaseModule):
             }, X
         elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE :
             histogram = Counter(data)
-            X = list(map(str,histogram.keys()))
-            Y = list(histogram.values())
+            X = np.array([str(x) for x in histogram.keys()])
+            Y = np.array(list(histogram.values()))
+
+            sorted_idx = np.argsort(Y)[::-1]
+
+            X = list(X[sorted_idx])
+            Y = list(Y[sorted_idx])
+
             return {
                 'x': X,
                 'y': Y
             }, Y
+
         elif data_subtype == DATA_SUBTYPES.IMAGE:
             image_hashes = []
             for img_path in data:
@@ -446,7 +454,7 @@ class StatsGenerator(BaseModule):
             else:
                 col_stats['variability_score_warning'] = None
 
-            # Some scores are meaningful on their own, and the user should be warnned if they fall below a certain threshold
+            # Some scores are meaningful on their own, and the user should be warned if they fall below a certain threshold
             if col_stats['empty_cells_score'] < 8:
                 empty_cells_percentage = col_stats['empty_percentage']
                 w = f'{empty_cells_percentage}% of the values in column {col_name} are empty, this might indicate that your data is of poor quality.'
@@ -543,11 +551,17 @@ class StatsGenerator(BaseModule):
             len_wo_nulls = len(input_data.data_frame[col_name].dropna())
             len_w_nulls = len(input_data.data_frame[col_name])
             len_unique = len(set(input_data.data_frame[col_name]))
+            nr_missing_values = len_w_nulls - len_wo_nulls
+
             stats_v2[col_name]['empty'] = {
-                'empty_cells': len_w_nulls - len_wo_nulls
-                ,'empty_percentage': 100 * round((len_w_nulls - len_wo_nulls)/len_w_nulls,3)
+                'empty_cells': nr_missing_values
+                ,'empty_percentage': 100 * round(nr_missing_values/len_w_nulls,3)
                 ,'is_empty': False
+                ,'description': 'TBD'
             }
+
+            if nr_missing_values > 0:
+                stats_v2[col_name]['empty']['warning'] = f'Your column has {nr_missing_values} values missing'
 
             col_data = sample_df[col_name].dropna()
 
@@ -558,6 +572,7 @@ class StatsGenerator(BaseModule):
                 ,'data_subtype': data_subtype
                 ,'data_type_dist': data_type_dist
                 ,'data_subtype_dist': data_subtype_dist
+                ,'description': 'TBD'
             }
 
             for k  in stats_v2[col_name]['typing']: stats[col_name][k] = stats_v2[col_name]['typing'][k]
@@ -572,7 +587,11 @@ class StatsGenerator(BaseModule):
                 stats_v2[col_name]['unique'] = {
                     'unique_values': len_unique
                     ,'unique_percentage': 100 * round(len_unique/len_w_nulls,8)
+                    ,'description': 'TBD'
                 }
+
+            if len_unique == 1:
+                stats_v2[col_name]['unique']['warning'] = 'This column contains no information because it has a single possible value.'
 
             histogram, percentage_buckets = StatsGenerator.get_histogram(hist_data, data_type=data_type, data_subtype=data_subtype)
 
@@ -634,10 +653,13 @@ class StatsGenerator(BaseModule):
                 S = entropy([x/nr_values for x in stats_v2[col_name]['histogram']['y']],base=max(2,len(stats_v2[col_name]['histogram']['y'])))
                 stats_v2[col_name]['bias'] = {
                     'entropy': S
+                    ,'description': 'TBD'
                 }
-                if S < 0.25:
-                    pick_nr = -max(1, int(len(stats_v2[col_name]['histogram']['y'])/10))
-                    stats_v2[col_name]['bias']['biased_buckets'] = [stats_v2[col_name]['histogram']['x'][i] for i in np.array(stats_v2[col_name]['histogram']['y']).argsort()[pick_nr:]]
+                if S < 0.8:
+                    if data_type in (DATA_TYPES.CATEGORICAL):
+                        stats_v2[col_name]['bias']['warning'] =  """You may to check if some categories occur too often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue."""
+                    else:
+                        stats_v2[col_name]['bias']['warning'] = """You may want to check if you see something suspicious on the right-hand-side graph. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue"""
 
             if 'lof_outliers' in stats[col_name]:
                 if data_subtype in (DATA_SUBTYPES.INT):
@@ -646,6 +668,7 @@ class StatsGenerator(BaseModule):
                 stats_v2[col_name]['outliers'] = {
                     'outlier_values': stats[col_name]['lof_outliers']
                     ,'outlier_score': stats[col_name]['lof_based_outlier_score']
+                    ,'description': 'TBD'
                 }
 
                 # map each bucket to list of outliers in it
@@ -655,24 +678,30 @@ class StatsGenerator(BaseModule):
                     vb = stats_v2[col_name]['percentage_buckets'][vb_index]
                     bucket_outliers[vb].append(value)
                 
+                # Filter out buckets without outliers,
+                # then sort by number of outliers in ascending order
+                buckets_with_outliers = sorted(filter(
+                    lambda kv: len(kv[1]) > 0, bucket_outliers.items()
+                ), key=lambda kv: len(kv[1]))
+
                 stats_v2[col_name]['outliers']['outlier_buckets'] = []
-                for bucket, outlier_values in bucket_outliers.items():
+
+                for i, (bucket, outlier_values) in enumerate(buckets_with_outliers):
                     bucket_index = stats_v2[col_name]['histogram']['x'].index(bucket)
 
                     bucket_values_num = stats_v2[col_name]['histogram']['y'][bucket_index]
                     bucket_outliers_num = len(outlier_values)
 
-                    total_outliers_num = len(stats_v2[col_name]['outliers']['outlier_values'])
-                    
+                    # Is the bucket in the 95th percentile by number of outliers?
+                    percentile_outlier = ((i + 1) / len(buckets_with_outliers)) >= 0.95
+
                     # Are half of values in the bucket outliers?
-                    predominantly_outlier = bucket_values_num > 0 and (bucket_outliers_num / bucket_values_num) > 0.5
-
-                    # Does number of outliers in the bucket make 95% of outliers
-                    # among all buckets?
-                    percentile_outlier = bucket_outliers_num > 0 and total_outliers_num > 0 and (bucket_outliers_num / total_outliers_num) > (1 - 0.05)
-
+                    predominantly_outlier = (bucket_outliers_num / bucket_values_num) > 0.5
+                    
                     if predominantly_outlier or percentile_outlier:
                         stats_v2[col_name]['outliers']['outlier_buckets'].append(bucket)
+
+        stats_v2[col_name]['nr_warnings'] = len([1 for x in stats_v2[col_name].values() if isinstance(x, dict) and 'warning' in x and x['warning'] is not None])
 
         self.transaction.lmd['column_stats'] = stats
         self.transaction.lmd['stats_v2'] = stats_v2

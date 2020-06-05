@@ -655,7 +655,7 @@ class StatsGenerator(BaseModule):
                 }
                 if S < 0.8:
                     if data_type in (DATA_TYPES.CATEGORICAL):
-                        stats_v2[col_name]['bias']['warning'] =  """You may to check if some categories occur to often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue."""
+                        stats_v2[col_name]['bias']['warning'] =  """You may to check if some categories occur too often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue."""
                     else:
                         stats_v2[col_name]['bias']['warning'] = """You may want to check if you see something suspicious on the right-hand-side graph. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue"""
 
@@ -669,7 +669,7 @@ class StatsGenerator(BaseModule):
                     ,'description': 'TBD'
                 }
 
-            stats_v2[col_name]['nr_warnings'] = sum([1 for x in stats_v2[col_name].values() if isinstance(x, dict) and 'warning' in x and x['warning'] is not None])
+            stats_v2[col_name]['nr_warnings'] = len([1 for x in stats_v2[col_name].values() if isinstance(x, dict) and 'warning' in x and x['warning'] is not None])
 
         self.transaction.lmd['column_stats'] = stats
         self.transaction.lmd['stats_v2'] = stats_v2

@@ -37,7 +37,7 @@ class Predictor:
         if CONFIG.CHECK_FOR_UPDATES:
             try:
                 check_for_updates()
-            except:
+            except Exception:
                 self.log.warning('Could not check for updates !')
 
         if not CONFIG.SAGEMAKER:
@@ -345,7 +345,7 @@ class Predictor:
                             try:
                                 mao['overall_input_importance']['x'].append(icol)
                                 mao['overall_input_importance']['y'].append(round(lmd['column_importances'][icol],1))
-                            except:
+                            except Exception:
                                 print(f'No column importances found for {icol} !')
 
                 amd['model_analysis'].append(mao)
@@ -367,7 +367,7 @@ class Predictor:
             shutil.make_archive(base_name=mindsdb_storage_dir, format='zip', root_dir=CONFIG.MINDSDB_STORAGE_PATH)
             print(f'Exported mindsdb storage to {mindsdb_storage_dir}.zip')
             return True
-        except:
+        except Exception:
             return False
 
     def export_model(self, model_name=None):
@@ -393,7 +393,7 @@ class Predictor:
                         for file in files:
                             full_path = os.path.join(root, file)
                             zip_fp.write(full_path, full_path[len(CONFIG.MINDSDB_STORAGE_PATH):])
-                except:
+                except Exception:
                     pass
 
             print(f'Exported model to {storage_file}')
@@ -460,7 +460,7 @@ class Predictor:
             try:
                 shutil.move(os.path.join(CONFIG.MINDSDB_STORAGE_PATH, old_model_name + extension), os.path.join(CONFIG.MINDSDB_STORAGE_PATH, new_model_name + extension))
                 moved_a_backend = True
-            except:
+            except Exception:
                 pass
 
         if not moved_a_backend:
@@ -479,13 +479,13 @@ class Predictor:
         try:
             lmd['ludwig_data']['ludwig_save_path'] = lmd['ludwig_data']['ludwig_save_path'].replace(old_model_name, new_model_name)
             renamed_one_backend = True
-        except:
+        except Exception:
             pass
 
         try:
             lmd['lightwood_data']['save_path'] = lmd['lightwood_data']['save_path'].replace(old_model_name, new_model_name)
             renamed_one_backend = True
-        except:
+        except Exception:
             pass
 
         if not renamed_one_backend:
@@ -516,12 +516,12 @@ class Predictor:
 
             try:
                 os.remove(lmd['lightwood_data']['save_path'])
-            except:
+            except Exception:
                 pass
 
             try:
                 shutil.rmtree(lmd['ludwig_data']['ludwig_save_path'])
-            except:
+            except Exception:
                 pass
 
         if model_name is None:

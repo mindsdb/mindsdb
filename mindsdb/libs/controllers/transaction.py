@@ -1,27 +1,26 @@
-from mindsdb.libs.helpers.general_helpers import unpickle_obj
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import *
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.data_types.transaction_output_data import PredictTransactionOutputData, TrainTransactionOutputData
 from mindsdb.libs.data_types.mindsdb_logger import log
-from mindsdb.libs.helpers.probabilistic_validator import ProbabilisticValidator
 from mindsdb.config import CONFIG
 
-import time
 import _thread
 import traceback
 import importlib
-import copy
 import pickle
 import datetime
 import sys
 from copy import deepcopy
 import pandas as pd
-import numpy as np
+
 
 class Transaction:
 
-    def __init__(self, session, light_transaction_metadata, heavy_transaction_metadata, logger =  log):
+    def __init__(self, session,
+                 light_transaction_metadata,
+                 heavy_transaction_metadata,
+                 logger=log):
         """
         A transaction is the interface to start some MindsDB operation within a session
 
@@ -47,18 +46,16 @@ class Transaction:
 
         # variables that can be persisted
 
-
         self.log = logger
 
         self.run()
-
 
     def load_metadata(self):
         try:
             import resource
             resource.setrlimit(resource.RLIMIT_STACK, [0x10000000, resource.RLIM_INFINITY])
             sys.setrecursionlimit(0x100000)
-        except:
+        except Exception:
             pass
 
 
@@ -77,7 +74,6 @@ class Transaction:
         except Exception as e:
             self.log.error(e)
             self.log.error(f'Could not load mindsdb heavy metadata in the file: {fn}')
-
 
     def save_metadata(self):
         fn = os.path.join(CONFIG.MINDSDB_STORAGE_PATH, self.lmd['name'] + '_light_model_metadata.pickle')
@@ -105,7 +101,7 @@ class Transaction:
         try:
             with open(fn, 'wb') as fp:
                 # Don't save data for now
-                pickle.dump(save_hmd, fp,protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(save_hmd, fp, protocol=pickle.HIGHEST_PROTOCOL)
         except Exception as e:
             self.log.error(e)
             self.log.error(f'Could not save mindsdb heavy metadata in the file: {fn}')
@@ -113,9 +109,6 @@ class Transaction:
     def _call_phase_module(self, module_name, **kwargs):
         """
         Loads the module and runs it
-
-        :param module_name:
-        :return:
         """
 
         self.lmd['is_active'] = True
@@ -125,11 +118,10 @@ class Transaction:
             main_module = importlib.import_module(module_full_path)
             module = getattr(main_module, module_name)
             return module(self.session, self)(**kwargs)
-        except:
-            error = 'Could not load module {module_name}'.format(module_name=module_name)
-            self.log.error('Could not load module {module_name}'.format(module_name=module_name))
-            self.log.error(traceback.format_exc())
-            raise Exception(error)
+        except Exception:
+            error = f'Could not load module {module_name}'
+            self.log.error(error)
+            raise
         finally:
             self.lmd['is_active'] = False
 
@@ -143,13 +135,15 @@ class Transaction:
         self._call_phase_module(module_name='DataCleaner', stage=0)
         self.save_metadata()
 
+        self._call_phase_module(module_name='TypeDeductor', input_data=self.input_data)
+        self.save_metadata()
+
         self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
-        self._call_phase_module(module_name='StatsGenerator', input_data=self.input_data, hmd=self.hmd)
+        self._call_phase_module(module_name='DataAnalyzer', input_data=self.input_data)
         self.save_metadata()
 
         self.lmd['current_phase'] = MODEL_STATUS_DONE
         self.save_metadata()
-        return
 
     def _execute_learn(self):
         """
@@ -165,8 +159,13 @@ class Transaction:
             self._call_phase_module(module_name='DataCleaner', stage=0)
             self.save_metadata()
 
+            self._call_phase_module(module_name='TypeDeductor',
+                                    input_data=self.input_data)
+            self.save_metadata()
+
             self.lmd['current_phase'] = MODEL_STATUS_DATA_ANALYSIS
-            self._call_phase_module(module_name='StatsGenerator', input_data=self.input_data, hmd=self.hmd)
+            self._call_phase_module(module_name='DataAnalyzer',
+                                    input_data=self.input_data)
             self.save_metadata()
 
             self._call_phase_module(module_name='DataCleaner', stage=0)
@@ -194,11 +193,7 @@ class Transaction:
             self.log.error(str(e))
             raise e
 
-
     def _execute_predict(self):
-        """
-        :return:
-        """
         old_lmd = {}
         for k in self.lmd: old_lmd[k] = self.lmd[k]
 
@@ -311,15 +306,8 @@ class Transaction:
 
             self.output_data.input_confidence = input_confidence
             self.output_data.extra_insights = extra_insights
-        return
-
 
     def run(self):
-        """
-
-        :return:
-        """
-
         if self.lmd['type'] == TRANSACTION_BAD_QUERY:
             self.log.error(self.errorMsg)
             self.error = True

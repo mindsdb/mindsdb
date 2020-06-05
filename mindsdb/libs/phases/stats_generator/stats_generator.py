@@ -4,7 +4,7 @@ import warnings
 import imghdr
 import sndhdr
 import logging
-from collections import Counter
+from collections import Counter, defaultdict
 
 import numpy as np
 from scipy.stats import entropy
@@ -18,6 +18,7 @@ from mindsdb.config import CONFIG
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float
+from mindsdb.libs.helpers.general_helpers import get_value_bucket
 from mindsdb.libs.helpers.debugging import *
 from mindsdb.libs.phases.stats_generator.scores import *
 from mindsdb.libs.phases.stats_generator.data_preparation import sample_data, clean_int_and_date_data
@@ -645,6 +646,31 @@ class StatsGenerator(BaseModule):
                     'outlier_values': stats[col_name]['lof_outliers']
                     ,'outlier_score': stats[col_name]['lof_based_outlier_score']
                 }
+
+                # map each bucket to list of outliers in it
+                bucket_outliers = defaultdict(list)
+                for value in stats_v2[col_name]['outliers']['outlier_values']:
+                    vb_index = get_value_bucket(value, stats_v2[col_name]['percentage_buckets'], stats[col_name])
+                    vb = stats_v2[col_name]['percentage_buckets'][vb_index]
+                    bucket_outliers[vb].append(value)
+                
+                stats_v2[col_name]['outliers']['outlier_buckets'] = []
+                for bucket, outlier_values in bucket_outliers.items():
+                    bucket_index = stats_v2[col_name]['histogram']['x'].index(bucket)
+
+                    bucket_values_num = stats_v2[col_name]['histogram']['y'][bucket_index]
+                    bucket_outliers_num = len(outlier_values)
+
+                    total_outliers_num = len(stats_v2[col_name]['outliers']['outlier_values'])
+                    
+                    # Are half of values in the bucket outliers?
+                    a = (bucket_outliers_num / bucket_values_num) > 0.5
+
+                    # Does number of outliers in the bucket make 95% of outliers
+                    # among all buckets?
+                    b = bucket_outliers_num > 0 and (bucket_outliers_num / total_outliers_num) > (1 - 0.05)
+                    if a or b:
+                        stats_v2[col_name]['outliers']['outlier_buckets'].append(bucket)
 
         self.transaction.lmd['column_stats'] = stats
         self.transaction.lmd['stats_v2'] = stats_v2

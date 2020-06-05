@@ -532,6 +532,7 @@ class StatsGenerator(BaseModule):
         sample_df = sample_data(input_data.data_frame, self.transaction.lmd['sample_margin_of_error'], self.transaction.lmd['sample_confidence_level'], self.log)
 
         for col_name in self.transaction.lmd['empty_columns']:
+            stats_v2[col_name] = {}
             stats_v2[col_name]['empty'] = {'is_empty': True}
 
         for col_name in sample_df.columns.values:

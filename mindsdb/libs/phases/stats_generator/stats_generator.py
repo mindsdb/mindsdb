@@ -325,8 +325,8 @@ class StatsGenerator(BaseModule):
 
             sorted_idx = np.argsort(Y)[::-1]
 
-            X = list(X[sorted_idx])
-            Y = list(Y[sorted_idx])
+            X = X[sorted_idx].tolist()
+            Y = Y[sorted_idx].tolist()
 
             return {
                 'x': X,
@@ -652,7 +652,7 @@ class StatsGenerator(BaseModule):
                 nr_values = sum(stats_v2[col_name]['histogram']['y'])
                 S = entropy([x/nr_values for x in stats_v2[col_name]['histogram']['y']],base=max(2,len(stats_v2[col_name]['histogram']['y'])))
                 stats_v2[col_name]['bias'] = {
-                    'entropy': S
+                    'entropy': float(S)
                     ,'description': 'TBD'
                 }
                 if S < 0.8:
@@ -677,7 +677,7 @@ class StatsGenerator(BaseModule):
                     vb_index = get_value_bucket(value, stats_v2[col_name]['percentage_buckets'], stats[col_name])
                     vb = stats_v2[col_name]['percentage_buckets'][vb_index]
                     bucket_outliers[vb].append(value)
-                
+
                 # Filter out buckets without outliers,
                 # then sort by number of outliers in ascending order
                 buckets_with_outliers = sorted(filter(
@@ -697,7 +697,7 @@ class StatsGenerator(BaseModule):
 
                     # Are half of values in the bucket outliers?
                     predominantly_outlier = (bucket_outliers_num / bucket_values_num) > 0.5
-                    
+
                     if predominantly_outlier or percentile_outlier:
                         stats_v2[col_name]['outliers']['outlier_buckets'].append(bucket)
 

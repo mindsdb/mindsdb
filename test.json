@@ -1,0 +1,310 @@
+{
+  'number_of_rooms': {
+    'empty': {
+      'empty_cells': 0,
+      'empty_percentage': 0.0,
+      'is_empty': False,
+      'description': 'TBD'
+    },
+    'typing': {
+      'data_type': 'Categorical',
+      'data_subtype': 'Category',
+      'data_type_dist': {
+        'Categorical': 312
+      },
+      'data_subtype_dist': {
+        'Category': 312
+      },
+      'description': 'TBD'
+    },
+    'unique': {
+      'unique_values': 4,
+      'unique_percentage': 1.273885,
+      'description': 'TBD'
+    },
+    'histogram': {
+      'x': ['3', '0', '1', '2'],
+      'y': [87, 83, 74, 70]
+    },
+    'percentage_buckets': [87, 83, 74, 70],
+    'additional_info': {
+      'other_potential_subtypes': ['Numeric'],
+      'other_potential_types': ['Int']
+    },
+    'bias': {
+      'entropy': 0.9972885317972084,
+      'description': 'TBD'
+    },
+    'nr_warnings': 0
+  },
+  'number_of_bathrooms': {
+    'empty': {
+      'empty_cells': 0,
+      'empty_percentage': 0.0,
+      'is_empty': False,
+      'description': 'TBD'
+    },
+    'typing': {
+      'data_type': 'Categorical',
+      'data_subtype': 'Binary Category',
+      'data_type_dist': {
+        'Categorical': 312
+      },
+      'data_subtype_dist': {
+        'Binary Category': 312
+      },
+      'description': 'TBD'
+    },
+    'unique': {
+      'unique_values': 2,
+      'unique_percentage': 0.6369429999999999,
+      'description': 'TBD'
+    },
+    'histogram': {
+      'x': ['1', '2'],
+      'y': [227, 87]
+    },
+    'percentage_buckets': [227, 87],
+    'additional_info': {
+      'other_potential_subtypes': ['Numeric'],
+      'other_potential_types': ['Int']
+    },
+    'bias': {
+      'entropy': 0.8514277847073052,
+      'description': 'TBD'
+    },
+    'nr_warnings': 0
+  },
+  'sqft': {
+    'empty': {
+      'empty_cells': 0,
+      'empty_percentage': 0.0,
+      'is_empty': False,
+      'description': 'TBD'
+    },
+    'typing': {
+      'data_type': 'Numeric',
+      'data_subtype': 'Int',
+      'data_type_dist': {
+        'Numeric': 312
+      },
+      'data_subtype_dist': {
+        'Int': 312
+      },
+      'description': 'TBD'
+    },
+    'histogram': {
+      'x': [102, 125, 147, 170, 193, 215, 238, 260, 283, 306, 328, 351, 374, 396, 419, 442, 464, 487, 510, 532, 555, 577, 600, 623, 645, 668, 691, 713, 736, 759, 781, 804, 826, 849, 872, 894, 917, 940, 962, 985, 1008, 1030, 1053, 1076, 1098, 1121, 1143, 1166, 1189, 1211],
+      'y': [6, 3, 4, 2, 2, 3, 1, 2, 8, 8, 7, 4, 5, 10, 11, 9, 10, 11, 9, 9, 2, 7, 8, 10, 8, 10, 3, 6, 11, 3, 4, 6, 1, 8, 16, 13, 11, 5, 6, 5, 3, 3, 5, 5, 4, 3, 6, 5, 2, 9]
+    },
+    'percentage_buckets': [102, 125, 147, 170, 193, 215, 238, 260, 283, 306, 328, 351, 374, 396, 419, 442, 464, 487, 510, 532, 555, 577, 600, 623, 645, 668, 691, 713, 736, 759, 781, 804, 826, 849, 872, 894, 917, 940, 962, 985, 1008, 1030, 1053, 1076, 1098, 1121, 1143, 1166, 1189, 1211],
+    'additional_info': {
+      'other_potential_subtypes': [],
+      'other_potential_types': []
+    },
+    'bias': {
+      'entropy': 0.9608454028559943,
+      'description': 'TBD'
+    },
+    'outliers': {
+      'outlier_values': [235, 231],
+      'outlier_score': 10,
+      'description': 'TBD',
+      'outlier_buckets': [215]
+    },
+    'nr_warnings': 0
+  },
+  'location': {
+    'empty': {
+      'empty_cells': 0,
+      'empty_percentage': 0.0,
+      'is_empty': False,
+      'description': 'TBD'
+    },
+    'typing': {
+      'data_type': 'Categorical',
+      'data_subtype': 'Category',
+      'data_type_dist': {
+        'Categorical': 312
+      },
+      'data_subtype_dist': {
+        'Category': 312
+      },
+      'description': 'TBD'
+    },
+    'unique': {
+      'unique_values': 3,
+      'unique_percentage': 0.9554139999999999,
+      'description': 'TBD'
+    },
+    'histogram': {
+      'x': ['good', 'poor', 'great'],
+      'y': [151, 95, 68]
+    },
+    'percentage_buckets': [151, 95, 68],
+    'additional_info': {
+      'other_potential_subtypes': [],
+      'other_potential_types': []
+    },
+    'bias': {
+      'entropy': 0.9512733720709029,
+      'description': 'TBD'
+    },
+    'nr_warnings': 0
+  },
+  'days_on_market': {
+    'empty': {
+      'empty_cells': 0,
+      'empty_percentage': 0.0,
+      'is_empty': False,
+      'description': 'TBD'
+    },
+    'typing': {
+      'data_type': 'Numeric',
+      'data_subtype': 'Int',
+      'data_type_dist': {
+        'Numeric': 312
+      },
+      'data_subtype_dist': {
+        'Int': 312
+      },
+      'description': 'TBD'
+    },
+    'histogram': {
+      'x': [0, 1, 3, 4, 5, 6, 8, 9, 10, 12, 13, 14, 15, 17, 18, 19, 20, 22, 23, 24, 26, 27, 28, 29, 31, 32, 33, 35, 36, 37, 38, 40, 41, 42, 44, 45, 46, 47, 49, 50, 51, 52, 54, 55, 56, 58, 59, 60, 61, 63],
+      'y': [9, 30, 20, 10, 10, 26, 23, 17, 31, 15, 12, 14, 4, 3, 5, 2, 3, 2, 2, 3, 2, 1, 1, 6, 3, 1, 1, 1, 3, 2, 2, 1, 1, 5, 3, 1, 1, 6, 4, 1, 2, 2, 2, 1, 3, 1, 3, 3, 4, 4]
+    },
+    'percentage_buckets': [0, 1, 3, 4, 5, 6, 8, 9, 10, 12, 13, 14, 15, 17, 18, 19, 20, 22, 23, 24, 26, 27, 28, 29, 31, 32, 33, 35, 36, 37, 38, 40, 41, 42, 44, 45, 46, 47, 49, 50, 51, 52, 54, 55, 56, 58, 59, 60, 61, 63],
+    'additional_info': {
+      'other_potential_subtypes': [],
+      'other_potential_types': []
+    },
+    'bias': {
+      'entropy': 0.8547718420480556,
+      'description': 'TBD'
+    },
+    'outliers': {
+      'outlier_values': [16, 9, 9, 17, 9, 9, 9, 17, 18, 18, 9, 9, 9, 9, 17, 18, 9, 9, 16, 9, 9, 9, 18, 18, 9, 9, 9],
+      'outlier_score': 9,
+      'description': 'TBD',
+      'outlier_buckets': [17, 18, 9]
+    },
+    'nr_warnings': 0
+  },
+  'initial_price': {
+    'empty': {
+      'empty_cells': 0,
+      'empty_percentage': 0.0,
+      'is_empty': False,
+      'description': 'TBD'
+    },
+    'typing': {
+      'data_type': 'Numeric',
+      'data_subtype': 'Int',
+      'data_type_dist': {
+        'Numeric': 312
+      },
+      'data_subtype_dist': {
+        'Int': 312
+      },
+      'description': 'TBD'
+    },
+    'histogram': {
+      'x': [923, 1015, 1106, 1198, 1290, 1382, 1473, 1565, 1657, 1749, 1840, 1932, 2024, 2116, 2207, 2299, 2391, 2483, 2574, 2666, 2758, 2850, 2941, 3033, 3125, 3216, 3308, 3400, 3492, 3583, 3675, 3767, 3859, 3950, 4042, 4134, 4226, 4317, 4409, 4501, 4593, 4684, 4776, 4868, 4960, 5051, 5143, 5235, 5327, 5418],
+      'y': [2, 2, 2, 2, 7, 9, 12, 16, 15, 19, 16, 8, 11, 10, 11, 5, 3, 5, 2, 4, 1, 1, 5, 7, 5, 12, 12, 9, 2, 2, 3, 2, 4, 0, 0, 0, 5, 5, 6, 5, 9, 12, 9, 8, 6, 1, 3, 9, 3, 5]
+    },
+    'percentage_buckets': [923, 1015, 1106, 1198, 1290, 1382, 1473, 1565, 1657, 1749, 1840, 1932, 2024, 2116, 2207, 2299, 2391, 2483, 2574, 2666, 2758, 2850, 2941, 3033, 3125, 3216, 3308, 3400, 3492, 3583, 3675, 3767, 3859, 3950, 4042, 4134, 4226, 4317, 4409, 4501, 4593, 4684, 4776, 4868, 4960, 5051, 5143, 5235, 5327, 5418],
+    'additional_info': {
+      'other_potential_subtypes': [],
+      'other_potential_types': []
+    },
+    'bias': {
+      'entropy': 0.9265014169876461,
+      'description': 'TBD'
+    },
+    'outliers': {
+      'outlier_values': [1083, 3645, 923, 1046, 3861, 3727, 3854, 1172, 1234, 957, 1243, 1179, 3938, 3861, 3705, 3901, 3671, 3856, 3691],
+      'outlier_score': 9,
+      'description': 'TBD',
+      'outlier_buckets': [1015, 3583, 923, 3767, 1106, 1198, 3675, 3859]
+    },
+    'nr_warnings': 0
+  },
+  'neighborhood': {
+    'empty': {
+      'empty_cells': 0,
+      'empty_percentage': 0.0,
+      'is_empty': False,
+      'description': 'TBD'
+    },
+    'typing': {
+      'data_type': 'Categorical',
+      'data_subtype': 'Category',
+      'data_type_dist': {
+        'Categorical': 312
+      },
+      'data_subtype_dist': {
+        'Category': 312
+      },
+      'description': 'TBD'
+    },
+    'unique': {
+      'unique_values': 6,
+      'unique_percentage': 1.9108279999999997,
+      'description': 'TBD'
+    },
+    'histogram': {
+      'x': ['downtown', 'westbrae', 'south_side', 'thowsand_oaks', 'alcatraz_ave', 'berkeley_hills'],
+      'y': [113, 73, 51, 38, 22, 17]
+    },
+    'percentage_buckets': [113, 73, 51, 38, 22, 17],
+    'additional_info': {
+      'other_potential_subtypes': [],
+      'other_potential_types': []
+    },
+    'bias': {
+      'entropy': 0.8940294012885315,
+      'description': 'TBD'
+    },
+    'nr_warnings': 0
+  },
+  'rental_price': {
+    'empty': {
+      'empty_cells': 0,
+      'empty_percentage': 0.0,
+      'is_empty': False,
+      'description': 'TBD'
+    },
+    'typing': {
+      'data_type': 'Numeric',
+      'data_subtype': 'Float',
+      'data_type_dist': {
+        'Numeric': 312
+      },
+      'data_subtype_dist': {
+        'Float': 312
+      },
+      'description': 'TBD'
+    },
+    'histogram': {
+      'x': [847.314, 940.56772, 1033.82144, 1127.0751599999999, 1220.32888, 1313.5826, 1406.83632, 1500.09004, 1593.3437599999997, 1686.59748, 1779.8511999999998, 1873.1049199999998, 1966.35864, 2059.6123599999996, 2152.86608, 2246.1198, 2339.3735199999996, 2432.62724, 2525.8809599999995, 2619.1346799999997, 2712.3884, 2805.6421199999995, 2898.8958399999997, 2992.1495599999994, 3085.4032799999995, 3178.6569999999997, 3271.9107199999994, 3365.1644399999996, 3458.4181599999997, 3551.6718799999994, 3644.9255999999996, 3738.1793199999993, 3831.4330399999994, 3924.6867599999996, 4017.9404799999993, 4111.1942, 4204.44792, 4297.701639999999, 4390.95536, 4484.20908, 4577.462799999999, 4670.71652, 4763.97024, 4857.223959999999, 4950.47768, 5043.7314, 5136.985119999999, 5230.23884, 5323.49256, 5416.746279999999],
+      'y': [2, 2, 1, 4, 7, 3, 14, 12, 15, 16, 17, 11, 11, 10, 10, 10, 3, 5, 8, 2, 1, 3, 1, 6, 5, 7, 12, 14, 3, 0, 5, 0, 7, 4, 2, 6, 1, 3, 3, 2, 5, 13, 11, 8, 5, 2, 3, 8, 4, 5]
+    },
+    'percentage_buckets': [847.314, 940.56772, 1033.82144, 1127.0751599999999, 1220.32888, 1313.5826, 1406.83632, 1500.09004, 1593.3437599999997, 1686.59748, 1779.8511999999998, 1873.1049199999998, 1966.35864, 2059.6123599999996, 2152.86608, 2246.1198, 2339.3735199999996, 2432.62724, 2525.8809599999995, 2619.1346799999997, 2712.3884, 2805.6421199999995, 2898.8958399999997, 2992.1495599999994, 3085.4032799999995, 3178.6569999999997, 3271.9107199999994, 3365.1644399999996, 3458.4181599999997, 3551.6718799999994, 3644.9255999999996, 3738.1793199999993, 3831.4330399999994, 3924.6867599999996, 4017.9404799999993, 4111.1942, 4204.44792, 4297.701639999999, 4390.95536, 4484.20908, 4577.462799999999, 4670.71652, 4763.97024, 4857.223959999999, 4950.47768, 5043.7314, 5136.985119999999, 5230.23884, 5323.49256, 5416.746279999999],
+    'additional_info': {
+      'other_potential_subtypes': [],
+      'other_potential_types': []
+    },
+    'bias': {
+      'entropy': 0.9299137102634817,
+      'description': 'TBD'
+    },
+    'outliers': {
+      'outlier_values': [1033.182, 3645.0, 4545.0, 847.314, 989.516, 4403.288, 1134.496, 1135.28, 880.44, 4538.772, 4464.608, 1112.976, 3671.0],
+      'outlier_score': 10,
+      'description': 'TBD',
+      'outlier_buckets': [1033.82144, 940.56772, 4484.20908, 847.314, 4390.95536, 1127.0751599999999]
+    },
+    'nr_warnings': 0
+  }
+}

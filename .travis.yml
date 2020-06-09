@@ -54,12 +54,12 @@ install:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --upgrade pip; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -e .; fi
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -e .; fi
-before_script: cd tests
 # run tests
 script:
   - pytest -s
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python ci_tests/fast_test.py; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 ci_tests/full_test.py; fi
+  - cd tests/ci_tests
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python fast_test.py; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 full_test.py; fi
   - cd ../..
   - pip install flake8
   - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics

@@ -32,7 +32,7 @@ def clean_float(val):
     if isinstance(val, numpy.float64):
         return val
 
-    val = str(val).strip()
+    val = str(val).strip(' ')
     val = val.replace(',', '.')
     val = val.rstrip('"').lstrip('"')
 

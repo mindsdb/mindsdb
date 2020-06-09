@@ -137,4 +137,3 @@ class TestDataAnalyzer:
         stats_v2 = lmd['stats_v2']
 
         assert stats_v2['empty_column']['empty']['is_empty']
-

@@ -128,7 +128,7 @@ def get_histogram(data, data_type, data_subtype):
     elif data_type == DATA_TYPES.CATEGORICAL or data_subtype == DATA_SUBTYPES.DATE:
         hist = get_hist(data)
         hist = {str(k): v for k, v in hist.items()}
-        return hist, hist['y']
+        return hist, hist['x']
     elif data_subtype == DATA_SUBTYPES.IMAGE:
         return get_image_histogram(data)
     else:
@@ -227,11 +227,13 @@ class DataAnalyzer(BaseModule):
             stats[col_name]['empty_cells'] = stats_v2[col_name]['empty']['empty_cells']
             stats[col_name]['empty_percentage'] = stats_v2[col_name]['empty']['empty_percentage']
 
-            stats_v2[col_name]['unique'] = get_uniq_values_report(input_data.data_frame[col_name])
 
             hist_data = col_data
             if data_type == DATA_TYPES.CATEGORICAL:
                 hist_data = input_data.data_frame[col_name]
+                stats_v2[col_name]['unique'] = get_uniq_values_report(input_data.data_frame[col_name])
+
+
             histogram, percentage_buckets = get_histogram(hist_data,
                                                           data_type=data_type,
                                                           data_subtype=data_subtype)

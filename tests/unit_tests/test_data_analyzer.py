@@ -85,11 +85,9 @@ class TestDataAnalyzer:
             assert stats_v2[col_name]['histogram']
             assert 'percentage_buckets' in stats_v2[col_name]
             assert stats_v2[col_name]['bias']['entropy']
-            assert stats_v2[col_name]['unique']['unique_values']
 
+        assert stats_v2['categorical_str']['unique']['unique_values']
         assert stats_v2['categorical_str']['unique']['unique_percentage'] == 4.0
-        assert stats_v2['categorical_str']['percentage_buckets'] == [25, 25, 25,
-                                                                     25]
 
         # Assert that the histogram on text field is made using words
         assert isinstance(stats_v2['sequential_text']['histogram']['x'][0], str)

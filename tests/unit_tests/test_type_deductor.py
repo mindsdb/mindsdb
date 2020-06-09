@@ -1,3 +1,4 @@
+import json
 from uuid import uuid4
 import pytest
 from datetime import datetime, timedelta
@@ -8,6 +9,7 @@ from mindsdb.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.phases.type_deductor.type_deductor import TypeDeductor
 from .utils import test_column_types
+
 
 class TestTypeDeductor:
     @pytest.fixture()
@@ -67,6 +69,8 @@ class TestTypeDeductor:
 
         assert DATA_SUBTYPES.INT in stats_v2['categorical_int']['additional_info']['other_potential_subtypes']
         assert hmd == {}
+
+        assert isinstance(json.dumps(transaction.lmd), str)
 
     def test_deduce_foreign_key(self, transaction, lmd):
         """Tests that basic cases of type deduction work correctly"""

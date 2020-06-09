@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 
 import pytest
@@ -93,6 +94,8 @@ class TestDataAnalyzer:
         assert isinstance(stats_v2['sequential_text']['histogram']['x'][0], str)
 
         assert hmd == {}
+
+        assert isinstance(json.dumps(transaction.lmd), str)
 
     def test_empty_values(self, transaction, lmd, stats_v2, stats):
         lmd['stats_v2'] = stats_v2

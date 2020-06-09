@@ -7,7 +7,9 @@ from mindsdb.libs.data_types.mindsdb_logger import log
 
 class ClickhouseDS(DataSource):
 
-    def _setup(self, query, host='http://localhost', user='default', password=None, port=8123):
+    def _setup(self, query, host='localhost', user='default', password=None, port=8123, protocol='http'):
+        if protocol not in ('https', 'http'):
+            raise ValueError('Unexpected protocol {}'.fomat(protocol))
 
         if ' format ' in query.lower():
             err_msg = 'Please refrain from adding a "FROAMT" statement to the query'
@@ -21,7 +23,7 @@ class ClickhouseDS(DataSource):
         if password is not None:
             params['password'] = password
 
-        response = requests.post(f'{host}:{port}', data=query, params=params)
+        response = requests.post(f'{protocol}://{host}:{port}', data=query, params=params)
         
         try:
             data = response.json()['data']
@@ -38,6 +40,8 @@ class ClickhouseDS(DataSource):
         return df, col_map
 
 if __name__ == "__main__":
+    from mindsdb import Predictor
+
     log.info('Starting ClickhouseDS tests !')
 
     log.info('Inserting data')
@@ -52,7 +56,6 @@ if __name__ == "__main__":
     requests.post('http://localhost:8123', data="""INSERT INTO test.mock VALUES ('b',2,[2,3,1])""")
     requests.post('http://localhost:8123', data="""INSERT INTO test.mock VALUES ('c',3,[3,1,2])""")
 
-
     log.info('Querying data')
     clickhouse_ds = ClickhouseDS('SELECT * FROM test.mock ORDER BY col2 DESC LIMIT 2')
 
@@ -61,6 +64,9 @@ if __name__ == "__main__":
     assert(sum(map(int,clickhouse_ds.df['col2'])) == 5)
     assert(len(list(clickhouse_ds.df['col3'][1])) == 3)
     assert(set(clickhouse_ds.df.columns) == set(['col1','col2','col3']))
+
+    mdb = Predictor(name='analyse_dataset_test_predictor')
+    mdb.analyse_dataset(from_data=clickhouse_ds)
 
     log.info('Finished running ClickhouseDS tests successfully !')
 

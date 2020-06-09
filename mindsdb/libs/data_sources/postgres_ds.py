@@ -24,7 +24,15 @@ class PostgresDS(DataSource):
         return df, col_map
 
 if __name__ == "__main__":
-    con = psycopg2.connect(dbname='postgres',user='postgres')
+    from mindsdb import Predictor
+
+    HOST = 'localhost'
+    USER = 'postgres'
+    PASSWORD = ''
+    DBNAME = 'postgres'
+    PORT = 5432
+
+    con = psycopg2.connect(dbname=DBNAME, user=USER, password=PASSWORD, host=HOST, port=PORT)
     cur = con.cursor()
 
     cur.execute('DROP TABLE IF EXISTS test_mindsdb')
@@ -34,5 +42,8 @@ if __name__ == "__main__":
     con.commit()
     con.close()
 
-    mysql_ds = PostgresDS(table='test_mindsdb')
+    mysql_ds = PostgresDS(table='test_mindsdb', host=HOST, user=USER, password=PASSWORD, database=DBNAME, port=PORT)
     assert(len(mysql_ds._df) == 200)
+
+    mdb = Predictor(name='analyse_dataset_test_predictor')
+    mdb.analyse_dataset(from_data=mysql_ds)

@@ -331,7 +331,7 @@ class StatsGenerator(BaseModule):
             return {
                 'x': X,
                 'y': Y
-            }, Y
+            }, X
 
         elif data_subtype == DATA_SUBTYPES.IMAGE:
             image_hashes = []

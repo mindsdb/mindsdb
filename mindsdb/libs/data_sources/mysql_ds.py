@@ -22,7 +22,15 @@ class MySqlDS(DataSource):
         return df, col_map
 
 if __name__ == "__main__":
-    con = MySQLdb.connect("localhost", "root", "", "mysql")
+    from mindsdb import Predictor
+
+    HOST = 'localhost'
+    USER = 'root'
+    PASSWORD = ''
+    DATABASE = 'mysql'
+    PORT = 3306
+
+    con = MySQLdb.connect(HOST, USER, PASSWORD, DATABASE)
     cur = con.cursor()
 
     cur.execute('DROP TABLE IF EXISTS test_mindsdb')
@@ -32,5 +40,8 @@ if __name__ == "__main__":
     con.commit()
     con.close()
 
-    mysql_ds = MySqlDS(table='test_mindsdb')
+    mysql_ds = MySqlDS(table='test_mindsdb', host=HOST, user=USER, password=PASSWORD, database=DATABASE, port=PORT)
     assert(len(mysql_ds._df) == 200)
+
+    mdb = Predictor(name='analyse_dataset_test_predictor')
+    mdb.analyse_dataset(from_data=mysql_ds)

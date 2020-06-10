@@ -1,11 +1,9 @@
-from mindsdb.libs.data_types.mindsdb_logger import log
 from mindsdb.libs.constants.mindsdb import DATA_TYPES_SUBTYPES, DATA_TYPES, DATA_SUBTYPES
 
 
 class DataSource:
 
     def __init__(self, *args, **kwargs):
-        self.log = log
         self.data_types = {}
         self.data_subtypes = {}
         df, col_map = self._setup(*args, **kwargs)

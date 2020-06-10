@@ -24,6 +24,8 @@ def compute_value_distribution_score(stats, columns, col_name):
         value_distribution_score: A dictioanry of with the probabilities that a value values in a bucket, for each of he buckets in the histogram
     """
 
+    if not stats[col_name].get('histogram'):
+        return {}
     bucket_probabilities = {}
     pair = stats[col_name]['histogram']
     total_vals = sum(pair['y'])
@@ -75,7 +77,8 @@ def compute_duplicates_score(stats, columns, col_name):
         """
     }
 
-    if stats[col_name]['data_type'] != DATA_TYPES.CATEGORICAL and stats[col_name]['data_type'] != DATA_TYPES.DATE:
+    if stats[col_name]['data_type'] != DATA_TYPES.CATEGORICAL \
+        and stats[col_name]['data_type'] != DATA_TYPES.DATE:
         data['duplicates_score'] = data['duplicates_percentage']/100
     else:
         data['c'] = 0
@@ -113,8 +116,8 @@ def compute_data_type_dist_score(stats, columns, col_name):
     principal = max(vals)
     total = len(columns[col_name])
     data_type_dist_score = (total - principal)/total
-    return {'data_type_distribution_score': round(10 * (1 - data_type_dist_score))
-    ,'data_type_distribution_score_description':"""
+    return {'data_type_distribution_score': round(10 * (1 - data_type_dist_score)),
+            'data_type_distribution_score_description':"""
     This score indicates the amount of data that are not of the same data type as the most commonly detected data type in this column. Note, the most commonly occuring data type is not necessarily the type mindsdb will use to label the column when learning or predicting.
     """}
 
@@ -172,6 +175,9 @@ def compute_lof_score(stats, columns, col_name):
 
     outliers = [columns[col_name][i] for i in range(len(columns[col_name])) if outlier_scores[i] < -0.8]
 
+    if stats[col_name]['data_subtype'] == DATA_SUBTYPES.INT:
+        outliers = [int(x) for x in outliers]
+
     return {
         'lof_outliers': outliers
         ,'lof_based_outlier_score': round(10 * (1 - len(outliers)/len(columns[col_name])))
@@ -193,6 +199,15 @@ def compute_similariy_score(stats, columns, col_name):
         similarities: How similar this column is to other columns (with 0 being completely different and 1 being an exact copy).
         similarity_score: A score equal to the highest similarity found, ranges from 1 to 0, where 1 is lowest quality and 0 is highest quality.
     """
+    if len(columns.columns) < 2:
+        return {'max_similarity': 0,
+                'similarities': [],
+                'similarity_score': 10,
+                'most_similar_column_name': None,
+                'similarity_score_description': """
+        This score is simple element-wise equality applied between this column and all other column.
+        The score * 100 is the number of values which are similar in the column that is most similar to the scored column.
+        """}
     col_data = columns[col_name]
 
     similarities = []
@@ -200,10 +215,12 @@ def compute_similariy_score(stats, columns, col_name):
         if other_col_name == col_name:
             continue
         else:
-            # @TODO Figure out why computing matthews_corrcoef is so slow, possibly find a better implementation and replace it with that. Matthews corrcoef code was: similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
+            # @TODO Figure out why computing matthews_corrcoef is so slow,
+            #  possibly find a better implementation and replace it with that.
+            #  Matthews corrcoef code was: similarity = matthews_corrcoef(list(map(str,col_data)), list(map(str,columns[other_col_name])))
             similarity = 0
-            X1 = list(map(str,col_data))
-            X2 = list(map(str,columns[other_col_name]))
+            X1 = list(map(str, col_data))
+            X2 = list(map(str, columns[other_col_name]))
             for ii in range(len(X1)):
                 if X1[ii] == X2[ii]:
                     similarity += 1
@@ -340,7 +357,6 @@ def compute_variability_score(stats, col_name):
          + col_stats['value_distribution_score'])/3
     else:
         variability_score = col_stats['value_distribution_score']/2
-
     return {'variability_score': variability_score
     ,'variability_score_description':"""
     A high value for this score indicates the data in this column seems to be very variable, indicating a large possibility of some random noise affecting your data. This could mean that the values for this column are not collected or processed correctly.
@@ -364,11 +380,11 @@ def compute_data_quality_score(stats, col_name):
     col_stats = stats[col_name]
     scores = ['consistency_score', 'redundancy_score', 'variability_score']
     quality_score = 0
+    count_scores = 0
     for score in scores:
         quality_score += col_stats[score]
     quality_score = quality_score/len(scores)
 
-    return {'quality_score': quality_score
-    ,'quality_score_description':"""
-    The higher this score is, the lower the quality of a given column.
-    """}
+    return {'quality_score': quality_score,
+            'quality_score_description':'The higher this score is, '
+                                        'the lower the quality of a given column.'}

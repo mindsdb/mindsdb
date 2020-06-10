@@ -7,7 +7,7 @@
 
 import logging
 from .helpers import *
-import  mindsdb.libs.constants.mindsdb as CONST
+import mindsdb.libs.constants.mindsdb as CONST
 
 class Config:
     # These are the paths for storing data regarding mindsdb models and model info

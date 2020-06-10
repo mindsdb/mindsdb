@@ -27,12 +27,12 @@ except:
 try:
     from mindsdb.libs.data_sources.mysql_ds import MySqlDS
 except:
-    log.warning("MySQL Datasource is not avaiable by default. If you wish to use it, please install mysqlclient or mindsdb[extra_data_sources]")
+    log.warning("MySQL Datasource is not available by default. If you wish to use it, please install mysqlclient or mindsdb[extra_data_sources]")
 
 try:
     from mindsdb.libs.data_sources.postgres_ds import PostgresDS
 except:
-    log.warning("PostgresDS Datasource is not avaiable by default. If you wish to use it, please install psycopg2 or mindsdb[extra_data_sources]")
+    log.warning("PostgresDS Datasource is not available by default. If you wish to use it, please install psycopg2 or mindsdb[extra_data_sources]")
 
 
 

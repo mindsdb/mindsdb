@@ -10,6 +10,7 @@ from sklearn.cluster import MiniBatchKMeans
 import imagehash
 from PIL import Image
 
+from mindsdb.libs.helpers.general_helpers import get_value_bucket
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.phases.base_module import BaseModule
 from mindsdb.libs.helpers.text_helpers import splitRecursive, clean_float
@@ -138,20 +139,31 @@ def get_histogram(data, data_type, data_subtype):
 def get_column_empty_values_report(data):
     len_wo_nulls = len(data.dropna())
     len_w_nulls = len(data)
-    return {
+    nr_missing_values = len_w_nulls - len_wo_nulls
+
+    ed = {
         'empty_cells': len_w_nulls - len_wo_nulls,
-        'empty_percentage': 100 * round((len_w_nulls - len_wo_nulls) / len_w_nulls, 3),
+        'empty_percentage': 100 * round(nr_missing_values/ len_w_nulls, 3),
         'is_empty': len_wo_nulls == 0
+        ,'description': 'TBD'
     }
+    if nr_missing_values > 0:
+        ed['warning'] = f'Your column has {nr_missing_values} values missing'
+
+    return ed
 
 
 def get_uniq_values_report(data):
     len_unique = len(set(data))
-    return {
+    ud = {
         'unique_values': len_unique,
         'unique_percentage': 100 * round(len_unique / len(data), 8)
+        ,'description': 'TBD'
     }
+    if len_unique == 1:
+        ud['warning'] = 'This column contains no information because it has a single possible value.'
 
+    return ud
 
 def compute_entropy_biased_buckets(hist_y, hist_x):
     S, biased_buckets = None, None
@@ -202,7 +214,13 @@ class DataAnalyzer(BaseModule):
                                 self.transaction.lmd['sample_confidence_level'],
                                 self.log)
 
+        for col_name in self.transaction.lmd['empty_columns']:
+            stats_v2[col_name] = {}
+            stats_v2[col_name]['empty'] = {'is_empty': True}
+            self.log.warning(f'Column {col_name} is empty.')
+
         for col_name in sample_df.columns.values:
+            self.log.info(f'Analyzing column: {col_name} !')
             data_type = stats_v2[col_name]['typing']['data_type']
             data_subtype = stats_v2[col_name]['typing']['data_subtype']
 
@@ -213,26 +231,13 @@ class DataAnalyzer(BaseModule):
 
             stats_v2[col_name]['empty'] = get_column_empty_values_report(input_data.data_frame[col_name])
 
-            # Not sure this is needed
-            if col_name in self.transaction.lmd['empty_columns']:
-                stats_v2[col_name]['empty']['is_empty'] = True
-
-            if stats_v2[col_name]['empty']['is_empty']:
-                self.log.warning(f'Column {col_name} is empty.')
-                continue
-
-            elif stats_v2[col_name]['empty']['empty_percentage'] > 30:
-                self.log.warning(f'Column {col_name} contains over 30% empty values.')
-
             stats[col_name]['empty_cells'] = stats_v2[col_name]['empty']['empty_cells']
             stats[col_name]['empty_percentage'] = stats_v2[col_name]['empty']['empty_percentage']
-
 
             hist_data = col_data
             if data_type == DATA_TYPES.CATEGORICAL:
                 hist_data = input_data.data_frame[col_name]
                 stats_v2[col_name]['unique'] = get_uniq_values_report(input_data.data_frame[col_name])
-
 
             histogram, percentage_buckets = get_histogram(hist_data,
                                                           data_type=data_type,
@@ -242,14 +247,68 @@ class DataAnalyzer(BaseModule):
             stats[col_name]['histogram'] = histogram
             stats[col_name]['percentage_buckets'] = percentage_buckets
             if histogram:
-                entropy_value, biased_buckets = compute_entropy_biased_buckets(histogram['y'], histogram['x'])
+                S, biased_buckets = compute_entropy_biased_buckets(histogram['y'], histogram['x'])
                 stats_v2[col_name]['bias'] = {
-                    'entropy': entropy_value,
+                    'entropy': S
+                    ,'description': 'TBD'
                 }
                 if biased_buckets:
                     stats_v2[col_name]['bias']['biased_buckets'] = biased_buckets
+                if S < 0.8:
+                    if data_type in (DATA_TYPES.CATEGORICAL):
+                        stats_v2[col_name]['bias']['warning'] =  """You may to check if some categories occur too often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue."""
+                    else:
+                        stats_v2[col_name]['bias']['warning'] = """You may want to check if you see something suspicious on the right-hand-side graph. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue"""
+
 
             self.compute_scores(col_name, sample_df, col_data_dict, stats)
+
+            if 'lof_outliers' in stats[col_name]:
+                if data_subtype in (DATA_SUBTYPES.INT):
+                    stats[col_name]['lof_outliers'] = [int(x) for x in stats[col_name]['lof_outliers']]
+
+                stats_v2[col_name]['outliers'] = {
+                    'outlier_values': stats[col_name]['lof_outliers']
+                    ,'outlier_score': stats[col_name]['lof_based_outlier_score']
+                    ,'description': 'TBD'
+                }
+
+                # map each bucket to list of outliers in it
+                bucket_outliers = defaultdict(list)
+                for value in stats_v2[col_name]['outliers']['outlier_values']:
+                    vb_index = get_value_bucket(value, stats_v2[col_name]['percentage_buckets'], stats[col_name])
+                    vb = stats_v2[col_name]['percentage_buckets'][vb_index]
+                    bucket_outliers[vb].append(value)
+
+                # Filter out buckets without outliers,
+                # then sort by number of outliers in ascending order
+                buckets_with_outliers = sorted(filter(
+                    lambda kv: len(kv[1]) > 0, bucket_outliers.items()
+                ), key=lambda kv: len(kv[1]))
+
+                stats_v2[col_name]['outliers']['outlier_buckets'] = []
+
+                for i, (bucket, outlier_values) in enumerate(buckets_with_outliers):
+                    bucket_index = stats_v2[col_name]['histogram']['x'].index(bucket)
+
+                    bucket_values_num = stats_v2[col_name]['histogram']['y'][bucket_index]
+                    bucket_outliers_num = len(outlier_values)
+
+                    # Is the bucket in the 95th percentile by number of outliers?
+                    percentile_outlier = ((i + 1) / len(buckets_with_outliers)) >= 0.95
+
+                    # Are half of values in the bucket outliers?
+                    predominantly_outlier = (bucket_outliers_num / bucket_values_num) > 0.5
+
+                    if predominantly_outlier or percentile_outlier:
+                        stats_v2[col_name]['outliers']['outlier_buckets'].append(bucket)
+
+            stats_v2[col_name]['nr_warnings'] = 0
+            for x in stats_v2[col_name].values():
+                if isinstance(x, dict) and 'warning' in x:
+                    self.log.warning(x['warning'])
+                stats_v2[col_name]['nr_warnings'] += 1
+            self.log.info(f'Finished analyzing column: {col_name} !\n')
 
         self.transaction.lmd['column_stats'].update(stats)
         self.transaction.lmd['stats_v2'].update(stats_v2)

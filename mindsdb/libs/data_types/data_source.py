@@ -1,4 +1,5 @@
 from mindsdb.libs.constants.mindsdb import DATA_TYPES_SUBTYPES, DATA_TYPES, DATA_SUBTYPES
+from mindsdb.libs.data_types.mindsdb_logger import log
 
 
 class DataSource:
@@ -43,7 +44,6 @@ class DataSource:
                         self.data_types[col] = col_type
 
     def _set_df(self, df, col_map):
-
         self._df = df
         self._col_map = col_map
 

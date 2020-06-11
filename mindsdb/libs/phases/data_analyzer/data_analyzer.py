@@ -37,7 +37,7 @@ def _log_interesting_stats(log, stats):
     """
     for col_name in stats:
         col_stats = stats[col_name]
-        if col_stats['is_empty'] == True:
+        if 'is_empty' in col_stats and col_stats['is_empty'] == True:
             continue
         # Overall quality
         if 'quality_score' in col_stats and col_stats['quality_score'] < 6:

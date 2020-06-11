@@ -207,7 +207,9 @@ def compute_outlier_buckets(outlier_values,
         percentile_outlier = ((i + 1) / len(buckets_with_outliers)) >= 0.95
 
         # Are half of values in the bucket outliers?
-        predominantly_outlier = (bucket_outliers_num / bucket_values_num) > 0.5
+        predominantly_outlier = False
+        if bucket_values_num:
+           predominantly_outlier = (bucket_outliers_num / bucket_values_num) > 0.5
 
         if predominantly_outlier or percentile_outlier:
             outlier_buckets.append(bucket)

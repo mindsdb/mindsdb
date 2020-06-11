@@ -96,6 +96,11 @@ class DataExtractor(BaseModule):
             return None
 
         df = self._apply_sort_conditions_to_df(df)
+
+        # Mutable lists -> immutable tuples
+        # (lists caused TypeError: uhashable type 'list' in TypeDeductor phase)
+        df = df.applymap(lambda cell: tuple(cell) if isinstance(cell, list) else cell)
+
         groups = df.columns.to_series().groupby(df.dtypes).groups
 
         if np.dtype('datetime64[ns]') in groups:

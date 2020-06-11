@@ -23,7 +23,7 @@ def get_file_subtype_if_exists(path):
             return DATA_SUBTYPES.AUDIO
     except Exception:
         # Not a file or file doesn't exist
-        pass
+        return None
 
 
 def get_number_subtype(string):
@@ -128,7 +128,7 @@ class TypeDeductor(BaseModule):
                          type_check_date,
                          type_check_sequence,
                          type_check_file]
-        for element in data:
+        for element in map(str, data):
             data_type_guess, subtype_guess = None, None
             for type_checker in type_checkers:
                 data_type_guess, subtype_guess = type_checker(element)

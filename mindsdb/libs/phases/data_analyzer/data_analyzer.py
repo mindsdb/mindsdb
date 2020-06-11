@@ -165,7 +165,7 @@ def get_text_histogram(data):
         and the number of times each word appears in the dataset """
     words = []
     for cell in data:
-        words += splitRecursive(cell, WORD_SEPARATORS)
+        words.extend(splitRecursive(cell, WORD_SEPARATORS))
 
     hist = get_hist(words)
     return hist
@@ -380,10 +380,11 @@ class DataAnalyzer(BaseModule):
             stats[col_name]['empty_cells'] = stats_v2[col_name]['empty']['empty_cells']
             stats[col_name]['empty_percentage'] = stats_v2[col_name]['empty']['empty_percentage']
 
-            hist_data = col_data
             if data_type == DATA_TYPES.CATEGORICAL:
                 hist_data = input_data.data_frame[col_name]
                 stats_v2[col_name]['unique'] = get_uniq_values_report(input_data.data_frame[col_name])
+            else:
+                hist_data = col_data
 
             histogram, percentage_buckets = get_histogram(hist_data,
                                                           data_type=data_type,
@@ -401,7 +402,7 @@ class DataAnalyzer(BaseModule):
                 if biased_buckets:
                     stats_v2[col_name]['bias']['biased_buckets'] = biased_buckets
                 if S < 0.8:
-                    if data_type in (DATA_TYPES.CATEGORICAL):
+                    if data_type == DATA_TYPES.CATEGORICAL:
                         warning_str =  "You may to check if some categories occur too often to too little in this columns."
                     else:
                         warning_str = "You may want to check if you see something suspicious on the right-hand-side graph."

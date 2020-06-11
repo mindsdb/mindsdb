@@ -253,6 +253,8 @@ class Predictor:
             try:
                 icm = self._adapt_column(lmd['column_stats'][col],col)
             except Exception as e:
+                print(e)
+                exit()
                 icm = {'column_name': col}
                 #continue
 
@@ -684,7 +686,7 @@ class Predictor:
         light_transaction_metadata['empty_columns'] = []
         light_transaction_metadata['data_types'] = {}
         light_transaction_metadata['data_subtypes'] = {}
-        
+
         light_transaction_metadata['equal_accuracy_for_all_output_categories'] = equal_accuracy_for_all_output_categories
         light_transaction_metadata['output_categories_importance_dictionary'] = output_categories_importance_dictionary if output_categories_importance_dictionary is not None else {}
 

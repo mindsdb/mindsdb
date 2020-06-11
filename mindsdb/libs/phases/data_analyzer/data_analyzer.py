@@ -165,6 +165,7 @@ def get_uniq_values_report(data):
 
     return ud
 
+
 def compute_entropy_biased_buckets(hist_y, hist_x):
     S, biased_buckets = None, None
     nr_values = sum(hist_y)
@@ -175,13 +176,51 @@ def compute_entropy_biased_buckets(hist_y, hist_x):
     return S, biased_buckets
 
 
+def compute_outlier_buckets(outlier_values,
+                            hist_x,
+                            hist_y,
+                            percentage_buckets,
+                            col_stats):
+    outlier_buckets = []
+    # map each bucket to list of outliers in it
+    bucket_outliers = defaultdict(list)
+    for value in outlier_values:
+        vb_index = get_value_bucket(value,
+                                    percentage_buckets,
+                                    col_stats)
+        vb = percentage_buckets[vb_index]
+        bucket_outliers[vb].append(value)
+
+    # Filter out buckets without outliers,
+    # then sort by number of outliers in ascending order
+    buckets_with_outliers = sorted(filter(
+        lambda kv: len(kv[1]) > 0, bucket_outliers.items()
+    ), key=lambda kv: len(kv[1]))
+
+    for i, (bucket, outlier_values) in enumerate(buckets_with_outliers):
+        bucket_index = hist_x.index(bucket)
+
+        bucket_values_num = hist_y[bucket_index]
+        bucket_outliers_num = len(outlier_values)
+
+        # Is the bucket in the 95th percentile by number of outliers?
+        percentile_outlier = ((i + 1) / len(buckets_with_outliers)) >= 0.95
+
+        # Are half of values in the bucket outliers?
+        predominantly_outlier = (bucket_outliers_num / bucket_values_num) > 0.5
+
+        if predominantly_outlier or percentile_outlier:
+            outlier_buckets.append(bucket)
+    return outlier_buckets
+
+
 class DataAnalyzer(BaseModule):
     """
     The data analyzer phase is responsible for generating the insights we need about the data in order to vectorize it.
     Additionally, also provides the user with some extra meaningful information about his data.
     """
 
-    # TODO get rid of scores entirely
+    # @TODO get rid of scores and stats entirely
     def compute_scores(self, col_name, sample_df, full_df, stats):
         for score_func in [compute_duplicates_score,
                            compute_empty_cells_score,
@@ -256,52 +295,23 @@ class DataAnalyzer(BaseModule):
                     stats_v2[col_name]['bias']['biased_buckets'] = biased_buckets
                 if S < 0.8:
                     if data_type in (DATA_TYPES.CATEGORICAL):
-                        stats_v2[col_name]['bias']['warning'] =  """You may to check if some categories occur too often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue."""
+                        warning_str =  "You may to check if some categories occur too often to too little in this columns."
                     else:
-                        stats_v2[col_name]['bias']['warning'] = """You may want to check if you see something suspicious on the right-hand-side graph. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue"""
-
+                        warning_str = "You may want to check if you see something suspicious on the right-hand-side graph."
+                    stats_v2[col_name]['bias']['warning'] = warning_str + " This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue."
 
             self.compute_scores(col_name, sample_df, col_data_dict, stats)
 
             if 'lof_outliers' in stats[col_name]:
-                if data_subtype in (DATA_SUBTYPES.INT):
-                    stats[col_name]['lof_outliers'] = [int(x) for x in stats[col_name]['lof_outliers']]
-
                 stats_v2[col_name]['outliers'] = {
-                    'outlier_values': stats[col_name]['lof_outliers']
-                    ,'outlier_score': stats[col_name]['lof_based_outlier_score']
-                    ,'description': 'TBD'
+                    'outlier_values': stats[col_name]['lof_outliers'],
+                    'outlier_score': stats[col_name]['lof_based_outlier_score'],
+                    'outlier_buckets': compute_outlier_buckets(outlier_values=stats[col_name]['lof_outliers'],
+                                                               hist_x=histogram['x'],
+                                                               hist_y=histogram['y'],
+                                                               col_stats=stats[col_name]),
+                    'description': 'TBD'
                 }
-
-                # map each bucket to list of outliers in it
-                bucket_outliers = defaultdict(list)
-                for value in stats_v2[col_name]['outliers']['outlier_values']:
-                    vb_index = get_value_bucket(value, stats_v2[col_name]['percentage_buckets'], stats[col_name])
-                    vb = stats_v2[col_name]['percentage_buckets'][vb_index]
-                    bucket_outliers[vb].append(value)
-
-                # Filter out buckets without outliers,
-                # then sort by number of outliers in ascending order
-                buckets_with_outliers = sorted(filter(
-                    lambda kv: len(kv[1]) > 0, bucket_outliers.items()
-                ), key=lambda kv: len(kv[1]))
-
-                stats_v2[col_name]['outliers']['outlier_buckets'] = []
-
-                for i, (bucket, outlier_values) in enumerate(buckets_with_outliers):
-                    bucket_index = stats_v2[col_name]['histogram']['x'].index(bucket)
-
-                    bucket_values_num = stats_v2[col_name]['histogram']['y'][bucket_index]
-                    bucket_outliers_num = len(outlier_values)
-
-                    # Is the bucket in the 95th percentile by number of outliers?
-                    percentile_outlier = ((i + 1) / len(buckets_with_outliers)) >= 0.95
-
-                    # Are half of values in the bucket outliers?
-                    predominantly_outlier = (bucket_outliers_num / bucket_values_num) > 0.5
-
-                    if predominantly_outlier or percentile_outlier:
-                        stats_v2[col_name]['outliers']['outlier_buckets'].append(bucket)
 
             stats_v2[col_name]['nr_warnings'] = 0
             for x in stats_v2[col_name].values():

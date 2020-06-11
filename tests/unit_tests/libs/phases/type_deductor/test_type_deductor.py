@@ -8,7 +8,7 @@ import pandas as pd
 from mindsdb.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.phases.type_deductor.type_deductor import TypeDeductor
-from .utils import test_column_types
+from tests.unit_tests.utils import test_column_types
 
 
 class TestTypeDeductor:

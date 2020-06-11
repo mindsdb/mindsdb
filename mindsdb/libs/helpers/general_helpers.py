@@ -117,6 +117,7 @@ def closest(arr, value):
     return len(arr)-1
 
 
+# @TODO not pass huge dicts of stats to this function, just pass the data type
 def get_value_bucket(value, buckets, col_stats, hmd=None):
     """
     :return: The bucket in the `histogram` in which our `value` falls
@@ -132,8 +133,8 @@ def get_value_bucket(value, buckets, col_stats, hmd=None):
 
     elif col_stats['data_subtype'] in (DATA_SUBTYPES.BINARY, DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT):
         bucket = closest(buckets, value)
-    elif col_stats['data_subtype'] in (DATA_SUBTYPES.IMAGE) and hmd is not None:
-        bucket = hmd['bucketing_algorithms'][col_name].predict(np.array(imagehash.phash(Image.open(value)).reshape(1, -1)))[0]
+    # elif col_stats['data_subtype'] in (DATA_SUBTYPES.IMAGE) and hmd is not None:
+    #     bucket = hmd['bucketing_algorithms'][col_name].predict(np.array(imagehash.phash(Image.open(value)).reshape(1, -1)))[0]
     else:
         bucket = len(buckets) # for null values
 

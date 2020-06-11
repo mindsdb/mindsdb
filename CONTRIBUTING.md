@@ -20,7 +20,8 @@ In general, we follow the "fork-and-pull" Git workflow.
 4. Push your local branch to your fork
 5. Submit a Pull request so that we can review your changes
 6. Write a commit message
-7. Make sure that the CI tests are GREEN
+7. Make sure that the unit tests are GREEN
+8. Make sure that the CI tests are GREEN
 
 >NOTE: Be sure to merge the latest from "upstream" before making a pull request!
 

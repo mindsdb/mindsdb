@@ -140,7 +140,13 @@ In order to make changes to mindsdb, the ideal approach is to fork the repositor
 
 For example: `export PYTHONPATH=$PYTHONPATH:/home/my_username/mindsdb`.
 
-To test if your changes are working you can try running the CI tests locally: `cd tests/ci_tests && python3 full_test.py`
+Too test your changes you can run unit tests (fast) and CI tests (slightly longer) locally.
+
+To run the unit tests:
+* Install pytest: `pip install -r requirements_test.txt`
+* Run: `pytest`
+
+To run the CI tests: `cd tests/ci_tests && python3 full_test.py`
 
 Once you have specific changes you want to merge into master, feel free to make a PR.
 

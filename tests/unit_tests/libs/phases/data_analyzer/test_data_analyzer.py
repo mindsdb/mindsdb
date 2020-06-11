@@ -119,6 +119,7 @@ class TestDataAnalyzer:
         assert stats_v2['numeric_int']['empty']['empty_percentage'] == 50
 
     def test_empty_column(self, transaction, lmd, stats_v2, stats):
+        lmd['empty_columns'] = ['empty_column']
         lmd['stats_v2'] = stats_v2
         lmd['stats_v2']['empty_column'] = lmd['stats_v2']['numeric_int']
         lmd['column_stats'] = stats

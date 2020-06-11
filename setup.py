@@ -23,7 +23,7 @@ long_description = open('README.md', encoding='utf-8').read()
 with open('requirements.txt', 'r') as req_file:
     requirements = [req.strip() for req in req_file.read().splitlines()]
 
-with open('requirements_tests.txt', 'r') as req_file:
+with open('requirements_test.txt', 'r') as req_file:
     test_requirements = [req.strip() for req in req_file.read().splitlines()]
 
 extra_data_sources_requirements = []

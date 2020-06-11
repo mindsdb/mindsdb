@@ -23,7 +23,7 @@ def get_file_subtype_if_exists(path):
             return DATA_SUBTYPES.AUDIO
     except Exception:
         # Not a file or file doesn't exist
-        pass
+        return None
 
 
 def get_number_subtype(string):

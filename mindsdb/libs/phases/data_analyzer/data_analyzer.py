@@ -259,9 +259,6 @@ class DataAnalyzer(BaseModule):
             self.log.warning(f'Column {col_name} is empty.')
 
         for col_name in sample_df.columns.values:
-            if col_name in self.transaction.lmd['empty_columns']:
-                continue
-
             self.log.info(f'Analyzing column: {col_name} !')
             data_type = stats_v2[col_name]['typing']['data_type']
             data_subtype = stats_v2[col_name]['typing']['data_subtype']
@@ -291,8 +288,8 @@ class DataAnalyzer(BaseModule):
             if histogram:
                 S, biased_buckets = compute_entropy_biased_buckets(histogram['y'], histogram['x'])
                 stats_v2[col_name]['bias'] = {
-                    'entropy': S
-                    ,'description': 'TBD'
+                    'entropy': S,
+                    'description': 'TBD'
                 }
                 if biased_buckets:
                     stats_v2[col_name]['bias']['biased_buckets'] = biased_buckets

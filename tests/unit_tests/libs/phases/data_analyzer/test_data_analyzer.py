@@ -47,16 +47,18 @@ class TestDataAnalyzer:
 
     @pytest.fixture()
     def stats(self, stats_v2):
-        result = defaultdict(dict)
-        for k, v in stats_v2.items():
-            result[k].update(v['typing'])
+        result = {}
+        for col, val in stats_v2.items():
+            result[col] = val['typing']
         return result
+
 
     def test_data_analysis(self, transaction, lmd, stats_v2, stats):
         """Tests that data analyzer doesn't crash on common types"""
         lmd['stats_v2'] = stats_v2
         lmd['column_stats'] = stats
         hmd = transaction.hmd
+
 
         data_analyzer = DataAnalyzer(session=transaction.session,
                                      transaction=transaction)
@@ -72,6 +74,8 @@ class TestDataAnalyzer:
             'categorical_binary': [0, 1] * (n_points//2),
             'sequential_array': [f"1,2,3,4,5,{i}" for i in range(n_points)],
             'sequential_text': [f'lorem ipsum long text {i}' for i in range(n_points)],
+            # @NOTE: It makes little for the tests to crash if this column is missing.
+            'categorical_int': [x for x in (list(range(n_category_values)) * (n_points//n_category_values))],
         }, index=list(range(n_points)))
 
         input_data = TransactionData()
@@ -96,24 +100,3 @@ class TestDataAnalyzer:
         assert hmd == {}
 
         assert isinstance(json.dumps(transaction.lmd), str)
-
-    def test_empty_values(self, transaction, lmd, stats_v2, stats):
-        lmd['stats_v2'] = stats_v2
-        lmd['column_stats'] = stats
-
-        data_analyzer = DataAnalyzer(session=transaction.session,
-                                     transaction=transaction)
-
-        n_points = 100
-        input_dataframe = pd.DataFrame({
-            'numeric_int': list(range(n_points)),
-        }, index=list(range(n_points)))
-
-        input_dataframe['numeric_int'].iloc[::2] = None
-        input_data = TransactionData()
-        input_data.data_frame = input_dataframe
-        data_analyzer.run(input_data)
-
-        stats_v2 = lmd['stats_v2']
-
-        assert stats_v2['numeric_int']['empty']['empty_percentage'] == 50

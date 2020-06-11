@@ -9,6 +9,7 @@ import numpy as np
 
 
 class ModelAnalyzer(BaseModule):
+    
     def run(self):
         np.seterr(divide='warn', invalid='warn')
         """

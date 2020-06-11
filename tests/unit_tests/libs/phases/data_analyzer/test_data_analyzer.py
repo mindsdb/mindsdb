@@ -9,7 +9,7 @@ import pandas as pd
 from mindsdb.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 from mindsdb.libs.data_types.transaction_data import TransactionData
 from mindsdb.libs.phases.data_analyzer.data_analyzer import DataAnalyzer
-from .utils import test_column_types
+from tests.unit_tests.utils import test_column_types
 
 
 class TestDataAnalyzer:
@@ -117,26 +117,3 @@ class TestDataAnalyzer:
         stats_v2 = lmd['stats_v2']
 
         assert stats_v2['numeric_int']['empty']['empty_percentage'] == 50
-
-    def test_empty_column(self, transaction, lmd, stats_v2, stats):
-        lmd['stats_v2'] = stats_v2
-        lmd['stats_v2']['empty_column'] = lmd['stats_v2']['numeric_int']
-        lmd['column_stats'] = stats
-        lmd['column_stats']['empty_column'] = lmd['column_stats']['numeric_int']
-
-        data_analyzer = DataAnalyzer(session=transaction.session,
-                                     transaction=transaction)
-
-        n_points = 100
-        input_dataframe = pd.DataFrame({
-            'numeric_int': list(range(n_points)),
-            'empty_column': [None for i in range(n_points)],
-        }, index=list(range(n_points)))
-
-        input_data = TransactionData()
-        input_data.data_frame = input_dataframe
-        data_analyzer.run(input_data)
-
-        stats_v2 = lmd['stats_v2']
-
-        assert stats_v2['empty_column']['empty']['is_empty']

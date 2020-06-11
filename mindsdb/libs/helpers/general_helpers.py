@@ -117,6 +117,7 @@ def closest(arr, value):
     return len(arr)-1
 
 
+# @TODO not pass huge dicts of stats to this function, just pass the data type
 def get_value_bucket(value, buckets, col_stats, hmd=None):
     """
     :return: The bucket in the `histogram` in which our `value` falls

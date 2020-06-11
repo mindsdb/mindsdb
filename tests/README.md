@@ -1,15 +1,19 @@
+# CI tests
+Running CI tests locally:
+
+`cd tests/ci_tests && python3 full_test.py`
+
+# Unit tests
 Unit tests use the [pytest](https://docs.pytest.org/en/latest/index.html) testing framework. [pytest-randomly](https://pypi.org/project/pytest-randomly/) is used to fix random seed for reproducibility.
 
----
-# Test guidelines
+## Test guidelines
 * Each unit test should ideally test just one thing.
 * Unit tests should be easy to read, even if it requires some code duplication.
 * Unit tests should be as simple as possible, so they don't become a burden to support.
 
 [More good unit testing practices](https://pylonsproject.org/community-unit-testing-guidelines.html).
 
----
-# Useful commands
+## Useful commands
 
 Run tests until first failure:
 

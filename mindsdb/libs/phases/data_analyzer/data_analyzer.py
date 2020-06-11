@@ -37,6 +37,8 @@ def _log_interesting_stats(log, stats):
     """
     for col_name in stats:
         col_stats = stats[col_name]
+        if col_stats['is_empty'] == True:
+            continue
         # Overall quality
         if 'quality_score' in col_stats and col_stats['quality_score'] < 6:
             # Some scores are not that useful on their own, so we should only warn users about them if overall quality is bad.

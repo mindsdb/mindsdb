@@ -15,6 +15,9 @@ Unit tests use the [pytest](https://docs.pytest.org/en/latest/index.html) testin
 
 ## Useful commands
 
+Run tests including slow tests:
+```pytest --run-slow```
+
 Run tests until first failure:
 
 ```pytest -x```

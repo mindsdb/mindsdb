@@ -71,9 +71,8 @@ class TestPredictor:
 
         assert model_data['data_analysis_v2']['numeric_int']['empty']['empty_percentage'] == 50
 
-    @pytest.mark.skip(reason="too slow")
+    @pytest.mark.slow
     def test_explain_prediction(self):
-        # @TODO this test needs to use a small dataset, so that it's fast, also needs assertions
         mdb = Predictor(name='test_home_rentals')
 
         mdb.learn(
@@ -82,14 +81,10 @@ class TestPredictor:
             stop_training_in_x_seconds=6
         )
 
-        # use the model to make predictions
         result = mdb.predict(when={"number_of_rooms": 2, "sqft": 1384})
-
-        result[0].explain()
-
-        when = {"number_of_rooms": 1, "sqft": 384}
-
-        # use the model to make predictions
-        result = mdb.predict(when=when)
-
-        result[0].explain()
+        explanation = result[0].explain()['rental_price'][0]
+        assert explanation['value']
+        assert explanation['confidence']
+        assert explanation['explanation']
+        assert explanation['simple']
+        assert explanation['model_result']

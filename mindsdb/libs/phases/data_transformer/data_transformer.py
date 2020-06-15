@@ -60,6 +60,13 @@ class DataTransformer(BaseModule):
         except:
             return None
 
+    @staticmethod
+    def clean_float_or_none(val):
+        try:
+            return clean_float(val)
+        except:
+            return None
+
     def _aply_to_all_data(self, input_data, column, func, transaction_type):
         if transaction_type == TRANSACTION_LEARN:
             input_data.train_df[column] = input_data.train_df[column].apply(func)
@@ -67,11 +74,14 @@ class DataTransformer(BaseModule):
             input_data.validation_df[column] = input_data.validation_df[column].apply(func)
 
             self.transaction.lmd['column_stats'][column]['histogram']['x'] = [func(x) for x in self.transaction.lmd['column_stats'][column]['histogram']['x']]
-            self.transaction.lmd['column_stats'][column]['percentage_buckets'] = [func(x) for x in self.transaction.lmd['column_stats'][column]['percentage_buckets']]
 
             self.transaction.lmd['stats_v2'][column]['histogram']['x'] = [func(x) for x in self.transaction.lmd['stats_v2'][column]['histogram']['x']]
-            self.transaction.lmd['stats_v2'][column]['percentage_buckets'] = [func(x) for x in self.transaction.lmd['stats_v2'][column]['percentage_buckets']]
 
+            if 'percentage_buckets' in self.transaction.lmd['column_stats'][column] and self.transaction.lmd['column_stats'][column]['percentage_buckets'] is not None:
+
+                self.transaction.lmd['column_stats'][column]['percentage_buckets'] = [func(x) for x in self.transaction.lmd['column_stats'][column]['percentage_buckets']]
+
+                self.transaction.lmd['stats_v2'][column]['percentage_buckets'] = [func(x) for x in self.transaction.lmd['stats_v2'][column]['percentage_buckets']]
         else:
             input_data.data_frame[column] = input_data.data_frame[column].apply(func)
 
@@ -85,7 +95,7 @@ class DataTransformer(BaseModule):
             data_subtype = self.transaction.lmd['column_stats'][column]['data_subtype']
 
             if data_type == DATA_TYPES.NUMERIC:
-                self._aply_to_all_data(input_data, column, clean_float, self.transaction.lmd['type'])
+                self._aply_to_all_data(input_data, column, self.clean_float_or_none, self.transaction.lmd['type'])
                 self._aply_to_all_data(input_data, column, self._handle_nan, self.transaction.lmd['type'])
 
                 if data_subtype == DATA_SUBTYPES.INT:

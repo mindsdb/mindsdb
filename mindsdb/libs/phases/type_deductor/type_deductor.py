@@ -95,7 +95,7 @@ class TypeDeductor(BaseModule):
                 else:
                     subtype_guess = DATA_SUBTYPES.TIMESTAMP
                 type_guess = DATA_TYPES.DATE
-            except ValueError:
+            except Exception:
                 pass
             return type_guess, subtype_guess
 
@@ -297,5 +297,3 @@ class TypeDeductor(BaseModule):
 
         self.transaction.lmd['column_stats'].update(stats)
         self.transaction.lmd['stats_v2'].update(stats_v2)
-
-

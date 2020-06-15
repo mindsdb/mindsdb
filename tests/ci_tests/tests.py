@@ -51,19 +51,8 @@ def test_adapted_model_data(amd, to_predict):
     #test_force_vectors(amd, to_predict)
 
 
-def basic_test(backend='lightwood',use_gpu=True, run_extra=False, IS_CI_TEST=False):
+def basic_test(backend='lightwood', use_gpu=True, IS_CI_TEST=False):
     mindsdb.CONFIG.IS_CI_TEST = IS_CI_TEST
-    if run_extra:
-        for py_file in [x for x in os.listdir('../functional_testing') if '.py' in x]:
-            # Skip data source tests since installing dependencies is annoying
-            # @TODO: Figure out a way to make travis install required dependencies on osx
-
-            if any(x in py_file for x in ['all_data_sources', 'custom_model']):
-                continue
-
-            code = os.system(f'python3 ../functional_testing/{py_file}')
-            if code != 0:
-                raise Exception(f'Test failed with status code: {code} !')
 
     # Create & Learn
     to_predict = 'rental_price'
@@ -72,9 +61,6 @@ def basic_test(backend='lightwood',use_gpu=True, run_extra=False, IS_CI_TEST=Fal
 
     # Reload & Predict
     model_name = 'home_rentals_price'
-    if run_extra:
-        mdb.rename_model('home_rentals_price', 'home_rentals_price_renamed')
-        model_name = 'home_rentals_price_renamed'
 
     mdb = mindsdb.Predictor(name=model_name)
     # Try predicting from a file and from a dictionary

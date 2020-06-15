@@ -7,7 +7,7 @@ import numpy as np
 import random
 
 
-class ProbabilisticValidator():
+class ProbabilisticValidator:
     """
     # The probabilistic validator is a quick to train model used for validating the predictions of our main model
     # It is fit to the results our model gets on the validation set
@@ -71,12 +71,12 @@ class ProbabilisticValidator():
                 real_value = row[self.col_name]
                 try:
                     predicted_value = predicted_value if self.col_stats['data_type'] != DATA_TYPES.NUMERIC else float(predicted_value)
-                except:
+                except Exception:
                     predicted_value = None
 
                 try:
                     real_value = real_value if self.col_stats['data_type'] != DATA_TYPES.NUMERIC else float(str(real_value).replace(',','.'))
-                except:
+                except Exception:
                     real_value = None
 
                 if self.buckets is not None:

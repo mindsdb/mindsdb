@@ -2,7 +2,12 @@ import pytest
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+from sklearn import preprocessing
+from sklearn.linear_model import LinearRegression
 from mindsdb.libs.controllers.predictor import Predictor
+from mindsdb.libs.data_sources.file_ds import FileDS
+from mindsdb.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
+
 from tests.unit_tests.utils import test_column_types
 
 
@@ -88,3 +93,115 @@ class TestPredictor:
         assert explanation['explanation']
         assert explanation['simple']
         assert explanation['model_result']
+
+    @pytest.mark.skip(reason="Causes error in probabilistic validator")
+    @pytest.mark.slow
+    def test_custom_backend(self):
+        predictor = Predictor(name='custom_model_test_predictor')
+
+        class CustomDTModel():
+            def __init__(self):
+                self.clf = LinearRegression()
+                le = preprocessing.LabelEncoder()
+
+            def set_transaction(self, transaction):
+                self.transaction = transaction
+                self.output_columns = self.transaction.lmd['predict_columns']
+                self.input_columns = [x for x in self.transaction.lmd['columns']
+                                      if x not in self.output_columns]
+                self.train_df = self.transaction.input_data.train_df
+                self.test_dt = train_df = self.transaction.input_data.test_df
+
+            def train(self):
+                self.le_arr = {}
+                for col in [*self.output_columns, *self.input_columns]:
+                    self.le_arr[col] = preprocessing.LabelEncoder()
+                    self.le_arr[col].fit(pd.concat(
+                        [self.transaction.input_data.train_df,
+                         self.transaction.input_data.test_df,
+                         self.transaction.input_data.validation_df])[col])
+
+                X = []
+                for col in self.input_columns:
+                    X.append(self.le_arr[col].transform(
+                        self.transaction.input_data.train_df[col]))
+
+                X = np.swapaxes(X, 1, 0)
+
+                # Only works with one output column
+                Y = self.le_arr[self.output_columns[0]].transform(
+                    self.transaction.input_data.train_df[self.output_columns[0]])
+
+                self.clf.fit(X, Y)
+
+            def predict(self, mode='predict', ignore_columns=[]):
+                if mode == 'predict':
+                    df = self.transaction.input_data.data_frame
+                if mode == 'validate':
+                    df = self.transaction.input_data.validation_df
+                elif mode == 'test':
+                    df = self.transaction.input_data.test_df
+
+                X = []
+                for col in self.input_columns:
+                    X.append(self.le_arr[col].transform(df[col]))
+
+                X = np.swapaxes(X, 1, 0)
+
+                predictions = self.clf.predict(X)
+
+                formated_predictions = {self.output_columns[0]: predictions}
+
+                return formated_predictions
+
+        dt_model = CustomDTModel()
+
+        predictor.learn(to_predict='rental_price',
+                        from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",
+                        backend=dt_model)
+        predictions = predictor.predict(
+            when_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",
+            backend=dt_model)
+
+        assert predictions
+
+    @pytest.mark.slow
+    def test_data_source_setting(self):
+        data_url = 'https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/german_credit_data/processed_data/test.csv'
+        data_source = FileDS(data_url)
+        data_source.set_subtypes({})
+
+        data_source_mod = FileDS(data_url)
+        data_source_mod.set_subtypes({'credit_usage': 'Int', 'Average_Credit_Balance': 'Text',
+             'existing_credits': 'Binary Category'})
+
+        analysis = Predictor('analyzer1').analyse_dataset(data_source)
+        analysis_mod = Predictor('analyzer2').analyse_dataset(data_source_mod)
+
+        a1 = analysis['data_analysis_v2']
+        a2 = analysis_mod['data_analysis_v2']
+        assert (len(a1) == len(a2))
+        assert (a1['over_draft']['typing']['data_type'] ==
+                a2['over_draft']['typing']['data_type'])
+
+        assert (a1['credit_usage']['typing']['data_type'] ==
+                a2['credit_usage']['typing']['data_type'])
+        assert (a1['credit_usage']['typing']['data_subtype'] !=
+                a2['credit_usage']['typing']['data_subtype'])
+        assert (a2['credit_usage']['typing']['data_subtype'] == DATA_SUBTYPES.INT)
+
+        assert (a1['Average_Credit_Balance']['typing']['data_type'] !=
+                a2['Average_Credit_Balance']['typing']['data_type'])
+        assert (a1['Average_Credit_Balance']['typing']['data_subtype'] !=
+                a2['Average_Credit_Balance']['typing']['data_subtype'])
+        assert (a2['Average_Credit_Balance']['typing'][
+                    'data_subtype'] == DATA_SUBTYPES.TEXT)
+        assert (a2['Average_Credit_Balance']['typing'][
+                    'data_type'] == DATA_TYPES.SEQUENTIAL)
+
+        assert (a1['existing_credits']['typing']['data_type'] ==
+                a2['existing_credits']['typing']['data_type'])
+        assert (a1['existing_credits']['typing']['data_subtype'] !=
+                a2['existing_credits']['typing']['data_subtype'])
+        assert (a2['existing_credits']['typing'][
+                    'data_subtype'] == DATA_SUBTYPES.SINGLE)

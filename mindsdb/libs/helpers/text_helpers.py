@@ -58,10 +58,10 @@ def cast_string_to_python_type(string):
         if string is None or string == '':
             return None
         return int(string)
-    except ValueError:
+    except:
         try:
             return clean_float(string)
-        except ValueError:
+        except:
             return string
 
 

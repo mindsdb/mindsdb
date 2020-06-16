@@ -202,4 +202,4 @@ class FileDS(DataSource):
             with open(file) as f:
                 f.readline()    # header
                 dialect = csv.Sniffer().sniff(f.readline())
-            return pd.read_csv(file), col_map
+            return pd.read_csv(file, sep=dialect.delimiter), col_map

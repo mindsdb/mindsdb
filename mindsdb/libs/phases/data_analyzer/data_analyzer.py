@@ -1,7 +1,5 @@
-import logging
 from collections import Counter, defaultdict
 
-import pandas as pd
 import numpy as np
 from scipy.stats import entropy
 from dateutil.parser import parse as parse_datetime
@@ -30,7 +28,7 @@ from mindsdb.libs.phases.data_analyzer.scores import (
 from mindsdb.libs.helpers.stats_helpers import sample_data
 
 
-def _log_interesting_stats(log, stats):
+def log_interesting_stats(log, stats):
     """
     # Provide interesting insights about the data to the user and send them to the logging server in order for it to generate charts
     :param stats: The stats extracted up until this point for all columns
@@ -330,7 +328,7 @@ class DataAnalyzer(BaseModule):
     """
 
     # @TODO get rid of scores and stats entirely
-    def compute_scores(self, col_name, sample_df, full_df, stats):
+    def compute_scores(self, col_name, sample_df, full_data_dict, stats):
         for score_func in [compute_duplicates_score,
                            compute_empty_cells_score,
                            compute_data_type_dist_score,
@@ -342,7 +340,7 @@ class DataAnalyzer(BaseModule):
 
         for score_func in [compute_z_score,
                            compute_lof_score]:
-            score_out = score_func(stats, full_df, col_name)
+            score_out = score_func(stats, full_data_dict, col_name)
             stats[col_name].update(score_out)
 
         for score_func in [compute_consistency_score,
@@ -431,7 +429,7 @@ class DataAnalyzer(BaseModule):
                 stats_v2[col_name]['nr_warnings'] += 1
             self.log.info(f'Finished analyzing column: {col_name} !\n')
 
-        _log_interesting_stats(self.log, self.transaction.lmd['column_stats'])
+        log_interesting_stats(self.log, stats)
 
         self.transaction.lmd['data_preparation']['accepted_margin_of_error'] = self.transaction.lmd['sample_margin_of_error']
 

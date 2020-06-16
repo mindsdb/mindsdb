@@ -59,38 +59,5 @@ class ModelAnalyzer(BaseModule):
             self.transaction.lmd['accuracy_samples'][col] = accuracy_samples
             self.transaction.hmd['probabilistic_validators'][col] = pickle_obj(pval)
 
-        print(overall_accuracy_arr)
         self.transaction.lmd['validation_set_accuracy'] = sum(overall_accuracy_arr)/len(overall_accuracy_arr)
 
-def test():
-    from mindsdb.libs.controllers.predictor import Predictor
-    from mindsdb import CONFIG
-
-    mdb = Predictor(name='home_rentals')
-
-    mdb.learn(
-        from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",
-        # the path to the file where we can learn from, (note: can be url)
-        to_predict='rental_price',  # the column we want to learn to predict given all the data in the file
-        #sample_margin_of_error=0.02,
-        stop_training_in_x_seconds=6
-    )
-
-    #use the model to make predictions
-    result = mdb.predict(
-        when={"number_of_rooms": 2, "sqft": 1384})
-
-    result[0].explain()
-
-    when = {"number_of_rooms": 1,"sqft": 384}
-
-    # use the model to make predictions
-    result = mdb.predict(
-        when=when)
-
-    result[0].explain()
-
-
-# only run the test if this file is called from debugger
-if __name__ == "__main__":
-    test()

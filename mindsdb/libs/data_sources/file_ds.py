@@ -199,4 +199,7 @@ class FileDS(DataSource):
         try:
             return pd.DataFrame(file_list_data, columns=header), col_map
         except:
+            with open(file) as f:
+                f.readline()    # header
+                dialect = csv.Sniffer().sniff(f.readline())
             return pd.read_csv(file), col_map

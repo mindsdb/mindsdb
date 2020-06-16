@@ -61,22 +61,30 @@ class DataTransformer(BaseModule):
             return None
 
     @staticmethod
-    def _aply_to_all_data(input_data, column, func, transaction_type):
+    def clean_float_or_none(val):
+        try:
+            return clean_float(val)
+        except:
+            return None
+
+    def _aply_to_all_data(self, input_data, column, func, transaction_type):
         if transaction_type == TRANSACTION_LEARN:
             input_data.train_df[column] = input_data.train_df[column].apply(func)
             input_data.test_df[column] = input_data.test_df[column].apply(func)
             input_data.validation_df[column] = input_data.validation_df[column].apply(func)
+
+            self.transaction.lmd['column_stats'][column]['histogram']['x'] = [func(x) for x in self.transaction.lmd['column_stats'][column]['histogram']['x']]
+
+            self.transaction.lmd['stats_v2'][column]['histogram']['x'] = [func(x) for x in self.transaction.lmd['stats_v2'][column]['histogram']['x']]
+
+            if 'percentage_buckets' in self.transaction.lmd['column_stats'][column] and self.transaction.lmd['column_stats'][column]['percentage_buckets'] is not None:
+
+                self.transaction.lmd['column_stats'][column]['percentage_buckets'] = [func(x) for x in self.transaction.lmd['column_stats'][column]['percentage_buckets']]
+
+                self.transaction.lmd['stats_v2'][column]['percentage_buckets'] = [func(x) for x in self.transaction.lmd['stats_v2'][column]['percentage_buckets']]
         else:
             input_data.data_frame[column] = input_data.data_frame[column].apply(func)
 
-    @staticmethod
-    def _cast_all_data(input_data, column, cast_to_type, transaction_type):
-        if transaction_type == TRANSACTION_LEARN:
-            input_data.train_df[column] = input_data.train_df[column].astype(cast_to_type)
-            input_data.test_df[column] = input_data.test_df[column].astype(cast_to_type)
-            input_data.validation_df[column] = input_data.validation_df[column].astype(cast_to_type)
-        else:
-            input_data.data_frame[column] = input_data.data_frame[column].astype(cast_to_type)
 
     def run(self, input_data):
         for column in input_data.columns:
@@ -87,7 +95,7 @@ class DataTransformer(BaseModule):
             data_subtype = self.transaction.lmd['column_stats'][column]['data_subtype']
 
             if data_type == DATA_TYPES.NUMERIC:
-                self._aply_to_all_data(input_data, column, clean_float, self.transaction.lmd['type'])
+                self._aply_to_all_data(input_data, column, self.clean_float_or_none, self.transaction.lmd['type'])
                 self._aply_to_all_data(input_data, column, self._handle_nan, self.transaction.lmd['type'])
 
                 if data_subtype == DATA_SUBTYPES.INT:
@@ -102,7 +110,6 @@ class DataTransformer(BaseModule):
 
             if data_type == DATA_TYPES.CATEGORICAL:
                 self._aply_to_all_data(input_data, column, str, self.transaction.lmd['type'])
-                self._cast_all_data(input_data, column, 'category', self.transaction.lmd['type'])
 
             if data_subtype == DATA_SUBTYPES.TEXT:
                 self._aply_to_all_data(input_data, column, str, self.transaction.lmd['type'])

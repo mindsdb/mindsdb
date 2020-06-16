@@ -254,7 +254,6 @@ class Predictor:
                 icm = self._adapt_column(lmd['column_stats'][col],col)
             except Exception as e:
                 print(e)
-                exit()
                 icm = {'column_name': col}
                 #continue
 

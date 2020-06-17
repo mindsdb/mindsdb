@@ -1,3 +1,7 @@
+import random
+import string
+import datetime
+from math import log
 from mindsdb.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 
 test_column_types = {
@@ -11,11 +15,6 @@ test_column_types = {
     'sequential_array': (DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.ARRAY),
     'sequential_text': (DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT),
 }
-
-import random
-import string
-import datetime
-from math import log
 
 
 def generate_timeseries(length,
@@ -37,12 +36,6 @@ def generate_timeseries(length,
         return list(map(str, map(lambda x: datetime.datetime.fromtimestamp(x).date(), column)))
 
 
-def rand_str(length=random.randrange(4,120)):
-    # Create a list of unicode characters within the range 0000-D7FF
-    random_unicodes = [chr(random.randrange(0xD7FF)) for _ in range(0, length)]
-    return u"".join(random_unicodes)
-
-
 def rand_ascii_str(length=30):
     charlist = [*string.ascii_letters]
     return ''.join(random.choice(charlist) for _ in range(length))
@@ -50,10 +43,6 @@ def rand_ascii_str(length=30):
 
 def rand_int():
     return int(random.randrange(-pow(2,18), pow(2,18)))
-
-
-def rand_numerical_cat():
-    return int(random.randrange(-pow(2,3), pow(2,3)))
 
 
 def rand_float():

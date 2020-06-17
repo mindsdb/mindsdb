@@ -1,4 +1,5 @@
 import pytest
+import os
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -8,7 +9,11 @@ from mindsdb.libs.controllers.predictor import Predictor
 from mindsdb.libs.data_sources.file_ds import FileDS
 from mindsdb.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 
-from tests.unit_tests.utils import test_column_types
+from tests.unit_tests.utils import (test_column_types,
+                                    generate_value_cols,
+                                    generate_timeseries_labels,
+                                    generate_log_labels,
+                                    columns_to_file)
 
 
 class TestPredictor:
@@ -83,7 +88,7 @@ class TestPredictor:
         mdb.learn(
             from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",
             to_predict='rental_price',
-            stop_training_in_x_seconds=6
+            stop_training_in_x_seconds=1
         )
 
         result = mdb.predict(when={"number_of_rooms": 2, "sqft": 1384})
@@ -205,3 +210,96 @@ class TestPredictor:
                 a2['existing_credits']['typing']['data_subtype'])
         assert (a2['existing_credits']['typing'][
                     'data_subtype'] == DATA_SUBTYPES.SINGLE)
+
+    @pytest.mark.skip(reason='Test gets stuck during learn call, need investigation')
+    @pytest.mark.slow
+    def test_timeseries(self, tmp_path):
+        ts_hours = 12
+        data_len = 120
+        train_file_name = os.path.join(str(tmp_path), 'train_data.csv')
+        test_file_name = os.path.join(str(tmp_path), 'test_data.csv')
+
+        features = generate_value_cols(['date', 'int'], data_len, ts_hours * 3600)
+        labels = [generate_timeseries_labels(features)]
+
+        feature_headers = list(map(lambda col: col[0], features))
+        label_headers = list(map(lambda col: col[0], labels))
+
+        # Create the training dataset and save it to a file
+        columns_train = list(
+            map(lambda col: col[1:int(len(col) * 3 / 4)], features))
+        columns_train.extend(
+            list(map(lambda col: col[1:int(len(col) * 3 / 4)], labels)))
+        columns_to_file(columns_train, train_file_name, headers=[*feature_headers,
+                                                                 *label_headers])
+        # Create the testing dataset and save it to a file
+        columns_test = list(
+            map(lambda col: col[int(len(col) * 3 / 4):], features))
+        columns_to_file(columns_test, test_file_name, headers=feature_headers)
+
+        mdb = Predictor(name='test_timeseries')
+
+        mdb.learn(
+            from_data=train_file_name,
+            to_predict=label_headers,
+            order_by=feature_headers[0],
+            # ,window_size_seconds=ts_hours* 3600 * 1.5
+            window_size=3,
+            stop_training_in_x_seconds=1
+        )
+
+        results = mdb.predict(when_data=test_file_name, use_gpu=False)
+
+        for row in results:
+            expect_columns = [label_headers[0],
+                              label_headers[0] + '_confidence']
+            for col in expect_columns:
+                assert col in row
+
+        models = mdb.get_models()
+        model_data = mdb.get_model_data(models[0]['name'])
+        assert model_data
+
+    def test_multilabel_prediction(self, tmp_path):
+        train_file_name = os.path.join(str(tmp_path), 'train_data.csv')
+        test_file_name = os.path.join(str(tmp_path), 'test_data.csv')
+        data_len = 60
+
+        features = generate_value_cols(['int', 'float', 'int', 'float'], data_len)
+        labels = []
+        labels.append(generate_log_labels(features))
+        labels.append(generate_timeseries_labels(features))
+
+        feature_headers = list(map(lambda col: col[0], features))
+        label_headers = list(map(lambda col: col[0], labels))
+
+        # Create the training dataset and save it to a file
+        columns_train = list(
+            map(lambda col: col[1:int(len(col) * 3 / 4)], features))
+        columns_train.extend(
+            list(map(lambda col: col[1:int(len(col) * 3 / 4)], labels)))
+        columns_to_file(columns_train, train_file_name,
+                        headers=[*feature_headers, *label_headers])
+
+        # Create the testing dataset and save it to a file
+        columns_test = list(
+            map(lambda col: col[int(len(col) * 3 / 4):], features))
+        columns_to_file(columns_test, test_file_name,
+                        headers=feature_headers)
+
+        mdb = Predictor(name='test_multilabel_prediction')
+        mdb.learn(from_data=train_file_name,
+                  to_predict=label_headers,
+                  stop_training_in_x_seconds=1)
+
+        results = mdb.predict(when_data=test_file_name)
+        models = mdb.get_models()
+        model_data = mdb.get_model_data(models[0]['name'])
+        assert model_data
+
+        for i in range(len(results)):
+            row = results[i]
+            for label in label_headers:
+                expect_columns = [label, label + '_confidence']
+                for col in expect_columns:
+                    assert col in row

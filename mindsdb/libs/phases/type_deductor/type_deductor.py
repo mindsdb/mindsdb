@@ -1,5 +1,6 @@
 import imghdr
 import sndhdr
+from copy import deepcopy
 from collections import Counter, defaultdict
 from dateutil.parser import parse as parse_datetime
 
@@ -264,9 +265,13 @@ class TypeDeductor(BaseModule):
                 'data_subtype': data_subtype,
                 'data_type_dist': data_type_dist,
                 'data_subtype_dist': data_subtype_dist,
+                'description': """A data type, in programming, is a classification that specifies which type of value a variable has and what type of mathematical, relational or logical operations can be applied to it without causing an error. A string, for example, is a data type that is used to classify text and an integer is a data type used to classify whole numbers."""
             }
-            stats[col_name] = type_data
+
+            stats[col_name] = deepcopy(type_data)
             stats[col_name].update(additional_info)
+            del stats[col_name]['description']
+            
             stats_v2[col_name]['typing'] = type_data
             stats_v2[col_name]['additional_info'] = additional_info
 

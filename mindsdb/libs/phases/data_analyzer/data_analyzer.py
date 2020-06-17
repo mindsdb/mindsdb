@@ -250,7 +250,7 @@ def get_column_empty_values_report(data):
         'empty_cells': len_w_nulls - len_wo_nulls,
         'empty_percentage': 100 * round(nr_missing_values/ len_w_nulls, 3),
         'is_empty': len_wo_nulls == 0
-        ,'description': 'TBD'
+        ,'description': """Mindsdb counts the number of unobserved data points, or so-called missing values for a given variable. Missing values arise when we do not observe any value for a given variable. It is commonly represented as N/A or NULL and it is different from NaN (Not a Number), or Inf (Infinity) which mostly arise when we try to do an undefined mathematical operation (like dividing by zero, zero over zero, inf, etc as examples)."""
     }
     if nr_missing_values > 0:
         ed['warning'] = f'Your column has {nr_missing_values} values missing'
@@ -263,7 +263,8 @@ def get_uniq_values_report(data):
     ud = {
         'unique_values': len_unique,
         'unique_percentage': 100 * round(len_unique / len(data), 8)
-        ,'description': 'TBD'
+        ,'description': """Mindsdb counts the number of unique values as well as the unique count percent (i.e., number of distinct categories relative to the total number of observations).
+If the data type is not numeric (integer, numeric) and the number of unique values is equal to the number of observations (unique_rate = 1), then the variable is likely to be an identifier. Therefore, this variable is also not suitable for the analysis model."""
     }
     if len_unique == 1:
         ud['warning'] = 'This column contains no information because it has a single possible value.'
@@ -397,7 +398,7 @@ class DataAnalyzer(BaseModule):
                 S, biased_buckets = compute_entropy_biased_buckets(histogram['y'], histogram['x'])
                 stats_v2[col_name]['bias'] = {
                     'entropy': S,
-                    'description': 'TBD'
+                    'description': """Under the assumption of uniformly distributed data (i.e., same probability for Head or Tails on a coin flip) mindsdb tries to detect potential divergences from such case, and it calls this "potential bias". Thus by our data having any potential bias mindsdb means any divergence from all categories having the same probability of being selected."""
                 }
                 if biased_buckets:
                     stats_v2[col_name]['bias']['biased_buckets'] = biased_buckets
@@ -419,7 +420,7 @@ class DataAnalyzer(BaseModule):
                                                                hist_y=histogram['y'],
                                                                percentage_buckets=percentage_buckets,
                                                                col_stats=stats[col_name]),
-                    'description': 'TBD'
+                    'description': """Potential outliers can be thought as the "extremes", i.e., data points that are far from the center of mass (mean/median/interquartile range) of the data."""
                 }
 
             stats_v2[col_name]['nr_warnings'] = 0

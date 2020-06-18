@@ -1,0 +1,7 @@
+.venv/*
+.git/*
+.docs/*
+.pytest_cache/*
+distributions/*
+
+*.csv

@@ -244,13 +244,14 @@ class TypeDeductor(BaseModule):
         stats = defaultdict(dict)
         stats_v2 = defaultdict(dict)
 
-        # Really bad that these parameters are implicitly passed through lmd
-        # Perhaps sampling can be moved somewhere upwards,
-        # so that it can be reused by all downstream phases?
-        sample_df = sample_data(input_data.data_frame,
-                                self.transaction.lmd['sample_margin_of_error'],
-                                self.transaction.lmd['sample_confidence_level'],
-                                self.log)
+        self.transaction.input_data.sample_df = sample_data(
+            input_data.data_frame,
+            self.transaction.lmd['sample_margin_of_error'],
+            self.transaction.lmd['sample_confidence_level'],
+            self.log
+        )
+
+        sample_df = self.transaction.input_data.sample_df
 
         for col_name in sample_df.columns.values:
             col_data = sample_df[col_name].dropna()

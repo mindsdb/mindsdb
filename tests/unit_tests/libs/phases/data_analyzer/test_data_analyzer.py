@@ -76,6 +76,7 @@ class TestDataAnalyzer:
 
         input_data = TransactionData()
         input_data.data_frame = input_dataframe
+        input_data.sample_df = input_dataframe.iloc[n_points // 2:]
         data_analyzer.run(input_data)
 
         stats_v2 = lmd['stats_v2']
@@ -114,6 +115,7 @@ class TestDataAnalyzer:
         input_dataframe['numeric_int'].iloc[::2] = None
         input_data = TransactionData()
         input_data.data_frame = input_dataframe
+        input_data.sample_df = input_dataframe.iloc[n_points // 2:]
         data_analyzer.run(input_data)
 
         stats_v2 = lmd['stats_v2']

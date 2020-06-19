@@ -356,7 +356,7 @@ class DataAnalyzer(BaseModule):
         stats_v2 = self.transaction.lmd['stats_v2']
         col_data_dict = {}
 
-        sample_df = self.transaction.input_data.sample_df
+        sample_df = input_data.sample_df
 
         for col_name in self.transaction.lmd['empty_columns']:
             stats_v2[col_name] = {}

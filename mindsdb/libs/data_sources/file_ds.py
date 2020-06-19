@@ -19,8 +19,9 @@ class FileDS(DataSource):
         n_row = []
         for cell in row:
             if str(cell) in ['', ' ', '  ', 'NaN', 'nan', 'NA']:
-                cell = None
-            n_row.append(cell)
+                n_row.append(None)
+            else:
+                n_row.append(cell)
 
         return n_row
 
@@ -145,9 +146,6 @@ class FileDS(DataSource):
             # No file type identified
             return data, None, dialect
 
-
-
-
     def _setup(self,file, clean_rows = True, custom_parser = None):
         """
         Setup from file
@@ -156,7 +154,6 @@ class FileDS(DataSource):
         :param custom_parser: if you want to parse the file with some custom parser
         """
 
-        col_map = {}
         # get file data io, format and dialect
         data, fmt, dialect = self._getDataIo(file)
         data.seek(0) # make sure we are at 0 in file pointer
@@ -183,23 +180,16 @@ class FileDS(DataSource):
             file_data = df.values.tolist()
         
         else:
-            raise ValueError('Could not load file into any format, supported formats are csv, json, xls, xslx')
-
-        for col in header:
-            col_map[col] = col
+            raise ValueError('Could not load file into any format, supported formats are csv, json, xls, xlsx')
 
         if clean_rows == True:
-            file_list_data = []
-            for row in file_data:
-                row = self.cleanRow(row)
-                file_list_data.append(row)
+            file_list_data = [self.cleanRow(row) for row in file_data]
         else:
             file_list_data = file_data
 
+        col_map = dict((col, col) for col in header)
+
         try:
             return pd.DataFrame(file_list_data, columns=header), col_map
-        except:
-            with open(file) as f:
-                f.readline()    # header
-                dialect = csv.Sniffer().sniff(f.readline())
+        except Exception:
             return pd.read_csv(file, sep=dialect.delimiter), col_map

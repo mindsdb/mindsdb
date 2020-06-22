@@ -3,7 +3,7 @@ import datetime
 import logging
 from mindsdb import Predictor
 from mindsdb.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
-from mindsdb.libs.data_sources.maria_ds import MariaDS
+from mindsdb import MariaDS
 
 
 def test_maria_ds():

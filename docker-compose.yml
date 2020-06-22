@@ -18,9 +18,11 @@ services:
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
   postgres:
-    image: postgres:alpine
+    image: postgres:12-alpine
     ports:
       - 5432:5432
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
   clickhouse:
     image: yandex/clickhouse-server:20.1
     ports:

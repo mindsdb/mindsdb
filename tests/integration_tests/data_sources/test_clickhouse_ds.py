@@ -1,13 +1,11 @@
-import pytest
-import os
 import requests
 from mindsdb import Predictor
 from mindsdb.libs.data_sources.clickhouse_ds import ClickhouseDS
 
 
 def test_clickhouse_ds():
-    HOST = os.environ.get('CLICKHOUSE_HOST', 'localhost')
-    PORT = os.environ.get('CLICKHOUSE_PORT', 8123)
+    HOST = 'localhost'
+    PORT = 8123
 
     clickhouse_url = f'http://{HOST}:{PORT}'
     requests.post(clickhouse_url,

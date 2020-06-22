@@ -12,8 +12,6 @@ services:
   postgres:
     image: postgres:alpine
     network_mode: host
-    environment:
-      POSTGRES_PASSWORD: "123"
   clickhouse:
     image: yandex/clickhouse-server:20.1
     network_mode: host

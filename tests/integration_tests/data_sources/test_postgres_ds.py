@@ -1,5 +1,3 @@
-import pytest
-import os
 import logging
 import pg8000
 from mindsdb import Predictor
@@ -7,11 +5,11 @@ from mindsdb.libs.data_sources.postgres_ds import PostgresDS
 
 
 def test_postgres_ds():
-    HOST = os.environ.get('POSTGRES_HOST', 'localhost')
-    USER = os.environ.get('POSTGRES_USER', 'postgres')
-    PASSWORD = os.environ.get('POSTGRES_PWD', '')
-    DBNAME = os.environ.get('POSTGRES_DB', 'postgres')
-    PORT = os.environ.get('POSTGRES_PORT', 5432)
+    HOST = 'localhost'
+    USER = 'postgres'
+    PASSWORD = ''
+    DBNAME = 'postgres'
+    PORT = 5432
 
     con = pg8000.connect(database=DBNAME, user=USER, password=PASSWORD,
                          host=HOST, port=PORT)

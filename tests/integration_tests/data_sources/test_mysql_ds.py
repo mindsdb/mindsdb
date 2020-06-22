@@ -1,17 +1,15 @@
-import pytest
 import mysql.connector
-import os
 import logging
 from mindsdb import Predictor
 from mindsdb.libs.data_sources.mysql_ds import MySqlDS
 
 
 def test_mysql_ds():
-    HOST = os.environ.get('MYSQL_HOST', 'localhost')
-    USER = os.environ.get('MYSQL_USER', 'root')
-    PASSWORD = os.environ.get('MYSQL_PWD', '')
-    DATABASE = os.environ.get('MYSQL_DB', 'mysql')
-    PORT = os.environ.get('MYSQL_PORT', 3306)
+    HOST = 'localhost'
+    USER = 'root'
+    PASSWORD = ''
+    DATABASE = 'mysql'
+    PORT = 3306
 
     con = mysql.connector.connect(host=HOST,
                                   port=PORT,

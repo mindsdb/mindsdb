@@ -21,12 +21,44 @@ def test_maria_ds():
     cur = con.cursor()
 
     cur.execute('DROP TABLE IF EXISTS test_mindsdb')
-    cur.execute('CREATE TABLE test_mindsdb(col_categorical Text, col_int BIGINT, col_bool BOOL, col_float FLOAT, col_date Text, col_ts Text, col_text Text)')
+    cur.execute("""CREATE TABLE test_mindsdb (
+                                col_int BIGINT,
+                                col_float FLOAT, 
+                                col_categorical Text, 
+                                col_bool BOOL, 
+                                col_text Text,
+                                col_date DATE,
+                                col_datetime DATETIME,
+                                col_timestamp TIMESTAMP,
+                                col_time TIME
+                                )
+                                """)
     for i in range(0, 200):
         dt = datetime.datetime.now() - datetime.timedelta(days=i)
-        dt_str = dt.strftime('%Y-%m-%d')
-        ts = (datetime.datetime.now() - datetime.timedelta(minutes=i)).isoformat()
-        cur.execute(f'INSERT INTO test_mindsdb VALUES ("String {i}", {i}, {i % 2 == 0}, {i+0.01}, "{dt_str}", "{ts}", "long long long text {i}")')
+
+        query = f"""INSERT INTO test_mindsdb (col_int,
+                                col_float, 
+                                col_categorical, 
+                                col_bool, 
+                                col_text,
+                                col_date,
+                                col_datetime,
+                                col_timestamp,
+                                col_time) 
+                                VALUES (%s, %s,  %s,  %s,  %s, %s, %s, %s, %s) 
+                                """
+        values = (
+            i,
+            i + 0.01,
+            f"Cat {i}",
+            i % 2 == 0,
+            f"long long long text {i}",
+            dt.date(),
+            dt,
+            dt.strftime('%Y-%m-%d %H:%M:%S.%f'),
+            dt.strftime('%H:%M:%S.%f')
+        )
+        cur.execute(query, values)
     con.commit()
     con.close()
 
@@ -40,23 +72,23 @@ def test_maria_ds():
     assert model_data
     assert analysis
 
-    assert analysis['col_categorical']['typing']['data_type'] == DATA_TYPES.CATEGORICAL
-    assert analysis['col_categorical']['typing']['data_subtype'] == DATA_SUBTYPES.MULTIPLE
+    def assert_expected_type(column_typing, expected_type, expected_subtype):
+        assert column_typing['data_type'] == expected_type
+        assert column_typing['data_subtype'] == expected_subtype
+        assert column_typing['data_type_dist'][expected_type] == 199
+        assert column_typing['data_subtype_dist'][expected_subtype] == 199
 
-    assert analysis['col_int']['typing']['data_type'] == DATA_TYPES.NUMERIC
-    assert analysis['col_int']['typing']['data_subtype'] == DATA_SUBTYPES.INT
 
-    assert analysis['col_float']['typing']['data_type'] == DATA_TYPES.NUMERIC
-    assert analysis['col_float']['typing']['data_subtype'] == DATA_SUBTYPES.FLOAT
+    assert_expected_type(analysis['col_categorical']['typing'], DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.MULTIPLE)
+    assert_expected_type(analysis['col_bool']['typing'], DATA_TYPES.CATEGORICAL, DATA_SUBTYPES.SINGLE)
+    assert_expected_type(analysis['col_int']['typing'], DATA_TYPES.NUMERIC, DATA_SUBTYPES.INT)
+    assert_expected_type(analysis['col_float']['typing'], DATA_TYPES.NUMERIC, DATA_SUBTYPES.FLOAT)
+    assert_expected_type(analysis['col_date']['typing'], DATA_TYPES.DATE, DATA_SUBTYPES.DATE)
+    assert_expected_type(analysis['col_datetime']['typing'], DATA_TYPES.DATE, DATA_SUBTYPES.TIMESTAMP)
+    assert_expected_type(analysis['col_timestamp']['typing'], DATA_TYPES.DATE, DATA_SUBTYPES.TIMESTAMP)
+    assert_expected_type(analysis['col_text']['typing'], DATA_TYPES.SEQUENTIAL, DATA_SUBTYPES.TEXT)
 
-    assert analysis['col_bool']['typing']['data_type'] == DATA_TYPES.CATEGORICAL
-    assert analysis['col_bool']['typing']['data_subtype'] == DATA_SUBTYPES.SINGLE
+    # @TODO Timedeltas not supported yet
+    # assert_expected_type((analysis['col_time']['typing'], DATA_TYPES.DATE, DATA_SUBTYPES.TIMEDELTA)
 
-    assert analysis['col_date']['typing']['data_type'] == DATA_TYPES.DATE
-    assert analysis['col_date']['typing']['data_subtype'] == DATA_SUBTYPES.DATE
 
-    assert analysis['col_ts']['typing']['data_type'] == DATA_TYPES.DATE
-    assert analysis['col_ts']['typing']['data_subtype'] == DATA_SUBTYPES.TIMESTAMP
-
-    assert analysis['col_text']['typing']['data_type'] == DATA_TYPES.SEQUENTIAL
-    assert analysis['col_text']['typing']['data_subtype'] == DATA_SUBTYPES.TEXT

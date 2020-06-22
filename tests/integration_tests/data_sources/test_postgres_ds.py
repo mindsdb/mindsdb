@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 import datetime
->>>>>>> master
 import logging
 import pg8000
 from mindsdb import Predictor

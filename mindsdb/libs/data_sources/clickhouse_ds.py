@@ -39,35 +39,5 @@ class ClickhouseDS(DataSource):
 
         return df, col_map
 
-if __name__ == "__main__":
-    from mindsdb import Predictor
-
-    log.info('Starting ClickhouseDS tests !')
-
-    log.info('Inserting data')
-    requests.post('http://localhost:8123', data='CREATE DATABASE IF NOT EXISTS test')
-    requests.post('http://localhost:8123', data='DROP TABLE IF EXISTS test.mock')
-    requests.post('http://localhost:8123', data="""CREATE TABLE test.mock(
-        col1 String
-        ,col2 Int64
-        ,col3 Array(UInt8)
-    ) ENGINE=Memory""")
-    requests.post('http://localhost:8123', data="""INSERT INTO test.mock VALUES ('a',1,[1,2,3])""")
-    requests.post('http://localhost:8123', data="""INSERT INTO test.mock VALUES ('b',2,[2,3,1])""")
-    requests.post('http://localhost:8123', data="""INSERT INTO test.mock VALUES ('c',3,[3,1,2])""")
-
-    log.info('Querying data')
-    clickhouse_ds = ClickhouseDS('SELECT * FROM test.mock ORDER BY col2 DESC LIMIT 2')
-
-    log.info('Validating data integrity')
-    assert(len(clickhouse_ds.df) == 2)
-    assert(sum(map(int,clickhouse_ds.df['col2'])) == 5)
-    assert(len(list(clickhouse_ds.df['col3'][1])) == 3)
-    assert(set(clickhouse_ds.df.columns) == set(['col1','col2','col3']))
-
-    mdb = Predictor(name='analyse_dataset_test_predictor')
-    mdb.analyse_dataset(from_data=clickhouse_ds)
-
-    log.info('Finished running ClickhouseDS tests successfully !')
 
 

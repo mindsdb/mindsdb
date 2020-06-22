@@ -1,0 +1,19 @@
+# This starts databases for local development or integration tests as if they were launched locally.
+# Run `docker-compose up -d`
+# Shut down and clean up: `docker-compose down`
+version: "3"
+services:
+  mysql:
+    image: mysql:8.0
+    network_mode: host
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+  postgres:
+    image: postgres:12-alpine
+    network_mode: host
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+  clickhouse:
+    image: yandex/clickhouse-server:20.1
+    network_mode: host

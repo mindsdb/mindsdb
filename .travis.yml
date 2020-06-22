@@ -11,8 +11,7 @@ matrix:
       env:
         DEPLOYMENT_ENV="true"
         BADGE=linux
-      services:
-        - docker
+      services: docker
 
     - name: "Python 3.6 on Ubuntu 16.0.4"
       os: linux
@@ -54,17 +53,29 @@ install:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --upgrade pip; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -e .; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -r requirements_test.txt; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -r optional_requirements_extra_data_sources.txt; fi
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -e .; fi
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -r requirements_test.txt; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -r optional_requirements_extra_data_sources.txt; fi
 # run tests
+before_script:
+  # Travis doesn't support docker on OSX and it doesn't work on Windows too
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then  docker-compose up -d; fi
 script:
-  - pytest -s --runslow --durations=20
-  - cd tests/ci_tests
+  # Unit tests
+  - travis_wait 15 pytest --runslow --durations=20
+  # Integration tests, require docker so only run on linux
+  - cd tests/integration_tests
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 15 pytest; fi
+  # Slow CI tests
+  - cd ../ci_tests
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python fast_test.py; fi
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 full_test.py; fi
   - cd ../..
   - pip install flake8
   - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+after_script:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then  docker-compose down; fi
 
 # deploy to pip and github pages
 deploy:

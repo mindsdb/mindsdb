@@ -10,7 +10,7 @@ services:
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
   postgres:
-    image: postgres:alpine
+    image: postgres:13-alpine
     network_mode: host
   clickhouse:
     image: yandex/clickhouse-server:20.1

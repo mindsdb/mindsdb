@@ -87,7 +87,7 @@ def basic_test(backend='lightwood', use_gpu=True, IS_CI_TEST=False):
     print(type(prediction[0]['rental_price_confidence']))
 
     print('\n\n========================\n\n')
-    print(prediction[0].explain())
+    print(prediction[0].explain()) # Warning: Deprecated explainer
     print(prediction[0].explanation)
     print(prediction[0].raw_predictions())
     print('\n\n')

@@ -101,10 +101,10 @@ class TestPredictor:
 
         result = mdb.predict(when={"numeric_x": 10, 'categorical_x': 1})
         explanation_new = result[0].explanation['numeric_y']
-        assert explanation_new['predicted_value']
+        assert explanation_new['predicted_value'] is not None
         assert explanation_new['confidence_interval']
         assert explanation_new['confidence'] >= 0.8
-        assert not explanation_new['important_missing_information']
+        assert explanation_new['important_missing_information'] == []
         assert explanation_new['prediction_quality'] == 'very confident'
 
 

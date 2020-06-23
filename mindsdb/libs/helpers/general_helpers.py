@@ -43,8 +43,6 @@ def check_for_updates():
     if Path(mdb_file).is_file():
         token = open(mdb_file, 'r').read()
     else:
-        if CONFIG.IS_CI_TEST:
-            uuid_str = 'travis'
         token = '{system}|{version}|{uid}'.format(system=platform.system(), version=__version__, uid=uuid_str)
         try:
             open(mdb_file,'w').write(token)

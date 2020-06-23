@@ -1,3 +1,4 @@
+import logging
 from mindsdb.libs.helpers.explain_prediction import explain_prediction, get_important_missing_cols
 from mindsdb.libs.constants.mindsdb import *
 
@@ -64,6 +65,8 @@ class TransactionOutputRow:
         return answers
 
     def explain(self):
+        logging.warning('TransactionOutputRow.explain() is outdated, please use the TransactionOutputRow.explanation property.')
+
         answers = {}
         for pred_col in self.predict_columns:
             answers[pred_col] = []
@@ -137,7 +140,3 @@ class TransactionOutputRow:
 
     def raw_predictions(self):
         return {key: self.data[key][self.row_index] for key in list(self.data.keys()) if key.startswith('model_')}
-
-    @property
-    def _predicted_values(self):
-        return {pred_col: evaluations[pred_col][self.row_index].predicted_value for pred_col in evaluations}

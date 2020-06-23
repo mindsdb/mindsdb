@@ -89,19 +89,28 @@ class TestPredictor:
     def test_explain_prediction(self):
         mdb = Predictor(name='test_home_rentals')
 
+        n_points = 100
+        input_dataframe = pd.DataFrame({
+            'numeric_x': list(range(n_points)),
+            'categorical_x': [int(x % 2 == 0) for x in range(n_points)],
+        }, index=list(range(n_points)))
+
+        input_dataframe['numeric_y'] = input_dataframe.numeric_x + 2*input_dataframe.categorical_x
+
         mdb.learn(
-            from_data="https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv",
-            to_predict='rental_price',
+            from_data=input_dataframe,
+            to_predict='numeric_y',
             stop_training_in_x_seconds=1
         )
 
-        result = mdb.predict(when={"number_of_rooms": 2, "sqft": 1384})
-        explanation = result[0].explain()['rental_price'][0]
-        assert explanation['value']
-        assert explanation['confidence']
-        assert explanation['explanation']
-        assert explanation['simple']
-        assert explanation['model_result']
+        result = mdb.predict(when={"numeric_x": 10, 'categorical_x': 1})
+        explanation_new = result[0].explanation['numeric_y']
+        assert explanation_new['predicted_value'] is not None
+        assert explanation_new['confidence_interval']
+        assert explanation_new['confidence'] >= 0.8
+        assert explanation_new['important_missing_information'] == []
+        assert explanation_new['prediction_quality'] == 'very confident'
+
 
     @pytest.mark.skip(reason="Causes error in probabilistic validator")
     @pytest.mark.slow
@@ -350,6 +359,7 @@ class TestPredictor:
         print(prediction[0]['rental_price_confidence'])
         print(type(prediction[0]['rental_price_confidence']))
 
+        print(prediction[0].explain()) # Deprecated interface, do not use
         print(prediction[0].explanation)
         print(prediction[0].raw_predictions())
 

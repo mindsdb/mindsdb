@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from mindsdb.libs.constants.mindsdb import *
 from mindsdb.libs.helpers.general_helpers import value_isnan
@@ -24,12 +25,13 @@ def explain_prediction(lmd, prediction_row, confidence, pred_col):
         :param prediction_row: The row that was predicted by the model backend and processed by mindsdb
         :return: A, hopefully human readable, string containing the explanation
     '''
+
     if lmd['column_importances'] is None or len(lmd['column_importances']) < 2:
         important_cols = [col for col in lmd['columns'] if col not in lmd['predict_columns']]
         useless_cols = []
     else:
-        top_20_val = np.percentile(list(lmd['column_importances'].values()),80)
-        bottom_20_val = np.percentile(list(lmd['column_importances'].values()),20)
+        top_20_val = np.percentile(list(lmd['column_importances'].values()), 80)
+        bottom_20_val = np.percentile(list(lmd['column_importances'].values()), 20)
 
         important_cols = [col for col in lmd['column_importances'] if lmd['column_importances'][col] >= top_20_val]
         useless_cols = [col for col in lmd['column_importances'] if lmd['column_importances'][col] <= bottom_20_val]
@@ -63,16 +65,6 @@ def explain_prediction(lmd, prediction_row, confidence, pred_col):
         percentage_bucket_percentage = round(100*bucket_occurances/total_occuraces, 2)
 
         column_confidence = confidence * 100
-
-        confidence_str = 'very confident'
-        if confidence < 0.80:
-            confidence_str = 'confident'
-        if confidence < 0.60:
-            confidence_str = 'somewhat confident'
-        if confidence < 0.40:
-            confidence_str = 'not very confident'
-        if confidence < 0.20:
-            confidence_str = 'not confident'
 
         if percentage_bucket_percentage < 2:
             column_explanation = f'A similar value for the predicted column {pred_col} occurs rarely in your dataset'

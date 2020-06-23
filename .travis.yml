@@ -67,10 +67,6 @@ script:
   # Integration tests, require docker so only run on linux
   - cd tests/integration_tests
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then travis_wait 15 pytest; fi
-  # Slow CI tests
-  - cd ../ci_tests
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python fast_test.py; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 full_test.py; fi
   - cd ../..
   - pip install flake8
   - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics

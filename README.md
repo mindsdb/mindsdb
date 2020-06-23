@@ -142,11 +142,9 @@ For example: `export PYTHONPATH=$PYTHONPATH:/home/my_username/mindsdb`.
 
 Too test your changes you can run unit tests (fast) and CI tests (slightly longer) locally.
 
-To run the unit tests:
+To run unit tests:
 * Install pytest: `pip install -r requirements_test.txt`
 * Run: `pytest`
-
-To run the CI tests: `cd tests/ci_tests && python3 full_test.py`
 
 Once you have specific changes you want to merge into master, feel free to make a PR.
 

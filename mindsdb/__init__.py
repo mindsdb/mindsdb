@@ -16,7 +16,6 @@ from mindsdb.libs.controllers.predictor import Predictor
 
 # Data Sources
 from mindsdb.libs.data_sources.file_ds import FileDS
-print('Here !')
 # These might not initialized properly since they require optional dependencies, so we wrap them in a try-except and don't export them if the dependencies aren't installed
 try:
     from mindsdb.libs.data_sources.s3_ds import S3DS

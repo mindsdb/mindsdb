@@ -1,8 +1,3 @@
-# CI tests
-Running CI tests locally:
-
-`cd tests/ci_tests && python3 full_test.py`
-
 # Unit tests
 Unit tests use the [pytest](https://docs.pytest.org/en/latest/index.html) testing framework. [pytest-randomly](https://pypi.org/project/pytest-randomly/) is used to fix random seed for reproducibility.
 

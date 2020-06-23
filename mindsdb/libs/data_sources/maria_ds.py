@@ -4,7 +4,7 @@ import mysql.connector
 from mindsdb.libs.data_types.data_source import DataSource
 
 
-class MySqlDS(DataSource):
+class MariaDS(DataSource):
 
     def _setup(self, query=None, host='localhost', user='root', password='',
                database='mysql', port=3306, table=None):

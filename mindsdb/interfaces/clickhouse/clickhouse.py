@@ -1,7 +1,6 @@
 import requests
 from mindsdb.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 
-
 class Clickhouse():
     def __init__(self, config):
         self.config = config
@@ -9,7 +8,6 @@ class Clickhouse():
         self.port = config['integrations']['clickhouse']['port']
         self.user = config['integrations']['clickhouse']['user']
         self.password = config['integrations']['clickhouse']['password']
-
         self.setup_clickhouse()
 
 

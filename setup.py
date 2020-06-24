@@ -29,6 +29,5 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ),
-    data_files=[('/mindsdb/etc/', []),('/mindsdb/var', ['empty.txt'])],
     python_requires=">=3.6"
 )

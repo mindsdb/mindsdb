@@ -39,7 +39,6 @@ class Mariadb():
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' `{name}` {new_type} ')
             except Exception as e:
-                print(e)
                 print(f'Error: cant convert type {col_subtype} of column {name} to mariadb tpye')
 
         return column_declaration

@@ -2,7 +2,6 @@ import subprocess
 import unittest
 import requests
 import time
-import MySQLdb
 
 class PredictorTest(unittest.TestCase):
 
@@ -35,23 +34,6 @@ class PredictorTest(unittest.TestCase):
         res = requests.put(url, json=params)
         assert res.status_code == 200
         time.sleep(50)
-
-        # MySQL interface: check if table for the predictor exists
-        '''
-        DBNAME = 'mysql'
-
-        con = MySQLdb.connect(
-            host='127.0.0.1',
-            port=47335,
-            user='mindsdb',
-            passwd='mindsdb',
-            db='mindsdb'
-        )
-
-        cur = con.cursor()
-        cur.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}' LIMIT 1;".format(DBNAME, PRED_NAME))
-        assert cur.fetchall() == 1
-        '''
 
         # HTTP clickhouse interface: try to make a prediction
         where = {

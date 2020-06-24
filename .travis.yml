@@ -41,8 +41,8 @@ install:
 before_script: cd tests/ci_tests
 # run tests
 script:
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python test_endpoints.py; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 test_endpoints.py; fi
+  #- if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python test_endpoints.py; fi
+  #- if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 test_endpoints.py; fi
   - cd ../..
 
 # deploy to pip

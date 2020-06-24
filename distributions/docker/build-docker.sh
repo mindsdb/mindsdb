@@ -14,11 +14,11 @@ docker build -t mindsdb .
 cd ..
 rm -rf mindsdb_docker > /dev/null 2>&1
 
-echo "Do you want to run MindsDB container (yes/no)?"
+echo "Do you want to run MindsDB Server container (yes/no)?"
 read run
 
 if [ "$run" = "yes" ]; then
-    echo "Running Mindsdb container..."
+    echo "Running Mindsdb Server container..."
     docker run -d -it  --name=mindsdb mindsdb
     docker exec -it mindsdb python
 fi

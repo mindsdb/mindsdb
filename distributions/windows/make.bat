@@ -1,0 +1,1 @@
+pyinstaller install.py -F --onefile

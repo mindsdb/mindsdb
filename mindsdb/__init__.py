@@ -1,30 +1,20 @@
-import sys
-if sys.version_info < (3,6):
-    sys.exit('Sorry, For MindsDB Python < 3.6 is not supported')
+import os
+import json
 
-from mindsdb.config import CONFIG
-import mindsdb.libs.constants.mindsdb as CONST
+from mindsdb.utilities.fs import get_or_create_dir_struct
+from mindsdb.utilities.wizards import cli_config
 
-from mindsdb.__about__ import __package_name__ as name, __version__
-from mindsdb.libs.controllers.predictor import Predictor
+config_dir, predictor_dir, datasource_dir = get_or_create_dir_struct()
+config_path = os.path.join(config_dir,'config.json')
+if not os.path.exists(config_path):
+    _ = cli_config(None,None,predictor_dir,datasource_dir,config_dir,use_default=True)
 
-# Data Sources
-from mindsdb.libs.data_sources.file_ds import FileDS
+with open(config_path, 'r') as fp:
+    os.environ['MINDSDB_STORAGE_PATH'] = json.load(fp)['interface']['mindsdb_native']['storage_dir']
 
-# These might not initialized properly since they require optional dependencies, so we wrap them in a try-except and don't export them if the dependencies aren't installed
-try:
-    from mindsdb.libs.data_sources.s3_ds import S3DS
-except:
-    pass
 
-try:
-    from mindsdb.libs.data_sources.mysql_ds import MySqlDS
-except:
-    pass
-
-try:
-    from mindsdb.libs.data_sources.postgres_ds import PostgresDS
-except:
-    pass
-    
-MindsDB = Predictor
+from mindsdb_native import *
+# Figure out how to add this as a module
+import lightwood
+#import dataskillet
+import mindsdb.utilities.wizards as wizards

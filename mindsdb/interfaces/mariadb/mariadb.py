@@ -2,7 +2,7 @@ import requests
 
 import mysql.connector
 
-from mindsdb.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
+from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 
 
 class Mariadb():

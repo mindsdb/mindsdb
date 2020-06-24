@@ -11,7 +11,7 @@ import mindsdb
 
 from mindsdb.interfaces.datastore.sqlite_helpers import *
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb import FileDS, ClickhouseDS, MariaDS
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS
 from mindsdb.interfaces.datastore.sqlite_helpers import create_sqlite_db
 
 

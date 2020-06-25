@@ -34,10 +34,9 @@ def download_file(url):
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
         with open(filename, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192): 
+            for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
     return filename
-
 
 print('installing vc_redist')
 vc_redist_filename = download_file(VC_REDIST_URL)
@@ -61,10 +60,10 @@ with open(os.path.join(PYTHON_DIR, 'sitecustomize.py'), 'w') as f:
 PYTHON_EXE = os.path.join(PYTHON_DIR, 'python.exe')
 
 get_pip_filename = download_file(GET_PIP_URL)
-os.system('{} {} --no-warn-script-location'.format(PYTHON_EXE, get_pip_filename))    
+os.system('{} {} --no-warn-script-location'.format(PYTHON_EXE, get_pip_filename))
 os.remove(get_pip_filename)
 
-LIBS = ['lightwood', 'mindsdb', 'mindsdb']
+LIBS = ['lightwood', 'mindsdb_native', 'mindsdb']
 
 os.system('{} -m pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html --no-warn-script-location'.format(PYTHON_EXE))
 

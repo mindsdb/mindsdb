@@ -29,8 +29,6 @@ echo -e """
            █░▀░█ ▀█▀ █░░█ █░░█ ▀▀█ █░░█ █▀▀▄
            ▀░░░▀ ▀▀▀ ▀░░▀ ▀▀▀░ ▀▀▀ ▀▀▀░ ▀▀▀░
 $cmdcol
-
-
 """
 
 # Attempt to detect python
@@ -118,8 +116,7 @@ _,-||*||-~*)
 
                              ..     /
                                *****
-$cmdcol
-
+$cmdcolf
 """
 
 INSTALLER_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

@@ -47,7 +47,7 @@ p_arr = []
 for api in api_arr:
     print(f'Starting Mindsdb {api} API !')
     try:
-        p = Process(target=start_functions[api], args=(config_path,))
+        p = Process(target=start_functions[api], args=(config_path,True,))
         p.start()
         p_arr.append(p)
         print(f'Started Mindsdb {api} API !')

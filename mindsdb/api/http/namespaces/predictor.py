@@ -8,9 +8,10 @@ import mindsdb
 
 from dateutil.parser import parse as parse_datetime
 from flask import request, send_file
-from flask_restx import Resource, abort, Namespace
+from flask_restx import Resource, abort
 from flask import current_app as ca
 
+from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     predictor_metadata,
     predictor_query_params,
@@ -21,7 +22,6 @@ from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_sta
 
 
 model_swapping_map = {}
-ns_conf = Namespace('predictors', description='Predictor is the main object exposed by the API')
 
 def debug_pkey_type(model, keys=None, reset_keyes=True, type_to_check=list, append_key=True):
     if type(model) != dict:

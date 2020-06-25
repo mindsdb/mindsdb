@@ -10,9 +10,10 @@ import csv
 import mindsdb
 from dateutil.parser import parse
 from flask import request, send_file
-from flask_restx import Resource, abort, Namespace
+from flask_restx import Resource, abort
 from flask import current_app as ca
 
+from mindsdb.api.http.namespaces.configs.datasources import ns_conf
 from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
     datasource_metadata,
     put_datasource_params
@@ -29,7 +30,6 @@ from mindsdb.api.http.namespaces.entitites.datasources.datasource_missed_files i
     get_datasource_missed_files_params
 )
 
-ns_conf = Namespace('datasources', description='Data sources')
 
 @ns_conf.route('/')
 class DatasourcesList(Resource):

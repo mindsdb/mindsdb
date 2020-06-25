@@ -5,13 +5,15 @@ import logging
 import sys
 import random
 
-from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
+from mindsdb.api.http.namespaces.configs.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces
 from mindsdb.utilities.config import Config
 
-def start(config):
+def start(config, initial=False):
+    if not initial:
+        print('\n\nWarning, this process should not have been started... nothing is "wrong" but it needlessly ate away a tiny bit of precious comute !\n\n')
     config = Config(config)
     port=47334
     host='0.0.0.0'

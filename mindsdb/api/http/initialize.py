@@ -1,7 +1,6 @@
 from flask import Flask, url_for
 from flask_restx import Api
 import json
-from flask import g
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
@@ -32,7 +31,6 @@ def initialize_flask(config):
 
     return app, api
 
-def initialize_interfaces(config,app):
-    with app.app_context():
-        g.default_store = DataStore(config)
-        g.mindsdb_native = MindsdbNative(config)
+def initialize_interfaces(config, app):
+    app.default_store = DataStore(config)
+    app.mindsdb_native = MindsdbNative(config)

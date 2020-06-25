@@ -60,10 +60,63 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
         config['api']['http']['host'] = _in('HTTP interface host: ','0.0.0.0',use_default)
         config['api']['http']['port'] = _in('HTTP interface port: ','47334',use_default)
 
+    crt_path = os.path.join(config_dir, 'cert.pem')
+    with open(crt_path, 'w') as fp:
+        fp.write("""-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDeItDNfMko2uLe
+gVQUzPTLXx2hod9LKIN+S01TpwJvLi5185JZ8YhquwZnI19VvLQLyOIUMGeVxVvg
+GPgkRA58liO4oyCjZGYJygwAN0gkMvJXeMXuNeezlfm3xiVvCk0+l6Vb8FqyJod/
+P9sr6CyfQPolXSngZ8C7M/Fz3YWQ4O26L9in79eynCeJodXmzHsdrLHwKKOhv3F9
+Chp5Rx82KRvoFrdhmUEGM+l4Aq1J1iUVEsAQHHiMWhJhfsiC1GjGErOjSfWKw9e0
+ckbgqY/2ypXHdjsg0mI3eLO3E29SnG8OCWDLRcJVU1oHeX8hqk04c0urXhVQThN3
+X6ecXD1dAgMBAAECggEAEVxjOUwhZKIGzSEKcz25fBOI+1LtYrBd5ob4GiuZUxsm
+4m0Q6RqpcL4BOBpZnxfKcolWsgE+d0QfdBo/eoYfI7mQPSPyrxJvryAtY+7uInYg
+3pk/zuhDnZOBGs3PqygA9X1gnRjh3b6JJHbXKE1S/3dSlYz8ct9o/riGjGmpwLLO
+WuLbiRZoXRPCGWb1bIRpjVPn01YhlEvHyJsXktikm4pMUv+2QUZC7PU/eaAyY3eX
+Y0qdgaxza8q7toFXENG2nI/4dL5T9d4Bg2642zIk+Ki43NbQox4BDeWaSBWQK+bB
+DNDEjNnuGG0pTrdMD65TIOt7AoWeNCAqJZtSLDcoeQKBgQDwTHs1QX65Eo15cVh6
+sClRYTP1d01t39cSdV7sX1Vtp/z7C3FeUlWpb8zgyo3wYJlo+7hyOAcY4KyBpTeS
+aJGy1qIfD0qSt2ZNIvw1wfjiKa00ThMVW8urOcSMt+8+Q9SA/1nE/1iLNSc6M9Af
+ixx34zxlg25vbEaYcFKqiGYNgwKBgQDspoXV4hiufqoPf7F5bYYrv5j3SXoaJZnM
+RJngvBHohlSE9TwGvhHmy6xJAj1CRpoOOQpLoWgvxvWpdsCvcny3a8MY5AbyqOI4
+banVDCW5jnRe5ak/ECoxP4uPK+5/9CUlW3cP+GKfRGU3H7OhadopvNfwjUPg+wB4
+PXTCUvhznwKBgQCvKkFB//09Mb35QduKi7GCxgWXMKE7r8jahr5sNc5TQfqSkbPR
+WtlgysOhNWYkTHZn5d59PERIKTb2xpXs3tcec4D4fTASJSiooBETqtMfIdxFXYhh
+sGmV5mVVYps+Wzmj0wAAL1a/Gz7+GVjkNYbKCdYz9YviIx6O7ooED6u8uwKBgHuM
+aJ0EYExhVpmm2doCQyT973dTBgs2jDfnrMp2hYb28pNDkOYYPzJWLQkkwSSjxXQd
+dXGMv98JqWGi3O/7/n6oJQAOtE3lu80n+519rQhWBg0xK43/+3cgrNS/Y9GrfeUl
+/l/5Fkv+IjWIOHjR0ZMuwzIUHlcL0+/ybc2yEYITAoGAc5shIP9wvjEGexemj1u1
+mp2XwZ7zc0yyZA2icgsYAED6CVoNyrvU6KUm3m1fwEsHPdjk9vLhB5thgz1cjabr
+eoOAdPicwUjndabSor9ylCTDpYpTc8SwuM9KoZyk39DNMUcW3DtwWVZ8YBcm5j0X
+91+jp56NrKca0z1vcyRvy4Q=
+-----END PRIVATE KEY-----
+-----BEGIN CERTIFICATE-----
+MIIDazCCAlOgAwIBAgIUfo40Rk2dYhY8SO+yXL5vrvli+20wDQYJKoZIhvcNAQEL
+BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM
+GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yMDA1MjExMzA4MzRaFw0yMTA1
+MjExMzA4MzRaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw
+HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEB
+AQUAA4IBDwAwggEKAoIBAQDeItDNfMko2uLegVQUzPTLXx2hod9LKIN+S01TpwJv
+Li5185JZ8YhquwZnI19VvLQLyOIUMGeVxVvgGPgkRA58liO4oyCjZGYJygwAN0gk
+MvJXeMXuNeezlfm3xiVvCk0+l6Vb8FqyJod/P9sr6CyfQPolXSngZ8C7M/Fz3YWQ
+4O26L9in79eynCeJodXmzHsdrLHwKKOhv3F9Chp5Rx82KRvoFrdhmUEGM+l4Aq1J
+1iUVEsAQHHiMWhJhfsiC1GjGErOjSfWKw9e0ckbgqY/2ypXHdjsg0mI3eLO3E29S
+nG8OCWDLRcJVU1oHeX8hqk04c0urXhVQThN3X6ecXD1dAgMBAAGjUzBRMB0GA1Ud
+DgQWBBRXK63AaxqKc92abM3L9tM/sF1fmTAfBgNVHSMEGDAWgBRXK63AaxqKc92a
+bM3L9tM/sF1fmTAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQC8
+1/JSufP8yWnKWDXYrfWCM1ji+COiW3qrjeYxOyl6uvkJDDNFUt8MQUO2c4HFr4BE
+I7BGYbCfGT3dc1K3/JKtlGeoKqbKMgBWe+Lu12kkB5nrQdyqTVSgQnL1HHN7u7ED
+apSV9TzYcz6wbX4Yv27UMGpwbUypIG2EUVbBCkElZYoMn4TNlKF7uTH5dOmR+LNr
+zGvTvYkjMFLRtJ13SkRyfiMJkfJcM89czOVu4X/dljiHhGePfdbCUuGs1Gw759a8
+3l7b506sujWQEmuSe6UdOUws+gR82H7kb8n7qxcOa5HXiIE2MRdfHXx8AS0LGPsa
+n0PAUDF7eqI/kYskiWUX
+-----END CERTIFICATE-----
+                 """)
+
     mysql = _in('Enable MYSQL API ? [Y/N]','Y',use_default)
     if mysql in ['Y','y']:
         config['api']['mysql'] = {
-            "certificate_path": "cert.pem"
+            "certificate_path": crt_path
             ,"log": {
                 "format": "%(asctime)s - %(levelname)s - %(message)s",
                 "folder": "logs/",

@@ -5,6 +5,7 @@ version: "3"
 services:
   mariadb:
     build: .
+    network_mode: host
     image: mariadb-connect:1
     container_name: connect
     command: --default-authentication-plugin=mysql_native_password
@@ -17,6 +18,8 @@ services:
     - ./connectData:/var/lib/mysql
     - ./connect.cnf:/etc/mysql/mariadb.conf.d/connect.cnf
   clickhouse:
+    network_mode: host
     image: yandex/clickhouse-server:20.1
     ports:
       - 8123:8123
+      - 9000:9000

@@ -1,5 +1,5 @@
 <h1 align="center">
-	<img width="300" src="https://github.com/mindsdb/mindsdb/blob/master/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
+	<img width="300" src="https://github.com/mindsdb/mindsdb_native/blob/stable/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
 	<br>
 
 </h1>
@@ -22,7 +22,7 @@ MindsDB is an Explainable AutoML framework for developers built on top of Pytorc
 	<tbody border="0" style="border:0px">
 <tr border="0" style="border:0px">
 	<td border="0" style="border:0px">
-		<img width="600" src="https://github.com/mindsdb/mindsdb/blob/master/assets/MindsDBTerminal.png?raw=true" alt="MindsDB">
+		<img width="600" src="https://github.com/mindsdb/mindsdb_native/blob/stable/assets/MindsDBTerminal.png?raw=true" alt="MindsDB">
 	</td>
 	<td border="0" style="border:0px">
 		<img alt="Linux build" src="https://www.screenconnect.com/Images/LogoLinux.png" align="center" height="30" width="30" />  <a href="https://travis-ci.com/mindsdb/mindsdb">

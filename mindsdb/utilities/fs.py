@@ -19,7 +19,7 @@ def get_or_create_dir_struct():
         try:
             for dir in tup:
                 assert(os.path.exists(dir))
-                os.access(dir, os.W_OK)
+                assert(os.access(dir, os.W_OK) == True)
             return tup[0], tup[1], tup[2]
         except Exception as e:
             pass
@@ -28,7 +28,7 @@ def get_or_create_dir_struct():
         try:
             for dir in tup:
                 create_directory(dir)
-                os.access(dir, os.W_OK)
+                assert(os.access(dir, os.W_OK) == True)
             return tup[0], tup[1], tup[2]
         except Exception as e:
             pass

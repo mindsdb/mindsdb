@@ -13,6 +13,7 @@ from flask import request, send_file
 from flask_restx import Resource, abort
 from flask import current_app as ca
 
+from mindsdb.interfaces.datastore.sqlite_helpers import *
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
 from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
     datasource_metadata,
@@ -136,7 +137,7 @@ class Analyze(Resource):
 class AnalyzeSubset(Resource):
     @ns_conf.doc('analyse_datasubset')
     def get(self, name):
-        ds = get_datasource(name)
+        ds = ca.default_store.get_datasource(name)
         if ds is None:
             print('No valid datasource given')
             abort(400, 'No valid datasource given')

@@ -84,8 +84,8 @@ class DataStore():
                 ,'kwargs': {}
             }
         elif source_type == 'clickhouse':
-            user = self.config['integrations']['clickhouse']['user']
-            password = self.config['integrations']['clickhouse']['password']
+            user = self.config['integrations']['default_clickhouse']['user']
+            password = self.config['integrations']['default_clickhouse']['password']
             # TODO add host port params
             ds = ClickhouseDS(source, user=user, password=password)
             picklable = {
@@ -94,10 +94,10 @@ class DataStore():
                 ,'kwargs': {'user': user,'password': password}
             }
         elif source_type == 'mariadb':
-            user = self.config['integrations']['mariadb']['user']
-            password = self.config['integrations']['mariadb']['password']
-            host = self.config['integrations']['mariadb']['host']
-            port = self.config['integrations']['mariadb']['port']
+            user = self.config['integrations']['default_mariadb']['user']
+            password = self.config['integrations']['default_mariadb']['password']
+            host = self.config['integrations']['default_mariadb']['host']
+            port = self.config['integrations']['default_mariadb']['port']
             ds = MariaDS(source, user=user, password=password, host=host, port=port)
             picklable = {
                 'class': 'MariaDS'

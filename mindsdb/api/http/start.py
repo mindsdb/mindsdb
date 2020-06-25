@@ -11,11 +11,15 @@ from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces
 from mindsdb.utilities.config import Config
 
-def start(config):
+def start(config, initial=False):
+    if not initial:
+        print('\n\nWarning, this process should not have been started... nothing is "wrong" but it needlessly ate away a tiny bit of precious comute !\n\n')
     config = Config(config)
     port=47334
     host='0.0.0.0'
     debug=False
+
+
 
     if not logging.root.handlers:
         rootLogger = logging.getLogger()
@@ -28,7 +32,6 @@ def start(config):
         errStream.addFilter(lambda record: record.levelno > logging.INFO)
         rootLogger.addHandler(errStream)
 
-
     mindsdb.CONFIG.MINDSDB_DATASOURCES_PATH = os.path.join(mindsdb.CONFIG.MINDSDB_STORAGE_PATH,'datasources')
     mindsdb.CONFIG.MINDSDB_TEMP_PATH = os.path.join(mindsdb.CONFIG.MINDSDB_STORAGE_PATH,'tmp')
 
@@ -36,6 +39,7 @@ def start(config):
     os.makedirs(mindsdb.CONFIG.MINDSDB_DATASOURCES_PATH, exist_ok=True)
     os.makedirs(mindsdb.CONFIG.MINDSDB_TEMP_PATH, exist_ok=True)
     #'''
+    
     app, api = initialize_flask(config)
     initialize_interfaces(config, app)
 

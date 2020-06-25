@@ -23,10 +23,10 @@ config = Config(TEST_CONFIG)
 
 def query(q):
     con = MySQLdb.connect(
-        host=config['integrations']['mariadb']['host'],
-        port=config['integrations']['mariadb']['port'],
-        user=config['integrations']['mariadb']['user'],
-        passwd=config['integrations']['mariadb']['password'],
+        host=config['integrations']['default_mariadb']['host'],
+        port=config['integrations']['default_mariadb']['port'],
+        user=config['integrations']['default_mariadb']['user'],
+        passwd=config['integrations']['default_mariadb']['password'],
         db='mindsdb'
     )
 

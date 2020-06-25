@@ -12,7 +12,7 @@ class MindsdbNative():
         self.unregister_from = []
 
         try:
-            assert(config['integrations']['clickhouse']['enabled'] == True)
+            assert(config['integrations']['default_clickhouse']['enabled'] == True)
             from mindsdb.interfaces.clickhouse.clickhouse import Clickhouse
             clickhouse = Clickhouse(self.config)
             self.unregister_from.append(clickhouse)
@@ -21,7 +21,7 @@ class MindsdbNative():
             pass
 
         try:
-            assert(config['integrations']['mariadb']['enabled'] == True)
+            assert(config['integrations']['default_mariadb']['enabled'] == True)
             from mindsdb.interfaces.mariadb.mariadb import Mariadb
             mariadb = Mariadb(self.config)
             self.unregister_from.append(mariadb)
@@ -30,25 +30,32 @@ class MindsdbNative():
             pass
 
     def learn(self, name, from_data, to_predict, kwargs={}):
-        p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all())
+        p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
         p.start()
 
     def predict(self, name, when=None, when_data=None, kwargs={}):
+        # @TODO Separate into two paths, one for "normal" predictions and one for "real time" predictions. Use the multiprocessing code commented out bellow for normal (once we figure out how to return the prediction object... else use the inline code but with the "real time" predict functionality of mindsdb_native taht will be implemented later)
+        '''
+        from_data = when if when is not None else when_data
+        p = PredictorProcess(name, from_data, to_predict=None, kwargs=kwargs, config=self.config.get_all(), 'predict')
+        p.start()
+        predictions = p.join()
+        '''
+
         mdb = mindsdb_native.Predictor(name=name)
 
-        use_gpu = self.config.get('use_gpu', False)
+        kwargs['use_gpu'] = config.get('use_gpu', None)
+
         if when is not None:
             predictions = mdb.predict(
                 when=when,
                 run_confidence_variation_analysis=True,
-                use_gpu=use_gpu,
                 **kwargs
             )
         else:
             predictions = mdb.predict(
                 when_data=when_data,
                 run_confidence_variation_analysis=False,
-                use_gpu=use_gpu,
                 **kwargs
             )
 

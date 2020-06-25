@@ -1,4 +1,4 @@
-from mindsdb.api.http.namespaces.configs.predictor import ns_conf
+from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.histogram_data import histogram_data
 from mindsdb.api.http.namespaces.entitites.nested_histogram_data import nested_histogram_data
 from mindsdb.api.http.namespaces.entitites.confusion_matrix_data import confusion_matrix_data

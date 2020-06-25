@@ -1,4 +1,4 @@
-from mindsdb.api.http.namespaces.configs.predictor import ns_conf
+from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.data_preparation_metadata import data_preparation_metadata, EXAMPLE as PREPARATION_METADATA_EXAMPLE
 from mindsdb.api.http.namespaces.entitites.data_analysis_metadata import data_analysis_metadata#, EXAMPLE as DATA_ANALYSIS_METADATA_EXAMPLE
 from mindsdb.api.http.namespaces.entitites.target_column_metadata import target_column_metadata#, EXAMPLES as TARGET_COLUMN_METADATA_EXAMPLES

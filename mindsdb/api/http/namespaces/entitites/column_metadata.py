@@ -1,4 +1,4 @@
-from mindsdb.api.http.namespaces.configs.predictor import ns_conf
+from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.quality_dimension import quality_dimension
 from mindsdb.api.http.namespaces.entitites.histogram_data import histogram_data, NUMERIC_EXAMPLE
 from mindsdb.api.http.namespaces.entitites.data_distribution_metadata import data_distribution_metadata

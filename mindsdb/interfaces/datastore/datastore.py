@@ -5,7 +5,9 @@ import shutil
 import os
 import pickle
 import sys
-import resource
+
+if os.name == 'posix'
+    import resource
 
 import mindsdb
 

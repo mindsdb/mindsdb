@@ -8,10 +8,10 @@ from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 class Mariadb():
     def __init__(self, config):
         self.config = config
-        self.host = config['integrations']['mariadb']['host']
-        self.port = config['integrations']['mariadb']['port']
-        self.user = config['integrations']['mariadb']['user']
-        self.password = config['integrations']['mariadb']['password']
+        self.host = config['integrations']['default_mariadb']['host']
+        self.port = config['integrations']['default_mariadb']['port']
+        self.user = config['integrations']['default_mariadb']['user']
+        self.password = config['integrations']['default_mariadb']['password']
 
         self.setup_mariadb()
 

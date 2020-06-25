@@ -3,7 +3,9 @@ import argparse
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
 from mindsdb.utilities.config import Config
 
-def start(config):
+def start(config, initial=False):
+    if not initial:
+        print('\n\nWarning, this process should not have been started... nothing is "wrong" but it needlessly ate away a tiny bit of precious comute !\n\n')
     config = Config(config)
     MysqlProxy.startProxy(config)
 

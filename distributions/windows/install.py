@@ -9,8 +9,8 @@ PY_EMBED_URL = 'https://www.python.org/ftp/python/3.7.4/python-3.7.4-embed-amd64
 GET_PIP_URL = 'https://bootstrap.pypa.io/get-pip.py'
 VC_REDIST_URL = 'https://aka.ms/vs/16/release/vc_redist.x64.exe'
 
-if len(sys.argv) < 3:
-    sys.exit('Usage: ./{} install_dir storage_dir'.format(__file__.split('.')[0]))
+if len(sys.argv) < 2:
+    sys.exit('Usage: ./{} install_dir'.format(__file__.split('.')[0]))
 
 
 def make_dir(d):
@@ -19,11 +19,9 @@ def make_dir(d):
 
 
 INSTALL_DIR = os.path.join(os.path.abspath(sys.argv[1]), 'mindsdb')
-STORAGE_DIR = os.path.join(os.path.abspath(sys.argv[2]), 'mindsdb_storage')
 PYTHON_DIR = os.path.join(INSTALL_DIR, 'python')
 
 make_dir(INSTALL_DIR)
-make_dir(STORAGE_DIR)
 make_dir(PYTHON_DIR)
 
 PTH_PATH = os.path.join(PYTHON_DIR, 'python37._pth')
@@ -63,16 +61,13 @@ get_pip_filename = download_file(GET_PIP_URL)
 os.system('{} {} --no-warn-script-location'.format(PYTHON_EXE, get_pip_filename))
 os.remove(get_pip_filename)
 
-LIBS = ['lightwood', 'mindsdb_native', 'mindsdb']
-
 os.system('{} -m pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html --no-warn-script-location'.format(PYTHON_EXE))
-
-for lib in LIBS:
-    os.system('{} -m pip install {} --no-warn-script-location'.format(PYTHON_EXE, lib))
+os.system('{} -m pip install mindsdb --no-warn-script-location'.format(PYTHON_EXE))
 
 print('generating run_server.bat')
 with open(os.path.join(INSTALL_DIR, 'run_server.bat'), 'w') as f:
-    lines = ['{} -m pip install {} --upgrade --no-warn-script-location'.format(PYTHON_EXE, lib) for lib in LIBS]
-    lines.append('set MINDSDB_STORAGE_PATH={}'.format(STORAGE_DIR))
-    lines.append('{} -m mindsdb'.format(PYTHON_EXE))
+    lines = [
+        '{} -m pip install mindsdb --upgrade --no-warn-script-location'.format(PYTHON_EXE),
+        '{} -m mindsdb'.format(PYTHON_EXE)
+    ]
     f.write('\n'.join(lines))

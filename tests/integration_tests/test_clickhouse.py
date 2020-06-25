@@ -24,8 +24,8 @@ def query_ch(query):
     if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
         query += ' FORMAT JSON'
 
-    user = config['integrations']['clickhouse']['user']
-    password = config['integrations']['clickhouse']['password']
+    user = config['integrations']['default_clickhouse']['user']
+    password = config['integrations']['default_clickhouse']['password']
 
     connect_string = 'http://{}:{}'.format(
         'localhost',
@@ -36,12 +36,12 @@ def query_ch(query):
 
     params = {'user': 'default'}
     try:
-        params['user'] = config['integrations']['clickhouse']['user']
+        params['user'] = config['integrations']['default_clickhouse']['user']
     except:
         pass
 
     try:
-        params['password'] = config['integrations']['clickhouse']['password']
+        params['password'] = config['integrations']['default_clickhouse']['password']
     except:
         pass
 

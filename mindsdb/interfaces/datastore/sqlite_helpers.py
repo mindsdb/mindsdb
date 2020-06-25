@@ -1,6 +1,6 @@
 import sqlite3
 from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
-
+import re
 
 def create_sqlite_db(path, data_frame):
     con = sqlite3.connect(path)

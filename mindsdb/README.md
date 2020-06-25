@@ -1,7 +1,7 @@
 This simple documentation should guide over how to bring ML capabilities to clickhouse. The idea is that you should be able to treat ML models just as if they were normal Clickhouse tables. What we have built so far allows you to create, train models, and finally query such models straight from the database. 
 
 
-**How can you try it?
+** How can you try it?
 
 We are trying to make it as simple as possible, what we have now is 3 simple steps:
 

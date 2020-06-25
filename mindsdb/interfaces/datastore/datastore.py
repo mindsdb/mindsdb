@@ -6,7 +6,7 @@ import os
 import pickle
 import sys
 
-if os.name == 'posix'
+if os.name == 'posix':
     import resource
 
 import mindsdb

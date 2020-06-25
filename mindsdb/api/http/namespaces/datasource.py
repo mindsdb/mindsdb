@@ -11,7 +11,7 @@ import mindsdb
 from dateutil.parser import parse
 from flask import request, send_file
 from flask_restx import Resource, abort
-from flask import g
+from flask import current_app as ca
 
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
 from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
@@ -37,7 +37,7 @@ class DatasourcesList(Resource):
     @ns_conf.marshal_list_with(datasource_metadata)
     def get(self):
         '''List all datasources'''
-        return g.default_store.get_datasources()
+        return ca.default_store.get_datasources()
 
 
 @ns_conf.route('/<name>')
@@ -47,7 +47,7 @@ class Datasource(Resource):
     @ns_conf.marshal_with(datasource_metadata)
     def get(self, name):
         '''return datasource metadata'''
-        ds = g.default_store.get_datasource(name)
+        ds = ca.default_store.get_datasource(name)
         if ds is not None:
             return ds
         return '', 404
@@ -56,7 +56,7 @@ class Datasource(Resource):
     def delete(self, name):
         '''delete datasource'''
         try:
-            g.default_store.delete_datasource(name)
+            ca.default_store.delete_datasource(name)
         except Exception as e:
             print(e)
             abort(400, str(e))
@@ -110,10 +110,10 @@ class Datasource(Resource):
         else:
             file_path = None
 
-        g.default_store.save_datasource(ds_name, source_type, source, file_path)
+        ca.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 
-        return g.default_store.get_datasource(ds_name)
+        return ca.default_store.get_datasource(ds_name)
 
 
 @ns_conf.route('/<name>/analyze')
@@ -121,12 +121,12 @@ class Datasource(Resource):
 class Analyze(Resource):
     @ns_conf.doc('analyse_dataset')
     def get(self, name):
-        ds = g.default_store.get_datasource(name)
+        ds = ca.default_store.get_datasource(name)
         if ds is None:
             print('No valid datasource given')
             abort(400, 'No valid datasource given')
 
-        analysis = g.default_store.get_analysis(ds['source'])
+        analysis = ca.default_store.get_analysis(ds['source'])
 
         return analysis, 200
 
@@ -149,7 +149,7 @@ class AnalyzeSubset(Resource):
                     abort(400, f'Not valid filter "{key}"')
                 where.append(param)
 
-        data_dict = g.default_store.get_data(ds['name'], where)
+        data_dict = ca.default_store.get_data(ds['name'], where)
 
         if data_dict['rowcount'] == 0:
             return abort(400, 'Empty dataset after filters applying')
@@ -164,7 +164,7 @@ class DatasourceData(Resource):
     @ns_conf.marshal_with(datasource_rows_metadata)
     def get(self, name):
         '''return data rows'''
-        ds = g.default_store.get_datasource(name)
+        ds = ca.default_store.get_datasource(name)
         if ds is None:
             abort(400, 'No valid datasource given')
 
@@ -184,7 +184,7 @@ class DatasourceData(Resource):
                     abort(400, f'Not valid filter "{key}"')
                 where.append(param)
 
-        data_dict = g.default_store.get_data(name, where, params['page[size]'], params['page[offset]'])
+        data_dict = ca.default_store.get_data(name, where, params['page[size]'], params['page[offset]'])
 
         return data_dict, 200
 
@@ -195,7 +195,7 @@ class DatasourceMissedFilesDownload(Resource):
     @ns_conf.doc('get_datasource_download')
     def get(self, name):
         '''download uploaded file'''
-        ds = g.default_store.get_datasource(name)
+        ds = ca.default_store.get_datasource(name)
         if not ds:
             abort(404, "{} not found".format(name))
         if not os.path.exists(ds['source']):

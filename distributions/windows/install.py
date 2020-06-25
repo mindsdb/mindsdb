@@ -62,10 +62,12 @@ os.system('{} {} --no-warn-script-location'.format(PYTHON_EXE, get_pip_filename)
 os.remove(get_pip_filename)
 
 os.system('{} -m pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html --no-warn-script-location'.format(PYTHON_EXE))
-os.system('{} -m pip install {} --no-warn-script-location'.format(PYTHON_EXE, lib))
+os.system('{} -m pip install mindsdb --no-warn-script-location'.format(PYTHON_EXE))
 
 print('generating run_server.bat')
 with open(os.path.join(INSTALL_DIR, 'run_server.bat'), 'w') as f:
-    lines = ['{} -m pip install {} --upgrade mindsdb --no-warn-script-location']
-    lines.append('{} -m mindsdb'.format(PYTHON_EXE))
+    lines = [
+        '{} -m pip install mindsdb --upgrade --no-warn-script-location'.format(PYTHON_EXE),
+        '{} -m mindsdb'.format(PYTHON_EXE)
+    ]
     f.write('\n'.join(lines))

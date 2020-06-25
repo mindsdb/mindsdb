@@ -28,10 +28,10 @@ class PredictorProcess(ctx.Process):
         if trx_type == 'learn':
             data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
 
+            kwargs['use_gpu'] = config.get('use_gpu', None)
             mdb.learn(
                 from_data=data_source,
                 to_predict=to_predict,
-                use_gpu=config.get('use_gpu', None),
                 **kwargs
             )
 
@@ -61,11 +61,12 @@ class PredictorProcess(ctx.Process):
                 when_data = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
                 when = None
 
+            kwargs['use_gpu'] = config.get('use_gpu', None)
+
             predictions = mdb.predict(
                 when=when,
                 when_data=when_data,
                 run_confidence_variation_analysis=True,
-                use_gpu=self.config.get('use_gpu', None),
                 **kwargs
             )
 

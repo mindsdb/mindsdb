@@ -44,20 +44,18 @@ class MindsdbNative():
 
         mdb = mindsdb_native.Predictor(name=name)
 
-        use_gpu = self.config.get('use_gpu', None)
+        kwargs['use_gpu'] = config.get('use_gpu', None)
 
         if when is not None:
             predictions = mdb.predict(
                 when=when,
                 run_confidence_variation_analysis=True,
-                use_gpu=use_gpu,
                 **kwargs
             )
         else:
             predictions = mdb.predict(
                 when_data=when_data,
                 run_confidence_variation_analysis=False,
-                use_gpu=use_gpu,
                 **kwargs
             )
 

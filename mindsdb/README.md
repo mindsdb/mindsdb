@@ -1,27 +1,25 @@
 This simple documentation should guide over how to bring ML capabilities to clickhouse. The idea is that you should be able to treat ML models just as if they were normal Clickhouse tables. What we have built so far allows you to create, train models, and finally query such models straight from the database. 
 
 
-** How can you try it?
+## How can you try it?
 
 We are trying to make it as simple as possible, what we have now is 3 simple steps:
 
-* First, install mindsdb which is a python based server that deals with the ML part.
+1. Install mindsdb which is a python based server that deals with the ML part: `pip3 install mindsdb`
 
-```pip3 install mindsdb```
+2. Then you simply run the server:  `python3 -m mindsdb`
 
-* Once installed you can tell mindsdb how to connect to your clickhouse database by modifying this file:
-	
-* Lastly, you simply run the server: 
+3. [Optional] When you run mindsdb you should see it creates a config file (e.g. `/home/your_user/mindsdb/etc/config.json`), edit the `default_clickhouse` key of this file to specify how to connect to your clickhouse instance (if it runs on localhost:8123 with the default user and no password this step is not needed)
 
-```python3 -m mindsdb```
+If everything worked you should be able to see a new database called `mindsdb` appear in your clickhouse server.
 
-If everything worked you should be able to see a new database appear in your clickhouse server;
-
-** Hands on ML  
+## Hands on ML  
 
 For the sake of this example we will use a table pulled from a url that contains information about house rentals.
 
-CREATE VIEW real_estate SELECT * FROM url('http://127.0.0.1:12345/', CSV, 'column1 String, column2 UInt32')
+```
+CREATE TABLE default.home_rentals (number_of_rooms String, number_of_bathrooms String, sqft Int64, location String, days_on_market Int64, initial_price Int64, neighborhood String, rental_price Float64)  ENGINE=URL('http://127.0.0.1:12345/', CSV)
+```
 
 Let’s create a model to predict the price for which we should rent a property.
 

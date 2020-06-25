@@ -18,19 +18,32 @@ If everything worked you should be able to see a new database called `mindsdb` a
 For the sake of this example we will use a table pulled from a url that contains information about house rentals.
 
 ```
-CREATE TABLE default.home_rentals (number_of_rooms String, number_of_bathrooms String, sqft Int64, location String, days_on_market Int64, initial_price Int64, neighborhood String, rental_price Float64)  ENGINE=URL('http://127.0.0.1:12345/', CSV)
+CREATE TABLE default.home_rentals (number_of_rooms String, number_of_bathrooms String, sqft Int64, location String, days_on_market Int64, initial_price Int64, neighborhood String, rental_price Float64)  ENGINE=URL('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv', CSVWithNames)
 ```
 
-Let’s create a model to predict the price for which we should rent a property.
+First, we'll train a predictor that predict a home's rental price based on the other columns in the table:
 
-You can simply insert into the mindsdb.predictors table to train new models
+```
+INSERT INTO mindsdb.predictors (name, predict_cols, select_data_query) VALUES('rentals_predictor','rental_price','SELECT * FROM default.home_rentals WHERE days_on_market <= 60');
+```
 
-You should see that a new table was created
+You should see mindsdb output some training logs, we'll have to wait a few minutes unitl the predictor is fully trained.
 
-USE MINDSDB;
-SHOW TABLES;
+Once that's done you can give some input data and get a prediction like this:
 
-You should be able to make predictions as follows:
+```
+SELECT rental_price FROM mindsdb.rentals_predictor WHERE initial_price=900 and number_of_rooms='2';
+```
 
+Or, you can select some other data from a similar table (or the same table) and get a bunch of predictions.
+
+```
+SELECT rental_price FROM mindsdb.rentals_predictor WHERE `$select_data_query`='SELECT * FROM default.home_rentals WHERE days_on_market > 60';
+```
+
+
+There's also some explainability features, confidence ranges for numerical predictions and confidence values for prediction but we are still tinkering around how to expose those in clickhouse.
+
+There's also a GUI with which you can visualize your predictors and the data it was trained on, plus a few extra insights about both. You can download it from here: https://www.mindsdb.com/product
 
 

@@ -307,6 +307,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         db = db[:db.find(' ')].strip(' `')
         ds_type = db
         ds = default_store.save_datasource(insert['name'], ds_type, insert['select_data_query'])
+        insert['predict_cols'] = [x.strip() for x in insert['predict_cols'].split(',')]
         mdb.learn(insert['name'], ds, insert['predict_cols'], kwargs)
 
         self.packet(OkPacket).send()

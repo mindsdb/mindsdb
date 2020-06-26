@@ -55,6 +55,14 @@ deploy:
       branch: stable
       condition: $DEPLOYMENT_ENV = "true"
 
+  - provider: s3
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_ACCESS_KEY_SECRET
+    bucket: "mindsdb-installer"
+    skip_cleanup: true
+    region: us-west-2
+    local_dir: build
+    
 # after pip is deployed, we can deploy to dockerhub
 after_deploy:
   -  if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "stable" ]]; then sleep 15; fi

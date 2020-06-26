@@ -139,6 +139,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             switch_out_answer.get()
             return switch_out_answer.enc_password.value
 
+        def get_fast_auth_password():
+            log.info('Asking for fast auth password')
+            self.packet(FastAuthFail).send()
+            password_answer = self.packet(PasswordAnswer)
+            password_answer.get()
+            try:
+                password = password_answer.password.value.decode()
+            except Exception:
+                log.info(f'error: no password in Fast Auth answer')
+                self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'Is not password in connection query.').send()
+                return None
+            return password
+
         if self.session is None:
             self.initSession()
         log.info('send HandshakePacket')
@@ -198,20 +211,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             password = switch_auth(new_method)
 
             if new_method == 'caching_sha2_password':
-                self.packet(FastAuthFail).send()
-                password_answer = self.packet(PasswordAnswer)
-                password_answer.get()
-                password = password_answer.password.value.decode()
+                password = get_fast_auth_password()
             else:
                 orig_password = orig_password_hash
 
         elif 'caching_sha2_password' in client_auth_plugin:
-            self.packet(FastAuthFail).send()
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                 'check auth using caching_sha2_password')
-            password_answer = self.packet(PasswordAnswer)
-            password_answer.get()
-            password = password_answer.password.value.decode()
+            password = get_fast_auth_password()
             orig_password = HARDCODED_PASSWORD
             
         elif 'mysql_native_password' in client_auth_plugin:

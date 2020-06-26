@@ -115,23 +115,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def isAuthOk(self, user, orig_user, password, orig_password):
         try:
-            log.info(f'check auth, user={user}')
             if user != orig_user:
-                log.warning(f'check auth: user mismatch')
+                log.warning(f'Check auth, user={user}: user mismatch')
                 return False
             if password != orig_password:
-                log.warning(f'check auth: password mismatch')
-                # @DEBUG === REMOVE !!
-                return True
-                #return False
+                log.warning(f'check auth, user={user}: password mismatch')
+                return False
 
             self.session.username = user
             self.session.auth = True
-            log.info(f'auth ok, user={user}')
+            log.info(f'Check auth, user={user}: Ok')
             return True
         except Exception:
+            log.error(f'Check auth, user={user}: ERROR')
             log.error(traceback.format_exc())
-            log.error('failed to authenticate')
 
     def handshake(self):
         global HARDCODED_PASSWORD, HARDCODED_USER
@@ -163,7 +160,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         username = None
         password = None
 
+        self.session.is_ssl = False
+
         if handshake_resp.type == 'SSLRequest':
+            log.info('switch to SSL')
+            self.session.is_ssl = True
             ssl_socket = ssl.wrap_socket(
                 self.socket,
                 server_side=True,
@@ -174,59 +175,62 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             handshake_resp = self.packet(HandshakeResponsePacket)
             handshake_resp.get()
             client_auth_plugin = handshake_resp.client_auth_plugin.value.decode()
+        
+        username = handshake_resp.username.value.decode()
 
-            if DEFAULT_AUTH_METHOD not in client_auth_plugin:
-                # if methods mismatch - need to switch them
-                new_method = 'caching_sha2_password' if 'caching_sha2_password' in client_auth_plugin else 'mysql_native_password'
-                password = switch_auth(new_method)
+        if orig_username == username and HARDCODED_PASSWORD == '':
+            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                'empty password')
+            password = ''
 
-                if new_method == 'caching_sha2_password':
-                    self.packet(FastAuthFail).send()
-                    password_answer = self.packet(PasswordAnswer)
-                    password_answer.get()
-                    password = password_answer.password.value.decode()
-                else:
-                    orig_password = orig_password_hash
+        elif (DEFAULT_AUTH_METHOD not in client_auth_plugin) or \
+            self.session.is_ssl is False and 'caching_sha2_password' in client_auth_plugin:
+            new_method = 'caching_sha2_password' if 'caching_sha2_password' in client_auth_plugin else 'mysql_native_password'
+    
+            if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
+                log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                    'error: cant switch to caching_sha2_password without SSL')
+                self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'caching_sha2_password without SSL not supported').send()
+                return False
 
-            elif 'caching_sha2_password' in client_auth_plugin:
+            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                f'switch auth method to {new_method}')
+            password = switch_auth(new_method)
+
+            if new_method == 'caching_sha2_password':
                 self.packet(FastAuthFail).send()
-                log.info('connected with SSL, caching_sha2_password method')
                 password_answer = self.packet(PasswordAnswer)
                 password_answer.get()
                 password = password_answer.password.value.decode()
-                orig_password = HARDCODED_PASSWORD
-            elif 'mysql_native_password' in client_auth_plugin:
-                log.info('connected with SSL, mysql_native_password method')
-                password = handshake_resp.enc_password.value
-                orig_password = orig_password_hash
             else:
-                log.info('connected with SSL, unknown method, try switch to mysql_native_password')
-                password = switch_auth('mysql_native_password')
                 orig_password = orig_password_hash
+
+        elif 'caching_sha2_password' in client_auth_plugin:
+            self.packet(FastAuthFail).send()
+            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                'check auth using caching_sha2_password')
+            password_answer = self.packet(PasswordAnswer)
+            password_answer.get()
+            password = password_answer.password.value.decode()
+            orig_password = HARDCODED_PASSWORD
+            
+        elif 'mysql_native_password' in client_auth_plugin:
+            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                'check auth using mysql_native_password')
+            password = handshake_resp.enc_password.value
+            orig_password = orig_password_hash
         else:
-            if DEFAULT_AUTH_METHOD not in client_auth_plugin:
-                new_method = 'caching_sha2_password' if 'caching_sha2_password' in client_auth_plugin else 'mysql_native_password'
-                if new_method == 'caching_sha2_password':
-                    self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'caching_sha2_password without SSL not supported').send()
-                    return False
-                password = switch_auth(new_method)
-                orig_password = orig_password_hash
-
-            elif 'mysql_native_password' in client_auth_plugin:
-                log.info('connected without SSL, default method')
-                password = handshake_resp.enc_password.value
-                orig_password = orig_password_hash
-            else:
-                log.info('connected without SSL, unknown method, try switch to mysql_native_password')
-                password = switch_auth('mysql_native_password')
-                orig_password = orig_password_hash
-
-        username = handshake_resp.username.value.decode()
+            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                'unknown method, possible ERROR. Try to switch to mysql_native_password')
+            password = switch_auth('mysql_native_password')
+            orig_password = orig_password_hash
 
         try:
             self.session.database = handshake_resp.database.value.decode()
         except Exception:
             self.session.database = None
+        log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+            f'connecting to database {self.session.database}')
 
         if self.isAuthOk(username, orig_username, password, orig_password):
             self.packet(OkPacket).send()
@@ -382,6 +386,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         keyword = sql_lower.split(' ')[0]
 
+        # TODO show tables from {name}
         if keyword == 'start':
             # start transaction
             self.packet(OkPacket).send()
@@ -452,11 +457,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'database()' in sql_lower:
                 self.answerSelectDatabase()
                 return
-
-            # TODO rewrite it
-            # if '`predictors_mariadb`' in sql:
-            #     sql = sql.replace('`predictors_mariadb`', '`mindsdb`.`predictors`')
-
             query = SQLQuery(sql, self.session.database)
             return self.selectAnswer(query)
         elif keyword == 'rollback':

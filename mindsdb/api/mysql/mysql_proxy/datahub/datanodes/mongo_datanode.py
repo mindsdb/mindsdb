@@ -22,7 +22,7 @@ class MongoDataNode(DataNode):
         # return keys of first row
         return list(self._db[table].find_one().keys())
 
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None):
+    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
         selected_cols = {k: 1 for k in columns}
 
         for k, v in where.items():

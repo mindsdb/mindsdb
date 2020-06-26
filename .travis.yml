@@ -62,7 +62,9 @@ deploy:
     skip_cleanup: true
     region: us-west-2
     local_dir: build
-    
+    on:
+      branch: stable
+      
 # after pip is deployed, we can deploy to dockerhub
 after_deploy:
   -  if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "stable" ]]; then sleep 15; fi

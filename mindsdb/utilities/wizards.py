@@ -162,7 +162,7 @@ def daemon_creator(python_path, config_path=None):
 Description=Mindsdb
 
 [Service]
-ExecStart={python_path} -m mindsdb_server { "--config="+config_path  if config_path else ""}
+ExecStart={python_path} -m mindsdb { "--config="+config_path  if config_path else ""}
 
 [Install]
 WantedBy=multi-user.target
@@ -183,7 +183,7 @@ WantedBy=multi-user.target
 
 def make_executable(python_path, exec_path, config_path=None):
     text = f"""#!/bin/bash
-{python_path} -m mindsdb_server { "--config="+config_path  if config_path else ""}
+{python_path} -m mindsdb { "--config="+config_path  if config_path else ""}
 """
 
     with open(exec_path, 'w') as fp:

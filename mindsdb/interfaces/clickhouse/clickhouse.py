@@ -37,6 +37,14 @@ class Clickhouse():
 
         return column_declaration
 
+    def check_connection(self):
+        try:
+            res = self._query('select 1;')
+            connected = res.status_code == 200
+        except Exception:
+            connected = False
+        return connected
+
     def _query(self, query):
         params = {'user': 'default'}
         try:

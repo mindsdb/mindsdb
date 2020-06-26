@@ -40,6 +40,15 @@ class Mariadb():
 
         return column_declaration
 
+    def check_connection(self):
+        try:
+            con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+            connected = con.is_connected()
+            con.close()
+        except Exception:
+            connected = False
+        return connected
+
     def _query(self, query):
         con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
 

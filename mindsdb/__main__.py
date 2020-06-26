@@ -60,6 +60,9 @@ if __name__ == '__main__':
         if clickhouse_enabled:
             from mindsdb.interfaces.clickhouse.clickhouse import Clickhouse
             clickhouse = Clickhouse(config)
+            if clickhouse.check_connection() is False:
+                print('ERROR: can`t connect to Clickhouse')
+                sys.exit(1)
             clickhouse.setup_clickhouse(models_data=models_data)
 
         try:
@@ -70,6 +73,9 @@ if __name__ == '__main__':
         if mariadb_enabled:
             from mindsdb.interfaces.mariadb.mariadb import Mariadb
             mariadb = Mariadb(config)
+            if mariadb.check_connection() is False:
+                print('ERROR: can`t connect to MariaBD')
+                sys.exit(1)
             mariadb.setup_mariadb(models_data=models_data)
 
     p_arr = []

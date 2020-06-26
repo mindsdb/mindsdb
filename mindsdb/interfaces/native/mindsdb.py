@@ -41,7 +41,6 @@ class MindsdbNative():
         p.start()
         predictions = p.join()
         '''
-
         mdb = mindsdb_native.Predictor(name=name)
 
         kwargs['use_gpu'] = self.config.get('use_gpu', None)

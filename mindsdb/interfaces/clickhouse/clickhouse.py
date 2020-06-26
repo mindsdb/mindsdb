@@ -8,8 +8,6 @@ class Clickhouse():
         self.port = config['integrations']['default_clickhouse']['port']
         self.user = config['integrations']['default_clickhouse']['user']
         self.password = config['integrations']['default_clickhouse']['password']
-        self.setup_clickhouse()
-
 
     def _to_clickhouse_table(self, stats):
         subtype_map = {
@@ -58,7 +56,9 @@ class Clickhouse():
 
         return response
 
-    def setup_clickhouse(self):
+    def setup_clickhouse(self, models_data):
+        self._query('DROP DATABASE IF EXISTS MINDSB')
+
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
 
         msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
@@ -84,7 +84,11 @@ class Clickhouse():
             ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'commands_clickhouse', '{msqyl_user}', '{msqyl_pass}')
         """
         print(f'Executing table creation query to create command table:\n{q}\n')
+
         self._query(q)
+
+        for model_data in models_data:
+            self.register_predictor(model_data['name'], model_data['data_analysis_v2'])
 
     def register_predictor(self, name, stats):
         columns_sql = ','.join(self._to_clickhouse_table(stats))

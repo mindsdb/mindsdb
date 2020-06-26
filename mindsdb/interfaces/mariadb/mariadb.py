@@ -13,9 +13,6 @@ class Mariadb():
         self.user = config['integrations']['default_mariadb']['user']
         self.password = config['integrations']['default_mariadb']['password']
 
-        self.setup_mariadb()
-
-
     def _to_mariadb_table(self, stats):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
@@ -71,7 +68,9 @@ class Mariadb():
 
         return connect
 
-    def setup_mariadb(self):
+    def setup_mariadb(self, models_data):
+        self._query('DROP DATABASE IF EXISTS mindsdb')
+
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
 
         connect = self._get_connect_string('predictors_mariadb')
@@ -96,6 +95,9 @@ class Mariadb():
         """
         print(f'Executing table creation query to create command table:\n{q}\n')
         self._query(q)
+
+        for model_data in models_data:
+            self.register_predictor(model_data['name'], model_data['data_analysis_v2'])
 
     def register_predictor(self, name, stats):
         columns_sql = ','.join(self._to_mariadb_table(stats))

@@ -8,6 +8,7 @@ import torch.multiprocessing as mp
 from torch.multiprocessing import Process
 
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.utilities.fs import get_or_create_dir_struct
@@ -46,6 +47,30 @@ if __name__ == '__main__':
         'http': start_http,
         'mysql': start_mysql
     }
+
+    if len(api_arr) > 0:
+        mdb = MindsdbNative(config)
+        models_data = [mdb.get_model_data(x['name']) for x in mdb.get_models()]
+
+        try:
+            clickhouse_enabled = config['integrations']['default_clickhouse']['enabled']
+        except Exception:
+            clickhouse_enabled = False
+
+        if clickhouse_enabled:
+            from mindsdb.interfaces.clickhouse.clickhouse import Clickhouse
+            clickhouse = Clickhouse(config)
+            clickhouse.setup_clickhouse(models_data=models_data)
+
+        try:
+            mariadb_enabled = config['integrations']['default_mariadb']['enabled']
+        except Exception:
+            mariadb_enabled = False
+
+        if mariadb_enabled:
+            from mindsdb.interfaces.mariadb.mariadb import Mariadb
+            mariadb = Mariadb(config)
+            mariadb.setup_mariadb(models_data=models_data)
 
     p_arr = []
     ctx = mp.get_context('spawn')

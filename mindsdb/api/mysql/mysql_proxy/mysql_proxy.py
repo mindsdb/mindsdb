@@ -432,7 +432,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         elif keyword == 'delete' and \
             ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
-            self.delete_predictor_answer(sql, db)
+            self.delete_predictor_answer(sql)
             return
         elif keyword == 'insert' and \
             ('mindsdb.commands' in sql_lower or self.session.database == 'mindsdb' and 'commands' in sql_lower):

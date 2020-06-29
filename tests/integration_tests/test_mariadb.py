@@ -183,11 +183,30 @@ class MariaDBTest(unittest.TestCase):
             self.assertTrue(res['location'] is not None and res['location'] != 'None')
             self.assertIsInstance(res['$rental_price_confidence'], float)
 
-    def test_5_delete_predictor(self):
+    def test_5_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
             insert into mindsdb.commands values ('delete predictor {test_predictor_name}');
+        """)
+
+        print(f'Predictor {test_predictor_name} not exists')
+        models = [x['name'] for x in self.mdb.get_models()]
+        self.assertTrue(test_predictor_name not in models)
+
+        print(f'Test predictor table not exists')
+        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = [x[0] for x in mindsdb_tables]
+        self.assertTrue(test_predictor_name not in mindsdb_tables)
+
+    def test_6_insert_predictor_again(self):
+        print(f'\nExecuting {inspect.stack()[0].function}')
+        self.test_2_insert_predictor()
+
+    def test_7_delete_predictor_by_delete_statement(self):
+        print(f'\nExecuting {inspect.stack()[0].function}')
+        query(f"""
+            delete from mindsdb.predictors where name='{test_predictor_name}';
         """)
 
         print(f'Predictor {test_predictor_name} not exists')

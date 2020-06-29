@@ -279,11 +279,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def insert_predictor_answer(self, sql):
+        global mdb, default_store
         insert = SQLQuery.parse_insert(sql)
 
-        datasources = default_store.get_datasources()
-        if insert['name'] in [x['name'] for x in datasources]:
-            self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg=f"datasource with name '{insert['name']}'' already exists").send()
+        models = mdb.get_models()
+        if insert['name'] in [x['name'] for x in models]:
+            self.packet(
+                ErrPacket,
+                err_code=ERR.ER_WRONG_ARGUMENTS,
+                msg=f"predictor with name '{insert['name']}'' already exists"
+            ).send()
             return
 
         kwargs = {}

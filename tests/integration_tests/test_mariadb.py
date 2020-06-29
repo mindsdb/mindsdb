@@ -17,7 +17,7 @@ from mindsdb.interfaces.mariadb.mariadb import Mariadb
 
 TEST_CONFIG = '/path_to/config.json'
 
-test_csv = 'tests/home_rentals.csv'
+test_csv = 'tests/temp/home_rentals.csv'
 test_data_table = 'home_rentals'
 test_predictor_name = 'test_predictor'
 

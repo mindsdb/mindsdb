@@ -30,6 +30,7 @@ class MindsDBDataNode(DataNode):
         columns = []
         columns += [x['column_name'] for x in model['data_analysis']['input_columns_metadata']]
         columns += [x['column_name'] for x in model['data_analysis']['target_columns_metadata']]
+        columns += [f"${x['column_name']}_confidence" for x in model['data_analysis']['target_columns_metadata']]
         # TODO this should be added just for clickhouse queries
         columns += ['$select_data_query']
         return columns
@@ -90,10 +91,13 @@ class MindsDBDataNode(DataNode):
 
         data = []
         keys = [x for x in list(res.data.keys()) if x in columns]
+        confidence_keys = [f'{x}_confidence' for x in predicted_columns]
         for i in range(length):
             row = {}
             for key in keys:
                 row[key] = res.data[key][i]
+            for key in confidence_keys:
+                row['$' + key] = res.data[key][i]
             data.append(row)
 
         if select_data_query is not None:

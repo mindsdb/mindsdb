@@ -77,7 +77,7 @@ class Mariadb():
 
         return connect
 
-    def setup_mariadb(self, models_data):
+    def setup_mariadb(self, models_meta):
         self._query('DROP DATABASE IF EXISTS mindsdb')
 
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
@@ -105,12 +105,16 @@ class Mariadb():
         print(f'Executing table creation query to create command table:\n{q}\n')
         self._query(q)
 
-        for model_data in models_data:
-            self.register_predictor(model_data['name'], model_data['data_analysis_v2'])
+        for model_meta in models_meta:
+            self.register_predictor(model_meta)
 
-    def register_predictor(self, name, stats):
+    def register_predictor(self, model_meta):
+        name = model_meta['name']
+        stats = model_meta['data_analysis']
         columns_sql = ','.join(self._to_mariadb_table(stats))
         columns_sql += ',`$select_data_query` varchar(500)'
+        for col in model_meta['predict_cols']:
+            columns_sql += f',`${col}_confidence` double'
 
         connect = self._get_connect_string(f'{name}_mariadb')
 

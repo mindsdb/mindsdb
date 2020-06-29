@@ -50,7 +50,13 @@ if __name__ == '__main__':
 
     if len(api_arr) > 0:
         mdb = MindsdbNative(config)
-        models_data = [mdb.get_model_data(x['name']) for x in mdb.get_models()]
+        models_meta = [
+            {
+                'name': x['name'],
+                'predict_cols': x['predict'],
+                'data_analysis': mdb.get_model_data(x['name'])['data_analysis_v2']
+            } for x in mdb.get_models()
+        ]
 
         try:
             clickhouse_enabled = config['integrations']['default_clickhouse']['enabled']
@@ -63,7 +69,7 @@ if __name__ == '__main__':
             if clickhouse.check_connection() is False:
                 print('ERROR: can`t connect to Clickhouse')
                 sys.exit(1)
-            clickhouse.setup_clickhouse(models_data=models_data)
+            clickhouse.setup_clickhouse(models_meta=models_meta)
 
         try:
             mariadb_enabled = config['integrations']['default_mariadb']['enabled']
@@ -76,7 +82,7 @@ if __name__ == '__main__':
             if mariadb.check_connection() is False:
                 print('ERROR: can`t connect to MariaBD')
                 sys.exit(1)
-            mariadb.setup_mariadb(models_data=models_data)
+            mariadb.setup_mariadb(models_meta=models_meta)
 
     p_arr = []
     ctx = mp.get_context('spawn')

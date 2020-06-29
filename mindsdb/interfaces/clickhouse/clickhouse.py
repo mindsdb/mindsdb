@@ -64,7 +64,7 @@ class Clickhouse():
 
         return response
 
-    def setup_clickhouse(self, models_data):
+    def setup_clickhouse(self, models_meta):
         self._query('DROP DATABASE IF EXISTS MINDSB')
 
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
@@ -95,12 +95,16 @@ class Clickhouse():
 
         self._query(q)
 
-        for model_data in models_data:
-            self.register_predictor(model_data['name'], model_data['data_analysis_v2'])
+        for model_meta in models_meta:
+            self.register_predictor(model_meta)
 
-    def register_predictor(self, name, stats):
+    def register_predictor(self, model_meta):
+        name = model_meta['name']
+        stats = model_meta['data_analysis']
         columns_sql = ','.join(self._to_clickhouse_table(stats))
         columns_sql += ',`$select_data_query` Nullable(String)'
+        for col in model_meta['predict_cols']:
+            columns_sql += ',`${col}_confidence` Nullable(Float64)'
 
         msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
         msqyl_user = self.config['api']['mysql']['user']

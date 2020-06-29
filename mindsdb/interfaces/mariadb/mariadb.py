@@ -97,6 +97,8 @@ class Mariadb():
         print(f'Executing table creation query to create predictors list:\n{q}\n')
         self._query(q)
 
+        connect = self._get_connect_string('commands_mariadb')
+
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.commands (
                 command VARCHAR(500)

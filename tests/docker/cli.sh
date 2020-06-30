@@ -15,4 +15,9 @@ if [ $1 = "mariadb" ]; then
     fi
     mkdir -p mariadb/connectData/
     docker-compose up mariadb-test
+elif [ $1 = "mariadb-stop" ]; then
+    docker-compose stop mariadb-test
+elif [ $1 = "clickhouse" ]; then
+    mkdir -p clickhouse/database/
+    docker-compose up clickhouse
 fi

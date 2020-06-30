@@ -127,7 +127,7 @@ class Analyze(Resource):
             print('No valid datasource given')
             abort(400, 'No valid datasource given')
 
-        analysis = ca.default_store.get_analysis(ds['source'])
+        analysis = ca.default_store.get_analysis(ds['name'])
 
         return analysis, 200
 

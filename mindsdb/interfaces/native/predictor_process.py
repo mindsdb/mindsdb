@@ -31,7 +31,7 @@ class PredictorProcess(ctx.Process):
                 **kwargs
             )
 
-            stats = mdb.get_model_data()['data_analysis_v2']
+            stats = mindsdb_native.F.get_model_data(name)['data_analysis_v2']
 
             DatabaseWrapper(config).register_predictors([{
                 'name': name,

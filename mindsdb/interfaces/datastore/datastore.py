@@ -24,10 +24,11 @@ class DataStore():
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):
-        try:
-            return self.mindsdb_native.analyse_dataset(ds)
-        except:
+        if isinstance(ds,str):
             return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
+        else:
+            return self.mindsdb_native.analyse_dataset(ds)
+
 
     def get_datasources(self):
         datasource_arr = []
@@ -71,9 +72,6 @@ class DataStore():
             else:
                 break
 
-        print('\n\n\n\n-------------------\n\n\n\n')
-        print(self.dir, name)
-        print('\n\n\n\n-------------------\n\n\n\n')
         ds_meta_dir = os.path.join(self.dir, name)
         os.mkdir(ds_meta_dir)
 

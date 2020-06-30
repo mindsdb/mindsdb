@@ -19,7 +19,7 @@ class DatabaseWrapper():
             for integration in self.integration_arr: integration.setup()
 
     def register_predictors(self, model_data_arr):
-        for integration in self.integration_arr: integration.register_predictor(model_data)
+        for integration in self.integration_arr: integration.register_predictors(model_data_arr)
 
     def unregister_predictor(self, name):
         for integration in self.integration_arr: integration.unregister_predictor(name)

@@ -26,7 +26,8 @@ class Mariadb():
             DATA_SUBTYPES.IMAGE: 'VARCHAR(500)',
             DATA_SUBTYPES.VIDEO: 'VARCHAR(500)',
             DATA_SUBTYPES.AUDIO: 'VARCHAR(500)',
-            DATA_SUBTYPES.TEXT: 'VARCHAR(500)',
+            DATA_SUBTYPES.SHORT: 'VARCHAR(500)',
+            DATA_SUBTYPES.RICH: 'VARCHAR(500)',
             DATA_SUBTYPES.ARRAY: 'VARCHAR(500)'
         }
 
@@ -69,7 +70,7 @@ class Mariadb():
 
         return connect
 
-    def setup(self, model_data_arr):
+    def setup(self):
         self._query('DROP DATABASE IF EXISTS mindsdb')
 
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
@@ -99,23 +100,24 @@ class Mariadb():
         print(f'Executing table creation query to create command table:\n{q}\n')
         self._query(q)
 
-    def register_predictors(self, model_meta):
-        name = model_meta['name']
-        stats = model_meta['data_analysis']
-        columns_sql = ','.join(self._to_mariadb_table(stats))
-        columns_sql += ',`$select_data_query` varchar(500)'
-        for col in model_meta['predict_cols']:
-            columns_sql += f',`${col}_confidence` double'
+    def register_predictors(self, model_data_arr):
+        for model_meta in model_data_arr:
+            name = model_meta['name']
+            stats = model_meta['data_analysis']
+            columns_sql = ','.join(self._to_mariadb_table(stats))
+            columns_sql += ',`$select_data_query` varchar(500)'
+            for col in model_meta['predict_cols']:
+                columns_sql += f',`${col}_confidence` double'
 
-        connect = self._get_connect_string(f'{name}_mariadb')
+            connect = self._get_connect_string(f'{name}_mariadb')
 
-        q = f"""
-                CREATE TABLE mindsdb.{name}
-                ({columns_sql}
-                ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
-        """
-        print(f'Executing table creation query to sync predictor:\n{q}\n')
-        self._query(q)
+            q = f"""
+                    CREATE TABLE mindsdb.{name}
+                    ({columns_sql}
+                    ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+            """
+            print(f'Executing table creation query to sync predictor:\n{q}\n')
+            self._query(q)
 
     def unregister_predictor(self, name):
         q = f"""

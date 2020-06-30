@@ -60,7 +60,6 @@ class DataStore():
         shutil.rmtree(os.path.join(self.dir, data_sources['name']))
 
     def save_datasource(self, name, source_type, source, file_path=None):
-        print(name, source_type, source)
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
 
@@ -72,6 +71,9 @@ class DataStore():
             else:
                 break
 
+        print('\n\n\n\n-------------------\n\n\n\n')
+        print(self.dir, name)
+        print('\n\n\n\n-------------------\n\n\n\n')
         ds_meta_dir = os.path.join(self.dir, name)
         os.mkdir(ds_meta_dir)
 

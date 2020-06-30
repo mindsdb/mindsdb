@@ -2,13 +2,13 @@ import requests
 from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 
 class Clickhouse():
-    def __init__(self, config):
+    def __init__(self, config, name):
         self.config = config
         self.name = name
-        self.host = config['integrations']['default_clickhouse']['host']
-        self.port = config['integrations']['default_clickhouse']['port']
-        self.user = config['integrations']['default_clickhouse']['user']
-        self.password = config['integrations']['default_clickhouse']['password']
+        self.host = config['integrations'][name]['host']
+        self.port = config['integrations'][name]['port']
+        self.user = config['integrations'][name]['user']
+        self.password = config['integrations'][name]['password']
 
     def _to_clickhouse_table(self, stats):
         subtype_map = {
@@ -22,7 +22,8 @@ class Clickhouse():
             DATA_SUBTYPES.IMAGE: 'Nullable(String)',
             DATA_SUBTYPES.VIDEO: 'Nullable(String)',
             DATA_SUBTYPES.AUDIO: 'Nullable(String)',
-            DATA_SUBTYPES.TEXT: 'Nullable(String)',
+            DATA_SUBTYPES.SHORT: 'Nullable(String)',
+            DATA_SUBTYPES.RICH: 'Nullable(String)',
             DATA_SUBTYPES.ARRAY: 'Array(Float64)'
         }
 
@@ -41,17 +42,17 @@ class Clickhouse():
     def _query(self, query):
         params = {'user': 'default'}
         try:
-            params['user'] = self.config['integrations']['default_clickhouse']['user']
+            params['user'] = self.user
         except:
             pass
 
         try:
-            params['password'] = self.config['integrations']['default_clickhouse']['password']
+            params['password'] = self.password
         except:
             pass
 
-        host = self.config['integrations']['default_clickhouse']['host']
-        port = self.config['integrations']['default_clickhouse']['port']
+        host = self.host
+        port = self.port
 
         response = requests.post(f'http://{host}:{port}', data=query, params=params)
 
@@ -89,25 +90,26 @@ class Clickhouse():
         self._query(q)
 
 
-    def register_predictors(self, model_meta):
-        name = model_meta['name']
-        stats = model_meta['data_analysis']
-        columns_sql = ','.join(self._to_clickhouse_table(stats))
-        columns_sql += ',`$select_data_query` Nullable(String)'
-        for col in model_meta['predict_cols']:
-            columns_sql += ',`${col}_confidence` Nullable(Float64)'
+    def register_predictors(self, model_data_arr):
+        for model_meta in model_data_arr:
+            name = model_meta['name']
+            stats = model_meta['data_analysis']
+            columns_sql = ','.join(self._to_clickhouse_table(stats))
+            columns_sql += ',`$select_data_query` Nullable(String)'
+            for col in model_meta['predict_cols']:
+                columns_sql += ',`${col}_confidence` Nullable(Float64)'
 
-        msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
-        msqyl_user = self.config['api']['mysql']['user']
-        msqyl_pass = self.config['api']['mysql']['password']
+            msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
+            msqyl_user = self.config['api']['mysql']['user']
+            msqyl_pass = self.config['api']['mysql']['password']
 
-        q = f"""
-                CREATE TABLE mindsdb.{name}
-                ({columns_sql}
-                ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', '{name}_clickhouse', '{msqyl_user}', '{msqyl_pass}')
-        """
-        print(f'Executing table creation query to sync predictor:\n{q}\n')
-        self._query(q)
+            q = f"""
+                    CREATE TABLE mindsdb.{name}
+                    ({columns_sql}
+                    ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', '{name}_clickhouse', '{msqyl_user}', '{msqyl_pass}')
+            """
+            print(f'Executing table creation query to sync predictor:\n{q}\n')
+            self._query(q)
 
     def unregister_predictor(self, name):
         q = f"""

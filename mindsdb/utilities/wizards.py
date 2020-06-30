@@ -141,7 +141,7 @@ n0PAUDF7eqI/kYskiWUX
         config['integrations']['default_clickhouse']['port'] = _in('Clickhouse port: ',8123,use_default)
         config['integrations']['default_clickhouse']['user'] = _in('Clickhouse user: ','default',use_default)
         config['integrations']['default_clickhouse']['password'] = _in('Clickhouse password: ','',use_default)
-        config['integrations']['default_mariadb']['type'] = 'clickhouse'
+        config['integrations']['default_clickhouse']['type'] = 'clickhouse'
 
     mariadb = _in('Connect to Mariadb ? [Y/N]','Y',use_default)
     if mariadb in ['Y','y']:

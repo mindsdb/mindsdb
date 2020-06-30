@@ -30,6 +30,10 @@ def cast_df_columns_types(df, stats):
         DATA_TYPES.SEQUENTIAL: {
             DATA_SUBTYPES.TEXT: 'object',
             DATA_SUBTYPES.ARRAY: 'object'
+        },
+        DATA_TYPES.TEXT: {
+            DATA_SUBTYPES.SHORT: 'object',
+            DATA_SUBTYPES.RICH: 'object'
         }
     }
 

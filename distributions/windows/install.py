@@ -10,15 +10,16 @@ GET_PIP_URL = 'https://bootstrap.pypa.io/get-pip.py'
 VC_REDIST_URL = 'https://aka.ms/vs/16/release/vc_redist.x64.exe'
 
 if len(sys.argv) < 2:
-    sys.exit('Usage: ./{} install_dir'.format(__file__.split('.')[0]))
-
+    INSTALL_DIR = os.path.join(os.path.abspath('mindsdb'))
+else:
+    INSTALL_DIR = os.path.join(os.path.abspath(sys.argv[1]), 'mindsdb')
+    
 
 def make_dir(d):
     if not os.path.isdir(d):
         os.makedirs(d)
 
 
-INSTALL_DIR = os.path.join(os.path.abspath(sys.argv[1]), 'mindsdb')
 PYTHON_DIR = os.path.join(INSTALL_DIR, 'python')
 
 make_dir(INSTALL_DIR)

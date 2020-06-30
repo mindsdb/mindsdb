@@ -44,7 +44,7 @@ class InformationSchema(DataNode):
             return self.information_schema[tn]
         raise Exception()
 
-    def select(self, columns=None, table=None, where=None, order_by=None, group_by=None):
+    def select(self, columns=None, table=None, where=None, order_by=None, group_by=None, came_from=None):
         tn = table.upper()
         if tn == 'SCHEMATA':
             # there is two query we can process, both hardcoded:

@@ -71,7 +71,7 @@ class CSVDataNode(DataNode):
             results.append(result)
         return ' and '.join(results)
 
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None):
+    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
         frame = self.frames[table]
 
         where_str = self._getPythonCondition(where, 'and')

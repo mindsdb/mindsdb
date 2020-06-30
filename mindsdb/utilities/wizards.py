@@ -13,6 +13,9 @@ def _in(ask, default, use_default):
     if type(default) == int:
         user_input = int(user_input)
 
+    if type(default) == bool:
+        user_input = int(user_input)
+
     return user_input
 
 def auto_config(python_path,pip_path,predictor_dir,datasource_dir):
@@ -133,7 +136,7 @@ n0PAUDF7eqI/kYskiWUX
 
     clickhouse = _in('Connect to clickhouse ? [Y/N]','Y',use_default)
     if clickhouse in ['Y','y']:
-        config['integrations']['default_clickhouse']['enabled'] = True
+        config['integrations']['default_mariadb']['enabled'] = _in('Enable Clickhouse integration ?: ',False,use_default)
         config['integrations']['default_clickhouse']['host'] = _in('Clickhouse host: ','localhost',use_default)
         config['integrations']['default_clickhouse']['port'] = _in('Clickhouse port: ',8123,use_default)
         config['integrations']['default_clickhouse']['user'] = _in('Clickhouse user: ','default',use_default)
@@ -142,7 +145,7 @@ n0PAUDF7eqI/kYskiWUX
 
     mariadb = _in('Connect to Mariadb ? [Y/N]','Y',use_default)
     if mariadb in ['Y','y']:
-        config['integrations']['default_mariadb']['enabled'] = True
+        config['integrations']['default_mariadb']['enabled'] = _in('Enable Mariadb integration ?: ',False,use_default)
         config['integrations']['default_mariadb']['host'] = _in('Mariadb host: ','localhost',use_default)
         config['integrations']['default_mariadb']['port'] = _in('Mariadb port: ',3306,use_default)
         config['integrations']['default_mariadb']['user'] = _in('Mariadb user: ','root',use_default)

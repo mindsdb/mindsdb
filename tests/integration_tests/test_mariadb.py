@@ -7,6 +7,7 @@ import inspect
 import subprocess
 import pathlib
 import atexit
+import json
 
 import mysql.connector
 
@@ -20,9 +21,12 @@ TEST_CONFIG = '/path_to/config.json'
 
 START_TIMEOUT = 15
 
-test_csv = 'tests/temp/home_rentals.csv'
-test_data_table = 'home_rentals'
-test_predictor_name = 'test_predictor'
+TEST_CSV = {
+    'name': 'home_rentals.csv',
+    'url': 'https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv'
+}
+TEST_DATA_TABLE = 'home_rentals'
+TEST_PREDICTOR_NAME = 'test_predictor'
 
 config = Config(TEST_CONFIG)
 
@@ -58,16 +62,16 @@ def create_churn_dataset(self):
 
         models = cls.mdb.get_models()
         models = [x['name'] for x in models]
-        if test_predictor_name in models:
-            cls.mdb.delete_model(test_predictor_name)
+        if TEST_PREDICTOR_NAME in models:
+            cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
         query('create database if not exists test')
         test_tables = query('show tables from test')
         test_tables = [x[0] for x in test_tables]
-        if test_data_table not in test_tables:
-            query(f'DROP TABLE IF EXISTS data.{test_data_table}_{mode}')
+        if TEST_DATA_TABLE not in test_tables:
+            query(f'DROP TABLE IF EXISTS data.{TEST_DATA_TABLE}_{mode}')
             query(f'''
-                CREATE TABLE data.{test_data_table}_{mode} (
+                CREATE TABLE data.{TEST_DATA_TABLE}_{mode} (
                     CreditScore int,
                     Geography varchar(300),
                     Gender varchar(300),
@@ -98,7 +102,7 @@ def create_churn_dataset(self):
                         EstimatedSalary = float(row[9])
                         Exited = int(row[10])
 
-                        query(f'''INSERT INTO data.{test_data_table}_{mode} VALUES (
+                        query(f'''INSERT INTO data.{TEST_DATA_TABLE}_{mode} VALUES (
                             {CreditScore},
                             '{Geography}',
                             '{Gender}',
@@ -119,22 +123,17 @@ class MariaDBTest(unittest.TestCase):
     def setUpClass(cls):
         cls.mdb = MindsdbNative(config)
 
-        if os.path.isfile(test_csv) is False:
-            r = requests.get("https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv")
-            with open(test_csv, 'wb') as f:
-                f.write(r.content)
-
         models = cls.mdb.get_models()
         models = [x['name'] for x in models]
-        if test_predictor_name in models:
-            cls.mdb.delete_model(test_predictor_name)
+        if TEST_PREDICTOR_NAME in models:
+            cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
         query('create database if not exists test')
         test_tables = query('show tables from test')
         test_tables = [x[0] for x in test_tables]
-        if test_data_table not in test_tables:
+        if TEST_DATA_TABLE not in test_tables:
             query(f'''
-                CREATE TABLE test.{test_data_table} (
+                CREATE TABLE test.{TEST_DATA_TABLE} (
                     number_of_rooms int,
                     number_of_bathrooms int,
                     sqft int,
@@ -145,7 +144,13 @@ class MariaDBTest(unittest.TestCase):
                     rental_price int
                 )
             ''')
-            with open(test_csv) as f:
+
+            test_csv_path = str(pathlib.Path(__file__).parent.absolute().joinpath('../temp/', TEST_CSV['name']).resolve())
+            if os.path.isfile(test_csv_path) is False:
+                r = requests.get(TEST_CSV['url'])
+                with open(test_csv_path, 'wb') as f:
+                    f.write(r.content)
+            with open(test_csv_path) as f:
                 csvf = csv.reader(f)
                 i = 0
                 for row in csvf:
@@ -158,7 +163,7 @@ class MariaDBTest(unittest.TestCase):
                         initial_price = int(row[5])
                         neighborhood = str(row[6])
                         rental_price = int(float(row[7]))
-                        query(f'''INSERT INTO test.{test_data_table} VALUES (
+                        query(f'''INSERT INTO test.{TEST_DATA_TABLE} VALUES (
                             {number_of_rooms},
                             {number_of_bathrooms},
                             {sqft},
@@ -174,19 +179,19 @@ class MariaDBTest(unittest.TestCase):
         print(f'\nExecuting {inspect.stack()[0].function}')
         print('Check all testing objects not exists')
         
-        print(f'Predictor {test_predictor_name} not exists')
+        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
         models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(test_predictor_name not in models)
+        self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print(f'Test datasource exists')
         test_tables = query('show tables from test')
         test_tables = [x[0] for x in test_tables]
-        self.assertTrue(test_data_table in test_tables)
+        self.assertTrue(TEST_DATA_TABLE in test_tables)
 
         print(f'Test predictor table not exists')
         mindsdb_tables = query('show tables from mindsdb')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
-        self.assertTrue(test_predictor_name not in mindsdb_tables)
+        self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
         print(f'mindsdb.predictors table exists')
         self.assertTrue('predictors' in mindsdb_tables)
@@ -200,22 +205,22 @@ class MariaDBTest(unittest.TestCase):
         query(f"""
             insert into mindsdb.predictors (name, predict_cols, select_data_query, training_options) values
             (
-                '{test_predictor_name}',
+                '{TEST_PREDICTOR_NAME}',
                 'rental_price, location',
-                'select * from test.{test_data_table} limit 100',
+                'select * from test.{TEST_DATA_TABLE} limit 100',
                 '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
             );
         """)
 
         print(f'predictor record in mindsdb.predictors')
-        res = query(f"select status from mindsdb.predictors where name = '{test_predictor_name}'", as_dict=True)
+        res = query(f"select status from mindsdb.predictors where name = '{TEST_PREDICTOR_NAME}'", as_dict=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
         print(f'predictor table in mindsdb db')
         mindsdb_tables = query('show tables from mindsdb')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
-        self.assertTrue(test_predictor_name in mindsdb_tables)
+        self.assertTrue(TEST_PREDICTOR_NAME in mindsdb_tables)
 
     def test_3_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
@@ -223,7 +228,7 @@ class MariaDBTest(unittest.TestCase):
             select
                 rental_price, location, sqft, $rental_price_confidence, number_of_rooms
             from
-                mindsdb.{test_predictor_name} where sqft=1000;
+                mindsdb.{TEST_PREDICTOR_NAME} where sqft=1000;
         """, as_dict=True)
 
         print('check result')
@@ -244,7 +249,7 @@ class MariaDBTest(unittest.TestCase):
             select
                 rental_price, location, sqft, $rental_price_confidence, number_of_rooms
             from
-                mindsdb.{test_predictor_name} where $select_data_query='select * from test.{test_data_table} limit 3';
+                mindsdb.{TEST_PREDICTOR_NAME} where $select_data_query='select * from test.{TEST_DATA_TABLE} limit 3';
         """, as_dict=True)
 
         print('check result')
@@ -258,17 +263,17 @@ class MariaDBTest(unittest.TestCase):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
-            insert into mindsdb.commands values ('delete predictor {test_predictor_name}');
+            insert into mindsdb.commands values ('delete predictor {TEST_PREDICTOR_NAME}');
         """)
 
-        print(f'Predictor {test_predictor_name} not exists')
+        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
         models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(test_predictor_name not in models)
+        self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print(f'Test predictor table not exists')
         mindsdb_tables = query('show tables from mindsdb')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
-        self.assertTrue(test_predictor_name not in mindsdb_tables)
+        self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
     def test_6_insert_predictor_again(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
@@ -277,17 +282,17 @@ class MariaDBTest(unittest.TestCase):
     def test_7_delete_predictor_by_delete_statement(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
-            delete from mindsdb.predictors where name='{test_predictor_name}';
+            delete from mindsdb.predictors where name='{TEST_PREDICTOR_NAME}';
         """)
 
-        print(f'Predictor {test_predictor_name} not exists')
+        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
         models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(test_predictor_name not in models)
+        self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print(f'Test predictor table not exists')
         mindsdb_tables = query('show tables from mindsdb')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
-        self.assertTrue(test_predictor_name not in mindsdb_tables)
+        self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
 
 def wait_mysql(timeout):
@@ -303,10 +308,41 @@ def wait_mysql(timeout):
 
     return connected
 
+def stop_mariadb():
+    maria_sp = subprocess.Popen(
+        ['./cli.sh', 'mariadb-stop'],
+        cwd=pathlib.Path(__file__).parent.absolute().joinpath('../docker/').resolve(),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    maria_sp.wait()
 
 if __name__ == "__main__":
     for key in config._config['integrations'].keys():
         config._config['integrations'][key]['enabled'] = key == 'default_mariadb'
+
+    TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../temp/').resolve()
+
+    config.merge({
+        'interface': {
+            'datastore': {
+                'storage_dir': str(pathlib.Path(TEMP_DIR).joinpath('datastore/'))
+            },
+            'mindsdb_native': {
+                'storage_dir': str(pathlib.Path(TEMP_DIR).joinpath('predictors/'))
+            }
+        }
+    })
+
+    if not os.path.isdir(config['interface']['datastore']['storage_dir']):
+        os.makedirs(config['interface']['datastore']['storage_dir'])
+    
+    if not os.path.isdir(config['interface']['mindsdb_native']['storage_dir']):
+        os.makedirs(config['interface']['mindsdb_native']['storage_dir'])
+
+    temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
+    with open(temp_config_path, 'wt') as f:
+        f.write(json.dumps(config._config))
 
     maria_sp = subprocess.Popen(
         ['./cli.sh', 'mariadb'],
@@ -314,16 +350,18 @@ if __name__ == "__main__":
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-    atexit.register(maria_sp.terminate)
+    atexit.register(stop_mariadb)
     maria_ready = wait_mysql(START_TIMEOUT)
+
     sp = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', TEST_CONFIG],
+        ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-    atexit.register(sp.terminate)
+    atexit.register(sp.kill)
     port_num = config['api']['mysql']['port']
     api_ready = wait_port(port_num, START_TIMEOUT)
+
     try:
         if maria_ready is False or api_ready is False:
             print(f'Failed by timeout. MariaDB started={maria_ready}, MindsDB started={api_ready}')

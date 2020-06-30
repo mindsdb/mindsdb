@@ -25,7 +25,7 @@ class FakeDataNode(DataNode):
     def getTableColumns(self, tableName):
         return self.tables[tableName]
 
-    def select(self, table=None, columns=None, where=None, where_data=None, order_by=None, group_by=None):
+    def select(self, table=None, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
         if columns is None:
             columns = self.getTableColumns(table)
         result = {

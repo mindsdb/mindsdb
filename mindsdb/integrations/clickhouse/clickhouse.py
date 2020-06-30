@@ -57,7 +57,7 @@ class Clickhouse():
 
         return response
 
-    def setup(self, model_data_arr):
+    def setup(self):
         self._query('DROP DATABASE IF EXISTS MINDSB')
 
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
@@ -88,8 +88,6 @@ class Clickhouse():
 
         self._query(q)
 
-        for model_meta in model_data_arr:
-            self.register_predictor(model_meta)
 
     def register_predictors(self, model_meta):
         name = model_meta['name']

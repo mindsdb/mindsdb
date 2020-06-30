@@ -33,7 +33,7 @@ class PredictorProcess(ctx.Process):
 
             stats = mdb.get_model_data()['data_analysis_v2']
 
-            DatabaseWrapper(config).register_predictor([{
+            DatabaseWrapper(config).register_predictors([{
                 'name': name,
                 'predict_cols': to_predict,
                 'data_analysis': stats

@@ -2,8 +2,8 @@ import pandas
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb.interfaces.clickhouse.clickhouse import Clickhouse
-from mindsdb.interfaces.mariadb.mariadb import Mariadb
+from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
+from mindsdb.integrations.mariadb.mariadb import Mariadb
 
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'

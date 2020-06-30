@@ -49,7 +49,7 @@ if __name__ == '__main__':
     }
 
     mdb = MindsdbNative(config)
-    models_meta = [
+    model_data_arr = [
         {
             'name': x['name'],
             'predict_cols': x['predict'],
@@ -57,7 +57,7 @@ if __name__ == '__main__':
         } for x in mdb.get_models()
     ]
     dbw = DatabaseWrapper(config, setup=True)
-    dbw.register_predictor(models_meta)
+    dbw.register_predictors(model_data_arr)
 
     for broken_name in dbw.check_connections():
         print(f'Error failed to integrate with database aliased: {broken_name}')

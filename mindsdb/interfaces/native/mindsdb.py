@@ -1,6 +1,6 @@
 # Mindsdb native interface
 import mindsdb_native
-import mindsdb_native.functional as F
+from mindsdb_native import F
 from dateutil.parser import parse as parse_datetime
 
 from mindsdb.interfaces.native.predictor_process import PredictorProcess
@@ -73,7 +73,7 @@ class MindsdbNative():
     def rename_model(self, name, new_name):
         dbw.unregister_predictor(name)
         F.rename_model(name, new_name)
-        dbw.register_predictor(new_name)
+        dbw.register_predictors((new_name)
 
     def load_model(self, fpath):
         F.load_model(model_archive_path=fpath)

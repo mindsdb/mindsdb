@@ -99,9 +99,6 @@ class Mariadb():
         print(f'Executing table creation query to create command table:\n{q}\n')
         self._query(q)
 
-        for model_meta in model_data_arr:
-            self.register_predictor(model_meta)
-
     def register_predictors(self, model_meta):
         name = model_meta['name']
         stats = model_meta['data_analysis']

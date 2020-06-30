@@ -73,13 +73,12 @@ class MindsdbNative():
     def rename_model(self, name, new_name):
         dbw.unregister_predictor(name)
         F.rename_model(name, new_name)
-        dbw.register_predictors((new_name)
+        dbw.register_predictors(new_name)
 
     def load_model(self, fpath):
+        F.load_model(model_archive_path=fpath)
         # @TODO How do we figure out the name here ?
         #dbw.register_predictor(...)
-        
-        F.load_model(model_archive_path=fpath)
 
     def export_model(self,name):
         F.export_model(model_name=name)

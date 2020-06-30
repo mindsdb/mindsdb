@@ -5,3 +5,6 @@ etc
 mindsdb/logs
 mindsdb/logs
 logs
+tests/temp
+tests/docker/mariadb/connectData
+tests/docker/mariadb/jars

@@ -4,6 +4,7 @@ from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 class Clickhouse():
     def __init__(self, config):
         self.config = config
+        self.name = name
         self.host = config['integrations']['default_clickhouse']['host']
         self.port = config['integrations']['default_clickhouse']['port']
         self.user = config['integrations']['default_clickhouse']['user']
@@ -37,14 +38,6 @@ class Clickhouse():
 
         return column_declaration
 
-    def check_connection(self):
-        try:
-            res = self._query('select 1;')
-            connected = res.status_code == 200
-        except Exception:
-            connected = False
-        return connected
-
     def _query(self, query):
         params = {'user': 'default'}
         try:
@@ -64,7 +57,7 @@ class Clickhouse():
 
         return response
 
-    def setup_clickhouse(self, models_meta):
+    def setup(self, model_data_arr):
         self._query('DROP DATABASE IF EXISTS MINDSB')
 
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
@@ -95,10 +88,10 @@ class Clickhouse():
 
         self._query(q)
 
-        for model_meta in models_meta:
+        for model_meta in model_data_arr:
             self.register_predictor(model_meta)
 
-    def register_predictor(self, model_meta):
+    def register_predictors(self, model_meta):
         name = model_meta['name']
         stats = model_meta['data_analysis']
         columns_sql = ','.join(self._to_clickhouse_table(stats))
@@ -124,3 +117,12 @@ class Clickhouse():
         """
         print(f'Executing table creation query to sync predictor:\n{q}\n')
         self._query(q)
+
+
+    def check_connection(self):
+        try:
+            res = self._query('select 1;')
+            connected = res.status_code == 200
+        except Exception:
+            connected = False
+        return connected

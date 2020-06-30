@@ -58,12 +58,22 @@ class MindsDBDataNode(DataNode):
             select_data_query = where['$select_data_query']['$eq']
             del where['$select_data_query']
 
+            '''
+            @TODO (Urgent~ish)
+
+            This is a horrible but function hack, however the proper way to do this is:
+            1. Figure out the alias of the database sending the query
+            2. Lookup the connection information in the config
+            3. Send that information + the query + a name (maybe the hash of the query or the query itself) to the Datastore API and ask it to create a datasource
+
+            That way we also avoid making the same query twice and we don't use the database integrations (meant to sync predictors) in order to query data (the role of the mindsdb_native datasources / the datastore / data skillet)
+            '''
             if came_from == 'clickhouse':
-                ch = Clickhouse(self.config)
+                ch = Clickhouse(self.config, 'default_clickhouse')
                 res = ch._query(select_data_query.strip(' ;') + ' FORMAT JSON')
                 data = res.json()['data']
             elif came_from == 'mariadb':
-                maria = Mariadb(self.config)
+                maria = Mariadb(self.config, 'default_mariadb')
                 data = maria._query(select_data_query)
 
             if where_data is None:

@@ -6,12 +6,13 @@ from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 
 
 class Mariadb():
-    def __init__(self, config):
+    def __init__(self, config, name):
         self.config = config
-        self.host = config['integrations']['default_mariadb']['host']
-        self.port = config['integrations']['default_mariadb']['port']
-        self.user = config['integrations']['default_mariadb']['user']
-        self.password = config['integrations']['default_mariadb']['password']
+        self.name = name
+        self.host = config['integrations'][name]['host']
+        self.port = config['integrations'][name]['port']
+        self.user = config['integrations'][name]['user']
+        self.password = config['integrations'][name]['password']
 
     def _to_mariadb_table(self, stats):
         subtype_map = {
@@ -39,15 +40,6 @@ class Mariadb():
                 print(f'Error: cant convert type {col_subtype} of column {name} to mariadb tpye')
 
         return column_declaration
-
-    def check_connection(self):
-        try:
-            con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
-            connected = con.is_connected()
-            con.close()
-        except Exception:
-            connected = False
-        return connected
 
     def _query(self, query):
         con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
@@ -77,7 +69,7 @@ class Mariadb():
 
         return connect
 
-    def setup_mariadb(self, models_meta):
+    def setup(self, model_data_arr):
         self._query('DROP DATABASE IF EXISTS mindsdb')
 
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
@@ -107,10 +99,10 @@ class Mariadb():
         print(f'Executing table creation query to create command table:\n{q}\n')
         self._query(q)
 
-        for model_meta in models_meta:
+        for model_meta in model_data_arr:
             self.register_predictor(model_meta)
 
-    def register_predictor(self, model_meta):
+    def register_predictors(self, model_meta):
         name = model_meta['name']
         stats = model_meta['data_analysis']
         columns_sql = ','.join(self._to_mariadb_table(stats))
@@ -134,3 +126,12 @@ class Mariadb():
         """
         print(f'Executing table creation query to sync predictor:\n{q}\n')
         self._query(q)
+
+    def check_connection(self):
+        try:
+            con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+            connected = con.is_connected()
+            con.close()
+        except Exception:
+            connected = False
+        return connected

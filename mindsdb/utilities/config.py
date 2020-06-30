@@ -13,9 +13,11 @@ class Config(object):
         else:
             raise TypeError('argument must be string or dict')
 
-    def merge(self, file_path):
-        if os.path.isfile(file_path):
-            with open(file_path, 'r') as fp:
+    def merge(self, config):
+        if isinstance(config, dict):
+            self._update_recursive(self._config, config)
+        elif isinstance(config, str) and os.path.isfile(config):
+            with open(config, 'r') as fp:
                 config = json.load(fp)
             self._update_recursive(self._config, config)
 

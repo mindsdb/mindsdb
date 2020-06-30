@@ -30,8 +30,13 @@ class MindsdbNative():
             pass
 
     def learn(self, name, from_data, to_predict, kwargs={}):
+        join_learn_process = kwargs.get('join_learn_process')
+        if 'join_learn_process' in kwargs:
+            del kwargs['join_learn_process']
         p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
         p.start()
+        if join_learn_process is True:
+            p.join()
 
     def predict(self, name, when=None, when_data=None, kwargs={}):
         # @TODO Separate into two paths, one for "normal" predictions and one for "real time" predictions. Use the multiprocessing code commented out bellow for normal (once we figure out how to return the prediction object... else use the inline code but with the "real time" predict functionality of mindsdb_native taht will be implemented later)
@@ -41,7 +46,6 @@ class MindsdbNative():
         p.start()
         predictions = p.join()
         '''
-
         mdb = mindsdb_native.Predictor(name=name)
 
         kwargs['use_gpu'] = self.config.get('use_gpu', None)

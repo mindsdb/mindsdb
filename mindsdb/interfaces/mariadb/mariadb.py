@@ -13,9 +13,6 @@ class Mariadb():
         self.user = config['integrations']['default_mariadb']['user']
         self.password = config['integrations']['default_mariadb']['password']
 
-        self.setup_mariadb()
-
-
     def _to_mariadb_table(self, stats):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
@@ -42,6 +39,15 @@ class Mariadb():
                 print(f'Error: cant convert type {col_subtype} of column {name} to mariadb tpye')
 
         return column_declaration
+
+    def check_connection(self):
+        try:
+            con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+            connected = con.is_connected()
+            con.close()
+        except Exception:
+            connected = False
+        return connected
 
     def _query(self, query):
         con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
@@ -71,7 +77,9 @@ class Mariadb():
 
         return connect
 
-    def setup_mariadb(self):
+    def setup_mariadb(self, models_meta):
+        self._query('DROP DATABASE IF EXISTS mindsdb')
+
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
 
         connect = self._get_connect_string('predictors_mariadb')
@@ -89,6 +97,8 @@ class Mariadb():
         print(f'Executing table creation query to create predictors list:\n{q}\n')
         self._query(q)
 
+        connect = self._get_connect_string('commands_mariadb')
+
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.commands (
                 command VARCHAR(500)
@@ -97,9 +107,16 @@ class Mariadb():
         print(f'Executing table creation query to create command table:\n{q}\n')
         self._query(q)
 
-    def register_predictor(self, name, stats):
+        for model_meta in models_meta:
+            self.register_predictor(model_meta)
+
+    def register_predictor(self, model_meta):
+        name = model_meta['name']
+        stats = model_meta['data_analysis']
         columns_sql = ','.join(self._to_mariadb_table(stats))
         columns_sql += ',`$select_data_query` varchar(500)'
+        for col in model_meta['predict_cols']:
+            columns_sql += f',`${col}_confidence` double'
 
         connect = self._get_connect_string(f'{name}_mariadb')
 

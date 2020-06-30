@@ -37,11 +37,17 @@ class PredictorProcess(ctx.Process):
 
             stats = mdb.get_model_data()['data_analysis_v2']
 
+            model_meta = {
+                'name': name,
+                'predict_cols': to_predict,
+                'data_analysis': stats
+            }
+
             try:
                 assert(config['integrations']['default_clickhouse']['enabled'] == True)
                 from mindsdb.interfaces.clickhouse.clickhouse import Clickhouse
                 clickhouse = Clickhouse(config)
-                clickhouse.register_predictor(name, stats)
+                clickhouse.register_predictor(model_meta)
             except:
                 pass
 
@@ -49,7 +55,7 @@ class PredictorProcess(ctx.Process):
                 assert(config['integrations']['default_mariadb']['enabled'] == True)
                 from mindsdb.interfaces.mariadb.mariadb import Mariadb
                 mariadb = Mariadb(config)
-                mariadb.register_predictor(name, stats)
+                mariadb.register_predictor(model_meta)
             except:
                 pass
 

@@ -290,11 +290,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def insert_predictor_answer(self, sql):
+        global mdb, default_store
         insert = SQLQuery.parse_insert(sql)
 
-        datasources = default_store.get_datasources()
-        if insert['name'] in [x['name'] for x in datasources]:
-            self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg=f"datasource with name '{insert['name']}'' already exists").send()
+        models = mdb.get_models()
+        if insert['name'] in [x['name'] for x in models]:
+            self.packet(
+                ErrPacket,
+                err_code=ERR.ER_WRONG_ARGUMENTS,
+                msg=f"predictor with name '{insert['name']}'' already exists"
+            ).send()
             return
 
         kwargs = {}
@@ -318,6 +323,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         db = db[:db.find(' ')].strip(' `')
         ds_type = db
         ds = default_store.save_datasource(insert['name'], ds_type, insert['select_data_query'])
+        insert['predict_cols'] = [x.strip() for x in insert['predict_cols'].split(',')]
         mdb.learn(insert['name'], ds, insert['predict_cols'], kwargs)
 
         self.packet(OkPacket).send()
@@ -438,7 +444,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         elif keyword == 'delete' and \
             ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
-            self.delete_predictor_answer(sql, db)
+            self.delete_predictor_answer(sql)
             return
         elif keyword == 'insert' and \
             ('mindsdb.commands' in sql_lower or self.session.database == 'mindsdb' and 'commands' in sql_lower):

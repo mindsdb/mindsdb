@@ -8,6 +8,7 @@ import torch.multiprocessing as mp
 from torch.multiprocessing import Process
 
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.utilities.fs import get_or_create_dir_struct
@@ -46,6 +47,42 @@ if __name__ == '__main__':
         'http': start_http,
         'mysql': start_mysql
     }
+
+    if len(api_arr) > 0:
+        mdb = MindsdbNative(config)
+        models_meta = [
+            {
+                'name': x['name'],
+                'predict_cols': x['predict'],
+                'data_analysis': mdb.get_model_data(x['name'])['data_analysis_v2']
+            } for x in mdb.get_models()
+        ]
+
+        try:
+            clickhouse_enabled = config['integrations']['default_clickhouse']['enabled']
+        except Exception:
+            clickhouse_enabled = False
+
+        if clickhouse_enabled:
+            from mindsdb.interfaces.clickhouse.clickhouse import Clickhouse
+            clickhouse = Clickhouse(config)
+            if clickhouse.check_connection() is False:
+                print('ERROR: can`t connect to Clickhouse')
+                sys.exit(1)
+            clickhouse.setup_clickhouse(models_meta=models_meta)
+
+        try:
+            mariadb_enabled = config['integrations']['default_mariadb']['enabled']
+        except Exception:
+            mariadb_enabled = False
+
+        if mariadb_enabled:
+            from mindsdb.interfaces.mariadb.mariadb import Mariadb
+            mariadb = Mariadb(config)
+            if mariadb.check_connection() is False:
+                print('ERROR: can`t connect to MariaBD')
+                sys.exit(1)
+            mariadb.setup_mariadb(models_meta=models_meta)
 
     p_arr = []
     ctx = mp.get_context('spawn')

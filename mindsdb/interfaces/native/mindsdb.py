@@ -47,7 +47,7 @@ class MindsdbNative():
         return predictions
 
     def analyse_dataset(self, ds):
-        return F.analyse_dataset(ds, sample_margin_of_error=0.025)
+        return F.analyse_dataset(ds)
 
     def get_model_data(self, name):
         return F.get_model_data(name)

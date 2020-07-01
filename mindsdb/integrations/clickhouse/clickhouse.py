@@ -56,6 +56,9 @@ class Clickhouse():
 
         response = requests.post(f'http://{host}:{port}', data=query, params=params)
 
+        if response.status_code != 200:
+            raise Exception(f'Error: {response.content}\nQuery:{query}')
+
         return response
 
     def setup(self):

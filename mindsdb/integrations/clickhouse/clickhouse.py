@@ -97,7 +97,7 @@ class Clickhouse():
             columns_sql = ','.join(self._to_clickhouse_table(stats))
             columns_sql += ',`$select_data_query` Nullable(String)'
             for col in model_meta['predict_cols']:
-                columns_sql += ',`${col}_confidence` Nullable(Float64)'
+                columns_sql += f',`${col}_confidence` Nullable(Float64)'
 
             msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
             msqyl_user = self.config['api']['mysql']['user']

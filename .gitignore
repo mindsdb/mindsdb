@@ -8,3 +8,4 @@ logs
 tests/temp
 tests/docker/mariadb/connectData
 tests/docker/mariadb/jars
+tests/docker/clickhouse/database

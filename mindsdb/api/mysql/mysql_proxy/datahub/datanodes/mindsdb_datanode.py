@@ -1,3 +1,5 @@
+import json
+
 import pandas
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
@@ -34,6 +36,7 @@ class MindsDBDataNode(DataNode):
             columns += [f"{col}_confidence"]
             if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                 columns += [f"{col}_min", f"{col}_max"]
+            columns += [f"{col}_explain"]
 
         # TODO this should be added just for clickhouse queries
         columns += ['select_data_query']
@@ -117,6 +120,7 @@ class MindsDBDataNode(DataNode):
                 row[key] = res.data[key][i]
             for key in predicted_columns:
                 row[key + '_confidence'] = res[i].explanation[key]['confidence']
+                row[key + '_explain'] = json.dumps(res[i].explanation[key])
             for key in min_max_keys:
                 row[key + '_min'] = res[i].explanation[key]['confidence_interval'][0]
                 row[key + '_max'] = res[i].explanation[key]['confidence_interval'][-1]

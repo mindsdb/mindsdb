@@ -111,6 +111,7 @@ class Mariadb():
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
                     columns_sql += f',`{col}_min` double'
                     columns_sql += f',`{col}_max` double'
+                columns_sql += f',`{col}_explain` varchar(500)'
 
             connect = self._get_connect_string(f'{name}_mariadb')
 

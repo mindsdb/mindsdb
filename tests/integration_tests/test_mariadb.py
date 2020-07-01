@@ -15,7 +15,7 @@ from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.mariadb.mariadb import Mariadb
 
-from common import wait_port
+from common import wait_port, prepare_config
 
 TEST_CONFIG = '/path_to/config.json'
 
@@ -318,31 +318,7 @@ def stop_mariadb():
     maria_sp.wait()
 
 if __name__ == "__main__":
-    for key in config._config['integrations'].keys():
-        config._config['integrations'][key]['enabled'] = key == 'default_mariadb'
-
-    TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../temp/').resolve()
-
-    config.merge({
-        'interface': {
-            'datastore': {
-                'storage_dir': str(pathlib.Path(TEMP_DIR).joinpath('datastore/'))
-            },
-            'mindsdb_native': {
-                'storage_dir': str(pathlib.Path(TEMP_DIR).joinpath('predictors/'))
-            }
-        }
-    })
-
-    if not os.path.isdir(config['interface']['datastore']['storage_dir']):
-        os.makedirs(config['interface']['datastore']['storage_dir'])
-    
-    if not os.path.isdir(config['interface']['mindsdb_native']['storage_dir']):
-        os.makedirs(config['interface']['mindsdb_native']['storage_dir'])
-
-    temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
-    with open(temp_config_path, 'wt') as f:
-        f.write(json.dumps(config._config))
+    temp_config_path = prepare_config(config)
 
     maria_sp = subprocess.Popen(
         ['./cli.sh', 'mariadb'],

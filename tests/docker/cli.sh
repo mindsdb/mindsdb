@@ -20,4 +20,6 @@ elif [ $1 = "mariadb-stop" ]; then
 elif [ $1 = "clickhouse" ]; then
     mkdir -p clickhouse/database/
     docker-compose up clickhouse
+elif [ $1 = "clickhouse-stop" ]; then
+    docker-compose stop clickhouse
 fi

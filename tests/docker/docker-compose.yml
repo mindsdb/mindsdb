@@ -19,5 +19,8 @@ services:
       - ./mariadb/connect.cnf:/etc/mysql/mariadb.conf.d/connect.cnf
   clickhouse:
     image: yandex/clickhouse-server:20.1
+    volumes:
+      - ./clickhouse/database:/var/lib/clickhouse
     ports:
       - 8123:8123
+      - 9000:9000

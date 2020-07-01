@@ -249,7 +249,7 @@ class MariaDBTest(unittest.TestCase):
             select
                 rental_price, location, sqft, $rental_price_confidence, number_of_rooms
             from
-                mindsdb.{TEST_PREDICTOR_NAME} where $select_data_query='select * from test.{TEST_DATA_TABLE} limit 3';
+                mindsdb.{TEST_PREDICTOR_NAME} where select_data_query='select * from test.{TEST_DATA_TABLE} limit 3';
         """, as_dict=True)
 
         print('check result')

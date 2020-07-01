@@ -31,12 +31,12 @@ class MindsDBDataNode(DataNode):
         columns += [x['column_name'] for x in model['data_analysis']['input_columns_metadata']]
         columns += [x['column_name'] for x in model['data_analysis']['target_columns_metadata']]
         for col in model['predict']:
-            columns += [f"${col}_confidence"]
+            columns += [f"{col}_confidence"]
             if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
-                columns += [f"${col}_min", f"${col}_max"]
+                columns += [f"{col}_min", f"{col}_max"]
 
         # TODO this should be added just for clickhouse queries
-        columns += ['$select_data_query']
+        columns += ['select_data_query']
         return columns
 
     def _select_predictors(self):
@@ -58,9 +58,9 @@ class MindsDBDataNode(DataNode):
             return self._select_predictors()
 
         select_data_query = None
-        if came_from is not None and '$select_data_query' in where:
-            select_data_query = where['$select_data_query']['$eq']
-            del where['$select_data_query']
+        if came_from is not None and 'select_data_query' in where:
+            select_data_query = where['select_data_query']['$eq']
+            del where['select_data_query']
 
             '''
             @TODO (Urgent~ish)
@@ -116,15 +116,15 @@ class MindsDBDataNode(DataNode):
             for key in keys:
                 row[key] = res.data[key][i]
             for key in predicted_columns:
-                row['$' + key + '_confidence'] = res[i].explanation[key]['confidence']
+                row[key + '_confidence'] = res[i].explanation[key]['confidence']
             for key in min_max_keys:
-                row['$' + key + '_min'] = res[i].explanation[key]['confidence_interval'][0]
-                row['$' + key + '_max'] = res[i].explanation[key]['confidence_interval'][-1]
+                row[key + '_min'] = res[i].explanation[key]['confidence_interval'][0]
+                row[key + '_max'] = res[i].explanation[key]['confidence_interval'][-1]
             data.append(row)
 
         if select_data_query is not None:
             for row in data:
-                row['$select_data_query'] = select_data_query
+                row['select_data_query'] = select_data_query
 
         if new_where is not None and len(new_where.keys()) > 0:
             columns = self.getTableColumns(table)

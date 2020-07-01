@@ -38,7 +38,7 @@ SELECT rental_price FROM mindsdb.rentals_predictor WHERE initial_price=900 and n
 Or, you can select some other data from a similar table (or the same table) and get a bunch of predictions.
 
 ```
-SELECT rental_price FROM mindsdb.rentals_predictor WHERE `$select_data_query`='SELECT * FROM default.home_rentals WHERE days_on_market > 60';
+SELECT rental_price FROM mindsdb.rentals_predictor WHERE `select_data_query`='SELECT * FROM default.home_rentals WHERE days_on_market > 60';
 ```
 
 

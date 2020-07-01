@@ -139,7 +139,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             switch_out_answer.get()
             password = switch_out_answer.password
             if method == 'mysql_native_password' and len(password) == 0:
-                password = handshake_resp.scramble_func(HARDCODED_PASSWORD, self.salt)
+                password = handshake_resp.scramble_func('', self.salt)
             return password
 
         def get_fast_auth_password():

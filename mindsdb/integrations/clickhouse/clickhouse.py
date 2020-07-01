@@ -62,7 +62,7 @@ class Clickhouse():
         return response
 
     def setup(self):
-        self._query('DROP DATABASE IF EXISTS MINDSB')
+        self._query('DROP DATABASE IF EXISTS mindsdb')
 
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
 

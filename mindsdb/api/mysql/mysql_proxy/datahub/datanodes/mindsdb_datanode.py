@@ -30,7 +30,11 @@ class MindsDBDataNode(DataNode):
         columns = []
         columns += [x['column_name'] for x in model['data_analysis']['input_columns_metadata']]
         columns += [x['column_name'] for x in model['data_analysis']['target_columns_metadata']]
-        columns += [f"${x['column_name']}_confidence" for x in model['data_analysis']['target_columns_metadata']]
+        for col in model['predict']:
+            columns += [f"${col}_confidence"]
+            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                columns += [f"${col}_min", f"${col}_max"]
+
         # TODO this should be added just for clickhouse queries
         columns += ['$select_data_query']
         return columns
@@ -96,18 +100,26 @@ class MindsDBDataNode(DataNode):
 
         res = self.mindsdb_native.predict(name=table, when=new_where, when_data=where_data)
 
-        predicted_columns = self.mindsdb_native.get_model_data(name=table)['predict']
-        length = len(res.data[predicted_columns[0]])
+        model = self.mindsdb_native.get_model_data(name=table)
+        predicted_columns = model['predict']
 
         data = []
         keys = [x for x in list(res.data.keys()) if x in columns]
-        confidence_keys = [f'{x}_confidence' for x in predicted_columns]
+        min_max_keys = []
+        for col in predicted_columns:
+            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                min_max_keys.append(col)
+
+        length = len(res.data[predicted_columns[0]])
         for i in range(length):
             row = {}
             for key in keys:
                 row[key] = res.data[key][i]
-            for key in confidence_keys:
-                row['$' + key] = res.data[key][i]
+            for key in predicted_columns:
+                row['$' + key + '_confidence'] = res[i].explanation[key]['confidence']
+            for key in min_max_keys:
+                row['$' + key + '_min'] = res[i].explanation[key]['confidence_interval'][0]
+                row['$' + key + '_max'] = res[i].explanation[key]['confidence_interval'][-1]
             data.append(row)
 
         if select_data_query is not None:

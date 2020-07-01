@@ -98,6 +98,9 @@ class Clickhouse():
             columns_sql += ',`$select_data_query` Nullable(String)'
             for col in model_meta['predict_cols']:
                 columns_sql += f',`${col}_confidence` Nullable(Float64)'
+                if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+                    columns_sql += f',`${col}_min` Nullable(Float64)'
+                    columns_sql += f',`${col}_max` Nullable(Float64)'
 
             msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
             msqyl_user = self.config['api']['mysql']['user']

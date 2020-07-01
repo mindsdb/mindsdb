@@ -76,8 +76,7 @@ class Packet:
                 break
             count_header = int(packet_string[3])
             body += self.mysql_socket.recv(len_header)
-        self.session.logging.info('Got packet')
-        self.session.logging.info(body)
+        self.session.logging.info(f'Got packet: {str(body)}')
         self.proxy.count = int(count_header) + 1
         self.setup(len(body), count_header, body)
         return True

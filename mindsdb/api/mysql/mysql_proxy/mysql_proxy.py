@@ -137,7 +137,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(SwitchOutPacket, seed=self.salt, method=method).send()
             switch_out_answer = self.packet(SwitchOutResponse)
             switch_out_answer.get()
-            return switch_out_answer.enc_password.value
+            password = switch_out_answer.password
+            if method == 'mysql_native_password' and len(password) == 0:
+                password = handshake_resp.scramble_func(HARDCODED_PASSWORD, self.salt)
+            return password
 
         def get_fast_auth_password():
             log.info('Asking for fast auth password')
@@ -191,12 +194,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         
         username = handshake_resp.username.value.decode()
 
-        if orig_username == username and HARDCODED_PASSWORD == '':
-            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                'empty password')
-            password = ''
-
-        elif (DEFAULT_AUTH_METHOD not in client_auth_plugin) or \
+        if (DEFAULT_AUTH_METHOD not in client_auth_plugin) or \
             self.session.is_ssl is False and 'caching_sha2_password' in client_auth_plugin:
             new_method = 'caching_sha2_password' if 'caching_sha2_password' in client_auth_plugin else 'mysql_native_password'
     
@@ -214,7 +212,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 password = get_fast_auth_password()
             else:
                 orig_password = orig_password_hash
-
+        elif orig_username == username and HARDCODED_PASSWORD == '':
+            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                'empty password')
+            password = ''
         elif 'caching_sha2_password' in client_auth_plugin:
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                 'check auth using caching_sha2_password')

@@ -24,10 +24,11 @@ class DataStore():
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):
-        try:
-            return self.mindsdb_native.analyse_dataset(ds)
-        except:
+        if isinstance(ds,str):
             return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
+        else:
+            return self.mindsdb_native.analyse_dataset(ds)
+
 
     def get_datasources(self):
         datasource_arr = []
@@ -60,7 +61,6 @@ class DataStore():
         shutil.rmtree(os.path.join(self.dir, data_sources['name']))
 
     def save_datasource(self, name, source_type, source, file_path=None):
-        print(name, source_type, source)
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
 

@@ -113,9 +113,6 @@ class Predictor(Resource):
         if 'equal_accuracy_for_all_output_categories' not in kwargs:
             kwargs['equal_accuracy_for_all_output_categories'] = True
 
-        if 'sample_margin_of_error' not in kwargs:
-            kwargs['sample_margin_of_error'] = 0.005
-
         if 'unstable_parameters_dict' not in kwargs:
             kwargs['unstable_parameters_dict'] = {}
 

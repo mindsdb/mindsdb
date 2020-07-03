@@ -25,9 +25,8 @@ class DatabaseWrapper():
         for integration in self.integration_arr: integration.unregister_predictor(name)
 
     def check_connections(self):
-        broken_connections = []
+        connections = {}
         for integration in self.integration_arr:
-            if not integration.check_connection():
-                broken_connections.append(integration.name)
+            connections[integration.name] = integration.check_connection()
 
-        return broken_connections
+        return connections

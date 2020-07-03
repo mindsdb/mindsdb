@@ -68,12 +68,12 @@ class MindsdbNative():
 
     def delete_model(self, name):
         F.delete_model(name)
-        dbw.unregister_predictor(name)
+        self.dbw.unregister_predictor(name)
 
     def rename_model(self, name, new_name):
-        dbw.unregister_predictor(name)
+        self.dbw.unregister_predictor(name)
         F.rename_model(name, new_name)
-        dbw.register_predictors(new_name)
+        self.dbw.register_predictors(new_name)
 
     def load_model(self, fpath):
         F.load_model(model_archive_path=fpath)

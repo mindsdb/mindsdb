@@ -26,6 +26,7 @@ def prepare_config(config):
         config._config['integrations'][key]['enabled'] = key == 'default_mariadb'
 
     TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../temp/').resolve()
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
     config.merge({
         'interface': {
@@ -37,12 +38,6 @@ def prepare_config(config):
             }
         }
     })
-
-    if not os.path.isdir(config['interface']['datastore']['storage_dir']):
-        os.makedirs(config['interface']['datastore']['storage_dir'])
-    
-    if not os.path.isdir(config['interface']['mindsdb_native']['storage_dir']):
-        os.makedirs(config['interface']['mindsdb_native']['storage_dir'])
 
     temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
     with open(temp_config_path, 'wt') as f:

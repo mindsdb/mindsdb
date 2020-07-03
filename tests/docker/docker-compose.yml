@@ -4,10 +4,10 @@
 version: "3"
 services:
   mariadb:
-    build: .
+    build: mariadb/.
     network_mode: host
-    image: mariadb-connect:1
-    container_name: connect
+    image: mariadb-test:1.0
+    container_name: mariadb-test
     command: --default-authentication-plugin=caching_sha2_password
     ports:
       - 3306:3306
@@ -15,8 +15,8 @@ services:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
       MYSQL_ROOT_PASSWORD: "root"
     volumes:
-    - ./connectData:/var/lib/mysql
-    - ./connect.cnf:/etc/mysql/mariadb.conf.d/connect.cnf
+    - ./mariadb/connectData:/var/lib/mysql
+    - ./mariadb/connect.cnf:/etc/mysql/mariadb.conf.d/connect.cnf
   clickhouse:
     network_mode: host
     image: yandex/clickhouse-server:20.1

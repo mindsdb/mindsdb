@@ -6,8 +6,10 @@ class SwitchOutResponse(Packet):
         length = len(body)
 
         if length == 0:
+            self.password = b''
             return
 
         self.enc_password = Datum('string<EOF>') # 0x04
         buffer = body
         buffer = self.enc_password.setFromBuff(buffer)
+        self.password = self.enc_password.value

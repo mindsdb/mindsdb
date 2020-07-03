@@ -23,7 +23,9 @@ matrix:
       before_install:
         - choco install python --version=3.7.3
         - python -m pip install --upgrade pip
-      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
+      env:
+        PATH=/c/Python37:/c/Python37/Scripts:$PATH
+        BADGE=windows
 
 
 notifications:
@@ -37,13 +39,15 @@ install:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -e .; fi
 
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -e .; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install pyinstaller; fi
 
-before_script: cd tests/ci_tests
-# run tests
 script:
-  #- if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python test_endpoints.py; fi
-  #- if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 test_endpoints.py; fi
-  - cd ../..
+  # Build windows installer
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mkdir -p build; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd distributions/windows; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 ./make.bat; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mv dist/install.exe ../../build/; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd ../..; fi
 
 # deploy to pip
 deploy:
@@ -55,6 +59,17 @@ deploy:
       branch: stable
       condition: $DEPLOYMENT_ENV = "true"
 
+  - provider: s3
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_ACCESS_KEY_SECRET
+    bucket: "mindsdb-installer"
+    skip_cleanup: true
+    region: us-west-2
+    local_dir: build
+    on:
+      branch: stable
+      condition: $BADGE = "windows"
+      
 # after pip is deployed, we can deploy to dockerhub
 after_deploy:
   -  if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "stable" ]]; then sleep 15; fi

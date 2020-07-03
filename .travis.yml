@@ -23,7 +23,9 @@ matrix:
       before_install:
         - choco install python --version=3.7.3
         - python -m pip install --upgrade pip
-      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
+      env:
+        PATH=/c/Python37:/c/Python37/Scripts:$PATH
+        BADGE=windows
 
 
 notifications:
@@ -66,6 +68,7 @@ deploy:
     local_dir: build
     on:
       branch: stable
+      condition: $BADGE = "windows"
       
 # after pip is deployed, we can deploy to dockerhub
 after_deploy:

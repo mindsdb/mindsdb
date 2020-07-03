@@ -38,18 +38,16 @@ install:
 
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -e .; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install pyinstaller; fi
+
+before_script: cd tests/ci_tests
+# run tests
+script:
+  # Build windows installer
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mkdir -p build; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd distributions/windows; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 ./make.bat; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mv dist/install.exe ../../build/; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd ../..; fi
-
-before_script: cd tests/ci_tests
-# run tests
-script:
-  #- if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python test_endpoints.py; fi
-  #- if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 test_endpoints.py; fi
-  - cd ../..
 
 # deploy to pip
 deploy:
@@ -68,8 +66,8 @@ deploy:
     skip_cleanup: true
     region: us-west-2
     local_dir: build
-    on:
-      branch: stable
+    #on:
+    #  branch: stable
       
 # after pip is deployed, we can deploy to dockerhub
 after_deploy:

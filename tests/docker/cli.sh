@@ -14,9 +14,9 @@ if [ $1 = "mariadb" ]; then
         wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1uH2yKnvLBCpDpQnhOmm_Us988-AcKkLw' -O mariadb/jars/wrapper/JdbcInterface.jar
     fi
     mkdir -p mariadb/connectData/
-    docker-compose up mariadb-test
+    docker-compose up mariadb
 elif [ $1 = "mariadb-stop" ]; then
-    docker-compose stop mariadb-test
+    docker-compose stop mariadb
 elif [ $1 = "clickhouse" ]; then
     mkdir -p clickhouse/database/
     docker-compose up clickhouse

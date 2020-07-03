@@ -97,17 +97,17 @@ class MindsDBDataNode(DataNode):
         res = self.mindsdb_native.predict(name=table, when=new_where, when_data=where_data)
 
         predicted_columns = self.mindsdb_native.get_model_data(name=table)['predict']
-        length = len(res.data[predicted_columns[0]])
+        length = len(res._data[predicted_columns[0]])
 
         data = []
-        keys = [x for x in list(res.data.keys()) if x in columns]
+        keys = [x for x in list(res._data.keys()) if x in columns]
         confidence_keys = [f'{x}_confidence' for x in predicted_columns]
         for i in range(length):
             row = {}
             for key in keys:
-                row[key] = res.data[key][i]
+                row[key] = res._data[key][i]
             for key in confidence_keys:
-                row['$' + key] = res.data[key][i]
+                row['$' + key] = res._data[key][i]
             data.append(row)
 
         if select_data_query is not None:

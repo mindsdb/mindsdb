@@ -13,7 +13,7 @@ import mysql.connector
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.mariadb.mariadb import Mariadb
+from mindsdb.interfaces.database.database import DatabaseWrapper
 
 from common import wait_port, prepare_config
 
@@ -132,6 +132,7 @@ class MariaDBTest(unittest.TestCase):
         test_tables = query('show tables from test')
         test_tables = [x[0] for x in test_tables]
         if TEST_DATA_TABLE not in test_tables:
+            print('creating test data table...')
             query(f'''
                 CREATE TABLE test.{TEST_DATA_TABLE} (
                     number_of_rooms int,
@@ -174,6 +175,7 @@ class MariaDBTest(unittest.TestCase):
                             {rental_price}
                         )''')
                     i += 1
+            print('done')
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
@@ -297,14 +299,14 @@ class MariaDBTest(unittest.TestCase):
 
 def wait_mysql(timeout):
     global config
-    m = Mariadb(config)
+    m = DatabaseWrapper(config)
 
     start_time = time.time()
 
-    connected = m.check_connection()
-    while connected is False and (time.time() - start_time) < timeout:
+    connected = m.check_connections()['default_mariadb']
+    while not connected and (time.time() - start_time) < timeout:
         time.sleep(2)
-        connected = m.check_connection()
+        connected = m.check_connections()['default_mariadb']
 
     return connected
 
@@ -329,20 +331,21 @@ if __name__ == "__main__":
     atexit.register(stop_mariadb)
     maria_ready = wait_mysql(START_TIMEOUT)
 
-    sp = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-    atexit.register(sp.kill)
-    port_num = config['api']['mysql']['port']
-    api_ready = wait_port(port_num, START_TIMEOUT)
+    if maria_ready:
+        sp = subprocess.Popen(
+            ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        atexit.register(sp.kill)
+        port_num = config['api']['mysql']['port']
+    api_ready = maria_ready and wait_port(port_num, START_TIMEOUT)
 
     try:
         if maria_ready is False or api_ready is False:
             print(f'Failed by timeout. MariaDB started={maria_ready}, MindsDB started={api_ready}')
             raise Exception()
-        unittest.main()
+        unittest.main(failfast=True)
         print('Tests passed !')
     except Exception as e:
         print('Tests Failed !')

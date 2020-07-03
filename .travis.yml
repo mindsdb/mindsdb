@@ -39,8 +39,6 @@ install:
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -e .; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install pyinstaller; fi
 
-before_script: cd tests/ci_tests
-# run tests
 script:
   # Build windows installer
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mkdir -p build; fi

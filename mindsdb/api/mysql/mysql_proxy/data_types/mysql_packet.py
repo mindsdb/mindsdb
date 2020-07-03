@@ -72,9 +72,9 @@ class Packet:
                 return False
                 break
             len_header = struct.unpack('i', packet_string[:3] + b'\x00')[0]
+            count_header = int(packet_string[3])
             if len_header == 0:
                 break
-            count_header = int(packet_string[3])
             body += self.mysql_socket.recv(len_header)
         self.session.logging.info(f'Got packet: {str(body)}')
         self.proxy.count = int(count_header) + 1

@@ -194,24 +194,28 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         
         username = handshake_resp.username.value.decode()
 
-        if (DEFAULT_AUTH_METHOD not in client_auth_plugin) or \
-            self.session.is_ssl is False and 'caching_sha2_password' in client_auth_plugin:
-            new_method = 'caching_sha2_password' if 'caching_sha2_password' in client_auth_plugin else 'mysql_native_password'
-    
-            if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
-                log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                    'error: cant switch to caching_sha2_password without SSL')
-                self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'caching_sha2_password without SSL not supported').send()
-                return False
 
-            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                f'switch auth method to {new_method}')
-            password = switch_auth(new_method)
-
-            if new_method == 'caching_sha2_password':
-                password = get_fast_auth_password()
+        if client_auth_plugin != DEFAULT_AUTH_METHOD:
+            if client_auth_plugin == 'mysql_native_password' and \
+                orig_password == '' and len(handshake_resp.enc_password.value) == 0:
+                password = orig_password
             else:
-                orig_password = orig_password_hash
+                new_method = 'caching_sha2_password' if client_auth_plugin == 'caching_sha2_password' else 'mysql_native_password'
+
+                if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
+                    log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                        'error: cant switch to caching_sha2_password without SSL')
+                    self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'caching_sha2_password without SSL not supported').send()
+                    return False
+
+                log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                    f'switch auth method to {new_method}')
+                password = switch_auth(new_method)
+
+                if new_method == 'caching_sha2_password':
+                    password = get_fast_auth_password()
+                else:
+                    orig_password = orig_password_hash
         elif orig_username == username and HARDCODED_PASSWORD == '':
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                 'empty password')
@@ -221,7 +225,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'check auth using caching_sha2_password')
             password = get_fast_auth_password()
             orig_password = HARDCODED_PASSWORD
-            
         elif 'mysql_native_password' in client_auth_plugin:
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                 'check auth using mysql_native_password')
@@ -893,7 +896,3 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # interrupt the program with Ctrl-C
         log.info('Waiting for incoming connections...')
         server.serve_forever()
-
-
-if __name__ == "__main__":
-    MysqlProxy.startProxy()

@@ -107,17 +107,17 @@ class MindsDBDataNode(DataNode):
         predicted_columns = model['predict']
 
         data = []
-        keys = [x for x in list(res.data.keys()) if x in columns]
+        keys = [x for x in list(res._data.keys()) if x in columns]
         min_max_keys = []
         for col in predicted_columns:
             if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                 min_max_keys.append(col)
 
-        length = len(res.data[predicted_columns[0]])
+        length = len(res._data[predicted_columns[0]])
         for i in range(length):
             row = {}
             for key in keys:
-                row[key] = res.data[key][i]
+                row[key] = res._data[key][i]
             for key in predicted_columns:
                 row[key + '_confidence'] = res[i].explanation[key]['confidence']
                 row[key + '_explain'] = json.dumps(res[i].explanation[key])

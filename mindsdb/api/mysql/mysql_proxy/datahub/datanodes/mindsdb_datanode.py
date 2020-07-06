@@ -1,3 +1,5 @@
+import json
+
 import pandas
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
@@ -30,9 +32,14 @@ class MindsDBDataNode(DataNode):
         columns = []
         columns += [x['column_name'] for x in model['data_analysis']['input_columns_metadata']]
         columns += [x['column_name'] for x in model['data_analysis']['target_columns_metadata']]
-        columns += [f"${x['column_name']}_confidence" for x in model['data_analysis']['target_columns_metadata']]
+        for col in model['predict']:
+            columns += [f"{col}_confidence"]
+            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                columns += [f"{col}_min", f"{col}_max"]
+            columns += [f"{col}_explain"]
+
         # TODO this should be added just for clickhouse queries
-        columns += ['$select_data_query']
+        columns += ['select_data_query']
         return columns
 
     def _select_predictors(self):
@@ -54,9 +61,9 @@ class MindsDBDataNode(DataNode):
             return self._select_predictors()
 
         select_data_query = None
-        if came_from is not None and '$select_data_query' in where:
-            select_data_query = where['$select_data_query']['$eq']
-            del where['$select_data_query']
+        if came_from is not None and 'select_data_query' in where:
+            select_data_query = where['select_data_query']['$eq']
+            del where['select_data_query']
 
             '''
             @TODO (Urgent~ish)
@@ -96,23 +103,32 @@ class MindsDBDataNode(DataNode):
 
         res = self.mindsdb_native.predict(name=table, when=new_where, when_data=where_data)
 
-        predicted_columns = self.mindsdb_native.get_model_data(name=table)['predict']
-        length = len(res._data[predicted_columns[0]])
+        model = self.mindsdb_native.get_model_data(name=table)
+        predicted_columns = model['predict']
 
         data = []
         keys = [x for x in list(res._data.keys()) if x in columns]
-        confidence_keys = [f'{x}_confidence' for x in predicted_columns]
+        min_max_keys = []
+        for col in predicted_columns:
+            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                min_max_keys.append(col)
+
+        length = len(res._data[predicted_columns[0]])
         for i in range(length):
             row = {}
             for key in keys:
                 row[key] = res._data[key][i]
-            for key in confidence_keys:
-                row['$' + key] = res._data[key][i]
+            for key in predicted_columns:
+                row[key + '_confidence'] = res[i].explanation[key]['confidence']
+                row[key + '_explain'] = json.dumps(res[i].explanation[key])
+            for key in min_max_keys:
+                row[key + '_min'] = res[i].explanation[key]['confidence_interval'][0]
+                row[key + '_max'] = res[i].explanation[key]['confidence_interval'][-1]
             data.append(row)
 
         if select_data_query is not None:
             for row in data:
-                row['$select_data_query'] = select_data_query
+                row['select_data_query'] = select_data_query
 
         if new_where is not None and len(new_where.keys()) > 0:
             columns = self.getTableColumns(table)

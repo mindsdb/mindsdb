@@ -37,11 +37,19 @@ cache: pip
 install:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --upgrade pip; fi
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -e .; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -r requirements_test.txt; fi
 
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -e .; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install pyinstaller; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -r requirements_test.txt; fi
 
+before_script:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/docker; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then docker-compose up -d; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd ../../ tests; fi
 script:
+  # Run tests (linux only due to docker support... :S)
+
   # Build windows installer
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mkdir -p build; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd distributions/windows; fi
@@ -49,6 +57,8 @@ script:
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mv dist/install.exe ../../build/; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd ../..; fi
 
+after_script:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then docker-compose down; fi
 # deploy to pip
 deploy:
   - provider: pypi
@@ -69,7 +79,7 @@ deploy:
     on:
       branch: stable
       condition: $BADGE = "windows"
-      
+
 # after pip is deployed, we can deploy to dockerhub
 after_deploy:
   -  if [[ "$DEPLOYMENT_ENV" = "true" && "$TRAVIS_BRANCH" = "stable" ]]; then sleep 15; fi

@@ -129,7 +129,7 @@ class Predictor(Resource):
             retrain = None
 
         ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
-        from_data = ca.default_store.get_datasource_obj(ds_name)
+        from_data = ca.default_store.get_datasource_obj(ds_name, raw=True)
 
         if retrain is True:
             original_name = name
@@ -217,7 +217,7 @@ class PredictorPredictFromDataSource(Resource):
         global model_swapping_map
         data = request.json
 
-        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'))
+        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=True)
 
         try:
             format_flag = data.get('format_flag')

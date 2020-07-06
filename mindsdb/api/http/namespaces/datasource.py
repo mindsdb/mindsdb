@@ -110,7 +110,7 @@ class Datasource(Resource):
             file_path = os.path.join(temp_dir_path, data['file'])
         else:
             file_path = None
-
+        
         ca.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 

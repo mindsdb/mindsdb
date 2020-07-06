@@ -12,13 +12,16 @@ class MindsdbNative():
         self.dbw = DatabaseWrapper(self.config)
 
     def learn(self, name, from_data, to_predict, kwargs={}):
-        join_learn_process = kwargs.get('join_learn_process')
+        join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
+
         p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
         p.start()
         if join_learn_process is True:
-            model_data = p.join()
+            p.join()
+            if p.exitcode != 0:
+                raise Exception('Learning process failed !')
 
 
     def predict(self, name, when=None, when_data=None, kwargs={}):

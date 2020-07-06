@@ -46,19 +46,19 @@ install:
 before_script:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/docker; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then docker-compose up -d; fi
-
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd ../..; fi
 script:
   # Run tests (linux only due to docker support... )
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cd tests/integration_tests; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then pytest; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cd ../..; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/integration_tests; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then pytest; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd ../..; fi
   # Build windows installer
   - mkdir -p build;
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd distributions/windows; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 ./make.bat; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mv dist/install.exe ../../build/; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd ../..; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; cp distributions/linux/install.sh build/; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cp distributions/linux/install.sh build/; fi
 
 after_script:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then docker-compose down; fi
@@ -81,7 +81,7 @@ deploy:
     local_dir: build
     on:
       branch: stable
-      condition: $BADGE = "windows"
+      condition: $DEPLOYMENT_ENV = "true"
 
 # after pip is deployed, we can deploy to dockerhub
 after_deploy:

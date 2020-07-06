@@ -17,6 +17,9 @@ import re
 import traceback
 import json
 import atexit
+from datetime import datetime, timedelta
+import tempfile
+import pathlib
 
 from moz_sql_parser import parse
 
@@ -130,8 +133,57 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.error(f'Check auth, user={user}: ERROR')
             log.error(traceback.format_exc())
 
+    def make_temp_cert(self):
+        from cryptography import x509
+        from cryptography.x509.oid import NameOID
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+            backend=default_backend(),
+        )
+
+        name = x509.Name([
+            x509.NameAttribute(NameOID.COMMON_NAME, self.socket.getsockname()[0]),
+            x509.NameAttribute(NameOID.COUNTRY_NAME, 'US'),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, 'California'),
+            x509.NameAttribute(NameOID.LOCALITY_NAME, 'Berkeley'),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'MindsDB')
+        ])
+
+        now = datetime.utcnow()
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(key.public_key())
+            .serial_number(1)
+            .not_valid_before(now)
+            .not_valid_after(now + timedelta(days=10*365))
+            .add_extension(
+                x509.BasicConstraints(ca=True, path_length=0),
+                False
+            )
+            .sign(key, hashes.SHA256(), default_backend())
+        )
+        cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
+        key_pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+
+        cert_temp_file = tempfile.mkstemp(prefix='mindsdb_cert_')[1]
+        with open(cert_temp_file, 'wb') as f:
+            f.write(key_pem + cert_pem)
+        return cert_temp_file
+
     def handshake(self):
-        global HARDCODED_PASSWORD, HARDCODED_USER
+        global HARDCODED_PASSWORD, HARDCODED_USER, CERT_PATH
 
         def switch_auth(method='mysql_native_password'):
             self.packet(SwitchOutPacket, seed=self.salt, method=method).send()
@@ -181,12 +233,27 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if handshake_resp.type == 'SSLRequest':
             log.info('switch to SSL')
             self.session.is_ssl = True
+
+            use_temp_cert = not isinstance(CERT_PATH, str) or not pathlib.Path(CERT_PATH).is_file()
+            cert_path = self.make_temp_cert() if use_temp_cert else CERT_PATH
+            if use_temp_cert:
+                log.info(f'use temp ssl cert: {cert_path}')
+            else:
+                log.info(f'use user defined ssl cert: {cert_path}')
+
             ssl_socket = ssl.wrap_socket(
                 self.socket,
                 server_side=True,
-                certfile=CERT_PATH,
+                certfile=cert_path,
                 do_handshake_on_connect=True
             )
+
+            if use_temp_cert:
+                try:
+                    pathlib.Path(cert_path).unlink()
+                except Exception as e:
+                    log.error(f'Cant remove temp cert file.\n{str(e)}')
+
             self.socket = ssl_socket
             handshake_resp = self.packet(HandshakeResponsePacket)
             handshake_resp.get()
@@ -875,7 +942,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         HARDCODED_USER = config['api']['mysql']['user']
         HARDCODED_PASSWORD = config['api']['mysql']['password']
-        CERT_PATH = config['api']['mysql']['certificate_path']
+        CERT_PATH = config['api']['mysql'].get('certificate_path')
         default_store = DataStore(config)
         mdb = MindsdbNative(config)
         datahub = init_datahub(config)

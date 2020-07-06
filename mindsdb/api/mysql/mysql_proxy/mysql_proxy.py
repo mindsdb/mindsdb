@@ -194,11 +194,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         
         username = handshake_resp.username.value.decode()
 
-
         if client_auth_plugin != DEFAULT_AUTH_METHOD:
             if client_auth_plugin == 'mysql_native_password' and \
                 orig_password == '' and len(handshake_resp.enc_password.value) == 0:
-                password = orig_password
+                switch_auth('mysql_native_password')
+                password = ''
             else:
                 new_method = 'caching_sha2_password' if client_auth_plugin == 'caching_sha2_password' else 'mysql_native_password'
 

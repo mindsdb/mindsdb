@@ -228,7 +228,8 @@ class MariaDBTest(unittest.TestCase):
         print(f'\nExecuting {inspect.stack()[0].function}')
         res = query(f"""
             select
-                rental_price, location, sqft, $rental_price_confidence, number_of_rooms
+                rental_price, location, sqft, number_of_rooms,
+                rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
                 mindsdb.{TEST_PREDICTOR_NAME} where sqft=1000;
         """, as_dict=True)
@@ -241,7 +242,10 @@ class MariaDBTest(unittest.TestCase):
         self.assertTrue(res['rental_price'] is not None and res['rental_price'] != 'None')
         self.assertTrue(res['location'] is not None and res['location'] != 'None')
         self.assertTrue(res['sqft'] == 1000)
-        self.assertIsInstance(res['$rental_price_confidence'], float)
+        self.assertIsInstance(res['rental_price_confidence'], float)
+        self.assertIsInstance(res['rental_price_min'], float)
+        self.assertIsInstance(res['rental_price_max'], float)
+        self.assertIsInstance(res['rental_price_explain'], str)
         self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
 
     def test_4_range_query(self):
@@ -249,9 +253,10 @@ class MariaDBTest(unittest.TestCase):
 
         results = query(f"""
             select
-                rental_price, location, sqft, $rental_price_confidence, number_of_rooms
+                rental_price, location, sqft, number_of_rooms,
+                rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
-                mindsdb.{TEST_PREDICTOR_NAME} where $select_data_query='select * from test.{TEST_DATA_TABLE} limit 3';
+                mindsdb.{TEST_PREDICTOR_NAME} where select_data_query='select * from test.{TEST_DATA_TABLE} limit 3';
         """, as_dict=True)
 
         print('check result')
@@ -259,7 +264,10 @@ class MariaDBTest(unittest.TestCase):
         for res in results:
             self.assertTrue(res['rental_price'] is not None and res['rental_price'] != 'None')
             self.assertTrue(res['location'] is not None and res['location'] != 'None')
-            self.assertIsInstance(res['$rental_price_confidence'], float)
+            self.assertIsInstance(res['rental_price_confidence'], float)
+            self.assertIsInstance(res['rental_price_min'], float)
+            self.assertIsInstance(res['rental_price_max'], float)
+            self.assertIsInstance(res['rental_price_explain'], str)
 
     def test_5_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

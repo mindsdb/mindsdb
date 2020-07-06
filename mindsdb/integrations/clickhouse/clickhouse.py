@@ -98,9 +98,13 @@ class Clickhouse():
             name = model_meta['name']
             stats = model_meta['data_analysis']
             columns_sql = ','.join(self._to_clickhouse_table(stats))
-            columns_sql += ',`$select_data_query` Nullable(String)'
+            columns_sql += ',`select_data_query` Nullable(String)'
             for col in model_meta['predict_cols']:
-                columns_sql += f',`${col}_confidence` Nullable(Float64)'
+                columns_sql += f',`{col}_confidence` Nullable(Float64)'
+                if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+                    columns_sql += f',`{col}_min` Nullable(Float64)'
+                    columns_sql += f',`{col}_max` Nullable(Float64)'
+                columns_sql += f',`{col}_explain` Nullable(String)'
 
             msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
             msqyl_user = self.config['api']['mysql']['user']

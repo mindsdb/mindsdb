@@ -50,7 +50,7 @@ before_script:
 script:
   # Run tests (linux only due to docker support... )
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/integration_tests; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then pytest; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then pytest -s; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd ../..; fi
   # Build windows installer
   - mkdir -p build;

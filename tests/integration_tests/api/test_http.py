@@ -32,7 +32,7 @@ class TestPredictor:
         except:
             pass
 
-    def test_put_ds_put_pred(self):
+    def test_put_ds_put_pred_predict(self):
         rand = randint(0,pow(10,12))
         PRED_NAME = f'hr_predictor_{rand}'
         DS_NAME = f'hr_ds_{rand}'

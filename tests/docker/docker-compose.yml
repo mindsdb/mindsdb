@@ -20,6 +20,7 @@ services:
   clickhouse:
     network_mode: host
     image: yandex/clickhouse-server:20.1
+    container_name: clickhouse-test
     volumes:
       - ./clickhouse/database:/var/lib/clickhouse
     ports:

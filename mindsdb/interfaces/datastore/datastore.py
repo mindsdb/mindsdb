@@ -129,7 +129,6 @@ class DataStore():
         df_with_types = cast_df_columns_types(df, self.get_analysis(df)['data_analysis_v2'])
         create_sqlite_db(os.path.join(ds_dir, 'sqlite.db'), df_with_types)
 
-        print(picklable)
         with open(os.path.join(ds_dir,'ds.pickle'), 'wb') as fp:
             pickle.dump(picklable, fp)
 
@@ -144,9 +143,9 @@ class DataStore():
                 'columns': [dict(name=x) for x in list(df.keys())]
             }, fp)
 
-        return self.get_datasource_obj(name, avoid_crash=True)
+        return self.get_datasource_obj(name, raw=True)
 
-    def get_datasource_obj(self, name, avoid_crash=False):
+    def get_datasource_obj(self, name, raw=False):
         ds_meta_dir = os.path.join(self.dir, name)
         ds_dir = os.path.join(ds_meta_dir, 'datasource')
         ds = None
@@ -155,7 +154,7 @@ class DataStore():
             #sys.setrecursionlimit(0x100000)
             with open(os.path.join(ds_dir,'ds.pickle'), 'rb') as fp:
                 picklable = pickle.load(fp)
-                if avoid_crash:
+                if raw:
                     return picklable
                 try:
                     ds = eval(picklable['class'])(*picklable['args'],**picklable['kwargs'])

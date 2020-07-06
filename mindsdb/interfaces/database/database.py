@@ -16,7 +16,15 @@ class DatabaseWrapper():
                     self.integration_arr.append(Mariadb(config,db_alias))
         # Doesn't really matter if we call this multiple times, but it will waste time so ideally don't
         if setup:
-            for integration in self.integration_arr: integration.setup()
+            working_integrations = []
+            try:
+                for integration in self.integration_arr:
+                    integration.setup()
+                    working_integrations.append(integration)
+            except Exception as e:
+                print(f'Failed to integrate with a database, error: {e}')
+
+            self.integration_arr = working_integrations
 
     def register_predictors(self, model_data_arr):
         for integration in self.integration_arr: integration.register_predictors(model_data_arr)

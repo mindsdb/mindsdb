@@ -51,11 +51,12 @@ script:
   # Run tests (linux only due to docker support... :S)
 
   # Build windows installer
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mkdir -p build; fi
+  - mkdir -p build;
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd distributions/windows; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 ./make.bat; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mv dist/install.exe ../../build/; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd ../..; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; cp distributions/linux/install.sh build/; fi
 
 after_script:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then docker-compose down; fi

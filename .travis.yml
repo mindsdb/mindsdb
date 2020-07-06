@@ -48,7 +48,7 @@ before_script:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then docker-compose up -d; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd ../../ tests; fi
 script:
-  # Run tests (linux only due to docker support... :S)
+  # Run tests (linux only due to docker support... )
 
   # Build windows installer
   - mkdir -p build;

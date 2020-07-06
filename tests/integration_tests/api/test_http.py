@@ -9,12 +9,12 @@ import signal
 from random import randint
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def ds_name():
     rand = randint(0,pow(10,12))
     return f'hr_ds_{rand}'
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def pred_name():
     rand = randint(0,pow(10,12))
     return f'hr_predictor_{rand}'
@@ -28,7 +28,6 @@ class TestPredictor:
         for i in range(20):
             try:
                 res = requests.get(f'{root}/ping')
-                print(res)
                 if res.status != 200:
                     raise Exception('')
             except:
@@ -45,7 +44,6 @@ class TestPredictor:
     @pytest.mark.order1
     def test_put_ds(self, ds_name):
         # PUT datasource
-        print(f'!!!!!!!{ds_name}')
         params = {
             'name': ds_name,
             'source_type': 'url',
@@ -57,7 +55,6 @@ class TestPredictor:
 
     @pytest.mark.order2
     def test_analyze(self, ds_name):
-        print(f'############{ds_name}')
         response = requests.get(f'{root}/datasources/{ds_name}/analyze')
         assert response.status_code == 200
 
@@ -82,7 +79,6 @@ class TestPredictor:
         }
         url = f'{root}/predictors/{pred_name}/predict'
         res = requests.post(url, json=params)
-        print(res.json())
         assert isinstance(res.json()[0]['rental_price']['predicted_value'],float)
         assert res.status_code == 200
 

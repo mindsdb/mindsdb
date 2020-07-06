@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     print(f'Using configuration file: {config_path}')
     config = Config(config_path)
-    print(args.api)
+    
     if args.api is None:
         api_arr = [api for api in config['api']]
     else:

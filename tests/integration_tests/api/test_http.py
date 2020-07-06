@@ -13,8 +13,6 @@ root = 'http://localhost:47334'
 class TestPredictor:
     @classmethod
     def setup_class(cls):
-        return
-
         cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http'], close_fds=True)
 
         for i in range(20):

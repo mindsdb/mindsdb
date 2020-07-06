@@ -46,11 +46,12 @@ install:
 before_script:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/docker; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then docker-compose up -d; fi
+
 script:
   # Run tests (linux only due to docker support... )
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; cd tests/integration_tests; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; pytest; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; cd ../..; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cd tests/integration_tests; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then pytest; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cd ../..; fi
   # Build windows installer
   - mkdir -p build;
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd distributions/windows; fi

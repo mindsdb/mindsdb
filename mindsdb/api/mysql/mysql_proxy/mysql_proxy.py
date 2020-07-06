@@ -131,7 +131,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.error(traceback.format_exc())
 
     def handshake(self):
-        global HARDCODED_PASSWORD, HARDCODED_USER
+        global HARDCODED_PASSWORD, HARDCODED_USER, CERT_PATH
 
         def switch_auth(method='mysql_native_password'):
             self.packet(SwitchOutPacket, seed=self.salt, method=method).send()
@@ -181,12 +181,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if handshake_resp.type == 'SSLRequest':
             log.info('switch to SSL')
             self.session.is_ssl = True
+
             ssl_socket = ssl.wrap_socket(
                 self.socket,
                 server_side=True,
                 certfile=CERT_PATH,
                 do_handshake_on_connect=True
             )
+
             self.socket = ssl_socket
             handshake_resp = self.packet(HandshakeResponsePacket)
             handshake_resp.get()
@@ -875,7 +877,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         HARDCODED_USER = config['api']['mysql']['user']
         HARDCODED_PASSWORD = config['api']['mysql']['password']
-        CERT_PATH = config['api']['mysql']['certificate_path']
+        CERT_PATH = config['api']['mysql'].get('certificate_path')
         default_store = DataStore(config)
         mdb = MindsdbNative(config)
         datahub = init_datahub(config)

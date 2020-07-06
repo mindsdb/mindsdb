@@ -857,7 +857,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         :return:
         """
         p = packetClass(socket=self.socket, seq=self.count, session=self.session, proxy=self, **kwargs)
-        self.count += 1
+        self.count = (self.count + 1) % 256
         return p
 
     @staticmethod

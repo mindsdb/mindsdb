@@ -9,6 +9,16 @@ import signal
 from random import randint
 
 
+@pytest.fixture(scope="module", autouse=True)
+def ds_name():
+    rand = randint(0,pow(10,12))
+    return f'hr_ds_{rand}'
+
+@pytest.fixture(scope="module", autouse=True)
+def pred_name():
+    rand = randint(0,pow(10,12))
+    return f'hr_predictor_{rand}'
+
 root = 'http://localhost:47334'
 class TestPredictor:
     @classmethod
@@ -32,36 +42,37 @@ class TestPredictor:
         except:
             pass
 
-    def test_put_ds_put_pred_predict(self):
-        rand = randint(0,pow(10,12))
-        PRED_NAME = f'hr_predictor_{rand}'
-        DS_NAME = f'hr_ds_{rand}'
-
-        DS_URL = 'https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv'
-
+    @pytest.mark.order1
+    def test_put_ds(self, ds_name):
         # PUT datasource
+        print(f'!!!!!!!{ds_name}')
         params = {
-            'name': DS_NAME,
+            'name': ds_name,
             'source_type': 'url',
-            'source': DS_URL
+            'source': 'https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv'
         }
-        url = f'{root}/datasources/{DS_NAME}'
+        url = f'{root}/datasources/{ds_name}'
         res = requests.put(url, json=params)
         assert res.status_code == 200
 
-        response = requests.get(f'{root}/datasources/{DS_NAME}/analyze')
+    @pytest.mark.order2
+    def test_analyze(self, ds_name):
+        print(f'############{ds_name}')
+        response = requests.get(f'{root}/datasources/{ds_name}/analyze')
         assert response.status_code == 200
 
+    @pytest.mark.order2
+    def test_put_predictor(self, ds_name, pred_name):
         # PUT predictor
         params = {
-            'data_source_name': DS_NAME,
+            'data_source_name': ds_name,
             'to_predict': 'rental_price',
             'kwargs': {
                 'stop_training_in_x_seconds': 5,
                 'join_learn_process': True
             }
         }
-        url = f'{root}/predictors/{PRED_NAME}'
+        url = f'{root}/predictors/{pred_name}'
         res = requests.put(url, json=params)
         assert res.status_code == 200
 
@@ -69,13 +80,13 @@ class TestPredictor:
         params = {
             'when': {'sqft':500}
         }
-        url = f'{root}/predictors/{PRED_NAME}/predict'
+        url = f'{root}/predictors/{pred_name}/predict'
         res = requests.post(url, json=params)
         print(res.json())
         assert isinstance(res.json()[0]['rental_price']['predicted_value'],float)
         assert res.status_code == 200
 
-
+    @pytest.mark.order3
     def test_datasources(self):
         """
         Call list datasources endpoint
@@ -84,6 +95,7 @@ class TestPredictor:
         response = requests.get(f'{root}/datasources/')
         assert response.status_code == 200
 
+    @pytest.mark.order3
     def test_datasource_not_found(self):
         """
         Call unexisting datasource
@@ -92,6 +104,7 @@ class TestPredictor:
         response = requests.get(f'{root}/datasource/dummy_source')
         assert response.status_code == 404
 
+    @pytest.mark.order3
     def test_ping(self):
         """
         Call utilities ping endpoint
@@ -100,6 +113,7 @@ class TestPredictor:
         response = requests.get(f'{root}/util/ping')
         assert response.status_code == 200
 
+    @pytest.mark.order3
     def test_predictors(self):
         """
         Call list predictors endpoint
@@ -108,6 +122,7 @@ class TestPredictor:
         response = requests.get(f'{root}/predictors/')
         assert response.status_code == 200
 
+    @pytest.mark.order3
     def test_predictor_not_found(self):
         """
         Call unexisting predictor

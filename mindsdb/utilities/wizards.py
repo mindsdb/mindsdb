@@ -113,7 +113,8 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
     mysql = _in('Enable MYSQL API ? [Y/N]','Y',use_default)
     if mysql in ['Y','y']:
         crt_path = os.path.join(config_dir, 'cert.pem')
-        make_ssl_cert(crt_path)
+        if os.path.isfile(crt_path) is False:
+            make_ssl_cert(crt_path)
         config['api']['mysql'] = {
             "certificate_path": crt_path,
             "log": {

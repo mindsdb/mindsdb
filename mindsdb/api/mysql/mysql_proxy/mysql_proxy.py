@@ -234,12 +234,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.info('switch to SSL')
             self.session.is_ssl = True
 
-            use_temp_cert = not isinstance(CERT_PATH, str) or not pathlib.Path(CERT_PATH).is_file()
+            use_temp_cert = isinstance(CERT_PATH, str) is False or len(CERT_PATH) == 0
             cert_path = self.make_temp_cert() if use_temp_cert else CERT_PATH
             if use_temp_cert:
                 log.info(f'use temp ssl cert: {cert_path}')
             else:
                 log.info(f'use user defined ssl cert: {cert_path}')
+                if not pathlib.Path(cert_path).is_file():
+                    log.error(f'File is not SSL cert: {cert_path}')
+                    return False
 
             ssl_socket = ssl.wrap_socket(
                 self.socket,

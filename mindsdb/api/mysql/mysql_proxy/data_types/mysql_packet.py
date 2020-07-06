@@ -48,14 +48,14 @@ class Packet:
 
     def loadFromPacketString(self, packet_string):
         len_header = struct.unpack('>i', struct.pack('1s', '') + packet_string[:3])[0]
-        count_header = struct.unpack('b', packet_string[3])[0]
+        count_header = struct.unpack('B', packet_string[3])[0]
         body = packet_string[4:]
         self.loadFromParams(length=len_header, seq=count_header, body=body)
 
     def getPacketString(self):
         body = self.body
         len_header = struct.pack('<i', self.length)[:3]  # keep it 3 bytes
-        count_header = struct.pack('b', self.seq)
+        count_header = struct.pack('B', self.seq)
         packet = len_header + count_header + body
         return packet
 
@@ -77,7 +77,7 @@ class Packet:
                 break
             body += self.mysql_socket.recv(len_header)
         self.session.logging.info(f'Got packet: {str(body)}')
-        self.proxy.count = int(count_header) + 1
+        self.proxy.count = (int(count_header) + 1) % 256
         self.setup(len(body), count_header, body)
         return True
 

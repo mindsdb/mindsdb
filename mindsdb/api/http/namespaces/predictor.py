@@ -129,11 +129,6 @@ class Predictor(Resource):
             original_name = name
             name = name + '_retrained'
 
-        print('!!!')
-        print(name)
-        print(from_data)
-        print(to_predict)
-        print(kwargs)
         ca.mindsdb_native.learn(name, from_data, to_predict, kwargs)
 
         if retrain is True:

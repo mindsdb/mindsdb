@@ -27,11 +27,13 @@ class TestPredictor:
 
         for i in range(20):
             try:
-                res = requests.get(f'{root}/ping')
-                if res.status != 200:
+                res = requests.get(f'{root}/util/ping')
+                if res.status_code != 200:
                     raise Exception('')
             except:
                 time.sleep(1)
+                if i == 19:
+                    raise Exception("Can't connect !")
 
     @classmethod
     def teardown_class(cls):

@@ -63,8 +63,8 @@ class TestClickhouse:
 
         for i in range(20):
             try:
-                res = requests.get(f'{root}/ping')
-                if res.status != 200:
+                res = requests.get(f'{root}/util/ping')
+                if res.status_code != 200:
                     raise Exception('')
             except:
                 time.sleep(1)
@@ -119,7 +119,7 @@ class TestClickhouse:
                 if i == 39:
                     raise Exception("Can't get predictor !")
 
-        assert resut.status == 200
+        assert resut.status_code == 200
 
         result = query_ch(f"show tables FROM mindsdb")
         assert pred_name in result

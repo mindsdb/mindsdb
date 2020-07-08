@@ -8,7 +8,8 @@ class Config(object):
     def __init__(self, config_path='mindsdb/default_config.json'):
         self._config_path = None
         self._config_hash = None
-        if isinstance(config, str):
+        self._config = None
+        if isinstance(config_path, str):
             self.config_path = config_path
             self._read()
             self._config_hash = self._gen_hash()
@@ -22,24 +23,24 @@ class Config(object):
         else:
             raise TypeErrpr('`self.config_path` must be a string representing a local file path to a json config')
 
-    def _gen_hash():
+    def _gen_hash(self):
         with open(self.config_path, 'rb') as fp:
             return hashlib.md5(fp.read()).hexdigest()
 
-    def _set_updated(self):
+    def _set_updated(self, key):
         # Only check this for dynamically generated keys, won't be needed once we switch to using a database here
-        if key in ['integrations']:
+        if key in self._config['integrations']:
             file_hash = self._gen_hash()
             if file_hash != self._config_hash:
                 self._read()
                 self._config_hash = self._gen_hash()
 
     def __getitem__(self, key):
-        self._set_updated()
+        self._set_updated(key)
         return self._config[key]
 
     def get(self, key, default=None):
-        self._set_updated()
+        self._set_updated(key)
         return self._config.get(key, default)
 
     def get_all(self):

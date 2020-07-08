@@ -47,7 +47,7 @@ def query_ch(query, config_path):
 
     return res
 
-class ClickhouseTest:
+class TestClickhouse:
     @classmethod
     def setup_class(cls, config_path):
         query_ch('DROP DATABASE mindsdb')

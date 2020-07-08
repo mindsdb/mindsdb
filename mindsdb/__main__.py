@@ -56,7 +56,7 @@ if __name__ == '__main__':
             'data_analysis': mdb.get_model_data(x['name'])['data_analysis_v2']
         } for x in mdb.get_models()
     ]
-    dbw = DatabaseWrapper(config, setup=True)
+    dbw = DatabaseWrapper(config)
     dbw.register_predictors(model_data_arr)
 
     for broken_name in dbw.check_connections():

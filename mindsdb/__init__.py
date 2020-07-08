@@ -7,6 +7,8 @@ from mindsdb.utilities.wizards import cli_config
 config_dir, predictor_dir, datasource_dir = get_or_create_dir_struct()
 config_path = os.path.join(config_dir,'config.json')
 if not os.path.exists(config_path):
+    if 'DEV_CONFIG_PATH' in os.environ:
+        config_dir = os.environ['DEV_CONFIG_PATH']
     _ = cli_config(None,None,predictor_dir,datasource_dir,config_dir,use_default=True)
 
 with open(config_path, 'r') as fp:

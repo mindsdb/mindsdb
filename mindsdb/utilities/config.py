@@ -53,3 +53,4 @@ class Config(object):
         pass
 
     def modify_db_integration(self, name, dict):
+        pass

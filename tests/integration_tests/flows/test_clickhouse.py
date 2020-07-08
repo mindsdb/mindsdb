@@ -14,59 +14,30 @@ from mindsdb.utilities.config import Config
 @pytest.fixture(scope="module")
 def ds_name():
     rand = randint(0,pow(10,12))
-    return f'hr_ds_{rand}'
+    return f'default.hr_ds_{rand}'
 
 @pytest.fixture(scope="module")
 def pred_name():
     rand = randint(0,pow(10,12))
     return f'hr_predictor_{rand}'
 
+@pytest.fixture(scope="module")
+def config_path():
+    os.environ['DEV_CONFIG_PATH'] = ''
+    return os.environ['DEV_CONFIG_PATH'] + 'config.json'
 
-class ClickhouseTest:
-    @classmethod
-    def setup_class(cls):
-        cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http'], close_fds=True)
 
-        for i in range(20):
-            try:
-                res = requests.get(f'{root}/ping')
-                if res.status != 200:
-                    raise Exception('')
-            except:
-                time.sleep(1)
-
-    @classmethod
-    def teardown_class(cls):
-        try:
-            pgrp = os.getpgid(cls.sp.pid)
-            os.killpg(pgrp, signal.SIGINT)
-        except:
-            pass
-
-def query_ch(query):
+def query_ch(query, config_path):
+    config = Config(config_path)
     if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
         query += ' FORMAT JSON'
 
-    user = config['integrations']['default_clickhouse']['user']
-    password = config['integrations']['default_clickhouse']['password']
-
     connect_string = 'http://{}:{}'.format(
-        'localhost',
-        8123
+        config['integrations']['default_clickhouse']['host'],
+        config['integrations']['default_clickhouse']['port']
     )
 
-    params = {}
-
-    params = {'user': 'default'}
-    try:
-        params['user'] = config['integrations']['default_clickhouse']['user']
-    except:
-        pass
-
-    try:
-        params['password'] = config['integrations']['default_clickhouse']['password']
-    except:
-        pass
+    params = {'user': config['integrations']['default_clickhouse']['user'], 'password': config['integrations']['default_clickhouse']['password']}
 
     res = requests.post(
         connect_string,
@@ -79,136 +50,84 @@ def query_ch(query):
 
     return res
 
-class ClickhouseTest(unittest.TestCase):
+class ClickhouseTest:
     @classmethod
-    def setUpClass(cls):
-        cls.mdb = MindsdbNative(config)
+    def setup_class(cls, config_path):
+        query_ch('DROP DATABASE mindsdb')
 
-        if os.path.isfile(test_csv) is False:
-            r = requests.get("https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv")
-            with open(test_csv, 'wb') as f:
-                f.write(r.content)
+        query_ch(f"""
+        CREATE TABLE {ds_name} (number_of_rooms String, number_of_bathrooms String, sqft Int64, location String, days_on_market Int64, initial_price Int64, neighborhood String, rental_price Float64)  ENGINE=URL('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv', CSVWithNames)
+        """)
 
-        models = cls.mdb.get_models()
-        models = [x['name'] for x in models]
-        if test_predictor_name in models:
-            cls.mdb.delete_model(test_predictor_name)
+        cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'mysql'], close_fds=True)
 
-        query_ch('create database if not exists test')
-        test_tables = query_ch('show tables from test')
-        test_tables = [x['name'] for x in test_tables]
-        if test_data_table not in test_tables:
-            query_ch(f'''
-                CREATE TABLE test.{test_data_table} (
-                number_of_rooms Int8,
-                number_of_bathrooms Int8,
-                sqft Int32,
-                location String,
-                days_on_market Int16,
-                initial_price Int32,
-                neighborhood String,
-                rental_price Int32
-                ) ENGINE = TinyLog()
-            ''')
-            with open(test_csv) as f:
-                csvf = csv.reader(f)
-                i = 0
-                for row in csvf:
-                    if i > 0:
-                        number_of_rooms = int(row[0])
-                        number_of_bathrooms = int(row[1])
-                        sqft = int(float(row[2].replace(',','.')))
-                        location = str(row[3])
-                        days_on_market = int(row[4])
-                        initial_price = int(row[5])
-                        neighborhood = str(row[6])
-                        rental_price = int(float(row[7]))
-                        query_ch(f'''INSERT INTO test.{test_data_table} VALUES (
-                            {number_of_rooms},
-                            {number_of_bathrooms},
-                            {sqft},
-                            '{location}',
-                            {days_on_market},
-                            {initial_price},
-                            '{neighborhood}',
-                            {rental_price}
-                        )''')
-                    i += 1
+        for i in range(20):
+            try:
+                res = requests.get(f'{root}/ping')
+                if res.status != 200:
+                    raise Exception('')
+            except:
+                time.sleep(1)
 
-    def test_1_predictor_record_not_exists(self):
+    @classmethod
+    def teardown_class(cls, config_path):
+        try:
+            pgrp = os.getpgid(cls.sp.pid)
+            os.killpg(pgrp, signal.SIGINT)
+            os.remove(config_path)
+        except:
+            pass
+
+    @pytest.mark.order1
+    def test_setup(self):
         print(f'Executing {inspect.stack()[0].function}')
-        # try:
-        #     pass
-        # except expression as identifier:
-        #     pass
-        result = query_ch(f"select name from mindsdb.predictors where name='{test_predictor_name}'")
-        self.assertTrue(len(result) == 0)
-        print('Passed')
+        result = query_ch(f"show tables FROM mindsdb")
+        names = [x['name'] for x in result]
+        assert 'predictors' in names
+        assert 'commands' in names
 
-    def test_2_predictor_table_not_exists(self):
-        print(f'Executing {inspect.stack()[0].function}')
-        result = query_ch(f"show tables from mindsdb")
-        result = [x['name'] for x in result]
-        self.assertTrue(test_predictor_name not in result)
-        print('Passed')
-
-    def test_3_learn_predictor(self):
+    @pytest.mark.order2
+    def test_learn(self, ds_name, pred_name):
         print('Executing test 3')
         q = f"""
             insert into mindsdb.predictors
                 (name, predict_cols, select_data_query, training_options)
             values (
-                '{test_predictor_name}',
+                '{pred_name}',
                 'rental_price',
-                'select * from test.{test_data_table} limit 1000',
-                '{{"stop_training_in_x_seconds": 30}}'
+                'SELECT * FROM {ds_name} LIMIT 400',
+                '{{"stop_training_in_x_seconds": 10}}'
             )
         """
         result = query_ch(q)
 
-        time.sleep(40)
+        for i in range(40):
+            try:
+                result = query_ch(f"SELECT name FROM mindsdb.predictors where name='{pred_name}'")
+                print(result)
+                assert isinstance(result, dict)
+            except:
+                time.sleep(1)
 
-        result = query_ch(f"select name from mindsdb.predictors where name='{test_predictor_name}'")
-        # check status!
-        self.assertTrue(len(result) == 1)
+        assert len(result) == 1
 
-        result = query_ch(f"show tables from mindsdb")
-        result = [x['name'] for x in result]
-        self.assertTrue(test_predictor_name in result)
+        result = query_ch(f"show tables FROM mindsdb")
+        assert pred_name in result
 
-    def test_4_query(self):
-        print('Executing test 4')
-        result = query_ch(f"select rental_price from mindsdb.{test_predictor_name} where sqft=1000 and location='good'")
-        self.assertTrue(len(result) == 1 and 'rental_price' in result[0])
+    @pytest.mark.order3
+    def test_predict_from_where(self, pred_name):
+        result = query_ch(f"SELECT rental_price FROM mindsdb.{pred_name} where sqft=1000 and location='good'")
+        assert len(result) == 1
+        assert 'rental_price' in result[0]
 
-def wait_mysql(timeout):
-    config
-
-
-    con = MySQLdb.connect(
-        config['api']['mysql']['host'],
-        USER,
-        PASSWORD,
-        DATABASE
-    )
-
-    cur = con.cursor()
-
-    cur.execute('DROP TABLE IF EXISTS test_mindsdb')
-    cur.execute('CREATE TABLE test_mindsdb(col_1 Text, col_2 BIGINT, col_3 BOOL)')
-    for i in range(0,200):
-        cur.execute(f'INSERT INTO test_mindsdb VALUES ("This is tring number {i}", {i}, {i % 2 == 0})')
-    con.commit()
-    con.close()
-
-if __name__ == "__main__":
-    sp = subprocess.Popen(['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', TEST_CONFIG])
-    try:
-        time.sleep(12)
-        unittest.main()
-        print('Tests passed !')
-    except:
-        print('Tests Failed !')
-    finally:
-        sp.terminate()
-    print('done')
+    @pytest.mark.order3
+    def test_predict_from_query(self, pred_name, ds_name):
+        len_ds = query_ch(f'SELECT COUNT(*) as len from {ds_name}')[0]['len']
+        result = query_ch(f""" SELECT rental_price FROM mindsdb.{pred_name} where `$select_data_query='SELECT * FROM {ds_name}'` """)
+        assert len(result) == len_ds
+        for res in result:
+            assert 'rental_price' in res
+            assert 'rental_price_explain' in res
+            assert 'rental_price_confidence' in res
+            assert 'rental_price_max' in res
+            assert 'rental_price_min' in res

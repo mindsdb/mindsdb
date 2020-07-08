@@ -29,11 +29,11 @@ class DatabaseWrapper():
                 if config['integrations'][db_alias]['type'] == 'mariadb':
                     integration_arr.append(Mariadb(config,db_alias))
                 else:
-                    print('Uknown integration type: ' config['integrations'][db_alias]['type'] + f' for database called: {db_alias}')
+                    print('Uknown integration type: ' + config['integrations'][db_alias]['type'] + f' for database called: {db_alias}')
 
         working_integration_arr = _setup_integrations(integration_arr)
         return working_integration_arr
-    
+
     def register_predictors(self, model_data_arr):
         for integration in self._get_integrations(): integration.register_predictors(model_data_arr)
 

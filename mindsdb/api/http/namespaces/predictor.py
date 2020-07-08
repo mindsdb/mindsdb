@@ -113,12 +113,6 @@ class Predictor(Resource):
         if 'equal_accuracy_for_all_output_categories' not in kwargs:
             kwargs['equal_accuracy_for_all_output_categories'] = True
 
-        if 'unstable_parameters_dict' not in kwargs:
-            kwargs['unstable_parameters_dict'] = {}
-
-        if 'use_selfaware_model' not in kwargs['unstable_parameters_dict']:
-            kwargs['unstable_parameters_dict']['use_selfaware_model'] = False
-
         try:
             retrain = data.get('retrain')
             if retrain in ('true', 'True'):
@@ -135,6 +129,11 @@ class Predictor(Resource):
             original_name = name
             name = name + '_retrained'
 
+        print('!!!')
+        print(name)
+        print(from_data)
+        print(to_predict)
+        print(kwargs)
         ca.mindsdb_native.learn(name, from_data, to_predict, kwargs)
 
         if retrain is True:

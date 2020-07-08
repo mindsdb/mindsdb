@@ -1,0 +1,61 @@
+{
+    "api": {
+        "http": {
+            "host": "0.0.0.0",
+            "port": "47334"
+        },
+        "mysql": {
+            "certificate_path": "config/cert.pem",
+            "datasources": [],
+            "host": "127.0.0.1",
+            "log": {
+                "console_level": "INFO",
+                "file": "mysql.log",
+                "file_level": "INFO",
+                "folder": "logs/",
+                "format": "%(asctime)s - %(levelname)s - %(message)s"
+            },
+            "password": "",
+            "port": "47335",
+            "user": "mindsdb"
+        }
+    },
+    "config_version": 1,
+    "debug": false,
+    "integrations": {
+        "default_clickhouse": {
+            "enabled": true,
+            "host": "localhost",
+            "password": "",
+            "port": 8123,
+            "type": "clickhouse",
+            "user": "default"
+        },
+        "default_mariadb": {
+            "enabled": true,
+            "host": "localhost",
+            "password": "",
+            "port": 3306,
+            "type": "mariadb",
+            "user": "root"
+        }
+    },
+    "interface": {
+        "dataskillet": {
+            "enabled": false
+        },
+        "datastore": {
+            "enabled": true,
+            "storage_dir": "/home/george/mindsdb/var/datastore"
+        },
+        "lightwood": {
+            "enabled": true
+        },
+        "mindsdb_native": {
+            "enabled": true,
+            "storage_dir": "/home/george/mindsdb/var/predictors"
+        }
+    },
+    "pip_path": null,
+    "python_interpreter": null
+}

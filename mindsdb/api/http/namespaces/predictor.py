@@ -113,12 +113,6 @@ class Predictor(Resource):
         if 'equal_accuracy_for_all_output_categories' not in kwargs:
             kwargs['equal_accuracy_for_all_output_categories'] = True
 
-        if 'unstable_parameters_dict' not in kwargs:
-            kwargs['unstable_parameters_dict'] = {}
-
-        if 'use_selfaware_model' not in kwargs['unstable_parameters_dict']:
-            kwargs['unstable_parameters_dict']['use_selfaware_model'] = False
-
         try:
             retrain = data.get('retrain')
             if retrain in ('true', 'True'):
@@ -204,7 +198,7 @@ class PredictorPredict(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        results = ca.mindsdb_native.predict(name, when=when, **kwargs)
+        results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
         # return '', 500
         return preparse_results(results, format_flag)
 

@@ -57,6 +57,8 @@ class MindsDBDataNode(DataNode):
         self.mindsdb_native.delete_model(name)
 
     def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
+        ''' NOTE WHERE statements can be just $eq joined with 'and'
+        '''
         if table == 'predictors':
             return self._select_predictors()
 
@@ -88,20 +90,21 @@ class MindsDBDataNode(DataNode):
             else:
                 where_data += data
 
-        # NOTE WHERE statements can be just $eq joined with 'and'
         new_where = {}
-        for key, value in where.items():
-            if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
-                # TODO value should be just string or number
-                raise Exception()
-            new_where[key] = value['$eq']
-        if len(new_where) == 0:
-            new_where = None
-
         if where_data is not None:
             where_data = pandas.DataFrame(where_data)
+        else:
+            for key, value in where.items():
+                if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
+                    # TODO value should be just string or number
+                    raise Exception()
+                new_where[key] = value['$eq']
+            if len(new_where) == 0:
+                new_where = None
 
-        res = self.mindsdb_native.predict(name=table, when=new_where, when_data=where_data)
+            where_data = [new_where]
+
+        res = self.mindsdb_native.predict(name=table, when_data=where_data)
 
         model = self.mindsdb_native.get_model_data(name=table)
         predicted_columns = model['predict']
@@ -129,13 +132,5 @@ class MindsDBDataNode(DataNode):
         if select_data_query is not None:
             for row in data:
                 row['select_data_query'] = select_data_query
-
-        if new_where is not None and len(new_where.keys()) > 0:
-            columns = self.getTableColumns(table)
-            for row in data:
-                for column in columns:
-                    if column not in row:
-                        row[column] = None
-                row.update(new_where)
 
         return data

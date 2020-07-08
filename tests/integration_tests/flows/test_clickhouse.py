@@ -105,8 +105,11 @@ class TestClickhouse:
         for i in range(40):
             try:
                 result = query_ch(f"SELECT name FROM mindsdb.predictors where name='{pred_name}'")
-                assert result[0]['name'] == pred_name
+                if result[0]['name'] != pred_name:
+                    raise Exception('not ready yet !')
             except:
+                print(time.time())
+                print("Sleeping for 1 second")
                 time.sleep(1)
                 if i == 39:
                     raise Exception("Can't get predictor !")
@@ -116,14 +119,14 @@ class TestClickhouse:
 
     @pytest.mark.order3
     def test_predict_from_where(self):
-        result = query_ch(f"SELECT rental_price FROM mindsdb.{pred_name} where sqft=1000 and location='good'")
+        result = query_ch(f"SELECT rental_price FROM mindsdb.`{pred_name}` where sqft=1000 and location='good'")
         assert len(result) == 1
         assert 'rental_price' in result[0]
 
     @pytest.mark.order3
     def test_predict_from_query(self):
         len_ds = query_ch(f'SELECT COUNT(*) as len from {ds_name}')[0]['len']
-        result = query_ch(f""" SELECT rental_price FROM mindsdb.{pred_name} where `$select_data_query='SELECT * FROM {ds_name}'` """)
+        result = query_ch(f""" SELECT rental_price FROM mindsdb.`{pred_name}` where `$select_data_query='SELECT * FROM {ds_name}'` """)
         assert len(result) == len_ds
         for res in result:
             assert 'rental_price' in res

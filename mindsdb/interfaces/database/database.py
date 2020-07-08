@@ -36,7 +36,9 @@ class DatabaseWrapper():
         return working_integration_arr
 
     def register_predictors(self, model_data_arr):
-        for integration in self._get_integrations(): integration.register_predictors(model_data_arr)
+        it = self._get_integrations()
+        print(it)
+        for integration in it: integration.register_predictors(model_data_arr)
 
     def unregister_predictor(self, name):
         for integration in self._get_integrations(): integration.unregister_predictor(name)

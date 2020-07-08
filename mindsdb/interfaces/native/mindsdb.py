@@ -23,8 +23,7 @@ class MindsdbNative():
             if p.exitcode != 0:
                 raise Exception('Learning process failed !')
 
-
-    def predict(self, name, when=None, when_data=None, kwargs={}):
+    def predict(self, name, when_data=None, kwargs={}):
         # @TODO Separate into two paths, one for "normal" predictions and one for "real time" predictions. Use the multiprocessing code commented out bellow for normal (once we figure out how to return the prediction object... else use the inline code but with the "real time" predict functionality of mindsdb_native taht will be implemented later)
         '''
         from_data = when if when is not None else when_data
@@ -34,18 +33,11 @@ class MindsdbNative():
         '''
         mdb = mindsdb_native.Predictor(name=name)
 
-        if when is not None:
-            predictions = mdb.predict(
-                when=when,
-                run_confidence_variation_analysis=True,
-                **kwargs
-            )
-        else:
-            predictions = mdb.predict(
-                when_data=when_data,
-                run_confidence_variation_analysis=False,
-                **kwargs
-            )
+        predictions = mdb.predict(
+            when_data=when_data,
+            run_confidence_variation_analysis=isinstance(when_data, list) is False or len(when_data) == 1,
+            **kwargs
+        )
 
         return predictions
 

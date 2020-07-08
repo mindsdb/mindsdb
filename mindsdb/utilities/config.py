@@ -17,7 +17,6 @@ class Config(object):
             raise TypeError('Argument must be string representing a file path <Later on to be switched to file path and/or database connection info>')
 
     def _read(self):
-
         if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
             with open(self.config_path, 'r') as fp:
                 self._config = config = json.load(fp)

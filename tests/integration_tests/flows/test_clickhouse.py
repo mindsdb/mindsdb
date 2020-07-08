@@ -1,12 +1,14 @@
-import requests
-import os
+from subprocess import Popen
 import time
+import os
+import signal
 from random import randint
+import requests
 
 import pytest
 
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.utilities.config import Config
+import mindsdb
 
 @pytest.fixture(scope="module")
 def ds_name():
@@ -19,14 +21,20 @@ def pred_name():
     return f'hr_predictor_{rand}'
 
 # Can't be a fixture since it's used in setup/teardown
+root = 'http://localhost:47334'
+
 def set_get_config_path():
-    os.environ['DEV_CONFIG_PATH'] = ''
-    return os.environ['DEV_CONFIG_PATH'] + 'config.json'
+    os.environ['DEV_CONFIG_PATH'] = 'config'
+    return os.environ['DEV_CONFIG_PATH'] + '/config.json'
 
 def query_ch(query):
     config = Config(set_get_config_path())
-    if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
-        query += ' FORMAT JSON'
+    query = query.lower()
+    add = 'format json'
+    for ele in ['drop ', 'create ','insert ']:
+        if ele in query:
+            add = ''
+    query += add
 
     connect_string = 'http://{}:{}'.format(
         config['integrations']['default_clickhouse']['host'],
@@ -50,13 +58,8 @@ class TestClickhouse:
     @classmethod
     def setup_class(cls):
         set_get_config_path()
-        query_ch('DROP DATABASE mindsdb')
 
-        query_ch(f"""
-        CREATE TABLE {ds_name} (number_of_rooms String, number_of_bathrooms String, sqft Int64, location String, days_on_market Int64, initial_price Int64, neighborhood String, rental_price Float64)  ENGINE=URL('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv', CSVWithNames)
-        """)
-
-        cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'mysql'], close_fds=True)
+        cls.sp = Popen(['python3', '-m', 'mindsdb'], close_fds=True)
 
         for i in range(20):
             try:
@@ -65,6 +68,14 @@ class TestClickhouse:
                     raise Exception('')
             except:
                 time.sleep(1)
+                if i == 19:
+                    raise Exception("Can't connect !")
+
+        #query_ch('DROP DATABASE mindsdb')
+
+        query_ch(f"""
+        CREATE TABLE {ds_name} (number_of_rooms String, number_of_bathrooms String, sqft Int64, location String, days_on_market Int64, initial_price Int64, neighborhood String, rental_price Float64)  ENGINE=URL('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv', CSVWithNames)
+        """)
 
     @classmethod
     def teardown_class(cls):
@@ -72,6 +83,7 @@ class TestClickhouse:
             pgrp = os.getpgid(cls.sp.pid)
             os.killpg(pgrp, signal.SIGINT)
             os.remove(set_get_config_path())
+            os.system('fuser -k 47335/tcp ; fuser -k 47334/tcp')
         except:
             pass
 
@@ -104,8 +116,10 @@ class TestClickhouse:
                 assert isinstance(result, dict)
             except:
                 time.sleep(1)
+                if i == 39:
+                    raise Exception("Can't get predictor !")
 
-        assert len(result) == 1
+        assert resut.status == 200
 
         result = query_ch(f"show tables FROM mindsdb")
         assert pred_name in result

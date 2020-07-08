@@ -1,12 +1,12 @@
-import pytest
-import requests
-import runpy
-
 from subprocess import Popen
 import time
 import os
 import signal
 from random import randint
+
+import pytest
+import requests
+import runpy
 
 
 @pytest.fixture(scope="module")

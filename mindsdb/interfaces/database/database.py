@@ -10,12 +10,12 @@ class DatabaseWrapper():
     def _setup_integrations(self, integration_arr):
         # Doesn't really matter if we call this multiple times, but it will waste time so ideally don't
         working_integration_arr = []
-        try:
-            for integration in integration_arr:
+        for integration in integration_arr:
+            try:
                 integration.setup()
                 working_integration_arr.append(integration)
-        except Exception as e:
-            print(f'Failed to integrate with a database, error: {e}')
+            except Exception as e:
+                print('Failed to integrate with database' + integration.name + f', error: {e}')
 
         return working_integration_arr
 

@@ -69,7 +69,7 @@ def make_ssl_cert(file_path):
     )
 
     name = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, ''),
+        x509.NameAttribute(NameOID.COMMON_NAME, 'mdb_autogen'),
         x509.NameAttribute(NameOID.COUNTRY_NAME, 'US'),
         x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, 'California'),
         x509.NameAttribute(NameOID.LOCALITY_NAME, 'Berkeley'),

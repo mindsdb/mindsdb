@@ -1,12 +1,9 @@
-import unittest
 import requests
 import os
-import csv
 import time
-import inspect
-import subprocess
 from random import randint
-import MySQLdb
+
+import pytest
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.utilities.config import Config
@@ -80,7 +77,6 @@ class ClickhouseTest:
 
     @pytest.mark.order1
     def test_setup(self):
-        print(f'Executing {inspect.stack()[0].function}')
         result = query_ch(f"show tables FROM mindsdb")
         names = [x['name'] for x in result]
         assert 'predictors' in names

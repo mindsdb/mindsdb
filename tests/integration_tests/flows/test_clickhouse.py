@@ -5,20 +5,43 @@ import csv
 import time
 import inspect
 import subprocess
-
+from random import randint
 import MySQLdb
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.utilities.config import Config
 
+@pytest.fixture(scope="module")
+def ds_name():
+    rand = randint(0,pow(10,12))
+    return f'hr_ds_{rand}'
 
-TEST_CONFIG = '/home/maxs/dev/mdb/venv/sources/mindsdb/test_config.json'
+@pytest.fixture(scope="module")
+def pred_name():
+    rand = randint(0,pow(10,12))
+    return f'hr_predictor_{rand}'
 
-test_csv = 'tests/home_rentals.csv'
-test_data_table = 'home_rentals_400'
-test_predictor_name = 'test_predictor_400'
 
-config = Config(TEST_CONFIG)
+class ClickhouseTest:
+    @classmethod
+    def setup_class(cls):
+        cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http'], close_fds=True)
+
+        for i in range(20):
+            try:
+                res = requests.get(f'{root}/ping')
+                if res.status != 200:
+                    raise Exception('')
+            except:
+                time.sleep(1)
+
+    @classmethod
+    def teardown_class(cls):
+        try:
+            pgrp = os.getpgid(cls.sp.pid)
+            os.killpg(pgrp, signal.SIGINT)
+        except:
+            pass
 
 def query_ch(query):
     if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
@@ -161,7 +184,7 @@ class ClickhouseTest(unittest.TestCase):
 def wait_mysql(timeout):
     config
 
-        
+
     con = MySQLdb.connect(
         config['api']['mysql']['host'],
         USER,

@@ -40,15 +40,12 @@ class PredictorProcess(ctx.Process):
             }])
 
         if trx_type == 'predict':
-            if isinstance(from_data,dict):
-                when = from_data
-                when_data = None
+            if isinstance(from_data, dict):
+                when_data = from_data
             else:
                 when_data = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-                when = None
 
             predictions = mdb.predict(
-                when=when,
                 when_data=when_data,
                 run_confidence_variation_analysis=True,
                 **kwargs

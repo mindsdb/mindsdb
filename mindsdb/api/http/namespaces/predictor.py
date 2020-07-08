@@ -204,7 +204,7 @@ class PredictorPredict(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        results = ca.mindsdb_native.predict(name, when=when, **kwargs)
+        results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
         # return '', 500
         return preparse_results(results, format_flag)
 

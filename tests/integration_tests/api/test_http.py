@@ -41,8 +41,9 @@ class TestPredictor:
         except:
             pass
 
-    @pytest.mark.order1
+    @pytest.mark.run(order=1)
     def test_put_ds(self, ds_name):
+        print('ORDER 1')
         # PUT datasource
         params = {
             'name': ds_name,
@@ -53,12 +54,13 @@ class TestPredictor:
         res = requests.put(url, json=params)
         assert res.status_code == 200
 
-    @pytest.mark.order2
+    @pytest.mark.run(order=2)
     def test_analyze(self, ds_name):
+        print('ORDER 2')
         response = requests.get(f'{root}/datasources/{ds_name}/analyze')
         assert response.status_code == 200
 
-    @pytest.mark.order2
+    @pytest.mark.run(order=2)
     def test_put_predictor(self, ds_name, pred_name):
         # PUT predictor
         params = {
@@ -82,7 +84,7 @@ class TestPredictor:
         assert isinstance(res.json()[0]['rental_price']['predicted_value'],float)
         assert res.status_code == 200
 
-    @pytest.mark.order3
+    @pytest.mark.run(order=3)
     def test_datasources(self):
         """
         Call list datasources endpoint
@@ -91,7 +93,7 @@ class TestPredictor:
         response = requests.get(f'{root}/datasources/')
         assert response.status_code == 200
 
-    @pytest.mark.order3
+    @pytest.mark.run(order=3)
     def test_datasource_not_found(self):
         """
         Call unexisting datasource
@@ -100,7 +102,7 @@ class TestPredictor:
         response = requests.get(f'{root}/datasource/dummy_source')
         assert response.status_code == 404
 
-    @pytest.mark.order3
+    @pytest.mark.run(order=3)
     def test_ping(self):
         """
         Call utilities ping endpoint
@@ -109,7 +111,7 @@ class TestPredictor:
         response = requests.get(f'{root}/util/ping')
         assert response.status_code == 200
 
-    @pytest.mark.order3
+    @pytest.mark.run(order=3)
     def test_predictors(self):
         """
         Call list predictors endpoint
@@ -118,7 +120,7 @@ class TestPredictor:
         response = requests.get(f'{root}/predictors/')
         assert response.status_code == 200
 
-    @pytest.mark.order3
+    @pytest.mark.run(order=3)
     def test_predictor_not_found(self):
         """
         Call unexisting predictor

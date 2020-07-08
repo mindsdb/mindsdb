@@ -24,7 +24,7 @@
     "debug": false,
     "integrations": {
         "default_clickhouse": {
-            "enabled": false,
+            "enabled": true,
             "host": "localhost",
             "password": "",
             "port": 8123,

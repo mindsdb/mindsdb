@@ -6,6 +6,7 @@ class DatabaseWrapper():
 
     def __init__(self, config):
         self.config = config
+        self._get_integrations()
 
     def _setup_integrations(self, integration_arr):
         # Doesn't really matter if we call this multiple times, but it will waste time so ideally don't
@@ -26,7 +27,7 @@ class DatabaseWrapper():
             if self.config['integrations'][db_alias]['enabled']:
                 if self.config['integrations'][db_alias]['type'] == 'clickhouse':
                     integration_arr.append(Clickhouse(self.config,db_alias))
-                if self.config['integrations'][db_alias]['type'] == 'mariadb':
+                elif self.config['integrations'][db_alias]['type'] == 'mariadb':
                     integration_arr.append(Mariadb(self.config,db_alias))
                 else:
                     print('Uknown integration type: ' + self.config['integrations'][db_alias]['type'] + f' for database called: {db_alias}')

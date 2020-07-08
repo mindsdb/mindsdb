@@ -113,11 +113,11 @@ class Predictor(Resource):
         if 'equal_accuracy_for_all_output_categories' not in kwargs:
             kwargs['equal_accuracy_for_all_output_categories'] = True
 
-        if 'unstable_parameters_dict' not in kwargs:
-            kwargs['unstable_parameters_dict'] = {}
+        if 'advanced_args' not in kwargs:
+            kwargs['advanced_args'] = {}
 
-        if 'use_selfaware_model' not in kwargs['unstable_parameters_dict']:
-            kwargs['unstable_parameters_dict']['use_selfaware_model'] = False
+        if 'use_selfaware_model' not in kwargs['advanced_args']:
+            kwargs['advanced_args']['use_selfaware_model'] = False
 
         try:
             retrain = data.get('retrain')

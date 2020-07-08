@@ -83,7 +83,6 @@ class Clickhouse():
                 command String
             ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'commands_clickhouse', '{msqyl_user}', '{msqyl_pass}')
         """
-
         self._query(q)
 
 

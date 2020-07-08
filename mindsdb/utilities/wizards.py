@@ -133,7 +133,7 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
 
     clickhouse = _in('Connect to clickhouse ? [Y/N]','Y',use_default)
     if clickhouse in ['Y','y']:
-        config['integrations']['default_mariadb']['enabled'] = _in('Enable Clickhouse integration ?: ',True,use_default)
+        config['integrations']['default_clickhouse']['enabled'] = _in('Enable Clickhouse integration ?: ',True,use_default)
         config['integrations']['default_clickhouse']['host'] = _in('Clickhouse host: ','localhost',use_default)
         config['integrations']['default_clickhouse']['port'] = _in('Clickhouse port: ',8123,use_default)
         config['integrations']['default_clickhouse']['user'] = _in('Clickhouse user: ','default',use_default)

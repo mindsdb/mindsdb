@@ -29,7 +29,7 @@ class Config(object):
 
     def _set_updated(self, key):
         # Only check this for dynamically generated keys, won't be needed once we switch to using a database here
-        if key in self._config['integrations']:
+        if key in ['integrations']:
             file_hash = self._gen_hash()
             if file_hash != self._config_hash:
                 self._read()

@@ -18,14 +18,13 @@ def pred_name():
     rand = randint(0,pow(10,12))
     return f'hr_predictor_{rand}'
 
-@pytest.fixture(scope="module")
-def config_path():
+# Can't be a fixture since it's used in setup/teardown
+def set_get_config_path():
     os.environ['DEV_CONFIG_PATH'] = ''
     return os.environ['DEV_CONFIG_PATH'] + 'config.json'
 
-
-def query_ch(query, config_path):
-    config = Config(config_path)
+def query_ch(query):
+    config = Config(set_get_config_path())
     if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
         query += ' FORMAT JSON'
 
@@ -49,7 +48,8 @@ def query_ch(query, config_path):
 
 class TestClickhouse:
     @classmethod
-    def setup_class(cls, config_path):
+    def setup_class(cls):
+        set_get_config_path()
         query_ch('DROP DATABASE mindsdb')
 
         query_ch(f"""
@@ -67,11 +67,11 @@ class TestClickhouse:
                 time.sleep(1)
 
     @classmethod
-    def teardown_class(cls, config_path):
+    def teardown_class(cls):
         try:
             pgrp = os.getpgid(cls.sp.pid)
             os.killpg(pgrp, signal.SIGINT)
-            os.remove(config_path)
+            os.remove(set_get_config_path())
         except:
             pass
 

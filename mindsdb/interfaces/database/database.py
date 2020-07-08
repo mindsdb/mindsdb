@@ -22,16 +22,16 @@ class DatabaseWrapper():
     def _get_integrations(self):
         # @TODO Once we have a presistent state sorted out this should be simplified as to not refresh the existing integrations every single time
         integration_arr = []
-        for db_alias in config['integrations']:
-            if config['integrations'][db_alias]['enabled']:
-                if config['integrations'][db_alias]['type'] == 'clickhouse':
-                    integration_arr.append(Clickhouse(config,db_alias))
-                if config['integrations'][db_alias]['type'] == 'mariadb':
-                    integration_arr.append(Mariadb(config,db_alias))
+        for db_alias in self.config['integrations']:
+            if self.config['integrations'][db_alias]['enabled']:
+                if self.config['integrations'][db_alias]['type'] == 'clickhouse':
+                    integration_arr.append(Clickhouse(self.config,db_alias))
+                if self.config['integrations'][db_alias]['type'] == 'mariadb':
+                    integration_arr.append(Mariadb(self.config,db_alias))
                 else:
-                    print('Uknown integration type: ' + config['integrations'][db_alias]['type'] + f' for database called: {db_alias}')
+                    print('Uknown integration type: ' + self.config['integrations'][db_alias]['type'] + f' for database called: {db_alias}')
 
-        working_integration_arr = _setup_integrations(integration_arr)
+        working_integration_arr = self._setup_integrations(integration_arr)
         return working_integration_arr
 
     def register_predictors(self, model_data_arr):

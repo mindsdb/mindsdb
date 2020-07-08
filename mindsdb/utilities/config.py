@@ -5,7 +5,7 @@ import hashlib
 class Config(object):
     _config = {}
 
-    def __init__(self, config_path='mindsdb/default_config.json'):
+    def __init__(self, config_path):
         self._config_path = None
         self._config_hash = None
         self._config = None
@@ -17,11 +17,12 @@ class Config(object):
             raise TypeError('Argument must be string representing a file path <Later on to be switched to file path and/or database connection info>')
 
     def _read(self):
+
         if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
             with open(self.config_path, 'r') as fp:
                 self._config = config = json.load(fp)
         else:
-            raise TypeErrpr('`self.config_path` must be a string representing a local file path to a json config')
+            raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
 
     def _gen_hash(self):
         with open(self.config_path, 'rb') as fp:

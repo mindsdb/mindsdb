@@ -4,6 +4,12 @@ import pathlib
 import os
 import json
 
+from mindsdb.interfaces.database.database import DatabaseWrapper
+
+TEST_CONFIG = '/home/maxs/dev/mdb/venv_new/sources/mindsdb/etc/config.json'
+
+START_TIMEOUT = 15
+
 def is_port_in_use(port_num):
     portsinuse = []
     conns = psutil.net_connections()
@@ -21,9 +27,26 @@ def wait_port(port_num, timeout):
 
     return in_use
 
-def prepare_config(config):
+def wait_api_ready(config):
+    port_num = config['api']['mysql']['port']
+    api_ready = wait_port(port_num, START_TIMEOUT)
+    return api_ready
+
+def wait_db(config, db_name):
+    m = DatabaseWrapper(config)
+
+    start_time = time.time()
+
+    connected = m.check_connections()[db_name]
+    while not connected and (time.time() - start_time) < START_TIMEOUT:
+        time.sleep(2)
+        connected = m.check_connections()[db_name]
+
+    return connected
+
+def prepare_config(config, db):
     for key in config._config['integrations'].keys():
-        config._config['integrations'][key]['enabled'] = key == 'default_mariadb'
+        config._config['integrations'][key]['enabled'] = key == db
 
     TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../temp/').resolve()
     TEMP_DIR.mkdir(parents=True, exist_ok=True)

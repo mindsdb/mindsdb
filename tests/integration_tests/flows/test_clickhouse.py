@@ -121,15 +121,15 @@ class ClickhouseTest(unittest.TestCase):
 
     def test_4_predict_from_query(self):
         len_ds = query_ch(f'SELECT COUNT(*) as len from {ds_name}')[0]['len']
-        result = query_ch(f""" SELECT rental_price FROM mindsdb.{pred_name} where select_data_query=='SELECT * FROM {ds_name}' """)
-        print(len(result), len_ds)
+        result = query_ch(f""" SELECT rental_price, rental_price_explain, rental_price_confidence, rental_price_max, rental_price_min FROM mindsdb.{pred_name} where select_data_query=='SELECT * FROM {ds_name}' """)
+
         assert int(len(result)) == int(len_ds)
         for res in result:
             assert 'rental_price' in res
-            #assert 'rental_price_explain' in res
-            #assert 'rental_price_confidence' in res
-            #assert 'rental_price_max' in res
-            #assert 'rental_price_min' in res
+            assert 'rental_price_explain' in res
+            assert 'rental_price_confidence' in res
+            assert 'rental_price_max' in res
+            assert 'rental_price_min' in res
 
 if __name__ == '__main__':
     unittest.main()

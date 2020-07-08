@@ -2,15 +2,16 @@ from subprocess import Popen
 import time
 import os
 import signal
-from random import randint
+import random
+import string
 import requests
 
-import pytest
+import unittest
 
 from mindsdb.utilities.config import Config
 import mindsdb
 
-rand = randint(0,pow(10,12))
+rand = ''.join(random.choice(string.ascii_uppercase) for _ in range(11))
 ds_name = f'default.hr_ds_{rand}'
 pred_name = f'hr_predictor_{rand}'
 
@@ -50,12 +51,11 @@ def query_ch(query, database='default'):
     else:
         return res.text
 
-class TestClickhouse:
-    @classmethod
-    def setup_class(cls):
+class ClickhouseTest(unittest.TestCase):
+    def setUp(self):
         set_get_config_path()
 
-        cls.sp = Popen(['python3', '-m', 'mindsdb'], close_fds=True)
+        self.sp = Popen(['python3', '-m', 'mindsdb'], close_fds=True)
 
         for i in range(20):
             try:
@@ -72,24 +72,21 @@ class TestClickhouse:
         CREATE TABLE {ds_name} (number_of_rooms String, number_of_bathrooms String, sqft Int64, location String, days_on_market Int64, initial_price Int64, neighborhood String, rental_price Float64)  ENGINE=URL('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv', CSVWithNames)
         """)
 
-    @classmethod
-    def teardown_class(cls):
+    def tearDown(cls):
         try:
-            pgrp = os.getpgid(cls.sp.pid)
+            pgrp = os.getpgid(self.sp.pid)
             os.killpg(pgrp, signal.SIGINT)
             os.remove(set_get_config_path())
             os.system('fuser -k 47335/tcp ; fuser -k 47334/tcp')
         except:
             pass
 
-    @pytest.mark.order1
-    def test_setup(self):
+    def test_a_setup(self):
         result = query_ch(f"show tables", 'mindsdb')
         assert 'predictors' in result
         assert 'commands' in result
 
-    @pytest.mark.order2
-    def test_learn(self):
+    def test_b_learn(self):
         q = f"""
             insert into mindsdb.predictors
                 (name, predict_cols, select_data_query, training_options)
@@ -109,7 +106,6 @@ class TestClickhouse:
                     raise Exception('not ready yet !')
             except:
                 print(time.time())
-                print("Sleeping for 1 second")
                 time.sleep(1)
                 if i == 39:
                     raise Exception("Can't get predictor !")
@@ -117,16 +113,14 @@ class TestClickhouse:
         result = query_ch(f"show tables", 'mindsdb')
         assert pred_name in result
 
-    @pytest.mark.order3
-    def test_predict_from_where(self):
-        result = query_ch(f"SELECT rental_price FROM mindsdb.`{pred_name}` where sqft=1000 and location='good'")
+    def test_c_predict_from_where(self):
+        result = query_ch(f"SELECT rental_price FROM mindsdb.{pred_name} where sqft=1000 and location='good'")
         assert len(result) == 1
         assert 'rental_price' in result[0]
 
-    @pytest.mark.order3
-    def test_predict_from_query(self):
+    def test_d_predict_from_query(self):
         len_ds = query_ch(f'SELECT COUNT(*) as len from {ds_name}')[0]['len']
-        result = query_ch(f""" SELECT rental_price FROM mindsdb.`{pred_name}` where `$select_data_query='SELECT * FROM {ds_name}'` """)
+        result = query_ch(f""" SELECT rental_price FROM mindsdb.{pred_name} where `$select_data_query='SELECT * FROM {ds_name}'` """)
         assert len(result) == len_ds
         for res in result:
             assert 'rental_price' in res
@@ -134,3 +128,6 @@ class TestClickhouse:
             assert 'rental_price_confidence' in res
             assert 'rental_price_max' in res
             assert 'rental_price_min' in res
+
+if __name__ == '__main__':
+    unittest.main()

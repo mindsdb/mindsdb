@@ -104,7 +104,7 @@ class Clickhouse():
             msqyl_pass = self.config['api']['mysql']['password']
 
             q = f"""
-                    CREATE TABLE mindsdb.`{name}`
+                    CREATE TABLE mindsdb.{name}
                     ({columns_sql}
                     ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', '{name}_clickhouse', '{msqyl_user}', '{msqyl_pass}')
             """

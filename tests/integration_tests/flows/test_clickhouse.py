@@ -10,7 +10,7 @@ import pytest
 from mindsdb.utilities.config import Config
 import mindsdb
 
-rand = '11' #randint(0,pow(10,12))
+rand = randint(0,pow(10,12))
 ds_name = f'default.hr_ds_{rand}'
 pred_name = f'hr_predictor_{rand}'
 
@@ -68,7 +68,6 @@ class TestClickhouse:
                     raise Exception("Can't connect !")
 
         #query_ch('DROP DATABASE mindsdb')
-
         query_ch(f"""
         CREATE TABLE {ds_name} (number_of_rooms String, number_of_bathrooms String, sqft Int64, location String, days_on_market Int64, initial_price Int64, neighborhood String, rental_price Float64)  ENGINE=URL('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv', CSVWithNames)
         """)
@@ -91,7 +90,6 @@ class TestClickhouse:
 
     @pytest.mark.order2
     def test_learn(self):
-        print('Executing test 3')
         q = f"""
             insert into mindsdb.predictors
                 (name, predict_cols, select_data_query, training_options)
@@ -107,9 +105,6 @@ class TestClickhouse:
         for i in range(40):
             try:
                 result = query_ch(f"SELECT name FROM mindsdb.predictors where name='{pred_name}'")
-                print(result)
-                print(result[0]['name'])
-                print(pred_name)
                 assert result[0]['name'] == pred_name
             except:
                 time.sleep(1)

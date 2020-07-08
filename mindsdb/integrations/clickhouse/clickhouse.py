@@ -108,6 +108,7 @@ class Clickhouse():
                     ({columns_sql}
                     ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', '{name}_clickhouse', '{msqyl_user}', '{msqyl_pass}')
             """
+            
             self._query(q)
 
     def unregister_predictor(self, name):

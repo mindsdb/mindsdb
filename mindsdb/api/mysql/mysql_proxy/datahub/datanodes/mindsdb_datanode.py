@@ -50,7 +50,7 @@ class MindsDBDataNode(DataNode):
             'accuracy': x['accuracy'],
             'predict_cols': ', '.join(x['predict']),
             'select_data_query': x['data_source'],
-            'training_options': ''  # TODEL ?
+            'training_options': ''  # TODO ?
         } for x in models]
 
     def delete_predictor(self, name):

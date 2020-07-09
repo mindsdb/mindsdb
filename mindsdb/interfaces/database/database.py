@@ -32,12 +32,11 @@ class DatabaseWrapper():
                 else:
                     print('Uknown integration type: ' + self.config['integrations'][db_alias]['type'] + f' for database called: {db_alias}')
 
-        working_integration_arr = self._setup_integrations(integration_arr)
-        return working_integration_arr
+        return integration_arr
 
     def register_predictors(self, model_data_arr):
         it = self._get_integrations()
-        print(it)
+        it = self._setup_integrations(it)
         for integration in it: integration.register_predictors(model_data_arr)
 
     def unregister_predictor(self, name):

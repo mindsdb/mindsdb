@@ -90,6 +90,8 @@ class Clickhouse():
         for model_meta in model_data_arr:
             name = model_meta['name']
             stats = model_meta['data_analysis']
+            if 'columns_to_ignore' in stats:
+                del stats['columns_to_ignore']
             columns_sql = ','.join(self._to_clickhouse_table(stats))
             columns_sql += ',`select_data_query` Nullable(String)'
             for col in model_meta['predict_cols']:

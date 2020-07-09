@@ -8,6 +8,8 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 
 TEST_CONFIG = '/home/maxs/dev/mdb/venv_new/sources/mindsdb/etc/config.json'
 
+TESTS_ROOT = pathlib.Path(__file__).parent.absolute().joinpath('../../').resolve()
+
 START_TIMEOUT = 15
 
 def is_port_in_use(port_num):
@@ -38,6 +40,7 @@ def wait_db(config, db_name):
     start_time = time.time()
 
     connected = m.check_connections()[db_name]
+
     while not connected and (time.time() - start_time) < START_TIMEOUT:
         time.sleep(2)
         connected = m.check_connections()[db_name]
@@ -48,19 +51,11 @@ def prepare_config(config, db):
     for key in config._config['integrations'].keys():
         config._config['integrations'][key]['enabled'] = key == db
 
-    TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../temp/').resolve()
+    TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
     TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
-    config.merge({
-        'interface': {
-            'datastore': {
-                'storage_dir': str(TEMP_DIR.joinpath('datastore/'))
-            },
-            'mindsdb_native': {
-                'storage_dir': str(TEMP_DIR.joinpath('predictors/'))
-            }
-        }
-    })
+    config['interface']['datastore']['storage_dir'] = str(TEMP_DIR.joinpath('datastore/'))
+    config['interface']['mindsdb_native']['storage_dir'] = str(TEMP_DIR.joinpath('datastore/'))
 
     temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
     with open(temp_config_path, 'wt') as f:

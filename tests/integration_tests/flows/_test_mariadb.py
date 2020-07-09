@@ -5,7 +5,6 @@ import csv
 import time
 import inspect
 import subprocess
-import pathlib
 import atexit
 import json
 
@@ -141,7 +140,7 @@ class MariaDBTest(unittest.TestCase):
                 )
             ''')
 
-            test_csv_path = str(pathlib.Path(__file__).parent.absolute().joinpath('../temp/', TEST_CSV['name']).resolve())
+            test_csv_path = str(TESTS_ROOT.joinpath('../temp/', TEST_CSV['name']).resolve())
             if os.path.isfile(test_csv_path) is False:
                 r = requests.get(TEST_CSV['url'])
                 with open(test_csv_path, 'wb') as f:
@@ -303,7 +302,7 @@ class MariaDBTest(unittest.TestCase):
 def stop_mariadb():
     maria_sp = subprocess.Popen(
         ['./cli.sh', 'mariadb-stop'],
-        cwd=pathlib.Path(__file__).parent.absolute().joinpath('../docker/').resolve(),
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
@@ -314,7 +313,7 @@ if __name__ == "__main__":
 
     subprocess.Popen(
         ['./cli.sh', 'mariadb'],
-        cwd=pathlib.Path(__file__).parent.absolute().joinpath('../docker/').resolve(),
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )

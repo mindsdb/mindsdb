@@ -5,7 +5,6 @@ import csv
 import time
 import inspect
 import subprocess
-import pathlib
 import atexit
 
 import MySQLdb
@@ -13,7 +12,7 @@ import MySQLdb
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.utilities.config import Config
 
-from common import wait_api_ready, prepare_config, wait_db, TEST_CONFIG, START_TIMEOUT
+from common import wait_api_ready, prepare_config, wait_db, TEST_CONFIG, START_TIMEOUT, TESTS_ROOT
 
 TEST_CSV = {
     'name': 'home_rentals.csv',
@@ -90,7 +89,7 @@ class ClickhouseTest(unittest.TestCase):
                 PARTITION BY location
             ''')
 
-            test_csv_path = str(pathlib.Path(__file__).parent.absolute().joinpath('../temp/', TEST_CSV['name']).resolve())
+            test_csv_path = str(TESTS_ROOT.joinpath('temp/', TEST_CSV['name']).resolve())
             if os.path.isfile(test_csv_path) is False:
                 r = requests.get(TEST_CSV['url'])
                 with open(test_csv_path, 'wb') as f:
@@ -236,7 +235,7 @@ class ClickhouseTest(unittest.TestCase):
 def stop_clickhouse():
     ch_sp = subprocess.Popen(
         ['./cli.sh', 'clickhouse-stop'],
-        cwd=pathlib.Path(__file__).parent.absolute().joinpath('../docker/').resolve(),
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
@@ -247,7 +246,7 @@ if __name__ == "__main__":
 
     subprocess.Popen(
         ['./cli.sh', 'clickhouse'],
-        cwd=pathlib.Path(__file__).parent.absolute().joinpath('../docker/').resolve(),
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )

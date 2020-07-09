@@ -9,3 +9,4 @@ tests/temp
 tests/docker/mariadb/connectData
 tests/docker/mariadb/jars
 tests/docker/clickhouse/database
+/integration_tests/flows/config/*

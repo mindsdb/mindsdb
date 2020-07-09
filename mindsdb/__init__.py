@@ -5,6 +5,7 @@ from mindsdb.utilities.fs import get_or_create_dir_struct
 from mindsdb.utilities.wizards import cli_config
 
 config_dir, predictor_dir, datasource_dir = get_or_create_dir_struct()
+
 config_path = os.path.join(config_dir,'config.json')
 if not os.path.exists(config_path):
     _ = cli_config(None,None,predictor_dir,datasource_dir,config_dir,use_default=True)

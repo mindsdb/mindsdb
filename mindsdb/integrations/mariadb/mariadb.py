@@ -9,10 +9,6 @@ class Mariadb():
     def __init__(self, config, name):
         self.config = config
         self.name = name
-        self.host = config['integrations'][name]['host']
-        self.port = config['integrations'][name]['port']
-        self.user = config['integrations'][name]['user']
-        self.password = config['integrations'][name]['password']
 
     def _to_mariadb_table(self, stats):
         subtype_map = {
@@ -43,7 +39,7 @@ class Mariadb():
         return column_declaration
 
     def _query(self, query):
-        con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+        con = mysql.connector.connect(host=self.config['integrations'][self.name]['host'], port=self.config['integrations'][self.name]['port'], user=self.config['integrations'][self.name]['user'], password=self.config['integrations'][self.name]['password'])
 
         cur = con.cursor(dictionary=True,buffered=True)
         cur.execute(query)
@@ -87,7 +83,6 @@ class Mariadb():
                 training_options VARCHAR(500)
                 ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
-        print(f'Executing table creation query to create predictors list:\n{q}\n')
         self._query(q)
 
         connect = self._get_connect_string('commands_mariadb')
@@ -97,7 +92,6 @@ class Mariadb():
                 command VARCHAR(500)
             ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
-        print(f'Executing table creation query to create command table:\n{q}\n')
         self._query(q)
 
     def register_predictors(self, model_data_arr):
@@ -120,19 +114,17 @@ class Mariadb():
                     ({columns_sql}
                     ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
             """
-            print(f'Executing table creation query to sync predictor:\n{q}\n')
             self._query(q)
 
     def unregister_predictor(self, name):
         q = f"""
             drop table if exists mindsdb.{name};
         """
-        print(f'Executing table creation query to sync predictor:\n{q}\n')
         self._query(q)
 
     def check_connection(self):
         try:
-            con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+            con = mysql.connector.connect(host=self.config['integrations'][self.name]['host'], port=self.config['integrations'][self.name]['port'], user=self.config['integrations'][self.name]['user'], password=self.config['integrations'][self.name]['password'])
             connected = con.is_connected()
             con.close()
         except Exception:

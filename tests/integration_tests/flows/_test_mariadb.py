@@ -176,7 +176,7 @@ class MariaDBTest(unittest.TestCase):
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         print('Check all testing objects not exists')
-        
+
         print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
         models = [x['name'] for x in self.mdb.get_models()]
         self.assertTrue(TEST_PREDICTOR_NAME not in models)

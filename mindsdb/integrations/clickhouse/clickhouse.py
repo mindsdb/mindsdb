@@ -5,10 +5,6 @@ class Clickhouse():
     def __init__(self, config, name):
         self.config = config
         self.name = name
-        self.host = config['integrations'][name]['host']
-        self.port = config['integrations'][name]['port']
-        self.user = config['integrations'][name]['user']
-        self.password = config['integrations'][name]['password']
 
     def _to_clickhouse_table(self, stats):
         subtype_map = {
@@ -42,17 +38,17 @@ class Clickhouse():
     def _query(self, query):
         params = {'user': 'default'}
         try:
-            params['user'] = self.user
+            params['user'] = self.config['integrations'][self.name]['user']
         except:
             pass
 
         try:
-            params['password'] = self.password
+            params['password'] = self.config['integrations'][self.name]['password']
         except:
             pass
 
-        host = self.host
-        port = self.port
+        host = self.config['integrations'][self.name]['host']
+        port = self.config['integrations'][self.name]['port']
 
         response = requests.post(f'http://{host}:{port}', data=query, params=params)
 
@@ -80,7 +76,6 @@ class Clickhouse():
                 training_options String
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors_clickhouse', '{msqyl_user}', '{msqyl_pass}')
         """
-        print(f'Executing table creation query to create predictors list:\n{q}\n')
         self._query(q)
 
         q = f"""
@@ -88,8 +83,6 @@ class Clickhouse():
                 command String
             ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'commands_clickhouse', '{msqyl_user}', '{msqyl_pass}')
         """
-        print(f'Executing table creation query to create command table:\n{q}\n')
-
         self._query(q)
 
 
@@ -115,14 +108,12 @@ class Clickhouse():
                     ({columns_sql}
                     ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', '{name}_clickhouse', '{msqyl_user}', '{msqyl_pass}')
             """
-            print(f'Executing table creation query to sync predictor:\n{q}\n')
             self._query(q)
 
     def unregister_predictor(self, name):
         q = f"""
             drop table if exists mindsdb.{name};
         """
-        print(f'Executing table creation query to sync predictor:\n{q}\n')
         self._query(q)
 
 

@@ -34,9 +34,10 @@ class DatabaseWrapper():
 
         return integration_arr
 
-    def register_predictors(self, model_data_arr):
+    def register_predictors(self, model_data_arr, setup=True):
         it = self._get_integrations()
-        it = self._setup_integrations(it)
+        if setup:
+            it = self._setup_integrations(it)
         for integration in it: integration.register_predictors(model_data_arr)
 
     def unregister_predictor(self, name):

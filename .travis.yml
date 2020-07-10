@@ -51,12 +51,11 @@ script:
   # Run tests (linux only due to docker support... )
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/integration_tests/api; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then python3 test_http.py; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd ../flow; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR/tests/integration_tests/flows; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then python3 test_clickhouse.py; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd ../..; fi
   # Build windows installer
   - mkdir -p build;
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd distributions/windows; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd $TRAVIS_BUILD_DIR/distributions/windows; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 ./make.bat; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mv dist/install.exe ../../build/; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd ../..; fi

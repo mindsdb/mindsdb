@@ -54,7 +54,12 @@ def query_ch(query, database='default'):
 class ClickhouseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        set_get_config_path()
+        confpath = set_get_config_path()
+        c = Config(confpath)
+        if os.path.isdir(c['interface']['datastore']['storage_dir']) is False:
+            os.makedirs(c['interface']['datastore']['storage_dir'], exist_ok=True)
+        if os.path.isdir(c['interface']['mindsdb_native']['storage_dir']) is False:
+            os.makedirs(c['interface']['mindsdb_native']['storage_dir'], exist_ok=True)
 
         cls.sp = Popen(['python3', '-m', 'mindsdb'], close_fds=True)
 
@@ -76,12 +81,16 @@ class ClickhouseTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         try:
-            pgrp = os.getpgid(cls.sp.pid)
-            os.killpg(pgrp, signal.SIGINT)
-            os.remove(set_get_config_path())
-            os.system('fuser -k 47335/tcp ; fuser -k 47334/tcp')
+            cls.sp.kill()
         except:
             pass
+        # try:
+        #     pgrp = os.getpgid(cls.sp.pid)
+        #     os.killpg(pgrp, signal.SIGINT)
+        #     os.remove(set_get_config_path())
+        #     os.system('fuser -k 47335/tcp ; fuser -k 47334/tcp')
+        # except:
+        #     pass
 
     def test_1_setup(self):
         result = query_ch(f"show tables", 'mindsdb')

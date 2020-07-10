@@ -127,10 +127,7 @@ class MindsDBDataNode(DataNode):
             for key in min_max_keys:
                 row[key + '_min'] = res[i].explanation[key]['confidence_interval'][0]
                 row[key + '_max'] = res[i].explanation[key]['confidence_interval'][-1]
+            row['select_data_query'] = select_data_query
             data.append(row)
-
-        if select_data_query is not None:
-            for row in data:
-                row['select_data_query'] = select_data_query
 
         return data

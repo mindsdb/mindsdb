@@ -59,7 +59,7 @@ if __name__ == '__main__':
     dbw = DatabaseWrapper(config)
     dbw.register_predictors(model_data_arr)
 
-    for broken_name in dbw.check_connections():
+    for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         print(f'Error failed to integrate with database aliased: {broken_name}')
 
     p_arr = []

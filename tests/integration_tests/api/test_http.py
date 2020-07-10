@@ -32,8 +32,7 @@ class HTTPTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         try:
-            pgrp = os.getpgid(cls.sp.pid)
-            os.killpg(pgrp, signal.SIGINT)
+            cls.sp.kill()
         except:
             pass
 

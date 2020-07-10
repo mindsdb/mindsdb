@@ -21,7 +21,7 @@
         }
     },
     "config_version": 1,
-    "debug": false,
+    "debug": true,
     "integrations": {
         "default_clickhouse": {
             "enabled": true,
@@ -46,14 +46,14 @@
         },
         "datastore": {
             "enabled": true,
-            "storage_dir": "/home/george/mindsdb/var/datastore"
+            "storage_dir": "/tmp/datastore"
         },
         "lightwood": {
             "enabled": true
         },
         "mindsdb_native": {
             "enabled": true,
-            "storage_dir": "/home/george/mindsdb/var/predictors"
+            "storage_dir": "/tmp/predictors"
         }
     },
     "pip_path": null,

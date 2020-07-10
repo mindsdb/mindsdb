@@ -8,14 +8,13 @@ matrix:
       python: 3.7.3
       node: 11.15.0
       dist: xenial
-      sudo: true
       env:
         DEPLOYMENT_ENV="true"
 
     - name: "Python 3.7.2 on OSX"
       os: osx
       language: shell
-      dist: xcode10.2
+      osx_image: xcode10.2
 
     - name: "Python 3.7.3 on Windows"
       os: windows           # Windows 10.0.17134 N/A Build 17134
@@ -36,12 +35,12 @@ cache: pip
 # install dependencies
 install:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --upgrade pip; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -e .; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -r requirements_test.txt; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install -e .; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install -r requirements_test.txt; fi
 
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -e .; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install -e .; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install pyinstaller; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -r requirements_test.txt; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install -r requirements_test.txt; fi
 
 before_script:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/docker; fi
@@ -52,13 +51,14 @@ script:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/integration_tests/api; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then python3 test_http.py; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR/tests/integration_tests/flows; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then python3 test_clickhouse.py; fi
+  # - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sleep 61 && python3 test_clickhouse.py; fi
   # Build windows installer
   - mkdir -p build;
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd $TRAVIS_BUILD_DIR/distributions/windows; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 ./make.bat; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mv dist/install.exe ../../build/; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd ../..; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd $TRAVIS_BUILD_DIR; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR && mkdir -p build/; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cp distributions/linux/install.sh build/; fi
 
 after_script:

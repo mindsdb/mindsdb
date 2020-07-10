@@ -58,7 +58,7 @@ script:
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 ./make.bat; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mv dist/install.exe ../../build/; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd $TRAVIS_BUILD_DIR; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR; && mkdir -p build/; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cp distributions/linux/install.sh build/; fi
 
 after_script:

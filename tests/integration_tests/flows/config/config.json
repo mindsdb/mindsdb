@@ -21,7 +21,7 @@
         }
     },
     "config_version": 1,
-    "debug": false,
+    "debug": true,
     "integrations": {
         "default_clickhouse": {
             "enabled": true,

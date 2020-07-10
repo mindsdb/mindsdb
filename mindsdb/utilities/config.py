@@ -1,39 +1,57 @@
 import os
 import json
-
+import hashlib
 
 class Config(object):
     _config = {}
 
-    def __init__(self, config='mindsdb/default_config.json'):
-        if isinstance(config, dict):
-            self._update_recursive(self._config, config)
-        elif isinstance(config, str):
-            self.merge(config)
+    def __init__(self, config_path):
+        self._config_path = None
+        self._config_hash = None
+        self._config = None
+        if isinstance(config_path, str):
+            self.config_path = config_path
+            self._read()
+            self._config_hash = self._gen_hash()
         else:
-            raise TypeError('argument must be string or dict')
+            raise TypeError('Argument must be string representing a file path <Later on to be switched to file path and/or database connection info>')
 
-    def merge(self, file_path):
-        if os.path.isfile(file_path):
-            with open(file_path, 'r') as fp:
-                config = json.load(fp)
-            self._update_recursive(self._config, config)
+    def _read(self):
+        if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
+            with open(self.config_path, 'r') as fp:
+                self._config = config = json.load(fp)
+        else:
+            raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
 
-    def _update_recursive(self, a, b):
-        for key in [x for x in a.keys() if x in b]:
-            if isinstance(a[key], dict) and isinstance(b[key], dict):
-                self._update_recursive(a[key], b[key])
-            else:
-                a[key] = b[key]
-        for key in b.keys():
-            if key not in a:
-                a[key] = b[key]
+    def _gen_hash(self):
+        with open(self.config_path, 'rb') as fp:
+            return hashlib.md5(fp.read()).hexdigest()
+
+    def _set_updated(self, key):
+        # Only check this for dynamically generated keys, won't be needed once we switch to using a database here
+        if key in ['integrations']:
+            file_hash = self._gen_hash()
+            if file_hash != self._config_hash:
+                self._read()
+                self._config_hash = self._gen_hash()
 
     def __getitem__(self, key):
+        self._set_updated(key)
         return self._config[key]
 
     def get(self, key, default=None):
+        self._set_updated(key)
         return self._config.get(key, default)
 
     def get_all(self):
         return self._config
+
+    def set(self, key_chain, value):
+        pass
+
+    # Higher level interface
+    def add_db_integration(self, name, dict):
+        pass
+
+    def modify_db_integration(self, name, dict):
+        pass

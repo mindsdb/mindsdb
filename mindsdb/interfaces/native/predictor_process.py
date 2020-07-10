@@ -1,4 +1,5 @@
 import torch.multiprocessing as mp
+from mindsdb.interfaces.database.database import DatabaseWrapper
 
 
 ctx = mp.get_context('spawn')
@@ -18,56 +19,38 @@ class PredictorProcess(ctx.Process):
         import sys
         import mindsdb_native
 
-        from mindsdb.utilities.config import Config
-
         name, from_data, to_predict, kwargs, config, trx_type = self._args
-        config = Config(config)
 
         mdb = mindsdb_native.Predictor(name=name)
 
         if trx_type == 'learn':
+            to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
             data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-
-            kwargs['use_gpu'] = config.get('use_gpu', None)
             mdb.learn(
                 from_data=data_source,
                 to_predict=to_predict,
                 **kwargs
             )
 
-            stats = mdb.get_model_data()['data_analysis_v2']
+            stats = mindsdb_native.F.get_model_data(name)['data_analysis_v2']
 
-            try:
-                assert(config['integrations']['default_clickhouse']['enabled'] == True)
-                from mindsdb.interfaces.clickhouse.clickhouse import Clickhouse
-                clickhouse = Clickhouse(config)
-                clickhouse.register_predictor(name, stats)
-            except:
-                pass
-
-            try:
-                assert(config['integrations']['default_mariadb']['enabled'] == True)
-                from mindsdb.interfaces.mariadb.mariadb import Mariadb
-                mariadb = Mariadb(config)
-                mariadb.register_predictor(name, stats)
-            except:
-                pass
+            DatabaseWrapper(config).register_predictors([{
+                'name': name,
+                'predict_cols': to_predict,
+                'data_analysis': stats
+            }], setup = False)
 
         if trx_type == 'predict':
-            if isinstance(from_data,dict):
-                when = from_data
-                when_data = None
+            if isinstance(from_data, dict):
+                when_data = from_data
             else:
                 when_data = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-                when = None
-
-            kwargs['use_gpu'] = config.get('use_gpu', None)
 
             predictions = mdb.predict(
-                when=when,
                 when_data=when_data,
                 run_confidence_variation_analysis=True,
                 **kwargs
             )
 
+            # @TODO Figure out a way to recover this since we are using `spawn` here... simple Queue or instiating a Multiprocessing manager and registering a value in a dict using that. Or using map from a multiprocessing pool with 1x process (though using a custom process there might be it's own bucket of annoying)
             return predictions

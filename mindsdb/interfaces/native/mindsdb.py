@@ -1,39 +1,29 @@
 # Mindsdb native interface
 import mindsdb_native
+from mindsdb_native import F
 from dateutil.parser import parse as parse_datetime
 
 from mindsdb.interfaces.native.predictor_process import PredictorProcess
-
+from mindsdb.interfaces.database.database import DatabaseWrapper
 
 class MindsdbNative():
     def __init__(self, config):
         self.config = config
-        self.metapredictor = mindsdb_native.Predictor('metapredictor')
-        self.unregister_from = []
-
-        try:
-            assert(config['integrations']['default_clickhouse']['enabled'] == True)
-            from mindsdb.interfaces.clickhouse.clickhouse import Clickhouse
-            clickhouse = Clickhouse(self.config)
-            self.unregister_from.append(clickhouse)
-        except Exception as e:
-            print(e)
-            pass
-
-        try:
-            assert(config['integrations']['default_mariadb']['enabled'] == True)
-            from mindsdb.interfaces.mariadb.mariadb import Mariadb
-            mariadb = Mariadb(self.config)
-            self.unregister_from.append(mariadb)
-        except Exception as e:
-            print(e)
-            pass
+        self.dbw = DatabaseWrapper(self.config)
 
     def learn(self, name, from_data, to_predict, kwargs={}):
+        join_learn_process = kwargs.get('join_learn_process', False)
+        if 'join_learn_process' in kwargs:
+            del kwargs['join_learn_process']
+
         p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
         p.start()
+        if join_learn_process is True:
+            p.join()
+            if p.exitcode != 0:
+                raise Exception('Learning process failed !')
 
-    def predict(self, name, when=None, when_data=None, kwargs={}):
+    def predict(self, name, when_data=None, kwargs={}):
         # @TODO Separate into two paths, one for "normal" predictions and one for "real time" predictions. Use the multiprocessing code commented out bellow for normal (once we figure out how to return the prediction object... else use the inline code but with the "real time" predict functionality of mindsdb_native taht will be implemented later)
         '''
         from_data = when if when is not None else when_data
@@ -41,35 +31,24 @@ class MindsdbNative():
         p.start()
         predictions = p.join()
         '''
-
         mdb = mindsdb_native.Predictor(name=name)
 
-        kwargs['use_gpu'] = self.config.get('use_gpu', None)
-
-        if when is not None:
-            predictions = mdb.predict(
-                when=when,
-                run_confidence_variation_analysis=True,
-                **kwargs
-            )
-        else:
-            predictions = mdb.predict(
-                when_data=when_data,
-                run_confidence_variation_analysis=False,
-                **kwargs
-            )
+        predictions = mdb.predict(
+            when_data=when_data,
+            run_confidence_variation_analysis=isinstance(when_data, list) is False or len(when_data) == 1,
+            **kwargs
+        )
 
         return predictions
 
     def analyse_dataset(self, ds):
-        return self.metapredictor.analyse_dataset(ds, sample_margin_of_error=0.025)
+        return F.analyse_dataset(ds)
 
     def get_model_data(self, name):
-        return self.metapredictor.get_model_data(name)
+        return F.get_model_data(name)
 
     def get_models(self, status='any'):
-        models = self.metapredictor.get_models()
-        models = [x for x in models if x['name'] != 'metapredictor']
+        models = F.get_models()
         if status != 'any':
             models = [x for x in models if x['status'] == status]
 
@@ -83,16 +62,18 @@ class MindsdbNative():
         return models
 
     def delete_model(self, name):
-        self.metapredictor.delete_model(name)
-        for entity in self.unregister_from:
-            unregister_func = getattr(entity, 'unregister_predictor')
-            unregister_func(name)
+        F.delete_model(name)
+        self.dbw.unregister_predictor(name)
 
     def rename_model(self, name, new_name):
-        self.metapredictor.rename_model(name, new_name)
+        self.dbw.unregister_predictor(name)
+        F.rename_model(name, new_name)
+        self.dbw.register_predictors(new_name)
 
     def load_model(self, fpath):
-        self.metapredictor.load_model(model_archive_path=fpath)
+        F.load_model(model_archive_path=fpath)
+        # @TODO How do we figure out the name here ?
+        #dbw.register_predictor(...)
 
     def export_model(self,name):
-        self.metapredictor.export_model(model_name=name)
+        F.export_model(model_name=name)

@@ -131,13 +131,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.error(traceback.format_exc())
 
     def handshake(self):
-        global HARDCODED_PASSWORD, HARDCODED_USER
+        global HARDCODED_PASSWORD, HARDCODED_USER, CERT_PATH
 
         def switch_auth(method='mysql_native_password'):
             self.packet(SwitchOutPacket, seed=self.salt, method=method).send()
             switch_out_answer = self.packet(SwitchOutResponse)
             switch_out_answer.get()
-            return switch_out_answer.enc_password.value
+            password = switch_out_answer.password
+            if method == 'mysql_native_password' and len(password) == 0:
+                password = handshake_resp.scramble_func('', self.salt)
+            return password
 
         def get_fast_auth_password():
             log.info('Asking for fast auth password')
@@ -178,12 +181,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if handshake_resp.type == 'SSLRequest':
             log.info('switch to SSL')
             self.session.is_ssl = True
+
             ssl_socket = ssl.wrap_socket(
                 self.socket,
                 server_side=True,
                 certfile=CERT_PATH,
                 do_handshake_on_connect=True
             )
+
             self.socket = ssl_socket
             handshake_resp = self.packet(HandshakeResponsePacket)
             handshake_resp.get()
@@ -191,36 +196,37 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         
         username = handshake_resp.username.value.decode()
 
-        if orig_username == username and HARDCODED_PASSWORD == '':
+        if client_auth_plugin != DEFAULT_AUTH_METHOD:
+            if client_auth_plugin == 'mysql_native_password' and \
+                orig_password == '' and len(handshake_resp.enc_password.value) == 0:
+                switch_auth('mysql_native_password')
+                password = ''
+            else:
+                new_method = 'caching_sha2_password' if client_auth_plugin == 'caching_sha2_password' else 'mysql_native_password'
+
+                if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
+                    log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                        'error: cant switch to caching_sha2_password without SSL')
+                    self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'caching_sha2_password without SSL not supported').send()
+                    return False
+
+                log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                    f'switch auth method to {new_method}')
+                password = switch_auth(new_method)
+
+                if new_method == 'caching_sha2_password':
+                    password = get_fast_auth_password()
+                else:
+                    orig_password = orig_password_hash
+        elif orig_username == username and HARDCODED_PASSWORD == '':
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                 'empty password')
             password = ''
-
-        elif (DEFAULT_AUTH_METHOD not in client_auth_plugin) or \
-            self.session.is_ssl is False and 'caching_sha2_password' in client_auth_plugin:
-            new_method = 'caching_sha2_password' if 'caching_sha2_password' in client_auth_plugin else 'mysql_native_password'
-    
-            if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
-                log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                    'error: cant switch to caching_sha2_password without SSL')
-                self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'caching_sha2_password without SSL not supported').send()
-                return False
-
-            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                f'switch auth method to {new_method}')
-            password = switch_auth(new_method)
-
-            if new_method == 'caching_sha2_password':
-                password = get_fast_auth_password()
-            else:
-                orig_password = orig_password_hash
-
         elif 'caching_sha2_password' in client_auth_plugin:
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                 'check auth using caching_sha2_password')
             password = get_fast_auth_password()
             orig_password = HARDCODED_PASSWORD
-            
         elif 'mysql_native_password' in client_auth_plugin:
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                 'check auth using mysql_native_password')
@@ -290,11 +296,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def insert_predictor_answer(self, sql):
+        global mdb, default_store
         insert = SQLQuery.parse_insert(sql)
 
-        datasources = default_store.get_datasources()
-        if insert['name'] in [x['name'] for x in datasources]:
-            self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg=f"datasource with name '{insert['name']}'' already exists").send()
+        models = mdb.get_models()
+        if insert['name'] in [x['name'] for x in models]:
+            self.packet(
+                ErrPacket,
+                err_code=ERR.ER_WRONG_ARGUMENTS,
+                msg=f"predictor with name '{insert['name']}'' already exists"
+            ).send()
             return
 
         kwargs = {}
@@ -318,6 +329,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         db = db[:db.find(' ')].strip(' `')
         ds_type = db
         ds = default_store.save_datasource(insert['name'], ds_type, insert['select_data_query'])
+        insert['predict_cols'] = [x.strip() for x in insert['predict_cols'].split(',')]
         mdb.learn(insert['name'], ds, insert['predict_cols'], kwargs)
 
         self.packet(OkPacket).send()
@@ -438,7 +450,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         elif keyword == 'delete' and \
             ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
-            self.delete_predictor_answer(sql, db)
+            self.delete_predictor_answer(sql)
             return
         elif keyword == 'insert' and \
             ('mindsdb.commands' in sql_lower or self.session.database == 'mindsdb' and 'commands' in sql_lower):
@@ -847,7 +859,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         :return:
         """
         p = packetClass(socket=self.socket, seq=self.count, session=self.session, proxy=self, **kwargs)
-        self.count += 1
+        self.count = (self.count + 1) % 256
         return p
 
     @staticmethod
@@ -865,7 +877,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         HARDCODED_USER = config['api']['mysql']['user']
         HARDCODED_PASSWORD = config['api']['mysql']['password']
-        CERT_PATH = config['api']['mysql']['certificate_path']
+        CERT_PATH = config['api']['mysql'].get('certificate_path')
         default_store = DataStore(config)
         mdb = MindsdbNative(config)
         datahub = init_datahub(config)
@@ -886,7 +898,3 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # interrupt the program with Ctrl-C
         log.info('Waiting for incoming connections...')
         server.serve_forever()
-
-
-if __name__ == "__main__":
-    MysqlProxy.startProxy()

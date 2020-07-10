@@ -8,10 +8,11 @@ import torch.multiprocessing as mp
 from torch.multiprocessing import Process
 
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.utilities.fs import get_or_create_dir_struct
-
+from mindsdb.interfaces.database.database import DatabaseWrapper
 
 def close_api_gracefully(p_arr):
     for p in p_arr:
@@ -46,6 +47,20 @@ if __name__ == '__main__':
         'http': start_http,
         'mysql': start_mysql
     }
+
+    mdb = MindsdbNative(config)
+    model_data_arr = [
+        {
+            'name': x['name'],
+            'predict_cols': x['predict'],
+            'data_analysis': mdb.get_model_data(x['name'])['data_analysis_v2']
+        } for x in mdb.get_models()
+    ]
+    dbw = DatabaseWrapper(config)
+    dbw.register_predictors(model_data_arr)
+
+    for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
+        print(f'Error failed to integrate with database aliased: {broken_name}')
 
     p_arr = []
     ctx = mp.get_context('spawn')

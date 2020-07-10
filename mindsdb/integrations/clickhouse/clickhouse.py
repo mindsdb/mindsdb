@@ -2,14 +2,9 @@ import requests
 from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 
 class Clickhouse():
-    def __init__(self, config):
+    def __init__(self, config, name):
         self.config = config
-        self.host = config['integrations']['default_clickhouse']['host']
-        self.port = config['integrations']['default_clickhouse']['port']
-        self.user = config['integrations']['default_clickhouse']['user']
-        self.password = config['integrations']['default_clickhouse']['password']
-        self.setup_clickhouse()
-
+        self.name = name
 
     def _to_clickhouse_table(self, stats):
         subtype_map = {
@@ -23,7 +18,8 @@ class Clickhouse():
             DATA_SUBTYPES.IMAGE: 'Nullable(String)',
             DATA_SUBTYPES.VIDEO: 'Nullable(String)',
             DATA_SUBTYPES.AUDIO: 'Nullable(String)',
-            DATA_SUBTYPES.TEXT: 'Nullable(String)',
+            DATA_SUBTYPES.SHORT: 'Nullable(String)',
+            DATA_SUBTYPES.RICH: 'Nullable(String)',
             DATA_SUBTYPES.ARRAY: 'Array(Float64)'
         }
 
@@ -42,23 +38,28 @@ class Clickhouse():
     def _query(self, query):
         params = {'user': 'default'}
         try:
-            params['user'] = self.config['integrations']['default_clickhouse']['user']
+            params['user'] = self.config['integrations'][self.name]['user']
         except:
             pass
 
         try:
-            params['password'] = self.config['integrations']['default_clickhouse']['password']
+            params['password'] = self.config['integrations'][self.name]['password']
         except:
             pass
 
-        host = self.config['integrations']['default_clickhouse']['host']
-        port = self.config['integrations']['default_clickhouse']['port']
+        host = self.config['integrations'][self.name]['host']
+        port = self.config['integrations'][self.name]['port']
 
         response = requests.post(f'http://{host}:{port}', data=query, params=params)
 
+        if response.status_code != 200:
+            raise Exception(f'Error: {response.content}\nQuery:{query}')
+
         return response
 
-    def setup_clickhouse(self):
+    def setup(self):
+        self._query('DROP DATABASE IF EXISTS mindsdb')
+
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
 
         msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
@@ -75,7 +76,6 @@ class Clickhouse():
                 training_options String
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors_clickhouse', '{msqyl_user}', '{msqyl_pass}')
         """
-        print(f'Executing table creation query to create predictors list:\n{q}\n')
         self._query(q)
 
         q = f"""
@@ -83,28 +83,46 @@ class Clickhouse():
                 command String
             ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'commands_clickhouse', '{msqyl_user}', '{msqyl_pass}')
         """
-        print(f'Executing table creation query to create command table:\n{q}\n')
         self._query(q)
 
-    def register_predictor(self, name, stats):
-        columns_sql = ','.join(self._to_clickhouse_table(stats))
-        columns_sql += ',`$select_data_query` Nullable(String)'
 
-        msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
-        msqyl_user = self.config['api']['mysql']['user']
-        msqyl_pass = self.config['api']['mysql']['password']
+    def register_predictors(self, model_data_arr):
+        for model_meta in model_data_arr:
+            name = model_meta['name']
+            stats = model_meta['data_analysis']
+            if 'columns_to_ignore' in stats:
+                del stats['columns_to_ignore']
+            columns_sql = ','.join(self._to_clickhouse_table(stats))
+            columns_sql += ',`select_data_query` Nullable(String)'
+            for col in model_meta['predict_cols']:
+                columns_sql += f',`{col}_confidence` Nullable(Float64)'
+                if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+                    columns_sql += f',`{col}_min` Nullable(Float64)'
+                    columns_sql += f',`{col}_max` Nullable(Float64)'
+                columns_sql += f',`{col}_explain` Nullable(String)'
 
-        q = f"""
-                CREATE TABLE mindsdb.{name}
-                ({columns_sql}
-                ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', '{name}_clickhouse', '{msqyl_user}', '{msqyl_pass}')
-        """
-        print(f'Executing table creation query to sync predictor:\n{q}\n')
-        self._query(q)
+            msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
+            msqyl_user = self.config['api']['mysql']['user']
+            msqyl_pass = self.config['api']['mysql']['password']
+
+            q = f"""
+                    CREATE TABLE mindsdb.{name}
+                    ({columns_sql}
+                    ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', '{name}_clickhouse', '{msqyl_user}', '{msqyl_pass}')
+            """
+            self._query(q)
 
     def unregister_predictor(self, name):
         q = f"""
             drop table if exists mindsdb.{name};
         """
-        print(f'Executing table creation query to sync predictor:\n{q}\n')
         self._query(q)
+
+
+    def check_connection(self):
+        try:
+            res = self._query('select 1;')
+            connected = res.status_code == 200
+        except Exception:
+            connected = False
+        return connected

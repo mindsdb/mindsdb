@@ -8,14 +8,13 @@ matrix:
       python: 3.7.3
       node: 11.15.0
       dist: xenial
-      sudo: true
       env:
         DEPLOYMENT_ENV="true"
 
     - name: "Python 3.7.2 on OSX"
       os: osx
       language: shell
-      dist: xcode10.2
+      osx_image: xcode12
 
     - name: "Python 3.7.3 on Windows"
       os: windows           # Windows 10.0.17134 N/A Build 17134
@@ -23,7 +22,9 @@ matrix:
       before_install:
         - choco install python --version=3.7.3
         - python -m pip install --upgrade pip
-      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
+      env:
+        PATH=/c/Python37:/c/Python37/Scripts:$PATH
+        BADGE=windows
 
 
 notifications:
@@ -34,23 +35,51 @@ cache: pip
 # install dependencies
 install:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --upgrade pip; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --no-cache-dir -e .; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install -q -e .; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install -r requirements_test.txt; fi
 
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install --no-cache-dir -e .; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install -e .; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install pyinstaller; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install -r requirements_test.txt; fi
 
-before_script: cd tests/ci_tests
-# run tests
+before_script:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/docker; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then docker-compose up -d; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd ../..; fi
 script:
-  #- if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 python test_endpoints.py; fi
-  #- if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 python3 test_endpoints.py; fi
-  - cd ../..
+  # Run tests (linux only due to docker support... )
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/integration_tests/api; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then python3 test_http.py; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR/tests/integration_tests/flows; fi
+  # - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sleep 61 && python3 test_clickhouse.py; fi
+  # Build windows installer
+  - mkdir -p build;
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd $TRAVIS_BUILD_DIR/distributions/windows; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 ./make.bat; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mv dist/install.exe ../../build/; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd $TRAVIS_BUILD_DIR; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR && mkdir -p build/; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cp distributions/linux/install.sh build/; fi
 
+after_script:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then docker-compose down; fi
 # deploy to pip
 deploy:
   - provider: pypi
     user: "mindsdb_sysadmin"
     password: $PYPI_SYSADMIN_PASSWORD
     distributions: "sdist"
+    on:
+      branch: stable
+      condition: $DEPLOYMENT_ENV = "true"
+
+  - provider: s3
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_ACCESS_KEY_SECRET
+    bucket: "mindsdb-installer"
+    skip_cleanup: true
+    region: us-west-2
+    local_dir: build
     on:
       branch: stable
       condition: $DEPLOYMENT_ENV = "true"

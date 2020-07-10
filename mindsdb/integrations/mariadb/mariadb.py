@@ -6,15 +6,9 @@ from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 
 
 class Mariadb():
-    def __init__(self, config):
+    def __init__(self, config, name):
         self.config = config
-        self.host = config['integrations']['default_mariadb']['host']
-        self.port = config['integrations']['default_mariadb']['port']
-        self.user = config['integrations']['default_mariadb']['user']
-        self.password = config['integrations']['default_mariadb']['password']
-
-        self.setup_mariadb()
-
+        self.name = name
 
     def _to_mariadb_table(self, stats):
         subtype_map = {
@@ -28,7 +22,8 @@ class Mariadb():
             DATA_SUBTYPES.IMAGE: 'VARCHAR(500)',
             DATA_SUBTYPES.VIDEO: 'VARCHAR(500)',
             DATA_SUBTYPES.AUDIO: 'VARCHAR(500)',
-            DATA_SUBTYPES.TEXT: 'VARCHAR(500)',
+            DATA_SUBTYPES.SHORT: 'VARCHAR(500)',
+            DATA_SUBTYPES.RICH: 'VARCHAR(500)',
             DATA_SUBTYPES.ARRAY: 'VARCHAR(500)'
         }
 
@@ -44,7 +39,7 @@ class Mariadb():
         return column_declaration
 
     def _query(self, query):
-        con = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+        con = mysql.connector.connect(host=self.config['integrations'][self.name]['host'], port=self.config['integrations'][self.name]['port'], user=self.config['integrations'][self.name]['user'], password=self.config['integrations'][self.name]['password'])
 
         cur = con.cursor(dictionary=True,buffered=True)
         cur.execute(query)
@@ -71,7 +66,9 @@ class Mariadb():
 
         return connect
 
-    def setup_mariadb(self):
+    def setup(self):
+        self._query('DROP DATABASE IF EXISTS mindsdb')
+
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
 
         connect = self._get_connect_string('predictors_mariadb')
@@ -86,34 +83,50 @@ class Mariadb():
                 training_options VARCHAR(500)
                 ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
-        print(f'Executing table creation query to create predictors list:\n{q}\n')
         self._query(q)
+
+        connect = self._get_connect_string('commands_mariadb')
 
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.commands (
                 command VARCHAR(500)
             ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
-        print(f'Executing table creation query to create command table:\n{q}\n')
         self._query(q)
 
-    def register_predictor(self, name, stats):
-        columns_sql = ','.join(self._to_mariadb_table(stats))
-        columns_sql += ',`$select_data_query` varchar(500)'
+    def register_predictors(self, model_data_arr):
+        for model_meta in model_data_arr:
+            name = model_meta['name']
+            stats = model_meta['data_analysis']
+            columns_sql = ','.join(self._to_mariadb_table(stats))
+            columns_sql += ',`select_data_query` varchar(500)'
+            for col in model_meta['predict_cols']:
+                columns_sql += f',`{col}_confidence` double'
+                if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+                    columns_sql += f',`{col}_min` double'
+                    columns_sql += f',`{col}_max` double'
+                columns_sql += f',`{col}_explain` varchar(500)'
 
-        connect = self._get_connect_string(f'{name}_mariadb')
+            connect = self._get_connect_string(f'{name}_mariadb')
 
-        q = f"""
-                CREATE TABLE mindsdb.{name}
-                ({columns_sql}
-                ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
-        """
-        print(f'Executing table creation query to sync predictor:\n{q}\n')
-        self._query(q)
+            q = f"""
+                    CREATE TABLE mindsdb.{name}
+                    ({columns_sql}
+                    ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+            """
+            self._query(q)
 
     def unregister_predictor(self, name):
         q = f"""
             drop table if exists mindsdb.{name};
         """
-        print(f'Executing table creation query to sync predictor:\n{q}\n')
         self._query(q)
+
+    def check_connection(self):
+        try:
+            con = mysql.connector.connect(host=self.config['integrations'][self.name]['host'], port=self.config['integrations'][self.name]['port'], user=self.config['integrations'][self.name]['user'], password=self.config['integrations'][self.name]['password'])
+            connected = con.is_connected()
+            con.close()
+        except Exception:
+            connected = False
+        return connected

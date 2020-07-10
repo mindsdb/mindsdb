@@ -113,14 +113,11 @@ class Predictor(Resource):
         if 'equal_accuracy_for_all_output_categories' not in kwargs:
             kwargs['equal_accuracy_for_all_output_categories'] = True
 
-        if 'sample_margin_of_error' not in kwargs:
-            kwargs['sample_margin_of_error'] = 0.005
+        if 'advanced_args' not in kwargs:
+            kwargs['advanced_args'] = {}
 
-        if 'unstable_parameters_dict' not in kwargs:
-            kwargs['unstable_parameters_dict'] = {}
-
-        if 'use_selfaware_model' not in kwargs['unstable_parameters_dict']:
-            kwargs['unstable_parameters_dict']['use_selfaware_model'] = False
+        if 'use_selfaware_model' not in kwargs['advanced_args']:
+            kwargs['advanced_args']['use_selfaware_model'] = False
 
         try:
             retrain = data.get('retrain')
@@ -132,7 +129,7 @@ class Predictor(Resource):
             retrain = None
 
         ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
-        from_data = ca.default_store.get_datasource_obj(ds_name)
+        from_data = ca.default_store.get_datasource_obj(ds_name, raw=True)
 
         if retrain is True:
             original_name = name
@@ -207,7 +204,7 @@ class PredictorPredict(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        results = ca.mindsdb_native.predict(name, when=when, **kwargs)
+        results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
         # return '', 500
         return preparse_results(results, format_flag)
 
@@ -220,7 +217,7 @@ class PredictorPredictFromDataSource(Resource):
         global model_swapping_map
         data = request.json
 
-        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'))
+        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=True)
 
         try:
             format_flag = data.get('format_flag')

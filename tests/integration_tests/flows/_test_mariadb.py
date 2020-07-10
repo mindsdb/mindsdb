@@ -13,7 +13,7 @@ import mysql.connector
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.utilities.config import Config
 
-from common import wait_api_ready, prepare_config, wait_db, TEST_CONFIG, START_TIMEOUT
+from common import wait_api_ready, prepare_config, wait_db, TEST_CONFIG, START_TIMEOUT, TESTS_ROOT
 
 TEST_CSV = {
     'name': 'home_rentals.csv',

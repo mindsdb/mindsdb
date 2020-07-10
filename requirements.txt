@@ -1,4 +1,4 @@
-mindsdb_native == 1.99.7
+mindsdb_native == 2.0.0
 pymongo >= 3.10.1
 flask-restx >= 0.2.0
 flask >= 1.0

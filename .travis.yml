@@ -15,7 +15,6 @@ matrix:
       os: osx
       language: shell
       osx_image: xcode10.2
-      dist: xcode10.2
 
     - name: "Python 3.7.3 on Windows"
       os: windows           # Windows 10.0.17134 N/A Build 17134

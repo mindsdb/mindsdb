@@ -8,13 +8,13 @@ matrix:
       python: 3.7.3
       node: 11.15.0
       dist: xenial
-      sudo: true
       env:
         DEPLOYMENT_ENV="true"
 
     - name: "Python 3.7.2 on OSX"
       os: osx
       language: shell
+      osx_image: xcode10.2
       dist: xcode10.2
 
     - name: "Python 3.7.3 on Windows"

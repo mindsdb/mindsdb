@@ -36,7 +36,7 @@ class PredictorProcess(ctx.Process):
 
             DatabaseWrapper(config).register_predictors([{
                 'name': name,
-                'predict_cols': to_predict,
+                'predict': to_predict,
                 'data_analysis': stats
             }], setup = False)
 

@@ -26,7 +26,6 @@ matrix:
         PATH=/c/Python37:/c/Python37/Scripts:$PATH
         BADGE=windows
 
-
 notifications:
   # send notifications only on master failure
   email:

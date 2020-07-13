@@ -3,6 +3,7 @@ import time
 import pathlib
 import json
 import docker
+import subprocess
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
@@ -11,6 +12,8 @@ TEST_CONFIG = 'tests/integration_tests/flows/config/config.json'
 TESTS_ROOT = pathlib.Path(__file__).parent.absolute().joinpath('../../').resolve()
 
 START_TIMEOUT = 15
+
+OUTPUT = None  # [None|subprocess.DEVNULL]
 
 
 def is_port_in_use(port_num):

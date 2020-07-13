@@ -17,7 +17,8 @@ from common import (
     wait_db,
     is_container_run,
     TEST_CONFIG,
-    TESTS_ROOT
+    TESTS_ROOT,
+    OUTPUT
 )
 
 TEST_CSV = {
@@ -311,8 +312,8 @@ def stop_mariadb():
     maria_sp = subprocess.Popen(
         ['./cli.sh', 'mariadb-stop'],
         cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
+        stdout=OUTPUT,
+        stderr=OUTPUT
     )
     maria_sp.wait()
 
@@ -324,8 +325,8 @@ if __name__ == "__main__":
         subprocess.Popen(
             ['./cli.sh', 'mariadb'],
             cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stdout=OUTPUT,
+            stderr=OUTPUT
         )
         atexit.register(stop_mariadb)
     maria_ready = wait_db(config, 'default_mariadb')
@@ -333,8 +334,8 @@ if __name__ == "__main__":
     if maria_ready:
         sp = subprocess.Popen(
             ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stdout=OUTPUT,
+            stderr=OUTPUT
         )
         atexit.register(sp.kill)
 

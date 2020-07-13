@@ -15,7 +15,8 @@ from common import (
     wait_db,
     is_container_run,
     TEST_CONFIG,
-    TESTS_ROOT
+    TESTS_ROOT,
+    OUTPUT
 )
 
 TEST_CSV = {
@@ -241,8 +242,8 @@ def stop_clickhouse():
     ch_sp = subprocess.Popen(
         ['./cli.sh', 'clickhouse-stop'],
         cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
+        stdout=OUTPUT,
+        stderr=OUTPUT
     )
     ch_sp.wait()
 
@@ -254,8 +255,8 @@ if __name__ == "__main__":
         subprocess.Popen(
             ['./cli.sh', 'clickhouse'],
             cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stdout=OUTPUT,
+            stderr=OUTPUT
         )
         atexit.register(stop_clickhouse)
     clickhouse_ready = wait_db(config, 'default_clickhouse')
@@ -263,8 +264,8 @@ if __name__ == "__main__":
     if clickhouse_ready:
         sp = subprocess.Popen(
             ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stdout=OUTPUT,
+            stderr=OUTPUT
         )
         atexit.register(sp.kill)
 

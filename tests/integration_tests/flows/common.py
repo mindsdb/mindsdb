@@ -61,9 +61,13 @@ def prepare_config(config, db):
 
     TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
     TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    datastore_dir = TEMP_DIR.joinpath('datastore/')
+    datastore_dir.mkdir(parents=True, exist_ok=True)
+    mindsdb_native_dir = TEMP_DIR.joinpath('predictors/')
+    mindsdb_native_dir.mkdir(parents=True, exist_ok=True)
 
-    config['interface']['datastore']['storage_dir'] = str(TEMP_DIR.joinpath('datastore/'))
-    config['interface']['mindsdb_native']['storage_dir'] = str(TEMP_DIR.joinpath('predictors/'))
+    config['interface']['datastore']['storage_dir'] = str(datastore_dir)
+    config['interface']['mindsdb_native']['storage_dir'] = str(mindsdb_native_dir)
 
     temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
     with open(temp_config_path, 'wt') as f:

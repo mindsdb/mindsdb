@@ -15,6 +15,8 @@ START_TIMEOUT = 15
 
 OUTPUT = None  # [None|subprocess.DEVNULL]
 
+TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
+TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 def is_port_in_use(port_num):
     portsinuse = []
@@ -59,8 +61,6 @@ def prepare_config(config, db):
     for key in config._config['integrations'].keys():
         config._config['integrations'][key]['enabled'] = key == db
 
-    TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
-    TEMP_DIR.mkdir(parents=True, exist_ok=True)
     datastore_dir = TEMP_DIR.joinpath('datastore/')
     datastore_dir.mkdir(parents=True, exist_ok=True)
     mindsdb_native_dir = TEMP_DIR.joinpath('predictors/')

@@ -50,7 +50,9 @@ script:
   # Run tests (linux only due to docker support... )
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd tests/integration_tests/api; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then python3 test_http.py; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR/tests/integration_tests/flows; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR && python3 tests/integration_tests/flows/_test_clickhouse.py; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR && python3 tests/integration_tests/flows/_test_mariadb.py; fi
+  # - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR/tests/integration_tests/flows; fi
   # - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sleep 61 && python3 test_clickhouse.py; fi
   # Build windows installer
   - mkdir -p build;

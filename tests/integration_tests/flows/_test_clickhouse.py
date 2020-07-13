@@ -7,12 +7,10 @@ import inspect
 import subprocess
 import atexit
 
-import MySQLdb
-
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.utilities.config import Config
 
-from common import wait_api_ready, prepare_config, wait_db, TEST_CONFIG, START_TIMEOUT, TESTS_ROOT
+from common import wait_api_ready, prepare_config, wait_db, TEST_CONFIG, START_TIMEOUT, TESTS_ROOT, is_container_run
 
 TEST_CSV = {
     'name': 'home_rentals.csv',
@@ -244,13 +242,14 @@ def stop_clickhouse():
 if __name__ == "__main__":
     temp_config_path = prepare_config(config, 'default_clickhouse')
 
-    subprocess.Popen(
-        ['./cli.sh', 'clickhouse'],
-        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-    atexit.register(stop_clickhouse)
+    if is_container_run('clickhouse-test') is False:
+        subprocess.Popen(
+            ['./cli.sh', 'clickhouse'],
+            cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        atexit.register(stop_clickhouse)
     clickhouse_ready = wait_db(config, 'default_clickhouse')
 
     if clickhouse_ready:

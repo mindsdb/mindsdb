@@ -3,10 +3,11 @@ import time
 import pathlib
 import os
 import json
+import docker
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
-TEST_CONFIG = '/home/maxs/dev/mdb/venv_new/sources/mindsdb/etc/config.json'
+TEST_CONFIG = 'tests/integration_tests/flows/config/config.json'
 
 TESTS_ROOT = pathlib.Path(__file__).parent.absolute().joinpath('../../').resolve()
 
@@ -62,3 +63,10 @@ def prepare_config(config, db):
         f.write(json.dumps(config._config))
 
     return temp_config_path
+
+
+def is_container_run(name):
+    docker_client = docker.from_env()
+    containers = docker_client.containers.list()
+    containers = [x.name for x in containers if x.status == 'running']
+    return name in containers

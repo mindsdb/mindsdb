@@ -35,7 +35,7 @@ cache: pip
 # install dependencies
 install:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install --upgrade pip; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install -q -e . --user; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install -q -e .; fi
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then travis_wait 15 pip3 install -r requirements_test.txt; fi
 
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then travis_wait 15 pip install -e .; fi

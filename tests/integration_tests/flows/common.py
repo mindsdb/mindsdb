@@ -1,7 +1,6 @@
 import psutil
 import time
 import pathlib
-import os
 import json
 import docker
 
@@ -13,12 +12,14 @@ TESTS_ROOT = pathlib.Path(__file__).parent.absolute().joinpath('../../').resolve
 
 START_TIMEOUT = 15
 
+
 def is_port_in_use(port_num):
     portsinuse = []
     conns = psutil.net_connections()
     portsinuse = [x.laddr[1] for x in conns if x.status == 'LISTEN']
     portsinuse.sort()
     return int(port_num) in portsinuse
+
 
 def wait_port(port_num, timeout):
     start_time = time.time()
@@ -30,10 +31,12 @@ def wait_port(port_num, timeout):
 
     return in_use
 
+
 def wait_api_ready(config):
     port_num = config['api']['mysql']['port']
     api_ready = wait_port(port_num, START_TIMEOUT)
     return api_ready
+
 
 def wait_db(config, db_name):
     m = DatabaseWrapper(config)
@@ -47,6 +50,7 @@ def wait_db(config, db_name):
         connected = m.check_connections()[db_name]
 
     return connected
+
 
 def prepare_config(config, db):
     for key in config._config['integrations'].keys():

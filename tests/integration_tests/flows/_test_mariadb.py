@@ -2,18 +2,23 @@ import unittest
 import requests
 import os
 import csv
-import time
 import inspect
 import subprocess
 import atexit
-import json
 
 import mysql.connector
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.utilities.config import Config
 
-from common import wait_api_ready, prepare_config, wait_db, TEST_CONFIG, START_TIMEOUT, TESTS_ROOT, is_container_run
+from common import (
+    wait_api_ready,
+    prepare_config,
+    wait_db,
+    is_container_run,
+    TEST_CONFIG,
+    TESTS_ROOT
+)
 
 TEST_CSV = {
     'name': 'home_rentals.csv',
@@ -23,6 +28,7 @@ TEST_DATA_TABLE = 'home_rentals'
 TEST_PREDICTOR_NAME = 'test_predictor'
 
 config = Config(TEST_CONFIG)
+
 
 def query(q, as_dict=False):
     con = mysql.connector.connect(
@@ -38,11 +44,12 @@ def query(q, as_dict=False):
     res = True
     try:
         res = cur.fetchall()
-    except:
+    except Exception:
         pass
     con.commit()
     con.close()
     return res
+
 
 def create_churn_dataset(self):
     for mode in ['train','test']:
@@ -112,6 +119,7 @@ def create_churn_dataset(self):
                     i += 1
     os.system(f'rm {test_csv}')
 
+
 class MariaDBTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -153,7 +161,7 @@ class MariaDBTest(unittest.TestCase):
                     if i > 0:
                         number_of_rooms = int(row[0])
                         number_of_bathrooms = int(row[1])
-                        sqft = int(float(row[2].replace(',','.')))
+                        sqft = int(float(row[2].replace(',', '.')))
                         location = str(row[3])
                         days_on_market = int(row[4])
                         initial_price = int(row[5])
@@ -180,20 +188,20 @@ class MariaDBTest(unittest.TestCase):
         models = [x['name'] for x in self.mdb.get_models()]
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
-        print(f'Test datasource exists')
+        print('Test datasource exists')
         test_tables = query('show tables from test')
         test_tables = [x[0] for x in test_tables]
         self.assertTrue(TEST_DATA_TABLE in test_tables)
 
-        print(f'Test predictor table not exists')
+        print('Test predictor table not exists')
         mindsdb_tables = query('show tables from mindsdb')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
-        print(f'mindsdb.predictors table exists')
+        print('mindsdb.predictors table exists')
         self.assertTrue('predictors' in mindsdb_tables)
 
-        print(f'mindsdb.commands table exists')
+        print('mindsdb.commands table exists')
         self.assertTrue('commands' in mindsdb_tables)
 
     def test_2_insert_predictor(self):
@@ -208,12 +216,12 @@ class MariaDBTest(unittest.TestCase):
             );
         """)
 
-        print(f'predictor record in mindsdb.predictors')
+        print('predictor record in mindsdb.predictors')
         res = query(f"select status from mindsdb.predictors where name = '{TEST_PREDICTOR_NAME}'", as_dict=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
-        print(f'predictor table in mindsdb db')
+        print('predictor table in mindsdb db')
         mindsdb_tables = query('show tables from mindsdb')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME in mindsdb_tables)
@@ -274,7 +282,7 @@ class MariaDBTest(unittest.TestCase):
         models = [x['name'] for x in self.mdb.get_models()]
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
-        print(f'Test predictor table not exists')
+        print('Test predictor table not exists')
         mindsdb_tables = query('show tables from mindsdb')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
@@ -293,7 +301,7 @@ class MariaDBTest(unittest.TestCase):
         models = [x['name'] for x in self.mdb.get_models()]
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
-        print(f'Test predictor table not exists')
+        print('Test predictor table not exists')
         mindsdb_tables = query('show tables from mindsdb')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
@@ -307,6 +315,7 @@ def stop_mariadb():
         stderr=subprocess.DEVNULL
     )
     maria_sp.wait()
+
 
 if __name__ == "__main__":
     temp_config_path = prepare_config(config, 'default_mariadb')

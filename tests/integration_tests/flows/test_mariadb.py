@@ -52,78 +52,45 @@ def query(q, as_dict=False):
     return res
 
 
-def create_churn_dataset(self):
-    for mode in ['train','test']:
-        os.system(f'rm {test_csv}')
-        cls.mdb = MindsdbNative(config)
-
-        if os.path.isfile(test_csv) is False:
-            r = requests.get(f"https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/churn/dataset/{mode}.csv")
-            with open(test_csv, 'wb') as f:
-                f.write(r.content)
-
-        models = cls.mdb.get_models()
-        models = [x['name'] for x in models]
-        if TEST_PREDICTOR_NAME in models:
-            cls.mdb.delete_model(TEST_PREDICTOR_NAME)
-
-        query('create database if not exists test')
-        test_tables = query('show tables from test')
-        test_tables = [x[0] for x in test_tables]
-        if TEST_DATA_TABLE not in test_tables:
-            query(f'DROP TABLE IF EXISTS data.{TEST_DATA_TABLE}_{mode}')
-            query(f'''
-                CREATE TABLE data.{TEST_DATA_TABLE}_{mode} (
-                    CreditScore int,
-                    Geography varchar(300),
-                    Gender varchar(300),
-                    Age int,
-                    Tenure int,
-                    Balance float,
-                    NumOfProducts int,
-                    HasCrCard int,
-                    IsActiveMember int,
-                    EstimatedSalary float,
-                    Exited int
-                )
-            ''')
-            with open(test_csv) as f:
-                csvf = csv.reader(f)
-                i = 0
-                for row in csvf:
-                    if i > 0:
-                        CreditScore = int(row[0])
-                        Geography = str(row[1])
-                        Gender = str(row[2])
-                        Age = int(row[3])
-                        Tenure = int(row[4])
-                        Balance = float(row[5])
-                        NumOfProducts = int(row[6])
-                        HasCrCard = int(row[7])
-                        IsActiveMember = int(row[8])
-                        EstimatedSalary = float(row[9])
-                        Exited = int(row[10])
-
-                        query(f'''INSERT INTO data.{TEST_DATA_TABLE}_{mode} VALUES (
-                            {CreditScore},
-                            '{Geography}',
-                            '{Gender}',
-                            {Age},
-                            {Tenure},
-                            {Balance},
-                            {NumOfProducts},
-                            {HasCrCard},
-                            {IsActiveMember},
-                            {EstimatedSalary},
-                            {Exited}
-                        )''')
-                    i += 1
-    os.system(f'rm {test_csv}')
+def stop_mariadb():
+    maria_sp = subprocess.Popen(
+        ['./cli.sh', 'mariadb-stop'],
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+        stdout=OUTPUT,
+        stderr=OUTPUT
+    )
+    maria_sp.wait()
 
 
 class MariaDBTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        temp_config_path = prepare_config(config, 'default_mariadb')
+
+        if is_container_run('mariadb-test') is False:
+            subprocess.Popen(
+                ['./cli.sh', 'mariadb'],
+                cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+                stdout=OUTPUT,
+                stderr=OUTPUT
+            )
+            atexit.register(stop_mariadb)
+        maria_ready = wait_db(config, 'default_mariadb')
+
+        if maria_ready:
+            sp = subprocess.Popen(
+                ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
+                stdout=OUTPUT,
+                stderr=OUTPUT
+            )
+            atexit.register(sp.kill)
+
+        api_ready = maria_ready and wait_api_ready(config)
+
+        if maria_ready is False or api_ready is False:
+            print(f'Failed by timeout. MariaDB started={maria_ready}, MindsDB started={api_ready}')
+            raise Exception()
+
         cls.mdb = MindsdbNative(config)
 
         models = cls.mdb.get_models()
@@ -308,43 +275,8 @@ class MariaDBTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
 
-def stop_mariadb():
-    maria_sp = subprocess.Popen(
-        ['./cli.sh', 'mariadb-stop'],
-        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-        stdout=OUTPUT,
-        stderr=OUTPUT
-    )
-    maria_sp.wait()
-
-
 if __name__ == "__main__":
-    temp_config_path = prepare_config(config, 'default_mariadb')
-
-    if is_container_run('mariadb-test') is False:
-        subprocess.Popen(
-            ['./cli.sh', 'mariadb'],
-            cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-            stdout=OUTPUT,
-            stderr=OUTPUT
-        )
-        atexit.register(stop_mariadb)
-    maria_ready = wait_db(config, 'default_mariadb')
-
-    if maria_ready:
-        sp = subprocess.Popen(
-            ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
-            stdout=OUTPUT,
-            stderr=OUTPUT
-        )
-        atexit.register(sp.kill)
-
-    api_ready = maria_ready and wait_api_ready(config)
-
     try:
-        if maria_ready is False or api_ready is False:
-            print(f'Failed by timeout. MariaDB started={maria_ready}, MindsDB started={api_ready}')
-            raise Exception()
         unittest.main(failfast=True)
         print('Tests passed!')
     except Exception as e:

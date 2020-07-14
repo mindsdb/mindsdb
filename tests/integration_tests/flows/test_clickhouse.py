@@ -65,9 +65,45 @@ def query(query):
     return res
 
 
+def stop_clickhouse():
+    ch_sp = subprocess.Popen(
+        ['./cli.sh', 'clickhouse-stop'],
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+        stdout=OUTPUT,
+        stderr=OUTPUT
+    )
+    ch_sp.wait()
+
+
 class ClickhouseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        temp_config_path = prepare_config(config, 'default_clickhouse')
+
+        if is_container_run('clickhouse-test') is False:
+            subprocess.Popen(
+                ['./cli.sh', 'clickhouse'],
+                cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+                stdout=OUTPUT,
+                stderr=OUTPUT
+            )
+            atexit.register(stop_clickhouse)
+        clickhouse_ready = wait_db(config, 'default_clickhouse')
+
+        if clickhouse_ready:
+            sp = subprocess.Popen(
+                ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
+                stdout=OUTPUT,
+                stderr=OUTPUT
+            )
+            atexit.register(sp.kill)
+
+        api_ready = clickhouse_ready and wait_api_ready(config)
+
+        if api_ready is False:
+            print(f'Failed by timeout. ClickHouse started={clickhouse_ready} MindsDB started={api_ready}')
+            raise Exception()
+
         cls.mdb = MindsdbNative(config)
 
         models = cls.mdb.get_models()
@@ -238,43 +274,8 @@ class ClickhouseTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
 
-def stop_clickhouse():
-    ch_sp = subprocess.Popen(
-        ['./cli.sh', 'clickhouse-stop'],
-        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-        stdout=OUTPUT,
-        stderr=OUTPUT
-    )
-    ch_sp.wait()
-
-
 if __name__ == "__main__":
-    temp_config_path = prepare_config(config, 'default_clickhouse')
-
-    if is_container_run('clickhouse-test') is False:
-        subprocess.Popen(
-            ['./cli.sh', 'clickhouse'],
-            cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-            stdout=OUTPUT,
-            stderr=OUTPUT
-        )
-        atexit.register(stop_clickhouse)
-    clickhouse_ready = wait_db(config, 'default_clickhouse')
-
-    if clickhouse_ready:
-        sp = subprocess.Popen(
-            ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
-            stdout=OUTPUT,
-            stderr=OUTPUT
-        )
-        atexit.register(sp.kill)
-
-    api_ready = clickhouse_ready and wait_api_ready(config)
-
     try:
-        if api_ready is False:
-            print(f'Failed by timeout. ClickHouse started={clickhouse_ready} MindsDB started={api_ready}')
-            raise Exception()
         unittest.main(failfast=True)
         print('Tests passed!')
     except Exception as e:

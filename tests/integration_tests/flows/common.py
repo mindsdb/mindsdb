@@ -18,6 +18,7 @@ OUTPUT = None  # [None|subprocess.DEVNULL]
 TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
+
 def is_port_in_use(port_num):
     portsinuse = []
     conns = psutil.net_connections()

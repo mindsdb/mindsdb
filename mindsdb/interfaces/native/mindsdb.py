@@ -71,7 +71,7 @@ class MindsdbNative():
         self.dbw.register_predictors(new_name)
 
     def load_model(self, fpath):
-        F.load_model(model_archive_path=fpath)
+        F.import_model(model_archive_path=fpath)
         # @TODO How do we figure out the name here ?
         #dbw.register_predictor(...)
 

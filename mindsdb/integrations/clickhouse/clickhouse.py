@@ -6,7 +6,7 @@ class Clickhouse():
         self.config = config
         self.name = name
 
-    def _to_clickhouse_table(self, stats):
+    def _to_clickhouse_table(self, stats, predicted_cols):
         subtype_map = {
             DATA_SUBTYPES.INT: 'Nullable(Int64)',
             DATA_SUBTYPES.FLOAT: 'Nullable(Float64)',
@@ -29,6 +29,8 @@ class Clickhouse():
                 col_subtype = stats[name]['typing']['data_subtype']
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' `{name}` {new_type} ')
+                if name in predicted_cols:
+                    column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception as e:
                 print(e)
                 print(f'Error: cant convert type {col_subtype} of column {name} to clickhouse tpye')
@@ -71,7 +73,7 @@ class Clickhouse():
                 (name String,
                 status String,
                 accuracy String,
-                predict_cols String,
+                predict String,
                 select_data_query String,
                 training_options String
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors_clickhouse', '{msqyl_user}', '{msqyl_pass}')
@@ -92,9 +94,9 @@ class Clickhouse():
             stats = model_meta['data_analysis']
             if 'columns_to_ignore' in stats:
                 del stats['columns_to_ignore']
-            columns_sql = ','.join(self._to_clickhouse_table(stats))
+            columns_sql = ','.join(self._to_clickhouse_table(stats, model_meta['predict']))
             columns_sql += ',`select_data_query` Nullable(String)'
-            for col in model_meta['predict_cols']:
+            for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
                     columns_sql += f',`{col}_min` Nullable(Float64)'

@@ -49,10 +49,11 @@ if __name__ == '__main__':
     }
 
     mdb = MindsdbNative(config)
+    # @TODO Maybe just use `get_model_data` directly here ? Seems like a useless abstraction
     model_data_arr = [
         {
             'name': x['name'],
-            'predict_cols': x['predict'],
+            'predict': x['predict'],
             'data_analysis': mdb.get_model_data(x['name'])['data_analysis_v2']
         } for x in mdb.get_models()
     ]

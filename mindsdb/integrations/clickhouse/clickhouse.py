@@ -73,7 +73,7 @@ class Clickhouse():
                 (name String,
                 status String,
                 accuracy String,
-                predict_cols String,
+                predict String,
                 select_data_query String,
                 training_options String
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors_clickhouse', '{msqyl_user}', '{msqyl_pass}')

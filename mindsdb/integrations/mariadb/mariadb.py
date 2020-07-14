@@ -80,7 +80,7 @@ class Mariadb():
                 (name VARCHAR(500),
                 status VARCHAR(500),
                 accuracy VARCHAR(500),
-                predict_cols VARCHAR(500),
+                predict VARCHAR(500),
                 select_data_query VARCHAR(500),
                 training_options VARCHAR(500)
                 ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';

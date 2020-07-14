@@ -10,7 +10,7 @@ class Mariadb():
         self.config = config
         self.name = name
 
-    def _to_mariadb_table(self, stats):
+    def _to_mariadb_table(self, stats, predicted_cols):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
             DATA_SUBTYPES.FLOAT: 'double',
@@ -33,6 +33,8 @@ class Mariadb():
                 col_subtype = stats[name]['typing']['data_subtype']
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' `{name}` {new_type} ')
+                if name in predicted_cols:
+                    column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception as e:
                 print(f'Error: cant convert type {col_subtype} of column {name} to mariadb tpye')
 
@@ -78,7 +80,7 @@ class Mariadb():
                 (name VARCHAR(500),
                 status VARCHAR(500),
                 accuracy VARCHAR(500),
-                predict_cols VARCHAR(500),
+                predict VARCHAR(500),
                 select_data_query VARCHAR(500),
                 training_options VARCHAR(500)
                 ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
@@ -98,9 +100,9 @@ class Mariadb():
         for model_meta in model_data_arr:
             name = model_meta['name']
             stats = model_meta['data_analysis']
-            columns_sql = ','.join(self._to_mariadb_table(stats))
+            columns_sql = ','.join(self._to_mariadb_table(stats, model_meta['predict']))
             columns_sql += ',`select_data_query` varchar(500)'
-            for col in model_meta['predict_cols']:
+            for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` double'
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
                     columns_sql += f',`{col}_min` double'

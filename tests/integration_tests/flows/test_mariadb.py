@@ -175,7 +175,7 @@ class MariaDBTest(unittest.TestCase):
     def test_2_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
-            insert into mindsdb.predictors (name, predict_cols, select_data_query, training_options) values
+            insert into mindsdb.predictors (name, predict, select_data_query, training_options) values
             (
                 '{TEST_PREDICTOR_NAME}',
                 'rental_price, location',

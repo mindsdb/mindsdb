@@ -76,4 +76,4 @@ class MindsdbNative():
         #dbw.register_predictor(...)
 
     def export_model(self,name):
-        F.export_model(model_name=name)
+        F.export_predictor(model_name=name)

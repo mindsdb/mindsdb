@@ -69,14 +69,14 @@ class Clickhouse():
         msqyl_pass = self.config['api']['mysql']['password']
 
         q = f"""
-                CREATE TABLE IF NOT EXISTS mindsdb.predictors
-                (name String,
+            CREATE TABLE IF NOT EXISTS mindsdb.predictors (
+                name String,
                 status String,
                 accuracy String,
                 predict String,
                 select_data_query String,
                 training_options String
-                ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors_clickhouse', '{msqyl_user}', '{msqyl_pass}')
+            ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors_clickhouse', '{msqyl_user}', '{msqyl_pass}')
         """
         self._query(q)
 
@@ -87,7 +87,6 @@ class Clickhouse():
         """
         self._query(q)
 
-
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
@@ -96,6 +95,7 @@ class Clickhouse():
                 del stats['columns_to_ignore']
             columns_sql = ','.join(self._to_clickhouse_table(stats, model_meta['predict']))
             columns_sql += ',`select_data_query` Nullable(String)'
+            columns_sql += ',`external_datasource` Nullable(String)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
@@ -119,7 +119,6 @@ class Clickhouse():
             drop table if exists mindsdb.{name};
         """
         self._query(q)
-
 
     def check_connection(self):
         try:

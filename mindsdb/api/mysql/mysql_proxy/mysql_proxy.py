@@ -193,7 +193,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             handshake_resp = self.packet(HandshakeResponsePacket)
             handshake_resp.get()
             client_auth_plugin = handshake_resp.client_auth_plugin.value.decode()
-        
+
         username = handshake_resp.username.value.decode()
 
         if client_auth_plugin != DEFAULT_AUTH_METHOD:

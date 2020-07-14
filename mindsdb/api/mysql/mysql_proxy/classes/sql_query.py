@@ -420,6 +420,12 @@ class SQLQuery():
                and table['join']['type'] == 'left join':
                 condition = {}
 
+            if 'external_datasource' in condition:
+                external_datasource = condition['external_datasource']['$eq']
+                del condition['external_datasource']
+                query = SQLQuery(external_datasource, default_dn='datasource')
+                result = query.fetch(self.datahub)
+
             if tablenum > 0 \
                and isinstance(table['join'], dict) \
                and table['join']['type'] == 'left join' \

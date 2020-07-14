@@ -7,6 +7,7 @@ from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 
+
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
@@ -41,6 +42,7 @@ class MindsDBDataNode(DataNode):
 
         # TODO this should be added just for clickhouse queries
         columns += ['select_data_query']
+        columns += ['external_datasource']
         return columns
 
     def _select_predictors(self):
@@ -62,6 +64,11 @@ class MindsDBDataNode(DataNode):
         '''
         if table == 'predictors':
             return self._select_predictors()
+
+        # external_datasource = None
+        # if 'external_datasource' in where:
+        #     external_datasource = where['external_datasource']['$eq']
+        #     del where['external_datasource']
 
         select_data_query = None
         if came_from is not None and 'select_data_query' in where:

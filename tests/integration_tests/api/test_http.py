@@ -70,8 +70,12 @@ class HTTPTest(unittest.TestCase):
 
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
-            assert res.json()['password'] == 'test'
-
+            modified_integration = res.json()
+            assert modified_integration['password'] == 'test'
+            for k in integration:
+                if k != 'password':
+                    assert modified_integration[k] == integration[k]
+                     
             # Put the original values back in
             res = requests.put(f'{root}/config/integrations/{name}/modify', json={'params':integration})
             res = requests.get(f'{root}/config/integrations/{name}')

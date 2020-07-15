@@ -64,19 +64,20 @@ class Config(object):
                     c[k] = value
 
         with open(self.config_path, 'w') as fp:
-            json.dump(self._config, fp)
+            json.dump(self._config, fp, indent=4, sort_keys=True)
 
     # Higher level interface
     def add_db_integration(self, name, dict):
-        if 'enabled' in dict:
+        if 'enabled' not in dict:
             dict['enabled'] = True
 
         self.set(['integrations', name], dict)
 
     def modify_db_integration(self, name, dict):
         old_dict = self._config['integrations'][name]
-        for k in dict:
-            old_dict[k] = dict[k]
+        for k in old_dict:
+            if k not in dict:
+                dict[k] = old_dict[k]
 
         self.add_db_integration(name, dict)
 

@@ -52,12 +52,12 @@ class Config(object):
 
         c = self._config
         for i, k in enumerate(key_chain):
-            if k in c:
+            if k in c and i+1 < len(key_chain):
                 c = c[k]
-            if k not in c and i-1 < len(key_chain):
+            elif k not in c and i+1 < len(key_chain):
                 c[k] = {}
                 c = c[k]
-            elif k not in c:
+            else:
                 if delete:
                     del c[k]
                 else:
@@ -68,17 +68,17 @@ class Config(object):
 
     # Higher level interface
     def add_db_integration(self, name, dict):
+        if 'enabled' in dict:
+            dict['enabled'] = True
+
+        self.set(['integrations', name], dict)
+
+    def modify_db_integration(self, name, dict):
         old_dict = self._config['integrations'][name]
         for k in dict:
             old_dict[k] = dict[k]
 
         self.add_db_integration(name, dict)
-
-    def modify_db_integration(self, name, dict):
-        if 'enabled' in dict:
-            dict['enabled'] = True
-
-        self.set(['integrations', name], dict)
 
     def remove_db_integration(self, name):
         self.set(['integrations', name], None, True)

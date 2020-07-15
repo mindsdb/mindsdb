@@ -9,6 +9,7 @@ import atexit
 import mysql.connector
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.config import Config
 
 from common import (
@@ -27,6 +28,8 @@ TEST_CSV = {
 }
 TEST_DATA_TABLE = 'home_rentals'
 TEST_PREDICTOR_NAME = 'test_predictor'
+
+EXTERNAL_DS_NAME = 'test_external'
 
 config = Config(TEST_CONFIG)
 
@@ -92,11 +95,18 @@ class MariaDBTest(unittest.TestCase):
             raise Exception()
 
         cls.mdb = MindsdbNative(config)
+        datastore = DataStore(config)
 
         models = cls.mdb.get_models()
         models = [x['name'] for x in models]
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
+
+        test_csv_path = str(TESTS_ROOT.joinpath('temp/', TEST_CSV['name']).resolve())
+        if os.path.isfile(test_csv_path) is False:
+            r = requests.get(TEST_CSV['url'])
+            with open(test_csv_path, 'wb') as f:
+                f.write(r.content)
 
         query('create database if not exists test')
         test_tables = query('show tables from test')
@@ -115,12 +125,6 @@ class MariaDBTest(unittest.TestCase):
                     rental_price int
                 )
             ''')
-
-            test_csv_path = str(TESTS_ROOT.joinpath('temp/', TEST_CSV['name']).resolve())
-            if os.path.isfile(test_csv_path) is False:
-                r = requests.get(TEST_CSV['url'])
-                with open(test_csv_path, 'wb') as f:
-                    f.write(r.content)
 
             with open(test_csv_path) as f:
                 csvf = csv.reader(f)
@@ -147,6 +151,11 @@ class MariaDBTest(unittest.TestCase):
                         )''')
                     i += 1
             print('done')
+
+        ds = datastore.get_datasource(EXTERNAL_DS_NAME)
+        if ds is not None:
+            datastore.delete_datasource(EXTERNAL_DS_NAME)
+        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', test_csv_path)
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
@@ -194,8 +203,8 @@ class MariaDBTest(unittest.TestCase):
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME in mindsdb_tables)
 
-    def test_3_insert_predictor_with_existing_ds(self):
-        name = f'{TEST_PREDICTOR_NAME}_2'
+    def test_3_externael_ds(self):
+        name = f'{TEST_PREDICTOR_NAME}_external'
         models = self.mdb.get_models()
         models = [x['name'] for x in models]
         if name in models:
@@ -206,7 +215,7 @@ class MariaDBTest(unittest.TestCase):
             (
                 '{name}',
                 'rental_price, location',
-                '{TEST_PREDICTOR_NAME}',
+                '{EXTERNAL_DS_NAME}',
                 '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
             );
         """)
@@ -220,6 +229,19 @@ class MariaDBTest(unittest.TestCase):
         mindsdb_tables = query('show tables from mindsdb')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(name in mindsdb_tables)
+
+        res = query(f"""
+            select
+                rental_price, location, sqft, number_of_rooms,
+                rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
+            from
+                mindsdb.{name} where external_datasource='{EXTERNAL_DS_NAME}'
+        """, as_dict=True)
+
+        print('check result')
+        self.assertTrue(len(res) > 0)
+        self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
+        self.assertTrue(res[0]['location'] is not None and res[0]['location'] != 'None')
 
     def test_4_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

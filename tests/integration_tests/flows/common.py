@@ -87,3 +87,10 @@ def is_container_run(name):
     containers = docker_client.containers.list()
     containers = [x.name for x in containers if x.status == 'running']
     return name in containers
+
+# def load_test_csv(name)
+#     test_csv_path = str(TESTS_ROOT.joinpath('temp/', TEST_CSV['name']).resolve())
+#     if os.path.isfile(test_csv_path) is False:
+#         r = requests.get(TEST_CSV['url'])
+#         with open(test_csv_path, 'wb') as f:
+#             f.write(r.content)

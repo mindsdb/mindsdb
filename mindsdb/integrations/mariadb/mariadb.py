@@ -82,6 +82,7 @@ class Mariadb():
                 accuracy VARCHAR(500),
                 predict VARCHAR(500),
                 select_data_query VARCHAR(500),
+                external_datasource VARCHAR(500),
                 training_options VARCHAR(500)
                 ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
@@ -102,6 +103,7 @@ class Mariadb():
             stats = model_meta['data_analysis']
             columns_sql = ','.join(self._to_mariadb_table(stats, model_meta['predict']))
             columns_sql += ',`select_data_query` varchar(500)'
+            columns_sql += ',`external_datasource` varchar(500)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` double'
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':

@@ -211,7 +211,34 @@ class ClickhouseTest(unittest.TestCase):
         mindsdb_tables = [x['name'] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME in mindsdb_tables)
 
-    def test_3_query_predictor(self):
+    def test_3_insert_predictor_with_existing_ds(self):
+        name = f'{TEST_PREDICTOR_NAME}_2'
+        models = self.mdb.get_models()
+        models = [x['name'] for x in models]
+        if name in models:
+            self.mdb.delete_model(name)
+
+        query(f"""
+            insert into mindsdb.predictors (name, predict, external_datasource, training_options) values
+            (
+                '{name}',
+                'rental_price, location',
+                '{TEST_PREDICTOR_NAME}',
+                '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
+            );
+        """)
+
+        print('predictor record in mindsdb.predictors')
+        res = query(f"select status from mindsdb.predictors where name = '{name}'")
+        self.assertTrue(len(res) == 1)
+        self.assertTrue(res[0]['status'] == 'complete')
+
+        print('predictor table in mindsdb db')
+        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = [x['name'] for x in mindsdb_tables]
+        self.assertTrue(name in mindsdb_tables)
+
+    def test_4_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         res = query(f"""
             select
@@ -236,7 +263,7 @@ class ClickhouseTest(unittest.TestCase):
         self.assertIsInstance(res['rental_price_explain'], str)
         self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
 
-    def test_4_range_query(self):
+    def test_5_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         results = query(f"""
@@ -257,7 +284,7 @@ class ClickhouseTest(unittest.TestCase):
             self.assertIsInstance(res['rental_price_max'], int)
             self.assertIsInstance(res['rental_price_explain'], str)
 
-    def test_5_delete_predictor_by_command(self):
+    def test_6_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""

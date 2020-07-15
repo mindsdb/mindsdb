@@ -75,6 +75,7 @@ CERT_PATH = None
 default_store = None
 mdb = None
 datahub = None
+config = None
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):
@@ -131,7 +132,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.error(traceback.format_exc())
 
     def handshake(self):
-        global HARDCODED_PASSWORD, HARDCODED_USER, CERT_PATH
+        global HARDCODED_PASSWORD, HARDCODED_USER, CERT_PATH, config
 
         def switch_auth(method='mysql_native_password'):
             self.packet(SwitchOutPacket, seed=self.salt, method=method).send()
@@ -193,8 +194,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             handshake_resp = self.packet(HandshakeResponsePacket)
             handshake_resp.get()
             client_auth_plugin = handshake_resp.client_auth_plugin.value.decode()
-        
+
         username = handshake_resp.username.value.decode()
+        # if connect come from 'integration', then username will be like username_dbname
+        integration = ''
+        prefix = orig_username + '_'
+        if username.startswith(prefix):
+            integration = username[len(prefix):]
+        if len(integration) > 0 and integration in config['integrations']:
+            self.session.integration = integration
+            username = orig_username
 
         if client_auth_plugin != DEFAULT_AUTH_METHOD:
             if client_auth_plugin == 'mysql_native_password' and \
@@ -296,7 +305,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def insert_predictor_answer(self, sql):
-        global mdb, default_store
+        global mdb, default_store, config
         insert = SQLQuery.parse_insert(sql)
 
         models = mdb.get_models()
@@ -324,10 +333,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # TODO clickhouse with any type of used escaping sends escaped quotes as \'.
         # Need to check other clients, they behaviour can be differ
         insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-
-        db = sql.lower()[sql.lower().find('predictors_') + len('predictors_'):]
-        db = db[:db.find(' ')].strip(' `')
-        ds_type = db
+        ds_type = config['integrations'][self.session.integration]['type']
         ds = default_store.save_datasource(insert['name'], ds_type, insert['select_data_query'])
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
         mdb.learn(insert['name'], ds, insert['predict'], kwargs)
@@ -339,7 +345,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         fake_sql = sql.strip(' ')
         fake_sql = 'select name ' + fake_sql[len('delete '):]
-        query = SQLQuery(fake_sql)
+        query = SQLQuery(fake_sql, session=self.session)
 
         result = query.fetch(datahub)
 
@@ -476,7 +482,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'database()' in sql_lower:
                 self.answerSelectDatabase()
                 return
-            query = SQLQuery(sql, self.session.database)
+            query = SQLQuery(sql, session=self.session)
             return self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()
@@ -863,16 +869,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return p
 
     @staticmethod
-    def startProxy(config):
+    def startProxy(_config):
         global HARDCODED_USER
         global HARDCODED_PASSWORD
         global CERT_PATH
         global default_store
         global mdb
         global datahub
+        global config
         """
         Create a server and wait for incoming connections until Ctrl-C
         """
+        config = _config
         init_logger(config)
 
         HARDCODED_USER = config['api']['mysql']['user']

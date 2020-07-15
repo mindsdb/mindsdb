@@ -60,12 +60,12 @@ class SQLQuery():
 
         return dict(zip(columns, values))
 
-    def __init__(self, sql, default_dn=None):
+    def __init__(self, sql, session=None):
         # parse
-
-        self.default_datanode = None
-        if isinstance(default_dn, str) and len(default_dn) > 0:
-            self.default_datanode = default_dn
+        self.session = session
+        self.integration = None
+        if session is not None:
+            self.integration = session.integration
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
@@ -114,28 +114,31 @@ class SQLQuery():
                         {'left join': {'name': 'b', 'value': 'xxx.zzz'}, 'on': {'eq': ['a.id', 'b.id']}}]
             This function do:
                 1. replace string view 'xxx.zzz' to {'value': 'xxx.zzz', 'name': 'zzz'}
-                2. if exists default_datanode, then replace 'zzz' to 'default_datanode.zzz'
+                2. if exists db info, then replace 'zzz' to 'db.zzz'
                 3. if database marks (as _clickhouse or _mariadb) in datasource name, than do:
                     {'value': 'xxx.zzz_mariadb', 'name': 'a'}
                     -> {'value': 'xxx.zzz', 'name': 'a', source: 'mariadb'}
         """
+        database = None
+        if self.session is not None:
+            database = self.session.database
         if isinstance(s, str):
             if '.' in s:
                 s = {
                     'name': s.split('.')[-1],
                     'value': s
                 }
-            elif self.default_datanode is not None:
+            elif database is not None:
                 s = {
                     'name': s,
-                    'value': f'{self.default_datanode}.{s}'
+                    'value': f'{database}.{s}'
                 }
             else:
                 raise SqlError('table without datasource %s ' % s)
         elif isinstance(s, dict):
             if 'value' in s and 'name' in s:
-                if '.' not in s['value'] and self.default_datanode is not None:
-                    s['value'] = f"{self.default_datanode}.{s['value']}"
+                if '.' not in s['value'] and database is not None:
+                    s['value'] = f"{database}.{s['value']}"
                 elif '.' not in s['value']:
                     raise SqlError('table without datasource %s ' % s['value'])
             elif 'left join' in s:
@@ -146,18 +149,11 @@ class SQLQuery():
                 s['join'] = self._format_from_statement(s['join'])
             else:
                 raise SqlError('Something wrong in query parsing process')
-        
-        for x in ['clickhouse', 'mariadb']:
-            _x = '_' + x
-            if s['value'].endswith(_x):
-                s['value'] = s['value'][:s['value'].rfind(_x)]
-                s['source'] = x
-
         return s
 
     def _parseQuery(self, sql):
         self.struct = parse(sql)
-        
+
         if 'limit' in self.struct:
             limit = self.struct.get('limit')
             if isinstance(limit, int) is False:
@@ -429,14 +425,14 @@ class SQLQuery():
                     columns=fields,
                     where=condition,
                     where_data=self.table_data[prev_table_name],
-                    came_from=table.get('source')
+                    came_from=self.integration
                 )
             else:
                 data = dn.select(
                     table=table_name,
                     columns=fields,
                     where=condition,
-                    came_from=table.get('source')
+                    came_from=self.integration
                 )
 
             self.table_data[full_table_name] = data

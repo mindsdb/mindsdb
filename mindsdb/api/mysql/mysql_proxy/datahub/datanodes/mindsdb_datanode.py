@@ -7,6 +7,7 @@ from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 
+
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
@@ -25,7 +26,7 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         if table == 'predictors':
-            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'training_options']
+            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
         if table == 'commands':
             return ['command']
         model = self.mindsdb_native.get_model_data(name=table)
@@ -41,6 +42,7 @@ class MindsDBDataNode(DataNode):
 
         # TODO this should be added just for clickhouse queries
         columns += ['select_data_query']
+        columns += ['external_datasource']
         return columns
 
     def _select_predictors(self):
@@ -51,6 +53,7 @@ class MindsDBDataNode(DataNode):
             'accuracy': x['accuracy'],
             'predict': ', '.join(x['predict']),
             'select_data_query': x['data_source'],
+            'external_datasource': '', # TODO
             'training_options': ''  # TODO ?
         } for x in models]
 
@@ -63,27 +66,23 @@ class MindsDBDataNode(DataNode):
         if table == 'predictors':
             return self._select_predictors()
 
+        external_datasource = None
+        if 'external_datasource' in where:
+            external_datasource = where['external_datasource']['$eq']
+            del where['external_datasource']
+
         select_data_query = None
         if came_from is not None and 'select_data_query' in where:
             select_data_query = where['select_data_query']['$eq']
             del where['select_data_query']
 
-            '''
-            @TODO (Urgent~ish)
-
-            This is a horrible but function hack, however the proper way to do this is:
-            1. Figure out the alias of the database sending the query
-            2. Lookup the connection information in the config
-            3. Send that information + the query + a name (maybe the hash of the query or the query itself) to the Datastore API and ask it to create a datasource
-
-            That way we also avoid making the same query twice and we don't use the database integrations (meant to sync predictors) in order to query data (the role of the mindsdb_native datasources / the datastore / data skillet)
-            '''
-            if came_from == 'clickhouse':
-                ch = Clickhouse(self.config, 'default_clickhouse')
-                res = ch._query(select_data_query.strip(' ;') + ' FORMAT JSON')
+            dbtype = self.config['integrations'][came_from]['type']
+            if dbtype == 'clickhouse':
+                ch = Clickhouse(self.config, came_from)
+                res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')
                 data = res.json()['data']
-            elif came_from == 'mariadb':
-                maria = Mariadb(self.config, 'default_mariadb')
+            elif dbtype == 'mariadb':
+                maria = Mariadb(self.config, came_from)
                 data = maria._query(select_data_query)
 
             if where_data is None:
@@ -110,13 +109,13 @@ class MindsDBDataNode(DataNode):
 
         original_target_values = {}
         for col in predicted_columns:
-            if type(where_data) == list:
-                original_target_values[col + '_original'] = [None] * len(where_data)
-                for row in where_data:
-                    if col in row:
-                        original_target_values[col + '_original'].append(row[col])
+            if where_data is not None:
+                if col in where_data:
+                    original_target_values[col + '_original'] = list(where_data[col])
+                else:
+                    original_target_values[col + '_original'] = [None] * len(where_data)
             else:
-                original_target_values[col + '_original'] = list(where_data[col])
+                original_target_values[col + '_original'] = [None]
 
         res = self.mindsdb_native.predict(name=table, when_data=where_data)
 
@@ -140,6 +139,7 @@ class MindsDBDataNode(DataNode):
                 row[key + '_min'] = explanation[key]['confidence_interval'][0]
                 row[key + '_max'] = explanation[key]['confidence_interval'][-1]
             row['select_data_query'] = select_data_query
+            row['external_datasource'] = external_datasource
             for k in original_target_values:
                 row[k] = original_target_values[k][i]
             data.append(row)

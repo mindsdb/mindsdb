@@ -1,4 +1,5 @@
 import psutil
+import shutil
 import time
 import pathlib
 import json
@@ -63,8 +64,12 @@ def prepare_config(config, db):
         config._config['integrations'][key]['enabled'] = key == db
 
     datastore_dir = TEMP_DIR.joinpath('datastore/')
+    if datastore_dir.exists():
+        shutil.rmtree(datastore_dir)
     datastore_dir.mkdir(parents=True, exist_ok=True)
     mindsdb_native_dir = TEMP_DIR.joinpath('predictors/')
+    if mindsdb_native_dir.exists():
+        shutil.rmtree(mindsdb_native_dir)
     mindsdb_native_dir.mkdir(parents=True, exist_ok=True)
 
     config['interface']['datastore']['storage_dir'] = str(datastore_dir)

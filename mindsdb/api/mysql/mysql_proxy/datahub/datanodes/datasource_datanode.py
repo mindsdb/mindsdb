@@ -18,12 +18,8 @@ class DataSourceDataNode(DataNode):
         # self.mindsdb_native = MindsdbNative(config)
 
     def getTables(self):
-        # models = self.mindsdb_native.get_models()
         dss = self.datastore.get_datasources()
         return [x['name'] for x in dss]
-        # models = [x['name'] for x in models if x['status'] == 'complete']
-        # models += ['predictors']
-        # return models
 
     def hasTable(self, table):
         return table in self.getTables()
@@ -34,4 +30,4 @@ class DataSourceDataNode(DataNode):
 
     def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
         data = self.datastore.get_data(table, where=None, limit=None, offset=None)
-        return data
+        return data['data']

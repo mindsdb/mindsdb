@@ -76,12 +76,15 @@ class SQLQuery():
         # prepare
         self._prepareQuery()
 
-    def fetch(self, datahub):
+    def fetch(self, datahub, view='list'):
         try:
             self.datahub = datahub
             self._fetchData()
             data = self._processData()
-            self.result = self._makeResultVeiw(data)
+            if view == 'dict':
+                self.result = self._makeDictResultVeiw(data)
+            elif view == 'list':
+                self.result = self._makeListResultVeiw(data)
         except (TableWithoutDatasourceException,
                 UndefinedColumnTableException,
                 DuplicateTableNameException,
@@ -422,14 +425,21 @@ class SQLQuery():
 
             if 'external_datasource' in condition:
                 external_datasource = condition['external_datasource']['$eq']
-                del condition['external_datasource']
                 query = SQLQuery(external_datasource, default_dn='datasource')
-                result = query.fetch(self.datahub)
-
-            if tablenum > 0 \
-               and isinstance(table['join'], dict) \
-               and table['join']['type'] == 'left join' \
-               and dn.type == 'mindsdb':
+                result = query.fetch(self.datahub, view='dict')
+                if result['success'] is False:
+                    raise Exception(result['msg'])
+                data = dn.select(
+                    table=table_name,
+                    columns=fields,
+                    where=condition,
+                    where_data=result['result'],
+                    came_from=table.get('source')
+                )
+            elif tablenum > 0 \
+                and isinstance(table['join'], dict) \
+                and table['join']['type'] == 'left join' \
+                and dn.type == 'mindsdb':
                 data = dn.select(
                     table=table_name,
                     columns=fields,
@@ -549,7 +559,19 @@ class SQLQuery():
 
         return data
 
-    def _makeResultVeiw(self, data):
+    def _makeDictResultVeiw(self, data):
+        result = []
+
+        for record in data:
+            row = {}
+            for col in self.columns:
+                table_record = record[f"{col['database']}.{col['table_name']}"]
+                row[col['name']] = table_record[col['name']]
+            result.append(row)
+
+        return result
+
+    def _makeListResultVeiw(self, data):
         result = []
 
         for record in data:

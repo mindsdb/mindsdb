@@ -26,7 +26,7 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         if table == 'predictors':
-            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'training_options']
+            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
         if table == 'commands':
             return ['command']
         model = self.mindsdb_native.get_model_data(name=table)
@@ -53,6 +53,7 @@ class MindsDBDataNode(DataNode):
             'accuracy': x['accuracy'],
             'predict': ', '.join(x['predict']),
             'select_data_query': x['data_source'],
+            'external_datasource': '', # TODO
             'training_options': ''  # TODO ?
         } for x in models]
 

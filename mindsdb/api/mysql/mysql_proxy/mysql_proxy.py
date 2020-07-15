@@ -28,11 +28,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapab
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
-    TableWithoutDatasourceException,
-    UndefinedColumnTableException,
-    DuplicateTableNameException,
-    NotImplementedError,
-    SqlError
+    NotImplementedError
 )
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
@@ -150,8 +146,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             try:
                 password = password_answer.password.value.decode()
             except Exception:
-                log.info(f'error: no password in Fast Auth answer')
-                self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'Is not password in connection query.').send()
+                log.info('error: no password in Fast Auth answer')
+                self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='Is not password in connection query.').send()
                 return None
             return password
 
@@ -198,7 +194,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if client_auth_plugin != DEFAULT_AUTH_METHOD:
             if client_auth_plugin == 'mysql_native_password' and \
-                orig_password == '' and len(handshake_resp.enc_password.value) == 0:
+                    orig_password == '' and len(handshake_resp.enc_password.value) == 0:
                 switch_auth('mysql_native_password')
                 password = ''
             else:
@@ -206,12 +202,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
                 if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
                     log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                        'error: cant switch to caching_sha2_password without SSL')
-                    self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'caching_sha2_password without SSL not supported').send()
+                             'error: cant switch to caching_sha2_password without SSL')
+                    self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='caching_sha2_password without SSL not supported').send()
                     return False
 
                 log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                    f'switch auth method to {new_method}')
+                         f'switch auth method to {new_method}')
                 password = switch_auth(new_method)
 
                 if new_method == 'caching_sha2_password':
@@ -220,21 +216,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     orig_password = orig_password_hash
         elif orig_username == username and HARDCODED_PASSWORD == '':
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                'empty password')
+                     'empty password')
             password = ''
         elif 'caching_sha2_password' in client_auth_plugin:
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                'check auth using caching_sha2_password')
+                     'check auth using caching_sha2_password')
             password = get_fast_auth_password()
             orig_password = HARDCODED_PASSWORD
         elif 'mysql_native_password' in client_auth_plugin:
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                'check auth using mysql_native_password')
+                     'check auth using mysql_native_password')
             password = handshake_resp.enc_password.value
             orig_password = orig_password_hash
         else:
             log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                'unknown method, possible ERROR. Try to switch to mysql_native_password')
+                     'unknown method, possible ERROR. Try to switch to mysql_native_password')
             password = switch_auth('mysql_native_password')
             orig_password = orig_password_hash
 
@@ -243,7 +239,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         except Exception:
             self.session.database = None
         log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-            f'connecting to database {self.session.database}')
+                 f'connecting to database {self.session.database}')
 
         if self.isAuthOk(username, orig_username, password, orig_password):
             self.packet(OkPacket).send()
@@ -299,6 +295,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         global mdb, default_store
         insert = SQLQuery.parse_insert(sql)
 
+        is_external_datasource = isinstance(insert.get('external_datasource'), str) and len(insert['external_datasource']) > 0
+        is_select_data_query = isinstance(insert.get('select_data_query'), str) and len(insert['select_data_query']) > 0
+
+        if is_external_datasource and is_select_data_query:
+            self.packet(
+                ErrPacket,
+                err_code=ERR.ER_WRONG_ARGUMENTS,
+                msg="'external_datasource' and 'select_data_query' should not be used in one query"
+            ).send()
+            return
+        elif is_external_datasource is False and is_select_data_query is False:
+            self.packet(
+                ErrPacket,
+                err_code=ERR.ER_WRONG_ARGUMENTS,
+                msg="in query should be 'external_datasource' or 'select_data_query'"
+            ).send()
+            return
+
         models = mdb.get_models()
         if insert['name'] in [x['name'] for x in models]:
             self.packet(
@@ -310,10 +324,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         kwargs = {}
         if isinstance(insert.get('training_options'), str) \
-            and len(insert['training_options']) > 0:
+                and len(insert['training_options']) > 0:
             try:
                 kwargs = json.loads(insert['training_options'])
-            except Exception as e:
+            except Exception:
                 self.packet(
                     ErrPacket,
                     err_code=ERR.ER_WRONG_ARGUMENTS,
@@ -321,15 +335,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
 
-        # TODO clickhouse with any type of used escaping sends escaped quotes as \'.
-        # Need to check other clients, they behaviour can be differ
-        insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
+        if is_select_data_query:
+            insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
 
-        db = sql.lower()[sql.lower().find('predictors_') + len('predictors_'):]
-        db = db[:db.find(' ')].strip(' `')
-        ds_type = db
-        ds = default_store.save_datasource(insert['name'], ds_type, insert['select_data_query'])
+            db = sql.lower()[sql.lower().find('predictors_') + len('predictors_'):]
+            db = db[:db.find(' ')].strip(' `')
+            ds_type = db
+            ds = default_store.save_datasource(insert['name'], ds_type, insert['select_data_query'])
+        elif is_external_datasource:
+            ds = default_store.get_datasource_obj(insert['external_datasource'], raw=True)
+
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
+
         mdb.learn(insert['name'], ds, insert['predict'], kwargs)
 
         self.packet(OkPacket).send()
@@ -365,10 +382,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         insert = SQLQuery.parse_insert(sql)
 
         if 'command' not in insert:
-            self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg=f"command should be inserted").send()
+            self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg="command should be inserted").send()
             return
         if len(insert) > 1:
-            self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg=f"only command should be inserted").send()
+            self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg="only command should be inserted").send()
             return
 
         command = insert['command'].strip(' ;').split()
@@ -449,15 +466,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answerShowCollation()
             return
         elif keyword == 'delete' and \
-            ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
+                ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
             self.delete_predictor_answer(sql)
             return
         elif keyword == 'insert' and \
-            ('mindsdb.commands' in sql_lower or self.session.database == 'mindsdb' and 'commands' in sql_lower):
+                ('mindsdb.commands' in sql_lower or self.session.database == 'mindsdb' and 'commands' in sql_lower):
             self.handle_custom_command(sql)
             return
         elif keyword == 'insert' and \
-            ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
+                ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
             self.insert_predictor_answer(sql)
             return
         elif keyword in ('update', 'insert'):

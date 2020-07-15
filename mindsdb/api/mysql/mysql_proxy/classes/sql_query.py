@@ -12,7 +12,6 @@
 import re
 import traceback
 
-from pprint import pprint
 from moz_sql_parser import parse
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, binary_ops, unary_ops, operator_map
@@ -54,7 +53,7 @@ class SQLQuery():
         search = re.search(r'(\(.*\)).*(\(.*\))', sql)
         columns = search.groups()[0].split(',')
         columns = [x.strip('(` )') for x in columns]
-        p = re.compile( '\s*,\s*'.join(["('.*')"]*len(columns)) )
+        p = re.compile('\s*,\s*'.join(["('.*')"] * len(columns)))
         values = re.search(p, search.groups()[1])
         values = [x.strip("( ')") for x in values.groups()]
 

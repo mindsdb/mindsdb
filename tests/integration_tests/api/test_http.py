@@ -19,7 +19,7 @@ root = 'http://localhost:47334'
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http'], close_fds=True)
+        #cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http'], close_fds=True)
 
         for i in range(20):
             try:
@@ -43,14 +43,42 @@ class HTTPTest(unittest.TestCase):
             pass
 
     def test_0_config(self):
+        test_integration_data = {'enabled': False, 'host':'test'}
+        res = requests.put(f'{root}/config/integrations/test_integration', json={'params':test_integration_data})
+        assert res.status_code == 200
+
+        res = requests.get(f'{root}/config/integrations/test_integration')
+        assert res.status_code == 200
+        test_integration = res.json()
+        assert len(test_integration) == 2
+
+        for k in test_integration_data:
+            assert test_integration[k] == test_integration_data[k]
+
         for name in ['default_mariadb', 'default_clickhouse']:
-            url = f'{root}/config/integrations/{name}'
-            res = requests.put(url, json=params)
+            # Get the original
+            res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
+
             integration = res.json()
             for k in ['enabled','host','port','password','type','user']:
                 assert k in integration
                 assert integration[k] is not None
+
+            # Modify it
+            res = requests.put(f'{root}/config/integrations/{name}/modify', json={'params':{'password':'test'}})
+
+            res = requests.get(f'{root}/config/integrations/{name}')
+            assert res.status_code == 200
+            assert res.json()['password'] == 'test'
+
+            # Put the original values back in
+            res = requests.put(f'{root}/config/integrations/{name}/modify', json={'params':integration})
+            res = requests.get(f'{root}/config/integrations/{name}')
+            assert res.status_code == 200
+            modified_integration = res.json()
+            for k in integration:
+                assert modified_integration[k] == integration[k]
 
     def test_1_put_ds(self):
         # PUT datasource
@@ -131,4 +159,4 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 404
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(failfast=True)

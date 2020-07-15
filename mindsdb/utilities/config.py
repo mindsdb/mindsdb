@@ -46,7 +46,7 @@ class Config(object):
     def get_all(self):
         return self._config
 
-    def set(self, key_chain, value):
+    def set(self, key_chain, value, delete=False):
         with open(self.config_path, 'r') as fp:
             self._config = json.load(fp)
 
@@ -58,7 +58,10 @@ class Config(object):
                 c[k] = {}
                 c = c[k]
             elif k not in c:
-                c[k] = value
+                if delete:
+                    del c[k]
+                else:
+                    c[k] = value
 
         with open(self.config_path, 'w') as fp:
             json.dump(self._config, fp)
@@ -76,3 +79,6 @@ class Config(object):
             dict['enabled'] = True
 
         self.set(['integrations', name], dict)
+
+    def remove_db_integration(self, name):
+        self.set(['integrations', name], None, True)

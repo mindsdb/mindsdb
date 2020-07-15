@@ -29,10 +29,12 @@ class Integration(Resource):
         '''return datasource metadata'''
         params = data.get('params')
         ca.config_obj.add_db_integration(name, params)
+        return 'added'
 
     @ns_conf.doc('delete_integration')
     def delete(self, name):
         ca.config_obj.remove_db_integration(name)
+        return 'deleted'
 
 @ns_conf.route('/integrations/<name>/modify')
 @ns_conf.param('name', 'Modify database integration')
@@ -42,3 +44,4 @@ class Integration(Resource):
         '''return datasource metadata'''
         params = data.get('params')
         ca.config_obj.modify_db_integration(name, params)
+        return 'modified'

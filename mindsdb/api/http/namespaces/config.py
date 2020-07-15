@@ -16,7 +16,7 @@ from flask import current_app as ca
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 
 
-@ns_conf.route('/<name>')
+@ns_conf.route('/integrations/<name>')
 @ns_conf.param('name', 'Database integration')
 class Integration(Resource):
     @ns_conf.doc('get_integration')
@@ -30,7 +30,11 @@ class Integration(Resource):
         params = data.get('params')
         ca.config_obj.add_db_integration(name, params)
 
-@ns_conf.route('/<name>/modify')
+    @ns_conf.doc('delete_integration')
+    def delete(self, name):
+        ca.config_obj.remove_db_integration(name)
+
+@ns_conf.route('/integrations/<name>/modify')
 @ns_conf.param('name', 'Modify database integration')
 class Integration(Resource):
     @ns_conf.doc('modify_integration')

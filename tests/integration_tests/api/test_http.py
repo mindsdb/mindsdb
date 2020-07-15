@@ -42,6 +42,16 @@ class HTTPTest(unittest.TestCase):
         except Exception:
             pass
 
+    def test_0_config(self):
+        for name in ['default_mariadb', 'default_clickhouse']:
+            url = f'{root}/config/integrations/{name}'
+            res = requests.put(url, json=params)
+            assert res.status_code == 200
+            integration = res.json()
+            for k in ['enabled','host','port','password','type','user']:
+                assert k in integration
+                assert integration[k] is not None
+
     def test_1_put_ds(self):
         # PUT datasource
         params = {

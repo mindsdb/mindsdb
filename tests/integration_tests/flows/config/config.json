@@ -5,7 +5,7 @@
             "port": "47334"
         },
         "mysql": {
-            "certificate_path": "config/cert.pem",
+            "certificate_path": "tests/integration_tests/flows/config/cert.pem",
             "datasources": [],
             "host": "127.0.0.1",
             "log": {
@@ -34,7 +34,7 @@
         "default_mariadb": {
             "enabled": true,
             "host": "localhost",
-            "password": "",
+            "password": "root",
             "port": 3306,
             "type": "mariadb",
             "user": "root"

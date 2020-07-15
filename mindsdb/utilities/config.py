@@ -19,7 +19,7 @@ class Config(object):
     def _read(self):
         if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
             with open(self.config_path, 'r') as fp:
-                self._config = config = json.load(fp)
+                self._config = json.load(fp)
         else:
             raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
 
@@ -47,11 +47,32 @@ class Config(object):
         return self._config
 
     def set(self, key_chain, value):
-        pass
+        with open(self.config_path, 'r') as fp:
+            self._config = json.load(fp)
+
+        c = self._config
+        for i, k in enumerate(key_chain):
+            if k in c:
+                c = c[k]
+            if k not in c and i-1 < len(key_chain):
+                c[k] = {}
+                c = c[k]
+            elif k not in c:
+                c[k] = value
+
+        with open(self.config_path, 'w') as fp:
+            json.dump(self._config, fp)
 
     # Higher level interface
     def add_db_integration(self, name, dict):
-        pass
+        old_dict = self._config['integrations'][name]
+        for k in dict:
+            old_dict[k] = dict[k]
+
+        self.add_db_integration(name, dict)
 
     def modify_db_integration(self, name, dict):
-        pass
+        if 'enabled' in dict:
+            dict['enabled'] = True
+
+        self.set(['integrations', name], dict)

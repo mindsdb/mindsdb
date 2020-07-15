@@ -60,7 +60,7 @@ class SQLQuery():
 
         return dict(zip(columns, values))
 
-    def __init__(self, sql, default_dn=None, session=None):
+    def __init__(self, sql, session=None):
         # parse
         self.session = session
         self.default_datanode = None

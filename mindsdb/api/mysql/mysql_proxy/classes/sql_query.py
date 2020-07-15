@@ -424,6 +424,9 @@ class SQLQuery():
 
             if 'external_datasource' in condition:
                 external_datasource = condition['external_datasource']['$eq']
+                result = []
+                if 'select ' not in external_datasource.lower():
+                    external_datasource = f'select * from {external_datasource}'
                 query = SQLQuery(external_datasource, default_dn='datasource')
                 result = query.fetch(self.datahub, view='dict')
                 if result['success'] is False:

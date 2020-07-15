@@ -19,7 +19,7 @@ root = 'http://localhost:47334'
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        #cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http'], close_fds=True)
+        cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http'], close_fds=True)
 
         for i in range(20):
             try:

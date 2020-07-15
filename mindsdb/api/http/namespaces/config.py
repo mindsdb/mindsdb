@@ -27,7 +27,7 @@ class Integration(Resource):
     @ns_conf.doc('put_integration')
     def put(self, name):
         '''return datasource metadata'''
-        params = data.get('params')
+        params = request.json.get('params')
         ca.config_obj.add_db_integration(name, params)
         return 'added'
 
@@ -42,6 +42,6 @@ class Integration(Resource):
     @ns_conf.doc('modify_integration')
     def put(self, name):
         '''return datasource metadata'''
-        params = data.get('params')
+        params = request.json.get('params')
         ca.config_obj.modify_db_integration(name, params)
         return 'modified'

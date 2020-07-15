@@ -2,6 +2,7 @@ from subprocess import Popen
 import time
 import os
 import signal
+import psutil
 from random import randint
 
 import unittest
@@ -14,6 +15,7 @@ ds_name = f'hr_ds_{rand}'
 pred_name =  f'hr_predictor_{rand}'
 root = 'http://localhost:47334'
 
+
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -24,7 +26,7 @@ class HTTPTest(unittest.TestCase):
                 res = requests.get(f'{root}/util/ping')
                 if res.status_code != 200:
                     raise Exception('')
-            except:
+            except Exception:
                 time.sleep(1)
                 if i == 19:
                     raise Exception("Can't connect !")
@@ -32,8 +34,12 @@ class HTTPTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         try:
+            conns = psutil.net_connections()
+            pid = [x.pid for x in conns if x.status == 'LISTEN' and x.laddr[1] == 47334 and x.pid is not None]
+            if len(pid) > 0:
+                os.kill(pid[0], 9)
             cls.sp.kill()
-        except:
+        except Exception:
             pass
 
     def test_1_put_ds(self):

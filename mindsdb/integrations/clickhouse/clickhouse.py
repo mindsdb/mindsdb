@@ -73,12 +73,13 @@ class Clickhouse():
         msqyl_user = self._get_mysql_user()
 
         q = f"""
-                CREATE TABLE IF NOT EXISTS mindsdb.predictors
-                (name String,
+            CREATE TABLE IF NOT EXISTS mindsdb.predictors (
+                name String,
                 status String,
                 accuracy String,
                 predict String,
                 select_data_query String,
+                external_datasource String,
                 training_options String
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors', '{msqyl_user}', '{msqyl_pass}')
         """
@@ -99,6 +100,7 @@ class Clickhouse():
                 del stats['columns_to_ignore']
             columns_sql = ','.join(self._to_clickhouse_table(stats, model_meta['predict']))
             columns_sql += ',`select_data_query` Nullable(String)'
+            columns_sql += ',`external_datasource` Nullable(String)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':

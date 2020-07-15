@@ -14,8 +14,6 @@ import mindsdb
 from mindsdb.interfaces.datastore.sqlite_helpers import *
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS
-from mindsdb.interfaces.datastore.sqlite_helpers import create_sqlite_db
-
 
 class DataStore():
     def __init__(self, config, storage_dir=None):
@@ -78,7 +76,6 @@ class DataStore():
         ds_dir = os.path.join(ds_meta_dir, 'datasource')
         os.mkdir(ds_dir)
 
-        print(source_type)
         if source_type == 'file':
             source = os.path.join(ds_dir, source)
             os.replace(file_path, source)

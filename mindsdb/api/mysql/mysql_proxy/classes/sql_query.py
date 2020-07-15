@@ -12,7 +12,6 @@
 import re
 import traceback
 
-from pprint import pprint
 from moz_sql_parser import parse
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, binary_ops, unary_ops, operator_map
@@ -54,7 +53,7 @@ class SQLQuery():
         search = re.search(r'(\(.*\)).*(\(.*\))', sql)
         columns = search.groups()[0].split(',')
         columns = [x.strip('(` )') for x in columns]
-        p = re.compile( '\s*,\s*'.join(["('.*')"]*len(columns)) )
+        p = re.compile('\s*,\s*'.join(["('.*')"] * len(columns)))
         values = re.search(p, search.groups()[1])
         values = [x.strip("( ')") for x in values.groups()]
 
@@ -76,12 +75,15 @@ class SQLQuery():
         # prepare
         self._prepareQuery()
 
-    def fetch(self, datahub):
+    def fetch(self, datahub, view='list'):
         try:
             self.datahub = datahub
             self._fetchData()
             data = self._processData()
-            self.result = self._makeResultVeiw(data)
+            if view == 'dict':
+                self.result = self._makeDictResultVeiw(data)
+            elif view == 'list':
+                self.result = self._makeListResultVeiw(data)
         except (TableWithoutDatasourceException,
                 UndefinedColumnTableException,
                 DuplicateTableNameException,
@@ -416,10 +418,26 @@ class SQLQuery():
                and table['join']['type'] == 'left join':
                 condition = {}
 
-            if tablenum > 0 \
-               and isinstance(table['join'], dict) \
-               and table['join']['type'] == 'left join' \
-               and dn.type == 'mindsdb':
+            if 'external_datasource' in condition:
+                external_datasource = condition['external_datasource']['$eq']
+                result = []
+                if 'select ' not in external_datasource.lower():
+                    external_datasource = f'select * from {external_datasource}'
+                query = SQLQuery(external_datasource, default_dn='datasource')
+                result = query.fetch(self.datahub, view='dict')
+                if result['success'] is False:
+                    raise Exception(result['msg'])
+                data = dn.select(
+                    table=table_name,
+                    columns=fields,
+                    where=condition,
+                    where_data=result['result'],
+                    came_from=table.get('source')
+                )
+            elif tablenum > 0 \
+                and isinstance(table['join'], dict) \
+                and table['join']['type'] == 'left join' \
+                and dn.type == 'mindsdb':
                 data = dn.select(
                     table=table_name,
                     columns=fields,
@@ -539,7 +557,19 @@ class SQLQuery():
 
         return data
 
-    def _makeResultVeiw(self, data):
+    def _makeDictResultVeiw(self, data):
+        result = []
+
+        for record in data:
+            row = {}
+            for col in self.columns:
+                table_record = record[f"{col['database']}.{col['table_name']}"]
+                row[col['name']] = table_record[col['name']]
+            result.append(row)
+
+        return result
+
+    def _makeListResultVeiw(self, data):
         result = []
 
         for record in data:

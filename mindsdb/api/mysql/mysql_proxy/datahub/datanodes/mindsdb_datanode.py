@@ -26,7 +26,7 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         if table == 'predictors':
-            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'training_options']
+            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
         if table == 'commands':
             return ['command']
         model = self.mindsdb_native.get_model_data(name=table)
@@ -42,6 +42,7 @@ class MindsDBDataNode(DataNode):
 
         # TODO this should be added just for clickhouse queries
         columns += ['select_data_query']
+        columns += ['external_datasource']
         return columns
 
     def _select_predictors(self):
@@ -52,6 +53,7 @@ class MindsDBDataNode(DataNode):
             'accuracy': x['accuracy'],
             'predict': ', '.join(x['predict']),
             'select_data_query': x['data_source'],
+            'external_datasource': '', # TODO
             'training_options': ''  # TODO ?
         } for x in models]
 
@@ -63,6 +65,11 @@ class MindsDBDataNode(DataNode):
         '''
         if table == 'predictors':
             return self._select_predictors()
+
+        external_datasource = None
+        if 'external_datasource' in where:
+            external_datasource = where['external_datasource']['$eq']
+            del where['external_datasource']
 
         select_data_query = None
         if came_from is not None and 'select_data_query' in where:
@@ -102,13 +109,13 @@ class MindsDBDataNode(DataNode):
 
         original_target_values = {}
         for col in predicted_columns:
-            if type(where_data) == list:
-                original_target_values[col + '_original'] = [None] * len(where_data)
-                for row in where_data:
-                    if col in row:
-                        original_target_values[col + '_original'].append(row[col])
+            if where_data is not None:
+                if col in where_data:
+                    original_target_values[col + '_original'] = list(where_data[col])
+                else:
+                    original_target_values[col + '_original'] = [None] * len(where_data)
             else:
-                original_target_values[col + '_original'] = list(where_data[col])
+                original_target_values[col + '_original'] = [None]
 
         res = self.mindsdb_native.predict(name=table, when_data=where_data)
 
@@ -132,6 +139,7 @@ class MindsDBDataNode(DataNode):
                 row[key + '_min'] = explanation[key]['confidence_interval'][0]
                 row[key + '_max'] = explanation[key]['confidence_interval'][-1]
             row['select_data_query'] = select_data_query
+            row['external_datasource'] = external_datasource
             for k in original_target_values:
                 row[k] = original_target_values[k][i]
             data.append(row)

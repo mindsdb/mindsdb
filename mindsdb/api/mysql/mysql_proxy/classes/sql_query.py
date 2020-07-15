@@ -60,12 +60,14 @@ class SQLQuery():
 
         return dict(zip(columns, values))
 
-    def __init__(self, sql, default_dn=None):
+    def __init__(self, sql, default_dn=None, session=None):
         # parse
-
+        self.session = session
         self.default_datanode = None
-        if isinstance(default_dn, str) and len(default_dn) > 0:
-            self.default_datanode = default_dn
+        self.integration = None
+        if session is not None:
+            self.default_datanode = session.database
+            self.integration = session.integration
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
@@ -146,13 +148,6 @@ class SQLQuery():
                 s['join'] = self._format_from_statement(s['join'])
             else:
                 raise SqlError('Something wrong in query parsing process')
-        
-        for x in ['clickhouse', 'mariadb']:
-            _x = '_' + x
-            if s['value'].endswith(_x):
-                s['value'] = s['value'][:s['value'].rfind(_x)]
-                s['source'] = x
-
         return s
 
     def _parseQuery(self, sql):
@@ -429,14 +424,14 @@ class SQLQuery():
                     columns=fields,
                     where=condition,
                     where_data=self.table_data[prev_table_name],
-                    came_from=table.get('source')
+                    came_from=self.integration
                 )
             else:
                 data = dn.select(
                     table=table_name,
                     columns=fields,
                     where=condition,
-                    came_from=table.get('source')
+                    came_from=self.integration
                 )
 
             self.table_data[full_table_name] = data

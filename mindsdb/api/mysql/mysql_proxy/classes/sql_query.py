@@ -63,10 +63,8 @@ class SQLQuery():
     def __init__(self, sql, session=None):
         # parse
         self.session = session
-        self.default_datanode = None
         self.integration = None
         if session is not None:
-            self.default_datanode = session.database
             self.integration = session.integration
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
@@ -116,28 +114,31 @@ class SQLQuery():
                         {'left join': {'name': 'b', 'value': 'xxx.zzz'}, 'on': {'eq': ['a.id', 'b.id']}}]
             This function do:
                 1. replace string view 'xxx.zzz' to {'value': 'xxx.zzz', 'name': 'zzz'}
-                2. if exists default_datanode, then replace 'zzz' to 'default_datanode.zzz'
+                2. if exists db info, then replace 'zzz' to 'db.zzz'
                 3. if database marks (as _clickhouse or _mariadb) in datasource name, than do:
                     {'value': 'xxx.zzz_mariadb', 'name': 'a'}
                     -> {'value': 'xxx.zzz', 'name': 'a', source: 'mariadb'}
         """
+        database = None
+        if self.session is not None:
+            database = self.session.database
         if isinstance(s, str):
             if '.' in s:
                 s = {
                     'name': s.split('.')[-1],
                     'value': s
                 }
-            elif self.default_datanode is not None:
+            elif database is not None:
                 s = {
                     'name': s,
-                    'value': f'{self.default_datanode}.{s}'
+                    'value': f'{database}.{s}'
                 }
             else:
                 raise SqlError('table without datasource %s ' % s)
         elif isinstance(s, dict):
             if 'value' in s and 'name' in s:
-                if '.' not in s['value'] and self.default_datanode is not None:
-                    s['value'] = f"{self.default_datanode}.{s['value']}"
+                if '.' not in s['value'] and database is not None:
+                    s['value'] = f"{database}.{s['value']}"
                 elif '.' not in s['value']:
                     raise SqlError('table without datasource %s ' % s['value'])
             elif 'left join' in s:
@@ -152,7 +153,7 @@ class SQLQuery():
 
     def _parseQuery(self, sql):
         self.struct = parse(sql)
-        
+
         if 'limit' in self.struct:
             limit = self.struct.get('limit')
             if isinstance(limit, int) is False:

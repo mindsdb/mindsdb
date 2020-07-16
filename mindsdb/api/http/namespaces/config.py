@@ -1,16 +1,5 @@
-import datetime
-import json
-import os
-import re
-
-import tempfile
-import multipart
-import csv
-
-import mindsdb
-from dateutil.parser import parse
-from flask import request, send_file
-from flask_restx import Resource, abort, Namespace
+from flask import request
+from flask_restx import Resource
 from flask import current_app as ca
 
 from mindsdb.api.http.namespaces.configs.config import ns_conf

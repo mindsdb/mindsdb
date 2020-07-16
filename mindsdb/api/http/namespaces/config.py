@@ -37,7 +37,7 @@ class Integration(Resource):
     @ns_conf.doc('modify_integration')
     def post(self, name):
         '''return datasource metadata'''
-        params = request.json.get('params')
-        ca.config_obj.modify_db_integration(name, params)
+        data = request.json
+        ca.config_obj.modify_db_integration(name, data)
         DatabaseWrapper(ca.config_obj)
         return 'modified'

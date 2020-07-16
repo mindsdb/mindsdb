@@ -6,6 +6,7 @@ import sys
 from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
+from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces
 from mindsdb.utilities.config import Config
 
@@ -40,6 +41,7 @@ def start(config, initial=False):
     api.add_namespace(predictor_ns)
     api.add_namespace(datasource_ns)
     api.add_namespace(utils_ns)
+    api.add_namespace(conf_ns)
 
     print(f"Start on {config['api']['http']['host']}:{config['api']['http']['port']}")
     app.run(debug=debug, port=config['api']['http']['port'], host=config['api']['http']['host'])

@@ -4,6 +4,7 @@ import json
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.utilities.config import Config
 
 
 class Swagger_Api(Api):
@@ -34,3 +35,4 @@ def initialize_flask(config):
 def initialize_interfaces(config, app):
     app.default_store = DataStore(config)
     app.mindsdb_native = MindsdbNative(config)
+    app.config_obj = config

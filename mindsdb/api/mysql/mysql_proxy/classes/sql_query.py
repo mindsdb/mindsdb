@@ -12,7 +12,6 @@
 import re
 import traceback
 
-from pprint import pprint
 from moz_sql_parser import parse
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, binary_ops, unary_ops, operator_map
@@ -54,18 +53,18 @@ class SQLQuery():
         search = re.search(r'(\(.*\)).*(\(.*\))', sql)
         columns = search.groups()[0].split(',')
         columns = [x.strip('(` )') for x in columns]
-        p = re.compile( '\s*,\s*'.join(["('.*')"]*len(columns)) )
+        p = re.compile('\s*,\s*'.join(["('.*')"] * len(columns)))
         values = re.search(p, search.groups()[1])
         values = [x.strip("( ')") for x in values.groups()]
 
         return dict(zip(columns, values))
 
-    def __init__(self, sql, default_dn=None):
+    def __init__(self, sql, session=None):
         # parse
-
-        self.default_datanode = None
-        if isinstance(default_dn, str) and len(default_dn) > 0:
-            self.default_datanode = default_dn
+        self.session = session
+        self.integration = None
+        if session is not None:
+            self.integration = session.integration
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
@@ -76,12 +75,15 @@ class SQLQuery():
         # prepare
         self._prepareQuery()
 
-    def fetch(self, datahub):
+    def fetch(self, datahub, view='list'):
         try:
             self.datahub = datahub
             self._fetchData()
             data = self._processData()
-            self.result = self._makeResultVeiw(data)
+            if view == 'dict':
+                self.result = self._makeDictResultVeiw(data)
+            elif view == 'list':
+                self.result = self._makeListResultVeiw(data)
         except (TableWithoutDatasourceException,
                 UndefinedColumnTableException,
                 DuplicateTableNameException,
@@ -114,28 +116,31 @@ class SQLQuery():
                         {'left join': {'name': 'b', 'value': 'xxx.zzz'}, 'on': {'eq': ['a.id', 'b.id']}}]
             This function do:
                 1. replace string view 'xxx.zzz' to {'value': 'xxx.zzz', 'name': 'zzz'}
-                2. if exists default_datanode, then replace 'zzz' to 'default_datanode.zzz'
+                2. if exists db info, then replace 'zzz' to 'db.zzz'
                 3. if database marks (as _clickhouse or _mariadb) in datasource name, than do:
                     {'value': 'xxx.zzz_mariadb', 'name': 'a'}
                     -> {'value': 'xxx.zzz', 'name': 'a', source: 'mariadb'}
         """
+        database = None
+        if self.session is not None:
+            database = self.session.database
         if isinstance(s, str):
             if '.' in s:
                 s = {
                     'name': s.split('.')[-1],
                     'value': s
                 }
-            elif self.default_datanode is not None:
+            elif database is not None:
                 s = {
                     'name': s,
-                    'value': f'{self.default_datanode}.{s}'
+                    'value': f'{database}.{s}'
                 }
             else:
                 raise SqlError('table without datasource %s ' % s)
         elif isinstance(s, dict):
             if 'value' in s and 'name' in s:
-                if '.' not in s['value'] and self.default_datanode is not None:
-                    s['value'] = f"{self.default_datanode}.{s['value']}"
+                if '.' not in s['value'] and database is not None:
+                    s['value'] = f"{database}.{s['value']}"
                 elif '.' not in s['value']:
                     raise SqlError('table without datasource %s ' % s['value'])
             elif 'left join' in s:
@@ -146,18 +151,11 @@ class SQLQuery():
                 s['join'] = self._format_from_statement(s['join'])
             else:
                 raise SqlError('Something wrong in query parsing process')
-        
-        for x in ['clickhouse', 'mariadb']:
-            _x = '_' + x
-            if s['value'].endswith(_x):
-                s['value'] = s['value'][:s['value'].rfind(_x)]
-                s['source'] = x
-
         return s
 
     def _parseQuery(self, sql):
         self.struct = parse(sql)
-        
+
         if 'limit' in self.struct:
             limit = self.struct.get('limit')
             if isinstance(limit, int) is False:
@@ -420,23 +418,39 @@ class SQLQuery():
                and table['join']['type'] == 'left join':
                 condition = {}
 
-            if tablenum > 0 \
-               and isinstance(table['join'], dict) \
-               and table['join']['type'] == 'left join' \
-               and dn.type == 'mindsdb':
+            if 'external_datasource' in condition:
+                external_datasource = condition['external_datasource']['$eq']
+                result = []
+                if 'select ' not in external_datasource.lower():
+                    external_datasource = f'select * from {external_datasource}'
+                query = SQLQuery(external_datasource, default_dn='datasource')
+                result = query.fetch(self.datahub, view='dict')
+                if result['success'] is False:
+                    raise Exception(result['msg'])
+                data = dn.select(
+                    table=table_name,
+                    columns=fields,
+                    where=condition,
+                    where_data=result['result'],
+                    came_from=table.get('source')
+                )
+            elif tablenum > 0 \
+                and isinstance(table['join'], dict) \
+                and table['join']['type'] == 'left join' \
+                and dn.type == 'mindsdb':
                 data = dn.select(
                     table=table_name,
                     columns=fields,
                     where=condition,
                     where_data=self.table_data[prev_table_name],
-                    came_from=table.get('source')
+                    came_from=self.integration
                 )
             else:
                 data = dn.select(
                     table=table_name,
                     columns=fields,
                     where=condition,
-                    came_from=table.get('source')
+                    came_from=self.integration
                 )
 
             self.table_data[full_table_name] = data
@@ -543,7 +557,19 @@ class SQLQuery():
 
         return data
 
-    def _makeResultVeiw(self, data):
+    def _makeDictResultVeiw(self, data):
+        result = []
+
+        for record in data:
+            row = {}
+            for col in self.columns:
+                table_record = record[f"{col['database']}.{col['table_name']}"]
+                row[col['name']] = table_record[col['name']]
+            result.append(row)
+
+        return result
+
+    def _makeListResultVeiw(self, data):
         result = []
 
         for record in data:

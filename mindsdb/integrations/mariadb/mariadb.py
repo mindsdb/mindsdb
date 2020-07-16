@@ -1,8 +1,6 @@
-import requests
-
 import mysql.connector
 
-from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
+from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 
 
 class Mariadb():
@@ -35,7 +33,7 @@ class Mariadb():
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
-            except Exception as e:
+            except Exception:
                 print(f'Error: cant convert type {col_subtype} of column {name} to mariadb tpye')
 
         return column_declaration
@@ -43,12 +41,12 @@ class Mariadb():
     def _query(self, query):
         con = mysql.connector.connect(host=self.config['integrations'][self.name]['host'], port=self.config['integrations'][self.name]['port'], user=self.config['integrations'][self.name]['user'], password=self.config['integrations'][self.name]['password'])
 
-        cur = con.cursor(dictionary=True,buffered=True)
+        cur = con.cursor(dictionary=True, buffered=True)
         cur.execute(query)
         res = True
         try:
             res = cur.fetchall()
-        except:
+        except Exception:
             pass
         con.commit()
         con.close()
@@ -56,7 +54,7 @@ class Mariadb():
         return res
 
     def _get_connect_string(self, table):
-        user = self.config['api']['mysql']['user']
+        user = f"{self.config['api']['mysql']['user']}_{self.name}"
         password = self.config['api']['mysql']['password']
         host = self.config['api']['mysql']['host']
         port = self.config['api']['mysql']['port']
@@ -73,7 +71,7 @@ class Mariadb():
 
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
 
-        connect = self._get_connect_string('predictors_mariadb')
+        connect = self._get_connect_string('predictors')
 
         q = f"""
                 CREATE TABLE IF NOT EXISTS mindsdb.predictors
@@ -82,12 +80,13 @@ class Mariadb():
                 accuracy VARCHAR(500),
                 predict VARCHAR(500),
                 select_data_query VARCHAR(500),
+                external_datasource VARCHAR(500),
                 training_options VARCHAR(500)
                 ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
         self._query(q)
 
-        connect = self._get_connect_string('commands_mariadb')
+        connect = self._get_connect_string('commands')
 
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.commands (
@@ -102,6 +101,7 @@ class Mariadb():
             stats = model_meta['data_analysis']
             columns_sql = ','.join(self._to_mariadb_table(stats, model_meta['predict']))
             columns_sql += ',`select_data_query` varchar(500)'
+            columns_sql += ',`external_datasource` varchar(500)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` double'
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
@@ -109,7 +109,7 @@ class Mariadb():
                     columns_sql += f',`{col}_max` double'
                 columns_sql += f',`{col}_explain` varchar(500)'
 
-            connect = self._get_connect_string(f'{name}_mariadb')
+            connect = self._get_connect_string(name)
 
             q = f"""
                     CREATE TABLE mindsdb.{name}

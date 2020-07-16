@@ -1,5 +1,6 @@
 import requests
-from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
+from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
+
 
 class Clickhouse():
     def __init__(self, config, name):
@@ -41,12 +42,12 @@ class Clickhouse():
         params = {'user': 'default'}
         try:
             params['user'] = self.config['integrations'][self.name]['user']
-        except:
+        except Exception:
             pass
 
         try:
             params['password'] = self.config['integrations'][self.name]['password']
-        except:
+        except Exception:
             pass
 
         host = self.config['integrations'][self.name]['host']
@@ -59,34 +60,37 @@ class Clickhouse():
 
         return response
 
+    def _get_mysql_user(self):
+        return f"{self.config['api']['mysql']['user']}_{self.name}"
+
     def setup(self):
         self._query('DROP DATABASE IF EXISTS mindsdb')
 
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
 
         msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
-        msqyl_user = self.config['api']['mysql']['user']
         msqyl_pass = self.config['api']['mysql']['password']
+        msqyl_user = self._get_mysql_user()
 
         q = f"""
-                CREATE TABLE IF NOT EXISTS mindsdb.predictors
-                (name String,
+            CREATE TABLE IF NOT EXISTS mindsdb.predictors (
+                name String,
                 status String,
                 accuracy String,
                 predict String,
                 select_data_query String,
+                external_datasource String,
                 training_options String
-                ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors_clickhouse', '{msqyl_user}', '{msqyl_pass}')
+                ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors', '{msqyl_user}', '{msqyl_pass}')
         """
         self._query(q)
 
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.commands (
                 command String
-            ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'commands_clickhouse', '{msqyl_user}', '{msqyl_pass}')
+            ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'commands', '{msqyl_user}', '{msqyl_pass}')
         """
         self._query(q)
-
 
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
@@ -96,6 +100,7 @@ class Clickhouse():
                 del stats['columns_to_ignore']
             columns_sql = ','.join(self._to_clickhouse_table(stats, model_meta['predict']))
             columns_sql += ',`select_data_query` Nullable(String)'
+            columns_sql += ',`external_datasource` Nullable(String)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
@@ -104,13 +109,13 @@ class Clickhouse():
                 columns_sql += f',`{col}_explain` Nullable(String)'
 
             msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
-            msqyl_user = self.config['api']['mysql']['user']
             msqyl_pass = self.config['api']['mysql']['password']
+            msqyl_user = self._get_mysql_user()
 
             q = f"""
                     CREATE TABLE mindsdb.{name}
                     ({columns_sql}
-                    ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', '{name}_clickhouse', '{msqyl_user}', '{msqyl_pass}')
+                    ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', {name}, '{msqyl_user}', '{msqyl_pass}')
             """
             self._query(q)
 
@@ -119,7 +124,6 @@ class Clickhouse():
             drop table if exists mindsdb.{name};
         """
         self._query(q)
-
 
     def check_connection(self):
         try:

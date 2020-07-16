@@ -43,6 +43,11 @@ class HTTPTest(unittest.TestCase):
             pass
 
     def test_1_config(self):
+        res = requests.get(f'{root}/config/integrations')
+        assert res.status_code == 200
+        integration_names = res.json()
+        assert set(integration_names['integrations']) == set(['default_mariadb', 'default_clickhouse'])
+
         test_integration_data = {'enabled': False, 'host':'test'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params':test_integration_data})
         assert res.status_code == 200
@@ -72,7 +77,7 @@ class HTTPTest(unittest.TestCase):
                 assert integration[k] is not None
 
             # Modify it
-            res = requests.put(f'{root}/config/integrations/{name}/modify', json={'params':{'password':'test'}})
+            res = requests.post(f'{root}/config/integrations/{name}', json={'params':{'password':'test'}})
 
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
@@ -83,7 +88,7 @@ class HTTPTest(unittest.TestCase):
                     assert modified_integration[k] == integration[k]
 
             # Put the original values back in
-            res = requests.put(f'{root}/config/integrations/{name}/modify', json={'params':integration})
+            res = requests.post(f'{root}/config/integrations/{name}', json={'params':integration})
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
             modified_integration = res.json()

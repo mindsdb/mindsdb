@@ -24,8 +24,8 @@ class Integration(Resource):
     @ns_conf.doc('put_integration')
     def put(self, name):
         '''return datasource metadata'''
-        params = request.json.get('params')
-        ca.config_obj.add_db_integration(name, params)
+        data = request.json
+        ca.config_obj.add_db_integration(name, data)
         DatabaseWrapper(ca.config_obj)
         return 'added'
 

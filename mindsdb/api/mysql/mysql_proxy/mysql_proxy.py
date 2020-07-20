@@ -362,7 +362,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         fake_sql = sql.strip(' ')
         fake_sql = 'select name ' + fake_sql[len('delete '):]
-        query = SQLQuery(fake_sql, session=self.session)
+        query = SQLQuery(fake_sql, integration=self.session.integration, database=self.session.database)
 
         result = query.fetch(datahub)
 
@@ -499,7 +499,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'database()' in sql_lower:
                 self.answerSelectDatabase()
                 return
-            query = SQLQuery(sql, session=self.session)
+            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
             return self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()

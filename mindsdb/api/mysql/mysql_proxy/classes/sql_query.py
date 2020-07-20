@@ -59,12 +59,10 @@ class SQLQuery():
 
         return dict(zip(columns, values))
 
-    def __init__(self, sql, session=None):
+    def __init__(self, sql, integration=None, database=None):
         # parse
-        self.session = session
-        self.integration = None
-        if session is not None:
-            self.integration = session.integration
+        self.integration = integration
+        self.database = database
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
@@ -121,9 +119,7 @@ class SQLQuery():
                     {'value': 'xxx.zzz_mariadb', 'name': 'a'}
                     -> {'value': 'xxx.zzz', 'name': 'a', source: 'mariadb'}
         """
-        database = None
-        if self.session is not None:
-            database = self.session.database
+        database = self.database
         if isinstance(s, str):
             if '.' in s:
                 s = {
@@ -423,7 +419,7 @@ class SQLQuery():
                 result = []
                 if 'select ' not in external_datasource.lower():
                     external_datasource = f'select * from {external_datasource}'
-                query = SQLQuery(external_datasource, default_dn='datasource')
+                query = SQLQuery(external_datasource, database='datasource', integration=self.integration)
                 result = query.fetch(self.datahub, view='dict')
                 if result['success'] is False:
                     raise Exception(result['msg'])

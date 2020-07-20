@@ -1,22 +1,23 @@
 import psutil
 import shutil
 import time
-import pathlib
+from pathlib import Path
 import json
 import docker
+import requests
 import subprocess
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
 TEST_CONFIG = 'tests/integration_tests/flows/config/config.json'
 
-TESTS_ROOT = pathlib.Path(__file__).parent.absolute().joinpath('../../').resolve()
+TESTS_ROOT = Path(__file__).parent.absolute().joinpath('../../').resolve()
 
 START_TIMEOUT = 15
 
 OUTPUT = None  # [None|subprocess.DEVNULL]
 
-TEMP_DIR = pathlib.Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
+TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -88,9 +89,21 @@ def is_container_run(name):
     containers = [x.name for x in containers if x.status == 'running']
     return name in containers
 
-# def load_test_csv(name)
-#     test_csv_path = str(TESTS_ROOT.joinpath('temp/', TEST_CSV['name']).resolve())
-#     if os.path.isfile(test_csv_path) is False:
-#         r = requests.get(TEST_CSV['url'])
-#         with open(test_csv_path, 'wb') as f:
-#             f.write(r.content)
+
+def get_test_csv(name, url, lines_count=None, rewrite=False):
+    test_csv_path = TESTS_ROOT.joinpath('temp/', name).resolve()
+    if not test_csv_path.is_file() or rewrite:
+        r = requests.get(url)
+        with open(test_csv_path, 'wb') as f:
+            f.write(r.content)
+        if lines_count is not None:
+            fp = str(test_csv_path)
+            p = subprocess.Popen(
+                f"mv {fp} {fp}_2; sed -n '1,{lines_count}p' {fp}_2 >> {fp}; rm {fp}_2",
+                cwd=TESTS_ROOT.resolve(),
+                stdout=OUTPUT,
+                stderr=OUTPUT,
+                shell=True
+            )
+            p.wait()
+    return str(test_csv_path)

@@ -1,6 +1,4 @@
 import unittest
-import requests
-import os
 import csv
 import inspect
 import subprocess
@@ -13,6 +11,7 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.config import Config
 
 from common import (
+    get_test_csv,
     wait_api_ready,
     prepare_config,
     wait_db,
@@ -102,11 +101,7 @@ class MariaDBTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        test_csv_path = str(TESTS_ROOT.joinpath('temp/', TEST_CSV['name']).resolve())
-        if os.path.isfile(test_csv_path) is False:
-            r = requests.get(TEST_CSV['url'])
-            with open(test_csv_path, 'wb') as f:
-                f.write(r.content)
+        test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
 
         query('create database if not exists test')
         test_tables = query('show tables from test')
@@ -155,7 +150,8 @@ class MariaDBTest(unittest.TestCase):
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:
             datastore.delete_datasource(EXTERNAL_DS_NAME)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', test_csv_path)
+        short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=300, rewrite=True)
+        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

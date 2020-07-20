@@ -166,7 +166,7 @@ class SQLQuery():
         fromStatements = self.struct.get('from')
         if isinstance(fromStatements, list) is False:
             fromStatements = [fromStatements]
-        
+
         self.struct['from'] = [self._format_from_statement(x) for x in fromStatements]
 
         orderby = self.struct.get('orderby')

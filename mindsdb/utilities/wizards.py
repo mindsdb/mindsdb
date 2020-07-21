@@ -124,7 +124,6 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
                 "file_level": "INFO",
                 "console_level": "INFO"
             }
-            ,"datasources": []
         }
         config['api']['mysql']['host'] = _in('MYSQL interface host','127.0.0.1',use_default)
         config['api']['mysql']['port'] = _in('MYSQL interface port','47335',use_default)

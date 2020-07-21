@@ -24,6 +24,8 @@ class Config(object):
                 config['integrations']['default_clickhouse']['type'] = 'clickhouse'
             if 'default_mariadb' in config['integrations'] and 'type' not in config['integrations']['default_mariadb']:
                 config['integrations']['default_mariadb']['type'] = 'mariadb'
+            if 'datasources' in config['api']['mysql']:
+                del config['api']['mysql']['datasources']
             config['config_version'] = '1.1'
             return config
 

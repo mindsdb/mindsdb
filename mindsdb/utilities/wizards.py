@@ -21,7 +21,7 @@ def _in(ask, default, use_default):
 def auto_config(python_path,pip_path,predictor_dir,datasource_dir):
     config = {
         "debug": False
-        ,"config_version": 1
+        ,"config_version": "1.1"
         ,"python_interpreter": python_path
         ,"pip_path": pip_path
         ,"api": {

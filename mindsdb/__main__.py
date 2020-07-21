@@ -5,7 +5,8 @@ import sys
 import os
 
 import torch.multiprocessing as mp
-from torch.multiprocessing import Process
+
+from mindsdb_native.config import CONFIG
 
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
@@ -14,12 +15,14 @@ from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.utilities.fs import get_or_create_dir_struct
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
+
 def close_api_gracefully(p_arr):
     for p in p_arr:
         sys.stdout.flush()
         p.terminate()
         p.join()
         sys.stdout.flush()
+
 
 if __name__ == '__main__':
     mp.freeze_support()
@@ -33,10 +36,12 @@ if __name__ == '__main__':
     config_path = args.config
     if config_path is None:
         config_dir, _, _ = get_or_create_dir_struct()
-        config_path = os.path.join(config_dir,'config.json')
+        config_path = os.path.join(config_dir, 'config.json')
 
     print(f'Using configuration file: {config_path}')
     config = Config(config_path)
+
+    CONFIG.MINDSDB_STORAGE_PATH = config['interface']['mindsdb_native']['storage_dir']
 
     if args.api is None:
         api_arr = [api for api in config['api']]
@@ -68,7 +73,7 @@ if __name__ == '__main__':
     for api in api_arr:
         print(f'Starting Mindsdb {api} API !')
         try:
-            p = ctx.Process(target=start_functions[api], args=(config_path,True,))
+            p = ctx.Process(target=start_functions[api], args=(config_path, True,))
             p.start()
             p_arr.append(p)
             print(f'Started Mindsdb {api} API !')

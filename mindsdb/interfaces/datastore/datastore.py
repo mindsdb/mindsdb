@@ -104,12 +104,11 @@ class DataStore():
             password = self.config['integrations']['default_mariadb']['password']
             host = self.config['integrations']['default_mariadb']['host']
             port = self.config['integrations']['default_mariadb']['port']
-            ds = MariaDS(table='', query=source, user=user, password=password, host=host, port=port)
+            ds = MariaDS(query=source, user=user, password=password, host=host, port=port)
             picklable = {
                 'class': 'MariaDS',
                 'args': [],
                 'kwargs': {
-                    'table': '',
                     'query': source,
                     'user': user,
                     'password': password,

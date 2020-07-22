@@ -78,7 +78,7 @@ def prepare_config(config, db):
 
     temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
     with open(temp_config_path, 'wt') as f:
-        f.write(json.dumps(config._config))
+        json.dump(config._config, f, indent=4, sort_keys=True)
 
     return temp_config_path
 

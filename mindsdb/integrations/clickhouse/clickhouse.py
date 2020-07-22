@@ -63,6 +63,9 @@ class Clickhouse():
     def _get_mysql_user(self):
         return f"{self.config['api']['mysql']['user']}_{self.name}"
 
+    def _escape_table_name(self, name):
+        return '`' + name.replace('`', '\\`') + '`'
+
     def setup(self):
         self._query('DROP DATABASE IF EXISTS mindsdb')
 
@@ -94,7 +97,7 @@ class Clickhouse():
 
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
-            name = model_meta['name']
+            name = self._escape_table_name(model_meta['name'])
             stats = model_meta['data_analysis']
             if 'columns_to_ignore' in stats:
                 del stats['columns_to_ignore']
@@ -121,7 +124,7 @@ class Clickhouse():
 
     def unregister_predictor(self, name):
         q = f"""
-            drop table if exists mindsdb.{name};
+            drop table if exists mindsdb.{self._escape_table_name(name)};
         """
         self._query(q)
 

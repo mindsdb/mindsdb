@@ -50,12 +50,21 @@ class SQLQuery():
 
     @staticmethod
     def parse_insert(sql):
-        search = re.search(r'(\(.*\)).*(\(.*\))', sql)
-        columns = search.groups()[0].split(',')
-        columns = [x.strip('(` )') for x in columns]
-        p = re.compile('\s*,\s*'.join(["('.*')"] * len(columns)))
-        values = re.search(p, search.groups()[1])
-        values = [x.strip("( ')") for x in values.groups()]
+        columns = sql[:sql.find(')')]
+        values = sql[len(columns):]
+
+        columns = columns[columns.find('(') + 1:]
+        values = values[values.find('(') + 1:values.rfind(')')]
+
+        p = parse(f'select ({columns})')['select']['value']
+        columns = p['literal'] if isinstance(p, dict) else p
+        if isinstance(columns, list) is False:
+            columns = [columns]
+
+        p = parse(f'select ({values})')['select']['value']
+        values = p['literal'] if isinstance(p, dict) else p
+        if isinstance(values, list) is False:
+            values = [values]
 
         return dict(zip(columns, values))
 

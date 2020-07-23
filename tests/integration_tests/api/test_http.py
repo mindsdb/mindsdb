@@ -48,14 +48,14 @@ class HTTPTest(unittest.TestCase):
         integration_names = res.json()
         assert set(integration_names['integrations']) == set(['default_mariadb', 'default_clickhouse'])
 
-        test_integration_data = {'enabled': False, 'host':'test'}
-        res = requests.put(f'{root}/config/integrations/test_integration', json={'params':test_integration_data})
+        test_integration_data = {'enabled': False, 'host': 'test', 'type': 'clickhouse'}
+        res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
         assert res.status_code == 200
 
         res = requests.get(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
         test_integration = res.json()
-        assert len(test_integration) == 2
+        assert len(test_integration) == 3
 
         res = requests.delete(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200

@@ -38,6 +38,9 @@ class Mariadb():
 
         return column_declaration
 
+    def _escape_table_name(self, name):
+        return '`' + name.replace('`', '``') + '`'
+
     def _query(self, query):
         con = mysql.connector.connect(host=self.config['integrations'][self.name]['host'], port=self.config['integrations'][self.name]['port'], user=self.config['integrations'][self.name]['user'], password=self.config['integrations'][self.name]['password'])
 
@@ -112,7 +115,7 @@ class Mariadb():
             connect = self._get_connect_string(name)
 
             q = f"""
-                    CREATE TABLE mindsdb.{name}
+                    CREATE TABLE mindsdb.{self._escape_table_name(name)}
                     ({columns_sql}
                     ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
             """
@@ -120,13 +123,18 @@ class Mariadb():
 
     def unregister_predictor(self, name):
         q = f"""
-            drop table if exists mindsdb.{name};
+            drop table if exists mindsdb.{self._escape_table_name(name)};
         """
         self._query(q)
 
     def check_connection(self):
         try:
-            con = mysql.connector.connect(host=self.config['integrations'][self.name]['host'], port=self.config['integrations'][self.name]['port'], user=self.config['integrations'][self.name]['user'], password=self.config['integrations'][self.name]['password'])
+            con = mysql.connector.connect(
+                host=self.config['integrations'][self.name]['host'],
+                port=self.config['integrations'][self.name]['port'],
+                user=self.config['integrations'][self.name]['user'],
+                password=self.config['integrations'][self.name]['password']
+            )
             connected = con.is_connected()
             con.close()
         except Exception:

@@ -2,7 +2,9 @@ import os
 import json
 import hashlib
 
+
 class Config(object):
+    current_version = '1.1'
     _config = {}
 
     def __init__(self, config_path):
@@ -16,12 +18,57 @@ class Config(object):
         else:
             raise TypeError('Argument must be string representing a file path <Later on to be switched to file path and/or database connection info>')
 
+    def _migrate(self):
+        def m1_0(config):
+            if 'default_clickhouse' in config['integrations'] and 'type' not in config['integrations']['default_clickhouse']:
+                config['integrations']['default_clickhouse']['type'] = 'clickhouse'
+            if 'default_mariadb' in config['integrations'] and 'type' not in config['integrations']['default_mariadb']:
+                config['integrations']['default_mariadb']['type'] = 'mariadb'
+            if 'datasources' in config['api']['mysql']:
+                del config['api']['mysql']['datasources']
+            config['config_version'] = '1.1'
+            return config
+
+        migrations = {
+            '1.0': m1_0
+        }
+
+        current_version = self._parse_version(self._config['config_version'])
+        target_version = self._parse_version(self.current_version)
+        while current_version < target_version:
+            str_version = '.'.join([str(x) for x in current_version])
+            self._config = migrations[str_version](self._config)
+            current_version = self._parse_version(self._config['config_version'])
+
+    def _validate(self):
+        integrations = self._config.get('integrations', {})
+        for key in integrations:
+            if 'type' not in integrations[key]:
+                raise KeyError(f"Config error: for integration '{key}' key 'type' must be specified")
+
+    def _parse_version(self, version):
+        if isinstance(version, str):
+            version = [int(x) for x in version.split('.')]
+        elif isinstance(version, int):
+            version = [version]
+        if len(version) == 1:
+            version.append(0)
+        return version
+
     def _read(self):
         if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
             with open(self.config_path, 'r') as fp:
                 self._config = json.load(fp)
+                if self._parse_version(self._config['config_version']) < self._parse_version(self.current_version):
+                    self._migrate()
+                    self._save()
+                self._validate()
         else:
             raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
+
+    def _save(self):
+        with open(self.config_path, 'w') as fp:
+            json.dump(self._config, fp, indent=4, sort_keys=True)
 
     def _gen_hash(self):
         with open(self.config_path, 'rb') as fp:
@@ -52,9 +99,9 @@ class Config(object):
 
         c = self._config
         for i, k in enumerate(key_chain):
-            if k in c and i+1 < len(key_chain):
+            if k in c and i + 1 < len(key_chain):
                 c = c[k]
-            elif k not in c and i+1 < len(key_chain):
+            elif k not in c and i + 1 < len(key_chain):
                 c[k] = {}
                 c = c[k]
             else:
@@ -62,9 +109,7 @@ class Config(object):
                     del c[k]
                 else:
                     c[k] = value
-
-        with open(self.config_path, 'w') as fp:
-            json.dump(self._config, fp, indent=4, sort_keys=True)
+        self._save()
 
     # Higher level interface
     def add_db_integration(self, name, dict):

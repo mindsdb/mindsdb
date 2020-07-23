@@ -6,7 +6,6 @@
         },
         "mysql": {
             "certificate_path": "tests/integration_tests/flows/config/cert.pem",
-            "datasources": [],
             "host": "127.0.0.1",
             "log": {
                 "console_level": "INFO",
@@ -20,7 +19,7 @@
             "user": "mindsdb"
         }
     },
-    "config_version": 1,
+    "config_version": "1.1",
     "debug": true,
     "integrations": {
         "default_clickhouse": {

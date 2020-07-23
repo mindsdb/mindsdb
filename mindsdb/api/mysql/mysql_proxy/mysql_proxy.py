@@ -10,6 +10,7 @@
 """
 
 
+import os
 import random
 import socketserver as SocketServer
 import ssl
@@ -17,8 +18,11 @@ import re
 import traceback
 import json
 import atexit
+import tempfile
 
 from moz_sql_parser import parse
+
+from mindsdb.utilities.wizards import make_ssl_cert
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
@@ -362,7 +366,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         fake_sql = sql.strip(' ')
         fake_sql = 'select name ' + fake_sql[len('delete '):]
-        query = SQLQuery(fake_sql, session=self.session)
+        query = SQLQuery(fake_sql, integration=self.session.integration, database=self.session.database)
 
         result = query.fetch(datahub)
 
@@ -499,7 +503,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'database()' in sql_lower:
                 self.answerSelectDatabase()
                 return
-            query = SQLQuery(sql, session=self.session)
+            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
             return self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()
@@ -903,6 +907,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         HARDCODED_USER = config['api']['mysql']['user']
         HARDCODED_PASSWORD = config['api']['mysql']['password']
         CERT_PATH = config['api']['mysql'].get('certificate_path')
+        if CERT_PATH is None or CERT_PATH == '':
+            CERT_PATH = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
+            make_ssl_cert(CERT_PATH)
+            atexit.register(lambda: os.remove(CERT_PATH))
+
         default_store = DataStore(config)
         mdb = MindsdbNative(config)
         datahub = init_datahub(config)

@@ -50,21 +50,28 @@ class SQLQuery():
 
     @staticmethod
     def parse_insert(sql):
-        search = re.search(r'(\(.*\)).*(\(.*\))', sql)
-        columns = search.groups()[0].split(',')
-        columns = [x.strip('(` )') for x in columns]
-        p = re.compile('\s*,\s*'.join(["('.*')"] * len(columns)))
-        values = re.search(p, search.groups()[1])
-        values = [x.strip("( ')") for x in values.groups()]
+        columns = sql[:sql.find(')')]
+        values = sql[len(columns):]
+
+        columns = columns[columns.find('(') + 1:]
+        values = values[values.find('(') + 1:values.rfind(')')]
+
+        p = parse(f'select ({columns})')['select']['value']
+        columns = p['literal'] if isinstance(p, dict) else p
+        if isinstance(columns, list) is False:
+            columns = [columns]
+
+        p = parse(f'select ({values})')['select']['value']
+        values = p['literal'] if isinstance(p, dict) else p
+        if isinstance(values, list) is False:
+            values = [values]
 
         return dict(zip(columns, values))
 
-    def __init__(self, sql, session=None):
+    def __init__(self, sql, integration=None, database=None):
         # parse
-        self.session = session
-        self.integration = None
-        if session is not None:
-            self.integration = session.integration
+        self.integration = integration
+        self.database = database
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
@@ -121,9 +128,7 @@ class SQLQuery():
                     {'value': 'xxx.zzz_mariadb', 'name': 'a'}
                     -> {'value': 'xxx.zzz', 'name': 'a', source: 'mariadb'}
         """
-        database = None
-        if self.session is not None:
-            database = self.session.database
+        database = self.database
         if isinstance(s, str):
             if '.' in s:
                 s = {
@@ -170,7 +175,7 @@ class SQLQuery():
         fromStatements = self.struct.get('from')
         if isinstance(fromStatements, list) is False:
             fromStatements = [fromStatements]
-        
+
         self.struct['from'] = [self._format_from_statement(x) for x in fromStatements]
 
         orderby = self.struct.get('orderby')
@@ -423,7 +428,7 @@ class SQLQuery():
                 result = []
                 if 'select ' not in external_datasource.lower():
                     external_datasource = f'select * from {external_datasource}'
-                query = SQLQuery(external_datasource, default_dn='datasource')
+                query = SQLQuery(external_datasource, database='datasource', integration=self.integration)
                 result = query.fetch(self.datahub, view='dict')
                 if result['success'] is False:
                     raise Exception(result['msg'])

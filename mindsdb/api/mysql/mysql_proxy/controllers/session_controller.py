@@ -27,6 +27,9 @@ class SessionController():
         self.auth = False
         self.logging = log
 
+        self.integration = None
+        self.database = None
+
         self.current_transaction = None
 
     def newTransaction(self, sql_query):

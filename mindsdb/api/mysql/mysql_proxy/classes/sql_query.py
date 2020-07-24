@@ -535,10 +535,17 @@ class SQLQuery():
             for record in data:
                 success = True
 
-                for cond in self.where_conditions:
-                    if not self._command_stack_eval(cond['commands'], record):
-                        success = False
-                        break
+                tables = list(self.where_conditions[0]['tables'])
+                db = (self.database or '').lower()
+                if len(tables) == 1 and (
+                        tables[0].lower() in ['mindsdb.predictors', 'mindsdb.commands'] or db == 'mindsdb' and tables[0].lower() in ['predictors', 'commands']) is False:
+                    success = True
+                else:
+                    for cond in self.where_conditions:
+                        if not self._command_stack_eval(cond['commands'], record):
+                            success = False
+                            break
+
                 if success:
                     data2.append(record)
             data = data2

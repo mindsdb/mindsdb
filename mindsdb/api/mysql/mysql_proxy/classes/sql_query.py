@@ -143,6 +143,7 @@ class SQLQuery():
             else:
                 raise SqlError('table without datasource %s ' % s)
         elif isinstance(s, dict):
+            # TODO case when dot in table name
             if 'value' in s and 'name' in s:
                 if '.' not in s['value'] and database is not None:
                     s['value'] = f"{database}.{s['value']}"
@@ -221,8 +222,7 @@ class SQLQuery():
                 self.tables_select.append(dict(
                     name=table,
                     alias=table_alias,
-                    join=join,
-                    source=statement.get('source')
+                    join=join
                 ))
 
         # create tables index
@@ -808,9 +808,20 @@ class SQLQuery():
 
     def _get_field(self, field):
         # get field destination
-        ar = field.split('.')
-        field_name = ar[-1]
-        table_name = '.'.join(ar[:-1])
+        field_name = field
+        table_name = ''
+        for table in self.tables_select:
+            alias_prefix = f"{table['alias']}."
+            table_prefix = f"{table['name'].split('.')[-1]}."
+            if field.startswith(alias_prefix):
+                table_name = table['name']
+                field_name = field_name[len(alias_prefix):]
+                break
+            elif field.startswith(table_prefix):
+                table_name = table['name']
+                field_name = field_name[len(table_prefix):]
+                break
+
         if table_name == '':
             if len(self.tables_select) > 1:
                 raise UndefinedColumnTableException('Unable find table: %s' % field)

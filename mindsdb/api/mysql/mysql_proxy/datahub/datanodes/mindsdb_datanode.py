@@ -6,6 +6,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.mariadb.mariadb import Mariadb
+from mindsdb.integrations.mysql.mysql import MySQL
 
 
 class MindsDBDataNode(DataNode):
@@ -84,6 +85,11 @@ class MindsDBDataNode(DataNode):
             elif dbtype == 'mariadb':
                 maria = Mariadb(self.config, came_from)
                 data = maria._query(select_data_query)
+            elif dbtype == 'mysql':
+                mysql = MySQL(self.config, came_from)
+                data = mysql._query(select_data_query)
+            else:
+                raise Exception(f'Unknown database type: {dbtype}')
 
             if where_data is None:
                 where_data = data

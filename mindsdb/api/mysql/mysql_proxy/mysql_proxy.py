@@ -475,6 +475,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif 'show collation' in sql_lower:
             self.answerShowCollation()
             return
+        elif 'show table status' in sql_lower:
+            self.answer_show_table_status(sql)
+            return
         elif keyword == 'delete' and \
                 ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
             self.delete_predictor_answer(sql)
@@ -514,6 +517,167 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         else:
             raise NotImplementedError('Action not implemented')
             return
+
+    def answer_show_table_status(self, sql):
+        # NOTE at this moment parsed statement only like `SHOW TABLE STATUS LIKE 'table'`.
+        # NOTE some columns has {'database': 'mysql'}, other not. That correct. This is how real DB sends messages.
+        parts = sql.split(' ')
+        if parts[3].lower() != 'like':
+            raise NotImplementedError('Action not implemented')
+        table = parts[4].strip("'")
+
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'database': 'mysql',
+                'table_name': 'tables',
+                'name': 'Name',
+                'alias': 'Name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Engine',
+                'alias': 'Engine',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Version',
+                'alias': 'Version',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': 'mysql',
+                'table_name': 'tables',
+                'name': 'Row_format',
+                'alias': 'Row_format',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Rows',
+                'alias': 'Rows',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Avg_row_length',
+                'alias': 'Avg_row_length',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Data_length',
+                'alias': 'Data_length',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Max_data_length',
+                'alias': 'Max_data_length',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Index_length',
+                'alias': 'Index_length',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Data_free',
+                'alias': 'Data_free',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Auto_increment',
+                'alias': 'Auto_increment',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Create_time',
+                'alias': 'Create_time',
+                'type': TYPES.MYSQL_TYPE_TIMESTAMP,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Update_time',
+                'alias': 'Update_time',
+                'type': TYPES.MYSQL_TYPE_TIMESTAMP,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Check_time',
+                'alias': 'Check_time',
+                'type': TYPES.MYSQL_TYPE_TIMESTAMP,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': 'mysql',
+                'table_name': 'tables',
+                'name': 'Collation',
+                'alias': 'Collation',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Checksum',
+                'alias': 'Checksum',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Create_options',
+                'alias': 'Create_options',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': 'tables',
+                'name': 'Comment',
+                'alias': 'Comment',
+                'type': TYPES.MYSQL_TYPE_BLOB,
+                'charset': self.charset_text_type
+            }],
+            data=[[
+                table,          # Name
+                'InnoDB',       # Engine
+                10,             # Version
+                'Dynamic',      # Row_format
+                1,              # Rows
+                16384,          # Avg_row_length
+                16384,          # Data_length
+                0,              # Max_data_length
+                0,              # Index_length
+                0,              # Data_free
+                None,           # Auto_increment
+                '2020-01-01 00:00:00',  # Create_time
+                '2020-01-01 00:00:00',  # Update_time
+                None,           # Check_time
+                'utf8mb4_0900_ai_ci',   # Collation
+                None,           # Checksum
+                '',             # Create_options
+                ''              # Comment
+            ]]
+        )
+        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        self.sendPackageGroup(packages)
 
     def answerShowWarnings(self):
         packages = []

@@ -152,8 +152,7 @@ Once you have specific changes you want to merge into master, feel free to make 
 
 Due to some repository restructuring the "old" Mindsdb repository is now Mindsdb Native (https://github.com/mindsdb/mindsdb_native). This repository is the "old" Mindsdb Server repository, though from a user's perspective everything should work just the same.
 
-Thanks for Max Stepanov (@StpMax) , Zoran Pandovski (@ZoranPandovski), Jorge Torres(@torrmal) for their contributions to Mindsdb Server, even though their contributions to those particular components may not show up in the commit history.
-
+Thanks for Max Stepanov (https://github.com/StpMaxi), Zoran Pandovski (https://github.com/ZoranPandovski), Jorge Torres(https://github.com/torrmal) for their contributions to Mindsdb Server, even though their contributions to those particular components may not show up in the commit history.
 ## Report Issues
 
 Please help us by [reporting any issues](https://github.com/mindsdb/mindsdb/issues/new/choose) you may have while using MindsDB.

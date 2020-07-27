@@ -1,5 +1,5 @@
 import json
-
+import datetime
 import pandas
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
@@ -138,6 +138,11 @@ class MindsDBDataNode(DataNode):
             explanation = res[i].explain()
             for key in keys:
                 row[key] = res._data[key][i]
+                # +++ FIXME this fix until issue https://github.com/mindsdb/mindsdb/issues/591 not resolved
+                if key in model['data_analysis_v2'] and model['data_analysis_v2'][key]['typing']['data_subtype'] == 'Timestamp' and row[key] is not None:
+                    timestamp = datetime.datetime.fromtimestamp(row[key])
+                    row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                # ---
             for key in predicted_columns:
                 row[key + '_confidence'] = explanation[key]['confidence']
                 row[key + '_explain'] = json.dumps(explanation[key])

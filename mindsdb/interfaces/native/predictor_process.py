@@ -3,6 +3,8 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 
 
 ctx = mp.get_context('spawn')
+
+
 class PredictorProcess(ctx.Process):
     daemon = True
 
@@ -16,7 +18,6 @@ class PredictorProcess(ctx.Process):
 
         this is work for celery worker here?
         '''
-        import sys
         import mindsdb_native
 
         name, from_data, to_predict, kwargs, config, trx_type = self._args
@@ -38,7 +39,7 @@ class PredictorProcess(ctx.Process):
                 'name': name,
                 'predict': to_predict,
                 'data_analysis': stats
-            }], setup = False)
+            }], setup=False)
 
         if trx_type == 'predict':
             if isinstance(from_data, dict):

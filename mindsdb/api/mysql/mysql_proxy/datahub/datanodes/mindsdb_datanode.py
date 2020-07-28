@@ -50,7 +50,7 @@ class MindsDBDataNode(DataNode):
         return [{
             'name': x['name'],
             'status': x['status'],
-            'accuracy': x['accuracy'],
+            'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
             'predict': ', '.join(x['predict']),
             'select_data_query': x['data_source'],
             'external_datasource': '',  # TODO

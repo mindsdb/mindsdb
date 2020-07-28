@@ -6,7 +6,10 @@ import json
 import docker
 import requests
 import subprocess
+import atexit
 
+from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
 TEST_CONFIG = 'tests/integration_tests/flows/config/config.json'
@@ -107,3 +110,48 @@ def get_test_csv(name, url, lines_count=None, rewrite=False):
             )
             p.wait()
     return str(test_csv_path)
+
+
+def stop_container(name):
+    sp = subprocess.Popen(
+        ['./cli.sh', f'{name}-stop'],
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+        stdout=OUTPUT,
+        stderr=OUTPUT
+    )
+    sp.wait()
+
+
+def run_environment(db, config):
+    DEFAULT_DB = f'default_{db}'
+
+    temp_config_path = prepare_config(config, DEFAULT_DB)
+
+    if is_container_run(f'{db}-test') is False:
+        subprocess.Popen(
+            ['./cli.sh', db],
+            cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+            stdout=OUTPUT,
+            stderr=OUTPUT
+        )
+        atexit.register(stop_container, name=db)
+    db_ready = wait_db(config, DEFAULT_DB)
+
+    if db_ready:
+        sp = subprocess.Popen(
+            ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
+            stdout=OUTPUT,
+            stderr=OUTPUT
+        )
+        atexit.register(sp.kill)
+
+    api_ready = db_ready and wait_api_ready(config)
+
+    if db_ready is False or api_ready is False:
+        print(f'Failed by timeout. {db} started={db_ready}, MindsDB started={api_ready}')
+        raise Exception()
+
+    mdb = MindsdbNative(config)
+    datastore = DataStore(config)
+
+    return mdb, datastore

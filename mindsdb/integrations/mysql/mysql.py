@@ -34,7 +34,7 @@ class MySQL():
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception:
-                print(f'Error: cant convert type {col_subtype} of column {name} to mysql tpye')
+                print(f'Error: cant convert type {col_subtype} of column {name} to mysql type')
 
         return column_declaration
 
@@ -84,7 +84,8 @@ class MySQL():
                 predict VARCHAR(500),
                 select_data_query VARCHAR(500),
                 external_datasource VARCHAR(500),
-                training_options VARCHAR(500)
+                training_options VARCHAR(500),
+                key name_key (name)
                 ) ENGINE=FEDERATED CONNECTION='{connect}';
         """
         self._query(q)
@@ -93,7 +94,8 @@ class MySQL():
 
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.commands (
-                command VARCHAR(500)
+                command VARCHAR(500),
+                key command_key (command)
             ) ENGINE=FEDERATED CONNECTION='{connect}';
         """
         self._query(q)

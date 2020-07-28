@@ -21,7 +21,7 @@ import atexit
 import tempfile
 import datetime
 
-from moz_sql_parser import parse
+import moz_sql_parser as sql_parser
 
 from mindsdb.utilities.wizards import make_ssl_cert
 
@@ -895,7 +895,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif '@@version' in sql.lower():
             self.answerVersion()
             return
-        p = parse(sql)
+        p = sql_parser.parse(sql)
         select = p.get('select')
         if isinstance(select, dict):
             select = [select]

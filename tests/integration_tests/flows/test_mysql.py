@@ -26,10 +26,10 @@ config = Config(TEST_CONFIG)
 
 def query(q, as_dict=False):
     con = mysql.connector.connect(
-        host=config['integrations']['default_mariadb']['host'],
-        port=config['integrations']['default_mariadb']['port'],
-        user=config['integrations']['default_mariadb']['user'],
-        passwd=config['integrations']['default_mariadb']['password'],
+        host=config['integrations']['default_mysql']['host'],
+        port=config['integrations']['default_mysql']['port'],
+        user=config['integrations']['default_mysql']['user'],
+        passwd=config['integrations']['default_mysql']['password'],
         db='mindsdb'
     )
 
@@ -48,7 +48,7 @@ def query(q, as_dict=False):
 class MariaDBTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment('mariadb', config)
+        mdb, datastore = run_environment('mysql', config)
         cls.mdb = mdb
 
         models = cls.mdb.get_models()
@@ -99,6 +99,7 @@ class MariaDBTest(unittest.TestCase):
                             '{neighborhood}',
                             {rental_price}
                         )''')
+                        print(i)
                     i += 1
             print('done')
 
@@ -201,7 +202,7 @@ class MariaDBTest(unittest.TestCase):
                 rental_price, location, sqft, number_of_rooms,
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
-                mindsdb.{TEST_PREDICTOR_NAME} where sqft=1000;
+                mindsdb.{TEST_PREDICTOR_NAME} where when_data='{{"sqft": 1000}}';
         """, as_dict=True)
 
         print('check result')

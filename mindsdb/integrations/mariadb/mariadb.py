@@ -34,7 +34,7 @@ class Mariadb():
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception:
-                print(f'Error: cant convert type {col_subtype} of column {name} to mariadb tpye')
+                print(f'Error: cant convert type {col_subtype} of column {name} to mariadb type')
 
         return column_declaration
 

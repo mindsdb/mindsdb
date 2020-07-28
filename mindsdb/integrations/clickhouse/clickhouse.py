@@ -34,7 +34,7 @@ class Clickhouse():
                     column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception as e:
                 print(e)
-                print(f'Error: cant convert type {col_subtype} of column {name} to clickhouse tpye')
+                print(f'Error: cant convert type {col_subtype} of column {name} to clickhouse type')
 
         return column_declaration
 

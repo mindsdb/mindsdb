@@ -19,7 +19,7 @@ class MindsDBDataNode(DataNode):
     def getTables(self):
         models = self.mindsdb_native.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
-        models += ['predictors']
+        models += ['predictors', 'commands']
         return models
 
     def hasTable(self, table):
@@ -65,6 +65,8 @@ class MindsDBDataNode(DataNode):
         '''
         if table == 'predictors':
             return self._select_predictors()
+        if table == 'commands':
+            return []
 
         original_when_data = None
         if 'when_data' in where:

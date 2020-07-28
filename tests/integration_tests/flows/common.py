@@ -122,6 +122,12 @@ def stop_container(name):
     sp.wait()
 
 
+def stop_mindsdb(sp):
+    sp.kill()
+    sp = subprocess.Popen('kill -9 $(lsof -t -i:47335)', shell=True)
+    sp.wait()
+
+
 def run_environment(db, config):
     DEFAULT_DB = f'default_{db}'
 
@@ -143,7 +149,7 @@ def run_environment(db, config):
             stdout=OUTPUT,
             stderr=OUTPUT
         )
-        atexit.register(sp.kill)
+        atexit.register(stop_mindsdb, sp=sp)
 
     api_ready = db_ready and wait_api_ready(config)
 

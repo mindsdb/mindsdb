@@ -30,13 +30,16 @@ def auto_config(python_path, pip_path, predictor_dir, datasource_dir):
         }
         ,"integrations": {
             "default_clickhouse": {
-                "enabled": False
+                "enabled": False,
+                "type": 'clickhouse'
             },
             "default_mariadb": {
-                "enabled": False
+                "enabled": False,
+                "type": 'mariadb'
             },
             "default_mysql": {
-                "enabled": False
+                "enabled": False,
+                "type": 'mysql'
             }
         }
         ,"interface":{

@@ -429,7 +429,9 @@ class SQLQuery():
                and table['join']['type'] == 'left join':
                 condition = {}
 
-            if 'external_datasource' in condition:
+            if 'external_datasource' in condition \
+                    and isinstance(condition['external_datasource']['$eq'], str) \
+                    and condition['external_datasource']['$eq'] != '':
                 external_datasource = condition['external_datasource']['$eq']
                 result = []
                 if 'select ' not in external_datasource.lower():
@@ -446,9 +448,9 @@ class SQLQuery():
                     came_from=table.get('source')
                 )
             elif tablenum > 0 \
-                and isinstance(table['join'], dict) \
-                and table['join']['type'] == 'left join' \
-                and dn.type == 'mindsdb':
+                    and isinstance(table['join'], dict) \
+                    and table['join']['type'] == 'left join' \
+                    and dn.type == 'mindsdb':
                 data = dn.select(
                     table=table_name,
                     columns=fields,

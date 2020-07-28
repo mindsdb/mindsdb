@@ -27,6 +27,7 @@ services:
       - 8123:8123
       - 9000:9000
   mysql:
+    network_mode: host
     image: mysql
     command: --default-authentication-plugin=mysql_native_password
     container_name: mysql-test
@@ -38,4 +39,4 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: test
     ports:
-      - 3307:3306
+      - 3307:3307

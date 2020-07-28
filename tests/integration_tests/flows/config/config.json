@@ -37,6 +37,14 @@
             "port": 3306,
             "type": "mariadb",
             "user": "root"
+        },
+        "default_mysql": {
+            "enabled": true,
+            "host": "localhost",
+            "password": "root",
+            "port": 3306,
+            "type": "mysql",
+            "user": "root"
         }
     },
     "interface": {

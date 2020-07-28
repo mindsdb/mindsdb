@@ -65,6 +65,12 @@ class SQLQuery():
         values = p['literal'] if isinstance(p, dict) else p
         if isinstance(values, list) is False:
             values = [values]
+        for i, v in enumerate(values):
+            if isinstance(v, dict) and 'literal' in v:
+                v = v['literal']
+            elif v == 'null':
+                v = None
+            values[i] = v
 
         return dict(zip(columns, values))
 

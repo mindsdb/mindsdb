@@ -99,7 +99,6 @@ class MariaDBTest(unittest.TestCase):
                             '{neighborhood}',
                             {rental_price}
                         )''')
-                        print(i)
                     i += 1
             print('done')
 

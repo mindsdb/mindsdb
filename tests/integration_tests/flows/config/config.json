@@ -42,7 +42,7 @@
             "enabled": true,
             "host": "localhost",
             "password": "root",
-            "port": 3306,
+            "port": 3307,
             "type": "mysql",
             "user": "root"
         }

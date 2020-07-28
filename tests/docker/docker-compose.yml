@@ -26,14 +26,6 @@ services:
     ports:
       - 8123:8123
       - 9000:9000
-  mssql:
-    image: "mcr.microsoft.com/mssql/server"
-    container_name: mssql-test
-    environment:
-      SA_PASSWORD: "123ABCdef@!"
-      ACCEPT_EULA: "Y"
-    ports:
-      - 1433:1433
   mysql:
     image: mysql
     command: --default-authentication-plugin=mysql_native_password
@@ -46,4 +38,4 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: test
     ports:
-      - 3306:3306
+      - 3307:3306

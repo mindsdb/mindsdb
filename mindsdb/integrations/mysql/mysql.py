@@ -112,11 +112,13 @@ class MySQL():
                     columns_sql += f',`{col}_max` double'
                 columns_sql += f',`{col}_explain` varchar(500)'
 
+            columns_list = [f'`{name}`' for name in stats.keys()]
+
             connect = self._get_connect_string(name)
 
             q = f"""
                     CREATE TABLE mindsdb.{self._escape_table_name(name)}
-                    ({columns_sql}
+                    ({columns_sql}, index main_index ({','.join(columns_list)})
                     ) ENGINE=FEDERATED CONNECTION='{connect}';
             """
             self._query(q)

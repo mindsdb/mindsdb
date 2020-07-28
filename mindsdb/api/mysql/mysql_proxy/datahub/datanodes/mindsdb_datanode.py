@@ -105,8 +105,9 @@ class MindsDBDataNode(DataNode):
                     # TODO value should be just string or number
                     raise Exception()
                 new_where[key] = value['$eq']
+
             if len(new_where) == 0:
-                new_where = None
+                return []
 
             where_data = [new_where]
 

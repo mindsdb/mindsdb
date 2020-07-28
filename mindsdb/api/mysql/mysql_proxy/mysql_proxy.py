@@ -19,6 +19,7 @@ import traceback
 import json
 import atexit
 import tempfile
+import datetime
 
 from moz_sql_parser import parse
 
@@ -667,8 +668,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 0,              # Index_length
                 0,              # Data_free
                 None,           # Auto_increment
-                '2020-01-01 00:00:00',  # Create_time
-                '2020-01-01 00:00:00',  # Update_time
+                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # Create_time
+                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # Update_time
                 None,           # Check_time
                 'utf8mb4_0900_ai_ci',   # Collation
                 None,           # Checksum

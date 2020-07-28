@@ -103,6 +103,7 @@ class Mariadb():
             name = model_meta['name']
             stats = model_meta['data_analysis']
             columns_sql = ','.join(self._to_mariadb_table(stats, model_meta['predict']))
+            columns_sql += ',`when_data` varchar(500)'
             columns_sql += ',`select_data_query` varchar(500)'
             columns_sql += ',`external_datasource` varchar(500)'
             for col in model_meta['predict']:

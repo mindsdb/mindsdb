@@ -36,14 +36,13 @@ class MindsDBDataNode(DataNode):
         columns += [x['column_name'] for x in model['data_analysis']['target_columns_metadata']]
         columns += [f'{x}_original' for x in model['predict']]
         for col in model['predict']:
-            columns += [f"{col}_confidence"]
             if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                 columns += [f"{col}_min", f"{col}_max"]
+            columns += [f"{col}_confidence"]
             columns += [f"{col}_explain"]
 
         # TODO this should be added just for clickhouse queries
-        columns += ['select_data_query']
-        columns += ['external_datasource']
+        columns += ['when_data', 'select_data_query', 'external_datasource']
         return columns
 
     def _select_predictors(self):
@@ -54,7 +53,7 @@ class MindsDBDataNode(DataNode):
             'accuracy': x['accuracy'],
             'predict': ', '.join(x['predict']),
             'select_data_query': x['data_source'],
-            'external_datasource': '', # TODO
+            'external_datasource': '',  # TODO
             'training_options': ''  # TODO ?
         } for x in models]
 
@@ -66,6 +65,18 @@ class MindsDBDataNode(DataNode):
         '''
         if table == 'predictors':
             return self._select_predictors()
+
+        original_when_data = None
+        if 'when_data' in where:
+            if len(where) > 1:
+                raise ValueError("Should not be used any other keys in 'where', if 'when_data' used")
+            try:
+                original_when_data = where['when_data']['$eq']
+                where_data = json.loads(where['when_data']['$eq'])
+                if isinstance(where_data, list) is False:
+                    where_data = [where_data]
+            except Exception:
+                raise ValueError(f'''Error while parse 'where_data'="{where_data}"''')
 
         external_datasource = None
         if 'external_datasource' in where:
@@ -152,6 +163,7 @@ class MindsDBDataNode(DataNode):
                 row[key + '_max'] = explanation[key]['confidence_interval'][-1]
             row['select_data_query'] = select_data_query
             row['external_datasource'] = external_datasource
+            row['when_data'] = original_when_data
             for k in original_target_values:
                 row[k] = original_target_values[k][i]
             data.append(row)

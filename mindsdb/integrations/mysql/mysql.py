@@ -103,6 +103,7 @@ class MySQL():
             name = model_meta['name']
             stats = model_meta['data_analysis']
             columns_sql = ','.join(self._to_mysql_table(stats, model_meta['predict']))
+            columns_sql += ',`when_data` varchar(500)'
             columns_sql += ',`select_data_query` varchar(500)'
             columns_sql += ',`external_datasource` varchar(500)'
             for col in model_meta['predict']:
@@ -112,13 +113,15 @@ class MySQL():
                     columns_sql += f',`{col}_max` double'
                 columns_sql += f',`{col}_explain` varchar(500)'
 
-            columns_list = [f'`{name}`' for name in stats.keys()]
-
             connect = self._get_connect_string(name)
 
             q = f"""
                     CREATE TABLE mindsdb.{self._escape_table_name(name)}
-                    ({columns_sql}, index main_index ({','.join(columns_list)})
+                    (
+                        {columns_sql},
+                        index when_data_index (when_data),
+                        index select_data_query_index (select_data_query),
+                        index external_datasource_index (external_datasource)
                     ) ENGINE=FEDERATED CONNECTION='{connect}';
             """
             self._query(q)

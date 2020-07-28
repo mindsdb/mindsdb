@@ -28,6 +28,7 @@ services:
       - 9000:9000
   mssql:
     image: "mcr.microsoft.com/mssql/server"
+    container_name: mssql-test
     environment:
       SA_PASSWORD: "123ABCdef@!"
       ACCEPT_EULA: "Y"
@@ -36,6 +37,7 @@ services:
   mysql:
     image: mysql
     command: --default-authentication-plugin=mysql_native_password
+    container_name: mysql-test
     volumes:
     - ./mysql/config.cnf:/etc/mysql/conf.d/config.cnf
     - ./mysql/storage:/var/lib/mysql

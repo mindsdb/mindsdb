@@ -86,7 +86,7 @@ class DataStore():
                 ,'kwargs': {}
             }
         elif source_type == 'clickhouse':
-            user = self.config['integrations']['default_clickhouse']['user']            # FIXME
+            user = self.config['integrations']['default_clickhouse']['user']            # FIXME need change 'default_clickhouse' to real db alias
             password = self.config['integrations']['default_clickhouse']['password']
             # TODO add host port params
             ds = ClickhouseDS(query=source, user=user, password=password)

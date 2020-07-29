@@ -42,7 +42,12 @@ class Mariadb():
         return '`' + name.replace('`', '``') + '`'
 
     def _query(self, query):
-        con = mysql.connector.connect(host=self.config['integrations'][self.name]['host'], port=self.config['integrations'][self.name]['port'], user=self.config['integrations'][self.name]['user'], password=self.config['integrations'][self.name]['password'])
+        con = mysql.connector.connect(
+            host=self.config['integrations'][self.name]['host'],
+            port=self.config['integrations'][self.name]['port'],
+            user=self.config['integrations'][self.name]['user'],
+            password=self.config['integrations'][self.name]['password']
+        )
 
         cur = con.cursor(dictionary=True, buffered=True)
         cur.execute(query)

@@ -66,8 +66,11 @@ class SQLQuery():
         if isinstance(values, list) is False:
             values = [values]
         for i, v in enumerate(values):
-            if isinstance(v, dict) and 'literal' in v:
-                v = v['literal']
+            if isinstance(v, dict):
+                if 'literal' in v:
+                    v = v['literal']
+                else:
+                    raise ValueError(f'Error while parse insert query: {sql}')
             elif v == 'null':
                 v = None
             values[i] = v

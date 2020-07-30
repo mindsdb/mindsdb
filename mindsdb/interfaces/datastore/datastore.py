@@ -95,7 +95,7 @@ class DataStore():
                     'user': integration['user'],
                     'password': integration['password'],
                     'host': integration['host'],
-                    'port': integration['post']
+                    'port': integration['port']
                 }
             }
             if integration['type'] == 'clickhouse':

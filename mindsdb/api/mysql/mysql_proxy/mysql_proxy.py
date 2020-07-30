@@ -350,9 +350,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
 
         if is_select_data_query:
+            integration = self.session.integration
+            if isinstance(integration, str) is False or len(integration) == 0:
+                self.packet(
+                    ErrPacket,
+                    err_code=ERR.ER_WRONG_ARGUMENTS,
+                    msg='select_data_query can be used only in query from database'
+                ).send()
+                return
             insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-            ds_type = config['integrations'][self.session.integration]['type']
-            ds = default_store.save_datasource(insert['name'], ds_type, insert['select_data_query'])
+            ds = default_store.save_datasource(insert['name'], integration, insert['select_data_query'])
         elif is_external_datasource:
             ds = default_store.get_datasource_obj(insert['external_datasource'], raw=True)
 

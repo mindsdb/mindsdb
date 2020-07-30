@@ -100,7 +100,7 @@ class HTTPTest(unittest.TestCase):
         params = {
             'name': ds_name,
             'source_type': 'url',
-            'source': 'https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv'
+            'source': 'https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv'
         }
         url = f'{root}/datasources/{ds_name}'
         res = requests.put(url, json=params)

@@ -104,7 +104,7 @@ class DataStore():
             elif integration['type'] == 'mariadb':
                 dsClass = MariaDS
                 picklable['class'] = 'MariaDS'
-            elif source_type == 'mysql':
+            elif integration['type'] == 'mysql':
                 dsClass = MySqlDS
                 picklable['class'] = 'MySqlDS'
             else:
@@ -114,7 +114,7 @@ class DataStore():
                 user=integration['user'],
                 password=integration['password'],
                 host=integration['host'],
-                port=integration['post']
+                port=integration['port']
             )
         else:
             # This probably only happens for urls

@@ -66,8 +66,11 @@ class SQLQuery():
         if isinstance(values, list) is False:
             values = [values]
         for i, v in enumerate(values):
-            if isinstance(v, dict) and 'literal' in v:
-                v = v['literal']
+            if isinstance(v, dict):
+                if 'literal' in v:
+                    v = v['literal']
+                else:
+                    raise ValueError(f'Error while parse insert query: {sql}')
             elif v == 'null':
                 v = None
             values[i] = v
@@ -429,7 +432,9 @@ class SQLQuery():
                and table['join']['type'] == 'left join':
                 condition = {}
 
-            if 'external_datasource' in condition:
+            if 'external_datasource' in condition \
+                    and isinstance(condition['external_datasource']['$eq'], str) \
+                    and condition['external_datasource']['$eq'] != '':
                 external_datasource = condition['external_datasource']['$eq']
                 result = []
                 if 'select ' not in external_datasource.lower():
@@ -446,9 +451,9 @@ class SQLQuery():
                     came_from=table.get('source')
                 )
             elif tablenum > 0 \
-                and isinstance(table['join'], dict) \
-                and table['join']['type'] == 'left join' \
-                and dn.type == 'mindsdb':
+                    and isinstance(table['join'], dict) \
+                    and table['join']['type'] == 'left join' \
+                    and dn.type == 'mindsdb':
                 data = dn.select(
                     table=table_name,
                     columns=fields,

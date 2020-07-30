@@ -2,6 +2,7 @@ import os
 import json
 from datetime import datetime, timedelta
 
+
 def _in(ask, default, use_default):
     if use_default:
         return default
@@ -18,7 +19,8 @@ def _in(ask, default, use_default):
 
     return user_input
 
-def auto_config(python_path,pip_path,predictor_dir,datasource_dir):
+
+def auto_config(python_path, pip_path, predictor_dir, datasource_dir):
     config = {
         "debug": False
         ,"config_version": "1.1"
@@ -27,12 +29,18 @@ def auto_config(python_path,pip_path,predictor_dir,datasource_dir):
         ,"api": {
         }
         ,"integrations": {
-          "default_clickhouse": {
-              "enabled": False
-          }
-          ,"default_mariadb": {
-              "enabled": False
-          }
+            "default_clickhouse": {
+                "enabled": False,
+                "type": 'clickhouse'
+            },
+            "default_mariadb": {
+                "enabled": False,
+                "type": 'mariadb'
+            },
+            "default_mysql": {
+                "enabled": False,
+                "type": 'mysql'
+            }
         }
         ,"interface":{
           "mindsdb_native": {
@@ -147,6 +155,15 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
         config['integrations']['default_mariadb']['user'] = _in('Mariadb user: ','root',use_default)
         config['integrations']['default_mariadb']['password'] = _in('Mariadb password: ','',use_default)
         config['integrations']['default_mariadb']['type'] = 'mariadb'
+
+    mysql = _in('Connect to MySQL ? [Y/N]', 'Y', use_default)
+    if mysql in ['Y', 'y']:
+        config['integrations']['default_mariadb']['enabled'] = _in('Enable MySQL integration ?: ', False, use_default)
+        config['integrations']['default_mariadb']['host'] = _in('MySQL host: ', 'localhost', use_default)
+        config['integrations']['default_mariadb']['port'] = _in('MySQL port: ', 3306, use_default)
+        config['integrations']['default_mariadb']['user'] = _in('MySQL user: ', 'root', use_default)
+        config['integrations']['default_mariadb']['password'] = _in('MySQL password: ', '', use_default)
+        config['integrations']['default_mariadb']['type'] = 'mysql'
 
     config_path = os.path.join(config_dir,'config.json')
     with open(config_path, 'w') as fp:

@@ -34,7 +34,7 @@ class Clickhouse():
                     column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception as e:
                 print(e)
-                print(f'Error: cant convert type {col_subtype} of column {name} to clickhouse tpye')
+                print(f'Error: cant convert type {col_subtype} of column {name} to clickhouse type')
 
         return column_declaration
 
@@ -102,6 +102,7 @@ class Clickhouse():
             if 'columns_to_ignore' in stats:
                 del stats['columns_to_ignore']
             columns_sql = ','.join(self._to_clickhouse_table(stats, model_meta['predict']))
+            columns_sql += ',`when_data` Nullable(String)'
             columns_sql += ',`select_data_query` Nullable(String)'
             columns_sql += ',`external_datasource` Nullable(String)'
             for col in model_meta['predict']:

@@ -2,22 +2,13 @@ import unittest
 import requests
 import csv
 import inspect
-import subprocess
-import atexit
 
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.config import Config
 
 from common import (
+    run_environment,
     get_test_csv,
-    wait_api_ready,
-    prepare_config,
-    wait_db,
-    is_container_run,
-    TEST_CONFIG,
-    TESTS_ROOT,
-    OUTPUT
+    TEST_CONFIG
 )
 
 TEST_CSV = {
@@ -68,47 +59,11 @@ def query(query):
     return res
 
 
-def stop_clickhouse():
-    ch_sp = subprocess.Popen(
-        ['./cli.sh', 'clickhouse-stop'],
-        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-        stdout=OUTPUT,
-        stderr=OUTPUT
-    )
-    ch_sp.wait()
-
-
 class ClickhouseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        temp_config_path = prepare_config(config, 'default_clickhouse')
-
-        if is_container_run('clickhouse-test') is False:
-            subprocess.Popen(
-                ['./cli.sh', 'clickhouse'],
-                cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-                stdout=OUTPUT,
-                stderr=OUTPUT
-            )
-            atexit.register(stop_clickhouse)
-        clickhouse_ready = wait_db(config, 'default_clickhouse')
-
-        if clickhouse_ready:
-            sp = subprocess.Popen(
-                ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
-                stdout=OUTPUT,
-                stderr=OUTPUT
-            )
-            atexit.register(sp.kill)
-
-        api_ready = clickhouse_ready and wait_api_ready(config)
-
-        if api_ready is False:
-            print(f'Failed by timeout. ClickHouse started={clickhouse_ready} MindsDB started={api_ready}')
-            raise Exception()
-
-        cls.mdb = MindsdbNative(config)
-        datastore = DataStore(config)
+        mdb, datastore = run_environment('clickhouse', config)
+        cls.mdb = mdb
 
         models = cls.mdb.get_models()
         models = [x['name'] for x in models]

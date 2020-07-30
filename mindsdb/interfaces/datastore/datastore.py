@@ -13,7 +13,7 @@ import mindsdb
 
 from mindsdb.interfaces.datastore.sqlite_helpers import *
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS
 
 class DataStore():
     def __init__(self, config, storage_dir=None):
@@ -85,54 +85,37 @@ class DataStore():
                 ,'args': [source]
                 ,'kwargs': {}
             }
-        elif source_type == 'clickhouse':
-            user = self.config['integrations']['default_clickhouse']['user']            # FIXME need change 'default_clickhouse' to real db alias
-            password = self.config['integrations']['default_clickhouse']['password']
-            # TODO add host port params
-            ds = ClickhouseDS(query=source, user=user, password=password)
+        elif source_type in self.config['integrations']:
+            integration = self.config['integrations'][source_type]
+            dsClass = None
             picklable = {
-                'class': 'ClickhouseDS',
                 'args': [],
                 'kwargs': {
                     'query': source,
-                    'user': user,
-                    'password': password
+                    'user': integration['user'],
+                    'password': integration['password'],
+                    'host': integration['host'],
+                    'port': integration['port']
                 }
             }
-        elif source_type == 'mariadb':
-            user = self.config['integrations']['default_mariadb']['user']
-            password = self.config['integrations']['default_mariadb']['password']
-            host = self.config['integrations']['default_mariadb']['host']
-            port = self.config['integrations']['default_mariadb']['port']
-            ds = MariaDS(query=source, user=user, password=password, host=host, port=port)
-            picklable = {
-                'class': 'MariaDS',
-                'args': [],
-                'kwargs': {
-                    'query': source,
-                    'user': user,
-                    'password': password,
-                    'host': host,
-                    'port': port
-                }
-            }
-        elif source_type == 'mysql':
-            user = self.config['integrations']['default_mysql']['user']
-            password = self.config['integrations']['default_mysql']['password']
-            host = self.config['integrations']['default_mysql']['host']
-            port = self.config['integrations']['default_mysql']['port']
-            ds = MariaDS(query=source, user=user, password=password, host=host, port=port)
-            picklable = {
-                'class': 'MySqlDS',
-                'args': [],
-                'kwargs': {
-                    'query': source,
-                    'user': user,
-                    'password': password,
-                    'host': host,
-                    'port': port
-                }
-            }
+            if integration['type'] == 'clickhouse':
+                dsClass = ClickhouseDS
+                picklable['class'] = 'ClickhouseDS'
+            elif integration['type'] == 'mariadb':
+                dsClass = MariaDS
+                picklable['class'] = 'MariaDS'
+            elif integration['type'] == 'mysql':
+                dsClass = MySqlDS
+                picklable['class'] = 'MySqlDS'
+            else:
+                raise ValueError(f'Unknown DS source_type: {source_type}')
+            ds = dsClass(
+                query=source,
+                user=integration['user'],
+                password=integration['password'],
+                host=integration['host'],
+                port=integration['port']
+            )
         else:
             # This probably only happens for urls
             print('Create URL data source !')

@@ -86,7 +86,7 @@ class DataStore():
                 ,'kwargs': {}
             }
         elif source_type == 'clickhouse':
-            user = self.config['integrations']['default_clickhouse']['user']
+            user = self.config['integrations']['default_clickhouse']['user']            # FIXME need change 'default_clickhouse' to real db alias
             password = self.config['integrations']['default_clickhouse']['password']
             # TODO add host port params
             ds = ClickhouseDS(query=source, user=user, password=password)
@@ -107,6 +107,23 @@ class DataStore():
             ds = MariaDS(query=source, user=user, password=password, host=host, port=port)
             picklable = {
                 'class': 'MariaDS',
+                'args': [],
+                'kwargs': {
+                    'query': source,
+                    'user': user,
+                    'password': password,
+                    'host': host,
+                    'port': port
+                }
+            }
+        elif source_type == 'mysql':
+            user = self.config['integrations']['default_mysql']['user']
+            password = self.config['integrations']['default_mysql']['password']
+            host = self.config['integrations']['default_mysql']['host']
+            port = self.config['integrations']['default_mysql']['port']
+            ds = MariaDS(query=source, user=user, password=password, host=host, port=port)
+            picklable = {
+                'class': 'MySqlDS',
                 'args': [],
                 'kwargs': {
                     'query': source,

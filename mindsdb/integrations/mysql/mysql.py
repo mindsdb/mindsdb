@@ -3,12 +3,12 @@ import mysql.connector
 from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 
 
-class Mariadb():
+class MySQL():
     def __init__(self, config, name):
         self.config = config
         self.name = name
 
-    def _to_mariadb_table(self, stats, predicted_cols):
+    def _to_mysql_table(self, stats, predicted_cols):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
             DATA_SUBTYPES.FLOAT: 'double',
@@ -34,7 +34,7 @@ class Mariadb():
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception:
-                print(f'Error: cant convert type {col_subtype} of column {name} to mariadb type')
+                print(f'Error: cant convert type {col_subtype} of column {name} to mysql type')
 
         return column_declaration
 
@@ -89,8 +89,9 @@ class Mariadb():
                 predict VARCHAR(500),
                 select_data_query VARCHAR(500),
                 external_datasource VARCHAR(500),
-                training_options VARCHAR(500)
-                ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+                training_options VARCHAR(500),
+                key name_key (name)
+                ) ENGINE=FEDERATED CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -98,8 +99,9 @@ class Mariadb():
 
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.commands (
-                command VARCHAR(500)
-            ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+                command VARCHAR(500),
+                key command_key (command)
+            ) ENGINE=FEDERATED CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -107,7 +109,7 @@ class Mariadb():
         for model_meta in model_data_arr:
             name = model_meta['name']
             stats = model_meta['data_analysis']
-            columns_sql = ','.join(self._to_mariadb_table(stats, model_meta['predict']))
+            columns_sql = ','.join(self._to_mysql_table(stats, model_meta['predict']))
             columns_sql += ',`when_data` varchar(500)'
             columns_sql += ',`select_data_query` varchar(500)'
             columns_sql += ',`external_datasource` varchar(500)'
@@ -122,8 +124,12 @@ class Mariadb():
 
             q = f"""
                     CREATE TABLE mindsdb.{self._escape_table_name(name)}
-                    ({columns_sql}
-                    ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+                    (
+                        {columns_sql},
+                        index when_data_index (when_data),
+                        index select_data_query_index (select_data_query),
+                        index external_datasource_index (external_datasource)
+                    ) ENGINE=FEDERATED CONNECTION='{connect}';
             """
             self._query(q)
 

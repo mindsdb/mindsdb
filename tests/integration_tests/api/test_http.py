@@ -46,7 +46,7 @@ class HTTPTest(unittest.TestCase):
         res = requests.get(f'{root}/config/integrations')
         assert res.status_code == 200
         integration_names = res.json()
-        assert set(integration_names['integrations']) == set(['default_mariadb', 'default_clickhouse'])
+        assert set(integration_names['integrations']) == set(['default_mariadb', 'default_clickhouse', 'default_mysql'])
 
         test_integration_data = {'enabled': False, 'host': 'test', 'type': 'clickhouse'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
@@ -100,7 +100,7 @@ class HTTPTest(unittest.TestCase):
         params = {
             'name': ds_name,
             'source_type': 'url',
-            'source': 'https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/benchmarks/home_rentals/dataset/train.csv'
+            'source': 'https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv'
         }
         url = f'{root}/datasources/{ds_name}'
         res = requests.put(url, json=params)

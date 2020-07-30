@@ -1,5 +1,6 @@
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.mariadb.mariadb import Mariadb
+from mindsdb.integrations.mysql.mysql import MySQL
 
 
 class DatabaseWrapper():
@@ -26,9 +27,11 @@ class DatabaseWrapper():
         for db_alias in self.config['integrations']:
             if self.config['integrations'][db_alias]['enabled']:
                 if self.config['integrations'][db_alias]['type'] == 'clickhouse':
-                    integration_arr.append(Clickhouse(self.config,db_alias))
+                    integration_arr.append(Clickhouse(self.config, db_alias))
                 elif self.config['integrations'][db_alias]['type'] == 'mariadb':
-                    integration_arr.append(Mariadb(self.config,db_alias))
+                    integration_arr.append(Mariadb(self.config, db_alias))
+                elif self.config['integrations'][db_alias]['type'] == 'mysql':
+                    integration_arr.append(MySQL(self.config, db_alias))
                 else:
                     print('Uknown integration type: ' + self.config['integrations'][db_alias]['type'] + f' for database called: {db_alias}')
 

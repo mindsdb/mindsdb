@@ -22,4 +22,13 @@ elif [ $1 = "clickhouse" ]; then
     docker-compose up clickhouse
 elif [ $1 = "clickhouse-stop" ]; then
     docker-compose stop clickhouse
+elif [ $1 = "mssql" ]; then
+    docker-compose up mssql
+elif [ $1 = "mssql-stop" ]; then
+    docker-compose stop mssql
+elif [ $1 = "mysql" ]; then
+    mkdir -p mysql/storage/
+    docker-compose up mysql
+elif [ $1 = "mysql-stop" ]; then
+    docker-compose stop mysql
 fi

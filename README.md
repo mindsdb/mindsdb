@@ -102,7 +102,7 @@ One line of code to **use the model**:
 ```python
 
 # use the model to make predictions
-result = Predictor(name='home_rentals_price').predict(when={'number_of_rooms': 2, 'initial_price': 2000, 'number_of_bathrooms':1, 'sqft': 1190})
+result = Predictor(name='home_rentals_price').predict(when_data={'number_of_rooms': 2, 'initial_price': 2000, 'number_of_bathrooms':1, 'sqft': 1190})
 
 # you can now print the results
 print('The predicted price is between ${price} with {conf} confidence'.format(price=result[0].explanation['rental_price']['confidence_interval'], conf=result[0].explanation['rental_price']['confidence']))

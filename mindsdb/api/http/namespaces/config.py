@@ -41,3 +41,16 @@ class Integration(Resource):
         ca.config_obj.modify_db_integration(name, params)
         DatabaseWrapper(ca.config_obj)
         return 'modified'
+
+
+@ns_conf.route('/integrations/<name>/check')
+@ns_conf.param('name', 'Database integration checks')
+class Check(Resource):
+    @ns_conf.doc('check')
+    def get(self, name):
+        '''return datasource metadata'''
+        dbw = DatabaseWrapper(config_obj)
+        for db_name, connected in dbw.check_connections().items():
+            if db_name == name:
+                returne 200, connected
+        return 400, f'Can\'t find database integration: {name}'

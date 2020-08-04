@@ -43,7 +43,8 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     COMMANDS,
     TYPES,
     SERVER_VARIABLES,
-    DEFAULT_AUTH_METHOD
+    DEFAULT_AUTH_METHOD,
+    SERVER_STATUS
 )
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
@@ -59,7 +60,9 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     ColumnCountPacket,
     ColumnDefenitionPacket,
     ResultsetRowPacket,
-    EofPacket
+    EofPacket,
+    STMTPrepareHeaderPacket,
+    BinaryResultsetRowPacket
 )
 
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -425,6 +428,88 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             err_code=ERR.ER_SYNTAX_ERROR,
             msg="at this moment only 'delete predictor' command supported"
         ).send()
+
+    def get_binary_resultset(self, columns, row):
+        return self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
+
+    def answer_stmt_fetch(self, statement_id, limit=100000):
+        global datahub
+        statement = self.session.statements[statement_id]
+        sql = statement['sql']
+        fetched = statement['fetched']
+        query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+
+        result = query.fetch(datahub)
+
+        if result['success'] is False:
+            self.packet(
+                ErrPacket,
+                err_code=result['error_code'],
+                msg=result['msg']
+            ).send()
+            return
+
+        packages = []
+        columns = query.columns
+        for row in query.result[fetched:limit]:
+            packages.append(self.get_binary_resultset(columns, row))
+
+        statement['fetched'] += len(query.result[fetched:limit])
+
+        if len(query.result) <= limit:
+            status = sum([
+                SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
+                SERVER_STATUS.SERVER_STATUS_LAST_ROW_SENT,
+            ])
+        else:
+            status = sum([
+                SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
+                SERVER_STATUS.SERVER_STATUS_CURSOR_EXISTS,
+            ])
+        packages.append(self.packet(EofPacket, status=status))
+
+        # what should be if CLIENT_DEPRECATE_EOF?
+
+        self.sendPackageGroup(packages)
+
+    def answer_stmt_execute(self, statement_id):
+        statement = self.session.statements[statement_id]
+        sql = statement['sql']
+        query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+
+        columns = query.columns
+        packages = [self.packet(ColumnCountPacket, count=len(columns))]
+        packages.extend(self._get_column_defenition_packets(columns))
+
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True, status=0x0062))
+        else:
+            packages.append(self.packet(EofPacket, status=0x0062))
+        self.sendPackageGroup(packages)
+
+    def answer_stmt_close(self, statement_id):
+        self.session.unregister_statement(statement_id)
+        self.packet(OkPacket, eof=True).send()
+
+    def answer_prepare_query(self, sql):
+        query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+
+        statement_id = self.session.register_statement(sql)
+        packages = [
+            self.packet(
+                STMTPrepareHeaderPacket,
+                statement_id=statement_id,
+                num_columns=len(query.columns)
+            )
+        ]
+
+        packages.extend(self._get_column_defenition_packets(query.columns))
+
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
 
     def queryAnswer(self, sql):
         sql_lower = sql.lower()
@@ -943,9 +1028,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.answerTableQuery(query)
 
-    def getTabelPackets(self, columns, data):
-        # TODO remove columns order
-        packets = [self.packet(ColumnCountPacket, count=len(columns))]
+    def _get_column_defenition_packets(self, columns, data=[]):
+        packets = []
         for i, column in enumerate(columns):
             table_name = column.get('table_name', 'table_name')
             column_name = column.get('name', 'column_name')
@@ -969,12 +1053,31 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     max_length=length
                 )
             )
+        return packets
+
+    def getTabelPackets(self, columns, data):
+        # TODO remove columns order
+        packets = [self.packet(ColumnCountPacket, count=len(columns))]
+        packets.extend(self._get_column_defenition_packets(columns, data))
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packets.append(self.packet(EofPacket))
 
         packets += [self.packet(ResultsetRowPacket, data=x) for x in data]
         return packets
+
+    def _prepare_sql(self, sql):
+        try:
+            prepared_sql = sql.decode('utf-8')
+            # NOTE dbeaver can insert in start of query comment with connector version, for example
+            # /* mysql-connector-java-8.0.11 (Revision: 6d4eaa273bc181b4cf1c8ad0821a2227f116fedf) */SELECT @@session.auto_increment_increment
+            prepared_sql = re.sub(re.compile("/\*.*?\*/", re.DOTALL), "", prepared_sql)
+            prepared_sql = prepared_sql.strip(' ;')
+            return prepared_sql
+        except Exception:
+
+            log.error('SQL contains non utf-8 values: {sql}'.format(sql=sql))
+            self.packet(OkPacket).send()
 
     def handle(self):
         """
@@ -1007,17 +1110,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             if p.type.value == COMMANDS.COM_QUERY:
                 try:
-                    sql = p.sql.value.decode('utf-8')
-                    # NOTE dbeaver can insert in start of query comment with connector version, for example
-                    # /* mysql-connector-java-8.0.11 (Revision: 6d4eaa273bc181b4cf1c8ad0821a2227f116fedf) */SELECT @@session.auto_increment_increment
-                    sql = re.sub(re.compile("/\*.*?\*/", re.DOTALL), "", sql)
-                    sql = sql.strip(' ;')
+                    sql = self._prepare_sql(p.sql.value)
                 except Exception:
                     log.error('SQL contains non utf-8 values: {sql}'.format(sql=p.sql.value))
                     self.packet(OkPacket).send()
                     continue
                 log.info(f'COM_QUERY: {sql}')
-                self.current_transaction = self.session.newTransaction(sql_query=sql)
 
                 try:
                     self.queryAnswer(sql)
@@ -1032,12 +1130,35 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                         err_code=ERR.ER_SYNTAX_ERROR,
                         msg=str(e)
                     ).send()
+            elif p.type.value == COMMANDS.COM_STMT_PREPARE:
+                # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
+                try:
+                    sql = self._prepare_sql(p.sql.value)
+                except Exception:
+                    log.error('SQL contains non utf-8 values: {sql}'.format(sql=p.sql.value))
+                    self.packet(OkPacket).send()
+                    continue
+                log.info(f'COM_STMT_PREPARE: {sql}')
 
-                # if self.current_transaction.output_data_array is None:
-                #     self.packet(OkPacket).send()
-                # else:
-                #     self.packet(ResultsetPacket, metadata=self.current_transaction.output_metadata,
-                #                 data_array=self.current_transaction.output_data_array).send()
+                try:
+                    self.answer_prepare_query(sql)
+                except Exception as e:
+                    log.error(
+                        f'ERROR while preparing query: {sql}\n'
+                        f'{traceback.format_exc()}\n'
+                        f'{e}'
+                    )
+                    self.packet(
+                        ErrPacket,
+                        err_code=ERR.ER_SYNTAX_ERROR,
+                        msg=str(e)
+                    ).send()
+            elif p.type.value == COMMANDS.COM_STMT_EXECUTE:
+                self.answer_stmt_execute(p.stmt_id.value)
+            elif p.type.value == COMMANDS.COM_STMT_CLOSE:
+                self.answer_stmt_close(p.stmt_id.value)
+            elif p.type.value == COMMANDS.COM_STMT_FETCH:
+                self.answer_stmt_fetch(p.stmt_id.value, p.limit.value)
             elif p.type.value == COMMANDS.COM_QUIT:
                 log.info('Session closed, on client disconnect')
                 self.session = None

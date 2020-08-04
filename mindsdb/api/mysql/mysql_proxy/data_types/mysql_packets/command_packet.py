@@ -35,12 +35,27 @@ class CommandPacket(Packet):
         buffer = body
         buffer = self.type.setFromBuff(buffer)
 
-        if self.type.value == COMMANDS.COM_QUERY:
+        if self.type.value in (COMMANDS.COM_QUERY, COMMANDS.COM_STMT_PREPARE):
             self.sql = Datum('str<EOF>')
-            self.sql.setFromBuff(buffer)
+            buffer = self.sql.setFromBuff(buffer)
+        elif self.type.value == COMMANDS.COM_STMT_EXECUTE:
+            self.stmt_id = Datum('int<4>')
+            buffer = self.stmt_id.setFromBuff(buffer)
+            self.flags = Datum('int<1>')
+            buffer = self.flags.setFromBuff(buffer)
+            self.iteration_count = Datum('int<4>')
+            buffer = self.iteration_count.setFromBuff(buffer)
+        elif self.type.value == COMMANDS.COM_STMT_CLOSE:
+            self.stmt_id = Datum('int<4>')
+            buffer = self.stmt_id.setFromBuff(buffer)
+        elif self.type.value == COMMANDS.COM_STMT_FETCH:
+            self.stmt_id = Datum('int<4>')
+            buffer = self.stmt_id.setFromBuff(buffer)
+            self.limit = Datum('int<4>')
+            buffer = self.limit.setFromBuff(buffer)
         else:
             self.data = Datum('str<EOF>')
-            self.data.setFromBuff(buffer)
+            buffer = self.data.setFromBuff(buffer)
 
     def __str__(self):
         return str({

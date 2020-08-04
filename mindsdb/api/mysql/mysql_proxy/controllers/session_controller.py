@@ -30,10 +30,18 @@ class SessionController():
         self.integration = None
         self.database = None
 
-        self.current_transaction = None
+        self.statements = {}
 
-    def newTransaction(self, sql_query):
-        return {
-            'output_metadata': {},
-            'output_data_array': []
+    def register_statement(self, sql):
+        self.statements.keys()
+        i = 1
+        while i in self.statements and i < 100:
+            i = i + 1
+        self.statements[i] = {
+            'sql': sql,
+            'fetched': 0
         }
+        return i
+
+    def unregister_statement(self, statement_id):
+        del self.statements[statement_id]

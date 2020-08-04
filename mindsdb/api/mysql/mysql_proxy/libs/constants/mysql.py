@@ -89,6 +89,10 @@ class COMMANDS(object):
     COM_SHUTDOWN = int('0x0a', 0)
     COM_SLEEP = int('0x00', 0)
     COM_STATISTICS = int('0x09', 0)
+    COM_STMT_PREPARE = int('0x16', 0)
+    COM_STMT_EXECUTE = int('0x17', 0)
+    COM_STMT_FETCH = int('0x1c', 0)
+    COM_STMT_CLOSE = int('0x19', 0)
 
 
 COMMANDS = COMMANDS()

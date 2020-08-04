@@ -511,6 +511,74 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(EofPacket))
         self.sendPackageGroup(packages)
 
+    def answer_explain_table(self, sql):
+        parts = sql.split(' ')
+        table = parts[1].lower()
+        if table == 'predictors' or table == 'mindsdb.predictors':
+            self.answer_explain_predictors()
+        else:
+            raise NotImplementedError("Only 'EXPLAIN predictors' supported")
+
+    def answer_explain_predictors(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'database': 'information_schema',
+                'table_name': 'COLUMNS',
+                'name': 'COLUMNS_NAME',
+                'alias': 'Field',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'information_schema',
+                'table_name': 'COLUMNS',
+                'name': 'COLUMN_TYPE',
+                'alias': 'Type',
+                'type': TYPES.MYSQL_TYPE_BLOB,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'information_schema',
+                'table_name': 'COLUMNS',
+                'name': 'IS_NULLABLE',
+                'alias': 'Null',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'information_schema',
+                'table_name': 'COLUMNS',
+                'name': 'COLUMN_KEY',
+                'alias': 'Key',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'information_schema',
+                'table_name': 'COLUMNS',
+                'name': 'COLUMN_DEFAULT',
+                'alias': 'Default',
+                'type': TYPES.MYSQL_TYPE_BLOB,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'information_schema',
+                'table_name': 'COLUMNS',
+                'name': 'EXTRA',
+                'alias': 'Extra',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }],
+            # [Field, Type, Null, Key, Default, Extra]
+            data=[
+                ['name', 'varchar(255)', 'NO', 'PRI', None, ''],
+                ['status', 'varchar(255)', 'YES', '', None, ''],
+                ['accuracy', 'varchar(255)', 'YES', '', None, ''],
+                ['predict', 'varchar(255)', 'YES', '', None, ''],
+                ['select_data_query', 'varchar(255)', 'YES', '', None, ''],
+                ['external_datasource', 'varchar(255)', 'YES', '', None, ''],
+                ['training_options', 'varchar(255)', 'YES', '', None, ''],
+            ]
+        )
+        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        self.sendPackageGroup(packages)
+
     def queryAnswer(self, sql):
         sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')
@@ -529,11 +597,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if keyword == 'start':
             # start transaction
             self.packet(OkPacket).send()
-            return
         elif keyword == 'set':
             if 'autocommit' in sql_lower:
                 self.packet(OkPacket).send()
-                return
             elif 'set names' in sql_lower:
                 # it can be "set names utf8"
                 self.charset = re.findall(r"set\s+names\s+(\S*)", sql_lower)[0]
@@ -548,47 +614,34 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                         ['character_set_results', self.charset]
                     ]
                 ).send()
-                return
             else:
                 self.packet(OkPacket).send()
-                return
         elif keyword == 'use':
             self.session.database = sql_lower.split()[1].trim(' ;')
             self.packet(OkPacket).send()
-            return
         elif 'show warnings' in sql_lower:
             self.answerShowWarnings()
-            return
         elif 'show engines' in sql_lower:
             self.answerShowEngines()
-            return
         elif 'show charset' in sql_lower:
             self.answerShowCharset()
-            return
         elif 'show collation' in sql_lower:
             self.answerShowCollation()
-            return
         elif 'show table status' in sql_lower:
             self.answer_show_table_status(sql)
-            return
         elif keyword == 'delete' and \
                 ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
             self.delete_predictor_answer(sql)
-            return
         elif keyword == 'insert' and \
                 ('mindsdb.commands' in sql_lower or self.session.database == 'mindsdb' and 'commands' in sql_lower):
             self.handle_custom_command(sql)
-            return
         elif keyword == 'insert' and \
                 ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
             self.insert_predictor_answer(sql)
-            return
         elif keyword in ('update', 'insert'):
             raise NotImplementedError('Update and Insert not implemented')
-            return
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             self.packet(OkPacket).send()
-            return
         elif keyword == 'select':
             if '@@' in sql_lower:
                 self.answerVariables(sql)
@@ -600,16 +653,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answerSelectDatabase()
                 return
             query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
-            return self.selectAnswer(query)
+            self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()
-            return
         elif keyword == 'commit':
             self.packet(OkPacket).send()
-            return
+        elif keyword == 'explain':
+            self.answer_explain_table(sql)
         else:
             raise NotImplementedError('Action not implemented')
-            return
 
     def answer_show_table_status(self, sql):
         # NOTE at this moment parsed statement only like `SHOW TABLE STATUS LIKE 'table'`.

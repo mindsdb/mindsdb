@@ -135,7 +135,7 @@ class DataStore():
             pickle.dump(picklable, fp)
 
         with open(os.path.join(ds_dir,'metadata.json'), 'w') as fp:
-            json.dump({
+            meta = {
                 'name': name,
                 'source_type': source_type,
                 'source': source,
@@ -143,7 +143,10 @@ class DataStore():
                 'updated_at': str(datetime.datetime.now()).split('.')[0],
                 'row_count': len(df),
                 'columns': [dict(name=x) for x in list(df.keys())]
-            }, fp)
+            }
+            if source_type in self.config['integrations']:
+                meta['integration_id'] = source_type
+            json.dump(meta, fp)
 
         return self.get_datasource_obj(name, raw=True)
 

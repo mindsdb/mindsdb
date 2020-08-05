@@ -8,10 +8,17 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 
 @ns_conf.route('/integrations')
 @ns_conf.param('name', 'List all database integration')
-class Integration(Resource):
+class ListIntegration(Resource):
     @ns_conf.doc('get_integrations')
     def get(self):
         return {'integrations': [k for k in ca.config_obj['integrations']]}
+
+@ns_conf.route('/all_integrations')
+@ns_conf.param('name', 'List all database integration')
+class AllIntegration(Resource):
+    @ns_conf.doc('get_all_integrations')
+    def get(self):
+        return ca.config_obj['integrations']
 
 @ns_conf.route('/integrations/<name>')
 @ns_conf.param('name', 'Database integration')

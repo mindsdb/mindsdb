@@ -144,8 +144,6 @@ class DataStore():
                 'row_count': len(df),
                 'columns': [dict(name=x) for x in list(df.keys())]
             }
-            if source_type in self.config['integrations']:
-                meta['integration_id'] = source_type
             json.dump(meta, fp)
 
         return self.get_datasource_obj(name, raw=True)

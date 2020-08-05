@@ -32,16 +32,16 @@ class SessionController():
 
         self.statements = {}
 
-    def register_statement(self, sql, stmt_type='select'):
+    def register_statement(self, sql):
         self.statements.keys()
         i = 1
         while i in self.statements and i < 100:
             i = i + 1
         self.statements[i] = dict(
-            type=stmt_type,     # [select|insert]
+            type=None,
             sql=sql,
-            fetched=0,
-            # num_params=0
+            insert=None,
+            fetched=0
         )
         return i
 

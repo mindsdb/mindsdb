@@ -21,6 +21,7 @@ class BinaryResultsetRowPacket(Packet):
     '''
     Implementation based on:
     https://mariadb.com/kb/en/resultset-row/#binary-resultset-row
+    https://dev.mysql.com/doc/internals/en/null-bitmap.html
     '''
 
     def setup(self):
@@ -28,16 +29,15 @@ class BinaryResultsetRowPacket(Packet):
         columns = self._kwargs.get('columns', {})
 
         self.value = [b'\x00']
-
         nulls = [0]
         for i, el in enumerate(data):
             if i > 0 and (i + 2) % 8 == 0:
                 nulls.append(0)
             if el is None:
                 if i < 6:
-                    nulls[-1] = nulls[-1] + 1 << ((i + 2) % 8)
+                    nulls[-1] = nulls[-1] + (1 << ((i + 2) % 8))
                 else:
-                    nulls[-1] = nulls[-1] + 1 << (i % 8)
+                    nulls[-1] = nulls[-1] + (1 << ((i - 6) % 8))
         self.value.append(bytes(nulls))
 
         for i, col in enumerate(columns):

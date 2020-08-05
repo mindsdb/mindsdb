@@ -24,7 +24,7 @@ class STMTPrepareHeaderPacket(Packet):
         self.status = Datum('int<1>', 0)
         self.statement_id = Datum('int<4>', self._kwargs.get('statement_id', 1))
         self.num_columns = Datum('int<2>', self._kwargs.get('num_columns', 0))
-        self.num_params = Datum('int<2>', 0)
+        self.num_params = Datum('int<2>', self._kwargs.get('num_params', 0))
         self.filler = Datum('int<1>', 0)
         self.warning_count = Datum('int<2>', 0)
 

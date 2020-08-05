@@ -52,7 +52,7 @@ class Datum():
                 log.error('Cant decode integer greater than 8 bytes')
                 return buff[end - 1:]
 
-            for j in range(8 - (start - end)):
+            for j in range(8 - (end - start)):
                 num_str += b'\0'
 
             if self.var_type == 'int':
@@ -60,8 +60,8 @@ class Datum():
                 return buff[end:]
 
             if self.var_type in ['byte', 'string']:
-                length = struct.unpack('i', num_str)
-                self.value = buff[start:(length + end)]
+                length = struct.unpack('Q', num_str)[0]
+                self.value = buff[end:(length + end)]
                 return buff[(length + end):]
 
         if self.var_len == 'EOF':

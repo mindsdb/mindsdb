@@ -33,7 +33,8 @@ from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapab
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
-    NotImplementedError
+    NotImplementedError,
+    SqlError
 )
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
@@ -472,38 +473,86 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.sendPackageGroup(packages)
 
-    def answer_stmt_execute(self, statement_id):
+    def answer_stmt_execute(self, statement_id, parameters):
         statement = self.session.statements[statement_id]
-        sql = statement['sql']
-        query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+        if statement['type'] == 'select':
+            sql = statement['sql']
+            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
 
-        columns = query.columns
-        packages = [self.packet(ColumnCountPacket, count=len(columns))]
-        packages.extend(self._get_column_defenition_packets(columns))
+            columns = query.columns
+            packages = [self.packet(ColumnCountPacket, count=len(columns))]
+            packages.extend(self._get_column_defenition_packets(columns))
 
-        if self.client_capabilities.DEPRECATE_EOF is True:
-            packages.append(self.packet(OkPacket, eof=True, status=0x0062))
+            if self.client_capabilities.DEPRECATE_EOF is True:
+                packages.append(self.packet(OkPacket, eof=True, status=0x0062))
+            else:
+                packages.append(self.packet(EofPacket, status=0x0062))
+            self.sendPackageGroup(packages)
+        elif statement['type'] == 'insert':
+            if len(parameters) != statement['num_params']:
+                raise SqlError(f"For INSERT statement got {len(parameters)} parameters, but should be {statement['num_params']}")
+            insert = statement['insert']
+
+            columns = insert.keys()
+            columns = ','.join(columns)
+            values = ','.join(f"'{x}'" if x is not None else 'null' for x in parameters)
+            sql = f'insert into mindsdb.predictors ({columns}) values ({values})'
+            self.insert_predictor_answer(sql)
         else:
-            packages.append(self.packet(EofPacket, status=0x0062))
-        self.sendPackageGroup(packages)
+            raise NotImplementedError(f"unknown statement type: {statement['type']}")
 
     def answer_stmt_close(self, statement_id):
         self.session.unregister_statement(statement_id)
         self.packet(OkPacket, eof=True).send()
 
     def answer_prepare_query(self, sql):
-        query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+        if 'insert into' in sql.lower():
+            # insert = SQLQuery.parse_insert(sql)
+            statement_id = self.session.register_statement(sql, stmt_type='insert')
+            insert = SQLQuery.parse_insert(sql)
+            self.session.sql = insert
 
-        statement_id = self.session.register_statement(sql)
+            # TEMP
+            self.session.statements[statement_id]['insert'] = insert
+
+            columns_str = ','.join(list(insert.keys()))
+            query = SQLQuery(
+                f'select {columns_str} from mindsdb.predictors',
+                integration=self.session.integration,
+                database=self.session.database
+            )
+            num_columns = 0
+            num_params = len(query.columns)
+            self.session.statements[statement_id]['num_params'] = num_params
+            columns_packets = []
+            for col in query.columns:
+                columns_packets.append(dict(
+                    database='',
+                    table_alias='',
+                    table_name='',
+                    alias='',
+                    name='?',
+                    type=TYPES.MYSQL_TYPE_VAR_STRING,
+                    charset=CHARSET_NUMBERS['binary']
+                ))
+            columns_packets = self._get_column_defenition_packets(columns_packets)
+        else:
+            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+            statement_id = self.session.register_statement(sql, stmt_type='select')
+            num_columns = len(query.columns)
+            num_params = 0
+            columns_packets = self._get_column_defenition_packets(query.columns)
+
         packages = [
             self.packet(
                 STMTPrepareHeaderPacket,
                 statement_id=statement_id,
-                num_columns=len(query.columns)
+                num_columns=num_columns,
+                num_params=num_params
             )
         ]
 
-        packages.extend(self._get_column_defenition_packets(query.columns))
+        packages.extend(columns_packets)
 
         if self.client_capabilities.DEPRECATE_EOF is True:
             packages.append(self.packet(OkPacket, eof=True))
@@ -1206,11 +1255,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                         msg=str(e)
                     ).send()
             elif p.type.value == COMMANDS.COM_STMT_EXECUTE:
-                self.answer_stmt_execute(p.stmt_id.value)
-            elif p.type.value == COMMANDS.COM_STMT_CLOSE:
-                self.answer_stmt_close(p.stmt_id.value)
+                self.answer_stmt_execute(p.stmt_id.value, p.parameters)
             elif p.type.value == COMMANDS.COM_STMT_FETCH:
                 self.answer_stmt_fetch(p.stmt_id.value, p.limit.value)
+            elif p.type.value == COMMANDS.COM_STMT_CLOSE:
+                self.answer_stmt_close(p.stmt_id.value)
             elif p.type.value == COMMANDS.COM_QUIT:
                 log.info('Session closed, on client disconnect')
                 self.session = None

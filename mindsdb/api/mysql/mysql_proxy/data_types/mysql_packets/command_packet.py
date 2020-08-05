@@ -67,7 +67,7 @@ class CommandPacket(Packet):
                     nulls = []
                     for i in range(null_bytes):
                         b, buffer = self._read_byte(buffer)
-                        for i in range(7, -1, -1):
+                        for i in range(8):
                             nulls.append(((1 << i) & b) != 0)
 
                     # read send-type byte

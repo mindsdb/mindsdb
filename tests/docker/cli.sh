@@ -31,4 +31,9 @@ elif [ $1 = "mysql" ]; then
     docker-compose up mysql
 elif [ $1 = "mysql-stop" ]; then
     docker-compose stop mysql
+elif [ $1 = "postgres" ]; then
+    mkdir -p postgres/storage/
+    docker-compose up postgres
+elif [ $1 = "postgres-stop" ]; then
+    docker-compose stop postgres
 fi

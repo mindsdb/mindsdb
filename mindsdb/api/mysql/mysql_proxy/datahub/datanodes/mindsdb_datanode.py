@@ -165,8 +165,8 @@ class MindsDBDataNode(DataNode):
                 row[key + '_confidence'] = explanation[key]['confidence']
                 row[key + '_explain'] = json.dumps(explanation[key])
             for key in min_max_keys:
-                row[key + '_min'] = explanation[key]['confidence_interval'][0]
-                row[key + '_max'] = explanation[key]['confidence_interval'][-1]
+                row[key + '_min'] = min(explanation[key]['confidence_interval'])
+                row[key + '_max'] = max(explanation[key]['confidence_interval'])
             row['select_data_query'] = select_data_query
             row['external_datasource'] = external_datasource
             row['when_data'] = original_when_data

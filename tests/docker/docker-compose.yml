@@ -51,3 +51,4 @@ services:
       POSTGRES_PASSWORD: "postgres"
     volumes:
     - ./postgres/storage:/var/lib/postgresql/data
+    - ./postgres/share:/share

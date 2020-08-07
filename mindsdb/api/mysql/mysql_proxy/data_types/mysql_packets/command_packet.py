@@ -59,8 +59,8 @@ class CommandPacket(Packet):
             self.parameters = []
 
             statement = self.session.statements[self.stmt_id.value]
-            if statement['type'] == 'insert':
-                num_params = len(statement['insert'])
+            if statement['type'] in ['insert', 'delete']:
+                num_params = len(statement['insert']) if statement['type'] == 'insert' else 1
                 if num_params > 0:
                     # read null-map
                     null_bytes = math.floor((num_params + 7) / 8)

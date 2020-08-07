@@ -76,7 +76,6 @@ class ClickhouseTest(unittest.TestCase):
             print('creating test data table...')
             query(f'''
                 CREATE TABLE test.{TEST_DATA_TABLE} (
-                    id int,
                     number_of_rooms int,
                     number_of_bathrooms int,
                     sqft int,
@@ -102,7 +101,6 @@ class ClickhouseTest(unittest.TestCase):
                         neighborhood = str(row[6])
                         rental_price = int(float(row[7]))
                         query(f'''INSERT INTO test.{TEST_DATA_TABLE} VALUES (
-                            {i},
                             {number_of_rooms},
                             {number_of_bathrooms},
                             {sqft},

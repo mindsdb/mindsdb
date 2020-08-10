@@ -41,6 +41,7 @@ class BinaryResultsetRowPacket(Packet):
         self.value.append(bytes(nulls))
 
         for i, col in enumerate(columns):
+            # NOTE at this moment all types sends as strings, and it works
             if data[i] is None:
                 continue
 
@@ -50,32 +51,21 @@ class BinaryResultsetRowPacket(Packet):
                 enc = '<d'
             elif col_type == TYPES.MYSQL_TYPE_LONGLONG:
                 enc = '<q'
-            elif col_type == TYPES.MYSQL_TYPE_LONG:  # mariadb TYPES.MYSQL_TYPE_INTEGER:
+            elif col_type == TYPES.MYSQL_TYPE_LONG:
                 enc = '<l'
-            # elif col_type == TYPES.MYSQL_TYPE_MEDIUMINT:
-            #     enc = '<l'
             elif col_type == TYPES.MYSQL_TYPE_FLOAT:
                 enc = '<f'
-            # elif col_type == TYPES.MYSQL_TYPE_SMALLINT:
-            #     enc = '<h'
             elif col_type == TYPES.MYSQL_TYPE_YEAR:
                 enc = '<h'
-            # elif col_type == TYPES.MYSQL_TYPE_TINYINT:
-            #     enc = '<b'
             elif col_type == TYPES.MYSQL_TYPE_DATE:
-                # TODO
                 enc = ''
             elif col_type == TYPES.MYSQL_TYPE_TIMESTAMP:
-                # TODO
                 enc = ''
             elif col_type == TYPES.MYSQL_TYPE_DATETIME:
-                # TODO
                 enc = ''
             elif col_type == TYPES.MYSQL_TYPE_TIME:
-                # TODO
                 enc = ''
             elif col_type == TYPES.MYSQL_TYPE_NEWDECIMAL:
-                # Mindsdb not use it, so pass atm
                 enc = ''
             else:
                 enc = 'string'

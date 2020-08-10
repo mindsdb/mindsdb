@@ -868,6 +868,8 @@ class SQLQuery():
                 'table_name': table_name,
                 'name': column['field'],
                 'alias': column['caption'],
+                # NOTE all work with text-type, but if/when wanted change types to real,
+                # it will need to check all types casts in BinaryResultsetRowPacket
                 'type': TYPES.MYSQL_TYPE_VAR_STRING
             })
         return result

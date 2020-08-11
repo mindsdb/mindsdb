@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import re
+import threading
 
 import tempfile
 import multipart
@@ -117,19 +118,39 @@ class Datasource(Resource):
         return ca.default_store.get_datasource(ds_name)
 
 
+ds_analysis = {}
+
+
+def analyzing_thread(name, default_store):
+    global ds_analysis
+    ds = default_store.get_datasource(name)
+    analysis = default_store.get_analysis(ds['name'])
+    ds_analysis[name] = analysis
+
+
 @ns_conf.route('/<name>/analyze')
 @ns_conf.param('name', 'Datasource name')
 class Analyze(Resource):
     @ns_conf.doc('analyse_dataset')
     def get(self, name):
+        global ds_analysis
+        if name in ds_analysis:
+            if ds_analysis[name] is None:
+                return {'status': 'analyzing'}, 200
+            else:
+                analysis = ds_analysis[name]
+                del ds_analysis[name]
+                return analysis, 200
+
         ds = ca.default_store.get_datasource(name)
         if ds is None:
             print('No valid datasource given')
             abort(400, 'No valid datasource given')
 
-        analysis = ca.default_store.get_analysis(ds['name'])
+        x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))
+        x.start()
 
-        return analysis, 200
+        return {'status': 'analyzing'}, 200
 
 
 @ns_conf.route('/<name>/analyze_subset')

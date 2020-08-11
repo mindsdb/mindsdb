@@ -123,6 +123,7 @@ ds_analysis = {}
 
 def analyzing_thread(name, default_store):
     global ds_analysis
+    ds_analysis[name] = None
     ds = default_store.get_datasource(name)
     analysis = default_store.get_analysis(ds['name'])
     ds_analysis[name] = analysis

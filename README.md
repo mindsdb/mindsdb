@@ -184,7 +184,9 @@ If you want to use multiple projects at once you can add `:` between the directo
 
 Add that same `export` command in a new line at the end of your `~/.bashrc` files to have this exported when the computer boots up in all terminals.
 
-6. If you want to install a version of mindsdb, lightwood ... etc from pip, do it in a virtualenv where you run `export PYTHONPATH=''`, otherwise the `PYTHONPATH` exports will override the version installed via pip
+6. Note, when running a script importing these libraries or running them as a python module (e.g. `python3 -m mindsdb`) make sure you are in a directory other than `/home/my_user` or `/home/my_user/package_name` (where `package_name` is mindsdb, lightwood or mindsdb_native). Otherwise the python importer will fail to properly import them
+
+7. If you want to install a version of mindsdb, lightwood ... etc from pip, do it in a virtualenv where you run `export PYTHONPATH=''`, otherwise the `PYTHONPATH` exports will override the version installed via pip
 
 ## Report Issues
 

@@ -1,5 +1,4 @@
 import unittest
-import requests
 import csv
 import inspect
 

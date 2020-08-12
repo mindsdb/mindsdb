@@ -67,12 +67,6 @@ class Datasource(Resource):
     @ns_conf.marshal_with(datasource_metadata)
     def put(self, name):
         '''add new datasource'''
-        if 'query' in request.json:
-            query = request.json['query']
-            source_type = request.json['integration_id']
-            ca.default_store.save_datasource(name, source_type, query)
-            return ca.default_store.get_datasource(name)
-
         data = {}
         def on_field(field):
             print(f'\n\n{field}\n\n')
@@ -84,7 +78,6 @@ class Datasource(Resource):
             data['file'] = file.file_name.decode()
 
         temp_dir_path = tempfile.mkdtemp(prefix='datasource_file_')
-
 
         if request.headers['Content-Type'].startswith('multipart/form-data'):
             parser = multipart.create_form_parser(
@@ -108,6 +101,13 @@ class Datasource(Resource):
             parser.close()
         else:
             data = request.json
+
+        if 'query' in data:
+            query = request.json['query']
+            source_type = request.json['integration_id']
+            ca.default_store.save_datasource(name, source_type, query)
+            os.rmdir(temp_dir_path)
+            return ca.default_store.get_datasource(name)
 
         ds_name = data['name'] if 'name' in data else name
         source = data['source'] if 'source' in data else name

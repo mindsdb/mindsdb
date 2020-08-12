@@ -475,13 +475,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             columns_def = query.columns
             for col in columns_def:
                 col['charset'] = CHARSET_NUMBERS['utf8_general_ci']
-            # TEST!!!
-            # columns_def[0]['flags'] = sum([
-            #     FIELD_FLAG.NOT_NULL,
-            #     FIELD_FLAG.PRIMARY_KEY,
-            #     0x5000
-            # ])
-            # TEST!!!
 
         elif sql_lower.startswith('delete'):
             statement['type'] = 'delete'
@@ -527,15 +520,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         ]
 
         packages.extend(
-            # columns_packets
             self._get_column_defenition_packets(columns_def)
         )
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
             packages.append(self.packet(EofPacket, status=status))
-        #     packages.append(self.packet(OkPacket, eof=True))
-        # else:
+
         self.sendPackageGroup(packages)
 
     def answer_stmt_execute(self, statement_id, parameters):
@@ -574,11 +565,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
 
             columns = query.columns
-            # TEST!!!
-            # for col in columns:
-            #     col['charset'] = CHARSET_NUMBERS['utf8_general_ci']
-            #     col['flags'] = 0x1001
-            # TEST!!!
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
             packages.extend(self._get_column_defenition_packets(columns))
 
@@ -634,9 +620,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
                 SERVER_STATUS.SERVER_STATUS_CURSOR_EXISTS,
             ])
-        packages.append(self.packet(EofPacket, status=status))
-
-        # what should be if CLIENT_DEPRECATE_EOF?
+        packages.append(self.packet(EofPacket, status=status))  # what should be if CLIENT_DEPRECATE_EOF?
 
         self.sendPackageGroup(packages)
 
@@ -727,7 +711,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ],
             status=status
         )
-        # packages.append(self.packet(OkPacket, eof=True, status=status))
+
         if self.client_capabilities.DEPRECATE_EOF is False:
             packages.append(self.packet(EofPacket, status=status))
         else:
@@ -749,9 +733,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ],
             status=status
         )
-
-        # packages.append(self.packet(OkPacket, eof=True, status=status))  # status?????
-        # packages.append(self.packet(OkPacket))
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packages.append(self.packet(EofPacket, status=status))

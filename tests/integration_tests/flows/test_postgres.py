@@ -37,10 +37,7 @@ def query(query):
 
     cur = con.cursor()
     res = True
-    # try:
     cur.execute(query)
-    # except Exception:
-    #     res = False
 
     try:
         rows = cur.fetchall()

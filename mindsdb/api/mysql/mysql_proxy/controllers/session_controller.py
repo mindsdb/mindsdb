@@ -37,6 +37,8 @@ class SessionController():
         i = 1
         while i in self.statements and i < 100:
             i = i + 1
+        if i == 100:
+            raise Exception('Too many unclosed queries')
         self.statements[i] = dict(
             type=None,
             sql=sql,

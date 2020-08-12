@@ -94,8 +94,8 @@ class CommandPacket(Packet):
                             buffer = x.setFromBuff(buffer)
                             self.parameters.append(x.value.decode())
                         else:
-                            pass
-                        # TODO other fields
+                            # NOTE at this moment all sends as strings and it works
+                            raise Exception(f"Unsupported type {types[i]['type']}")
 
         elif self.type.value == COMMANDS.COM_STMT_CLOSE:
             self.stmt_id = Datum('int<4>')

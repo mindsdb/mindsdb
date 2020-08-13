@@ -56,7 +56,7 @@ class ColumnDefenitionPacket(Packet):
             )
         )
 
-        self.flags = Datum('int<2>', 0)
+        self.flags = Datum('int<2>', self._kwargs.get('flags', 0))
         self.decimals = Datum('int<1>', 0)
 
         self.unused = Datum('int<2>', 0)

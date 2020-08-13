@@ -40,3 +40,15 @@ services:
       MYSQL_DATABASE: test
     ports:
       - 3307:3307
+  postgres:
+    build: postgres/.
+    network_mode: host
+    image: postgres-test:1.0
+    container_name: postgres-test
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+    - ./postgres/storage:/var/lib/postgresql/data
+    - ./postgres/share:/share

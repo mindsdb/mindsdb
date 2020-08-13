@@ -11,3 +11,5 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets.column_count_packet 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets.column_definition_packet import ColumnDefenitionPacket
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets.resultset_row_package import ResultsetRowPacket
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets.eof_packet import EofPacket
+from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets.stmt_prepare_header import STMTPrepareHeaderPacket
+from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets.binary_resultset_row_package import BinaryResultsetRowPacket

@@ -11,6 +11,7 @@
 
 import re
 import traceback
+from collections import OrderedDict
 
 from moz_sql_parser import parse
 
@@ -61,6 +62,10 @@ class SQLQuery():
         if isinstance(columns, list) is False:
             columns = [columns]
 
+        if '?' in values and len(values.strip('?, ')) == 0:
+            # it parametrized query, like 'insert into x (a,b,c) values (?,?,?)'
+            values = values.replace('?', "'?'")
+
         p = parse(f'select ({values})')['select']['value']
         values = p['literal'] if isinstance(p, dict) else p
         if isinstance(values, list) is False:
@@ -75,7 +80,7 @@ class SQLQuery():
                 v = None
             values[i] = v
 
-        return dict(zip(columns, values))
+        return OrderedDict(zip(columns, values))
 
     def __init__(self, sql, integration=None, database=None):
         # parse
@@ -863,6 +868,8 @@ class SQLQuery():
                 'table_name': table_name,
                 'name': column['field'],
                 'alias': column['caption'],
+                # NOTE all work with text-type, but if/when wanted change types to real,
+                # it will need to check all types casts in BinaryResultsetRowPacket
                 'type': TYPES.MYSQL_TYPE_VAR_STRING
             })
         return result

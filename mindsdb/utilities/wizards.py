@@ -40,6 +40,11 @@ def auto_config(python_path, pip_path, predictor_dir, datasource_dir):
             "default_mysql": {
                 "enabled": False,
                 "type": 'mysql'
+            },
+            "default_postgres": {
+                "enabled": False,
+                "type": 'postgres',
+                "database": 'postgres'
             }
         }
         ,"interface":{
@@ -164,6 +169,16 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
         config['integrations']['default_mariadb']['user'] = _in('MySQL user: ', 'root', use_default)
         config['integrations']['default_mariadb']['password'] = _in('MySQL password: ', '', use_default)
         config['integrations']['default_mariadb']['type'] = 'mysql'
+
+    mysql = _in('Connect to PostgreSQL ? [Y/N]', 'Y', use_default)
+    if mysql in ['Y', 'y']:
+        config['integrations']['default_postgres']['enabled'] = _in('Enable PostgreSQL integration ?: ', False, use_default)
+        config['integrations']['default_postgres']['host'] = _in('PostgreSQL host: ', 'localhost', use_default)
+        config['integrations']['default_postgres']['port'] = _in('PostgreSQL port: ', 3306, use_default)
+        config['integrations']['default_postgres']['user'] = _in('PostgreSQL user: ', 'root', use_default)
+        config['integrations']['default_postgres']['password'] = _in('PostgreSQL password: ', '', use_default)
+        config['integrations']['default_postgres']['database'] = _in('PostgreSQL database: ', 'postgres', use_default)
+        config['integrations']['default_postgres']['type'] = 'postgres'
 
     config_path = os.path.join(config_dir,'config.json')
     with open(config_path, 'w') as fp:

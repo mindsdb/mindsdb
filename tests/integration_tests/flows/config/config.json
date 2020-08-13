@@ -45,6 +45,15 @@
             "port": 3307,
             "type": "mysql",
             "user": "root"
+        },
+        "default_postgres": {
+            "enabled": true,
+            "host": "localhost",
+            "user": "postgres",
+            "password": "",
+            "database": "postgres",
+            "port": 5432,
+            "type": "postgres"
         }
     },
     "interface": {

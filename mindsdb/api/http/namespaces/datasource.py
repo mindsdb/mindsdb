@@ -126,7 +126,10 @@ def analyzing_thread(name, default_store):
     ds_analysis[name] = None
     ds = default_store.get_datasource(name)
     analysis = default_store.get_analysis(ds['name'])
-    ds_analysis[name] = analysis
+    ds_analysis[name] = {
+        'created_at': datetime.datetime.utcnow(),
+        'data': analysis
+    }
 
 
 @ns_conf.route('/<name>/analyze')
@@ -138,9 +141,10 @@ class Analyze(Resource):
         if name in ds_analysis:
             if ds_analysis[name] is None:
                 return {'status': 'analyzing'}, 200
-            else:
-                analysis = ds_analysis[name]
+            elif (datetime.datetime.utcnow() - ds_analysis[name]['created_at']) > datetime.timedelta(seconds=10):
                 del ds_analysis[name]
+            else:
+                analysis = ds_analysis[name]['data']
                 return analysis, 200
 
         ds = ca.default_store.get_datasource(name)

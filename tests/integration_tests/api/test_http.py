@@ -46,7 +46,8 @@ class HTTPTest(unittest.TestCase):
         res = requests.get(f'{root}/config/integrations')
         assert res.status_code == 200
         integration_names = res.json()
-        assert set(integration_names['integrations']) == set(['default_mariadb', 'default_clickhouse', 'default_mysql', 'default_postgres'])
+        for integration_name in integration_names['integrations']:
+            assert integration_name in ['default_mariadb', 'default_clickhouse', 'default_mysql', 'default_postgres', 'test_integration']
 
         test_integration_data = {'enabled': False, 'host': 'test', 'type': 'clickhouse'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
@@ -55,7 +56,8 @@ class HTTPTest(unittest.TestCase):
         res = requests.get(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
         test_integration = res.json()
-        assert len(test_integration) == 3
+        print(test_integration, len(test_integration))
+        assert len(test_integration) == 5
 
         res = requests.delete(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
@@ -105,6 +107,20 @@ class HTTPTest(unittest.TestCase):
         url = f'{root}/datasources/{ds_name}'
         res = requests.put(url, json=params)
         assert res.status_code == 200
+
+        db_ds_name = ds_name + '_db'
+        params = {
+            'name': db_ds_name
+            ,'query': 'SELECT arrayJoin([1,2,3]) as a, arrayJoin([1,2,3,4,5,6,7,8]) as b'
+            ,'integration_id': 'default_clickhouse'
+        }
+
+        url = f'{root}/datasources/{db_ds_name}'
+        res = requests.put(url, json=params)
+        assert res.status_code == 200
+        ds_data = res.json()
+        assert ds_data['source_type'] == 'default_clickhouse'
+        assert ds_data['row_count'] == 3 * 8
 
     def test_3_analyze(self):
         response = requests.get(f'{root}/datasources/{ds_name}/analyze')

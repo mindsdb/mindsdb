@@ -1,6 +1,7 @@
 import os
 import json
 import hashlib
+import datetime
 
 
 class Config(object):
@@ -113,6 +114,9 @@ class Config(object):
 
     # Higher level interface
     def add_db_integration(self, name, dict):
+        dict['date_last_update'] = str(datetime.datetime.now()).split('.')[0]
+        if 'database_name' not in dict:
+            dict['database_name'] = name
         if 'enabled' not in dict:
             dict['enabled'] = True
 

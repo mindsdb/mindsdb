@@ -102,6 +102,13 @@ class Datasource(Resource):
         else:
             data = request.json
 
+        if 'query' in data:
+            query = request.json['query']
+            source_type = request.json['integration_id']
+            ca.default_store.save_datasource(name, source_type, query)
+            os.rmdir(temp_dir_path)
+            return ca.default_store.get_datasource(name)
+
         ds_name = data['name'] if 'name' in data else name
         source = data['source'] if 'source' in data else name
         source_type = data['source_type']
@@ -110,7 +117,7 @@ class Datasource(Resource):
             file_path = os.path.join(temp_dir_path, data['file'])
         else:
             file_path = None
-        
+
         ca.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 

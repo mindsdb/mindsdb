@@ -57,7 +57,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         test_integration = res.json()
         print(test_integration, len(test_integration))
-        assert len(test_integration) == 5
+        assert len(test_integration) == 6
 
         res = requests.delete(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200

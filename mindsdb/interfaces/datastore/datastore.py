@@ -156,7 +156,7 @@ class DataStore():
             }
             json.dump(meta, fp)
 
-        return self.get_datasource_obj(name, raw=True)
+        return self.get_datasource_obj(name, raw=True), name
 
     def get_datasource_obj(self, name, raw=False):
         ds_meta_dir = os.path.join(self.dir, name)

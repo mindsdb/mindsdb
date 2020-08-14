@@ -51,6 +51,9 @@ script:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR && python3 tests/integration_tests/flows/test_clickhouse.py; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR && python3 tests/integration_tests/flows/test_mariadb.py; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR && python3 tests/integration_tests/flows/test_mysql.py; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR && python3 tests/integration_tests/flows/test_postgres.py; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then ps -aux | grep $(lsof -t -i:47334) || true; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sleep 61; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR/tests/integration_tests/api && python3 test_http.py; fi
 
   # Build windows installer

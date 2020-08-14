@@ -1,4 +1,5 @@
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
+from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
 
@@ -26,14 +27,17 @@ class DatabaseWrapper():
         integration_arr = []
         for db_alias in self.config['integrations']:
             if self.config['integrations'][db_alias]['enabled']:
-                if self.config['integrations'][db_alias]['type'] == 'clickhouse':
+                db_type = self.config['integrations'][db_alias]['type']
+                if db_type == 'clickhouse':
                     integration_arr.append(Clickhouse(self.config, db_alias))
-                elif self.config['integrations'][db_alias]['type'] == 'mariadb':
+                elif db_type == 'mariadb':
                     integration_arr.append(Mariadb(self.config, db_alias))
-                elif self.config['integrations'][db_alias]['type'] == 'mysql':
+                elif db_type == 'mysql':
                     integration_arr.append(MySQL(self.config, db_alias))
+                elif db_type == 'postgres':
+                    integration_arr.append(PostgreSQL(self.config, db_alias))
                 else:
-                    print('Uknown integration type: ' + self.config['integrations'][db_alias]['type'] + f' for database called: {db_alias}')
+                    print(f'Uknown integration type: {db_type} for database called: {db_alias}')
 
         return integration_arr
 
@@ -41,10 +45,12 @@ class DatabaseWrapper():
         it = self._get_integrations()
         if setup:
             it = self._setup_integrations(it)
-        for integration in it: integration.register_predictors(model_data_arr)
+        for integration in it:
+            integration.register_predictors(model_data_arr)
 
     def unregister_predictor(self, name):
-        for integration in self._get_integrations(): integration.unregister_predictor(name)
+        for integration in self._get_integrations():
+            integration.unregister_predictor(name)
 
     def check_connections(self):
         connections = {}

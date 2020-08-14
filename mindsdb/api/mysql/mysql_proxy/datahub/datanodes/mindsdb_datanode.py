@@ -5,6 +5,7 @@ import pandas
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
+from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
 
@@ -101,6 +102,9 @@ class MindsDBDataNode(DataNode):
             elif dbtype == 'mysql':
                 mysql = MySQL(self.config, came_from)
                 data = mysql._query(select_data_query)
+            elif dbtype == 'postgres':
+                mysql = PostgreSQL(self.config, came_from)
+                data = mysql._query(select_data_query)
             else:
                 raise Exception(f'Unknown database type: {dbtype}')
 
@@ -153,16 +157,23 @@ class MindsDBDataNode(DataNode):
             for key in keys:
                 row[key] = res._data[key][i]
                 # +++ FIXME this fix until issue https://github.com/mindsdb/mindsdb/issues/591 not resolved
-                if key in model['data_analysis_v2'] and model['data_analysis_v2'][key]['typing']['data_subtype'] == 'Timestamp' and row[key] is not None:
+                typing = None
+                if key in model['data_analysis_v2']:
+                    typing = model['data_analysis_v2'][key]['typing']['data_subtype']
+
+                if typing == 'Timestamp' and row[key] is not None:
                     timestamp = datetime.datetime.utcfromtimestamp(row[key])
                     row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                elif typing == 'Date':
+                    timestamp = datetime.datetime.utcfromtimestamp(row[key])
+                    row[key] = timestamp.strftime('%Y-%m-%d')
                 # ---
             for key in predicted_columns:
                 row[key + '_confidence'] = explanation[key]['confidence']
                 row[key + '_explain'] = json.dumps(explanation[key])
             for key in min_max_keys:
-                row[key + '_min'] = explanation[key]['confidence_interval'][0]
-                row[key + '_max'] = explanation[key]['confidence_interval'][-1]
+                row[key + '_min'] = min(explanation[key]['confidence_interval'])
+                row[key + '_max'] = max(explanation[key]['confidence_interval'])
             row['select_data_query'] = select_data_query
             row['external_datasource'] = external_datasource
             row['when_data'] = original_when_data

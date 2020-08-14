@@ -13,7 +13,7 @@ import mindsdb
 
 from mindsdb.interfaces.datastore.sqlite_helpers import *
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS
 
 class DataStore():
     def __init__(self, config, storage_dir=None):
@@ -107,6 +107,9 @@ class DataStore():
             elif integration['type'] == 'mysql':
                 dsClass = MySqlDS
                 picklable['class'] = 'MySqlDS'
+            elif integration['type'] == 'postgres':
+                dsClass = PostgresDS
+                picklable['class'] = 'PostgresDS'
             else:
                 raise ValueError(f'Unknown DS source_type: {source_type}')
             ds = dsClass(
@@ -135,7 +138,7 @@ class DataStore():
             pickle.dump(picklable, fp)
 
         with open(os.path.join(ds_dir,'metadata.json'), 'w') as fp:
-            json.dump({
+            meta = {
                 'name': name,
                 'source_type': source_type,
                 'source': source,
@@ -143,7 +146,8 @@ class DataStore():
                 'updated_at': str(datetime.datetime.now()).split('.')[0],
                 'row_count': len(df),
                 'columns': [dict(name=x) for x in list(df.keys())]
-            }, fp)
+            }
+            json.dump(meta, fp)
 
         return self.get_datasource_obj(name, raw=True)
 

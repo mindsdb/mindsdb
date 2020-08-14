@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import re
+import threading
 
 import tempfile
 import multipart
@@ -102,6 +103,13 @@ class Datasource(Resource):
         else:
             data = request.json
 
+        if 'query' in data:
+            query = request.json['query']
+            source_type = request.json['integration_id']
+            ca.default_store.save_datasource(name, source_type, query)
+            os.rmdir(temp_dir_path)
+            return ca.default_store.get_datasource(name)
+
         ds_name = data['name'] if 'name' in data else name
         source = data['source'] if 'source' in data else name
         source_type = data['source_type']
@@ -110,11 +118,25 @@ class Datasource(Resource):
             file_path = os.path.join(temp_dir_path, data['file'])
         else:
             file_path = None
-        
+
         ca.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 
         return ca.default_store.get_datasource(ds_name)
+
+
+ds_analysis = {}
+
+
+def analyzing_thread(name, default_store):
+    global ds_analysis
+    ds_analysis[name] = None
+    ds = default_store.get_datasource(name)
+    analysis = default_store.get_analysis(ds['name'])
+    ds_analysis[name] = {
+        'created_at': datetime.datetime.utcnow(),
+        'data': analysis
+    }
 
 
 @ns_conf.route('/<name>/analyze')
@@ -122,14 +144,28 @@ class Datasource(Resource):
 class Analyze(Resource):
     @ns_conf.doc('analyse_dataset')
     def get(self, name):
+        global ds_analysis
+        if name in ds_analysis:
+            if ds_analysis[name] is None:
+                return {'status': 'analyzing'}, 200
+            elif (datetime.datetime.utcnow() - ds_analysis[name]['created_at']) > datetime.timedelta(seconds=10):
+                del ds_analysis[name]
+            else:
+                analysis = ds_analysis[name]['data']
+                return analysis, 200
+
         ds = ca.default_store.get_datasource(name)
         if ds is None:
             print('No valid datasource given')
             abort(400, 'No valid datasource given')
 
-        analysis = ca.default_store.get_analysis(ds['name'])
-
-        return analysis, 200
+        if ds['row_count'] <= 10000:
+            analysis = ca.default_store.get_analysis(ds['name'])
+            return analysis, 200
+        else:
+            x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))
+            x.start()
+            return {'status': 'analyzing'}, 200
 
 
 @ns_conf.route('/<name>/analyze_subset')

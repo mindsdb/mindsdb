@@ -154,6 +154,40 @@ Due to some repository restructuring the "old" Mindsdb repository is now Mindsdb
 
 Thanks for Max Stepanov (@StpMax) , Zoran Pandovski (@ZoranPandovski), Jorge Torres(@torrmal) for their contributions to Mindsdb Server, even though their contributions to those particular components may not show up in the commit history.
 
+## Running mindsdb as a developer
+
+1. Make your you have python3 and pip3 installed (one some environments pip3 might be called pip instead, if you don't have the `pip3` command just run `pip --version` and if it says something with `(python 3.x)` in there that means you can use that). The version of python3 should be > 3.4.
+
+2. If you already installed mindsdb via pip uninstall it and all related mindsdb packages by running:
+
+`pip3 uninstall mindsdb; pip3 uninstall mindsdb_native; pip3 uninstall lightwood; sudo pip3 uninstall mindsdb; sudo pip3 uninstall mindsdb_native; sudo pip3 uninstall lightwood;`
+
+That should get rid of all local versions of mindsdb you have.
+
+3. Pick a directory (here I'll call it `/home/my_user` and clone the repository you want to use there).
+
+For mindsdb this would be `git clone git@github.com:mindsdb/mindsdb.git`
+For native: `git clone git@github.com:mindsdb/mindsdb_native.git`
+For lightwood: `git clone git@github.com:mindsdb/lightwood.git`
+
+4. Install everything in the `requirements.txt` files of the project.
+
+For mindsdb this would be `cd mindsdb && pip3 install -r requirements.txt --user`
+
+5. Add the projects you want to use to your `PYTHONPATH` env variable by running:
+
+`export PYTHONPATH=/home/my_user/mindsdb` (replace `mindsdb` with `mindsdb_native` and `lightwood` for those packages)
+
+If you want to use multiple projects at once you can add `:` between the directories to pythonpath, e.g.
+
+`export PYTHONPATH=/home/my_user/mindsdb_native:/home/my_user/lightwood:/home/my_user/mindsdb`
+
+Add that same `export` command in a new line at the end of your `~/.bashrc` files to have this exported when the computer boots up in all terminals.
+
+6. Note, when running a script importing these libraries or running them as a python module (e.g. `python3 -m mindsdb`) make sure you are in a directory other than `/home/my_user` or `/home/my_user/package_name` (where `package_name` is mindsdb, lightwood or mindsdb_native). Otherwise the python importer will fail to properly import them
+
+7. If you want to install a version of mindsdb, lightwood ... etc from pip, do it in a virtualenv where you run `export PYTHONPATH=''`, otherwise the `PYTHONPATH` exports will override the version installed via pip
+
 ## Report Issues
 
 Please help us by [reporting any issues](https://github.com/mindsdb/mindsdb/issues/new/choose) you may have while using MindsDB.

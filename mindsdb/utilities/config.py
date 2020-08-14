@@ -1,6 +1,7 @@
 import os
 import json
 import hashlib
+import datetime
 
 
 class Config(object):
@@ -55,6 +56,18 @@ class Config(object):
             version.append(0)
         return version
 
+    def _format(self):
+        ''' changing user input to formalised view
+        '''
+        for integration in self._config.get('integrations', {}).values():
+            password = integration.get('password')
+            password = '' if password is None else str(password)
+            integration['password'] = str(password)
+
+        password = self._config['api']['mysql'].get('password')
+        password = '' if password is None else str(password)
+        self._config['api']['mysql']['password'] = str(password)
+
     def _read(self):
         if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
             with open(self.config_path, 'r') as fp:
@@ -63,6 +76,7 @@ class Config(object):
                     self._migrate()
                     self._save()
                 self._validate()
+                self._format()
         else:
             raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
 
@@ -113,6 +127,9 @@ class Config(object):
 
     # Higher level interface
     def add_db_integration(self, name, dict):
+        dict['date_last_update'] = str(datetime.datetime.now()).split('.')[0]
+        if 'database_name' not in dict:
+            dict['database_name'] = name
         if 'enabled' not in dict:
             dict['enabled'] = True
 

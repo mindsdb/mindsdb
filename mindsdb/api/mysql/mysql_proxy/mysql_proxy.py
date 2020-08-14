@@ -363,11 +363,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
             insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-            ds = default_store.save_datasource(insert['name'], integration, insert['select_data_query'])
+            ds, ds_name = default_store.save_datasource(insert['name'], integration, insert['select_data_query'])
         elif is_external_datasource:
             ds = default_store.get_datasource_obj(insert['external_datasource'], raw=True)
+            ds_name = insert['external_datasource']
 
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
+
+        ds_columns = [x['name'] for x in default_store.get_datasource(ds_name)['columns']]
+        for col in insert['predict']:
+            if col not in ds_columns:
+                if is_select_data_query:
+                    default_store.delete_datasource(ds_name)
+                raise Exception(f"Column '{col}' not exists")
 
         mdb.learn(insert['name'], ds, insert['predict'], kwargs)
 
@@ -779,7 +787,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 self.packet(OkPacket).send()
         elif keyword == 'use':
-            self.session.database = sql_lower.split()[1].trim(' ;')
+            self.session.database = sql_lower.split()[1].strip(' ;')
             self.packet(OkPacket).send()
         elif 'show warnings' in sql_lower:
             self.answerShowWarnings()

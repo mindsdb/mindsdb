@@ -441,7 +441,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         sql = statement.sql
         sql_lower = sql.lower()
         stmt_id = self.session.register_stmt(sql)
-        prepared_stmt = self.session.prepared_stmt[stmt_id]
+        prepared_stmt = self.session.prepared_stmts[stmt_id]
 
         if statement.keyword == 'insert':
             prepared_stmt['type'] = 'insert'
@@ -540,7 +540,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def answer_stmt_execute(self, stmt_id, parameters):
-        prepared_stmt = self.session.prepared_stmt[stmt_id]
+        prepared_stmt = self.session.prepared_stmts[stmt_id]
         if prepared_stmt['type'] == 'select':
             sql = prepared_stmt['sql']
             query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
@@ -607,7 +607,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_stmt_fetch(self, stmt_id, limit=100000):
         global datahub
-        statement = self.session.prepared_stmt[stmt_id]
+        statement = self.session.prepared_stmts[stmt_id]
         sql = statement.get('prepared_sql', statement['sql'])
         fetched = statement['fetched']
         query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)

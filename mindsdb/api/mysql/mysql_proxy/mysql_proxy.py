@@ -434,9 +434,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             msg="at this moment only 'delete predictor' command supported"
         ).send()
 
-    def get_binary_resultset(self, columns, row):
-        return self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
-
     def answer_stmt_prepare(self, statement):
         sql = statement.sql
         sql_lower = sql.lower()
@@ -625,7 +622,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages = []
         columns = query.columns
         for row in query.result[fetched:limit]:
-            packages.append(self.get_binary_resultset(columns, row))
+            packages.append(
+                self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
+            )
 
         statement['fetched'] += len(query.result[fetched:limit])
 

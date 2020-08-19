@@ -412,21 +412,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         for predictor_name in predictors_names:
             datahub['mindsdb'].delete_predictor(predictor_name)
 
-    def handle_custom_command(self, statement):
-        struct = statement.struct
-        if len(struct['columns']) == 0:
-            struct['columns'] = ['command']
-
-        insert = OrderedDict(zip(struct['columns'], struct['values']))
-
-        if 'command' not in insert:
-            self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg="Error: 'command' should be inserted").send()
-            return
-        if len(insert) > 1:
-            self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg="Error: only 'command' should be inserted").send()
-            return
-
-        command = insert['command'].strip(' ;').split()
+    def handle_custom_command(self, command):
+        command = command.strip(' ;').split()
 
         if command[0].lower() == 'delete' and command[1].lower() == 'predictor':
             if len(command) != 3:
@@ -583,9 +570,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             database = struct['database'].lower() if isinstance(struct['database'], str) else None
             if table == 'commands' \
                     and (database == 'mindsdb' or database is None and self.session.database == 'mindsdb'):
-                sql = sql.replace('?', f"'{insert_dict['command']}'")
-                statement = SqlStatementParser(sql)
-                self.handle_custom_command(statement)
+                if len(insert_dict) != 1 or 'command' not in insert_dict:
+                    self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg="Error: only 'command' should be inserted in mindsdb.commands").send()
+                    return
+                self.handle_custom_command(insert_dict['command'])
             elif table == 'predictors' \
                     and (database == 'mindsdb' or database is None and self.session.database == 'mindsdb'):
                 self.insert_predictor_answer(insert_dict)
@@ -834,7 +822,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'insert' \
                 and (struct['database'] == 'mindsdb' or struct['database'] is None and self.session.database == 'mindsdb') \
                 and struct['table'] == 'commands':
-            self.handle_custom_command(statement)
+            insert = OrderedDict(zip(struct['columns'], struct['values']))
+            if len(insert) != 1 or 'command' not in insert:
+                self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg="Error: only 'command' should be inserted in mindsdb.commands").send()
+                return
+            self.handle_custom_command(insert['command'])
         elif keyword == 'insert' \
                 and (struct['database'] == 'mindsdb' or struct['database'] is None and self.session.database == 'mindsdb') \
                 and struct['table'] == 'predictors':

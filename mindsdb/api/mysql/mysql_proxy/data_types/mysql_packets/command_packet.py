@@ -12,10 +12,11 @@
 import struct
 import math
 
-# import logging
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import COMMANDS, getConstName, TYPES
+
+from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SQL_PARAMETER
 
 
 class CommandPacket(Packet):
@@ -58,9 +59,13 @@ class CommandPacket(Packet):
 
             self.parameters = []
 
-            statement = self.session.statements[self.stmt_id.value]
+            statement = self.session.prepared_stmt[self.stmt_id.value]
             if statement['type'] in ['insert', 'delete']:
-                num_params = len(statement['insert']) if statement['type'] == 'insert' else 1
+                if statement['type'] == 'insert':
+                    num_params = statement['parsed_statement'].struct['values'].count(SQL_PARAMETER)
+                else:
+                    num_params = 1  # hardcoded
+
                 if num_params > 0:
                     # read null-map
                     null_bytes = math.floor((num_params + 7) / 8)

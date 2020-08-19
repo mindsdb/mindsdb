@@ -30,16 +30,16 @@ class SessionController():
         self.integration = None
         self.database = None
 
-        self.statements = {}
+        self.prepared_stmt = {}
 
-    def register_statement(self, sql):
-        self.statements.keys()
+    def register_stmt(self, sql):
         i = 1
-        while i in self.statements and i < 100:
+        while i in self.prepared_stmt and i < 100:
             i = i + 1
         if i == 100:
             raise Exception('Too many unclosed queries')
-        self.statements[i] = dict(
+
+        self.prepared_stmt[i] = dict(
             type=None,
             sql=sql,
             insert=None,
@@ -47,5 +47,5 @@ class SessionController():
         )
         return i
 
-    def unregister_statement(self, statement_id):
-        del self.statements[statement_id]
+    def unregister_stmt(self, stmt_id):
+        del self.prepared_stmt[stmt_id]

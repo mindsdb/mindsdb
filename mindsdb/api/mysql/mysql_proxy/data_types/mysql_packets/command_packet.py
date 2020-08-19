@@ -59,10 +59,11 @@ class CommandPacket(Packet):
 
             self.parameters = []
 
-            statement = self.session.prepared_stmt[self.stmt_id.value]
-            if statement['type'] in ['insert', 'delete']:
-                if statement['type'] == 'insert':
-                    num_params = statement['parsed_statement'].struct['values'].count(SQL_PARAMETER)
+            prepared_stmt = self.session.prepared_stmts[self.stmt_id.value]
+
+            if prepared_stmt['type'] in ['insert', 'delete']:
+                if prepared_stmt['type'] == 'insert':
+                    num_params = prepared_stmt['statement'].struct['values'].count(SQL_PARAMETER)
                 else:
                     num_params = 1  # hardcoded
 

@@ -32,7 +32,7 @@ class SessionController():
 
         self.prepared_stmts = {}
 
-    def register_stmt(self, sql):
+    def register_stmt(self, statement):
         i = 1
         while i in self.prepared_stmts and i < 100:
             i = i + 1
@@ -41,9 +41,7 @@ class SessionController():
 
         self.prepared_stmts[i] = dict(
             type=None,
-            sql=sql,
-            # parsed_statement
-            insert=None,
+            statement=statement,
             fetched=0
         )
         return i

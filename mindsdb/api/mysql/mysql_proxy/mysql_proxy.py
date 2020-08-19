@@ -436,8 +436,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_stmt_prepare(self, statement):
         sql = statement.sql
-        sql_lower = sql.lower()
-        stmt_id = self.session.register_stmt(sql)
+        stmt_id = self.session.register_stmt(statement)
         prepared_stmt = self.session.prepared_stmts[stmt_id]
 
         if statement.keyword == 'insert':
@@ -446,8 +445,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             struct = statement.struct
             if struct['table'] not in ['predictors', 'commands']:
                 raise Exception("Only parametrized insert into 'predictors' or 'commands' supported at this moment")
-
-            prepared_stmt['parsed_statement'] = statement
 
             columns_str = ','.join([f'`{col}`' for col in struct['columns']])
             query = SQLQuery(
@@ -472,14 +469,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     type=TYPES.MYSQL_TYPE_VAR_STRING,
                     charset=CHARSET_NUMBERS['binary']
                 ))
-        elif statement.keyword == 'select' and sql_lower.endswith('for update'):
+        elif statement.keyword == 'select' and statement.ends_with('for update'):
             # postgres when execute "delete from mindsdb.predictors where name = 'x'" sends for it prepare statement:
             # 'select name from mindsdb.predictors where name = 'x' FOR UPDATE;'
             # and after it send prepare for delete query.
             prepared_stmt['type'] = 'lock'
-            sql = sql[:sql.rfind('FOR UPDATE')]
-            prepared_stmt['prepared_sql'] = sql
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+            statement.cut_from_tail('for update')
+            query = SQLQuery(statement.sql, integration=self.session.integration, database=self.session.database)
             num_columns = len(query.columns)
             num_params = 0
             columns_def = query.columns
@@ -489,8 +485,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif statement.keyword == 'delete':
             prepared_stmt['type'] = 'delete'
 
-            fake_sql = sql.strip(' ')
-            fake_sql = fake_sql.replace('?', '"?"')
+            fake_sql = sql.replace('?', '"?"')
             fake_sql = 'select name ' + fake_sql[len('delete '):]
             query = SQLQuery(fake_sql, integration=self.session.integration, database=self.session.database)
             num_columns = 0
@@ -539,7 +534,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def answer_stmt_execute(self, stmt_id, parameters):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
         if prepared_stmt['type'] == 'select':
-            sql = prepared_stmt['sql']
+            sql = prepared_stmt['statement'].sql
             query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
 
             columns = query.columns
@@ -552,7 +547,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.packet(EofPacket, status=0x0062))
             self.sendPackageGroup(packages)
         elif prepared_stmt['type'] == 'insert':
-            statement = prepared_stmt['parsed_statement']
+            statement = prepared_stmt['statement']
             struct = statement.struct
 
             insert_dict = OrderedDict(zip(struct['columns'], struct['values']))
@@ -577,7 +572,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 raise NotImplementedError("Only 'insert into predictors' and 'insert into commands' implemented")
         elif prepared_stmt['type'] == 'lock':
-            sql = prepared_stmt['prepared_sql']
+            sql = prepared_stmt['statement'].sql
             query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
 
             columns = query.columns
@@ -597,16 +592,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif prepared_stmt['type'] == 'delete':
             if len(parameters) != 1:
                 raise SqlError("Delete statement must content 'where' filter")
-            self.delete_predictor_sql(prepared_stmt['sql'].replace('?', f"'{parameters[0]}'"))
+            self.delete_predictor_sql(prepared_stmt['statement'].sql.replace('?', f"'{parameters[0]}'"))
             self.packet(OkPacket).send()
         else:
             raise NotImplementedError(f"Unknown statement type: {prepared_stmt['type']}")
 
     def answer_stmt_fetch(self, stmt_id, limit=100000):
         global datahub
-        statement = self.session.prepared_stmts[stmt_id]
-        sql = statement.get('prepared_sql', statement['sql'])
-        fetched = statement['fetched']
+        prepared_stmt = self.session.prepared_stmts[stmt_id]
+        sql = prepared_stmt['statement'].sql
+        fetched = prepared_stmt['fetched']
         query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
 
         result = query.fetch(datahub)
@@ -626,7 +621,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
             )
 
-        statement['fetched'] += len(query.result[fetched:limit])
+        prepared_stmt['fetched'] += len(query.result[fetched:limit])
 
         if len(query.result) <= limit:
             status = sum([

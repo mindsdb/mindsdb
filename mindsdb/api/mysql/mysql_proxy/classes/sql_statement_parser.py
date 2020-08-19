@@ -12,7 +12,10 @@ from pyparsing import (
     OneOrMore,
     delimitedList,
     Optional,
-    Suppress
+    Suppress,
+    CaselessKeyword,
+    ParseException,
+    SkipTo
 )
 import re
 
@@ -132,6 +135,32 @@ class SqlStatementParser():
             if text.startswith(quote) and text.endswith(quote):
                 return text[1:-1]
         return text
+
+    def ends_with(self, text):
+        ''' Check if sql ends with 'text'. Not case sensitive.
+        '''
+        test_sql = ' '.join(self._sql.split()).lower()
+        return test_sql.endswith(text.lower())
+
+    def cut_from_tail(self, text):
+        ''' Removes 'text' from end of sql. Not case sensitive.
+        '''
+        text_arr = text.split(' ')
+
+        ending = CaselessKeyword(text_arr[0])
+        for x in text_arr[1:]:
+            ending = ending + CaselessKeyword(x)
+        ending = ending + StringEnd()
+
+        expr = (originalTextFor(SkipTo(ending)))('original') + (originalTextFor(ending))('ending')
+
+        try:
+            r = expr.parseString(self._sql)
+        except ParseException:
+            return False
+
+        self._sql = r.asDict()['original'].strip()
+        return True
 
     def parse_as_insert(self) -> dict:
         ''' Parse insert. Example: 'insert into database.table (columns) values (values)'

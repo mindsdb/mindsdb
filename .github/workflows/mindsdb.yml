@@ -10,9 +10,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8]
-        #include:
-        #  - os: macos-latest
-        #    python-version: 3.7
+        include:
+          - os: macos-latest
+            python-version: 3.7
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -32,13 +32,15 @@ jobs:
         #flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with unittest
       run: |
-        cd tests/docker
-        docker-compose -f docker-compose.yml up -d
-        cd ../..
-        pip install -r requirements_test.txt
-        cd tests/integration_tests/flows/
-        python -m unittest
-
+        if [ "$RUNNER_OS" != "macOS" ]; then
+          cd tests/docker
+          docker-compose -f docker-compose.yml up -d
+          cd ../..
+          pip install -r requirements_test.txt
+          cd tests/integration_tests/flows/
+          python -m unittest
+        fi
+        
   deploy:
     runs-on: ubuntu-latest
     needs: test

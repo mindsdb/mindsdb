@@ -10,9 +10,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8]
-        include:
-          - os: macos-latest
-            python-version: 3.7
+        #include:
+        #  - os: macos-latest
+        #    python-version: 3.7
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}

@@ -1,4 +1,3 @@
-import argparse
 import atexit
 import traceback
 import sys
@@ -14,6 +13,7 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.utilities.fs import get_or_create_dir_struct
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.utilities.functions import args_parse
 
 
 def close_api_gracefully(p_arr):
@@ -27,11 +27,7 @@ def close_api_gracefully(p_arr):
 if __name__ == '__main__':
     mp.freeze_support()
 
-    parser = argparse.ArgumentParser(description='CL argument for mindsdb server')
-    parser.add_argument('--api', type=str, default=None)
-    parser.add_argument('--config', type=str, default=None)
-
-    args = parser.parse_args()
+    args = args_parse()
 
     config_path = args.config
     if config_path is None:
@@ -40,8 +36,6 @@ if __name__ == '__main__':
 
     print(f'Using configuration file: {config_path}')
     config = Config(config_path)
-
-    CONFIG.MINDSDB_STORAGE_PATH = config['interface']['mindsdb_native']['storage_dir']
 
     if args.api is None:
         api_arr = [api for api in config['api']]

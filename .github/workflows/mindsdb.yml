@@ -33,7 +33,7 @@ jobs:
     - name: Test with unittest
       run: |
         cd tests/docker
-        docker-compose up -d
+        docker-compose -f docker-compose.yml up -d
         cd ../..
         pip install -r requirements_test.txt
         cd tests/integration_tests/flows/

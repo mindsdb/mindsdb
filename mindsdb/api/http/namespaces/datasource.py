@@ -73,11 +73,12 @@ class Datasource(Resource):
             value = field.value.decode()
             data[name] = value
 
+        file_object = None
+
         def on_file(file):
+            nonlocal file_object
             data['file'] = file.file_name.decode()
-            f = file.file_object
-            if not f.closed:
-                f.close()
+            file_object = file.file_object
 
         temp_dir_path = tempfile.mkdtemp(prefix='datasource_file_')
 
@@ -101,6 +102,9 @@ class Datasource(Resource):
                 parser.write(chunk)
             parser.finalize()
             parser.close()
+
+            if file_object is not None and not file_object.closed:
+                file_object.close()
         else:
             data = request.json
 

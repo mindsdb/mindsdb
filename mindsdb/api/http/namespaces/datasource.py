@@ -1,12 +1,9 @@
 import datetime
-import json
 import os
-import re
 import threading
-
 import tempfile
+
 import multipart
-import csv
 
 import mindsdb
 from dateutil.parser import parse
@@ -69,6 +66,7 @@ class Datasource(Resource):
     def put(self, name):
         '''add new datasource'''
         data = {}
+
         def on_field(field):
             print(f'\n\n{field}\n\n')
             name = field.field_name.decode()
@@ -77,6 +75,9 @@ class Datasource(Resource):
 
         def on_file(file):
             data['file'] = file.file_name.decode()
+            f = file.file_object
+            if not f.closed:
+                f.close()
 
         temp_dir_path = tempfile.mkdtemp(prefix='datasource_file_')
 

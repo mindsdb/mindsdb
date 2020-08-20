@@ -1,12 +1,9 @@
 import datetime
-import json
 import os
-import re
 import threading
-
 import tempfile
+
 import multipart
-import csv
 
 import mindsdb
 from dateutil.parser import parse
@@ -69,14 +66,19 @@ class Datasource(Resource):
     def put(self, name):
         '''add new datasource'''
         data = {}
+
         def on_field(field):
             print(f'\n\n{field}\n\n')
             name = field.field_name.decode()
             value = field.value.decode()
             data[name] = value
 
+        file_object = None
+
         def on_file(file):
+            nonlocal file_object
             data['file'] = file.file_name.decode()
+            file_object = file.file_object
 
         temp_dir_path = tempfile.mkdtemp(prefix='datasource_file_')
 
@@ -100,6 +102,9 @@ class Datasource(Resource):
                 parser.write(chunk)
             parser.finalize()
             parser.close()
+
+            if file_object is not None and not file_object.closed:
+                file_object.close()
         else:
             data = request.json
 

@@ -73,7 +73,7 @@ class DataStore():
         if source_type == 'file':
             try:
                 source = os.path.join(ds_dir, source)
-                os.replace(file_path, source)
+                shutil.move(file_path, source)
                 ds = FileDS(source)
             except Exception:
                 shutil.rmtree(ds_meta_dir)

@@ -32,9 +32,11 @@ jobs:
         #flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with unittest
       run: |
-        cd tests
+        cd tests/docker
+        docker-compose up -d
+        cd ../..
+        cd tests/integration_tests/flows/
         python -m unittest
-        cd ..
 
   deploy:
     runs-on: ubuntu-latest

@@ -35,6 +35,7 @@ jobs:
         cd tests/docker
         docker-compose up -d
         cd ../..
+        pip install -r requirements_test.txt
         cd tests/integration_tests/flows/
         python -m unittest
 

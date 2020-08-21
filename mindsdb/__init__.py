@@ -1,4 +1,5 @@
 import os
+import sys
 
 from mindsdb.utilities.fs import get_or_create_dir_struct, create_directory
 from mindsdb.utilities.wizards import cli_config
@@ -15,7 +16,11 @@ args = args_parse()
 if args.config is not None:
     config_path = args.config
 
-config = Config(config_path)
+try:
+    config = Config(config_path)
+except Exception as e:
+    print(str(e))
+    sys.exit(1)
 
 try:
     datasource_dir = config['interface']['datastore']['storage_dir']

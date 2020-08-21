@@ -43,7 +43,9 @@ class Config(object):
 
     def _validate(self):
         integrations = self._config.get('integrations', {})
-        for key in integrations:
+        for key, value in integrations.items():
+            if not isinstance(value, dict):
+                raise TypeError(f"Config error: integration '{key}' must be dict type")
             if 'type' not in integrations[key]:
                 raise KeyError(f"Config error: for integration '{key}' key 'type' must be specified")
 

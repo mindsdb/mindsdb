@@ -49,39 +49,6 @@ class SQLQuery():
     struct = {}
     result = None
 
-    @staticmethod
-    def parse_insert(sql):
-        columns = sql[:sql.find(')')]
-        values = sql[len(columns):]
-
-        columns = columns[columns.find('(') + 1:]
-        values = values[values.find('(') + 1:values.rfind(')')]
-
-        p = parse(f'select ({columns})')['select']['value']
-        columns = p['literal'] if isinstance(p, dict) else p
-        if isinstance(columns, list) is False:
-            columns = [columns]
-
-        if '?' in values and len(values.strip('?, ')) == 0:
-            # it parametrized query, like 'insert into x (a,b,c) values (?,?,?)'
-            values = values.replace('?', "'?'")
-
-        p = parse(f'select ({values})')['select']['value']
-        values = p['literal'] if isinstance(p, dict) else p
-        if isinstance(values, list) is False:
-            values = [values]
-        for i, v in enumerate(values):
-            if isinstance(v, dict):
-                if 'literal' in v:
-                    v = v['literal']
-                else:
-                    raise ValueError(f'Error while parse insert query: {sql}')
-            elif v == 'null':
-                v = None
-            values[i] = v
-
-        return OrderedDict(zip(columns, values))
-
     def __init__(self, sql, integration=None, database=None):
         # parse
         self.integration = integration

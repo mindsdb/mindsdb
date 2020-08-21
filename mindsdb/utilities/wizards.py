@@ -163,12 +163,12 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
 
     mysql = _in('Connect to MySQL ? [Y/N]', 'Y', use_default)
     if mysql in ['Y', 'y']:
-        config['integrations']['default_mariadb']['enabled'] = _in('Enable MySQL integration ?: ', False, use_default)
-        config['integrations']['default_mariadb']['host'] = _in('MySQL host: ', 'localhost', use_default)
-        config['integrations']['default_mariadb']['port'] = _in('MySQL port: ', 3306, use_default)
-        config['integrations']['default_mariadb']['user'] = _in('MySQL user: ', 'root', use_default)
-        config['integrations']['default_mariadb']['password'] = _in('MySQL password: ', '', use_default)
-        config['integrations']['default_mariadb']['type'] = 'mysql'
+        config['integrations']['default_mysql']['enabled'] = _in('Enable MySQL integration ?: ', False, use_default)
+        config['integrations']['default_mysql']['host'] = _in('MySQL host: ', 'localhost', use_default)
+        config['integrations']['default_mysql']['port'] = _in('MySQL port: ', 3306, use_default)
+        config['integrations']['default_mysql']['user'] = _in('MySQL user: ', 'root', use_default)
+        config['integrations']['default_mysql']['password'] = _in('MySQL password: ', '', use_default)
+        config['integrations']['default_mysql']['type'] = 'mysql'
 
     mysql = _in('Connect to PostgreSQL ? [Y/N]', 'Y', use_default)
     if mysql in ['Y', 'y']:

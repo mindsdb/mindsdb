@@ -31,7 +31,8 @@ try:
 except KeyError:
     pass
 
-map(create_directory, [datasource_dir, predictor_dir])
+create_directory(datasource_dir)
+create_directory(predictor_dir)
 
 os.environ['MINDSDB_STORAGE_PATH'] = datasource_dir
 

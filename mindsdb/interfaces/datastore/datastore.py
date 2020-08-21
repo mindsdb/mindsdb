@@ -4,16 +4,11 @@ from dateutil.parser import parse as parse_dt
 import shutil
 import os
 import pickle
-import sys
 
-if os.name == 'posix':
-    import resource
-
-import mindsdb
-
-from mindsdb.interfaces.datastore.sqlite_helpers import *
+from mindsdb.interfaces.datastore.sqlite_helpers import get_sqlite_data, cast_df_columns_types, create_sqlite_db
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS
+
 
 class DataStore():
     def __init__(self, config, storage_dir=None):
@@ -22,11 +17,10 @@ class DataStore():
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):
-        if isinstance(ds,str):
+        if isinstance(ds, str):
             return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
         else:
             return self.mindsdb_native.analyse_dataset(ds)
-
 
     def get_datasources(self):
         datasource_arr = []
@@ -77,13 +71,18 @@ class DataStore():
         os.mkdir(ds_dir)
 
         if source_type == 'file':
-            source = os.path.join(ds_dir, source)
-            os.replace(file_path, source)
-            ds = FileDS(source)
+            try:
+                source = os.path.join(ds_dir, source)
+                shutil.move(file_path, source)
+                ds = FileDS(source)
+            except Exception:
+                shutil.rmtree(ds_meta_dir)
+                raise
+
             picklable = {
-                'class': 'FileDS'
-                ,'args': [source]
-                ,'kwargs': {}
+                'class': 'FileDS',
+                'args': [source],
+                'kwargs': {}
             }
         elif source_type in self.config['integrations']:
             integration = self.config['integrations'][source_type]
@@ -112,21 +111,29 @@ class DataStore():
                 picklable['class'] = 'PostgresDS'
             else:
                 raise ValueError(f'Unknown DS source_type: {source_type}')
-            ds = dsClass(
-                query=source,
-                user=integration['user'],
-                password=integration['password'],
-                host=integration['host'],
-                port=integration['port']
-            )
+            try:
+                ds = dsClass(
+                    query=source,
+                    user=integration['user'],
+                    password=integration['password'],
+                    host=integration['host'],
+                    port=integration['port']
+                )
+            except Exception:
+                shutil.rmtree(ds_meta_dir)
+                raise
         else:
             # This probably only happens for urls
             print('Create URL data source !')
-            ds = FileDS(source)
+            try:
+                ds = FileDS(source)
+            except Exception:
+                shutil.rmtree(ds_meta_dir)
+                raise
             picklable = {
-                'class': 'FileDS'
-                ,'args': [source]
-                ,'kwargs': {}
+                'class': 'FileDS',
+                'args': [source],
+                'kwargs': {}
             }
 
         df = ds.df
@@ -134,10 +141,10 @@ class DataStore():
         df_with_types = cast_df_columns_types(df, self.get_analysis(df)['data_analysis_v2'])
         create_sqlite_db(os.path.join(ds_dir, 'sqlite.db'), df_with_types)
 
-        with open(os.path.join(ds_dir,'ds.pickle'), 'wb') as fp:
+        with open(os.path.join(ds_dir, 'ds.pickle'), 'wb') as fp:
             pickle.dump(picklable, fp)
 
-        with open(os.path.join(ds_dir,'metadata.json'), 'w') as fp:
+        with open(os.path.join(ds_dir, 'metadata.json'), 'w') as fp:
             meta = {
                 'name': name,
                 'source_type': source_type,
@@ -149,24 +156,21 @@ class DataStore():
             }
             json.dump(meta, fp)
 
-        return self.get_datasource_obj(name, raw=True)
+        return self.get_datasource_obj(name, raw=True), name
 
     def get_datasource_obj(self, name, raw=False):
         ds_meta_dir = os.path.join(self.dir, name)
         ds_dir = os.path.join(ds_meta_dir, 'datasource')
         ds = None
         try:
-            #resource.setrlimit(resource.RLIMIT_STACK, [0x10000000, resource.RLIM_INFINITY])
-            #sys.setrecursionlimit(0x100000)
-            with open(os.path.join(ds_dir,'ds.pickle'), 'rb') as fp:
+            with open(os.path.join(ds_dir, 'ds.pickle'), 'rb') as fp:
                 picklable = pickle.load(fp)
                 if raw:
                     return picklable
                 try:
-                    ds = eval(picklable['class'])(*picklable['args'],**picklable['kwargs'])
-                except:
+                    ds = eval(picklable['class'])(*picklable['args'], **picklable['kwargs'])
+                except Exception:
                     ds = picklable
-
             return ds
         except Exception as e:
             print(f'\n{e}\n')

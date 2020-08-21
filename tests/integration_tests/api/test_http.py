@@ -86,7 +86,7 @@ class HTTPTest(unittest.TestCase):
             modified_integration = res.json()
             assert modified_integration['password'] == 'test'
             for k in integration:
-                if k != 'password':
+                if k not in ['password', 'date_last_update']:
                     assert modified_integration[k] == integration[k]
 
             # Put the original values back in
@@ -95,7 +95,8 @@ class HTTPTest(unittest.TestCase):
             assert res.status_code == 200
             modified_integration = res.json()
             for k in integration:
-                assert modified_integration[k] == integration[k]
+                if k != 'date_last_update':
+                    assert modified_integration[k] == integration[k]
 
     def test_2_put_ds(self):
         # PUT datasource
@@ -188,6 +189,7 @@ class HTTPTest(unittest.TestCase):
         """
         response = requests.get(f'{root}/predictors/dummy_predictor')
         assert response.status_code == 404
+
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

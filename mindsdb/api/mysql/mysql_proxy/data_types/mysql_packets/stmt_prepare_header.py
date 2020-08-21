@@ -22,7 +22,7 @@ class STMTPrepareHeaderPacket(Packet):
 
     def setup(self):
         self.status = Datum('int<1>', 0)
-        self.statement_id = Datum('int<4>', self._kwargs.get('statement_id', 1))
+        self.stmt_id = Datum('int<4>', self._kwargs.get('stmt_id', 1))
         self.num_columns = Datum('int<2>', self._kwargs.get('num_columns', 0))
         self.num_params = Datum('int<2>', self._kwargs.get('num_params', 0))
         self.filler = Datum('int<1>', 0)
@@ -32,7 +32,7 @@ class STMTPrepareHeaderPacket(Packet):
     def body(self):
         order = [
             'status',
-            'statement_id',
+            'stmt_id',
             'num_columns',
             'num_params',
             'filler',

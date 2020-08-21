@@ -19,7 +19,7 @@ def get_integration(name):
 class ListIntegration(Resource):
     @ns_conf.doc('get_integrations')
     def get(self):
-        return {'integrations': [k for k in ca.config_obj('integrations', {})]}
+        return {'integrations': [k for k in ca.config_obj.get('integrations', {})]}
 
 
 @ns_conf.route('/all_integrations')

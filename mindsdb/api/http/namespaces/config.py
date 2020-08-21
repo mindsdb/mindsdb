@@ -1,3 +1,5 @@
+import copy
+
 from flask import request
 from flask_restx import Resource
 from flask import current_app as ca
@@ -13,12 +15,20 @@ class ListIntegration(Resource):
     def get(self):
         return {'integrations': [k for k in ca.config_obj['integrations']]}
 
+
 @ns_conf.route('/all_integrations')
 @ns_conf.param('name', 'List all database integration')
 class AllIntegration(Resource):
     @ns_conf.doc('get_all_integrations')
     def get(self):
-        return ca.config_obj['integrations']
+        integrations = copy.deepcopy(
+            ca.config_obj.get('integrations', {})
+        )
+        for integration in integrations.values():
+            if 'password' in integration:
+                integration['password'] = None
+        return integrations
+
 
 @ns_conf.route('/integrations/<name>')
 @ns_conf.param('name', 'Database integration')
@@ -26,7 +36,15 @@ class Integration(Resource):
     @ns_conf.doc('get_integration')
     def get(self, name):
         '''return datasource metadata'''
-        return ca.config_obj['integrations'][name]
+        integrations = ca.config_obj.get('integrations', {})
+        if name not in integrations:
+            return f'Can\'t find database integration: {name}', 404
+        integration = copy.deepcopy(
+            ca.config_obj['integrations'][name]
+        )
+        if 'password' in integration:
+            integration['password'] = None
+        return integration
 
     @ns_conf.doc('put_integration')
     def put(self, name):
@@ -60,4 +78,4 @@ class Check(Resource):
         for db_name, connected in dbw.check_connections().items():
             if db_name == name:
                 return connected, 200
-        return f'Can\'t find database integration: {name}', 400
+        return f'Can\'t find database integration: {name}', 404

@@ -14,7 +14,8 @@ jobs:
         # Alpha Release
         uses: cla-assistant/github-action@v1.4.3-alpha
         env: 
-          GITHUB_TOKEN: ${{ secrets.CLA_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
+          PERSONAL_ACCESS_TOKEN : ${{ secrets.CLA_TOKEN }}
         with: 
           path-to-signatures: 'assets/contributions-agreement/signatures/cla.json'
           # Add path to the CLA here

@@ -25,7 +25,7 @@ jobs:
         pip install --no-cache-dir .
     - name: Run integration api and flow tests
       run: |
-        if [ "$RUNNER_OS" != "macOS" ]; then
+        if [ "$RUNNER_OS" == "Linux" ]; then
           cd tests/docker
           docker-compose -f docker-compose.yml up -d
           cd ../..

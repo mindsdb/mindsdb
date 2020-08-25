@@ -45,7 +45,7 @@ class Config(object):
         integrations = self._config.get('integrations', {})
         for key, value in integrations.items():
             if not isinstance(value, dict):
-                raise TypeError(f"Config error: integration '{key}' must be dict type")
+                raise TypeError(f"Config error: integration '{key}' must be a json")
             if 'type' not in integrations[key]:
                 raise KeyError(f"Config error: for integration '{key}' key 'type' must be specified")
 

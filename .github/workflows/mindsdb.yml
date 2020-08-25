@@ -36,6 +36,7 @@ jobs:
           cd api
           python -m unittest
         fi
+      shell: bash
 
   deploy:
     runs-on: ubuntu-latest

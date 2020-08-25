@@ -33,7 +33,7 @@ jobs:
           cd tests/integration_tests/flows/
          # python -m unittest
           cd ..
-          cd /api
+          cd api
           python -m unittest
         fi
 

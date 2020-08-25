@@ -34,8 +34,6 @@ jobs:
           python -m unittest
         fi
       shell: bash
-    - name: Cleanup
-      run: docker-compose down
 
   deploy:
     runs-on: ubuntu-latest

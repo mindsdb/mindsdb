@@ -1,7 +1,7 @@
 name: MindsDB workflow
 
 on:
-  push:
+  pull_request:
 
 jobs:
   test:
@@ -23,13 +23,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install --no-cache-dir .
-    - name: Lint with flake8
-      run: |
-        # IMPLEMENT THIS AFTER WE HAVE ALL PEP8 styles
-        # stop the build if there are Python syntax errors or undefined names
-        #flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        #flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with unittest
       run: |
         if [ "$RUNNER_OS" != "macOS" ]; then
@@ -72,4 +65,27 @@ jobs:
         tag_with_ref: true
         tag_with_sha: true
 
-    
+    # Maybe use different build, we need windows here
+    # - name: Build windows installer
+    #   run: |
+    #     mkdir -p build
+    #     cd /distributions/windows
+    #     ./make.bat
+    #    
+    #   - name: Build linux installer
+    #    run: |
+    #     mkdir -p build
+    #     mv dist/install.exe ../../build/
+    #     cp distributions/linux/install.sh build/
+
+    # - name: Sync installer to s3
+    #   uses: jakejarvis/s3-sync-action@master
+    #   with:
+    #     args: --acl public-read --follow-symlinks --delete
+    #   env:
+    #     AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+    #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #     AWS_REGION: 'us-west-2'   
+    #     SOURCE_DIR: 'build'  
+    #     DEST_DIR: 'mindsdb-installer'   

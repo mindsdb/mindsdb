@@ -25,7 +25,7 @@ jobs:
         pip install --no-cache-dir .
     - name: Run integration api and flow tests
       run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
+        if [ "$RUNNER_OS" != "macOS" ]; then
           cd tests/docker
           docker-compose -f docker-compose.yml up -d
           cd ../..
@@ -34,6 +34,9 @@ jobs:
           python -m unittest
         fi
       shell: bash
+    - name: Cleanup
+        if: always()
+        run: docker-compose down
 
   deploy:
     runs-on: ubuntu-latest

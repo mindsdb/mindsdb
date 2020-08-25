@@ -111,7 +111,7 @@ print('The predicted price is between ${price} with {conf} confidence'.format(pr
 
 Visit the documentation to [learn more](https://docs.mindsdb.com/)
 
-* **Google Colab**: You can also try MindsDB straight here [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
+* **Google Colab**: You can also try MindsDB straight here [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qnH4bhTKvm6mEyV8nAoK9uMZm8HV_gwE?usp=sharing)
 
 
 ## Video Tutorial

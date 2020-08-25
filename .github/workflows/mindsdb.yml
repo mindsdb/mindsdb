@@ -30,10 +30,7 @@ jobs:
           docker-compose -f docker-compose.yml up -d
           cd ../..
           pip install -r requirements_test.txt
-          cd tests/integration_tests/flows/
-         # python -m unittest
-          cd ..
-          cd api
+          cd tests/integration_tests/
           python -m unittest
         fi
       shell: bash

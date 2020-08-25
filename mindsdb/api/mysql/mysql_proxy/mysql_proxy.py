@@ -21,6 +21,7 @@ import atexit
 import tempfile
 import datetime
 from collections import OrderedDict
+import math
 
 import moz_sql_parser as sql_parser
 
@@ -1284,12 +1285,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             column_name = column.get('name', 'column_name')
             column_alias = column.get('alias', column_name)
             flags = column.get('flags', 0)
-            length = 1
-            for row in data:
-                if isinstance(row, dict):
-                    length = max(len(str(row[column_alias])), length)
+            if len(data) == 0:
+                if self.session.integration == 'mssql':
+                    # mssql raise error if value more then this.
+                    length = 0x2000
                 else:
-                    length = max(len(str(row[i])), length)
+                    length = 0xffff
+            else:
+                length = 1
+                for row in data:
+                    if isinstance(row, dict):
+                        length = max(len(str(row[column_alias])), length)
+                    else:
+                        length = max(len(str(row[i])), length)
+                # only MSSQL sensitive to value in 'max_length'. I cant find original formula,
+                # this figured out from packets analysis
+                length = math.ceil((length * 2) / 8) * 12
+
             packets.append(
                 self.packet(
                     ColumnDefenitionPacket,

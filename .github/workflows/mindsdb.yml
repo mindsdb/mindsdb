@@ -29,7 +29,7 @@ jobs:
           cd tests/docker
           docker-compose -f docker-compose.yml up -d
           cd ../..
-          python tests/integration_tests/flows test_flow.py
+          python tests/integration_tests/flows/test_flow.py
         fi
       shell: bash
 

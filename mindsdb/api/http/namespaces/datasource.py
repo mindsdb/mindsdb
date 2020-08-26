@@ -8,7 +8,7 @@ import multipart
 import mindsdb
 from dateutil.parser import parse
 from flask import request, send_file
-from flask_restx import Resource, abort
+from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 from flask import current_app as ca
 
 from mindsdb.interfaces.datastore.sqlite_helpers import *
@@ -164,13 +164,9 @@ class Analyze(Resource):
             print('No valid datasource given')
             abort(400, 'No valid datasource given')
 
-        if ds['row_count'] <= 10000:
-            analysis = ca.default_store.get_analysis(ds['name'])
-            return analysis, 200
-        else:
-            x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))
-            x.start()
-            return {'status': 'analyzing'}, 200
+        x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))
+        x.start()
+        return {'status': 'analyzing'}, 200
 
 
 @ns_conf.route('/<name>/analyze_subset')

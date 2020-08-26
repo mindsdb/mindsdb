@@ -79,7 +79,7 @@ One line of code to **use the model**:
 ```python
 
 # use the model to make predictions
-result = Predictor(name='home_rentals_price').predict(when={'number_of_rooms': 2, 'initial_price': 2000, 'number_of_bathrooms':1, 'sqft': 1190})
+result = Predictor(name='home_rentals_price').predict(when_data={'number_of_rooms': 2, 'initial_price': 2000, 'number_of_bathrooms':1, 'sqft': 1190})
 
 # you can now print the results
 print('The predicted price is between ${price} with {conf} confidence'.format(price=result[0].explanation['rental_price']['confidence_interval'], conf=result[0].explanation['rental_price']['confidence']))
@@ -88,7 +88,7 @@ print('The predicted price is between ${price} with {conf} confidence'.format(pr
 
 Visit the documentation to [learn more](https://docs.mindsdb.com/)
 
-* **Google Colab**: You can also try MindsDB straight here [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qsIkMeAQFE-MOEANd1c6KMyT44OnycSb)
+* **Google Colab**: You can also try MindsDB straight here [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg "MindsDB")](https://colab.research.google.com/drive/1qnH4bhTKvm6mEyV8nAoK9uMZm8HV_gwE?usp=sharing)
 
 
 ## Video Tutorial

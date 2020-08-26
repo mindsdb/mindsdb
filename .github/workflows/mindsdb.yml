@@ -29,6 +29,7 @@ jobs:
           cd tests/docker
           docker-compose -f docker-compose.yml up -d
           cd ../..
+          pip install -r requirements_test.txt
           python tests/integration_tests/flows/test_flow.py
         fi
       shell: bash

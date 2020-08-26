@@ -7,7 +7,7 @@ import pickle
 
 from mindsdb.interfaces.datastore.sqlite_helpers import get_sqlite_data, cast_df_columns_types, create_sqlite_db
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS
 
 
 class DataStore():
@@ -109,6 +109,9 @@ class DataStore():
             elif integration['type'] == 'postgres':
                 dsClass = PostgresDS
                 picklable['class'] = 'PostgresDS'
+            elif integration['type'] == 'mssql':
+                dsClass = MSSQLDS
+                picklable['class'] = 'MSSQLDS'
             else:
                 raise ValueError(f'Unknown DS source_type: {source_type}')
             try:

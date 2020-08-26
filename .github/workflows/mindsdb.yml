@@ -30,7 +30,10 @@ jobs:
           docker-compose -f docker-compose.yml up -d
           cd ../..
           pip install -r requirements_test.txt
-          python tests/integration_tests/flows/test_flow.py
+          python tests/integration_tests/flows/test_clickhouse.py
+          python tests/integration_tests/flows/test_mariadb.py
+          python tests/integration_tests/flows/test_mysql.py
+          python tests/integration_tests/flows/test_postgres.py
         fi
       shell: bash
 

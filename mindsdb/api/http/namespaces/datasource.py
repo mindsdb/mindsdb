@@ -8,7 +8,7 @@ import multipart
 import mindsdb
 from dateutil.parser import parse
 from flask import request, send_file
-from flask_restx import Resource, abort
+from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 from flask import current_app as ca
 
 from mindsdb.interfaces.datastore.sqlite_helpers import *

@@ -959,6 +959,7 @@ SERVER_VARIABLES = {
     '@@license': ('GPL', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
     '@@lower_case_table_names': (0, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
     '@@max_allowed_packet': (16777216, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
+    '@@net_buffer_length': (16384, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
     '@@net_write_timeout': (60, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
     '@@query_cache_size': (16777216, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
     '@@query_cache_type': ('OFF', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),

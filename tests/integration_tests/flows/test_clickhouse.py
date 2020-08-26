@@ -5,7 +5,7 @@ import inspect
 
 from mindsdb.utilities.config import Config
 
-from flows.common import (
+from common import (
     run_environment,
     get_test_csv,
     TEST_CONFIG
@@ -19,7 +19,6 @@ TEST_DATA_TABLE = 'home_rentals'
 TEST_PREDICTOR_NAME = 'test_predictor'
 
 EXTERNAL_DS_NAME = 'test_external'
-
 config = Config(TEST_CONFIG)
 
 

@@ -6,7 +6,7 @@ import mysql.connector
 
 from mindsdb.utilities.config import Config
 
-from flows.common import (
+from common import (
     run_environment,
     get_test_csv,
     TEST_CONFIG

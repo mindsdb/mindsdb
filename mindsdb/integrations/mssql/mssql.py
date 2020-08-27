@@ -44,6 +44,12 @@ class MSSQL(Integration):
                 ,@provider=N'MSDASQL'
                 ,@provstr=N'DRIVER={{{driver_name}}}; SERVER={mysql['host']}; PORT={mysql['port']}; DATABASE=mindsdb; USER={mysql['user']}_{self.name}; {('PASSWORD=' + mysql['password'] + ';') if len(mysql['password']) > 0 else ''} OPTION=3;';
         ''')
+        try:
+            self._query("exec sp_serveroption @server='mindsdb', @optname='rpc', @optvalue='true'")
+            self._query("exec sp_serveroption @server='mindsdb', @optname='rpc out', @optvalue='true'")
+        except Exception:
+            # nothing critical if server options not setted. Only 'four part' notation will not work.
+            print('MSSQL integration: failed to set server options.')
 
     def register_predictors(self, model_data_arr):
         pass

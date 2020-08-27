@@ -108,7 +108,7 @@ class MindsDBDataNode(DataNode):
                 data = mysql._query(select_data_query)
             elif dbtype == 'mssql':
                 mssql = MSSQL(self.config, came_from)
-                data = mssql._query(select_data_query)
+                data = mssql._query(select_data_query, fetch=True)
             else:
                 raise Exception(f'Unknown database type: {dbtype}')
 

@@ -16,7 +16,7 @@ TEST_CONFIG = 'tests/integration_tests/flows/config/config.json'
 
 TESTS_ROOT = Path(__file__).parent.absolute().joinpath('../../').resolve()
 
-START_TIMEOUT = 35
+START_TIMEOUT = 15
 
 OUTPUT = None  # [None|subprocess.DEVNULL]
 

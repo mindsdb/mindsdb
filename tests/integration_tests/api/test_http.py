@@ -47,7 +47,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         integration_names = res.json()
         for integration_name in integration_names['integrations']:
-            assert integration_name in ['default_mariadb', 'default_clickhouse', 'default_mysql', 'default_postgres', 'test_integration']
+            assert integration_name in ['default_mariadb', 'default_clickhouse', 'default_mysql', 'default_postgres', 'default_mssql', 'test_integration']
 
         test_integration_data = {'enabled': False, 'host': 'test', 'type': 'clickhouse'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})

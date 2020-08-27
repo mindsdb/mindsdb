@@ -21,7 +21,6 @@ import atexit
 import tempfile
 import datetime
 from collections import OrderedDict
-import math
 
 import moz_sql_parser as sql_parser
 
@@ -32,7 +31,7 @@ from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import Session
 from mindsdb.api.mysql.mysql_proxy.controllers.log import init_logger, log
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
-from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER
+from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
@@ -212,6 +211,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             integration = username[len(prefix):]
         if len(integration) > 0 and integration in config['integrations']:
             self.session.integration = integration
+            self.session.integration_type = config['integrations'][integration]['type']
             username = orig_username
 
         if client_auth_plugin != DEFAULT_AUTH_METHOD:
@@ -319,6 +319,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
         global mdb, default_store, config
+
+        for key in insert.keys():
+            if insert[key] is SQL_DEFAULT:
+                insert[key] = None  # all default values at this moment is null (None)
 
         is_external_datasource = isinstance(insert.get('external_datasource'), str) and len(insert['external_datasource']) > 0
         is_select_data_query = isinstance(insert.get('select_data_query'), str) and len(insert['select_data_query']) > 0
@@ -490,9 +494,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             fake_sql = 'select name ' + fake_sql[len('delete '):]
             query = SQLQuery(fake_sql, integration=self.session.integration, database=self.session.database)
             num_columns = 0
-            num_params = len(query.columns)
+            num_params = sql.count('?')
             columns_def = []
-            for col in query.columns:
+            for i in range(num_params):
                 columns_def.append(dict(
                     database='',
                     table_alias='',
@@ -591,10 +595,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.packet(EofPacket, status=status))
             self.sendPackageGroup(packages)
         elif prepared_stmt['type'] == 'delete':
-            if len(parameters) != 1:
+            if len(parameters) == 0:
                 raise SqlError("Delete statement must content 'where' filter")
-            self.delete_predictor_sql(prepared_stmt['statement'].sql.replace('?', f"'{parameters[0]}'"))
-            self.packet(OkPacket).send()
+            sql = prepared_stmt['statement'].sql
+            sql = sql[:sql.find('?')] + f"'{parameters[0]}'"
+            self.delete_predictor_sql(sql)
+            self.packet(OkPacket, affected_rows=1).send()
         else:
             raise NotImplementedError(f"Unknown statement type: {prepared_stmt['type']}")
 
@@ -1285,22 +1291,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             column_name = column.get('name', 'column_name')
             column_alias = column.get('alias', column_name)
             flags = column.get('flags', 0)
-            if len(data) == 0:
-                if self.session.integration == 'mssql':
-                    # mssql raise error if value more then this.
-                    length = 0x2000
-                else:
-                    length = 0xffff
+            if self.session.integration_type == 'mssql':
+                # mssql raise error if value more then this.
+                length = 0x2000
             else:
-                length = 1
-                for row in data:
-                    if isinstance(row, dict):
-                        length = max(len(str(row[column_alias])), length)
-                    else:
-                        length = max(len(str(row[i])), length)
-                # only MSSQL sensitive to value in 'max_length'. I cant find original formula,
-                # this figured out from packets analysis
-                length = math.ceil((length * 2) / 8) * 12
+                if len(data) == 0:
+                    length = 0xffff
+                else:
+                    length = 1
+                    for row in data:
+                        if isinstance(row, dict):
+                            length = max(len(str(row[column_alias])), length)
+                        else:
+                            length = max(len(str(row[i])), length)
 
             packets.append(
                 self.packet(

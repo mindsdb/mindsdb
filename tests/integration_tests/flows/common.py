@@ -16,7 +16,7 @@ TEST_CONFIG = 'tests/integration_tests/flows/config/config.json'
 
 TESTS_ROOT = Path(__file__).parent.absolute().joinpath('../../').resolve()
 
-START_TIMEOUT = 15
+START_TIMEOUT = 35
 
 OUTPUT = None  # [None|subprocess.DEVNULL]
 
@@ -133,15 +133,18 @@ def run_environment(db, config):
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
 
-    if is_container_run(f'{db}-test') is False:
-        subprocess.Popen(
-            ['./cli.sh', db],
-            cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-            stdout=OUTPUT,
-            stderr=OUTPUT
-        )
-        atexit.register(stop_container, name=db)
-    db_ready = wait_db(config, DEFAULT_DB)
+    if db == 'mssql':
+        db_ready = True
+    else:
+        if is_container_run(f'{db}-test') is False:
+            subprocess.Popen(
+                ['./cli.sh', db],
+                cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+                stdout=OUTPUT,
+                stderr=OUTPUT
+            )
+            atexit.register(stop_container, name=db)
+        db_ready = wait_db(config, DEFAULT_DB)
 
     if db_ready:
         sp = subprocess.Popen(

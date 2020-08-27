@@ -49,7 +49,7 @@ def start(config, initial=False):
     def handle_exception(e):
         # pass through HTTP errors
         if isinstance(e, HTTPException):
-            return e
+            return {'message': str(e)}, e.code, e.get_response().headers
         name = getattr(type(e), '__name__') or 'Unknown error'
         return {'message': f'{name}: {str(e)}'}, 500
 

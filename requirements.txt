@@ -6,4 +6,4 @@ moz-sql-parser >= 3.31.20024
 cryptography >= 2.9.2
 pg8000 >= 1.15.3
 pyparsing >= 2.4.7
-pytds >= 1.10.0
+python-tds >= 1.10.0

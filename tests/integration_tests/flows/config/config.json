@@ -54,6 +54,15 @@
             "database": "postgres",
             "port": 5432,
             "type": "postgres"
+        },
+        "default_mssql": {
+            "enabled": true,
+            "host": "127.0.0.1",
+            "odbc_driver_name": "MySQL ODBC 8.0 Unicode Driver",
+            "password": "password",
+            "port": 1433,
+            "type": "mssql",
+            "user": "sa"
         }
     },
     "interface": {

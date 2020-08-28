@@ -31,6 +31,13 @@ class SQLParameter:
 SQL_PARAMETER = SQLParameter()
 
 
+class SQLDefault:
+    pass
+
+
+SQL_DEFAULT = SQLDefault()
+
+
 class SqlStatementParser():
     """Parser for initial analysis of sql statements.
     Example of usage:
@@ -239,6 +246,8 @@ class SqlStatementParser():
                 result['values'][i] = None
             elif val == '?':
                 result['values'][i] = SQL_PARAMETER
+            elif isinstance(val, str) and val.lower() == 'default':
+                result['values'][i] = SQL_DEFAULT
             elif SqlStatementParser.is_int_str(val):
                 result['values'][i] = int(val)
             elif SqlStatementParser.is_float_str(val):

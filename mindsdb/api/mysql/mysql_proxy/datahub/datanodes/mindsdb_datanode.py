@@ -8,6 +8,7 @@ from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
+from mindsdb.integrations.mssql.mssql import MSSQL
 
 
 class MindsDBDataNode(DataNode):
@@ -105,6 +106,9 @@ class MindsDBDataNode(DataNode):
             elif dbtype == 'postgres':
                 mysql = PostgreSQL(self.config, came_from)
                 data = mysql._query(select_data_query)
+            elif dbtype == 'mssql':
+                mssql = MSSQL(self.config, came_from)
+                data = mssql._query(select_data_query, fetch=True)
             else:
                 raise Exception(f'Unknown database type: {dbtype}')
 

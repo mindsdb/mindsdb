@@ -1,35 +1,49 @@
 from subprocess import Popen
 import time
 import os
-import signal
 import psutil
 from random import randint
-
+from pathlib import Path
 import unittest
 import requests
-import runpy
 
+from mindsdb.utilities.config import Config
 
-rand = randint(0,pow(10,12))
+import importlib.util
+common_path = Path(__file__).parent.parent.absolute().joinpath('flows/common.py').resolve()
+spec = importlib.util.spec_from_file_location("common", str(common_path))
+common = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(common)
+
+rand = randint(0, pow(10, 12))
 ds_name = f'hr_ds_{rand}'
-pred_name =  f'hr_predictor_{rand}'
+pred_name = f'hr_predictor_{rand}'
 root = 'http://localhost:47334'
 
 
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http'], close_fds=True)
+        config = Config(common.TEST_CONFIG)
+        config_path = common.prepare_config(config, ['default_mariadb', 'default_clickhouse'])
 
+        cls.sp = Popen(
+            ['python3', '-m', 'mindsdb', '--api', 'http', '--config', config_path],
+            close_fds=True,
+            stdout=None,
+            stderr=None
+        )
         for i in range(20):
             try:
                 res = requests.get(f'{root}/util/ping')
                 if res.status_code != 200:
                     raise Exception('')
+                else:
+                    break
             except Exception:
                 time.sleep(1)
                 if i == 19:
-                    raise Exception("Can't connect !")
+                    raise Exception("Can't connect!")
 
     @classmethod
     def tearDownClass(cls):
@@ -47,7 +61,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         integration_names = res.json()
         for integration_name in integration_names['integrations']:
-            assert integration_name in ['default_mariadb', 'default_clickhouse', 'default_mysql', 'default_postgres', 'test_integration']
+            assert integration_name in ['default_mariadb', 'default_clickhouse', 'default_mysql', 'default_postgres', 'default_mssql', 'test_integration']
 
         test_integration_data = {'enabled': False, 'host': 'test', 'type': 'clickhouse'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
@@ -74,23 +88,29 @@ class HTTPTest(unittest.TestCase):
             assert res.status_code == 200
 
             integration = res.json()
-            for k in ['enabled','host','port','password','type','user']:
+            for k in ['enabled', 'host', 'port', 'type', 'user']:
                 assert k in integration
                 assert integration[k] is not None
+            assert integration['password'] is None
 
             # Modify it
-            res = requests.post(f'{root}/config/integrations/{name}', json={'params':{'password':'test'}})
+            res = requests.post(
+                f'{root}/config/integrations/{name}',
+                json={'params': {'user': 'dr.Who'}}
+            )
 
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
             modified_integration = res.json()
-            assert modified_integration['password'] == 'test'
+            assert modified_integration['password'] is None
+            assert modified_integration['user'] == 'dr.Who'
             for k in integration:
-                if k not in ['password', 'date_last_update']:
+                if k not in ['password', 'date_last_update', 'user']:
                     assert modified_integration[k] == integration[k]
 
-            # Put the original values back in
-            res = requests.post(f'{root}/config/integrations/{name}', json={'params':integration})
+            # Put the original values back in\
+            del integration['password']
+            res = requests.post(f'{root}/config/integrations/{name}', json={'params': integration})
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
             modified_integration = res.json()
@@ -111,9 +131,9 @@ class HTTPTest(unittest.TestCase):
 
         db_ds_name = ds_name + '_db'
         params = {
-            'name': db_ds_name
-            ,'query': 'SELECT arrayJoin([1,2,3]) as a, arrayJoin([1,2,3,4,5,6,7,8]) as b'
-            ,'integration_id': 'default_clickhouse'
+            'name': db_ds_name,
+            'query': 'SELECT arrayJoin([1,2,3]) as a, arrayJoin([1,2,3,4,5,6,7,8]) as b',
+            'integration_id': 'default_clickhouse'
         }
 
         url = f'{root}/datasources/{db_ds_name}'
@@ -143,11 +163,11 @@ class HTTPTest(unittest.TestCase):
 
         # POST predictions
         params = {
-            'when': {'sqft':500}
+            'when': {'sqft': 500}
         }
         url = f'{root}/predictors/{pred_name}/predict'
         res = requests.post(url, json=params)
-        assert isinstance(res.json()[0]['rental_price']['predicted_value'],float)
+        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
         assert res.status_code == 200
 
     def test_4_datasources(self):

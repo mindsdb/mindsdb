@@ -12,14 +12,13 @@ jobs:
       - name: "CLA Assistant"
         if: (github.event.comment.body == 'recheckcla' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request'
         # Alpha Release
-        uses: cla-assistant/github-action@v1.4.3-alpha
+        uses: cla-assistant/github-action@v2.0.0-alpha
         env: 
-          GITHUB_TOKEN: ${{ secrets.CLA_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CLA_TOKEN }}          
+          PERSONAL_ACCESS_TOKEN : ${{ secrets.CLA_TOKEN }}
         with: 
           path-to-signatures: 'assets/contributions-agreement/signatures/cla.json'
           # Add path to the CLA here
           path-to-cla-document: 'https://github.com/mindsdb/mindsdb_native/blob/stable/assets/contributions-agreement/individual-contributor.md'
           branch: 'stable'
-          allowlist: bot*, George3d6, ZoranPandovski, torrmal, Stpmax, maximlopin, paxcema
-          empty-commit-flag: false
-          blockchain-storage-flag: false
+          allowlist: bot*, George3d6, ZoranPandovski, torrmal, Stpmax, maximlopin, paxcema, mindsdbadmin

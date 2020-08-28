@@ -22,7 +22,9 @@ class HTTPTest(unittest.TestCase):
         time.sleep(10)
         for i in range(20):
             try:
+                print('ping')
                 res = requests.get(f'{root}/util/ping')
+                print(f'pong {res.status_code}')
                 if res.status_code != 200:
                     raise Exception('')
             except Exception:

@@ -7,12 +7,15 @@ import docker
 import requests
 import subprocess
 import atexit
+import os 
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
-TEST_CONFIG = 'tests/integration_tests/flows/config/config.json'
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+TEST_CONFIG = dir_path + '/config/config.json'
 
 TESTS_ROOT = Path(__file__).parent.absolute().joinpath('../../').resolve()
 

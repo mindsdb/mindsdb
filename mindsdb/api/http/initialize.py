@@ -17,7 +17,7 @@ class Swagger_Api(Api):
         return url_for(self.endpoint("specs"), _external=False)
 
 def initialize_flask(config):
-    app = Flask(__name__)
+    app = Flask(__name__, static_url_path='/static')
 
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     authorizations = {

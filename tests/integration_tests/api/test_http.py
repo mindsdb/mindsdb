@@ -17,20 +17,23 @@ root = 'http://localhost:47334'
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http', '--config', TEST_CONFIG], close_fds=True)
-        print('starting...')
-        time.sleep(10)
+        cls.sp = Popen(
+            ['python3', '-m', 'mindsdb', '--api', 'http', '--config', TEST_CONFIG],
+            close_fds=True,
+            stdout=None,
+            stderr=None
+        )
         for i in range(20):
             try:
-                print('ping')
                 res = requests.get(f'{root}/util/ping')
-                print(f'pong {res.status_code}')
                 if res.status_code != 200:
                     raise Exception('')
+                else:
+                    break
             except Exception:
                 time.sleep(1)
                 if i == 19:
-                    raise Exception("Can't connect !")
+                    raise Exception("Can't connect!")
 
     @classmethod
     def tearDownClass(cls):

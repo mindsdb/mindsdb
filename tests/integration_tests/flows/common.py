@@ -7,7 +7,7 @@ import docker
 import requests
 import subprocess
 import atexit
-import os 
+import os
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -66,9 +66,11 @@ def wait_db(config, db_name):
     return connected
 
 
-def prepare_config(config, db):
+def prepare_config(config, dbs):
+    if isinstance(dbs, list) is False:
+        dbs = [dbs]
     for key in config._config['integrations'].keys():
-        config._config['integrations'][key]['enabled'] = key == db
+        config._config['integrations'][key]['enabled'] = key in dbs
 
     datastore_dir = TEMP_DIR.joinpath('datastore/')
     if datastore_dir.exists():

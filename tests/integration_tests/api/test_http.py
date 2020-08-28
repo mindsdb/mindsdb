@@ -18,7 +18,8 @@ class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http', '--config', TEST_CONFIG], close_fds=True)
-        time.sleep(5)
+        print('starting...')
+        time.sleep(10)
         for i in range(20):
             try:
                 res = requests.get(f'{root}/util/ping')

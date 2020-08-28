@@ -21,4 +21,4 @@ jobs:
           # Add path to the CLA here
           path-to-cla-document: 'https://github.com/mindsdb/mindsdb_native/blob/stable/assets/contributions-agreement/individual-contributor.md'
           branch: 'stable'
-          allowlist: bot*, George3d6, ZoranPandovski, torrmal, Stpmax, maximlopin, paxcema
+          allowlist: bot*, George3d6, ZoranPandovski, torrmal, Stpmax, maximlopin, paxcema, mindsdbadmin

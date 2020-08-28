@@ -35,7 +35,6 @@ jobs:
           python tests/integration_tests/flows/test_mariadb.py
           python tests/integration_tests/flows/test_mysql.py
           python tests/integration_tests/flows/test_postgres.py
-          sleep 61
           python tests/integration_tests/api/test_http.py
           cd tests/docker
           docker-compose down

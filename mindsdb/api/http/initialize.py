@@ -1,5 +1,6 @@
 from flask import Flask, url_for
 from flask_restx import Api
+from flask_cors import CORS
 import json
 
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -27,6 +28,7 @@ def initialize_flask(config):
             'name': 'apikey'
         }
     }
+    cors = CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')
 

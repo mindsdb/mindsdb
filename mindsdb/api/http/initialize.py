@@ -28,7 +28,8 @@ def initialize_flask(config):
             'name': 'apikey'
         }
     }
-    cors = CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+    cors_origin_list = ["http://localhost:5000", "http://localhost:3000"]
+    cors = CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')
 

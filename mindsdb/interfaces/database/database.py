@@ -2,6 +2,7 @@ from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
+from mindsdb.integrations.mssql.mssql import MSSQL
 
 
 class DatabaseWrapper():
@@ -36,6 +37,8 @@ class DatabaseWrapper():
                     integration_arr.append(MySQL(self.config, db_alias))
                 elif db_type == 'postgres':
                     integration_arr.append(PostgreSQL(self.config, db_alias))
+                elif db_type == 'mssql':
+                    integration_arr.append(MSSQL(self.config, db_alias))
                 else:
                     print(f'Uknown integration type: {db_type} for database called: {db_alias}')
 

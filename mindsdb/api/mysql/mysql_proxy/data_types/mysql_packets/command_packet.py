@@ -64,8 +64,8 @@ class CommandPacket(Packet):
             if prepared_stmt['type'] in ['insert', 'delete']:
                 if prepared_stmt['type'] == 'insert':
                     num_params = prepared_stmt['statement'].struct['values'].count(SQL_PARAMETER)
-                else:
-                    num_params = 1  # hardcoded
+                elif prepared_stmt['type'] == 'delete':
+                    num_params = prepared_stmt['statement'].sql.count('?')
 
                 if num_params > 0:
                     # read null-map

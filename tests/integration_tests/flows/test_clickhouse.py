@@ -19,7 +19,6 @@ TEST_DATA_TABLE = 'home_rentals'
 TEST_PREDICTOR_NAME = 'test_predictor'
 
 EXTERNAL_DS_NAME = 'test_external'
-
 config = Config(TEST_CONFIG)
 
 

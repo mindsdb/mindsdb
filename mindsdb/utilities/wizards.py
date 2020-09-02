@@ -45,6 +45,10 @@ def auto_config(python_path, pip_path, predictor_dir, datasource_dir):
                 "enabled": False,
                 "type": 'postgres',
                 "database": 'postgres'
+            },
+            "default_mssql": {
+                "enabled": False,
+                "type": 'mssql'
             }
         }
         ,"interface":{
@@ -145,7 +149,7 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
 
     clickhouse = _in('Connect to clickhouse ? [Y/N]','Y',use_default)
     if clickhouse in ['Y','y']:
-        config['integrations']['default_clickhouse']['enabled'] = _in('Enable Clickhouse integration ?: ',False,use_default)
+        config['integrations']['default_clickhouse']['enabled'] = _in('Enable Clickhouse integration?: ',False,use_default)
         config['integrations']['default_clickhouse']['host'] = _in('Clickhouse host: ','localhost',use_default)
         config['integrations']['default_clickhouse']['port'] = _in('Clickhouse port: ',8123,use_default)
         config['integrations']['default_clickhouse']['user'] = _in('Clickhouse user: ','default',use_default)
@@ -154,7 +158,7 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
 
     mariadb = _in('Connect to Mariadb ? [Y/N]','Y',use_default)
     if mariadb in ['Y','y']:
-        config['integrations']['default_mariadb']['enabled'] = _in('Enable Mariadb integration ?: ',False,use_default)
+        config['integrations']['default_mariadb']['enabled'] = _in('Enable Mariadb integration?: ',False,use_default)
         config['integrations']['default_mariadb']['host'] = _in('Mariadb host: ','localhost',use_default)
         config['integrations']['default_mariadb']['port'] = _in('Mariadb port: ',3306,use_default)
         config['integrations']['default_mariadb']['user'] = _in('Mariadb user: ','root',use_default)
@@ -163,7 +167,7 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
 
     mysql = _in('Connect to MySQL ? [Y/N]', 'Y', use_default)
     if mysql in ['Y', 'y']:
-        config['integrations']['default_mysql']['enabled'] = _in('Enable MySQL integration ?: ', False, use_default)
+        config['integrations']['default_mysql']['enabled'] = _in('Enable MySQL integration?: ', False, use_default)
         config['integrations']['default_mysql']['host'] = _in('MySQL host: ', 'localhost', use_default)
         config['integrations']['default_mysql']['port'] = _in('MySQL port: ', 3306, use_default)
         config['integrations']['default_mysql']['user'] = _in('MySQL user: ', 'root', use_default)
@@ -172,7 +176,7 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
 
     mysql = _in('Connect to PostgreSQL ? [Y/N]', 'Y', use_default)
     if mysql in ['Y', 'y']:
-        config['integrations']['default_postgres']['enabled'] = _in('Enable PostgreSQL integration ?: ', False, use_default)
+        config['integrations']['default_postgres']['enabled'] = _in('Enable PostgreSQL integration?: ', False, use_default)
         config['integrations']['default_postgres']['host'] = _in('PostgreSQL host: ', 'localhost', use_default)
         config['integrations']['default_postgres']['port'] = _in('PostgreSQL port: ', 3306, use_default)
         config['integrations']['default_postgres']['user'] = _in('PostgreSQL user: ', 'root', use_default)
@@ -180,7 +184,17 @@ def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_
         config['integrations']['default_postgres']['database'] = _in('PostgreSQL database: ', 'postgres', use_default)
         config['integrations']['default_postgres']['type'] = 'postgres'
 
-    config_path = os.path.join(config_dir,'config.json')
+    mssql = _in('Connect to MSSQL ? [Y/N]', 'Y', use_default)
+    if mssql in ['Y', 'y']:
+        config['integrations']['default_mssql']['enabled'] = _in('Enable MSSQL integration?: ', False, use_default)
+        config['integrations']['default_mssql']['host'] = _in('MSSQL host: ', 'localhost', use_default)
+        config['integrations']['default_mssql']['port'] = _in('MSSQL port: ', 1433, use_default)
+        config['integrations']['default_mssql']['user'] = _in('MSSQL user: ', 'sa', use_default)
+        config['integrations']['default_mssql']['password'] = _in('MSSQL password: ', '', use_default)
+        config['integrations']['default_mssql']['odbc_driver_name'] = _in('MySQL ODBC driver name: ', 'MySQL ODBC 8.0 Unicode Driver', use_default)
+        config['integrations']['default_mssql']['type'] = 'mssql'
+
+    config_path = os.path.join(config_dir, 'config.json')
     with open(config_path, 'w') as fp:
         json.dump(config, fp, indent=4, sort_keys=True)
 

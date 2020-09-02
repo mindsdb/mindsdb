@@ -41,9 +41,9 @@ class OkPacket(Packet):
     def setup(self):
         eof = self._kwargs.get('eof', False)
         self.ok_header = Datum('int<1>', 0xFE if eof is True else 0)
-        self.affected_rows = Datum('int<lenenc>', 0)
+        self.affected_rows = Datum('int<lenenc>', self._kwargs.get('affected_rows', 0))
         self.last_insert_id = Datum('int<lenenc>', 0)
-        status = self._kwargs.get('status', 0x0002)  #  TEST 0x4002)
+        status = self._kwargs.get('status', 0x0002)
         self.server_status = Datum('int<2>', status)
         # Datum('int<2>', 0)
         self.warning_count = Datum('int<2>', 0)

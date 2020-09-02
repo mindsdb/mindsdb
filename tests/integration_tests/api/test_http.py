@@ -3,10 +3,17 @@ import time
 import os
 import psutil
 from random import randint
+from pathlib import Path
 import unittest
 import requests
 
-TEST_CONFIG = 'tests/integration_tests/flows/config/config.json'
+from mindsdb.utilities.config import Config
+
+import importlib.util
+common_path = Path(__file__).parent.parent.absolute().joinpath('flows/common.py').resolve()
+spec = importlib.util.spec_from_file_location("common", str(common_path))
+common = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(common)
 
 rand = randint(0, pow(10, 12))
 ds_name = f'hr_ds_{rand}'
@@ -17,17 +24,26 @@ root = 'http://localhost:47334'
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.sp = Popen(['python3', '-m', 'mindsdb', '--api', 'http', '--config', TEST_CONFIG], close_fds=True)
+        config = Config(common.TEST_CONFIG)
+        config_path = common.prepare_config(config, ['default_mariadb', 'default_clickhouse'])
 
+        cls.sp = Popen(
+            ['python3', '-m', 'mindsdb', '--api', 'http', '--config', config_path],
+            close_fds=True,
+            stdout=None,
+            stderr=None
+        )
         for i in range(20):
             try:
                 res = requests.get(f'{root}/util/ping')
                 if res.status_code != 200:
                     raise Exception('')
+                else:
+                    break
             except Exception:
                 time.sleep(1)
                 if i == 19:
-                    raise Exception("Can't connect !")
+                    raise Exception("Can't connect!")
 
     @classmethod
     def tearDownClass(cls):
@@ -45,7 +61,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         integration_names = res.json()
         for integration_name in integration_names['integrations']:
-            assert integration_name in ['default_mariadb', 'default_clickhouse', 'default_mysql', 'default_postgres', 'test_integration']
+            assert integration_name in ['default_mariadb', 'default_clickhouse', 'default_mysql', 'default_postgres', 'default_mssql', 'test_integration']
 
         test_integration_data = {'enabled': False, 'host': 'test', 'type': 'clickhouse'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})

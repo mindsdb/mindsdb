@@ -1,9 +1,10 @@
 import pg8000
 
 from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
+from mindsdb.integrations.base import Integration
 
 
-class PostgreSQL():
+class PostgreSQL(Integration):
     def __init__(self, config, name):
         self.config = config
         self.name = name

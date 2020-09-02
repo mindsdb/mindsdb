@@ -7,12 +7,15 @@ import docker
 import requests
 import subprocess
 import atexit
+import os
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
-TEST_CONFIG = 'tests/integration_tests/flows/config/config.json'
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+TEST_CONFIG = dir_path + '/config/config.json'
 
 TESTS_ROOT = Path(__file__).parent.absolute().joinpath('../../').resolve()
 
@@ -63,9 +66,11 @@ def wait_db(config, db_name):
     return connected
 
 
-def prepare_config(config, db):
+def prepare_config(config, dbs):
+    if isinstance(dbs, list) is False:
+        dbs = [dbs]
     for key in config._config['integrations'].keys():
-        config._config['integrations'][key]['enabled'] = key == db
+        config._config['integrations'][key]['enabled'] = key in dbs
 
     datastore_dir = TEMP_DIR.joinpath('datastore/')
     if datastore_dir.exists():
@@ -133,15 +138,18 @@ def run_environment(db, config):
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
 
-    if is_container_run(f'{db}-test') is False:
-        subprocess.Popen(
-            ['./cli.sh', db],
-            cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-            stdout=OUTPUT,
-            stderr=OUTPUT
-        )
-        atexit.register(stop_container, name=db)
-    db_ready = wait_db(config, DEFAULT_DB)
+    if db == 'mssql':
+        db_ready = True
+    else:
+        if is_container_run(f'{db}-test') is False:
+            subprocess.Popen(
+                ['./cli.sh', db],
+                cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+                stdout=OUTPUT,
+                stderr=OUTPUT
+            )
+            atexit.register(stop_container, name=db)
+        db_ready = wait_db(config, DEFAULT_DB)
 
     if db_ready:
         sp = subprocess.Popen(

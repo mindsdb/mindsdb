@@ -53,6 +53,12 @@ def start(config, initial=False):
         name = getattr(type(e), '__name__') or 'Unknown error'
         return {'message': f'{name}: {str(e)}'}, 500
 
+    @app.after_request
+    def add_header(resp):
+        resp.headers['Access-Control-Allow-Origin'] = 'http://localhost:8000'
+        resp.headers['Vary'] = 'Origin'
+        return resp
+
     print(f"Start on {config['api']['http']['host']}:{config['api']['http']['port']}")
     app.run(debug=debug, port=config['api']['http']['port'], host=config['api']['http']['host'])
 

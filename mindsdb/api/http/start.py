@@ -2,8 +2,10 @@ import os
 import mindsdb
 import logging
 import sys
+import multiprocessing
 
 from werkzeug.exceptions import HTTPException
+import gunicorn.app.base
 
 from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
@@ -13,11 +15,26 @@ from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces
 from mindsdb.utilities.config import Config
 
 
+class StandaloneApplication(gunicorn.app.base.BaseApplication):
+    def __init__(self, app, options=None):
+        self.options = options or {}
+        self.application = app
+        super().__init__()
+
+    def load_config(self):
+        config = {key: value for key, value in self.options.items()
+                  if key in self.cfg.settings and value is not None}
+        for key, value in config.items():
+            self.cfg.set(key.lower(), value)
+
+    def load(self):
+        return self.application
+
+
 def start(config, initial=False):
     if not initial:
         print('\n\nWarning, this process should not have been started... nothing is "wrong" but it needlessly ate away a tiny bit of precious comute !\n\n')
     config = Config(config)
-    debug = False
 
     if not logging.root.handlers:
         rootLogger = logging.getLogger()
@@ -52,15 +69,24 @@ def start(config, initial=False):
             return {'message': str(e)}, e.code, e.get_response().headers
         name = getattr(type(e), '__name__') or 'Unknown error'
         return {'message': f'{name}: {str(e)}'}, 500
-
+      
     @app.after_request
     def add_header(resp):
         resp.headers['Access-Control-Allow-Origin'] = 'http://localhost:8000'
         resp.headers['Vary'] = 'Origin'
         return resp
 
-    print(f"Start on {config['api']['http']['host']}:{config['api']['http']['port']}")
-    app.run(debug=debug, port=config['api']['http']['port'], host=config['api']['http']['host'])
+
+    port = config['api']['http']['port']
+    host = config['api']['http']['host']
+
+    print(f"Start on {host}:{port}")
+
+    options = {
+        'bind': f'{host}:{port}',
+        'workers': min(max(multiprocessing.cpu_count(), 2), 3)
+    }
+    StandaloneApplication(app, options).run()
 
 
 if __name__ == '__main__':

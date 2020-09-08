@@ -73,14 +73,12 @@ class CustomPredictor(Resource):
     @ns_conf.doc('put_custom_predictor')
     def put(self, name):
         predictor_file = request.files['file']
-        model_dir = mindsdb.CONFIG.MINDSDB_TEMP_PATH + '/' + name
-
-        print('\n\n\n\n\n\nModel being placed in dir: ' + model_dir + '\n\n\n\n\n\n')
-        print('Name is: ' + name + ' :')
-        fpath = os.path.join(f'{model_dir}.zip')
+        fpath = os.path.join(mindsdb.CONFIG.MINDSDB_TEMP_PATH + '/' + name + '.zip')
         with open(fpath, 'wb') as f:
             f.write(predictor_file.read())
-        shutil.unpack_archive(f'{model_dir}.zip', model_dir, 'zip')
+
+        ca.custom_models.load_model(fpath, name)
+
         return f'Uploaded custom model {name}'
 
 @ns_conf.route('/<name>')

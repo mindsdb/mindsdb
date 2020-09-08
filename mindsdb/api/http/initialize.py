@@ -4,6 +4,7 @@ import json
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom import CustomModels
 from mindsdb.utilities.config import Config
 
 
@@ -35,4 +36,5 @@ def initialize_flask(config):
 def initialize_interfaces(config, app):
     app.default_store = DataStore(config)
     app.mindsdb_native = MindsdbNative(config)
+    app.custom_models = MindsdbNative(config)
     app.config_obj = config

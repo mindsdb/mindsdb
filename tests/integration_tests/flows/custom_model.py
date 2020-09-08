@@ -4,6 +4,8 @@ import csv
 import inspect
 import shutil
 import requests
+import os
+import time
 
 from mindsdb.utilities.config import Config
 
@@ -14,7 +16,7 @@ from common import (
 )
 
 
-root = 'http://localhost:47334'
+root = 'http://127.0.0.1:47334'
 TEST_CSV = {
     'name': 'home_rentals.csv',
     'url': 'https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv'
@@ -65,7 +67,10 @@ def query(query):
 class ClickhouseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment('clickhouse', config, run_apis='api')
+        return
+        print('HERE')
+        time.sleep(3)
+        mdb, datastore = run_environment('clickhouse', config, run_apis='all')
         cls.mdb = mdb
 
         models = cls.mdb.get_models()
@@ -129,14 +134,19 @@ class ClickhouseTest(unittest.TestCase):
             datastore.delete_datasource(EXTERNAL_DS_NAME)
         short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=300, rewrite=True)
         datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
+        print('Here 2')
+        time.sleep(4)
 
     def test_1_simple_model_upload(self):
-        dir = 'test_custom_model'
-        zip = 'my_model.zip'
-        p_name = 'this_is_my_custom_sklearnmodel'
+        dir_name = 'test_custom_model'
+        pred_name = 'this_is_my_custom_sklearnmodel'
 
-        os.mkdir(dir)
-        with open(dir + '/model.py', 'w') as fp:
+        try:
+            os.mkdir(dir_name)
+        except:
+            pass
+
+        with open(dir_name + '/model.py', 'w') as fp:
             fp.write("""
 from sklearn.linear_model import LinearRegression
 import numpy as np
@@ -168,40 +178,42 @@ class Model():
 
                      """)
 
-    shutil.make_archive(zip, 'zip', dir)
+        shutil.make_archive(base_name='my_model', format='zip', root_dir=dir_name)
 
-    # Upload the model (new endpoint)
-    res = requests.put(f'{root}/predictors/custom/{p_name}', files=dict(model=open(zip,'rb')))
-    assert res.status_code == 200
+        # Upload the model (new endpoint)
+        res = requests.put(f'{root}/predictors/custom/{pred_name}', files=dict(file=open('my_model.zip','rb')))
+        print(res.status_code)
+        print(res.text)
+        assert res.status_code == 200
 
-    # Train the model (new endpoint, just redirects to the /predictors/ endpoint basically)
-    params = {
-        'data_source_name': EXTERNAL_DS_NAME,
-        'to_predict': 'rental_price',
-        'kwargs': {}
-    }
-    res = requests.put(f'{root}/predictors/{p_name}/fit', json=params)
+        # Train the model (new endpoint, just redirects to the /predictors/ endpoint basically)
+        params = {
+            'data_source_name': EXTERNAL_DS_NAME,
+            'to_predict': 'rental_price',
+            'kwargs': {}
+        }
+        res = requests.put(f'{root}/predictors/{pred_name}/fit', json=params)
 
-    # Run a single value prediction
-    params = {
-        'when': {'initial_price': 5000}
-    }
-    url = f'{root}/predictors/{pred_name}/predict'
-    res = requests.post(url, json=params)
-    assert res.status_code == 200
-    assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
-    assert 4500 < res.json()[0]['rental_price']['predicted_value'] < 5500
+        # Run a single value prediction
+        params = {
+            'when': {'initial_price': 5000}
+        }
+        url = f'{root}/predictors/{pred_name}/predict'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
+        assert 4500 < res.json()[0]['rental_price']['predicted_value'] < 5500
 
-    params = {
-        'data_source_name': EXTERNAL_DS_NAME
-    }
-    url = f'{root}/predictors/{pred_name}/predict_datasource'
-    res = requests.post(url, json=params)
+        params = {
+            'data_source_name': EXTERNAL_DS_NAME
+        }
+        url = f'{root}/predictors/{pred_name}/predict_datasource'
+        res = requests.post(url, json=params)
 
-    assert res.status_code == 200
-    assert(len(res.json()) == 300)
-    for pred in res.json()[0]:
-        assert isinstance(pred['rental_price']['predicted_value'], float)
+        assert res.status_code == 200
+        assert(len(res.json()) == 300)
+        for pred in res.json()[0]:
+            assert isinstance(pred['rental_price']['predicted_value'], float)
 
     def test_2_predict_from_db(self):
         pass

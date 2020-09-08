@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     config_path = args.config
     if config_path is None:
-        config_dir, _, _ = get_or_create_dir_struct()
+        config_dir, _, _, _ = get_or_create_dir_struct()
         config_path = os.path.join(config_dir, 'config.json')
 
     print(f'Using configuration file: {config_path}')

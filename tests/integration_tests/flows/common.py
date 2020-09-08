@@ -93,7 +93,11 @@ def prepare_config(config, dbs):
 
 def is_container_run(name):
     docker_client = docker.from_env()
-    containers = docker_client.containers.list()
+    try:
+        containers = docker_client.containers.list()
+    except:
+        # In case docker is running for sudo or another user
+        return True
     containers = [x.name for x in containers if x.status == 'running']
     return name in containers
 

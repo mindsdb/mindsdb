@@ -17,7 +17,8 @@ def get_paths():
         (
             f'{mindsdb_path}/etc/',
             f'{mindsdb_path}/var/predictors',
-            f'{mindsdb_path}/var/datastore'
+            f'{mindsdb_path}/var/datastore',
+            f'{mindsdb_path}/var/misc'
         )
     ]
 
@@ -28,6 +29,7 @@ def get_paths():
                 os.path.join(os.environ['APPDATA'], 'mindsdb'),
                 os.path.join(os.environ['APPDATA'], 'mindsdb', 'predictors'),
                 os.path.join(os.environ['APPDATA'], 'mindsdb', 'datastore'),
+                os.path.join(os.environ['APPDATA'], 'mindsdb', 'misc'),
             )
         ])
     else:
@@ -35,12 +37,14 @@ def get_paths():
             (
                 '/etc/mindsdb',
                 '/var/lib/mindsdb/predictors',
-                '/var/lib/mindsdb/datastore'
+                '/var/lib/mindsdb/datastore',
+                '/var/lib/mindsdb/misc'
             ),
             (
                 '~/.local/etc/mindsdb',
                 '~/.local/var/lib/mindsdb/predictors',
-                '~/.local/var/lib/mindsdb/datastore'
+                '~/.local/var/lib/mindsdb/datastore',
+                '~/.local/var/lib/mindsdb/misc'
             )
         ])
 
@@ -71,8 +75,8 @@ def get_or_create_dir_struct():
             config_dir = tup[0]
             if 'DEV_CONFIG_PATH' in os.environ:
                 config_dir = os.environ['DEV_CONFIG_PATH']
-                
-            return config_dir, tup[1], tup[2]
+
+            return config_dir, tup[1], tup[2], tup[3]
 
         except Exception as e:
             pass

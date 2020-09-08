@@ -8,12 +8,9 @@ from pathlib import Path
 
 from flask import Flask, url_for
 from flask_restx import Api
-<<<<<<< HEAD
 from flask_cors import CORS
 import json
-=======
 import boto3
->>>>>>> download gui from s3
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore

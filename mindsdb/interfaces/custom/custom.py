@@ -48,15 +48,16 @@ class CustomModels():
             when_data = pd.DataFrame(when_data)
         model = self._internal_load(name)
         predictions = model.predict(when_data, kwargs)
-        print(predictions)
+
         pred_arr = []
         for i in range(len(predictions)):
             pred_arr.append({})
             pred_arr[-1] = {}
             for col in predictions.columns:
                 pred_arr[-1][col] = {}
-                pred_arr[-1][col]['predicted_value'] = predictions[col].iloc(i)
+                pred_arr[-1][col]['predicted_value'] = predictions[col].iloc[i]
 
+        print(pred_arr)
         return pred_arr
 
     def get_model_data(self, name):

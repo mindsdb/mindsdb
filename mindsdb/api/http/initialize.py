@@ -83,7 +83,8 @@ def initialize_static():
         s3.download_file('mindsdb-web-builds', 'css-V' + gui_version_lv.vstring + '.zip', css_zip_path)
         s3.download_file('mindsdb-web-builds', 'js-V' + gui_version_lv.vstring + '.zip', js_zip_path)
     except Exception as e:
-        raise Exception(f'Error during downloading files from s3: {e}')
+        print(f'Error during downloading files from s3: {e}')
+        return False
 
     # unzip process
     ZipFile(js_zip_path).extractall(static_path)

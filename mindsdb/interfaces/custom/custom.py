@@ -2,6 +2,8 @@ import os
 import shutil
 import importlib
 
+import pandas as pd
+
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.fs import get_or_create_dir_struct
 
@@ -13,7 +15,7 @@ class CustomModels():
         self.model_cache = []
 
     def _dir(self, name):
-        os.path.join(self.storage_dir, 'custom_model_' + name)
+        return str(os.path.join(self.storage_dir, 'custom_model_' + name))
 
     def internal_load(self, name):
         model = importlib.import_moduel(self._dir(name) + '/model.py')
@@ -33,6 +35,9 @@ class CustomModels():
         model.fit(name, from_data, to_predict, kwargs)
 
     def predict(self, name, when_data=None, kwargs={}):
+        if isinstance(when_data, dict):
+            for k in when_data: when_data[k] = [when_data[k]]
+            when_data = pd.DataFrame(when_data)
         model = internal_load(name)
         predictions = model.predict(when_data, kwargs)
         return predictions
@@ -58,4 +63,4 @@ class CustomModels():
         shutil.move(self._dir(name), self._dir(new_name))
 
     def load_model(self, fpath, name):
-        shutil.unpack_archive(fpath,self._dir(name), 'zip')
+        shutil.unpack_archive(fpath, self._dir(name), 'zip')

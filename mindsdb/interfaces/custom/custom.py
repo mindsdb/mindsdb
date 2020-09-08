@@ -30,6 +30,7 @@ class CustomModels():
 
     def learn(self, name, from_data, to_predict, kwargs={}):
         model = internal_load(name)
+        model.fit(name, from_data, to_predict, kwargs)
 
     def predict(self, name, when_data=None, kwargs={}):
         model = internal_load(name)

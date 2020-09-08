@@ -162,6 +162,27 @@ class Predictor(Resource):
 
         return '', 200
 
+@ns_conf.route('/<name>/learn')
+@ns_conf.param('name', 'The predictor identifier')
+class PredictorColumns(Resource):
+    def post(self, name):
+        data = request.json
+        to_predict = data.get('to_predict')
+        kwargs = data.get('kwargs', None)
+
+        if type(kwargs) != type({}):
+            kwargs = {}
+
+        if 'advanced_args' not in kwargs:
+            kwargs['advanced_args'] = {}
+
+
+        ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
+        from_data = ca.default_store.get_datasource_obj(ds_name, raw=True)
+
+        ca.custom_models.learn(name, from_data, to_predict, kwargs)
+
+        return '', 200
 
 @ns_conf.route('/<name>/columns')
 @ns_conf.param('name', 'The predictor identifier')
@@ -218,8 +239,11 @@ class PredictorPredict(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
-        # return '', 500
+        if name in ca.custom_models.get_models():
+            results = ca.custom_models.predict(name, when_data=when, **kwargs)
+        else:
+            results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
+
         return preparse_results(results, format_flag)
 
 
@@ -252,7 +276,11 @@ class PredictorPredictFromDataSource(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
+        if name in ca.custom_models.get_models():
+            results = ca.custom_models.predict(name, when_data=when, **kwargs)
+        else:
+            results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
+
         return preparse_results(results, format_flag)
 
 

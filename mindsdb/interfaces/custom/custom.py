@@ -17,7 +17,7 @@ class CustomModels():
     def _dir(self, name):
         return str(os.path.join(self.storage_dir, 'custom_model_' + name))
 
-    def internal_load(self, name):
+    def _internal_load(self, name):
         model = importlib.import_moduel(self._dir(name) + '/model.py')
 
         if name in self.model_cache:
@@ -31,14 +31,14 @@ class CustomModels():
         return model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
-        model = internal_load(name)
+        model = self._internal_load(name)
         model.fit(name, from_data, to_predict, kwargs)
 
     def predict(self, name, when_data=None, kwargs={}):
         if isinstance(when_data, dict):
             for k in when_data: when_data[k] = [when_data[k]]
             when_data = pd.DataFrame(when_data)
-        model = internal_load(name)
+        model = self._internal_load(name)
         predictions = model.predict(when_data, kwargs)
         return predictions
 

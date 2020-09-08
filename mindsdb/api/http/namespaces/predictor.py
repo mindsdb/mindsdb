@@ -239,7 +239,7 @@ class PredictorPredict(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        if name in ca.custom_models.get_models():
+        if name in [x['name'] for x in ca.custom_models.get_models()]:
             results = ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
             results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
@@ -276,7 +276,7 @@ class PredictorPredictFromDataSource(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        if name in ca.custom_models.get_models():
+        if name in [x['name'] for x in ca.custom_models.get_models()]:
             results = ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
             results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)

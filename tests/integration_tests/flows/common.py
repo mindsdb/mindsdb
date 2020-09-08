@@ -133,7 +133,7 @@ def stop_mindsdb(sp):
     sp.wait()
 
 
-def run_environment(db, config):
+def run_environment(db, config, run_apis='db_only'):
     DEFAULT_DB = f'default_{db}'
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
@@ -151,9 +151,16 @@ def run_environment(db, config):
             atexit.register(stop_container, name=db)
         db_ready = wait_db(config, DEFAULT_DB)
 
+    if run_apis == 'db_only':
+        api_str = 'mysql'
+    elif run_apis == 'http_only':
+        api_str = 'http'
+    elif run_apis == 'all':
+        api_str = 'mysql,http'
+
     if db_ready:
         sp = subprocess.Popen(
-            ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
+            ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path],
             stdout=OUTPUT,
             stderr=OUTPUT
         )

@@ -36,5 +36,5 @@ def initialize_flask(config):
 def initialize_interfaces(config, app):
     app.default_store = DataStore(config)
     app.mindsdb_native = MindsdbNative(config)
-    app.custom_models = MindsdbNative(config)
+    app.custom_models = CustomModels(config)
     app.config_obj = config

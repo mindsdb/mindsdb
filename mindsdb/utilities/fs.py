@@ -62,7 +62,7 @@ def get_or_create_dir_struct():
             if 'DEV_CONFIG_PATH' in os.environ:
                 config_dir = os.environ['DEV_CONFIG_PATH']
 
-            return config_dir, tup[1], tup[2]
+            return config_dir, tup[1], tup[2], tup[3]
         except Exception as e:
             pass
 

@@ -68,8 +68,6 @@ class ClickhouseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         return
-        print('HERE')
-        time.sleep(3)
         mdb, datastore = run_environment('clickhouse', config, run_apis='all')
         cls.mdb = mdb
 
@@ -134,8 +132,6 @@ class ClickhouseTest(unittest.TestCase):
             datastore.delete_datasource(EXTERNAL_DS_NAME)
         short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=300, rewrite=True)
         datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
-        print('Here 2')
-        time.sleep(4)
 
     def test_1_simple_model_upload(self):
         dir_name = 'test_custom_model'
@@ -157,23 +153,24 @@ class Model():
     def setup(self):
         self.model = LinearRegression()
 
-    def get_x(data):
-        initial_price = np.array(from_data['initial_price'])
-        initial_price.reshpae(-1, 1)
+    def get_x(self, data):
+        initial_price = np.array(data['initial_price'])
+        initial_price = initial_price.reshape(-1, 1)
+        print(initial_price)
         return initial_price
 
-    def get_y(data, to_predict_str):
-        to_predict = np.array(from_data[to_predict])
+    def get_y(self, data, to_predict_str):
+        to_predict = np.array(data[to_predict_str])
         return to_predict
 
     def predict(self, from_data, kwargs):
-        initial_price = get_x(from_data)
+        initial_price = self.get_x(from_data)
         rental_price = self.model.predict(initial_price)
         return pd.DataFrame({'rental_price': rental_price})
 
     def fit(self, from_data, to_predict, data_analysis, kwargs):
-        Y = get_y(from_data, to_predict)
-        X = get_x(from_data)
+        Y = self.get_y(from_data, to_predict)
+        X = self.get_x(from_data)
         self.model.fit(X, Y)
 
                      """)
@@ -188,11 +185,14 @@ class Model():
 
         # Train the model (new endpoint, just redirects to the /predictors/ endpoint basically)
         params = {
-            'data_source_name': EXTERNAL_DS_NAME,
+            'data_source_name': 'hr', # Should be: EXTERNAL_DS_NAME but the upload fails at the moment
             'to_predict': 'rental_price',
             'kwargs': {}
         }
-        res = requests.put(f'{root}/predictors/{pred_name}/fit', json=params)
+        res = requests.post(f'{root}/predictors/{pred_name}/learn', json=params)
+        print(res.status_code)
+        print(res.text)
+        assert res.status_code == 200
 
         # Run a single value prediction
         params = {

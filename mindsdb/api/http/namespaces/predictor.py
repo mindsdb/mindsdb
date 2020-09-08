@@ -180,7 +180,8 @@ class PredictorColumns(Resource):
         ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
         from_data = ca.default_store.get_datasource_obj(ds_name, raw=True)
 
-        ca.custom_models.learn(name, from_data, to_predict, kwargs)
+        data_analysis = ca.default_store.get_analysis(ds_name)
+        ca.custom_models.learn(name, from_data, to_predict, data_analysis, kwargs)
 
         return '', 200
 
@@ -240,7 +241,7 @@ class PredictorPredict(Resource):
             time.sleep(1)
 
         if name in [x['name'] for x in ca.custom_models.get_models()]:
-            results = ca.custom_models.predict(name, when_data=when, **kwargs)
+            return ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
             results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
 
@@ -277,7 +278,7 @@ class PredictorPredictFromDataSource(Resource):
             time.sleep(1)
 
         if name in [x['name'] for x in ca.custom_models.get_models()]:
-            results = ca.custom_models.predict(name, when_data=when, **kwargs)
+            return ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
             results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
 

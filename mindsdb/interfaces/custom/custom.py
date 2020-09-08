@@ -1,6 +1,7 @@
 import os
 import shutil
 import importlib
+import mindsdb_native
 
 import pandas as pd
 
@@ -12,17 +13,21 @@ class CustomModels():
         self.config = config
         self.dbw = DatabaseWrapper(self.config)
         _, _, _, self.storage_dir = get_or_create_dir_struct()
-        self.model_cache = []
+        self.model_cache = {}
 
     def _dir(self, name):
         return str(os.path.join(self.storage_dir, 'custom_model_' + name))
 
     def _internal_load(self, name):
-        model = importlib.import_module(self._dir(name) + '/model.py')
 
         if name in self.model_cache:
             return self.model_cache[name]
 
+        spec = importlib.util.spec_from_file_location(name, self._dir(name) + '/model.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        model = module.Model()
         if hasattr(model, 'setup'):
             model.setup()
 
@@ -30,9 +35,12 @@ class CustomModels():
 
         return model
 
-    def learn(self, name, from_data, to_predict, kwargs={}):
+    def learn(self, name, from_data, to_predict, data_analysis, kwargs={}):
+        print(from_data)
+        data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+        data_frame = data_source._df
         model = self._internal_load(name)
-        model.fit(name, from_data, to_predict, kwargs)
+        model.fit(data_frame, to_predict, data_analysis, kwargs)
 
     def predict(self, name, when_data=None, kwargs={}):
         if isinstance(when_data, dict):
@@ -40,7 +48,15 @@ class CustomModels():
             when_data = pd.DataFrame(when_data)
         model = self._internal_load(name)
         predictions = model.predict(when_data, kwargs)
-        return predictions
+
+        pred_arr = []
+        for i in range(len(predictions)):
+            pred_arr.append({})
+            pred_arr[-1] = {}
+            for col in predictions.columns:
+                pred_arr[-1][col]['predicted_value'] = predictions[col].iloc(i)
+
+        return pred_arr
 
     def get_model_data(self, name):
         pass

@@ -8,3 +8,4 @@ pg8000 >= 1.15.3
 pyparsing >= 2.4.7
 python-tds >= 1.10.0
 gunicorn >= 20.0.4
+flask_cors >= 1.1

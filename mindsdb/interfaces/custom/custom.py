@@ -18,7 +18,7 @@ class CustomModels():
         return str(os.path.join(self.storage_dir, 'custom_model_' + name))
 
     def _internal_load(self, name):
-        model = importlib.import_moduel(self._dir(name) + '/model.py')
+        model = importlib.import_module(self._dir(name) + '/model.py')
 
         if name in self.model_cache:
             return self.model_cache[name]

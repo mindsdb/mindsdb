@@ -218,6 +218,8 @@ class PredictorPredictFromDataSource(Resource):
         data = request.json
 
         from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=True)
+        if from_data is None:
+            abort(400, 'No valid datasource given')
 
         try:
             format_flag = data.get('format_flag')
@@ -231,13 +233,6 @@ class PredictorPredictFromDataSource(Resource):
 
         if type(kwargs) != type({}):
             kwargs = {}
-
-        if from_data is None:
-            from_data = data.get('from_data')
-        if from_data is None:
-            from_data = data.get('when_data')
-        if from_data is None:
-            abort(400, 'No valid datasource given')
 
         # Not the fanciest semaphor, but should work since restplus is multi-threaded and this condition should rarely be reached
         while name in model_swapping_map and model_swapping_map[name] is True:

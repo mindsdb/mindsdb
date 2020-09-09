@@ -74,6 +74,7 @@ def initialize_static():
     try:
         css_zip_path = str(static_path.joinpath('css.zip'))
         js_zip_path = str(static_path.joinpath('js.zip'))
+        media_zip_path = str(static_path.joinpath('media.zip'))
         bucket = "https://mindsdb-web-builds.s3.amazonaws.com/"
 
         cssZip = requests.get(bucket + 'css-V' + gui_version_lv.vstring + '.zip')
@@ -82,8 +83,15 @@ def initialize_static():
         jsZip = requests.get(bucket + 'js-V' + gui_version_lv.vstring + '.zip')
         open(js_zip_path, 'wb').write(jsZip.content)
 
-        indexFile = requests.get(bucket + 'index.html')
+        indexFile = requests.get(bucket + 'indexV' + gui_version_lv.vstring + '.html')
         open(str(static_path.joinpath('index.html')), 'wb').write(indexFile.content)
+
+        # Common resource
+        faviconFile = requests.get(bucket + 'favicon.ico')
+        open(str(static_path.joinpath('favicon.ico')), 'wb').write(faviconFile.content)
+
+        mediaZip = requests.get(bucket + 'media.zip')
+        open(media_zip_path, 'wb').write(mediaZip.content)
     except Exception as e:
         print(f'Error during downloading files from s3: {e}')
         return False
@@ -91,9 +99,11 @@ def initialize_static():
     # unzip process
     ZipFile(js_zip_path).extractall(static_path)
     ZipFile(css_zip_path).extractall(static_path)
+    ZipFile(media_zip_path).extractall(static_path)
 
     os.remove(js_zip_path)
     os.remove(css_zip_path)
+    os.remove(media_zip_path)
 
     shutil.move(static_path.joinpath('build', 'static', 'js'), static_path.joinpath('js'))
     shutil.move(static_path.joinpath('build', 'static', 'css'), static_path.joinpath('css'))

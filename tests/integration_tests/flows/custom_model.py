@@ -67,7 +67,6 @@ def query(query):
 class ClickhouseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        return
         mdb, datastore = run_environment('clickhouse', config, run_apis='all')
         cls.mdb = mdb
 
@@ -157,7 +156,6 @@ class Model():
     def get_x(self, data):
         initial_price = np.array([int(x) for x in data['initial_price']])
         initial_price = initial_price.reshape(-1, 1)
-        print(initial_price)
         return initial_price
 
     def get_y(self, data, to_predict_str):
@@ -168,7 +166,6 @@ class Model():
         initial_price = self.get_x(from_data)
         rental_price = self.model.predict(initial_price)
         df = pd.DataFrame({'rental_price': rental_price})
-        print(df)
         return df
 
     def fit(self, from_data, to_predict, data_analysis, kwargs):
@@ -188,7 +185,7 @@ class Model():
 
         # Train the model (new endpoint, just redirects to the /predictors/ endpoint basically)
         params = {
-            'data_source_name': 'hr', # Should be: EXTERNAL_DS_NAME but the upload fails at the moment
+            'data_source_name': EXTERNAL_DS_NAME,
             'to_predict': 'rental_price',
             'kwargs': {}
         }
@@ -214,8 +211,8 @@ class Model():
         res = requests.post(url, json=params)
 
         assert res.status_code == 200
-        assert(len(res.json()) == 300)
-        for pred in res.json()[0]:
+        assert(len(res.json()) == 299)
+        for pred in res.json():
             assert isinstance(pred['rental_price']['predicted_value'], float)
 
     def test_2_predict_from_db(self):

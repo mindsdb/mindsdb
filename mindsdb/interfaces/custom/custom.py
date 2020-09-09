@@ -42,12 +42,19 @@ class CustomModels():
         model = self._internal_load(name)
         model.fit(data_frame, to_predict, data_analysis, kwargs)
 
-    def predict(self, name, when_data=None, kwargs={}):
-        if isinstance(when_data, dict):
-            for k in when_data: when_data[k] = [when_data[k]]
-            when_data = pd.DataFrame(when_data)
+    def predict(self, name, when_data=None, from_data=None, kwargs={}):
+        if from_data is not None:
+            data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+            data_frame = data_source._df
+        elif when_data is not None:
+            if isinstance(when_data, dict):
+                for k in when_data: when_data[k] = [when_data[k]]
+                data_frame = pd.DataFrame(when_data)
+            else:
+                data_frame = when_data
+
         model = self._internal_load(name)
-        predictions = model.predict(when_data, kwargs)
+        predictions = model.predict(data_frame, kwargs)
 
         pred_arr = []
         for i in range(len(predictions)):

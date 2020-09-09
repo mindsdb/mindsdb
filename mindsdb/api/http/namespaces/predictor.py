@@ -278,9 +278,9 @@ class PredictorPredictFromDataSource(Resource):
             time.sleep(1)
 
         if name in [x['name'] for x in ca.custom_models.get_models()]:
-            return ca.custom_models.predict(name, when_data=when, **kwargs)
+            return ca.custom_models.predict(name, from_data=from_data, **kwargs)
         else:
-            results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
+            results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
 
         return preparse_results(results, format_flag)
 

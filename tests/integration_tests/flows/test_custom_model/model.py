@@ -12,7 +12,6 @@ class Model():
     def get_x(self, data):
         initial_price = np.array([int(x) for x in data['initial_price']])
         initial_price = initial_price.reshape(-1, 1)
-        print(initial_price)
         return initial_price
 
     def get_y(self, data, to_predict_str):
@@ -23,7 +22,6 @@ class Model():
         initial_price = self.get_x(from_data)
         rental_price = self.model.predict(initial_price)
         df = pd.DataFrame({'rental_price': rental_price})
-        print(df)
         return df
 
     def fit(self, from_data, to_predict, data_analysis, kwargs):

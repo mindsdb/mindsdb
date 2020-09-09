@@ -160,46 +160,73 @@ class MindsDBDataNode(DataNode):
                 original_target_values[col + '_original'] = [None]
 
         if table in [x['name'] for x in self.custom_models.get_models()]:
-            self.custom_models.predict(name=table, when_data=where_data)
+            res = self.custom_models.predict(name=table, when_data=where_data)
+            data = []
+            for ele in res:
+                row = {}
+                row['select_data_query'] = select_data_query
+                row['external_datasource'] = external_datasource
+                row['when_data'] = original_when_data
+
+                for key in ele:
+                    row[key] = ele[key]['predicted_value']
+                    # +++ FIXME this fix until issue https://github.com/mindsdb/mindsdb/issues/591 not resolved
+                    typing = None
+                    if key in model['data_analysis']:
+                        typing = model['data_analysis'][key]['typing']['data_subtype']
+
+                    if typing == 'Timestamp' and row[key] is not None:
+                        timestamp = datetime.datetime.utcfromtimestamp(row[key])
+                        row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    elif typing == 'Date':
+                        timestamp = datetime.datetime.utcfromtimestamp(row[key])
+                        row[key] = timestamp.strftime('%Y-%m-%d')
+                    elif typing == 'Int':
+                        row[key] = int(row[key])
+                    # ---
+
+                data.append(row)
+
+            return data
         else:
             res = self.mindsdb_native.predict(name=table, when_data=where_data)
 
-        data = []
-        keys = [x for x in list(res._data.keys()) if x in columns]
-        min_max_keys = []
-        for col in predicted_columns:
-            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
-                min_max_keys.append(col)
+            data = []
+            keys = [x for x in list(res._data.keys()) if x in columns]
+            min_max_keys = []
+            for col in predicted_columns:
+                if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                    min_max_keys.append(col)
 
-        length = len(res._data[predicted_columns[0]])
-        for i in range(length):
-            row = {}
-            explanation = res[i].explain()
-            for key in keys:
-                row[key] = res._data[key][i]
-                # +++ FIXME this fix until issue https://github.com/mindsdb/mindsdb/issues/591 not resolved
-                typing = None
-                if key in model['data_analysis_v2']:
-                    typing = model['data_analysis_v2'][key]['typing']['data_subtype']
+            length = len(res._data[predicted_columns[0]])
+            for i in range(length):
+                row = {}
+                explanation = res[i].explain()
+                for key in keys:
+                    row[key] = res._data[key][i]
+                    # +++ FIXME this fix until issue https://github.com/mindsdb/mindsdb/issues/591 not resolved
+                    typing = None
+                    if key in model['data_analysis_v2']:
+                        typing = model['data_analysis_v2'][key]['typing']['data_subtype']
 
-                if typing == 'Timestamp' and row[key] is not None:
-                    timestamp = datetime.datetime.utcfromtimestamp(row[key])
-                    row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-                elif typing == 'Date':
-                    timestamp = datetime.datetime.utcfromtimestamp(row[key])
-                    row[key] = timestamp.strftime('%Y-%m-%d')
-                # ---
-            for key in predicted_columns:
-                row[key + '_confidence'] = explanation[key]['confidence']
-                row[key + '_explain'] = json.dumps(explanation[key])
-            for key in min_max_keys:
-                row[key + '_min'] = min(explanation[key]['confidence_interval'])
-                row[key + '_max'] = max(explanation[key]['confidence_interval'])
-            row['select_data_query'] = select_data_query
-            row['external_datasource'] = external_datasource
-            row['when_data'] = original_when_data
-            for k in original_target_values:
-                row[k] = original_target_values[k][i]
-            data.append(row)
+                    if typing == 'Timestamp' and row[key] is not None:
+                        timestamp = datetime.datetime.utcfromtimestamp(row[key])
+                        row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    elif typing == 'Date':
+                        timestamp = datetime.datetime.utcfromtimestamp(row[key])
+                        row[key] = timestamp.strftime('%Y-%m-%d')
+                    # ---
+                for key in predicted_columns:
+                    row[key + '_confidence'] = explanation[key]['confidence']
+                    row[key + '_explain'] = json.dumps(explanation[key])
+                for key in min_max_keys:
+                    row[key + '_min'] = min(explanation[key]['confidence_interval'])
+                    row[key + '_max'] = max(explanation[key]['confidence_interval'])
+                row['select_data_query'] = select_data_query
+                row['external_datasource'] = external_datasource
+                row['when_data'] = original_when_data
+                for k in original_target_values:
+                    row[k] = original_target_values[k][i]
+                data.append(row)
 
-        return data
+            return data

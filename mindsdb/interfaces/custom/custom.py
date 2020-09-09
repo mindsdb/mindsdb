@@ -36,10 +36,7 @@ class CustomModels():
         module = __import__(name)
 
         try:
-            if not hasattr(model, 'save_after_fit') or model.save_after_fit == True:
-                model = pickle.load( open( os.path.join(self._dir(name),'model.pickle'), 'rb' ))
-            else:
-                raise Exception('next !')
+            model = pickle.load( open( os.path.join(self._dir(name), 'model.pickle'), 'rb' ))
         except:
             model = module.Model()
             if hasattr(model, 'setup'):
@@ -47,12 +44,12 @@ class CustomModels():
 
         self.model_cache[name] = model
 
-        return model, module.Model
+        return model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
         data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
         data_frame = data_source._df
-        model, model_type = self._internal_load(name)
+        model = self._internal_load(name)
 
         data_analysis = self.mindsdb_native.analyse_dataset(data_source)['data_analysis_v2']
 
@@ -81,7 +78,7 @@ class CustomModels():
             else:
                 data_frame = when_data
 
-        model, model_type = self._internal_load(name)
+        model = self._internal_load(name)
         predictions = model.predict(data_frame, kwargs)
 
         pred_arr = []

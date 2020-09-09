@@ -26,7 +26,7 @@ TEST_PREDICTOR_NAME = 'test_predictor'
 
 EXTERNAL_DS_NAME = 'test_external'
 config = Config(TEST_CONFIG)
-
+PRED_NAME = 'this_is_my_custom_sklearnmodel'
 
 def query(query):
     if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
@@ -134,7 +134,6 @@ class ClickhouseTest(unittest.TestCase):
 
     def test_1_simple_model_upload(self):
         dir_name = 'test_custom_model'
-        pred_name = 'this_is_my_custom_sklearnmodel'
 
         try:
             os.mkdir(dir_name)
@@ -178,7 +177,7 @@ class Model():
         shutil.make_archive(base_name='my_model', format='zip', root_dir=dir_name)
 
         # Upload the model (new endpoint)
-        res = requests.put(f'{root}/predictors/custom/{pred_name}', files=dict(file=open('my_model.zip','rb')))
+        res = requests.put(f'{root}/predictors/custom/{PRED_NAME}', files=dict(file=open('my_model.zip','rb')))
         print(res.status_code)
         print(res.text)
         assert res.status_code == 200
@@ -189,7 +188,7 @@ class Model():
             'to_predict': 'rental_price',
             'kwargs': {}
         }
-        res = requests.post(f'{root}/predictors/{pred_name}/learn', json=params)
+        res = requests.post(f'{root}/predictors/{PRED_NAME}/learn', json=params)
         print(res.status_code)
         print(res.text)
         assert res.status_code == 200
@@ -198,7 +197,7 @@ class Model():
         params = {
             'when': {'initial_price': 5000}
         }
-        url = f'{root}/predictors/{pred_name}/predict'
+        url = f'{root}/predictors/{PRED_NAME}/predict'
         res = requests.post(url, json=params)
         assert res.status_code == 200
         assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
@@ -207,7 +206,7 @@ class Model():
         params = {
             'data_source_name': EXTERNAL_DS_NAME
         }
-        url = f'{root}/predictors/{pred_name}/predict_datasource'
+        url = f'{root}/predictors/{PRED_NAME}/predict_datasource'
         res = requests.post(url, json=params)
 
         assert res.status_code == 200
@@ -215,8 +214,17 @@ class Model():
         for pred in res.json():
             assert isinstance(pred['rental_price']['predicted_value'], float)
 
-    def test_2_predict_from_db(self):
-        pass
+    def test_2_db_predict_from_external_datasource(self):
+        name = f'{TEST_PREDICTOR_NAME}_external'
+        models = self.mdb.get_models()
+        models = [x['name'] for x in models]
+        if name in models:
+            self.mdb.delete_model(name)
+
+        res = query(f"""SELECT rental_price FROM mindsdb.{PRED_NAME} WHERE external_datasource='{EXTERNAL_DS_NAME}'""")
+
+        self.assertTrue(len(res) > 0)
+        self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
 
     def test_3_retrain_model(self):
         pass

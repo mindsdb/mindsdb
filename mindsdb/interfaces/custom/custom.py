@@ -39,18 +39,18 @@ class CustomModels():
 
         return model
 
-    def learn(self, name, from_data, to_predict, data_analysis, kwargs={}):
+    def learn(self, name, from_data, to_predict, kwargs={}):
         data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
         data_frame = data_source._df
         model = self._internal_load(name)
 
-        data_analysis = self.mindsdb_native.get_analysis(ds_name)['data_analysis_v2']
+        data_analysis = self.mindsdb_native.analyse_dataset(data_source)['data_analysis_v2']
 
         with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
             json.dump({
                 'name': name
                 ,'data_analysis': data_analysis
-                ,'predict': to_predict if isinstance(to_predict,str) else [to_predict]
+                ,'predict': to_predict if isinstance(to_predict,list) else [to_predict]
             }, fp)
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
@@ -104,20 +104,24 @@ class CustomModels():
         shutil.move(self._dir(name), self._dir(new_name))
 
     def load_model(self, fpath, name):
-        print('\n\n\n\n')
-        print(self._dir(name))
-        print('\n\n\n\n')
         shutil.unpack_archive(fpath, self._dir(name), 'zip')
         with open(os.path.join(self._dir(name), 'metadata.json') , 'w') as fp:
             json.dump({
                 'name': name
                 ,'data_analysis': {
-                    'Empty': {
+                    'Empty_target': {
                         'typing': {
-                            'data_subtype': 'Text'
+                            'data_type': 'Text'
+                            ,'data_subtype': 'Short Text'
+                        }
+                    }
+                    ,'Empty_input': {
+                        'typing': {
+                            'data_type': 'Text'
+                            ,'data_subtype': 'Short Text'
                         }
                     }
                 }
-                ,'predict': ['Empty']
+                ,'predict': ['Empty_target']
             }, fp)
         self.dbw.register_predictors([self.get_model_data(name)])

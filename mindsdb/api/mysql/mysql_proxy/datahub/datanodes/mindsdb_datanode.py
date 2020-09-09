@@ -4,6 +4,7 @@ import pandas
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom import CustomModels
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
@@ -17,11 +18,13 @@ class MindsDBDataNode(DataNode):
     def __init__(self, config):
         self.config = config
         self.mindsdb_native = MindsdbNative(config)
+        self.custom_models = CustomModels(config)
 
     def getTables(self):
         models = self.mindsdb_native.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
         models += ['predictors', 'commands']
+        models += [x['name'] for x in self.custom_models.get_models()]
         return models
 
     def hasTable(self, table):
@@ -145,7 +148,10 @@ class MindsDBDataNode(DataNode):
             else:
                 original_target_values[col + '_original'] = [None]
 
-        res = self.mindsdb_native.predict(name=table, when_data=where_data)
+        if name in [x['name'] for x in self.custom_models.get_models()]:
+            self.custom_models.predict(name=table, when_data=where_data)
+        else:
+            res = self.mindsdb_native.predict(name=table, when_data=where_data)
 
         data = []
         keys = [x for x in list(res._data.keys()) if x in columns]

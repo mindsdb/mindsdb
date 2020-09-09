@@ -109,6 +109,7 @@ class Clickhouse(Integration):
             columns_sql += ',`external_datasource` Nullable(String)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
+                print(model_meta)
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
                     columns_sql += f',`{col}_min` Nullable(Float64)'
                     columns_sql += f',`{col}_max` Nullable(Float64)'

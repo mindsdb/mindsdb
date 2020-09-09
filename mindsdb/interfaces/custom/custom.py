@@ -50,7 +50,7 @@ class CustomModels():
             json.dump({
                 'name': name
                 ,'data_analysis': data_analysis
-                ,'predict': to_predict
+                ,'predict': to_predict if isinstance(to_predict,str) else [to_predict]
             }, fp)
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
@@ -86,9 +86,13 @@ class CustomModels():
 
     def get_models(self, status='any'):
         models = []
-        for dir in os.listdir(self.storage_dir):
-            if 'custom_model_' in dir:
-                models.append(get_model_data(dir.replace('custom_model_','')))
+        for model_dir in os.listdir(self.storage_dir):
+            if 'custom_model_' in model_dir:
+                name = model_dir.replace('custom_model_','')
+                try:
+                    models.append(self.get_model_data(name))
+                except:
+                    print(f'Model {name} not found !')
 
         return models
 
@@ -100,17 +104,20 @@ class CustomModels():
         shutil.move(self._dir(name), self._dir(new_name))
 
     def load_model(self, fpath, name):
+        print('\n\n\n\n')
+        print(self._dir(name))
+        print('\n\n\n\n')
         shutil.unpack_archive(fpath, self._dir(name), 'zip')
         with open(os.path.join(self._dir(name), 'metadata.json') , 'w') as fp:
             json.dump({
                 'name': name
                 ,'data_analysis': {
-                    'empty': {
+                    'Empty': {
                         'typing': {
                             'data_subtype': 'Text'
                         }
                     }
                 }
-                ,'predict': 'Unknown'
+                ,'predict': ['Empty']
             }, fp)
         self.dbw.register_predictors([self.get_model_data(name)])

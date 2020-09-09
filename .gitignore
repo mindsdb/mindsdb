@@ -11,4 +11,3 @@ tests/docker/mariadb/jars
 tests/docker/clickhouse/database
 tests/docker/mysql/storage
 /integration_tests/flows/config/*
-mindsdb/api/http/static

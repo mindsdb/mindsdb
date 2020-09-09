@@ -1,0 +1,31 @@
+{
+  "files": {
+    "main.css": "/static/css/main.2ec23807.chunk.css",
+    "main.js": "/static/js/main.152d2312.chunk.js",
+    "main.js.map": "/static/js/main.152d2312.chunk.js.map",
+    "runtime-main.js": "/static/js/runtime-main.cfe1206a.js",
+    "runtime-main.js.map": "/static/js/runtime-main.cfe1206a.js.map",
+    "static/css/2.426ed7e8.chunk.css": "/static/css/2.426ed7e8.chunk.css",
+    "static/js/2.4d00e017.chunk.js": "/static/js/2.4d00e017.chunk.js",
+    "static/js/2.4d00e017.chunk.js.map": "/static/js/2.4d00e017.chunk.js.map",
+    "index.html": "/index.html",
+    "precache-manifest.791bcf34f84098e6903c9298ca0c42a1.js": "/precache-manifest.791bcf34f84098e6903c9298ca0c42a1.js",
+    "service-worker.js": "/service-worker.js",
+    "static/css/2.426ed7e8.chunk.css.map": "/static/css/2.426ed7e8.chunk.css.map",
+    "static/css/main.2ec23807.chunk.css.map": "/static/css/main.2ec23807.chunk.css.map",
+    "static/js/2.4d00e017.chunk.js.LICENSE.txt": "/static/js/2.4d00e017.chunk.js.LICENSE.txt",
+    "static/media/App.scss": "/static/media/poppins-v6-latin-regular.a2ed588b.svg",
+    "static/media/primereact.min.css": "/static/media/line.567f5738.gif",
+    "static/media/all.min.css": "/static/media/fa-solid-900.ee09ad75.woff",
+    "static/media/mindsdb-logo.svg": "/static/media/mindsdb-logo.770b9ba0.svg",
+    "static/media/theme.css": "/static/media/open-sans-v15-latin-regular.cffb686d.woff2",
+    "static/media/primeicons.css": "/static/media/primeicons.b8eccb10.eot"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.cfe1206a.js",
+    "static/css/2.426ed7e8.chunk.css",
+    "static/js/2.4d00e017.chunk.js",
+    "static/css/main.2ec23807.chunk.css",
+    "static/js/main.152d2312.chunk.js"
+  ]
+}

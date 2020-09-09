@@ -2,8 +2,10 @@ import os
 import mindsdb
 import logging
 import sys
+import multiprocessing
 
 from werkzeug.exceptions import HTTPException
+from waitress import serve
 
 from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
@@ -17,7 +19,6 @@ def start(config, initial=False):
     if not initial:
         print('\n\nWarning, this process should not have been started... nothing is "wrong" but it needlessly ate away a tiny bit of precious comute !\n\n')
     config = Config(config)
-    debug = False
 
     if not logging.root.handlers:
         rootLogger = logging.getLogger()
@@ -53,8 +54,28 @@ def start(config, initial=False):
         name = getattr(type(e), '__name__') or 'Unknown error'
         return {'message': f'{name}: {str(e)}'}, 500
 
-    print(f"Start on {config['api']['http']['host']}:{config['api']['http']['port']}")
-    app.run(debug=debug, port=config['api']['http']['port'], host=config['api']['http']['host'])
+    port = config['api']['http']['port']
+    host = config['api']['http']['host']
+
+    print(f"Start on {host}:{port}")
+
+    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
+
+    if server.lower() == 'waitress':
+        serve(app, port=port, host=host)
+    elif server.lower() == 'flask':
+        app.run(debug=False, port=port, host=host)
+    elif server.lower() == 'gunicorn':
+        try:
+            from mindsdb.api.http.gunicorn_wrapper import StandaloneApplication
+        except ImportError:
+            print("Gunicorn server is not available by default. If you wish to use it, please install 'gunicorn'")
+            return
+        options = {
+            'bind': f'{host}:{port}',
+            'workers': min(max(multiprocessing.cpu_count(), 2), 3)
+        }
+        StandaloneApplication(app, options).run()
 
 
 if __name__ == '__main__':

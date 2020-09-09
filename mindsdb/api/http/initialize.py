@@ -72,16 +72,19 @@ def initialize_static():
     shutil.rmtree(static_path)
     static_path.mkdir(parents=True, exist_ok=True)
 
-    ACCESS_KEY = ""
-    SECRET_KEY = ""
-
     try:
-        s3 = boto3.client('s3', aws_access_key_id=ACCESS_KEY, aws_secret_access_key=SECRET_KEY)
-        s3.download_file('mindsdb-web-builds', 'index.html', str(static_path.joinpath('index.html')))
         css_zip_path = str(static_path.joinpath('css.zip'))
         js_zip_path = str(static_path.joinpath('js.zip'))
-        s3.download_file('mindsdb-web-builds', 'css-V' + gui_version_lv.vstring + '.zip', css_zip_path)
-        s3.download_file('mindsdb-web-builds', 'js-V' + gui_version_lv.vstring + '.zip', js_zip_path)
+        bucket = "https://mindsdb-web-builds.s3.amazonaws.com/"
+
+        cssZip = requests.get(bucket + 'css-V' + gui_version_lv.vstring + '.zip')
+        open(css_zip_path, 'wb').write(cssZip.content)
+
+        jsZip = requests.get(bucket + 'js-V' + gui_version_lv.vstring + '.zip')
+        open(js_zip_path, 'wb').write(jsZip.content)
+
+        indexFile = requests.get(bucket + 'index.html')
+        open(str(static_path.joinpath('index.html')), 'wb').write(indexFile.content)
     except Exception as e:
         print(f'Error during downloading files from s3: {e}')
         return False

@@ -52,3 +52,14 @@ services:
     volumes:
     - ./postgres/storage:/var/lib/postgresql/data
     - ./postgres/share:/share
+  mongo:
+    image: mongo:4.4
+    network_mode: host
+    container_name: mongo-test
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+    - ./mongodb/storage:/data/db

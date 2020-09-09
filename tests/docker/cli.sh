@@ -36,4 +36,9 @@ elif [ $1 = "postgres" ]; then
     docker-compose up postgres
 elif [ $1 = "postgres-stop" ]; then
     docker-compose stop postgres
+elif [ $1 = "mongo" ]; then
+    mkdir -p mongodb/storage/
+    docker-compose up mongo
+elif [ $1 = "mongo-stop" ]; then
+    docker-compose stop mongo
 fi

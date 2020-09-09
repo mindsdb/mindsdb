@@ -10,7 +10,6 @@ from flask import Flask, url_for
 from flask_restx import Api
 from flask_cors import CORS
 import json
-import boto3
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -119,7 +118,7 @@ def initialize_flask(config):
             'name': 'apikey'
         }
     }
-    cors_origin_list = ["http://localhost:5000", "http://localhost:3000"]
+    cors_origin_list = ["http://localhost:5000", "http://localhost:3000", "http://0.0.0.0:47334"]
     cors = CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')

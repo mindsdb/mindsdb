@@ -9,6 +9,7 @@ from mindsdb_native.config import CONFIG
 
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.utilities.fs import get_or_create_dir_struct
@@ -48,6 +49,7 @@ if __name__ == '__main__':
     }
 
     mdb = MindsdbNative(config)
+    cst = CustomModels(config)
     # @TODO Maybe just use `get_model_data` directly here ? Seems like a useless abstraction
     model_data_arr = [
         {
@@ -56,6 +58,9 @@ if __name__ == '__main__':
             'data_analysis': mdb.get_model_data(x['name'])['data_analysis_v2']
         } for x in mdb.get_models()
     ]
+
+    model_data_arr.extend(cst.get_models())
+
     dbw = DatabaseWrapper(config)
     dbw.register_predictors(model_data_arr)
 

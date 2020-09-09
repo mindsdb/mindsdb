@@ -7,7 +7,7 @@ import pickle
 
 from mindsdb.interfaces.datastore.sqlite_helpers import get_sqlite_data, cast_df_columns_types, create_sqlite_db
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS
 
 
 class DataStore():
@@ -86,45 +86,73 @@ class DataStore():
             }
         elif source_type in self.config['integrations']:
             integration = self.config['integrations'][source_type]
-            dsClass = None
-            picklable = {
-                'args': [],
-                'kwargs': {
-                    'query': source,
-                    'user': integration['user'],
-                    'password': integration['password'],
-                    'host': integration['host'],
-                    'port': integration['port']
-                }
+
+            ds_class_map = {
+                'clickhouse': ClickhouseDS,
+                'mariadb': MariaDS,
+                'mysql': MySqlDS,
+                'postgres': PostgresDS,
+                'mssql': MSSQLDS,
+                'mongodb': MongoDS
             }
-            if integration['type'] == 'clickhouse':
-                dsClass = ClickhouseDS
-                picklable['class'] = 'ClickhouseDS'
-            elif integration['type'] == 'mariadb':
-                dsClass = MariaDS
-                picklable['class'] = 'MariaDS'
-            elif integration['type'] == 'mysql':
-                dsClass = MySqlDS
-                picklable['class'] = 'MySqlDS'
-            elif integration['type'] == 'postgres':
-                dsClass = PostgresDS
-                picklable['class'] = 'PostgresDS'
-            elif integration['type'] == 'mssql':
-                dsClass = MSSQLDS
-                picklable['class'] = 'MSSQLDS'
-            else:
-                raise ValueError(f'Unknown DS source_type: {source_type}')
+
             try:
-                ds = dsClass(
-                    query=source,
-                    user=integration['user'],
-                    password=integration['password'],
-                    host=integration['host'],
-                    port=integration['port']
-                )
-            except Exception:
-                shutil.rmtree(ds_meta_dir)
-                raise
+                dsClass = ds_class_map[integration['type']]
+            except KeyError:
+                raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
+
+            if integration['type'] != 'mongodb':
+                picklable = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source,
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port']
+                    }
+                }
+
+                try:
+                    ds = dsClass(
+                        query=source,
+                        user=integration['user'],
+                        password=integration['password'],
+                        host=integration['host'],
+                        port=integration['port']
+                    )
+                except Exception:
+                    shutil.rmtree(ds_meta_dir)
+                    raise
+            else:
+                picklable = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'database': source['database'],
+                        'collection': source['collection'],
+                        'query': source['find'],
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port']
+                    }
+                }
+
+                try:
+                    ds = dsClass(
+                        database=source['database'],
+                        collection=source['collection'],
+                        query=source['find'],
+                        user=integration['user'],
+                        password=integration['password'],
+                        host=integration['host'],
+                        port=integration['port']
+                    )
+                except Exception:
+                    shutil.rmtree(ds_meta_dir)
+                    raise
         else:
             # This probably only happens for urls
             print('Create URL data source !')

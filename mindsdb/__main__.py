@@ -11,6 +11,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
+from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.fs import get_or_create_dir_struct
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse
@@ -44,7 +45,8 @@ if __name__ == '__main__':
 
     start_functions = {
         'http': start_http,
-        'mysql': start_mysql
+        'mysql': start_mysql,
+        'mongo': start_mongo
     }
 
     mdb = MindsdbNative(config)

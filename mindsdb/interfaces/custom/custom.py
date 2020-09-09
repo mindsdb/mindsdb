@@ -54,6 +54,7 @@ class CustomModels():
             }, fp)
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
+        self.dbw.register_predictors([self.get_model_data(name)])
 
     def predict(self, name, when_data=None, from_data=None, kwargs={}):
         if from_data is not None:
@@ -77,18 +78,17 @@ class CustomModels():
                 pred_arr[-1][col] = {}
                 pred_arr[-1][col]['predicted_value'] = predictions[col].iloc[i]
 
-        print(pred_arr)
         return pred_arr
 
     def get_model_data(self, name):
-        pass
+        with open(os.path.join(self._dir(name), 'metadata.json'), 'r') as fp:
+            return json.load(fp)
 
     def get_models(self, status='any'):
         models = []
         for dir in os.listdir(self.storage_dir):
             if 'custom_model_' in dir:
-                with open(os.path.join(self.storage_dir, dir, 'metadata.json'), 'r') as fp:
-                    models.append(json.load(fp))
+                models.append(get_model_data(dir.replace('custom_model_','')))
 
         return models
 
@@ -113,3 +113,4 @@ class CustomModels():
                 }
                 ,'predict': 'Unknown'
             }, fp)
+        self.dbw.register_predictors([self.get_model_data(name)])

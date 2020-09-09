@@ -2,6 +2,8 @@ import os
 import shutil
 import importlib
 import json
+import pickle
+import sys
 
 import mindsdb_native
 import pandas as pd
@@ -27,22 +29,30 @@ class CustomModels():
         if name in self.model_cache:
             return self.model_cache[name]
 
-        spec = importlib.util.spec_from_file_location(name, self._dir(name) + '/model.py')
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        #spec = importlib.util.spec_from_file_location(name, self._dir(name) + '/model.py')
+        #module = importlib.util.module_from_spec(spec)
+        #spec.loader.exec_module(module)
+        sys.path.insert(0, self._dir(name))
+        module = __import__(name)
 
-        model = module.Model()
-        if hasattr(model, 'setup'):
-            model.setup()
+        try:
+            if not hasattr(model, 'save_after_fit') or model.save_after_fit == True:
+                model = pickle.load( open( os.path.join(self._dir(name),'model.pickle'), 'rb' ))
+            else:
+                raise Exception('next !')
+        except:
+            model = module.Model()
+            if hasattr(model, 'setup'):
+                model.setup()
 
         self.model_cache[name] = model
 
-        return model
+        return model, module.Model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
         data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
         data_frame = data_source._df
-        model = self._internal_load(name)
+        model, model_type = self._internal_load(name)
 
         data_analysis = self.mindsdb_native.analyse_dataset(data_source)['data_analysis_v2']
 
@@ -54,6 +64,10 @@ class CustomModels():
             }, fp)
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
+
+        if not hasattr(model, 'save_after_fit') or model.save_after_fit == True:
+            pickle.dump(model, open( os.path.join(self._dir(name),'model.pickle'), 'wb' ))
+
         self.dbw.register_predictors([self.get_model_data(name)])
 
     def predict(self, name, when_data=None, from_data=None, kwargs={}):
@@ -67,7 +81,7 @@ class CustomModels():
             else:
                 data_frame = when_data
 
-        model = self._internal_load(name)
+        model, model_type = self._internal_load(name)
         predictions = model.predict(data_frame, kwargs)
 
         pred_arr = []
@@ -105,6 +119,7 @@ class CustomModels():
 
     def load_model(self, fpath, name):
         shutil.unpack_archive(fpath, self._dir(name), 'zip')
+        shutil.move( os.path.join(self._dir(name), 'model.py') ,  os.path.join(self._dir(name), f'{name}.py') )
         with open(os.path.join(self._dir(name), 'metadata.json') , 'w') as fp:
             json.dump({
                 'name': name
@@ -124,4 +139,8 @@ class CustomModels():
                 }
                 ,'predict': ['Empty_target']
             }, fp)
+
+        with open(os.path.join(self._dir(name), '__init__.py') , 'w') as fp:
+            fp.write('')
+
         self.dbw.register_predictors([self.get_model_data(name)])

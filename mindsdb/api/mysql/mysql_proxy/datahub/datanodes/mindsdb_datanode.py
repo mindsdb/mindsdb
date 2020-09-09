@@ -31,6 +31,13 @@ class MindsDBDataNode(DataNode):
         return table in self.getTables()
 
     def getTableColumns(self, table):
+        try:
+            columns = self.custom_models.get_model_data(table)['predict']
+            columns += ['external_datasource', 'select_data_query', 'when_data']
+            return columns
+        except Exception as e:
+            pass
+
         if table == 'predictors':
             return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
         if table == 'commands':
@@ -135,7 +142,11 @@ class MindsDBDataNode(DataNode):
 
             where_data = [new_where]
 
-        model = self.mindsdb_native.get_model_data(name=table)
+        try:
+            model = self.custom_models.get_model_data(name=table)
+        except:
+            model = self.mindsdb_native.get_model_data(name=table)
+
         predicted_columns = model['predict']
 
         original_target_values = {}
@@ -148,7 +159,7 @@ class MindsDBDataNode(DataNode):
             else:
                 original_target_values[col + '_original'] = [None]
 
-        if name in [x['name'] for x in self.custom_models.get_models()]:
+        if table in [x['name'] for x in self.custom_models.get_models()]:
             self.custom_models.predict(name=table, when_data=where_data)
         else:
             res = self.mindsdb_native.predict(name=table, when_data=where_data)

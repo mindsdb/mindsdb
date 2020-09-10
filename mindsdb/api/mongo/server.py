@@ -212,8 +212,12 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
     _stopped = False
 
     def handle(self):
+        print('connect')
+        print(str(self.server.socket))
         while True:
+            print('wait')
             header = self._read_bytes(16)
+            print('done wait')
             length, pos = unpack(INT, header)
             request_id, pos = unpack(INT, header, pos)
             response_to, pos = unpack(INT, header, pos)
@@ -244,7 +248,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         return buffer
 
 
-class MongoServer(SocketServer.TCPServer):
+class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     def __init__(self, config):
         mongodb_config = config['api'].get('mongodb')
         assert mongodb_config is not None, 'is no mongodb config!'
@@ -273,14 +277,28 @@ class MongoServer(SocketServer.TCPServer):
         }
 
         respondersCollection.add(
-            when={'isMaster': helpers.is_true},
-            result={
-                'isMaster': True,   # lowercase?
-                'minWireVersion': 0,
-                'maxWireVersion': 6,
-                'ok': 1
-            }
+            when={'drop': 'system.sessions'},
+            result={'ok': 1}
         )
+        respondersCollection.add(
+            when={'update': 'system.version'},
+            result={'ok': 1}
+        )
+        respondersCollection.add(
+            when={'setFeatureCompatibilityVersion': helpers.is_true},
+            result={'ok': 1}
+        )
+        # OpMSG=OrderedDict([('features', 1), ('$clusterTime', OrderedDict([('clusterTime', Timestamp(1599748325, 1)), ('signature', OrderedDict([('hash', b'\xb8\xc3\x03\x18\xca\xe6bh\xf0\xcb47,\x924\x8a >\xfc\x91'), ('keyId', 6870854312365391875)]))])), ('$configServerState', OrderedDict([('opTime', OrderedDict([('ts', Timestamp(1599748325, 1)), ('t', 1)]))])), ('$db', 'admin')])
+        respondersCollection.add(
+            when={'features': helpers.is_true},
+            result={'ok': 1}
+        )
+        # OpMSG=OrderedDict([('serverStatus', 1), ('$clusterTime', OrderedDict([('clusterTime', Timestamp(1599748366, 1)), ('signature', OrderedDict([('hash', b'\xa1E}\xbbIU\xc2D\x95++\x82\x88\xb5\x84\xf5\xda)+B'), ('keyId', 6870854312365391875)]))])), ('$configServerState', OrderedDict([('opTime', OrderedDict([('ts', Timestamp(1599748366, 1)), ('t', 1)]))])), ('$db', 'admin')])
+        respondersCollection.add(
+            when={'serverStatus': helpers.is_true},
+            result={'ok': 1}
+        )
+        # OpMSG=OrderedDict([('ismaster', 1), ('$db', 'admin'), ('$clusterTime', OrderedDict([('clusterTime', Timestamp(1599749031, 1)), ('signature', OrderedDict([('hash', b'6\x87\xd5Y\xa7\xc7\xcf$\xab\x1e\xa2{\xe5B\xe5\x99\xdbl\x8d\xf4'), ('keyId', 6870854312365391875)]))])), ('$client', OrderedDict([('application', OrderedDict([('name', 'MongoDB Shell')])), ('driver', OrderedDict([('name', 'MongoDB Internal Client'), ('version', '3.6.3')])), ('os', OrderedDict([('type', 'Linux'), ('name', 'Ubuntu'), ('architecture', 'x86_64'), ('version', '18.04')])), ('mongos', OrderedDict([('host', 'maxs-comp:27103'), ('client', '127.0.0.1:52148'), ('version', '3.6.3')]))])), ('$configServerState', OrderedDict([('opTime', OrderedDict([('ts', Timestamp(1599749031, 1)), ('t', 1)]))]))])
 
         respondersCollection.responders += op_msg_responders
 

@@ -1,6 +1,7 @@
 from .whatsmyuri import responder as responder_whatsmyuri
 from .buildinfo import responder as responder_buildinfo
 from .is_master import responder as responder_is_master
+from .is_master_lower import responder as responder_is_master_lower
 from .replsetgetstatus import responder as responder_replsetgetstatus
 from .getlog import responder as responder_getlog
 
@@ -14,7 +15,8 @@ responders = [
     # service queries
     responder_whatsmyuri,
     responder_buildinfo,
-    # responder_is_master,
+    responder_is_master,
+    responder_is_master_lower,
     responder_replsetgetstatus,
     responder_getlog,
     #

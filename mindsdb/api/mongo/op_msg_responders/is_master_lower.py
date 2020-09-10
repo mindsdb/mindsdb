@@ -3,7 +3,7 @@ import mindsdb.api.mongo.functions as helpers
 
 
 class Responce(Responder):
-    when = {'isMaster': helpers.is_true}
+    when = {'ismaster': helpers.is_true}
 
     result = response = {
         "ismaster": True,

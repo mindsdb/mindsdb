@@ -1,5 +1,4 @@
 import os
-import mindsdb
 import logging
 import sys
 import multiprocessing
@@ -30,13 +29,6 @@ def start(config, initial=False):
         errStream = logging.StreamHandler(sys.stderr)
         errStream.addFilter(lambda record: record.levelno > logging.INFO)
         rootLogger.addHandler(errStream)
-
-    mindsdb.CONFIG.MINDSDB_DATASOURCES_PATH = os.path.join(mindsdb.CONFIG.MINDSDB_STORAGE_PATH, 'datasources')
-    mindsdb.CONFIG.MINDSDB_TEMP_PATH = os.path.join(mindsdb.CONFIG.MINDSDB_STORAGE_PATH, 'tmp')
-
-    os.makedirs(mindsdb.CONFIG.MINDSDB_STORAGE_PATH, exist_ok=True)
-    os.makedirs(mindsdb.CONFIG.MINDSDB_DATASOURCES_PATH, exist_ok=True)
-    os.makedirs(mindsdb.CONFIG.MINDSDB_TEMP_PATH, exist_ok=True)
 
     app, api = initialize_flask(config)
     initialize_interfaces(config, app)
@@ -76,7 +68,3 @@ def start(config, initial=False):
             'workers': min(max(multiprocessing.cpu_count(), 2), 3)
         }
         StandaloneApplication(app, options).run()
-
-
-if __name__ == '__main__':
-    start()

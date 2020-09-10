@@ -34,7 +34,11 @@ except KeyError:
 create_directory(datasource_dir)
 create_directory(predictor_dir)
 
-os.environ['MINDSDB_STORAGE_PATH'] = datasource_dir
+temp_path = os.path.join(predictor_dir, 'tmp')
+create_directory(temp_path)
+
+os.environ['MINDSDB_STORAGE_PATH'] = predictor_dir
+os.environ['MINDSDB_TEMP_PATH'] = temp_path
 
 from mindsdb_native import *
 # Figure out how to add this as a module

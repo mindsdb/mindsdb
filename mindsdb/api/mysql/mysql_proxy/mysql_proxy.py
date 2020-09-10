@@ -71,7 +71,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb.interfaces.custom.custom import CustomModels
+from mindsdb.interfaces.custom.custom_models import CustomModels
 
 
 connection_id = 0

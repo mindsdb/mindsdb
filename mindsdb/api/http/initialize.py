@@ -4,7 +4,7 @@ import json
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb.interfaces.custom.custom import CustomModels
+from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.config import Config
 
 

@@ -145,9 +145,9 @@ class ClickhouseTest(unittest.TestCase):
 from sklearn.linear_model import LinearRegression
 import numpy as np
 import pandas as pd
+from mindsdb import ModelInterface
 
-
-class Model():
+class Model(ModelInterface):
     def setup(self):
         print('Setting up model !')
         self.model = LinearRegression()

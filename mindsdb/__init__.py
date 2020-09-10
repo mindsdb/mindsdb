@@ -41,3 +41,4 @@ from mindsdb_native import *
 import lightwood
 #import dataskillet
 import mindsdb.utilities.wizards as wizards
+from mindsdb.interfaces.custom.model_interface import ModelInterface

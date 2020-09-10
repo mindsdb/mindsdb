@@ -9,7 +9,7 @@ from mindsdb_native.config import CONFIG
 
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb.interfaces.custom.custom import CustomModels
+from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.utilities.fs import get_or_create_dir_struct

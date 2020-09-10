@@ -4,7 +4,7 @@ import pandas
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb.interfaces.custom.custom import CustomModels
+from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb

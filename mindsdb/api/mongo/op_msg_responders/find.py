@@ -13,8 +13,7 @@ class Responce(Responder):
         table = query['find']
         where_data = query.get('filter', {})
         if table == 'predictors':
-            # models = mindsdb_env['mindsdb_native'].get_models()
-            models = [{
+            data = [{
                 'name': x['name'],
                 'status': x['status'],
                 'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
@@ -23,20 +22,9 @@ class Responce(Responder):
                 'external_datasource': '',
                 'training_options': ''
             } for x in models]
-
-            cursor = {
-                'id': Int64(0),
-                'ns': 'qwe.$cmd.predictors',    # real!
-                'firstBatch': models
-            }
-
-            return {
-                'cursor': cursor,
-                'ok': 1,
-            }
         elif table in model_names:
             # prediction
-            model = mindsdb_env['mindsdb_native'].get_model_data(name='p1')
+            model = mindsdb_env['mindsdb_native'].get_model_data(name=query['find'])
 
             # TODO remove duplication
             columns = []
@@ -104,17 +92,19 @@ class Responce(Responder):
                 # TODO remove columns
                 pass
 
-            cursor = {
-                'id': Int64(0),
-                'ns': 'qwe.$cmd.predictors',    # set real!
-                'firstBatch': data  # [{'status': 'not ready yet'}]
-            }
-            return {
-                'cursor': cursor,
-                'ok': 1
-            }
+        else:
+            # probably wrong table name. Mongo in this case returns empty data
+            data = []
 
-        raise Exception('Is no table!')
+        cursor = {
+            'id': Int64(0),
+            'ns': f"mindsdb.$cmd.{query['find']}",
+            'firstBatch': data
+        }
+        return {
+            'cursor': cursor,
+            'ok': 1
+        }
 
 
 responder = Responce()

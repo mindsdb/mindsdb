@@ -1,5 +1,5 @@
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.mongo.classes import Responder
-# import mindsdb.api.mongo.functions as helpers
 
 
 class Responce(Responder):
@@ -11,8 +11,8 @@ class Responce(Responder):
         )
 
     result = {
-        "version": "MindsDB 2.6",   # TODO set real
-        "ok": 1
+        'version': f'MindsDB {mindsdb_version}',   # TODO set real
+        'ok': 1
     }
 
 

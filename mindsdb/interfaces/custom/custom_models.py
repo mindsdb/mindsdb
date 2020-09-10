@@ -2,7 +2,6 @@ import os
 import shutil
 import importlib
 import json
-import pickle
 import sys
 
 import mindsdb_native
@@ -36,7 +35,7 @@ class CustomModels():
         module = __import__(name)
 
         try:
-            model = pickle.load( open( os.path.join(self._dir(name), 'model.pickle'), 'rb' ))
+            model = module.Model.load(os.path.join(self._dir(name), 'model.pickle'))
         except:
             model = module.Model()
             if hasattr(model, 'setup'):
@@ -62,8 +61,7 @@ class CustomModels():
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
 
-        if not hasattr(model, 'save_after_fit') or model.save_after_fit == True:
-            pickle.dump(model, open( os.path.join(self._dir(name),'model.pickle'), 'wb' ))
+        model.save(os.path.join(self._dir(name), 'model.pickle'))
 
         self.dbw.register_predictors([self.get_model_data(name)])
 

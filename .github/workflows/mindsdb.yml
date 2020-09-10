@@ -1,7 +1,6 @@
 name: MindsDB workflow
 
-on:
-  push:
+on: [push, pull_request]
 
 jobs:
   test:
@@ -67,11 +66,12 @@ jobs:
     - name: Build and push mindsdb Docker image
       uses: docker/build-push-action@v1
       with:
+        file: distributions/docker/Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
         repository: mindsdb/mindsdb
         tag_with_ref: true
-        tag_with_sha: true
+        
 
     # Maybe use different build, we need windows here
     # - name: Build windows installer

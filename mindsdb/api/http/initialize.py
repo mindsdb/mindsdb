@@ -25,7 +25,7 @@ class Swagger_Api(Api):
         return url_for(self.endpoint("specs"), _external=False)
 
 
-def initialize_static(config):
+def initialize_static():
     this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
     static_path = Path(this_file_path).parent.joinpath('static/')
     static_path.mkdir(parents=True, exist_ok=True)
@@ -127,11 +127,15 @@ def initialize_flask(config):
             'name': 'apikey'
         }
     }
+
     port = config['api']['http']['port']
+    host = config['api']['http']['host']
     cors_origin_list = ["http://localhost:5000", "http://localhost:3000", f"http://0.0.0.0:{port}"]
     CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')
+
+    print(f'GUI should be available by http://{host}:{port}/static/index.html')
 
     return app, api
 

@@ -30,6 +30,8 @@ def start(config, initial=False):
         errStream.addFilter(lambda record: record.levelno > logging.INFO)
         rootLogger.addHandler(errStream)
 
+    initialize_static()
+
     app, api = initialize_flask(config)
     initialize_interfaces(config, app)
 

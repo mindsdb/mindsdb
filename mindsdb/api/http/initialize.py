@@ -9,7 +9,6 @@ from pathlib import Path
 from flask import Flask, url_for
 from flask_restx import Api
 from flask_cors import CORS
-import json
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -26,7 +25,7 @@ class Swagger_Api(Api):
         return url_for(self.endpoint("specs"), _external=False)
 
 
-def initialize_static():
+def initialize_static(config):
     this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
     static_path = Path(this_file_path).parent.joinpath('static/')
     static_path.mkdir(parents=True, exist_ok=True)
@@ -128,8 +127,9 @@ def initialize_flask(config):
             'name': 'apikey'
         }
     }
-    cors_origin_list = ["http://localhost:5000", "http://localhost:3000", "http://0.0.0.0:47334"]
-    cors = CORS(app, resources={r"/*": {"origins": cors_origin_list}})
+    port = config['api']['http']['port']
+    cors_origin_list = ["http://localhost:5000", "http://localhost:3000", f"http://0.0.0.0:{port}"]
+    CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')
 

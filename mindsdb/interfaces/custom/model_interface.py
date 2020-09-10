@@ -6,14 +6,14 @@ class ModelInterface:
     # Optional but with a default implementation
     def save(self, path):
         import pickle
-        with open(path, 'wb'):
-            pickle.dump(self, path)
+        with open(path, 'wb') as fp:
+            pickle.dump(self, fp)
 
     @staticmethod
     def load(path):
         import pickle
-        with open(path, 'rb'):
-            model = pickle.load(path)
+        with open(path, 'rb') as fp:
+            model = pickle.load(fp)
         return model
 
     # Mandatory under certain circumstances

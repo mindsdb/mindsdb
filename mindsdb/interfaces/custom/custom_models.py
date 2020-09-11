@@ -92,7 +92,6 @@ class CustomModels():
                 data_frame = pd.DataFrame(when_data)
 
         model = self._internal_load(name)
-        print(data_frame)
         predictions = model.predict(data_frame, kwargs)
 
         pred_arr = []

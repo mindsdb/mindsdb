@@ -42,7 +42,7 @@ class MindsDBDataNode(DataNode):
             return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
         if table == 'commands':
             return ['command']
-        
+
         model = self.mindsdb_native.get_model_data(name=table)
         columns = []
         columns += [x['column_name'] for x in model['data_analysis']['input_columns_metadata']]
@@ -162,8 +162,9 @@ class MindsDBDataNode(DataNode):
 
         if table in [x['name'] for x in self.custom_models.get_models()]:
             res = self.custom_models.predict(name=table, when_data=where_data)
+
             data = []
-            for ele in res:
+            for i, ele in enumerate(res):
                 row = {}
                 row['select_data_query'] = select_data_query
                 row['external_datasource'] = external_datasource
@@ -185,6 +186,15 @@ class MindsDBDataNode(DataNode):
                     elif typing == 'Int':
                         row[key] = int(row[key])
                     # ---
+                for k in model['data_analysis']:
+                    if k not in ele:
+                        if k in where_data[i]:
+                            row[k] = where_data[i][k]
+                        else:
+                            row[k] = None
+
+                for k in original_target_values:
+                    row[k] = original_target_values[k][i]
 
                 data.append(row)
 

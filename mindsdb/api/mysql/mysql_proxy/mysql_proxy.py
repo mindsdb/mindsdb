@@ -83,6 +83,7 @@ HARDCODED_PASSWORD = None
 CERT_PATH = None
 default_store = None
 mdb = None
+custom_models = None
 datahub = None
 config = None
 
@@ -319,7 +320,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             Parameters:
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
-        global mdb, default_store, config
+        global mdb, default_store, config, custom_models
 
         for key in insert.keys():
             if insert[key] is SQL_DEFAULT:
@@ -389,7 +390,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     default_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
-        if name in [x['name'] for x in custom_models.get_models()]:
+        if insert['name'] in [x['name'] for x in custom_models.get_models()]:
             custom_models.learn(insert['name'], ds, insert['predict'], kwargs)
         else:
             mdb.learn(insert['name'], ds, insert['predict'], kwargs)

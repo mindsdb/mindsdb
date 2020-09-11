@@ -125,7 +125,7 @@ class CustomModels():
             json.dump({
                 'name': name
                 ,'data_analysis': model.column_type_map
-                ,'predict': to_predict
+                ,'predict': model.to_predict
             }, fp)
 
         with open(os.path.join(self._dir(name), '__init__.py') , 'w') as fp:

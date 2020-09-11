@@ -133,6 +133,11 @@ class CustomModels():
 
     def rename_model(self, name, new_name):
         shutil.move(self._dir(name), self._dir(new_name))
+        shutil.move(os.path.join(self._dir(new_name) + f'{name}.py'), os.path.join(self._dir(new_name) ,f'{new_name}.py'))
+
+    def export_model(self, name):
+        shutil.make_archive(base_name=name, format='zip', root_dir=self._dir(name))
+        return str(self._dir(name)) + '.zip'
 
     def load_model(self, fpath, name):
         shutil.unpack_archive(fpath, self._dir(name), 'zip')

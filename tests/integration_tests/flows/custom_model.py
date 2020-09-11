@@ -260,7 +260,13 @@ class Model(ModelInterface):
             assert isinstance(pred['sqft']['predicted_value'], float)
 
     def test_7_list_from_http_api(self):
-        pass
+        res = requests.get(f'{root}/predictors')
+        assert res.status_code == 200
+        assert PRED_NAME in [x['name'] for x in res.json()]
+        for ele in res.json():
+            if ele['name'] == PRED_NAME:
+                assert ele['is_custom'] == True
+        
 
     def test_8_delete_from_http_api(self):
         pass

@@ -12,6 +12,7 @@ import os
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb_native import CONFIG
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -162,6 +163,7 @@ def run_environment(db, config):
         print(f'Failed by timeout. {db} started={db_ready}, MindsDB started={api_ready}')
         raise Exception()
 
+    CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
     mdb = MindsdbNative(config)
     datastore = DataStore(config)
 

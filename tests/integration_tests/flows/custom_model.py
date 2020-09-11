@@ -215,23 +215,20 @@ class Model(ModelInterface):
             assert isinstance(pred['rental_price']['predicted_value'], float)
 
     def test_2_db_predict_from_external_datasource(self):
-        name = f'{TEST_PREDICTOR_NAME}_external'
-        models = self.mdb.get_models()
-        models = [x['name'] for x in models]
-        if name in models:
-            self.mdb.delete_model(name)
-
         res = query(f"""SELECT rental_price FROM mindsdb.{PRED_NAME} WHERE external_datasource='{EXTERNAL_DS_NAME}'""")
 
         self.assertTrue(len(res) > 0)
         self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
 
     def test_3_retrain_model(self):
-        res = query(f""" INSERT INTO mindsdb.predictors (name, predict, select_data_query) VALUES ('{PRED_NAME}', 'rental_price', 'SELECT * FROM test.{TEST_DATA_TABLE}') """)
+        res = query(f""" INSERT INTO mindsdb.predictors (name, predict, select_data_query) VALUES ('{PRED_NAME}', 'sqft', 'SELECT * FROM test.{TEST_DATA_TABLE}') """)
         #sqft
 
-    def test_4_upload_pretrain_model(self):
-        pass
+    def test_4_predict_with_retrained_from_sql(self):
+        res = query(f"""SELECT rental_price FROM mindsdb.{PRED_NAME} WHERE initial_price=6000""")
+
+        self.assertTrue(len(res) > 0)
+        self.assertTrue(res[0]['sqft'] is not None and res[0]['sqft'] != 'None')
 
 
 

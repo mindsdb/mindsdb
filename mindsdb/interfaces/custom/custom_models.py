@@ -47,25 +47,34 @@ class CustomModels():
         return model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
+        model_data = self.get_model_data(name)
+        model_data['status'] = 'training'
+        self.save_model_data(name, model_data)
+
         to_predict = to_predict if isinstance(to_predict,list) else [to_predict]
         data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
         data_frame = data_source._df
         model = self._internal_load(name)
         model.to_predict = to_predict
 
+        model_data = self.get_model_data(name)
+        model_data['predict'] = model.to_predict
+        self.save_model_data(name, model_data)
+
         data_analysis = self.mindsdb_native.analyse_dataset(data_source)['data_analysis_v2']
 
-        with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
-            json.dump({
-                'name': name
-                ,'data_analysis': data_analysis
-                ,'predict': to_predict
-            }, fp)
+        model_data = self.get_model_data(name)
+        model_data['data_analysis'] = data_analysis
+        self.save_model_data(name, model_data)
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
 
         model.save(os.path.join(self._dir(name), 'model.pickle'))
         self.model_cache[name] = model
+
+        model_data = self.get_model_data(name)
+        model_data['status'] = 'completed'
+        self.save_model_data(name, model_data)
 
         self.dbw.register_predictors([self.get_model_data(name)])
 
@@ -97,6 +106,10 @@ class CustomModels():
         with open(os.path.join(self._dir(name), 'metadata.json'), 'r') as fp:
             return json.load(fp)
 
+    def save_model_data(self, name, data):
+        with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
+            json.dump(data, fp)
+
     def get_models(self, status='any'):
         models = []
         for model_dir in os.listdir(self.storage_dir):
@@ -121,12 +134,12 @@ class CustomModels():
         shutil.move( os.path.join(self._dir(name), 'model.py') ,  os.path.join(self._dir(name), f'{name}.py') )
         model = self._internal_load(name)
         model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
-        with open(os.path.join(self._dir(name), 'metadata.json') , 'w') as fp:
-            json.dump({
-                'name': name
-                ,'data_analysis': model.column_type_map
-                ,'predict': model.to_predict
-            }, fp)
+        self.save_model_data(name,{
+            'name': name
+            ,'data_analysis': model.column_type_map
+            ,'predict': model.to_predict
+            ,'status': 'untrined'
+        })
 
         with open(os.path.join(self._dir(name), '__init__.py') , 'w') as fp:
             fp.write('')

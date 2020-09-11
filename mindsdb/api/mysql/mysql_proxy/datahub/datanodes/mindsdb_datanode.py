@@ -188,8 +188,13 @@ class MindsDBDataNode(DataNode):
                     # ---
                 for k in model['data_analysis']:
                     if k not in ele:
-                        if k in where_data[i]:
-                            row[k] = where_data[i][k]
+                        if isinstance(where_data, list):
+                            if k in where_data[i]:
+                                row[k] = where_data[i][k]
+                            else:
+                                row[k] = None
+                        elif k in where_data.columns:
+                            row[k] = where_data[k].iloc[i]
                         else:
                             row[k] = None
 

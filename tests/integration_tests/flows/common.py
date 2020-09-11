@@ -12,6 +12,7 @@ import os
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb_native import CONFIG
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -72,17 +73,14 @@ def prepare_config(config, dbs):
     for key in config._config['integrations'].keys():
         config._config['integrations'][key]['enabled'] = key in dbs
 
-    datastore_dir = TEMP_DIR.joinpath('datastore/')
-    if datastore_dir.exists():
-        shutil.rmtree(datastore_dir)
-    datastore_dir.mkdir(parents=True, exist_ok=True)
-    mindsdb_native_dir = TEMP_DIR.joinpath('predictors/')
-    if mindsdb_native_dir.exists():
-        shutil.rmtree(mindsdb_native_dir)
-    mindsdb_native_dir.mkdir(parents=True, exist_ok=True)
+    storage_dir = TEMP_DIR.joinpath('storage')
+    config._config['storage_dir'] = str(storage_dir)
 
-    config['interface']['datastore']['storage_dir'] = str(datastore_dir)
-    config['interface']['mindsdb_native']['storage_dir'] = str(mindsdb_native_dir)
+    paths = config.paths
+    for key in paths:
+        p = storage_dir.joinpath(key)
+        p.mkdir(mode=0o777, exist_ok=True, parents=True)
+        paths[key] = str(p)
 
     temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
     with open(temp_config_path, 'wt') as f:
@@ -165,6 +163,7 @@ def run_environment(db, config):
         print(f'Failed by timeout. {db} started={db_ready}, MindsDB started={api_ready}')
         raise Exception()
 
+    CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
     mdb = MindsdbNative(config)
     datastore = DataStore(config)
 

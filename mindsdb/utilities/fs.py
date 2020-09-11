@@ -1,7 +1,6 @@
 import inspect
 import os
 from pathlib import Path
-import traceback
 
 
 def create_directory(path):
@@ -16,8 +15,7 @@ def get_paths():
     tuples = [
         (
             f'{mindsdb_path}/etc/',
-            f'{mindsdb_path}/var/predictors',
-            f'{mindsdb_path}/var/datastore'
+            f'{mindsdb_path}/var/'
         )
     ]
 
@@ -26,21 +24,18 @@ def get_paths():
         tuples.extend([
             (
                 os.path.join(os.environ['APPDATA'], 'mindsdb'),
-                os.path.join(os.environ['APPDATA'], 'mindsdb', 'predictors'),
-                os.path.join(os.environ['APPDATA'], 'mindsdb', 'datastore'),
+                os.path.join(os.environ['APPDATA'], 'mindsdb'),
             )
         ])
     else:
         tuples.extend([
             (
                 '/etc/mindsdb',
-                '/var/lib/mindsdb/predictors',
-                '/var/lib/mindsdb/datastore'
+                '/var/lib/mindsdb'
             ),
             (
                 '~/.local/etc/mindsdb',
-                '~/.local/var/lib/mindsdb/predictors',
-                '~/.local/var/lib/mindsdb/datastore'
+                '~/.local/var/lib/mindsdb'
             )
         ])
 
@@ -58,7 +53,7 @@ def get_or_create_dir_struct():
             if 'DEV_CONFIG_PATH' in os.environ:
                 config_dir = os.environ['DEV_CONFIG_PATH']
 
-            return config_dir, tup[1], tup[2]
+            return config_dir, tup[1]
         except Exception as e:
             pass
 
@@ -72,7 +67,7 @@ def get_or_create_dir_struct():
             if 'DEV_CONFIG_PATH' in os.environ:
                 config_dir = os.environ['DEV_CONFIG_PATH']
                 
-            return config_dir, tup[1], tup[2]
+            return config_dir, tup[1]
 
         except Exception as e:
             pass

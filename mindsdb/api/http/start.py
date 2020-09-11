@@ -10,7 +10,7 @@ from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
-from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces
+from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.config import Config
 
 
@@ -29,6 +29,8 @@ def start(config, initial=False):
         errStream = logging.StreamHandler(sys.stderr)
         errStream.addFilter(lambda record: record.levelno > logging.INFO)
         rootLogger.addHandler(errStream)
+
+    initialize_static(config)
 
     app, api = initialize_flask(config)
     initialize_interfaces(config, app)

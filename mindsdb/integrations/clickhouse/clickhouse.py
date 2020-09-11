@@ -69,14 +69,15 @@ class Clickhouse(Integration):
         return '`' + name.replace('`', '\\`') + '`'
 
     def setup(self):
+        print(1)
         self._query('DROP DATABASE IF EXISTS mindsdb')
-
+        print(2)
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
-
+        print(3)
         msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
         msqyl_pass = self.config['api']['mysql']['password']
         msqyl_user = self._get_mysql_user()
-
+        print(4)
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.predictors (
                 name String,
@@ -89,13 +90,15 @@ class Clickhouse(Integration):
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors', '{msqyl_user}', '{msqyl_pass}')
         """
         self._query(q)
-
+        print(5)
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.commands (
                 command String
             ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'commands', '{msqyl_user}', '{msqyl_pass}')
         """
+        print(6)
         self._query(q)
+        print(7)
 
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:

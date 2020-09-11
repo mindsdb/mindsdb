@@ -69,7 +69,7 @@ class MindsdbNative():
     def rename_model(self, name, new_name):
         self.dbw.unregister_predictor(self.get_model_data(name))
         F.rename_model(name, new_name)
-        self.dbw.register_predictors(self.get_model_data(new_name))
+        self.dbw.register_predictors(self.get_model_data(new_name), setup=False)
 
     def load_model(self, fpath):
         F.import_model(model_archive_path=fpath)

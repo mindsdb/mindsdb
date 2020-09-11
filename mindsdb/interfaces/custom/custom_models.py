@@ -76,7 +76,7 @@ class CustomModels():
         model_data['status'] = 'completed'
         self.save_model_data(name, model_data)
 
-        self.dbw.register_predictors([self.get_model_data(name)])
+        self.dbw.register_predictors([self.get_model_data(name)], setup=False)
 
     def predict(self, name, when_data=None, from_data=None, kwargs={}):
         if from_data is not None:
@@ -139,9 +139,10 @@ class CustomModels():
             ,'data_analysis': model.column_type_map
             ,'predict': model.to_predict
             ,'status': 'untrined'
+            ,'is_custom': True
         })
 
         with open(os.path.join(self._dir(name), '__init__.py') , 'w') as fp:
             fp.write('')
 
-        self.dbw.register_predictors([self.get_model_data(name)])
+        self.dbw.register_predictors([self.get_model_data(name)], setup=False)

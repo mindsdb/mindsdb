@@ -38,7 +38,7 @@ class CustomModels():
             model = module.Model.load(os.path.join(self._dir(name), 'model.pickle'))
         except Exception as e:
             model = module.Model()
-            model.name = name
+            model.initialize_column_types()
             if hasattr(model, 'setup'):
                 model.setup()
 
@@ -47,9 +47,11 @@ class CustomModels():
         return model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
+        to_predict = to_predict if isinstance(to_predict,list) else [to_predict]
         data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
         data_frame = data_source._df
         model = self._internal_load(name)
+        model.to_predict = to_predict
 
         data_analysis = self.mindsdb_native.analyse_dataset(data_source)['data_analysis_v2']
 
@@ -57,12 +59,13 @@ class CustomModels():
             json.dump({
                 'name': name
                 ,'data_analysis': data_analysis
-                ,'predict': to_predict if isinstance(to_predict,list) else [to_predict]
+                ,'predict': to_predict
             }, fp)
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
 
         model.save(os.path.join(self._dir(name), 'model.pickle'))
+        self.model_cache[name] = model
 
         self.dbw.register_predictors([self.get_model_data(name)])
 
@@ -117,11 +120,12 @@ class CustomModels():
         shutil.unpack_archive(fpath, self._dir(name), 'zip')
         shutil.move( os.path.join(self._dir(name), 'model.py') ,  os.path.join(self._dir(name), f'{name}.py') )
         model = self._internal_load(name)
+        model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
         with open(os.path.join(self._dir(name), 'metadata.json') , 'w') as fp:
             json.dump({
                 'name': name
                 ,'data_analysis': model.column_type_map
-                ,'predict': model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
+                ,'predict': to_predict
             }, fp)
 
         with open(os.path.join(self._dir(name), '__init__.py') , 'w') as fp:

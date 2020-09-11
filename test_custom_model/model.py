@@ -21,7 +21,7 @@ class Model(ModelInterface):
     def predict(self, from_data, kwargs):
         initial_price = self.get_x(from_data)
         rental_price = self.model.predict(initial_price)
-        df = pd.DataFrame({'rental_price': rental_price})
+        df = pd.DataFrame({self.to_predict[0]: rental_price})
         return df
 
     def fit(self, from_data, to_predict, data_analysis, kwargs):

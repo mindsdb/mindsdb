@@ -1,6 +1,6 @@
 class ModelInterface:
-    # Should not be override, or if it is, should be addtionally called using `super(YourChildClass, self).__init__()`
-    def __init__(self):
+    # Should not be override, or if it is, should be addtionally called using `super(YourChildClass, self).initialize_column_types()`
+    def initialize_column_types(self):
         if self.column_type_map is None:
             self.column_type_map = {
                 'Empty_target': {
@@ -13,6 +13,7 @@ class ModelInterface:
                     'typing': {
                         'data_type': 'Text'
                         ,'data_subtype': 'Short Text'
+                    }
                 }
             }
 

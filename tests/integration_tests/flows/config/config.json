@@ -19,7 +19,7 @@
             "user": "mindsdb"
         }
     },
-    "config_version": "1.1",
+    "config_version": "1.2",
     "debug": true,
     "integrations": {
         "default_clickhouse": {
@@ -70,17 +70,16 @@
             "enabled": false
         },
         "datastore": {
-            "enabled": true,
-            "storage_dir": "/tmp/datastore"
+            "enabled": true
         },
         "lightwood": {
             "enabled": true
         },
         "mindsdb_native": {
-            "enabled": true,
-            "storage_dir": "/tmp/predictors"
+            "enabled": true
         }
     },
     "pip_path": null,
-    "python_interpreter": null
+    "python_interpreter": null,
+    "storage_dir": "/tmp/mindsdb_storage"
 }

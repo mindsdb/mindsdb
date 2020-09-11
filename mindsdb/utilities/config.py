@@ -5,22 +5,16 @@ import datetime
 
 
 class Config(object):
-    current_version = '1.1'
+    current_version = '1.2'
     _config = {}
     paths = {
-        'static': ''
+        'datasources': '',
+        'predictors': '',
+        'static': '',
+        'tmp': ''
     }
 
     def __init__(self, config_path):
-        # +++ temporary. Will be removed in next PR
-        import inspect
-        from pathlib import Path
-        p = os.path.abspath(inspect.getfile(inspect.currentframe()))
-        p = Path(p).parent.parent.parent.joinpath('var/', 'static/')
-        p.mkdir(mode=0o777, exist_ok=True, parents=True)
-        self.paths['static'] = str(p)
-        # ---
-
         self._config_path = None
         self._config_hash = None
         self._config = None
@@ -28,6 +22,12 @@ class Config(object):
             self.config_path = config_path
             self._read()
             self._config_hash = self._gen_hash()
+
+            storage_dir = self._config['storage_dir']
+            self.paths['datasources'] = os.path.join(storage_dir, 'datasources')
+            self.paths['predictors'] = os.path.join(storage_dir, 'predictors')
+            self.paths['static'] = os.path.join(storage_dir, 'static')
+            self.paths['tmp'] = os.path.join(storage_dir, 'tmp')
         else:
             raise TypeError('Argument must be string representing a file path <Later on to be switched to file path and/or database connection info>')
 
@@ -42,8 +42,43 @@ class Config(object):
             config['config_version'] = '1.1'
             return config
 
+        def m1_1(config):
+            import tempfile
+            import shutil
+            from pathlib import Path
+
+            ds_storage_path = Path(config['interface']['datastore']['storage_dir'])
+            mdb_storage_path = Path(config['interface']['mindsdb_native']['storage_dir'])
+
+            temp_dir_path = tempfile.mkdtemp()
+            shutil.move(
+                str(ds_storage_path),
+                temp_dir_path
+            )
+            ds_storage_path.mkdir(mode=0o777, exist_ok=True, parents=True)
+            shutil.move(
+                str(Path(temp_dir_path).joinpath('datastore')),
+                str(ds_storage_path.joinpath('datasources'))
+            )
+            shutil.move(
+                str(mdb_storage_path),
+                str(ds_storage_path.joinpath('predictors'))
+            )
+            ds_storage_path.joinpath('tmp').mkdir(mode=0o777, exist_ok=True)
+            ds_storage_path.joinpath('static').mkdir(mode=0o777, exist_ok=True)
+
+            if Path(temp_dir_path).is_dir():
+                shutil.rmtree(temp_dir_path)
+
+            config['storage_dir'] = str(ds_storage_path)
+            del config['interface']['datastore']['storage_dir']
+            del config['interface']['mindsdb_native']['storage_dir']
+            config['config_version'] = '1.2'
+            return config
+
         migrations = {
-            '1.0': m1_0
+            '1.0': m1_0,
+            '1.1': m1_1
         }
 
         current_version = self._parse_version(self._config['config_version'])
@@ -60,6 +95,10 @@ class Config(object):
                 raise TypeError(f"Config error: integration '{key}' must be a json")
             if 'type' not in integrations[key]:
                 raise KeyError(f"Config error: for integration '{key}' key 'type' must be specified")
+
+        storage_dir = self._config.get('storage_dir')
+        if storage_dir is None:
+            raise KeyError("'storage_dir' mandatory key in config")
 
     def _parse_version(self, version):
         if isinstance(version, str):

@@ -20,10 +20,10 @@ def _in(ask, default, use_default):
     return user_input
 
 
-def auto_config(python_path, pip_path, predictor_dir, datasource_dir):
+def auto_config(python_path, pip_path, storage_dir):
     config = {
         "debug": False
-        ,"config_version": "1.1"
+        ,"config_version": "1.2"
         ,"python_interpreter": python_path
         ,"pip_path": pip_path
         ,"api": {
@@ -54,19 +54,18 @@ def auto_config(python_path, pip_path, predictor_dir, datasource_dir):
         ,"interface":{
           "mindsdb_native": {
               "enabled": True
-              ,"storage_dir": predictor_dir
           }
           ,"lightwood": {
                "enabled": True
           }
           ,"datastore": {
                "enabled": True
-               ,"storage_dir": datasource_dir
           }
           ,"dataskillet": {
                "enabled": False
           }
-        }
+        },
+        'storage_dir': storage_dir
     }
 
     return config
@@ -118,8 +117,9 @@ def make_ssl_cert(file_path):
     with open(file_path, 'wb') as f:
         f.write(key_pem + cert_pem)
 
-def cli_config(python_path,pip_path,predictor_dir,datasource_dir,config_dir,use_default=False):
-    config = auto_config(python_path,pip_path,predictor_dir,datasource_dir)
+
+def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False):
+    config = auto_config(python_path, pip_path, storage_dir)
 
     http = _in('Enable HTTP API ? [Y/N]','Y',use_default)
     if http in ['Y','y']:

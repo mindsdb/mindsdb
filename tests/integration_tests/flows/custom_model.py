@@ -64,7 +64,7 @@ def query(query):
     return res
 
 
-class ClickhouseTest(unittest.TestCase):
+class CustomModelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         mdb, datastore = run_environment('clickhouse', config, run_apis='all')

@@ -25,7 +25,7 @@ class Model(ModelInterface):
         return df
 
     def fit(self, from_data, to_predict, data_analysis, kwargs):
-        Y = self.get_y(from_data, to_predict)
+        Y = self.get_y(from_data, to_predict[0])
         X = self.get_x(from_data)
         self.model.fit(X, Y)
 

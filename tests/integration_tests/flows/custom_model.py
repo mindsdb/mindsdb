@@ -168,7 +168,7 @@ class Model(ModelInterface):
         return df
 
     def fit(self, from_data, to_predict, data_analysis, kwargs):
-        Y = self.get_y(from_data, to_predict)
+        Y = self.get_y(from_data, to_predict[0])
         X = self.get_x(from_data)
         self.model.fit(X, Y)
 
@@ -227,7 +227,7 @@ class Model(ModelInterface):
         self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
 
     def test_3_retrain_model(self):
-        res = query(f""" INSERT INTO mindsdb.predictors (name, predict_cols, select_data_query) VALUES ('{PRED_NAME}', 'rental_price', 'SELECT * FROM test.{TEST_DATA_TABLE}') """)
+        res = query(f""" INSERT INTO mindsdb.predictors (name, predict, select_data_query) VALUES ('{PRED_NAME}', 'rental_price', 'SELECT * FROM test.{TEST_DATA_TABLE}') """)
         #sqft
 
     def test_4_upload_pretrain_model(self):

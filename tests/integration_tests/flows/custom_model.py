@@ -259,18 +259,24 @@ class Model(ModelInterface):
         for pred in res.json():
             assert isinstance(pred['sqft']['predicted_value'], float)
 
-    def test_7_list_from_http_api(self):
+    def test_7_utils_from_http_api(self):
         res = requests.get(f'{root}/predictors')
         assert res.status_code == 200
         assert PRED_NAME in [x['name'] for x in res.json()]
         for ele in res.json():
             if ele['name'] == PRED_NAME:
                 assert ele['is_custom'] == True
-        
+
+        res = requests.get(f'{root}/predictors/{PRED_NAME}')
+        assert res.status_code == 200
+        assert res.json['name'] == PRED_NAME
+        assert res.json['is_custom'] == True
 
     def test_8_delete_from_http_api(self):
-        pass
-
+        res = requests.delete(f'{root}/predictors/{PRED_NAME}')
+        assert res.status_code == 200
+        res = requests.get(f'{root}/predictors')
+        assert PRED_NAME not in [x['name'] for x in res.json()]
 
 if __name__ == "__main__":
     unittest.main(failfast=True)

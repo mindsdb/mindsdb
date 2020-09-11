@@ -56,6 +56,10 @@ def preparse_results(results, format_flag='explain'):
     else:
         abort(400, "")
 
+def is_custom(name):
+    if name in [x['name'] for x in ca.custom_models.get_models()]:
+        return True
+    else False
 
 @ns_conf.route('/')
 class PredictorList(Resource):
@@ -239,7 +243,7 @@ class PredictorPredict(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        if name in [x['name'] for x in ca.custom_models.get_models()]:
+        if is_custom(name)
             return ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
             results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
@@ -276,7 +280,7 @@ class PredictorPredictFromDataSource(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        if name in [x['name'] for x in ca.custom_models.get_models()]:
+        if is_custom(name):
             return ca.custom_models.predict(name, from_data=from_data, **kwargs)
         else:
             results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)

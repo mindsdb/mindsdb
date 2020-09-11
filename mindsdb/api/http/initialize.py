@@ -3,7 +3,6 @@ import requests
 import os
 import shutil
 from zipfile import ZipFile
-import inspect
 from pathlib import Path
 
 from flask import Flask, url_for
@@ -25,9 +24,8 @@ class Swagger_Api(Api):
         return url_for(self.endpoint("specs"), _external=False)
 
 
-def initialize_static():
-    this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
-    static_path = Path(this_file_path).parent.joinpath('static/')
+def initialize_static(config):
+    static_path = Path(config.paths['static'])
     static_path.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -117,7 +115,11 @@ def initialize_static():
 
 
 def initialize_flask(config):
-    app = Flask(__name__, static_url_path='/static')
+    app = Flask(
+        __name__,
+        static_url_path='/static',
+        static_folder=config.paths['static']
+    )
 
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     authorizations = {
@@ -130,7 +132,7 @@ def initialize_flask(config):
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']
-    cors_origin_list = ["http://localhost:5000", "http://localhost:3000", f"http://0.0.0.0:{port}"]
+    cors_origin_list = [f'http://{host}:{port}']
     CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')

@@ -76,6 +76,7 @@ class CustomModels():
         model_data['status'] = 'completed'
         self.save_model_data(name, model_data)
 
+        self.dbw.unregister_predictor(name)
         self.dbw.register_predictors([self.get_model_data(name)], setup=False)
 
     def predict(self, name, when_data=None, from_data=None, kwargs={}):

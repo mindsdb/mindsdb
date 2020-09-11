@@ -94,7 +94,7 @@ class Predictor(Resource):
     def get(self, name):
         try:
             if is_custom(name):
-                model_data = ca.custom_models.get_model_data(name)
+                model = ca.custom_models.get_model_data(name)
             else:
                 model = ca.mindsdb_native.get_model_data(name)
         except Exception as e:
@@ -110,9 +110,9 @@ class Predictor(Resource):
     def delete(self, name):
         '''Remove predictor'''
         if is_custom(name):
-            ca.mindsdb_native.delete_model(name)
-        else:
             ca.custom_models.delete_model(name)
+        else:
+            ca.mindsdb_native.delete_model(name)
 
         return '', 200
 
@@ -355,9 +355,9 @@ class PredictorDownload(Resource):
         try:
             new_name = request.args.get('new_name')
             if is_custom(name):
-                ca.mindsdb_native.rename_model(name, new_name)
-            else:
                 ca.custom_models.rename_model(name, new_name)
+            else:
+                ca.mindsdb_native.rename_model(name, new_name)
         except Exception as e:
             return str(e), 400
 

@@ -264,13 +264,14 @@ class Model(ModelInterface):
         assert res.status_code == 200
         assert PRED_NAME in [x['name'] for x in res.json()]
         for ele in res.json():
+            print(ele)
             if ele['name'] == PRED_NAME:
                 assert ele['is_custom'] == True
 
         res = requests.get(f'{root}/predictors/{PRED_NAME}')
         assert res.status_code == 200
-        assert res.json['name'] == PRED_NAME
-        assert res.json['is_custom'] == True
+        assert res.json()['name'] == PRED_NAME
+        assert res.json()['is_custom'] == True
 
     def test_8_delete_from_http_api(self):
         res = requests.delete(f'{root}/predictors/{PRED_NAME}')

@@ -85,12 +85,14 @@ class CustomModels():
             data_frame = data_source._df
         elif when_data is not None:
             if isinstance(when_data, dict):
-                for k in when_data: when_data[k] = [when_data[k]]
+                for k in when_data:
+                    when_data[k] = [when_data[k]]
                 data_frame = pd.DataFrame(when_data)
             else:
-                data_frame = when_data
+                data_frame = pd.DataFrame(when_data)
 
         model = self._internal_load(name)
+        print(data_frame)
         predictions = model.predict(data_frame, kwargs)
 
         pred_arr = []

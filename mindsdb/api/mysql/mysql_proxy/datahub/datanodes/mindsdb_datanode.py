@@ -32,7 +32,7 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         try:
-            columns = self.custom_models.get_model_data(table)['predict']
+            columns = list(self.custom_models.get_model_data(table)['data_analysis'].keys())
             columns += ['external_datasource', 'select_data_query', 'when_data']
             return columns
         except Exception as e:
@@ -42,6 +42,7 @@ class MindsDBDataNode(DataNode):
             return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
         if table == 'commands':
             return ['command']
+        
         model = self.mindsdb_native.get_model_data(name=table)
         columns = []
         columns += [x['column_name'] for x in model['data_analysis']['input_columns_metadata']]

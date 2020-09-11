@@ -73,7 +73,7 @@ def prepare_config(config, dbs):
         config._config['integrations'][key]['enabled'] = key in dbs
 
     storage_dir = TEMP_DIR.joinpath('storage')
-    config['storage_dir'] = storage_dir
+    config._config['storage_dir'] = str(storage_dir)
 
     paths = config.paths
     for key in paths:

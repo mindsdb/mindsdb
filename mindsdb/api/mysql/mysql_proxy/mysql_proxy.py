@@ -1440,6 +1440,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         global mdb
         global datahub
         global config
+        global custom_models
         """
         Create a server and wait for incoming connections until Ctrl-C
         """

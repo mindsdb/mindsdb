@@ -15,6 +15,15 @@ class Config(object):
     }
 
     def __init__(self, config_path):
+        # +++ temporary. Will be removed in next PR
+        import inspect
+        from pathlib import Path
+        p = os.path.abspath(inspect.getfile(inspect.currentframe()))
+        p = Path(p).parent.parent.parent.joinpath('var/', 'static/')
+        p.mkdir(mode=0o777, exist_ok=True, parents=True)
+        self.paths['static'] = str(p)
+        # ---
+
         self._config_path = None
         self._config_hash = None
         self._config = None

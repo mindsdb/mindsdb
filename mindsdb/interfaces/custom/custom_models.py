@@ -37,8 +37,8 @@ class CustomModels():
         try:
             model = module.Model.load(os.path.join(self._dir(name), 'model.pickle'))
         except Exception as e:
-            print(f'\n\n\n\n{e}\n\n\n\n')
             model = module.Model()
+            model.name = name
             if hasattr(model, 'setup'):
                 model.setup()
 
@@ -116,24 +116,12 @@ class CustomModels():
     def load_model(self, fpath, name):
         shutil.unpack_archive(fpath, self._dir(name), 'zip')
         shutil.move( os.path.join(self._dir(name), 'model.py') ,  os.path.join(self._dir(name), f'{name}.py') )
+        model = self._internal_load(name)
         with open(os.path.join(self._dir(name), 'metadata.json') , 'w') as fp:
             json.dump({
                 'name': name
-                ,'data_analysis': {
-                    'Empty_target': {
-                        'typing': {
-                            'data_type': 'Text'
-                            ,'data_subtype': 'Short Text'
-                        }
-                    }
-                    ,'Empty_input': {
-                        'typing': {
-                            'data_type': 'Text'
-                            ,'data_subtype': 'Short Text'
-                        }
-                    }
-                }
-                ,'predict': ['Empty_target']
+                ,'data_analysis': model.column_type_map
+                ,'predict': model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
             }, fp)
 
         with open(os.path.join(self._dir(name), '__init__.py') , 'w') as fp:

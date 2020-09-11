@@ -1,9 +1,32 @@
 class ModelInterface:
+    # Should not be override, or if it is, should be addtionally called using `super(YourChildClass, self).__init__()`
+    def __init__(self):
+        if self.column_type_map is None:
+            self.column_type_map = {
+                'Empty_target': {
+                    'typing': {
+                        'data_type': 'Text'
+                        ,'data_subtype': 'Short Text'
+                    }
+                }
+                ,'Empty_input': {
+                    'typing': {
+                        'data_type': 'Text'
+                        ,'data_subtype': 'Short Text'
+                }
+            }
+
+        if self.to_predict is None:
+            self.to_predict = 'Empty_target'
+
     # Optional methods
     def setup(self):
         pass
 
     # Optional but with a default implementation
+    column_type_map = None
+    to_predict = None
+
     def save(self, path):
         import pickle
         with open(path, 'wb') as fp:
@@ -18,6 +41,8 @@ class ModelInterface:
 
     # Mandatory under certain circumstances
     def fit(self, from_data, to_predict, data_analysis, kwargs):
+        self.to_predict = to_predict
+        self.column_type_map = data_analysis
         raise NotImplementedError('You must implement `fit` in order to be able to train your model')
 
     # Mandatory

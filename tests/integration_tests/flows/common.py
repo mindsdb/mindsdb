@@ -72,17 +72,14 @@ def prepare_config(config, dbs):
     for key in config._config['integrations'].keys():
         config._config['integrations'][key]['enabled'] = key in dbs
 
-    datastore_dir = TEMP_DIR.joinpath('datastore/')
-    if datastore_dir.exists():
-        shutil.rmtree(datastore_dir)
-    datastore_dir.mkdir(parents=True, exist_ok=True)
-    mindsdb_native_dir = TEMP_DIR.joinpath('predictors/')
-    if mindsdb_native_dir.exists():
-        shutil.rmtree(mindsdb_native_dir)
-    mindsdb_native_dir.mkdir(parents=True, exist_ok=True)
+    storage_dir = TEMP_DIR.joinpath('storage')
+    config['storage_dir'] = storage_dir
 
-    config['interface']['datastore']['storage_dir'] = str(datastore_dir)
-    config['interface']['mindsdb_native']['storage_dir'] = str(mindsdb_native_dir)
+    paths = config.paths
+    for key in paths:
+        p = storage_dir.joinpath(key)
+        p.mkdir(mode=0o777, exist_ok=True, parents=True)
+        paths[key] = str(p)
 
     temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
     with open(temp_config_path, 'wt') as f:

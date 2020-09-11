@@ -12,3 +12,7 @@ tests/docker/clickhouse/database
 tests/docker/postgres
 tests/docker/mysql/storage
 /integration_tests/flows/config/*
+my_model.zip
+model.py
+tests/integration_tests/flows/model.py
+tests/integration_tests/flows/my_model.zip

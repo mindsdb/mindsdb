@@ -1,10 +1,8 @@
 import copy
 import os
 import shutil
-import sys
 import time
 from io import BytesIO
-import mindsdb
 
 from dateutil.parser import parse as parse_datetime
 from flask import request, send_file
@@ -305,7 +303,7 @@ class PredictorUpload(Resource):
         '''Upload existing predictor'''
         predictor_file = request.files['file']
         # @TODO: Figure out how to remove
-        fpath = os.path.join(mindsdb.CONFIG.MINDSDB_TEMP_PATH, 'new.zip')
+        fpath = os.path.join(ca.config_obj.paths['tmp'], 'new.zip')
         with open(fpath, 'wb') as f:
             f.write(predictor_file.read())
 
@@ -328,7 +326,7 @@ class PredictorDownload(Resource):
         fname = name + '.zip'
         original_file = os.path.join(fname)
         # @TODO: Figure out how to remove
-        fpath = os.path.join(mindsdb.CONFIG.MINDSDB_TEMP_PATH, fname)
+        fpath = os.path.join(ca.config_obj.paths['tmp'], fname)
         shutil.move(original_file, fpath)
 
         with open(fpath, 'rb') as f:

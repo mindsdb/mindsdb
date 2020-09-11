@@ -15,7 +15,9 @@ class CustomModels():
     def __init__(self, config):
         self.config = config
         self.dbw = DatabaseWrapper(self.config)
-        _, _, _, self.storage_dir = get_or_create_dir_struct()
+        _, self.storage_dir = get_or_create_dir_struct()
+        self.storage_dir = os.path.join(self.storage_dir,'misc')
+        os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
         self.mindsdb_native = MindsdbNative(self.config)
         self.dbw = DatabaseWrapper(self.config)

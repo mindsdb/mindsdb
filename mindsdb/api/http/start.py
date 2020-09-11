@@ -1,34 +1,17 @@
 import os
-import mindsdb
 import logging
 import sys
 import multiprocessing
 
 from werkzeug.exceptions import HTTPException
-import gunicorn.app.base
+from waitress import serve
 
 from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
-from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces
+from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.config import Config
-
-
-class StandaloneApplication(gunicorn.app.base.BaseApplication):
-    def __init__(self, app, options=None):
-        self.options = options or {}
-        self.application = app
-        super().__init__()
-
-    def load_config(self):
-        config = {key: value for key, value in self.options.items()
-                  if key in self.cfg.settings and value is not None}
-        for key, value in config.items():
-            self.cfg.set(key.lower(), value)
-
-    def load(self):
-        return self.application
 
 
 def start(config, initial=False):
@@ -47,12 +30,7 @@ def start(config, initial=False):
         errStream.addFilter(lambda record: record.levelno > logging.INFO)
         rootLogger.addHandler(errStream)
 
-    mindsdb.CONFIG.MINDSDB_DATASOURCES_PATH = os.path.join(mindsdb.CONFIG.MINDSDB_STORAGE_PATH, 'datasources')
-    mindsdb.CONFIG.MINDSDB_TEMP_PATH = os.path.join(mindsdb.CONFIG.MINDSDB_STORAGE_PATH, 'tmp')
-
-    os.makedirs(mindsdb.CONFIG.MINDSDB_STORAGE_PATH, exist_ok=True)
-    os.makedirs(mindsdb.CONFIG.MINDSDB_DATASOURCES_PATH, exist_ok=True)
-    os.makedirs(mindsdb.CONFIG.MINDSDB_TEMP_PATH, exist_ok=True)
+    initialize_static(config)
 
     app, api = initialize_flask(config)
     initialize_interfaces(config, app)
@@ -75,12 +53,20 @@ def start(config, initial=False):
 
     print(f"Start on {host}:{port}")
 
-    options = {
-        'bind': f'{host}:{port}',
-        'workers': min(max(multiprocessing.cpu_count(), 2), 3)
-    }
-    StandaloneApplication(app, options).run()
+    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
 
-
-if __name__ == '__main__':
-    start()
+    if server.lower() == 'waitress':
+        serve(app, port=port, host=host)
+    elif server.lower() == 'flask':
+        app.run(debug=False, port=port, host=host)
+    elif server.lower() == 'gunicorn':
+        try:
+            from mindsdb.api.http.gunicorn_wrapper import StandaloneApplication
+        except ImportError:
+            print("Gunicorn server is not available by default. If you wish to use it, please install 'gunicorn'")
+            return
+        options = {
+            'bind': f'{host}:{port}',
+            'workers': min(max(multiprocessing.cpu_count(), 2), 3)
+        }
+        StandaloneApplication(app, options).run()

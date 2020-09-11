@@ -5,7 +5,6 @@ from dateutil.parser import parse as parse_datetime
 
 from mindsdb.interfaces.native.predictor_process import PredictorProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.utilities.fs import get_or_create_dir_struct
 
 class MindsdbNative():
     def __init__(self, config):

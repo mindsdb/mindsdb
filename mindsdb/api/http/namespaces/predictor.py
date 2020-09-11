@@ -75,7 +75,7 @@ class CustomPredictor(Resource):
     @ns_conf.doc('put_custom_predictor')
     def put(self, name):
         predictor_file = request.files['file']
-        fpath = os.path.join(mindsdb.CONFIG.MINDSDB_TEMP_PATH + '/' + name + '.zip')
+        fpath = os.path.join(ca.config_obj.paths['tmp'],  name + '.zip')
         with open(fpath, 'wb') as f:
             f.write(predictor_file.read())
 

@@ -168,6 +168,7 @@ class Model(ModelInterface):
         return df
 
     def fit(self, from_data, to_predict, data_analysis, kwargs):
+        self.model = LinearRegression()
         Y = self.get_y(from_data, to_predict[0])
         X = self.get_x(from_data)
         self.model.fit(X, Y)
@@ -225,11 +226,44 @@ class Model(ModelInterface):
         #sqft
 
     def test_4_predict_with_retrained_from_sql(self):
-        res = query(f"""SELECT rental_price FROM mindsdb.{PRED_NAME} WHERE initial_price=6000""")
+        res = query(f"""SELECT sqft FROM mindsdb.{PRED_NAME} WHERE initial_price=6000""")
 
         self.assertTrue(len(res) > 0)
+        print(res)
         self.assertTrue(res[0]['sqft'] is not None and res[0]['sqft'] != 'None')
 
+    def test_5_predict_with_retrained_from_select(self):
+        res = query(f"""SELECT sqft FROM mindsdb.{PRED_NAME} WHERE select_data_query='SELECT * FROM test.{TEST_DATA_TABLE}'""")
+
+        self.assertTrue(len(res) > 0)
+        print(res)
+        self.assertTrue(res[0]['sqft'] is not None and res[0]['sqft'] != 'None')
+
+    def test_6_predict_with_retrained_from_http_api(self):
+        params = {
+            'when': {'initial_price': 5000, 'rental_price': 4000}
+        }
+        url = f'{root}/predictors/{PRED_NAME}/predict'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+        assert isinstance(res.json()[0]['sqft']['predicted_value'], float)
+
+        params = {
+            'data_source_name': EXTERNAL_DS_NAME
+        }
+        url = f'{root}/predictors/{PRED_NAME}/predict_datasource'
+        res = requests.post(url, json=params)
+
+        assert res.status_code == 200
+        assert(len(res.json()) == 299)
+        for pred in res.json():
+            assert isinstance(pred['sqft']['predicted_value'], float)
+
+    def test_7_list_from_http_api(self):
+        pass
+
+    def test_8_delete_from_http_api(self):
+        pass
 
 
 if __name__ == "__main__":

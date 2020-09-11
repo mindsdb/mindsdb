@@ -25,12 +25,15 @@ class CustomModels():
 
     def _internal_load(self, name):
 
-        if name in self.model_cache:
-            return self.model_cache[name]
+        # Caching (2 lines bellow), currently disabled due to multiprocessing cache invalidation issues
+        #if name in self.model_cache:
+        #    return self.model_cache[name]
 
+        # "Proper" model loading (3 lines bellow), currently disabled due to pickling issues
         #spec = importlib.util.spec_from_file_location(name, self._dir(name) + '/model.py')
         #module = importlib.util.module_from_spec(spec)
         #spec.loader.exec_module(module)
+
         sys.path.insert(0, self._dir(name))
         module = __import__(name)
 

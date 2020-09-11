@@ -25,6 +25,7 @@ class Model(ModelInterface):
         return df
 
     def fit(self, from_data, to_predict, data_analysis, kwargs):
+        self.model = LinearRegression()
         Y = self.get_y(from_data, to_predict[0])
         X = self.get_x(from_data)
         self.model.fit(X, Y)

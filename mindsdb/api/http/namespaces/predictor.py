@@ -173,7 +173,7 @@ class Predictor(Resource):
 
 @ns_conf.route('/<name>/learn')
 @ns_conf.param('name', 'The predictor identifier')
-class PredictorColumns(Resource):
+class PredictorLearn(Resource):
     def post(self, name):
         data = request.json
         to_predict = data.get('to_predict')
@@ -188,7 +188,7 @@ class PredictorColumns(Resource):
 
         ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
         from_data = ca.default_store.get_datasource_obj(ds_name, raw=True)
-        
+
         ca.custom_models.learn(name, from_data, to_predict, kwargs)
 
         return '', 200

@@ -12,6 +12,7 @@ from flask_cors import CORS
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom_models import CustomModels
 
 
 class Swagger_Api(Api):
@@ -157,4 +158,5 @@ def initialize_flask(config):
 def initialize_interfaces(config, app):
     app.default_store = DataStore(config)
     app.mindsdb_native = MindsdbNative(config)
+    app.custom_models = CustomModels(config)
     app.config_obj = config

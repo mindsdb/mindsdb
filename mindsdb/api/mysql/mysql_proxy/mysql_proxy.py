@@ -71,6 +71,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom_models import CustomModels
 
 
 connection_id = 0
@@ -82,6 +83,7 @@ HARDCODED_PASSWORD = None
 CERT_PATH = None
 default_store = None
 mdb = None
+custom_models = None
 datahub = None
 config = None
 
@@ -318,7 +320,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             Parameters:
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
-        global mdb, default_store, config
+        global mdb, default_store, config, custom_models
 
         for key in insert.keys():
             if insert[key] is SQL_DEFAULT:
@@ -388,7 +390,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     default_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
-        mdb.learn(insert['name'], ds, insert['predict'], kwargs)
+        if insert['name'] in [x['name'] for x in custom_models.get_models()]:
+            custom_models.learn(insert['name'], ds, insert['predict'], kwargs)
+        else:
+            mdb.learn(insert['name'], ds, insert['predict'], kwargs)
 
         self.packet(OkPacket).send()
 
@@ -1435,6 +1440,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         global mdb
         global datahub
         global config
+        global custom_models
         """
         Create a server and wait for incoming connections until Ctrl-C
         """
@@ -1451,6 +1457,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         default_store = DataStore(config)
         mdb = MindsdbNative(config)
+        custom_models = CustomModels(config)
         datahub = init_datahub(config)
 
         host = config['api']['mysql']['host']

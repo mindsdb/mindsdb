@@ -70,7 +70,6 @@ class Clickhouse(Integration):
 
     def setup(self):
         self._query('DROP DATABASE IF EXISTS mindsdb')
-
         self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
 
         msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
@@ -89,7 +88,6 @@ class Clickhouse(Integration):
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors', '{msqyl_user}', '{msqyl_pass}')
         """
         self._query(q)
-
         q = f"""
             CREATE TABLE IF NOT EXISTS mindsdb.commands (
                 command String
@@ -109,6 +107,7 @@ class Clickhouse(Integration):
             columns_sql += ',`external_datasource` Nullable(String)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
+                
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
                     columns_sql += f',`{col}_min` Nullable(Float64)'
                     columns_sql += f',`{col}_max` Nullable(Float64)'

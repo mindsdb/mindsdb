@@ -16,7 +16,8 @@ predictor_status = ns_conf.model('PredictorStatus', {
     'current_phase': fields.String(required=False, description='Current training phase'),
     'train_end_at': fields.DateTime(required=False, description='The time the predictor finished training'),
     'updated_at': fields.DateTime(required=False, description='The time the predictor was last updated at'),
-    'created_at': fields.DateTime(required=False, description='The time the predictor was created at')
+    'created_at': fields.DateTime(required=False, description='The time the predictor was created at'),
+    'is_custom': fields.Boolean(default=False),
 })
 
 

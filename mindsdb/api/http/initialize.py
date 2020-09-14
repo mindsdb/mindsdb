@@ -34,8 +34,8 @@ def initialize_static(config):
         print(f'Is no connection. {e}')
         return False
 
-    if res.res.status_code != 200:
-        print(f'Cant get compatible-config.json: returned status code = {res.res.status_code}')
+    if res.status_code != 200:
+        print(f'Cant get compatible-config.json: returned status code = {res.status_code}')
         return False
 
     try:

@@ -13,7 +13,6 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.custom.custom_models import CustomModels
-from mindsdb.utilities.config import Config
 
 
 class Swagger_Api(Api):

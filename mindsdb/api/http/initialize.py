@@ -35,24 +35,36 @@ def initialize_static(config):
         print(f'Is no connection. {e}')
         return False
 
-    versions = res.json()
+    if res.status_code != 200:
+        print(f'Cant get compatible-config.json: returned status code = {res.status_code}')
+        return False
+
+    try:
+        versions = res.json()
+    except Exception as e:
+        print(f'Cant decode compatible-config.json: {e}')
+        return False
 
     current_mindsdb_lv = LooseVersion(mindsdb_version)
 
-    gui_versions = {}
-    gui_version_lv = None
-    max_mindsdb_lv = None
-    for el in versions['mindsdb']:
-        mindsdb_lv = LooseVersion(el['mindsdb_version'])
-        gui_lv = LooseVersion(el['gui_version'])
-        if mindsdb_lv.vstring not in gui_versions or gui_lv > gui_versions[mindsdb_lv.vstring]:
-            gui_versions[mindsdb_lv.vstring] = gui_lv
-        if max_mindsdb_lv is None or max_mindsdb_lv < mindsdb_lv:
-            max_mindsdb_lv = mindsdb_lv
-    if current_mindsdb_lv.vstring in gui_versions:
-        gui_version_lv = gui_versions[current_mindsdb_lv.vstring]
-    else:
-        gui_version_lv = gui_versions[max_mindsdb_lv.vstring]
+    try:
+        gui_versions = {}
+        gui_version_lv = None
+        max_mindsdb_lv = None
+        for el in versions['mindsdb']:
+            mindsdb_lv = LooseVersion(el['mindsdb_version'])
+            gui_lv = LooseVersion(el['gui_version'])
+            if mindsdb_lv.vstring not in gui_versions or gui_lv > gui_versions[mindsdb_lv.vstring]:
+                gui_versions[mindsdb_lv.vstring] = gui_lv
+            if max_mindsdb_lv is None or max_mindsdb_lv < mindsdb_lv:
+                max_mindsdb_lv = mindsdb_lv
+        if current_mindsdb_lv.vstring in gui_versions:
+            gui_version_lv = gui_versions[current_mindsdb_lv.vstring]
+        else:
+            gui_version_lv = gui_versions[max_mindsdb_lv.vstring]
+    except Exception as e:
+        print(f'Error in compatible-config.json structure: {e}')
+        return False
 
     current_gui_version = None
 

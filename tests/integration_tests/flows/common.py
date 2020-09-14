@@ -170,9 +170,9 @@ def run_environment(db, config, run_apis='db_only'):
 
     if run_apis == 'all':
         api_ready = db_ready and wait_api_ready(config, 'mysql') and wait_api_ready(config, 'http')
-    elif run_apis == 'http':
+    elif run_apis == 'http_only':
         api_ready = db_ready and wait_api_ready(config, 'http')
-    elif run_apis == 'mysql':
+    elif run_apis == 'db_only':
         api_ready = db_ready and wait_api_ready(config, 'mysql')
 
     if db_ready is False or api_ready is False:

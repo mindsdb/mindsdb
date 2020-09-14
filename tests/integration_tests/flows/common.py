@@ -47,8 +47,8 @@ def wait_port(port_num, timeout):
     return in_use
 
 
-def wait_api_ready(config):
-    port_num = config['api']['mysql']['port']
+def wait_api_ready(config, api='mysql'):
+    port_num = config['api'][api]['port']
     api_ready = wait_port(port_num, START_TIMEOUT)
     return api_ready
 
@@ -168,7 +168,12 @@ def run_environment(db, config, run_apis='db_only'):
         )
         atexit.register(stop_mindsdb, sp=sp)
 
-    api_ready = db_ready and wait_api_ready(config)
+    if run_apis == 'all':
+        api_ready = db_ready and wait_api_ready(config, 'mysql') and wait_api_ready(config, 'http')
+    elif run_apis == 'http':
+        api_ready = db_ready and wait_api_ready(config, 'http')
+    elif run_apis == 'mysql':
+        api_ready = db_ready and wait_api_ready(config, 'mysql')
 
     if db_ready is False or api_ready is False:
         print(f'Failed by timeout. {db} started={db_ready}, MindsDB started={api_ready}')

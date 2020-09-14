@@ -215,9 +215,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         print('connect')
         print(str(self.server.socket))
         while True:
-            print('wait')
             header = self._read_bytes(16)
-            print('done wait')
             length, pos = unpack(INT, header)
             request_id, pos = unpack(INT, header, pos)
             response_to, pos = unpack(INT, header, pos)

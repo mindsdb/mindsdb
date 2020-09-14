@@ -43,7 +43,6 @@ class Responce(Responder):
                 if key not in columns:
                     raise Exception(f"Unknown column '{key}'. Only columns from this list can be used in query: {', '.join(columns)}")
 
-            # TODO make query
             prediction = mindsdb_env['mindsdb_native'].predict(name=table, when_data=where_data)
 
             predicted_columns = model['predict']

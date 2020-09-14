@@ -10,6 +10,7 @@ from .list_databases import responder as responder_list_databases
 
 from .find import responder as responder_find
 from .insert import responder as responder_insert
+from .delete import responder as responder_delete
 
 responders = [
     # service queries
@@ -19,9 +20,10 @@ responders = [
     responder_is_master_lower,
     responder_replsetgetstatus,
     responder_getlog,
-    #
+    # user queries
     responder_list_collections,
     responder_list_databases,
     responder_find,
-    responder_insert
+    responder_insert,
+    responder_delete
 ]

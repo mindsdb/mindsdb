@@ -87,14 +87,34 @@ class Responce(Responder):
                 #     row[k] = original_target_values[k][i]
                 data.append(row)
             #####
-
-            if 'projection' in query:
-                # TODO remove columns
-                pass
-
         else:
             # probably wrong table name. Mongo in this case returns empty data
             data = []
+
+        if 'projection' in query and len(data) > 0:
+            true_filter = []
+            false_filter = []
+            for key, value in query['projection'].items():
+                if helpers.is_true(value):
+                    true_filter.append(key)
+                else:
+                    false_filter.append(key)
+
+            keys = list(data[0].keys())
+            del_id = '_id' in false_filter
+            if len(true_filter) > 0:
+                for row in data:
+                    for key in keys:
+                        if key != '_id':
+                            if key not in true_filter:
+                                del row[key]
+                        elif del_id:
+                            del row[key]
+            else:
+                for row in data:
+                    for key in false_filter:
+                        if key in row:
+                            del row[key]
 
         cursor = {
             'id': Int64(0),

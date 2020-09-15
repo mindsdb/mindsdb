@@ -146,6 +146,12 @@ def initialize_flask(config):
     port = config['api']['http']['port']
     host = config['api']['http']['host']
     cors_origin_list = [f'http://{host}:{port}']
+
+    if 'MINDSDB_CORS_PORT' in os.environ:
+        ports = os.environ['MINDSDB_CORS_PORT'].strip('[]').split(',')
+        ports = [f'http://{host}:{p}' for p in ports]
+        cors_origin_list.extend(ports)
+
     CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')

@@ -12,6 +12,7 @@ import os
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb_native import CONFIG
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -46,8 +47,8 @@ def wait_port(port_num, timeout):
     return in_use
 
 
-def wait_api_ready(config):
-    port_num = config['api']['mysql']['port']
+def wait_api_ready(config, api='mysql'):
+    port_num = config['api'][api]['port']
     api_ready = wait_port(port_num, START_TIMEOUT)
     return api_ready
 
@@ -72,17 +73,14 @@ def prepare_config(config, dbs):
     for key in config._config['integrations'].keys():
         config._config['integrations'][key]['enabled'] = key in dbs
 
-    datastore_dir = TEMP_DIR.joinpath('datastore/')
-    if datastore_dir.exists():
-        shutil.rmtree(datastore_dir)
-    datastore_dir.mkdir(parents=True, exist_ok=True)
-    mindsdb_native_dir = TEMP_DIR.joinpath('predictors/')
-    if mindsdb_native_dir.exists():
-        shutil.rmtree(mindsdb_native_dir)
-    mindsdb_native_dir.mkdir(parents=True, exist_ok=True)
+    storage_dir = TEMP_DIR.joinpath('storage')
+    config._config['storage_dir'] = str(storage_dir)
 
-    config['interface']['datastore']['storage_dir'] = str(datastore_dir)
-    config['interface']['mindsdb_native']['storage_dir'] = str(mindsdb_native_dir)
+    paths = config.paths
+    for key in paths:
+        p = storage_dir.joinpath(key)
+        p.mkdir(mode=0o777, exist_ok=True, parents=True)
+        paths[key] = str(p)
 
     temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
     with open(temp_config_path, 'wt') as f:
@@ -93,7 +91,11 @@ def prepare_config(config, dbs):
 
 def is_container_run(name):
     docker_client = docker.from_env()
-    containers = docker_client.containers.list()
+    try:
+        containers = docker_client.containers.list()
+    except:
+        # In case docker is running for sudo or another user
+        return True
     containers = [x.name for x in containers if x.status == 'running']
     return name in containers
 
@@ -133,7 +135,7 @@ def stop_mindsdb(sp):
     sp.wait()
 
 
-def run_environment(db, config):
+def run_environment(db, config, run_apis='db_only'):
     DEFAULT_DB = f'default_{db}'
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
@@ -151,20 +153,33 @@ def run_environment(db, config):
             atexit.register(stop_container, name=db)
         db_ready = wait_db(config, DEFAULT_DB)
 
+    if run_apis == 'db_only':
+        api_str = 'mysql'
+    elif run_apis == 'http_only':
+        api_str = 'http'
+    elif run_apis == 'all':
+        api_str = 'mysql,http'
+
     if db_ready:
         sp = subprocess.Popen(
-            ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
+            ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path],
             stdout=OUTPUT,
             stderr=OUTPUT
         )
         atexit.register(stop_mindsdb, sp=sp)
 
-    api_ready = db_ready and wait_api_ready(config)
+    if run_apis == 'all':
+        api_ready = db_ready and wait_api_ready(config, 'mysql') and wait_api_ready(config, 'http')
+    elif run_apis == 'http_only':
+        api_ready = db_ready and wait_api_ready(config, 'http')
+    elif run_apis == 'db_only':
+        api_ready = db_ready and wait_api_ready(config, 'mysql')
 
     if db_ready is False or api_ready is False:
         print(f'Failed by timeout. {db} started={db_ready}, MindsDB started={api_ready}')
         raise Exception()
 
+    CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
     mdb = MindsdbNative(config)
     datastore = DataStore(config)
 

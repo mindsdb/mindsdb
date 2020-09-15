@@ -13,7 +13,7 @@ from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, M
 class DataStore():
     def __init__(self, config, storage_dir=None):
         self.config = config
-        self.dir = storage_dir if isinstance(storage_dir, str) else config['interface']['datastore']['storage_dir']
+        self.dir = storage_dir if isinstance(storage_dir, str) else config.paths['datasources']
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):

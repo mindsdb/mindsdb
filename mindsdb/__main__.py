@@ -9,6 +9,7 @@ from mindsdb_native.config import CONFIG
 
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
@@ -32,7 +33,7 @@ if __name__ == '__main__':
 
     config_path = args.config
     if config_path is None:
-        config_dir, _, _ = get_or_create_dir_struct()
+        config_dir, _ = get_or_create_dir_struct()
         config_path = os.path.join(config_dir, 'config.json')
 
     print(f'Using configuration file: {config_path}')
@@ -50,6 +51,7 @@ if __name__ == '__main__':
     }
 
     mdb = MindsdbNative(config)
+    cst = CustomModels(config)
     # @TODO Maybe just use `get_model_data` directly here ? Seems like a useless abstraction
     model_data_arr = [
         {
@@ -58,6 +60,9 @@ if __name__ == '__main__':
             'data_analysis': mdb.get_model_data(x['name'])['data_analysis_v2']
         } for x in mdb.get_models()
     ]
+
+    model_data_arr.extend(cst.get_models())
+
     dbw = DatabaseWrapper(config)
     dbw.register_predictors(model_data_arr)
 

@@ -140,7 +140,7 @@ def run_environment(db, config, run_apis='db_only'):
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
 
-    if db == 'mssql':
+    if db in ['mssql', 'mongo']:
         db_ready = True
     else:
         if is_container_run(f'{db}-test') is False:
@@ -157,8 +157,10 @@ def run_environment(db, config, run_apis='db_only'):
         api_str = 'mysql'
     elif run_apis == 'http_only':
         api_str = 'http'
+    elif run_apis == 'mongo_only':
+        api_str = 'mongo'
     elif run_apis == 'all':
-        api_str = 'mysql,http'
+        api_str = 'mysql,http,mongo'
 
     if db_ready:
         sp = subprocess.Popen(
@@ -172,6 +174,8 @@ def run_environment(db, config, run_apis='db_only'):
         api_ready = db_ready and wait_api_ready(config, 'mysql') and wait_api_ready(config, 'http')
     elif run_apis == 'http_only':
         api_ready = db_ready and wait_api_ready(config, 'http')
+    elif run_apis == 'mongo_only':
+        api_ready = db_ready and wait_api_ready(config, 'mongodb')
     elif run_apis == 'db_only':
         api_ready = db_ready and wait_api_ready(config, 'mysql')
 

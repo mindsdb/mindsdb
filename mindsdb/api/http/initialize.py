@@ -30,7 +30,7 @@ def initialize_static(config):
     static_path.mkdir(parents=True, exist_ok=True)
 
     try:
-        res = requests.get('https://raw.githubusercontent.com/mindsdb/mindsdb_gui_web/master/compatible-config.json?token=AA7S27R5CPBEUKNEONQJNBC7LPBJK')
+        res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json')
     except ConnectionError as e:
         print(f'Is no connection. {e}')
         return False

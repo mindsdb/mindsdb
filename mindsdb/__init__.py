@@ -36,3 +36,7 @@ import lightwood
 #import dataskillet
 import mindsdb.utilities.wizards as wizards
 from mindsdb.interfaces.custom.model_interface import ModelInterface
+
+from mindsdb_native.__about__ import __version__ as mindsdb_native_version
+print(f'lightwood version {lightwood.__version__}')
+print(f'MindsDB_native version {mindsdb_native_version}')

@@ -9,3 +9,4 @@ pyparsing >= 2.4.7
 python-tds >= 1.10.0
 flask_cors >= 1.1
 waitress >= 1.4.4
+pymongo >= 3.10.1

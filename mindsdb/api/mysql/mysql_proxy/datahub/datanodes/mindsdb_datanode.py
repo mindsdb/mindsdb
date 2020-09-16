@@ -173,6 +173,9 @@ class MindsDBDataNode(DataNode):
 
                 for key in ele:
                     row[key] = ele[key]['predicted_value']
+                    # FIXME prefer get int from mindsdb_native in this case
+                    if model['data_analysis'][key]['typing']['data_subtype'] == 'Int':
+                        row[key] = int(row[key])
 
                 for k in model['data_analysis']:
                     if k not in ele:

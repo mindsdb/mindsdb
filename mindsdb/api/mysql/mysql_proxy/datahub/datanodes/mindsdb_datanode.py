@@ -171,6 +171,9 @@ class MindsDBDataNode(DataNode):
                 row['external_datasource'] = external_datasource
                 row['when_data'] = original_when_data
 
+                for key in ele:
+                    row[key] = ele[key]['predicted_value']
+
                 for k in model['data_analysis']:
                     if k not in ele:
                         if isinstance(where_data, list):

@@ -58,6 +58,8 @@ class Responce(Responder):
             for i in range(length):
                 row = {}
                 explanation = prediction[i].explain()
+                for key in keys:
+                    row[key] = prediction._data[key][i]
 
                 for key in predicted_columns:
                     row[key + '_confidence'] = explanation[key]['confidence']

@@ -46,7 +46,7 @@ class Responce(Responder):
             prediction = mindsdb_env['mindsdb_native'].predict(name=table, when_data=where_data)
 
             predicted_columns = model['predict']
-            ##### doublication
+
             data = []
             keys = [x for x in list(prediction._data.keys()) if x in columns]
             min_max_keys = []
@@ -58,34 +58,15 @@ class Responce(Responder):
             for i in range(length):
                 row = {}
                 explanation = prediction[i].explain()
-                for key in keys:
-                    row[key] = prediction._data[key][i]
-                    # +++ FIXME this fix until issue https://github.com/mindsdb/mindsdb/issues/591 not resolved
-                    # typing = None
-                    # if key in model['data_analysis_v2']:
-                    #     typing = model['data_analysis_v2'][key]['typing']['data_subtype']
 
-                    # if typing == 'Timestamp' and row[key] is not None:
-                    #     timestamp = datetime.datetime.utcfromtimestamp(row[key])
-                    #     row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-                    # elif typing == 'Date':
-                    #     timestamp = datetime.datetime.utcfromtimestamp(row[key])
-                    #     row[key] = timestamp.strftime('%Y-%m-%d')
-                    # ---
                 for key in predicted_columns:
                     row[key + '_confidence'] = explanation[key]['confidence']
-                    # row[key + '_explain'] = json.dumps(explanation[key])
                     row[key + '_explain'] = explanation[key]
                 for key in min_max_keys:
                     row[key + '_min'] = min(explanation[key]['confidence_interval'])
                     row[key + '_max'] = max(explanation[key]['confidence_interval'])
-                # row['select_data_query'] = select_data_query
-                # row['external_datasource'] = external_datasource
-                # row['when_data'] = original_when_data
-                # for k in original_target_values:
-                #     row[k] = original_target_values[k][i]
                 data.append(row)
-            #####
+
         else:
             # probably wrong table name. Mongo in this case returns empty data
             data = []

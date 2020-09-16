@@ -4,11 +4,12 @@ import csv
 from pymongo import MongoClient
 
 from mindsdb.utilities.config import Config
-
 from common import (
     run_environment,
     get_test_csv,
-    TEST_CONFIG
+    TEST_CONFIG,
+    run_container,
+    wait_port
 )
 
 TEST_CSV = {
@@ -22,14 +23,21 @@ EXTERNAL_DS_NAME = 'test_external'
 
 config = Config(TEST_CONFIG)
 
+DOCKER_TIMEOUT = 60
 
-# NOTE mongo instances must be already run
+
 class MongoTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        run_container('mongo-config')
+        run_container('mongo-instance')
+        ready = wait_port(27000, DOCKER_TIMEOUT)
+        assert ready
+        ready = wait_port(27001, DOCKER_TIMEOUT)
+        assert ready
+
         cls.config_client = MongoClient('mongodb://localhost:27000/')
         cls.instance_client = MongoClient('mongodb://localhost:27001/')
-        cls.mongos_client = MongoClient('mongodb://localhost:27002/')
 
         try:
             r = cls.config_client.admin.command('replSetInitiate', {
@@ -62,9 +70,6 @@ class MongoTest(unittest.TestCase):
         mdb, datastore = run_environment('mongo', config, run_apis='mongo_only')
         cls.mdb = mdb
 
-        cls.mongos_client.admin.command('addShard', 'replmain/127.0.0.1:27001')
-        cls.mongos_client.admin.command('addShard', f"127.0.0.1:{config['api']['mongodb']['port']}")
-
         models = cls.mdb.get_models()
         models = [x['name'] for x in models]
         if TEST_PREDICTOR_NAME in models:
@@ -94,6 +99,14 @@ class MongoTest(unittest.TestCase):
                         ))
                 db['home_rentals'].insert_many(data)
             print('done')
+
+        run_container('mongo-mongos')
+        ready = wait_port(27002, DOCKER_TIMEOUT)
+        assert ready
+        cls.mongos_client = MongoClient('mongodb://localhost:27002/')
+
+        cls.mongos_client.admin.command('addShard', 'replmain/127.0.0.1:27001')
+        cls.mongos_client.admin.command('addShard', f"127.0.0.1:{config['api']['mongodb']['port']}")
 
     def test_1_entitys_exists(self):
         databases = self.mongos_client.list_database_names()

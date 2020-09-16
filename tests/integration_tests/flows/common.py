@@ -1,5 +1,4 @@
 import psutil
-import shutil
 import time
 from pathlib import Path
 import json
@@ -93,7 +92,7 @@ def is_container_run(name):
     docker_client = docker.from_env()
     try:
         containers = docker_client.containers.list()
-    except:
+    except Exception:
         # In case docker is running for sudo or another user
         return True
     containers = [x.name for x in containers if x.status == 'running']
@@ -117,6 +116,20 @@ def get_test_csv(name, url, lines_count=None, rewrite=False):
             )
             p.wait()
     return str(test_csv_path)
+
+
+def run_container(name):
+    env = os.environ.copy()
+    env['UID'] = str(os.getuid())
+    env['GID'] = str(os.getgid())
+    subprocess.Popen(
+        ['./cli.sh', name],
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+        stdout=OUTPUT,
+        stderr=OUTPUT,
+        env=env
+    )
+    atexit.register(stop_container, name=name)
 
 
 def stop_container(name):
@@ -144,13 +157,7 @@ def run_environment(db, config, run_apis='db_only'):
         db_ready = True
     else:
         if is_container_run(f'{db}-test') is False:
-            subprocess.Popen(
-                ['./cli.sh', db],
-                cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-                stdout=OUTPUT,
-                stderr=OUTPUT
-            )
-            atexit.register(stop_container, name=db)
+            run_container(db)
         db_ready = wait_db(config, DEFAULT_DB)
 
     if run_apis == 'db_only':

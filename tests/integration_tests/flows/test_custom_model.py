@@ -178,7 +178,9 @@ class Model(ModelInterface):
         shutil.make_archive(base_name='my_model', format='zip', root_dir=dir_name)
 
         # Upload the model (new endpoint)
-        res = requests.put(f'{root}/predictors/custom/{PRED_NAME}', files=dict(file=open('my_model.zip','rb')))
+        res = requests.put(f'{root}/predictors/custom/{PRED_NAME}', files=dict(file=open('my_model.zip','rb')), json={
+            'trained_status': 'untrained'
+        })
         print(res.status_code)
         print(res.text)
         assert res.status_code == 200

@@ -39,6 +39,8 @@ class DatabaseWrapper():
                     integration_arr.append(PostgreSQL(self.config, db_alias))
                 elif db_type == 'mssql':
                     integration_arr.append(MSSQL(self.config, db_alias))
+                elif db_type == 'mongodb':
+                    pass
                 else:
                     print(f'Uknown integration type: {db_type} for database called: {db_alias}')
 

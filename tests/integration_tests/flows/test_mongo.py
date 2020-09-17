@@ -30,10 +30,11 @@ class MongoTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         run_container('mongo-config')
+        run_container('mongo-instance')
+
         ready = wait_port(27000, DOCKER_TIMEOUT)
         assert ready
 
-        run_container('mongo-instance')
         ready = wait_port(27001, DOCKER_TIMEOUT)
         assert ready
 

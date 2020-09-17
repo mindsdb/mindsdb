@@ -1,5 +1,4 @@
 import psutil
-import shutil
 import time
 from pathlib import Path
 import json
@@ -93,7 +92,7 @@ def is_container_run(name):
     docker_client = docker.from_env()
     try:
         containers = docker_client.containers.list()
-    except:
+    except Exception:
         # In case docker is running for sudo or another user
         return True
     containers = [x.name for x in containers if x.status == 'running']
@@ -119,6 +118,20 @@ def get_test_csv(name, url, lines_count=None, rewrite=False):
     return str(test_csv_path)
 
 
+def run_container(name):
+    env = os.environ.copy()
+    env['UID'] = str(os.getuid())
+    env['GID'] = str(os.getgid())
+    subprocess.Popen(
+        ['./cli.sh', name],
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+        stdout=OUTPUT,
+        stderr=OUTPUT,
+        env=env
+    )
+    atexit.register(stop_container, name=name)
+
+
 def stop_container(name):
     sp = subprocess.Popen(
         ['./cli.sh', f'{name}-stop'],
@@ -131,34 +144,29 @@ def stop_container(name):
 
 def stop_mindsdb(sp):
     sp.kill()
+    sp = subprocess.Popen('kill -9 $(lsof -t -i:47334)', shell=True)
+    sp.wait()
     sp = subprocess.Popen('kill -9 $(lsof -t -i:47335)', shell=True)
+    sp.wait()
+    sp = subprocess.Popen('kill -9 $(lsof -t -i:47336)', shell=True)
     sp.wait()
 
 
-def run_environment(db, config, run_apis='db_only'):
+def run_environment(db, config, run_apis='mysql'):
     DEFAULT_DB = f'default_{db}'
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
 
-    if db == 'mssql':
+    if db in ['mssql', 'mongo', 'clickhouse']:
         db_ready = True
     else:
         if is_container_run(f'{db}-test') is False:
-            subprocess.Popen(
-                ['./cli.sh', db],
-                cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-                stdout=OUTPUT,
-                stderr=OUTPUT
-            )
-            atexit.register(stop_container, name=db)
+            run_container(db)
         db_ready = wait_db(config, DEFAULT_DB)
 
-    if run_apis == 'db_only':
-        api_str = 'mysql'
-    elif run_apis == 'http_only':
-        api_str = 'http'
-    elif run_apis == 'all':
-        api_str = 'mysql,http'
+    if isinstance(run_apis, list) is False:
+        run_apis = run_apis.split(',')
+    api_str = ','.join(run_apis)
 
     if db_ready:
         sp = subprocess.Popen(
@@ -168,12 +176,12 @@ def run_environment(db, config, run_apis='db_only'):
         )
         atexit.register(stop_mindsdb, sp=sp)
 
-    if run_apis == 'all':
-        api_ready = db_ready and wait_api_ready(config, 'mysql') and wait_api_ready(config, 'http')
-    elif run_apis == 'http_only':
-        api_ready = db_ready and wait_api_ready(config, 'http')
-    elif run_apis == 'db_only':
-        api_ready = db_ready and wait_api_ready(config, 'mysql')
+    api_ready = True
+    for api in run_apis:
+        apistr = 'mongodb' if api == 'mongo' else api
+        api_ready = api_ready and wait_api_ready(config, apistr)
+        if api_ready is False:
+            break
 
     if db_ready is False or api_ready is False:
         print(f'Failed by timeout. {db} started={db_ready}, MindsDB started={api_ready}')

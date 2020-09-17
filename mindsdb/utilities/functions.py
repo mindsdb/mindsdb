@@ -1,4 +1,5 @@
 import argparse
+import datetime
 
 
 def args_parse():
@@ -6,3 +7,17 @@ def args_parse():
     parser.add_argument('--api', type=str, default=None)
     parser.add_argument('--config', type=str, default=None)
     return parser.parse_args()
+
+
+def cast_row_types(row, field_types):
+    '''
+    '''
+    keys = [x for x in row.keys() if x in field_types]
+    for key in keys:
+        t = field_types[key]
+        if t == 'Timestamp' and row[key] is not None:
+            timestamp = datetime.datetime.utcfromtimestamp(row[key])
+            row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        elif t == 'Date':
+            timestamp = datetime.datetime.utcfromtimestamp(row[key])
+            row[key] = timestamp.strftime('%Y-%m-%d')

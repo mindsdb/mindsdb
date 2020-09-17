@@ -74,12 +74,17 @@ class PredictorList(Resource):
 class CustomPredictor(Resource):
     @ns_conf.doc('put_custom_predictor')
     def put(self, name):
+        try:
+            trained_status = request.json['trained_status']
+        except:
+            trained_status = 'untrained'
+
         predictor_file = request.files['file']
         fpath = os.path.join(ca.config_obj.paths['tmp'],  name + '.zip')
         with open(fpath, 'wb') as f:
             f.write(predictor_file.read())
 
-        ca.custom_models.load_model(fpath, name)
+        ca.custom_models.load_model(fpath, name, trained_status)
 
         return f'Uploaded custom model {name}'
 

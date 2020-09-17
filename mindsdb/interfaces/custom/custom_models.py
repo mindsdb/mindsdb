@@ -141,7 +141,7 @@ class CustomModels():
         shutil.make_archive(base_name=name, format='zip', root_dir=self._dir(name))
         return str(self._dir(name)) + '.zip'
 
-    def load_model(self, fpath, name):
+    def load_model(self, fpath, name, trained_status):
         shutil.unpack_archive(fpath, self._dir(name), 'zip')
         shutil.move( os.path.join(self._dir(name), 'model.py') ,  os.path.join(self._dir(name), f'{name}.py') )
         model = self._internal_load(name)
@@ -150,7 +150,7 @@ class CustomModels():
             'name': name
             ,'data_analysis': model.column_type_map
             ,'predict': model.to_predict
-            ,'status': 'untrained'
+            ,'status': trained_status
             ,'is_custom': True
         })
 

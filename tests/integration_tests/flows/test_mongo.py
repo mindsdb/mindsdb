@@ -39,6 +39,7 @@ class MongoTest(unittest.TestCase):
         cls.config_client = MongoClient('mongodb://localhost:27000/')
         cls.instance_client = MongoClient('mongodb://localhost:27001/')
 
+        print('init replconf')
         try:
             r = cls.config_client.admin.command('replSetInitiate', {
                 '_id': 'replconf',
@@ -47,12 +48,14 @@ class MongoTest(unittest.TestCase):
                 ]
             })
         except Exception as e:
+            print('already initialized')
             if str(e) == 'already initialized':
                 r = {'ok': 1}
 
         if bool(r['ok']) is not True:
             assert False
 
+        print('init replmain')
         try:
             r = cls.instance_client.admin.command('replSetInitiate', {
                 '_id': 'replmain',
@@ -61,6 +64,7 @@ class MongoTest(unittest.TestCase):
                 ]
             })
         except Exception as e:
+            print('already initialized')
             if str(e) == 'already initialized':
                 r = {'ok': 1}
 

@@ -49,6 +49,10 @@ def auto_config(python_path, pip_path, storage_dir):
             "default_mssql": {
                 "enabled": False,
                 "type": 'mssql'
+            },
+            "default_mongodb": {
+                "enabled": False,
+                "type": 'mongodb'
             }
         }
         ,"interface":{

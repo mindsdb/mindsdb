@@ -70,7 +70,7 @@
         },
         "default_mongodb": {
             "enabled": false,
-            "host": "localhost",
+            "host": "127.0.0.1",
             "password": "",
             "port": 27001,
             "type": "mongodb",

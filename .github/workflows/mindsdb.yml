@@ -35,6 +35,8 @@ jobs:
           python tests/integration_tests/flows/test_mariadb.py
           python tests/integration_tests/flows/test_mysql.py
           python tests/integration_tests/flows/test_postgres.py
+          docker container ls
+          ls tests/docker/mongodb/storage_config
           python tests/integration_tests/flows/test_mongo.py
           sleep 61
           python tests/integration_tests/api/test_http.py

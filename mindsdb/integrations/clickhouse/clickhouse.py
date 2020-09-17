@@ -99,8 +99,7 @@ class Clickhouse(Integration):
         for model_meta in model_data_arr:
             name = self._escape_table_name(model_meta['name'])
             stats = model_meta['data_analysis']
-            if 'columns_to_ignore' in stats:
-                del stats['columns_to_ignore']
+
             columns_sql = ','.join(self._to_clickhouse_table(stats, model_meta['predict']))
             columns_sql += ',`when_data` Nullable(String)'
             columns_sql += ',`select_data_query` Nullable(String)'

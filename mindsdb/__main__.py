@@ -61,6 +61,12 @@ if __name__ == '__main__':
         } for x in mdb.get_models()
     ]
 
+    for m in model_data_arr:
+        if 'columns_to_ignore' in m['data_analysis']:
+            del m['data_analysis']['columns_to_ignore']
+        if 'train_std_dev' in m['data_analysis']:
+            del m['data_analysis']['train_std_dev']
+
     model_data_arr.extend(cst.get_models())
 
     dbw = DatabaseWrapper(config)

@@ -9,8 +9,8 @@ services:
         ports:
           - 27000:27000
         command: --configsvr --dbpath /data/db --port 27000 --replSet replconf
-        # volumes:
-        # - ./mongodb/storage_config:/data/db
+        volumes:
+        - ./mongodb/storage_config:/data/db
     mongo-instance:
         # image: mongo:4.4
         image: mongo:3.6
@@ -20,8 +20,8 @@ services:
         ports:
             - 27001:27001
         command: --dbpath /data/db --port 27001 --shardsvr --replSet replmain --sslMode disabled
-        # volumes:
-        # - ./mongodb/storage_instance:/data/db
+        volumes:
+        - ./mongodb/storage_instance:/data/db
     mongo-mongos:
         build:
             context: mongodb/mongos/.
@@ -34,5 +34,5 @@ services:
         user: "${UID}:${GID}"
         ports:
             - 27002:27002
-        # volumes:
-        # - ./mongodb/storage_mongos:/data/db
+        volumes:
+        - ./mongodb/storage_mongos:/data/db

@@ -144,7 +144,11 @@ def stop_container(name):
 
 def stop_mindsdb(sp):
     sp.kill()
+    sp = subprocess.Popen('kill -9 $(lsof -t -i:47334)', shell=True)
+    sp.wait()
     sp = subprocess.Popen('kill -9 $(lsof -t -i:47335)', shell=True)
+    sp.wait()
+    sp = subprocess.Popen('kill -9 $(lsof -t -i:47336)', shell=True)
     sp.wait()
 
 

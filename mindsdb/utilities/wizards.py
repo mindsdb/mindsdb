@@ -151,11 +151,11 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
         config['api']['mysql']['user'] = _in('MYSQL interface user','mindsdb',use_default)
         config['api']['mysql']['password'] = _in('MYSQL interface password','',use_default)
 
-    http = _in('Enable Mongo API ? [Y/N]', 'Y', use_default)
-    if http in ['Y', 'y']:
-        config['api']['http'] = {}
-        config['api']['http']['host'] = _in('Mongo interface host: ', '127.0.0.1', use_default)
-        config['api']['http']['port'] = _in('Mongo interface port: ', '47336', use_default)
+    mongodb = _in('Enable Mongo API ? [Y/N]', 'Y', use_default)
+    if mongodb in ['Y', 'y']:
+        config['api']['mongodb'] = {}
+        config['api']['mongodb']['host'] = _in('Mongo interface host: ', '127.0.0.1', use_default)
+        config['api']['mongodb']['port'] = _in('Mongo interface port: ', '47336', use_default)
 
     clickhouse = _in('Connect to clickhouse ? [Y/N]','Y',use_default)
     if clickhouse in ['Y','y']:

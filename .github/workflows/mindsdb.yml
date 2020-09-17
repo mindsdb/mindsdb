@@ -37,7 +37,7 @@ jobs:
           python tests/integration_tests/flows/test_postgres.py
           docker container ls
           docker container ls -a
-          ls tests/docker/mongodb/storage_config
+          ls tests/docker/mongodb
           python tests/integration_tests/flows/test_mongo.py
           sleep 61
           python tests/integration_tests/api/test_http.py

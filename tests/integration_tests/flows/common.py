@@ -148,26 +148,21 @@ def stop_mindsdb(sp):
     sp.wait()
 
 
-def run_environment(db, config, run_apis='db_only'):
+def run_environment(db, config, run_apis='mysql'):
     DEFAULT_DB = f'default_{db}'
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
 
-    if db in ['mssql', 'mongo']:
+    if db in ['mssql', 'mongo', 'clickhouse']:
         db_ready = True
     else:
         if is_container_run(f'{db}-test') is False:
             run_container(db)
         db_ready = wait_db(config, DEFAULT_DB)
 
-    if run_apis == 'db_only':
-        api_str = 'mysql'
-    elif run_apis == 'http_only':
-        api_str = 'http'
-    elif run_apis == 'mongo_only':
-        api_str = 'mongo'
-    elif run_apis == 'all':
-        api_str = 'mysql,http,mongo'
+    if isinstance(run_apis, list) is False:
+        run_apis = run_apis.split(',')
+    api_str = ','.join(run_apis)
 
     if db_ready:
         sp = subprocess.Popen(
@@ -177,14 +172,12 @@ def run_environment(db, config, run_apis='db_only'):
         )
         atexit.register(stop_mindsdb, sp=sp)
 
-    if run_apis == 'all':
-        api_ready = db_ready and wait_api_ready(config, 'mysql') and wait_api_ready(config, 'http')
-    elif run_apis == 'http_only':
-        api_ready = db_ready and wait_api_ready(config, 'http')
-    elif run_apis == 'mongo_only':
-        api_ready = db_ready and wait_api_ready(config, 'mongodb')
-    elif run_apis == 'db_only':
-        api_ready = db_ready and wait_api_ready(config, 'mysql')
+    api_ready = True
+    for api in run_apis:
+        apistr = 'mongodb' if api == 'mongo' else api
+        api_ready = api_ready and wait_api_ready(config, apistr)
+        if api_ready is False:
+            break
 
     if db_ready is False or api_ready is False:
         print(f'Failed by timeout. {db} started={db_ready}, MindsDB started={api_ready}')

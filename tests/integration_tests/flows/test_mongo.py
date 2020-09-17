@@ -1,7 +1,9 @@
 import unittest
 import csv
+import time
 
 from pymongo import MongoClient
+import docker
 
 from mindsdb.utilities.config import Config
 from common import (
@@ -9,7 +11,8 @@ from common import (
     get_test_csv,
     TEST_CONFIG,
     run_container,
-    wait_port
+    wait_port,
+    is_container_run
 )
 
 TEST_CSV = {
@@ -30,11 +33,10 @@ class MongoTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         run_container('mongo-config')
-        run_container('mongo-instance')
-
         ready = wait_port(27000, DOCKER_TIMEOUT)
         assert ready
 
+        run_container('mongo-instance')
         ready = wait_port(27001, DOCKER_TIMEOUT)
         assert ready
 
@@ -73,7 +75,7 @@ class MongoTest(unittest.TestCase):
         if bool(r['ok']) is not True:
             assert False
 
-        mdb, datastore = run_environment('mongo', config, run_apis='mongo_only')
+        mdb, datastore = run_environment('mongo', config, run_apis='mongo')
         cls.mdb = mdb
 
         models = cls.mdb.get_models()

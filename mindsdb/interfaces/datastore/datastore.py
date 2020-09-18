@@ -26,7 +26,7 @@ class DataStore():
         datasource_arr = []
         for ds_name in os.listdir(self.dir):
             try:
-                with open(os.path.join(self.dir, ds_name, 'datasource', 'metadata.json'), 'r') as fp:
+                with open(os.path.join(self.dir, ds_name, 'metadata.json'), 'r') as fp:
                     try:
                         datasource = json.load(fp)
                         datasource['created_at'] = parse_dt(datasource['created_at'].split('.')[0])
@@ -40,7 +40,7 @@ class DataStore():
 
     def get_data(self, name, where=None, limit=None, offset=None):
         # @TODO Apply filter directly to postgres/mysql/clickhouse/etc...  when the datasource is of that type
-        return get_sqlite_data(os.path.join(self.dir, name, 'datasource', 'sqlite.db'), where=where, limit=limit, offset=offset)
+        return get_sqlite_data(os.path.join(self.dir, name, 'sqlite.db'), where=where, limit=limit, offset=offset)
 
     def get_datasource(self, name):
         for ds in self.get_datasources():
@@ -67,12 +67,9 @@ class DataStore():
         ds_meta_dir = os.path.join(self.dir, name)
         os.mkdir(ds_meta_dir)
 
-        ds_dir = os.path.join(ds_meta_dir, 'datasource')
-        os.mkdir(ds_dir)
-
         if source_type == 'file':
             try:
-                source = os.path.join(ds_dir, source)
+                source = os.path.join(ds_meta_dir, source)
                 shutil.move(file_path, source)
                 ds = FileDS(source)
             except Exception:
@@ -170,12 +167,12 @@ class DataStore():
         df = ds.df
 
         df_with_types = cast_df_columns_types(df, self.get_analysis(df)['data_analysis_v2'])
-        create_sqlite_db(os.path.join(ds_dir, 'sqlite.db'), df_with_types)
+        create_sqlite_db(os.path.join(ds_meta_dir, 'sqlite.db'), df_with_types)
 
-        with open(os.path.join(ds_dir, 'ds.pickle'), 'wb') as fp:
+        with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
             pickle.dump(picklable, fp)
 
-        with open(os.path.join(ds_dir, 'metadata.json'), 'w') as fp:
+        with open(os.path.join(ds_meta_dir, 'metadata.json'), 'w') as fp:
             meta = {
                 'name': name,
                 'source_type': source_type,
@@ -191,10 +188,9 @@ class DataStore():
 
     def get_datasource_obj(self, name, raw=False):
         ds_meta_dir = os.path.join(self.dir, name)
-        ds_dir = os.path.join(ds_meta_dir, 'datasource')
         ds = None
         try:
-            with open(os.path.join(ds_dir, 'ds.pickle'), 'rb') as fp:
+            with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'rb') as fp:
                 picklable = pickle.load(fp)
                 if raw:
                     return picklable

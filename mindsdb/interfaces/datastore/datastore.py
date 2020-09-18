@@ -182,7 +182,10 @@ class DataStore():
                 'row_count': len(df),
                 'columns': [dict(name=x) for x in list(df.keys())]
             }
-            json.dump(meta, fp)
+            json.dump(meta, fp, indent=4, sort_keys=True)
+
+        with open(os.path.join(ds_meta_dir, 'versions.json'), 'wt') as fp:
+            json.dump(self.config.versions, fp, indent=4, sort_keys=True)
 
         return self.get_datasource_obj(name, raw=True), name
 

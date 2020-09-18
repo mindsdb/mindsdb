@@ -158,7 +158,7 @@ def run_environment(db, config, run_apis='mysql'):
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
 
-    if db in ['mssql', 'mongo', 'clickhouse']:
+    if db in ['mssql', 'mongo']:
         db_ready = True
     else:
         if is_container_run(f'{db}-test') is False:

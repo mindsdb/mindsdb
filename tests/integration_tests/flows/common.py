@@ -1,4 +1,3 @@
-import psutil
 import time
 from pathlib import Path
 import json
@@ -7,6 +6,8 @@ import requests
 import subprocess
 import atexit
 import os
+
+import psutil
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore

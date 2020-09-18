@@ -1,11 +1,12 @@
 from subprocess import Popen
 import time
 import os
-import psutil
 from random import randint
 from pathlib import Path
 import unittest
 import requests
+
+import psutil
 
 from mindsdb.utilities.config import Config
 

@@ -201,6 +201,9 @@ class MindsDBDataNode(DataNode):
 
             return data
         else:
+            # temporary, when method .predict can accept DataFrame as arg- it can be removed
+            if isinstance(where_data, pandas.DataFrame):
+                where_data = list(where_data.T.to_dict().values())
             res = self.mindsdb_native.predict(name=table, when_data=where_data)
 
             keys = [x for x in list(res._data.keys()) if x in columns]

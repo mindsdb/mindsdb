@@ -8,11 +8,13 @@ class Config(object):
     current_version = '1.2'
     _config = {}
     paths = {
+        'root': '',
         'datasources': '',
         'predictors': '',
         'static': '',
         'tmp': ''
     }
+    versions = {}
 
     def __init__(self, config_path):
         self._config_path = None
@@ -24,12 +26,20 @@ class Config(object):
             self._config_hash = self._gen_hash()
 
             storage_dir = self._config['storage_dir']
+            self.paths['root'] = storage_dir
             self.paths['datasources'] = os.path.join(storage_dir, 'datasources')
             self.paths['predictors'] = os.path.join(storage_dir, 'predictors')
             self.paths['static'] = os.path.join(storage_dir, 'static')
             self.paths['tmp'] = os.path.join(storage_dir, 'tmp')
+
+            self._read_versions_file(os.path.join(self.paths['root'], 'versions.json'))
         else:
             raise TypeError('Argument must be string representing a file path <Later on to be switched to file path and/or database connection info>')
+
+    def _read_versions_file(self, path):
+        if os.path.isfile(path):
+            with open(path, 'rt') as f:
+                self.versions = json.loads(f.read())
 
     def _migrate(self):
         def m1_0(config):

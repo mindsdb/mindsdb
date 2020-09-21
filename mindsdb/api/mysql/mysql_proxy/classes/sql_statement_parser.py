@@ -77,7 +77,7 @@ class SqlStatementParser():
         comment = nestedExpr('/*', '*/').suppress()
         starting = ZeroOrMore(comment.suppress())
         ending = ZeroOrMore(comment | ';').suppress() + StringEnd()
-        expr = starting + ... + ending
+        expr = starting + SkipTo(ending) + ending
         r = expr.parseString(sql)
 
         if len(r) != 1:

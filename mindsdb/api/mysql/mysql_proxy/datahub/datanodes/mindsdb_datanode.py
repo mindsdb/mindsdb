@@ -1,14 +1,15 @@
 import json
-import datetime
 import pandas
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
+from mindsdb.utilities.functions import cast_row_types
 
 
 class MindsDBDataNode(DataNode):
@@ -17,21 +18,31 @@ class MindsDBDataNode(DataNode):
     def __init__(self, config):
         self.config = config
         self.mindsdb_native = MindsdbNative(config)
+        self.custom_models = CustomModels(config)
 
     def getTables(self):
         models = self.mindsdb_native.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
         models += ['predictors', 'commands']
+        models += [x['name'] for x in self.custom_models.get_models()]
         return models
 
     def hasTable(self, table):
         return table in self.getTables()
 
     def getTableColumns(self, table):
+        try:
+            columns = list(self.custom_models.get_model_data(table)['data_analysis'].keys())
+            columns += ['external_datasource', 'select_data_query', 'when_data']
+            return columns
+        except Exception:
+            pass
+
         if table == 'predictors':
             return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
         if table == 'commands':
             return ['command']
+
         model = self.mindsdb_native.get_model_data(name=table)
         columns = []
         columns += [x['column_name'] for x in model['data_analysis']['input_columns_metadata']]
@@ -49,6 +60,7 @@ class MindsDBDataNode(DataNode):
 
     def _select_predictors(self):
         models = self.mindsdb_native.get_models()
+        # TODO add custom models
         return [{
             'name': x['name'],
             'status': x['status'],
@@ -132,7 +144,11 @@ class MindsDBDataNode(DataNode):
 
             where_data = [new_where]
 
-        model = self.mindsdb_native.get_model_data(name=table)
+        try:
+            model = self.custom_models.get_model_data(name=table)
+        except Exception:
+            model = self.mindsdb_native.get_model_data(name=table)
+
         predicted_columns = model['predict']
 
         original_target_values = {}
@@ -145,44 +161,79 @@ class MindsDBDataNode(DataNode):
             else:
                 original_target_values[col + '_original'] = [None]
 
-        res = self.mindsdb_native.predict(name=table, when_data=where_data)
+        if table in [x['name'] for x in self.custom_models.get_models()]:
+            res = self.custom_models.predict(name=table, when_data=where_data)
 
-        data = []
-        keys = [x for x in list(res._data.keys()) if x in columns]
-        min_max_keys = []
-        for col in predicted_columns:
-            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
-                min_max_keys.append(col)
+            data = []
+            for i, ele in enumerate(res):
+                row = {}
+                row['select_data_query'] = select_data_query
+                row['external_datasource'] = external_datasource
+                row['when_data'] = original_when_data
 
-        length = len(res._data[predicted_columns[0]])
-        for i in range(length):
-            row = {}
-            explanation = res[i].explain()
-            for key in keys:
-                row[key] = res._data[key][i]
-                # +++ FIXME this fix until issue https://github.com/mindsdb/mindsdb/issues/591 not resolved
-                typing = None
-                if key in model['data_analysis_v2']:
-                    typing = model['data_analysis_v2'][key]['typing']['data_subtype']
+                for key in ele:
+                    row[key] = ele[key]['predicted_value']
+                    # FIXME prefer get int from mindsdb_native in this case
+                    if model['data_analysis'][key]['typing']['data_subtype'] == 'Int':
+                        row[key] = int(row[key])
 
-                if typing == 'Timestamp' and row[key] is not None:
-                    timestamp = datetime.datetime.utcfromtimestamp(row[key])
-                    row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-                elif typing == 'Date':
-                    timestamp = datetime.datetime.utcfromtimestamp(row[key])
-                    row[key] = timestamp.strftime('%Y-%m-%d')
-                # ---
-            for key in predicted_columns:
-                row[key + '_confidence'] = explanation[key]['confidence']
-                row[key + '_explain'] = json.dumps(explanation[key])
-            for key in min_max_keys:
-                row[key + '_min'] = min(explanation[key]['confidence_interval'])
-                row[key + '_max'] = max(explanation[key]['confidence_interval'])
-            row['select_data_query'] = select_data_query
-            row['external_datasource'] = external_datasource
-            row['when_data'] = original_when_data
-            for k in original_target_values:
-                row[k] = original_target_values[k][i]
-            data.append(row)
+                for k in model['data_analysis']:
+                    if k not in ele:
+                        if isinstance(where_data, list):
+                            if k in where_data[i]:
+                                row[k] = where_data[i][k]
+                            else:
+                                row[k] = None
+                        elif k in where_data.columns:
+                            row[k] = where_data[k].iloc[i]
+                        else:
+                            row[k] = None
 
-        return data
+                for k in original_target_values:
+                    row[k] = original_target_values[k][i]
+
+                data.append(row)
+
+            fields = list(model['data_analysis'].keys())
+            field_types = {f: model['data_analysis'][f]['typing']['data_subtype'] for f in fields}
+            for row in data:
+                cast_row_types(row, field_types)
+
+            return data
+        else:
+            res = self.mindsdb_native.predict(name=table, when_data=where_data)
+
+            keys = [x for x in list(res._data.keys()) if x in columns]
+            min_max_keys = []
+            for col in predicted_columns:
+                if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                    min_max_keys.append(col)
+
+            data = []
+            explains = []
+            for i, el in enumerate(res):
+                data.append({key: el[key] for key in keys})
+                explains.append(el.explain())
+
+            fields = [x for x in model['data_analysis_v2'].keys() if x not in ['columns_to_ignore', 'train_std_dev']]
+            field_types = {f: model['data_analysis_v2'][f]['typing']['data_subtype'] for f in fields}
+
+            for row in data:
+                cast_row_types(row, field_types)
+
+                row['select_data_query'] = select_data_query
+                row['external_datasource'] = external_datasource
+                row['when_data'] = original_when_data
+
+                for k in original_target_values:
+                    row[k] = original_target_values[k][i]
+
+                explanation = explains[i]
+                for key in predicted_columns:
+                    row[key + '_confidence'] = explanation[key]['confidence']
+                    row[key + '_explain'] = json.dumps(explanation[key])
+                for key in min_max_keys:
+                    row[key + '_min'] = min(explanation[key]['confidence_interval'])
+                    row[key + '_max'] = max(explanation[key]['confidence_interval'])
+
+            return data

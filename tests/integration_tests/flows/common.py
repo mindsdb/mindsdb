@@ -1,5 +1,3 @@
-import psutil
-import shutil
 import time
 from pathlib import Path
 import json
@@ -8,6 +6,8 @@ import requests
 import subprocess
 import atexit
 import os
+
+import psutil
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -47,8 +47,8 @@ def wait_port(port_num, timeout):
     return in_use
 
 
-def wait_api_ready(config):
-    port_num = config['api']['mysql']['port']
+def wait_api_ready(config, api='mysql'):
+    port_num = config['api'][api]['port']
     api_ready = wait_port(port_num, START_TIMEOUT)
     return api_ready
 
@@ -91,7 +91,11 @@ def prepare_config(config, dbs):
 
 def is_container_run(name):
     docker_client = docker.from_env()
-    containers = docker_client.containers.list()
+    try:
+        containers = docker_client.containers.list()
+    except Exception:
+        # In case docker is running for sudo or another user
+        return True
     containers = [x.name for x in containers if x.status == 'running']
     return name in containers
 
@@ -115,6 +119,20 @@ def get_test_csv(name, url, lines_count=None, rewrite=False):
     return str(test_csv_path)
 
 
+def run_container(name):
+    env = os.environ.copy()
+    env['UID'] = str(os.getuid())
+    env['GID'] = str(os.getgid())
+    subprocess.Popen(
+        ['./cli.sh', name],
+        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
+        stdout=OUTPUT,
+        stderr=OUTPUT,
+        env=env
+    )
+    atexit.register(stop_container, name=name)
+
+
 def stop_container(name):
     sp = subprocess.Popen(
         ['./cli.sh', f'{name}-stop'],
@@ -127,37 +145,44 @@ def stop_container(name):
 
 def stop_mindsdb(sp):
     sp.kill()
+    sp = subprocess.Popen('kill -9 $(lsof -t -i:47334)', shell=True)
+    sp.wait()
     sp = subprocess.Popen('kill -9 $(lsof -t -i:47335)', shell=True)
+    sp.wait()
+    sp = subprocess.Popen('kill -9 $(lsof -t -i:47336)', shell=True)
     sp.wait()
 
 
-def run_environment(db, config):
+def run_environment(db, config, run_apis='mysql'):
     DEFAULT_DB = f'default_{db}'
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
 
-    if db == 'mssql':
+    if db in ['mssql', 'mongo']:
         db_ready = True
     else:
         if is_container_run(f'{db}-test') is False:
-            subprocess.Popen(
-                ['./cli.sh', db],
-                cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-                stdout=OUTPUT,
-                stderr=OUTPUT
-            )
-            atexit.register(stop_container, name=db)
+            run_container(db)
         db_ready = wait_db(config, DEFAULT_DB)
+
+    if isinstance(run_apis, list) is False:
+        run_apis = run_apis.split(',')
+    api_str = ','.join(run_apis)
 
     if db_ready:
         sp = subprocess.Popen(
-            ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
+            ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path],
             stdout=OUTPUT,
             stderr=OUTPUT
         )
         atexit.register(stop_mindsdb, sp=sp)
 
-    api_ready = db_ready and wait_api_ready(config)
+    api_ready = True
+    for api in run_apis:
+        apistr = 'mongodb' if api == 'mongo' else api
+        api_ready = api_ready and wait_api_ready(config, apistr)
+        if api_ready is False:
+            break
 
     if db_ready is False or api_ready is False:
         print(f'Failed by timeout. {db} started={db_ready}, MindsDB started={api_ready}')

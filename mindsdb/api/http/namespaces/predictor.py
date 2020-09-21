@@ -54,6 +54,10 @@ def preparse_results(results, format_flag='explain'):
     else:
         abort(400, "")
 
+def is_custom(name):
+    if name in [x['name'] for x in ca.custom_models.get_models()]:
+        return True
+    return False
 
 @ns_conf.route('/')
 class PredictorList(Resource):
@@ -62,8 +66,27 @@ class PredictorList(Resource):
     def get(self):
         '''List all predictors'''
 
-        return ca.mindsdb_native.get_models()
+        return [*ca.mindsdb_native.get_models(),*ca.custom_models.get_models()]
 
+@ns_conf.route('/custom/<name>')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class CustomPredictor(Resource):
+    @ns_conf.doc('put_custom_predictor')
+    def put(self, name):
+        try:
+            trained_status = request.json['trained_status']
+        except:
+            trained_status = 'untrained'
+
+        predictor_file = request.files['file']
+        fpath = os.path.join(ca.config_obj.paths['tmp'],  name + '.zip')
+        with open(fpath, 'wb') as f:
+            f.write(predictor_file.read())
+
+        ca.custom_models.load_model(fpath, name, trained_status)
+
+        return f'Uploaded custom model {name}'
 
 @ns_conf.route('/<name>')
 @ns_conf.param('name', 'The predictor identifier')
@@ -73,7 +96,10 @@ class Predictor(Resource):
     @ns_conf.marshal_with(predictor_metadata, skip_none=True)
     def get(self, name):
         try:
-            model = ca.mindsdb_native.get_model_data(name)
+            if is_custom(name):
+                model = ca.custom_models.get_model_data(name)
+            else:
+                model = ca.mindsdb_native.get_model_data(name)
         except Exception as e:
             abort(404, "")
 
@@ -86,7 +112,11 @@ class Predictor(Resource):
     @ns_conf.doc('delete_predictor')
     def delete(self, name):
         '''Remove predictor'''
-        ca.mindsdb_native.delete_model(name)
+        if is_custom(name):
+            ca.custom_models.delete_model(name)
+        else:
+            ca.mindsdb_native.delete_model(name)
+
         return '', 200
 
     @ns_conf.doc('put_predictor', params=put_predictor_params)
@@ -146,6 +176,27 @@ class Predictor(Resource):
 
         return '', 200
 
+@ns_conf.route('/<name>/learn')
+@ns_conf.param('name', 'The predictor identifier')
+class PredictorLearn(Resource):
+    def post(self, name):
+        data = request.json
+        to_predict = data.get('to_predict')
+        kwargs = data.get('kwargs', None)
+
+        if type(kwargs) != type({}):
+            kwargs = {}
+
+        if 'advanced_args' not in kwargs:
+            kwargs['advanced_args'] = {}
+
+
+        ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
+        from_data = ca.default_store.get_datasource_obj(ds_name, raw=True)
+
+        ca.custom_models.learn(name, from_data, to_predict, kwargs)
+
+        return '', 200
 
 @ns_conf.route('/<name>/columns')
 @ns_conf.param('name', 'The predictor identifier')
@@ -154,7 +205,10 @@ class PredictorColumns(Resource):
     def get(self, name):
         '''List of predictors colums'''
         try:
-            model = ca.mindsdb_native.get_model_data(name)
+            if is_custom(name):
+                model = ca.custom_models.get_model_data(name)
+            else:
+                model = ca.mindsdb_native.get_model_data(name)
         except Exception:
             abort(404, 'Invalid predictor name')
 
@@ -202,8 +256,11 @@ class PredictorPredict(Resource):
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
-        # return '', 500
+        if is_custom(name):
+            return ca.custom_models.predict(name, when_data=when, **kwargs)
+        else:
+            results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
+
         return preparse_results(results, format_flag)
 
 
@@ -216,6 +273,8 @@ class PredictorPredictFromDataSource(Resource):
         data = request.json
 
         from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=True)
+        if from_data is None:
+            abort(400, 'No valid datasource given')
 
         try:
             format_flag = data.get('format_flag')
@@ -230,18 +289,15 @@ class PredictorPredictFromDataSource(Resource):
         if type(kwargs) != type({}):
             kwargs = {}
 
-        if from_data is None:
-            from_data = data.get('from_data')
-        if from_data is None:
-            from_data = data.get('when_data')
-        if from_data is None:
-            abort(400, 'No valid datasource given')
-
         # Not the fanciest semaphor, but should work since restplus is multi-threaded and this condition should rarely be reached
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
-        results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
+        if is_custom(name):
+            return ca.custom_models.predict(name, from_data=from_data, **kwargs)
+        else:
+            results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
+
         return preparse_results(results, format_flag)
 
 
@@ -301,7 +357,10 @@ class PredictorDownload(Resource):
         '''Export predictor to file'''
         try:
             new_name = request.args.get('new_name')
-            ca.mindsdb_native.rename_model(name, new_name)
+            if is_custom(name):
+                ca.custom_models.rename_model(name, new_name)
+            else:
+                ca.mindsdb_native.rename_model(name, new_name)
         except Exception as e:
             return str(e), 400
 

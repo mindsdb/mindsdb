@@ -30,10 +30,12 @@ jobs:
           cd ../..
           pip install -r requirements_test.txt
           # maybe use TestSuite addTest 
+          python tests/integration_tests/flows/test_custom_model.py
           python tests/integration_tests/flows/test_clickhouse.py
           python tests/integration_tests/flows/test_mariadb.py
           python tests/integration_tests/flows/test_mysql.py
           python tests/integration_tests/flows/test_postgres.py
+          python tests/integration_tests/flows/test_mongo.py
           sleep 61
           python tests/integration_tests/api/test_http.py
           cd tests/docker
@@ -66,12 +68,12 @@ jobs:
     - name: Build and push mindsdb Docker image
       uses: docker/build-push-action@v1
       with:
-        file: distributions/docker/Dockerfile
+        dockerfile: distributions/docker/Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
         repository: mindsdb/mindsdb
         tag_with_ref: true
-        
+
 
     # Maybe use different build, we need windows here
     # - name: Build windows installer
@@ -79,7 +81,7 @@ jobs:
     #     mkdir -p build
     #     cd /distributions/windows
     #     ./make.bat
-    #    
+    #
     #   - name: Build linux installer
     #    run: |
     #     mkdir -p build
@@ -94,6 +96,6 @@ jobs:
     #     AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
     #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
     #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #     AWS_REGION: 'us-west-2'   
-    #     SOURCE_DIR: 'build'  
-    #     DEST_DIR: 'mindsdb-installer'   
+    #     AWS_REGION: 'us-west-2'
+    #     SOURCE_DIR: 'build'
+    #     DEST_DIR: 'mindsdb-installer'

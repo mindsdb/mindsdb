@@ -1,11 +1,12 @@
 from subprocess import Popen
 import time
 import os
-import psutil
 from random import randint
 from pathlib import Path
 import unittest
 import requests
+
+import psutil
 
 from mindsdb.utilities.config import Config
 
@@ -25,6 +26,7 @@ class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         config = Config(common.TEST_CONFIG)
+        cls.initial_integrations_names = list(config['integrations'].keys())
         config_path = common.prepare_config(config, ['default_mariadb', 'default_clickhouse'])
 
         cls.sp = Popen(
@@ -61,7 +63,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         integration_names = res.json()
         for integration_name in integration_names['integrations']:
-            assert integration_name in ['default_mariadb', 'default_clickhouse', 'default_mysql', 'default_postgres', 'default_mssql', 'test_integration']
+            assert integration_name in self.initial_integrations_names
 
         test_integration_data = {'enabled': False, 'host': 'test', 'type': 'clickhouse'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})

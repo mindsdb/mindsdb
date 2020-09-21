@@ -12,6 +12,7 @@ from flask_cors import CORS
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom_models import CustomModels
 
 
 class Swagger_Api(Api):
@@ -29,7 +30,7 @@ def initialize_static(config):
     static_path.mkdir(parents=True, exist_ok=True)
 
     try:
-        res = requests.get('https://raw.githubusercontent.com/mindsdb/mindsdb_gui_web/master/compatible-config.json?token=AA7S27R5CPBEUKNEONQJNBC7LPBJK')
+        res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json')
     except ConnectionError as e:
         print(f'Is no connection. {e}')
         return False
@@ -145,6 +146,12 @@ def initialize_flask(config):
     port = config['api']['http']['port']
     host = config['api']['http']['host']
     cors_origin_list = [f'http://{host}:{port}']
+
+    if 'MINDSDB_CORS_PORT' in os.environ:
+        ports = os.environ['MINDSDB_CORS_PORT'].strip('[]').split(',')
+        ports = [f'http://{host}:{p}' for p in ports]
+        cors_origin_list.extend(ports)
+
     CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')
@@ -157,4 +164,5 @@ def initialize_flask(config):
 def initialize_interfaces(config, app):
     app.default_store = DataStore(config)
     app.mindsdb_native = MindsdbNative(config)
+    app.custom_models = CustomModels(config)
     app.config_obj = config

@@ -49,6 +49,10 @@ def auto_config(python_path, pip_path, storage_dir):
             "default_mssql": {
                 "enabled": False,
                 "type": 'mssql'
+            },
+            "default_mongodb": {
+                "enabled": False,
+                "type": 'mongodb'
             }
         }
         ,"interface":{
@@ -147,6 +151,12 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
         config['api']['mysql']['user'] = _in('MYSQL interface user','mindsdb',use_default)
         config['api']['mysql']['password'] = _in('MYSQL interface password','',use_default)
 
+    mongodb = _in('Enable Mongo API ? [Y/N]', 'Y', use_default)
+    if mongodb in ['Y', 'y']:
+        config['api']['mongodb'] = {}
+        config['api']['mongodb']['host'] = _in('Mongo interface host: ', '127.0.0.1', use_default)
+        config['api']['mongodb']['port'] = _in('Mongo interface port: ', '47336', use_default)
+
     clickhouse = _in('Connect to clickhouse ? [Y/N]','Y',use_default)
     if clickhouse in ['Y','y']:
         config['integrations']['default_clickhouse']['enabled'] = _in('Enable Clickhouse integration?: ',False,use_default)
@@ -193,6 +203,15 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
         config['integrations']['default_mssql']['password'] = _in('MSSQL password: ', '', use_default)
         config['integrations']['default_mssql']['odbc_driver_name'] = _in('MySQL ODBC driver name: ', 'MySQL ODBC 8.0 Unicode Driver', use_default)
         config['integrations']['default_mssql']['type'] = 'mssql'
+
+    mongodb = _in('Connect to MongoDB ? [Y/N]', 'Y', use_default)
+    if mongodb in ['Y', 'y']:
+        config['integrations']['default_mongodb']['enabled'] = _in('Enable MongoDB integration?: ', False, use_default)
+        config['integrations']['default_mongodb']['host'] = _in('MongoDB host: ', 'localhost', use_default)
+        config['integrations']['default_mongodb']['port'] = _in('MongoDB port: ', 27017, use_default)
+        config['integrations']['default_mongodb']['user'] = _in('MongoDB user: ', '', use_default)
+        config['integrations']['default_mongodb']['password'] = _in('MongoDB password: ', '', use_default)
+        config['integrations']['default_mongodb']['type'] = 'mongodb'
 
     config_path = os.path.join(config_dir, 'config.json')
     with open(config_path, 'w') as fp:

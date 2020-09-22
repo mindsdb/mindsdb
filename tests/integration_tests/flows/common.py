@@ -158,7 +158,7 @@ def run_environment(db, config, run_apis='mysql'):
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
 
-    if db in ['mssql', 'mongo']:
+    if db in ['mssql', 'mongodb']:
         db_ready = True
     else:
         if is_container_run(f'{db}-test') is False:
@@ -179,7 +179,7 @@ def run_environment(db, config, run_apis='mysql'):
 
     api_ready = True
     for api in run_apis:
-        apistr = 'mongodb' if api == 'mongo' else api
+        apistr = 'mongodb' if api == 'mongodb' else api
         api_ready = api_ready and wait_api_ready(config, apistr)
         if api_ready is False:
             break

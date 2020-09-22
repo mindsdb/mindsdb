@@ -12,7 +12,8 @@ class Config(object):
         'datasources': '',
         'predictors': '',
         'static': '',
-        'tmp': ''
+        'tmp': '',
+        'log': ''
     }
     versions = {}
 
@@ -31,6 +32,7 @@ class Config(object):
             self.paths['predictors'] = os.path.join(storage_dir, 'predictors')
             self.paths['static'] = os.path.join(storage_dir, 'static')
             self.paths['tmp'] = os.path.join(storage_dir, 'tmp')
+            self.paths['log'] = os.path.join(storage_dir, 'log')
 
             self._read_versions_file(os.path.join(self.paths['root'], 'versions.json'))
         else:

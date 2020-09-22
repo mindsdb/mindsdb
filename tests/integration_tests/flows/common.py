@@ -7,11 +7,11 @@ import subprocess
 import atexit
 import os
 
-import psutil
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.utilities.ps import wait_port
 from mindsdb_native import CONFIG
 
 
@@ -26,25 +26,6 @@ OUTPUT = None  # [None|subprocess.DEVNULL]
 
 TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def is_port_in_use(port_num):
-    portsinuse = []
-    conns = psutil.net_connections()
-    portsinuse = [x.laddr[1] for x in conns if x.status == 'LISTEN']
-    portsinuse.sort()
-    return int(port_num) in portsinuse
-
-
-def wait_port(port_num, timeout):
-    start_time = time.time()
-
-    in_use = is_port_in_use(port_num)
-    while in_use is False and (time.time() - start_time) < timeout:
-        time.sleep(2)
-        in_use = is_port_in_use(port_num)
-
-    return in_use
 
 
 def wait_api_ready(config, api='mysql'):
@@ -158,7 +139,7 @@ def run_environment(db, config, run_apis='mysql'):
 
     temp_config_path = prepare_config(config, DEFAULT_DB)
 
-    if db in ['mssql', 'mongo']:
+    if db in ['mssql', 'mongodb']:
         db_ready = True
     else:
         if is_container_run(f'{db}-test') is False:
@@ -179,7 +160,7 @@ def run_environment(db, config, run_apis='mysql'):
 
     api_ready = True
     for api in run_apis:
-        apistr = 'mongodb' if api == 'mongo' else api
+        apistr = 'mongodb' if api == 'mongodb' else api
         api_ready = api_ready and wait_api_ready(config, apistr)
         if api_ready is False:
             break

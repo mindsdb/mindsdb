@@ -45,7 +45,7 @@ if __name__ == '__main__':
         api_arr = args.api.split(',')
 
     for api in api_arr:
-        if api not in config:
+        if api not in config['api']:
             print(f"Trying run '{api}' API, but is no config for this api.")
             print(f"Please, fill config['api']['{api}']")
             sys.exit(0)

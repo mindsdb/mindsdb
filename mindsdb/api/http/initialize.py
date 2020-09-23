@@ -33,8 +33,11 @@ def initialize_static(config):
 
     try:
         res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json')
-    except ConnectionError as e:
+    except (ConnectionError, requests.exceptions.ConnectionError) as e:
         print(f'Is no connection. {e}')
+        return False
+    except Exception as e:
+        print(f'Is something wrong with getting compatible-config.json: {e}')
         return False
 
     if res.status_code != 200:

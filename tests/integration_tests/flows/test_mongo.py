@@ -75,7 +75,7 @@ class MongoTest(unittest.TestCase):
         if bool(r['ok']) is not True:
             assert False
 
-        mdb, datastore = run_environment('mongo', config, run_apis='mongo')
+        mdb, datastore = run_environment('mongodb', config, run_apis='mongodb')
         cls.mdb = mdb
 
         models = cls.mdb.get_models()

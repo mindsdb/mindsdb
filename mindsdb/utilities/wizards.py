@@ -133,6 +133,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
 
     mysql = _in('Enable MYSQL API ? [Y/N]','Y',use_default)
     if mysql in ['Y', 'y']:
+        config['api']['mysql'] = {}
         config['api']['mysql']['host'] = _in('MYSQL interface host','127.0.0.1',use_default)
         config['api']['mysql']['port'] = _in('MYSQL interface port','47335',use_default)
         config['api']['mysql']['user'] = _in('MYSQL interface user','mindsdb',use_default)

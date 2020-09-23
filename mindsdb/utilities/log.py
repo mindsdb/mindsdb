@@ -27,7 +27,7 @@ def initialize_log(config, logger_name, wrap_print=False):
     :param logger_name: str, name of logger
     :param wrap_print: bool, if true, then print() calls will be wrapped by log.debug() function.
     '''
-    log = logging.getLogger('mindsdb.{logger_name}')
+    log = logging.getLogger(f'mindsdb.{logger_name}')
     log.propagate = False
     log.setLevel(min(
         getattr(logging, config['log']['level']['console']),

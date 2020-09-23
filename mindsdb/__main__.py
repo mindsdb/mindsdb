@@ -36,17 +36,34 @@ if __name__ == '__main__':
         config_dir, _ = get_or_create_dir_struct()
         config_path = os.path.join(config_dir, 'config.json')
 
-    print(f'Configuration file:\n   {config_path}')
     config = Config(config_path)
 
     from lightwood.__about__ import __version__ as lightwood_version
     from mindsdb.__about__ import __version__ as mindsdb_version
     from mindsdb_native.__about__ import __version__ as mindsdb_native_version
 
-    print('versions:')
+    if args.version:
+        print(f'MindsDB {mindsdb_version}')
+        sys.exit(0)
+
+    if args.verbose:
+        config['log']['level']['console'] = 'INFO'
+
+    print(f'Configuration file:\n   {config_path}')
+    print(f"Storage path:\n   {config.paths['root']}")
+
+    print('Versions:')
     print(f' - lightwood {lightwood_version}')
     print(f' - MindsDB_native {mindsdb_native_version}')
     print(f' - MindsDB {mindsdb_version}')
+
+    os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
+    if args.verbose is True:
+        os.environ['DEFAULT_LOG_LEVEL'] = 'INFO'
+        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'INFO'
+    else:
+        os.environ['DEFAULT_LOG_LEVEL'] = 'WARNING'
+        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'WARNING'
 
     update_versions_file(
         config,
@@ -107,7 +124,7 @@ if __name__ == '__main__':
         api_name = api['name']
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(config_path, True,))
+            p = ctx.Process(target=start_functions[api_name], args=(config_path, args.verbose))
             p.start()
             p_arr.append(p)
         except Exception as e:

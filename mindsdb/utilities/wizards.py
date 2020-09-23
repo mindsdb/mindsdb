@@ -132,20 +132,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
         config['api']['http']['port'] = _in('HTTP interface port: ','47334',use_default)
 
     mysql = _in('Enable MYSQL API ? [Y/N]','Y',use_default)
-    if mysql in ['Y','y']:
-        crt_path = os.path.join(config_dir, 'cert.pem')
-        if os.path.isfile(crt_path) is False:
-            make_ssl_cert(crt_path)
-        config['api']['mysql'] = {
-            "certificate_path": crt_path,
-            "log": {
-                "format": "%(asctime)s - %(levelname)s - %(message)s",
-                "folder": "logs/",
-                "file": "mysql.log",
-                "file_level": "INFO",
-                "console_level": "INFO"
-            }
-        }
+    if mysql in ['Y', 'y']:
         config['api']['mysql']['host'] = _in('MYSQL interface host','127.0.0.1',use_default)
         config['api']['mysql']['port'] = _in('MYSQL interface port','47335',use_default)
         config['api']['mysql']['user'] = _in('MYSQL interface user','mindsdb',use_default)

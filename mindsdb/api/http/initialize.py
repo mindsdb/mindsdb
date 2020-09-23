@@ -27,54 +27,6 @@ class Swagger_Api(Api):
         return url_for(self.endpoint("specs"), _external=False)
 
 
-class LoggerWriter(object):
-    def __init__(self, writer):
-        self._writer = writer
-        self._msg = ''
-
-    def write(self, message):
-        self._msg = self._msg + message
-        while '\n' in self._msg:
-            pos = self._msg.find('\n')
-            self._writer(self._msg[:pos])
-            self._msg = self._msg[pos + 1:]
-
-    def flush(self):
-        if self._msg != '':
-            self._writer(self._msg)
-            self._msg = ''
-
-
-def init_log(config):
-    log = logging.getLogger('mindsdb.http')
-    log.propagate = False
-    log.setLevel(logging.DEBUG)     # global log level
-
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)       # that level will be in console
-    log.addHandler(ch)
-
-    log_path = os.path.join(config.paths['log'], 'http')
-    if not os.path.isdir(log_path):
-        os.mkdir(log_path)
-
-    fh = logging.handlers.RotatingFileHandler(
-        os.path.join(log_path, 'log.txt'),
-        mode='a',
-        encoding='utf-8',
-        maxBytes=100 * 1024,
-        backupCount=3
-    )
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-    log.addHandler(fh)
-
-    # wrap all 'print' as log.level() call
-    sys.stdout = LoggerWriter(log.debug)
-
-
 def initialize_static(config):
     static_path = Path(config.paths['static'])
     static_path.mkdir(parents=True, exist_ok=True)

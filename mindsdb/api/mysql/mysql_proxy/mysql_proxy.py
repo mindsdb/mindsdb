@@ -21,6 +21,7 @@ import atexit
 import tempfile
 import datetime
 from collections import OrderedDict
+import logging
 
 import moz_sql_parser as sql_parser
 
@@ -28,7 +29,6 @@ from mindsdb.utilities.wizards import make_ssl_cert
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.controllers.log import init_logger, log
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
@@ -86,6 +86,7 @@ mdb = None
 custom_models = None
 datahub = None
 config = None
+log = logging.getLogger('mindsdb.mysql')
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):
@@ -1445,7 +1446,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         Create a server and wait for incoming connections until Ctrl-C
         """
         config = _config
-        init_logger(config)
 
         HARDCODED_USER = config['api']['mysql']['user']
         HARDCODED_PASSWORD = config['api']['mysql']['password']

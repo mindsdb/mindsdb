@@ -9,14 +9,17 @@ from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
-from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static, init_log
+from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import initialize_log
 
 
-def start(config, initial=False):
-    if not initial:
-        print('\n\nWarning, this process should not have been started... nothing is "wrong" but it needlessly ate away a tiny bit of precious compute !\n\n')
+def start(config, verbose=False):
     config = Config(config)
+    if verbose:
+        config['log']['level']['console'] = 'INFO'
+
+    initialize_log(config, 'http', wrap_print=True)
 
     initialize_static(config)
 
@@ -41,7 +44,6 @@ def start(config, initial=False):
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
 
-    init_log(config)
     if server.lower() == 'waitress':
         serve(app, port=port, host=host)
     elif server.lower() == 'flask':

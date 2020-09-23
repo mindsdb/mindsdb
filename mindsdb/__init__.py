@@ -29,6 +29,8 @@ for path in paths.values():
 os.environ['MINDSDB_STORAGE_PATH'] = paths['predictors']
 os.environ['DEFAULT_LOG_LEVEL'] = 'WARNING'
 
+os.environ['LIGHTWOOD_LOG_LEVEL'] = 'WARNING'
+
 from mindsdb_native import *
 # Figure out how to add this as a module
 import lightwood

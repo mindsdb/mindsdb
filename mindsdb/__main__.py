@@ -62,8 +62,8 @@ if __name__ == '__main__':
         os.environ['DEFAULT_LOG_LEVEL'] = 'INFO'
         os.environ['LIGHTWOOD_LOG_LEVEL'] = 'INFO'
     else:
-        os.environ['DEFAULT_LOG_LEVEL'] = 'WARNING'
-        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'WARNING'
+        os.environ['DEFAULT_LOG_LEVEL'] = 'ERROR'
+        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'ERROR'
 
     update_versions_file(
         config,

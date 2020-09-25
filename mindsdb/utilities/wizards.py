@@ -128,7 +128,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
     http = _in('Enable HTTP API ? [Y/N]','Y',use_default)
     if http in ['Y','y']:
         config['api']['http'] = {}
-        config['api']['http']['host'] = _in('HTTP interface host: ','0.0.0.0',use_default)
+        config['api']['http']['host'] = _in('HTTP interface host: ', '127.0.0.1', use_default)
         config['api']['http']['port'] = _in('HTTP interface port: ','47334',use_default)
 
     mysql = _in('Enable MYSQL API ? [Y/N]','Y',use_default)

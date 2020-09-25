@@ -8,7 +8,7 @@ class Responce(Responder):
     result = response = {
         "ismaster": True,
         "minWireVersion": 0,
-        "maxWireVersion": 6,
+        "maxWireVersion": 9,
         "ok": 1
     }
 

@@ -7,11 +7,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: [3.6, 3.7, 3.8]
-        include:
-          - os: macos-latest
-            python-version: 3.7
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -29,7 +26,7 @@ jobs:
           docker-compose -f docker-compose.yml up -d
           cd ../..
           pip install -r requirements_test.txt
-          # maybe use TestSuite addTest 
+          # maybe use TestSuite addTest
           python tests/integration_tests/flows/test_custom_model.py
           python tests/integration_tests/flows/test_clickhouse.py
           python tests/integration_tests/flows/test_mariadb.py
@@ -42,6 +39,8 @@ jobs:
           docker-compose down
         fi
       shell: bash
+      env:
+        MINDSDB_CHECK_FOR_UPDATES: 'false'
 
   deploy:
     runs-on: ubuntu-latest

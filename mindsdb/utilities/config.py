@@ -26,6 +26,13 @@ class Config(object):
             self._config_hash = self._gen_hash()
 
             storage_dir = self._config['storage_dir']
+            if os.path.isabs(storage_dir) is False:
+                storage_dir = os.path.normpath(
+                    os.path.join(
+                        os.path.dirname(config_path),
+                        storage_dir
+                    )
+                )
             self.paths['root'] = storage_dir
             self.paths['datasources'] = os.path.join(storage_dir, 'datasources')
             self.paths['predictors'] = os.path.join(storage_dir, 'predictors')

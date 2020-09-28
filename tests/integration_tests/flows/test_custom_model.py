@@ -1,11 +1,8 @@
 import unittest
-import requests
 import csv
-import inspect
 import shutil
 import requests
 import os
-import time
 
 from mindsdb.utilities.config import Config
 
@@ -16,7 +13,7 @@ from common import (
 )
 
 
-root = 'http://127.0.0.1:47334'
+root = 'http://127.0.0.1:47334/api'
 TEST_CSV = {
     'name': 'home_rentals.csv',
     'url': 'https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv'
@@ -27,6 +24,7 @@ TEST_PREDICTOR_NAME = 'test_predictor'
 EXTERNAL_DS_NAME = 'test_external'
 config = Config(TEST_CONFIG)
 PRED_NAME = 'this_is_my_custom_sklearnmodel'
+
 
 def query(query):
     if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():

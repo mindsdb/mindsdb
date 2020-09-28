@@ -40,7 +40,7 @@ jobs:
         fi
       shell: bash
       env:
-        MINDSDB_CHECK_FOR_UPDATES: 'false'
+        CHECK_FOR_UPDATES: False
 
   deploy:
     runs-on: ubuntu-latest

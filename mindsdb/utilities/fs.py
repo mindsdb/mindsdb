@@ -133,8 +133,11 @@ def update_versions_file(config, versions):
     versions_file_path = os.path.join(config.paths['root'], 'versions.json')
     old_versions = {}
     if Path(versions_file_path).is_file():
-        with open(versions_file_path, 'rt') as f:
-            old_versions = json.loads(f.read())
+        try:
+            with open(versions_file_path, 'rt') as f:
+                old_versions = json.loads(f.read())
+        except Exception:
+            pass
 
     # do here anything for update
     if len(old_versions) == 0:

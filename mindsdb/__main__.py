@@ -40,14 +40,20 @@ if __name__ == '__main__':
     config = Config(config_path)
 
     if args.api is None:
-        api_arr = [api for api in config['api']]
+        api_arr = ['http', 'mysql']
     else:
         api_arr = args.api.split(',')
+
+    for api in api_arr:
+        if api not in config['api']:
+            print(f"Trying run '{api}' API, but is no config for this api.")
+            print(f"Please, fill config['api']['{api}']")
+            sys.exit(0)
 
     start_functions = {
         'http': start_http,
         'mysql': start_mysql,
-        'mongo': start_mongo
+        'mongodb': start_mongo
     }
 
     mdb = MindsdbNative(config)

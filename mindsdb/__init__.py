@@ -23,7 +23,7 @@ except Exception as e:
     sys.exit(1)
 
 paths = mindsdb_config.paths
-for path in paths:
+for path in paths.values():
     create_directory(path)
 
 os.environ['MINDSDB_STORAGE_PATH'] = paths['predictors']

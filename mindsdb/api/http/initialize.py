@@ -145,7 +145,10 @@ def initialize_flask(config):
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']
-    cors_origin_list = [f'http://{host}:{port}']
+    hosts = ['0.0.0.0', 'localhost', '127.0.0.1']
+    if host not in hosts:
+        hosts.append(host)
+    cors_origin_list = [f'http://{h}:{port}' for h in hosts]
 
     if 'MINDSDB_CORS_PORT' in os.environ:
         ports = os.environ['MINDSDB_CORS_PORT'].strip('[]').split(',')

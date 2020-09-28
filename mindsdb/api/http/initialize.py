@@ -165,7 +165,7 @@ def initialize_flask(config):
         prefix='/api'
     )
 
-    print(f'GUI should be available by http://{host}:{port}/static/index.html')
+    print(f'GUI should be available by http://{host}:{port}/index.html')
 
     return app, api
 

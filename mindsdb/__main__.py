@@ -39,21 +39,21 @@ if __name__ == '__main__':
 
     config = Config(config_path)
 
+    from mindsdb.__about__ import __version__ as mindsdb_version
+
+    if args.version:
+        print(f'MindsDB {mindsdb_version}')
+        sys.exit(0)
+
     try:
         lightwood_version = get_distribution('lightwood').version
     except Exception:
         from lightwood.__about__ import __version__ as lightwood_version
 
     try:
-        mindsdb_native = get_distribution('mindsdb_native').version
+        mindsdb_native_version = get_distribution('mindsdb_native').version
     except Exception:
         from mindsdb_native.__about__ import __version__ as mindsdb_native_version
-
-    from mindsdb.__about__ import __version__ as mindsdb_version
-
-    if args.version:
-        print(f'MindsDB {mindsdb_version}')
-        sys.exit(0)
 
     if args.verbose:
         config['log']['level']['console'] = 'INFO'

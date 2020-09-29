@@ -26,6 +26,13 @@ class Config(object):
             self._config_hash = self._gen_hash()
 
             storage_dir = self._config['storage_dir']
+            if os.path.isabs(storage_dir) is False:
+                storage_dir = os.path.normpath(
+                    os.path.join(
+                        os.path.dirname(config_path),
+                        storage_dir
+                    )
+                )
             self.paths['root'] = storage_dir
             self.paths['datasources'] = os.path.join(storage_dir, 'datasources')
             self.paths['predictors'] = os.path.join(storage_dir, 'predictors')
@@ -61,19 +68,36 @@ class Config(object):
             mdb_storage_path = Path(config['interface']['mindsdb_native']['storage_dir'])
 
             temp_dir_path = tempfile.mkdtemp()
-            shutil.move(
-                str(ds_storage_path),
-                temp_dir_path
-            )
+
+            if ds_storage_path.is_dir():
+                shutil.move(
+                    str(ds_storage_path),
+                    temp_dir_path
+                )
+
             ds_storage_path.mkdir(mode=0o777, exist_ok=True, parents=True)
-            shutil.move(
-                str(Path(temp_dir_path).joinpath('datastore')),
-                str(ds_storage_path.joinpath('datasources'))
-            )
-            shutil.move(
-                str(mdb_storage_path),
-                str(ds_storage_path.joinpath('predictors'))
-            )
+
+            if Path(temp_dir_path).joinpath('datastore').is_dir():
+                shutil.move(
+                    str(Path(temp_dir_path).joinpath('datastore')),
+                    str(ds_storage_path.joinpath('datasources'))
+                )
+            else:
+                ds_storage_path.joinpath('datasources').mkdir(mode=0o777, exist_ok=True)
+
+            if ds_storage_path == mdb_storage_path:
+                shutil.move(
+                    str(Path(temp_dir_path)),
+                    str(ds_storage_path.joinpath('predictors'))
+                )
+            elif mdb_storage_path.is_dir():
+                shutil.move(
+                    str(mdb_storage_path),
+                    str(ds_storage_path.joinpath('predictors'))
+                )
+            else:
+                mdb_storage_path.joinpath('predictors').mkdir(mode=0o777, exist_ok=True)
+
             ds_storage_path.joinpath('tmp').mkdir(mode=0o777, exist_ok=True)
             ds_storage_path.joinpath('static').mkdir(mode=0o777, exist_ok=True)
 

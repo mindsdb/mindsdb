@@ -1,6 +1,7 @@
 import os
 import sys
 
+from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
 from mindsdb.utilities.fs import get_or_create_dir_struct, create_directory
 from mindsdb.utilities.wizards import cli_config
 from mindsdb.utilities.config import Config

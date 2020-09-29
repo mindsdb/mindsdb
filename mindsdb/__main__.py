@@ -4,6 +4,7 @@ import sys
 import os
 import time
 
+from pkg_resources import get_distribution
 import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
@@ -38,9 +39,17 @@ if __name__ == '__main__':
 
     config = Config(config_path)
 
-    from lightwood.__about__ import __version__ as lightwood_version
+    try:
+        lightwood_version = get_distribution('lightwood').version
+    except Exception:
+        from lightwood.__about__ import __version__ as lightwood_version
+
+    try:
+        mindsdb_native = get_distribution('mindsdb_native').version
+    except Exception:
+        from mindsdb_native.__about__ import __version__ as mindsdb_native_version
+
     from mindsdb.__about__ import __version__ as mindsdb_version
-    from mindsdb_native.__about__ import __version__ as mindsdb_native_version
 
     if args.version:
         print(f'MindsDB {mindsdb_version}')

@@ -21,7 +21,6 @@ import atexit
 import tempfile
 import datetime
 from collections import OrderedDict
-import logging
 
 import moz_sql_parser as sql_parser
 
@@ -32,6 +31,7 @@ from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import Session
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
+from mindsdb.api.mysql.mysql_proxy.utilities import log
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
@@ -86,7 +86,6 @@ mdb = None
 custom_models = None
 datahub = None
 config = None
-log = logging.getLogger('mindsdb.mysql')
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):

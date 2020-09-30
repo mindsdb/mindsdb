@@ -1,11 +1,9 @@
 from distutils.version import LooseVersion
 import requests
 import os
-import sys
 import shutil
 from zipfile import ZipFile
 from pathlib import Path
-import logging
 
 from flask import Flask, url_for
 from flask_restx import Api

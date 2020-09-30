@@ -57,3 +57,6 @@ def initialize_log(config, logger_name, wrap_print=False):
 
     if wrap_print:
         sys.stdout = LoggerWrapper(log.debug)
+
+
+log = logging.getLogger('mindsdb')

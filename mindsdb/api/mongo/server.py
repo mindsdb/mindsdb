@@ -217,6 +217,9 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         log.debug(str(self.server.socket))
         while True:
             header = self._read_bytes(16)
+            if header is False:
+                # connection closed by client
+                break
             length, pos = unpack(INT, header)
             request_id, pos = unpack(INT, header, pos)
             response_to, pos = unpack(INT, header, pos)
@@ -240,7 +243,8 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         while length:
             chunk = self.request.recv(length)
             if chunk == b'':
-                raise Exception('Connection closed')
+                log.debug('Connection closed')
+                return False
 
             length -= len(chunk)
             buffer += chunk

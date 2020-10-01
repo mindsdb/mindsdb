@@ -15,7 +15,7 @@ default_config = {
 
 
 class Config(object):
-    current_version = '1.2'
+    current_version = '1.3'
     _config = {}
     paths = {
         'root': '',

@@ -103,8 +103,8 @@ def make_ssl_cert(file_path):
         .issuer_name(name)
         .public_key(key.public_key())
         .serial_number(1)
-        .not_valid_before(now)
-        .not_valid_after(now + timedelta(days=10*365))
+        .not_valid_before(now - timedelta(days=10 * 365))
+        .not_valid_after(now + timedelta(days=10 * 365))
         .add_extension(
             x509.BasicConstraints(ca=True, path_length=0),
             False

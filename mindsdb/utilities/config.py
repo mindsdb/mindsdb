@@ -122,9 +122,32 @@ class Config(object):
             config['config_version'] = '1.2'
             return config
 
+        def m1_2(config):
+            ''' remove no longer needed fields
+            '''
+            try:
+                del config['api']['mysql']['log']
+            except Exception:
+                pass
+
+            try:
+                del config['interface']
+            except Exception:
+                pass
+
+            if 'pip_path' in config and config['pip_path'] is None:
+                del config['pip_path']
+
+            if 'python_interpreter' in config and config['python_interpreter'] is None:
+                del config['python_interpreter']
+
+            config['config_version'] = '1.3'
+            return config
+
         migrations = {
             '1.0': m1_0,
-            '1.1': m1_1
+            '1.1': m1_1,
+            '1.2': m1_2
         }
 
         current_version = self._parse_version(self._config['config_version'])

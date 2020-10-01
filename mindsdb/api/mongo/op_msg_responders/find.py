@@ -26,7 +26,6 @@ class Responce(Responder):
             # prediction
             model = mindsdb_env['mindsdb_native'].get_model_data(name=query['find'])
 
-            # TODO remove duplication
             columns = []
             columns += [x['column_name'] for x in model['data_analysis']['input_columns_metadata']]
             columns += [x['column_name'] for x in model['data_analysis']['target_columns_metadata']]

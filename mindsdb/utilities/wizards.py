@@ -22,13 +22,11 @@ def _in(ask, default, use_default):
 
 def auto_config(python_path, pip_path, storage_dir):
     config = {
-        "debug": False
-        ,"config_version": "1.2"
-        ,"python_interpreter": python_path
-        ,"pip_path": pip_path
-        ,"api": {
-        }
-        ,"integrations": {
+        "debug": False,
+        "config_version": "1.3",
+        "api": {
+        },
+        "integrations": {
             "default_clickhouse": {
                 "enabled": False,
                 "type": 'clickhouse'
@@ -54,25 +52,18 @@ def auto_config(python_path, pip_path, storage_dir):
                 "enabled": False,
                 "type": 'mongodb'
             }
-        }
-        ,"interface":{
-          "mindsdb_native": {
-              "enabled": True
-          }
-          ,"lightwood": {
-               "enabled": True
-          }
-          ,"datastore": {
-               "enabled": True
-          }
-          ,"dataskillet": {
-               "enabled": False
-          }
         },
         'storage_dir': storage_dir
     }
 
+    if isinstance(python_path, str):
+        config['python_interpreter'] = python_path
+
+    if isinstance(pip_path, str):
+        config['pip_path'] = python_path
+
     return config
+
 
 def make_ssl_cert(file_path):
     from cryptography import x509
@@ -103,8 +94,8 @@ def make_ssl_cert(file_path):
         .issuer_name(name)
         .public_key(key.public_key())
         .serial_number(1)
-        .not_valid_before(now)
-        .not_valid_after(now + timedelta(days=10*365))
+        .not_valid_before(now - timedelta(days=10 * 365))
+        .not_valid_after(now + timedelta(days=10 * 365))
         .add_extension(
             x509.BasicConstraints(ca=True, path_length=0),
             False
@@ -132,20 +123,8 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
         config['api']['http']['port'] = _in('HTTP interface port: ','47334',use_default)
 
     mysql = _in('Enable MYSQL API ? [Y/N]','Y',use_default)
-    if mysql in ['Y','y']:
-        crt_path = os.path.join(config_dir, 'cert.pem')
-        if os.path.isfile(crt_path) is False:
-            make_ssl_cert(crt_path)
-        config['api']['mysql'] = {
-            "certificate_path": crt_path,
-            "log": {
-                "format": "%(asctime)s - %(levelname)s - %(message)s",
-                "folder": "logs/",
-                "file": "mysql.log",
-                "file_level": "INFO",
-                "console_level": "INFO"
-            }
-        }
+    if mysql in ['Y', 'y']:
+        config['api']['mysql'] = {}
         config['api']['mysql']['host'] = _in('MYSQL interface host','127.0.0.1',use_default)
         config['api']['mysql']['port'] = _in('MYSQL interface port','47335',use_default)
         config['api']['mysql']['user'] = _in('MYSQL interface user','mindsdb',use_default)

@@ -1,13 +1,13 @@
 from mindsdb.utilities.config import Config
 from mindsdb.api.mongo.server import run_server
+from mindsdb.utilities.log import initialize_log
 
 
-def start(config, initial=False):
-    if not initial:
-        print('\n\nWarning, this process should not have been started... nothing is "wrong" but it needlessly ate away a tiny bit of precious compute !\n\n')
+def start(config, verbose=False):
     config = Config(config)
+    if verbose:
+        config['log']['level']['console'] = 'INFO'
+
+    initialize_log(config, 'mongodb', wrap_print=True)
+
     run_server(config)
-
-
-if __name__ == '__main__':
-    start()

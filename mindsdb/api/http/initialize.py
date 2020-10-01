@@ -4,6 +4,7 @@ import os
 import shutil
 from zipfile import ZipFile
 from pathlib import Path
+import logging
 
 from flask import Flask, url_for
 from flask_restx import Api
@@ -162,7 +163,9 @@ def initialize_flask(config):
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')
 
-    print(f' - GUI available at http://{host}:{port}/static/index.html')
+    # NOTE rewrite it, that hotfix to see GUI link
+    log = logging.getLogger('mindsdb.http')
+    log.error(f' - GUI available at http://{host}:{port}/static/index.html')
 
     return app, api
 

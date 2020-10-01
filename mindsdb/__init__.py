@@ -7,6 +7,23 @@ from mindsdb.utilities.wizards import cli_config
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import args_parse
 
+py_ver = sys.version_info
+if py_ver.minor < 8 or py_ver.major < 3:
+    msg = '''
+    MindsDB server requires Python >= 3.8 to run
+
+    Once you have Python 3.8 installed you can tun mindsdb as follows:
+
+    1. create and activate venv:
+        python3.8 -m venv venv
+        source venv/bin/activate
+    2. install MindsDB:
+        pip3 install mindsdb
+
+    More instructions in https://docs.mindsdb.com'''
+    print(msg)
+    exit()
+
 config_dir, storage_dir = get_or_create_dir_struct()
 
 config_path = os.path.join(config_dir, 'config.json')

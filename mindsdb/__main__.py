@@ -157,7 +157,11 @@ if __name__ == '__main__':
     while (time.time() - start_time) < timeout and all_started is False:
         all_started = True
         for i, api in enumerate(api_arr):
-            in_use = api['started'] or is_port_in_use(api['port'])
+            try:
+                in_use = api['started'] or is_port_in_use(api['port'])
+            except Exception:
+                # NOTE that hotfix for OSX: is_port_in_use will raise AccessDenied error if it runned not as sudo
+                in_use = True
             if in_use and api['started'] != in_use:
                 api['started'] = in_use
                 print(f"{api['name']} API: started on {api['port']}")

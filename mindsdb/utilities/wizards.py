@@ -22,13 +22,11 @@ def _in(ask, default, use_default):
 
 def auto_config(python_path, pip_path, storage_dir):
     config = {
-        "debug": False
-        ,"config_version": "1.2"
-        ,"python_interpreter": python_path
-        ,"pip_path": pip_path
-        ,"api": {
-        }
-        ,"integrations": {
+        "debug": False,
+        "config_version": "1.3",
+        "api": {
+        },
+        "integrations": {
             "default_clickhouse": {
                 "enabled": False,
                 "type": 'clickhouse'
@@ -54,25 +52,18 @@ def auto_config(python_path, pip_path, storage_dir):
                 "enabled": False,
                 "type": 'mongodb'
             }
-        }
-        ,"interface":{
-          "mindsdb_native": {
-              "enabled": True
-          }
-          ,"lightwood": {
-               "enabled": True
-          }
-          ,"datastore": {
-               "enabled": True
-          }
-          ,"dataskillet": {
-               "enabled": False
-          }
         },
         'storage_dir': storage_dir
     }
 
+    if isinstance(python_path, str):
+        config['python_interpreter'] = python_path
+
+    if isinstance(pip_path, str):
+        config['pip_path'] = python_path
+
     return config
+
 
 def make_ssl_cert(file_path):
     from cryptography import x509

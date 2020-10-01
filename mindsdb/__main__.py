@@ -2,10 +2,10 @@ import atexit
 import traceback
 import sys
 import os
+import time
 
+from pkg_resources import get_distribution
 import torch.multiprocessing as mp
-
-from mindsdb_native.config import CONFIG
 
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
@@ -13,7 +13,8 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.fs import get_or_create_dir_struct
+from mindsdb.utilities.fs import get_or_create_dir_struct, update_versions_file
+from mindsdb.utilities.ps import is_port_in_use
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse
 
@@ -36,18 +37,69 @@ if __name__ == '__main__':
         config_dir, _ = get_or_create_dir_struct()
         config_path = os.path.join(config_dir, 'config.json')
 
-    print(f'Using configuration file: {config_path}')
     config = Config(config_path)
+
+    from mindsdb.__about__ import __version__ as mindsdb_version
+
+    if args.version:
+        print(f'MindsDB {mindsdb_version}')
+        sys.exit(0)
+
+    try:
+        lightwood_version = get_distribution('lightwood').version
+    except Exception:
+        from lightwood.__about__ import __version__ as lightwood_version
+
+    try:
+        mindsdb_native_version = get_distribution('mindsdb_native').version
+    except Exception:
+        from mindsdb_native.__about__ import __version__ as mindsdb_native_version
+
+    if args.verbose:
+        config['log']['level']['console'] = 'INFO'
+
+    print(f'Configuration file:\n   {config_path}')
+    print(f"Storage path:\n   {config.paths['root']}")
+
+    print('Versions:')
+    print(f' - lightwood {lightwood_version}')
+    print(f' - MindsDB_native {mindsdb_native_version}')
+    print(f' - MindsDB {mindsdb_version}')
+
+    os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
+    if args.verbose is True:
+        os.environ['DEFAULT_LOG_LEVEL'] = 'INFO'
+        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'INFO'
+    else:
+        os.environ['DEFAULT_LOG_LEVEL'] = 'ERROR'
+        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'ERROR'
+
+    update_versions_file(
+        config,
+        {
+            'lightwood': lightwood_version,
+            'mindsdb_native': mindsdb_native_version,
+            'mindsdb': mindsdb_version,
+            'python': sys.version.replace('\n', '')
+        }
+    )
 
     if args.api is None:
         api_arr = ['http', 'mysql']
     else:
         api_arr = args.api.split(',')
 
+    api_arr = [{
+        'name': api,
+        'port': config['api'][api]['port'],
+        'started': False
+    } for api in api_arr]
+
     for api in api_arr:
-        if api not in config['api']:
-            print(f"Trying run '{api}' API, but is no config for this api.")
-            print(f"Please, fill config['api']['{api}']")
+        api_name = api['name']
+        if api_name not in config['api']:
+            print(f"Trying run '{api_name}' API, but is no config for this api.")
+            print(f"Please, fill config['api']['{api_name}']")
             sys.exit(0)
 
     start_functions = {
@@ -83,20 +135,34 @@ if __name__ == '__main__':
 
     p_arr = []
     ctx = mp.get_context('spawn')
+
     for api in api_arr:
-        print(f'Starting Mindsdb {api} API !')
+        api_name = api['name']
+        print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api], args=(config_path, True,))
+            p = ctx.Process(target=start_functions[api_name], args=(config_path, args.verbose))
             p.start()
             p_arr.append(p)
-            print(f'Started Mindsdb {api} API !')
         except Exception as e:
             close_api_gracefully(p_arr)
-            print(f'Failed to start {api} API with exception {e}')
+            print(f'Failed to start {api_name} API with exception {e}')
             print(traceback.format_exc())
             raise
 
     atexit.register(close_api_gracefully, p_arr=p_arr)
+
+    timeout = 15
+    start_time = time.time()
+    all_started = False
+    while (time.time() - start_time) < timeout and all_started is False:
+        all_started = True
+        for i, api in enumerate(api_arr):
+            in_use = api['started'] or is_port_in_use(api['port'])
+            if in_use and api['started'] != in_use:
+                api['started'] = in_use
+                print(f"{api['name']} API: started on {api['port']}")
+            all_started = all_started and in_use
+        time.sleep(0.5)
 
     for p in p_arr:
         p.join()

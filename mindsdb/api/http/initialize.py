@@ -31,8 +31,11 @@ def initialize_static(config):
 
     try:
         res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json')
-    except ConnectionError as e:
+    except (ConnectionError, requests.exceptions.ConnectionError) as e:
         print(f'Is no connection. {e}')
+        return False
+    except Exception as e:
+        print(f'Is something wrong with getting compatible-config.json: {e}')
         return False
 
     if res.status_code != 200:
@@ -159,7 +162,7 @@ def initialize_flask(config):
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')
 
-    print(f'GUI should be available by http://{host}:{port}/static/index.html')
+    print(f' - GUI available at http://{host}:{port}/static/index.html')
 
     return app, api
 

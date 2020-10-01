@@ -1,13 +1,13 @@
-import argparse
-
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import initialize_log
 
-def start(config, initial=False):
-    if not initial:
-        print('\n\nWarning, this process should not have been started... nothing is "wrong" but it needlessly ate away a tiny bit of precious compute !\n\n')
+
+def start(config, verbose=False):
     config = Config(config)
-    MysqlProxy.startProxy(config)
+    if verbose:
+        config['log']['level']['console'] = 'INFO'
 
-if __name__ == '__main__':
-    start()
+    initialize_log(config, 'mysql', wrap_print=True)
+
+    MysqlProxy.startProxy(config)

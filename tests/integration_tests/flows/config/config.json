@@ -11,13 +11,6 @@
         "mysql": {
             "certificate_path": "tests/integration_tests/flows/config/cert.pem",
             "host": "127.0.0.1",
-            "log": {
-                "console_level": "INFO",
-                "file": "mysql.log",
-                "file_level": "INFO",
-                "folder": "logs/",
-                "format": "%(asctime)s - %(levelname)s - %(message)s"
-            },
             "password": "",
             "port": "47335",
             "user": "mindsdb"
@@ -89,6 +82,12 @@
         },
         "mindsdb_native": {
             "enabled": true
+        }
+    },
+    "log": {
+        "level": {
+            "console": "WARNING",
+            "file": "ERROR"
         }
     },
     "pip_path": null,

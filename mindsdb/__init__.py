@@ -1,7 +1,8 @@
 import os
 import sys
 
-from mindsdb.utilities.fs import get_or_create_dir_struct, create_directory, update_versions_file
+from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
+from mindsdb.utilities.fs import get_or_create_dir_struct, create_directory
 from mindsdb.utilities.wizards import cli_config
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import args_parse
@@ -27,6 +28,8 @@ for path in paths.values():
     create_directory(path)
 
 os.environ['MINDSDB_STORAGE_PATH'] = paths['predictors']
+os.environ['DEFAULT_LOG_LEVEL'] = 'ERROR'
+os.environ['LIGHTWOOD_LOG_LEVEL'] = 'ERROR'
 
 from mindsdb_native import *
 # Figure out how to add this as a module
@@ -34,21 +37,3 @@ import lightwood
 #import dataskillet
 import mindsdb.utilities.wizards as wizards
 from mindsdb.interfaces.custom.model_interface import ModelInterface
-
-from lightwood.__about__ import __version__ as lightwood_version
-from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb_native.__about__ import __version__ as mindsdb_native_version
-
-print('versions:')
-print(f' - lightwood {lightwood_version}')
-print(f' - MindsDB_native {mindsdb_native_version}')
-print(f' - MindsDB {mindsdb_version}')
-
-update_versions_file(
-    mindsdb_config,
-    {
-        'lightwood': lightwood_version,
-        'mindsdb_native': mindsdb_native_version,
-        'mindsdb': mindsdb_version
-    }
-)

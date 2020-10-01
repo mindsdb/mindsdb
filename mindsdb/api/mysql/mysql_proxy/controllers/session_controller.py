@@ -9,7 +9,7 @@
  *******************************************************
 """
 
-from mindsdb.api.mysql.mysql_proxy.controllers.log import log
+from mindsdb.api.mysql.mysql_proxy.utilities import log
 
 
 class SessionController():

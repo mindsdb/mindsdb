@@ -4,6 +4,16 @@ import hashlib
 import datetime
 
 
+default_config = {
+    "log": {
+        "level": {
+            "console": "ERROR",
+            "file": "WARNING"
+        }
+    }
+}
+
+
 class Config(object):
     current_version = '1.2'
     _config = {}
@@ -12,7 +22,8 @@ class Config(object):
         'datasources': '',
         'predictors': '',
         'static': '',
-        'tmp': ''
+        'tmp': '',
+        'log': ''
     }
     versions = {}
 
@@ -38,6 +49,7 @@ class Config(object):
             self.paths['predictors'] = os.path.join(storage_dir, 'predictors')
             self.paths['static'] = os.path.join(storage_dir, 'static')
             self.paths['tmp'] = os.path.join(storage_dir, 'tmp')
+            self.paths['log'] = os.path.join(storage_dir, 'log')
 
             self._read_versions_file(os.path.join(self.paths['root'], 'versions.json'))
         else:
@@ -155,6 +167,17 @@ class Config(object):
         password = '' if password is None else str(password)
         self._config['api']['mysql']['password'] = str(password)
 
+    def _merge_default_config(self):
+        def merge_key_recursive(target_dict, source_dict, key):
+            if key not in target_dict:
+                target_dict[key] = source_dict[key]
+            elif isinstance(target_dict[key], dict) and isinstance(source_dict[key], dict):
+                for k in source_dict[key]:
+                    merge_key_recursive(target_dict[key], source_dict[key], k)
+
+        for key in default_config:
+            merge_key_recursive(self._config, default_config, key)
+
     def _read(self):
         if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
             with open(self.config_path, 'r') as fp:
@@ -164,6 +187,7 @@ class Config(object):
                     self._save()
                 self._validate()
                 self._format()
+                self._merge_default_config()
         else:
             raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
 

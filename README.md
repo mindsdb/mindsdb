@@ -33,6 +33,19 @@ MindsDB is an open-source AI layer for existing databases that allows you to eff
 
 ### Installation
 
+1.Create and activate venv:
+```bash
+   python3.9 -m venv venv
+  source venv/bin/activate
+```
+2.Install MindsDB
+```bash
+  pip3 install mindsdb
+```
+3.Run MindsDB
+```bash
+  python3.8 -m mindsdb
+```
 
 * **Desktop**: You can use MindsDB on your own computer in under a minute, if you already have a python environment setup, just run the following command:
 

@@ -16,7 +16,7 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.custom.custom_models import CustomModels
-from mindsdb.utilities.ps import wait_port
+from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 
 
 class Swagger_Api(Api):
@@ -171,7 +171,8 @@ def initialize_flask(config):
     url = f'http://{host}:{port}/static/index.html'
     log.error(f' - GUI available at {url}')
 
-    x = threading.Thread(target=_open_webbrowser, args=(url, port), daemon=True)
+    pid = os.getpid()
+    x = threading.Thread(target=_open_webbrowser, args=(url, pid, port), daemon=True)
     x.start()
 
     return app, api
@@ -184,14 +185,15 @@ def initialize_interfaces(config, app):
     app.config_obj = config
 
 
-def _open_webbrowser(url: str, port: int):
+def _open_webbrowser(url: str, pid: int, port: int):
     """Open webbrowser with url when http service is started.
 
     If some error then do nothing.
     """
     logger = logging.getLogger('mindsdb.http')
     try:
-        is_http_active = wait_port(port_num=port, timeout=10)
+        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,
+                                           pid=pid, port=port)
         if is_http_active:
             webbrowser.open(url)
     except Exception as e:

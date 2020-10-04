@@ -58,21 +58,16 @@ if __name__ == '__main__':
     if args.verbose:
         config['log']['level']['console'] = 'INFO'
 
-    print(f'Configuration file:\n   {config_path}')
-    print(f"Storage path:\n   {config.paths['root']}")
-
-    print('Versions:')
+    # Print Welcome message
+    print("Welcome to MindsDB, you have the following versions installed:\n")
     print(f' - lightwood {lightwood_version}')
     print(f' - MindsDB_native {mindsdb_native_version}')
     print(f' - MindsDB {mindsdb_version}')
 
-    os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
-    if args.verbose is True:
-        os.environ['DEFAULT_LOG_LEVEL'] = 'INFO'
-        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'INFO'
-    else:
-        os.environ['DEFAULT_LOG_LEVEL'] = 'ERROR'
-        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'ERROR'
+    print("\n\nNOTE: These paths may come handy if you want to make general config updates or see the data that is being saved.\n")
+    print(f'Using configuration file: {config_path}')
+    print(f"MindsDB storage directory: {config.paths['root']}")
+    print('\n' + '='*7 + '\n') # print divider
 
     update_versions_file(
         config,
@@ -138,7 +133,7 @@ if __name__ == '__main__':
 
     for api in api_arr:
         api_name = api['name']
-        print(f'{api_name} API: starting...')
+        print(f'Starting Mindsdb {api_name} API ... OK')
         try:
             p = ctx.Process(target=start_functions[api_name], args=(config_path, args.verbose))
             p.start()
@@ -148,6 +143,16 @@ if __name__ == '__main__':
             print(f'Failed to start {api_name} API with exception {e}')
             print(traceback.format_exc())
             raise
+
+    os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
+    if args.verbose is True:
+        os.environ['DEFAULT_LOG_LEVEL'] = 'INFO'
+        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'INFO'
+    else:
+        os.environ['DEFAULT_LOG_LEVEL'] = 'ERROR'
+        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'ERROR'
+        print("\nNOTE: Verbose is OFF [see --help for options]")
+    print('\n' + '='*7 + '\n') # print divider
 
     atexit.register(close_api_gracefully, p_arr=p_arr)
 
@@ -164,9 +169,17 @@ if __name__ == '__main__':
                 in_use = True
             if in_use and api['started'] != in_use:
                 api['started'] = in_use
-                print(f"{api['name']} API: started on {api['port']}")
+                if api['name'] == 'mysql':
+                    print("You can now connect to MindsDB Server on any Mysql client as:")
+                    print(f"\ttcp://127.0.0.1:{api['port']}")
+                else: # api['name'] == http
+                    print("You can now work on MindsDB in your browser at: ")
+                    print(f"\thttp://localhost:{api['port']}")
             all_started = all_started and in_use
         time.sleep(0.5)
+
+    print("\nHappy Predicting!")
+    print("\nMore information @ https://docs.mindsdb.com")
 
     for p in p_arr:
         p.join()

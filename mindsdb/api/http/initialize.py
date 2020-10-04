@@ -165,7 +165,7 @@ def initialize_flask(config):
 
     # NOTE rewrite it, that hotfix to see GUI link
     log = logging.getLogger('mindsdb.http')
-    log.error(f' - GUI available at http://{host}:{port}/static/index.html')
+    log.info(f' - GUI available at http://{host}:{port}/static/index.html')
 
     return app, api
 

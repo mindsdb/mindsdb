@@ -39,6 +39,14 @@
       "created_at": "2020-09-18T19:59:32Z",
       "repoId": 143328315,
       "pullRequestNo": 694
+    },
+    {
+      "name": "sergey-mindsdb",
+      "id": 72136530,
+      "comment_id": 703506011,
+      "created_at": "2020-10-05T09:10:36Z",
+      "repoId": 143328315,
+      "pullRequestNo": 754
     }
   ]
 }

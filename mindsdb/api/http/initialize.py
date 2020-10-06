@@ -2,6 +2,8 @@ from distutils.version import LooseVersion
 import requests
 import os
 import shutil
+import threading
+import webbrowser
 from zipfile import ZipFile
 from pathlib import Path
 import logging
@@ -14,6 +16,7 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.custom.custom_models import CustomModels
+from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 
 
 class Swagger_Api(Api):
@@ -165,7 +168,12 @@ def initialize_flask(config):
 
     # NOTE rewrite it, that hotfix to see GUI link
     log = logging.getLogger('mindsdb.http')
-    log.error(f' - GUI available at http://{host}:{port}/static/index.html')
+    url = f'http://{host}:{port}/static/index.html'
+    log.error(f' - GUI available at {url}')
+
+    pid = os.getpid()
+    x = threading.Thread(target=_open_webbrowser, args=(url, pid, port), daemon=True)
+    x.start()
 
     return app, api
 
@@ -175,3 +183,19 @@ def initialize_interfaces(config, app):
     app.mindsdb_native = MindsdbNative(config)
     app.custom_models = CustomModels(config)
     app.config_obj = config
+
+
+def _open_webbrowser(url: str, pid: int, port: int):
+    """Open webbrowser with url when http service is started.
+
+    If some error then do nothing.
+    """
+    logger = logging.getLogger('mindsdb.http')
+    try:
+        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,
+                                           pid=pid, port=port)
+        if is_http_active:
+            webbrowser.open(url)
+    except Exception as e:
+        logger.error(f'Failed to open {url} in webbrowser with exception {e}')
+        logger.error(traceback.format_exc())

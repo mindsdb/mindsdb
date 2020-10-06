@@ -73,28 +73,28 @@ jobs:
         repository: mindsdb/mindsdb
         tag_with_ref: true
 
-
-    # Maybe use different build, we need windows here
-    # - name: Build windows installer
-    #   run: |
-    #     mkdir -p build
-    #     cd /distributions/windows
-    #     ./make.bat
-    #
+    - name: Build windows installer
+      run: |
+        pip install pyinstaller
+        pip install winshell
+        mkdir -p build
+        cd distributions/windows
+        make.bat
+    
     #   - name: Build linux installer
     #    run: |
     #     mkdir -p build
     #     mv dist/install.exe ../../build/
     #     cp distributions/linux/install.sh build/
 
-    # - name: Sync installer to s3
-    #   uses: jakejarvis/s3-sync-action@master
-    #   with:
-    #     args: --acl public-read --follow-symlinks --delete
-    #   env:
-    #     AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-    #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #     AWS_REGION: 'us-west-2'
-    #     SOURCE_DIR: 'build'
-    #     DEST_DIR: 'mindsdb-installer'
+    - name: Sync installer to s3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks --delete
+      env:
+        AWS_S3_BUCKET: 'https://s3.console.aws.amazon.com/s3/buckets/mindsdb-installer'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-2'
+        SOURCE_DIR: 'dist'
+        DEST_DIR: 'mindsdb-installer'

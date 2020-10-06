@@ -35,7 +35,7 @@ MindsDB is an open-source AI layer for existing databases that allows you to eff
 
 
 * **Desktop**:
-  * **Virtual Environment**: We suggest you to run MindsDB on a virtual environment to avoid dependency issues. Make sure your Python version is >=3.8. To set up a virtual environment:
+  * **Virtual Environment**: We suggest you to run MindsDB on a virtual environment to avoid dependency issues. Make sure your Python version is >=3.6. To set up a virtual environment:
     1. Create and activate venv:
     ```bash
     python -m venv venv
@@ -45,15 +45,23 @@ MindsDB is an open-source AI layer for existing databases that allows you to eff
     ```bash
     pip install mindsdb
     ```
+    3. Run MindsDB:
+    ```bash
+    python -m mindsdb
+    ```
    >Note: Python 64 bit version is required. Depending on your environment, you might have to use `pip3` instead of `pip`, and `python3.x` instead of `python` in the above commands.*
  
   * **Host Environment**: You can use MindsDB on your own computer in under a minute, if you already have a python environment setup, just run the following command:
+    1. Install MindsDB:
+    ```bash
+     pip install mindsdb --user
+    ```
+    2. Run MindsDB:
+    ```bash
+    python -m mindsdb
+    ```
 
-  ```bash
-   pip install mindsdb --user
-  ```
-
-  >Note: Python 64 bit version is required. Depending on your environment, you might have to use `pip3` instead of `pip` in the above command.*
+  >Note: Python 64 bit version is required. Depending on your environment, you might have to use `pip3` instead of `pip`, and `python3.x` instead of `python` in the above commands.*
 
   If for some reason this fail, don't worry, simply follow the [complete installation instructions](https://docs.mindsdb.com/Installing/) which will lead you through a more thorough procedure which should fix most issues.
 

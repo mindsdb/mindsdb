@@ -7,7 +7,8 @@ import pickle
 
 from mindsdb.interfaces.datastore.sqlite_helpers import get_sqlite_data, cast_df_columns_types, create_sqlite_db
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
+
 
 
 class DataStore():
@@ -90,7 +91,8 @@ class DataStore():
                 'mysql': MySqlDS,
                 'postgres': PostgresDS,
                 'mssql': MSSQLDS,
-                'mongodb': MongoDS
+                'mongodb': MongoDS,
+                'snowflake': SnowflakeDS
             }
 
             try:

@@ -1,1 +1,1 @@
-pyinstaller install.py -F --onefile
+pyinstaller install.py -F --onefile -n MindsDBServer-Setup.exe

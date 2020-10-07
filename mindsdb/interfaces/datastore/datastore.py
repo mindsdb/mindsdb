@@ -100,7 +100,7 @@ class DataStore():
             except KeyError:
                 raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
 
-            if integration['type'] != 'mongodb':
+            if integration['type'] not in ['mongodb','snowflake']:
                 picklable = {
                     'class': dsClass.__name__,
                     'args': [],
@@ -124,7 +124,29 @@ class DataStore():
                 except Exception:
                     shutil.rmtree(ds_meta_dir)
                     raise
-            else:
+            elif integration['type'] == 'snowflake':
+                picklable = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source['query'],
+                        'schema': source['schema'],
+                        'warehouse': source['warehouse'],
+                        'database': source['database'],
+                        'host': integration['host'],
+                        'password': integration['password'],
+                        'user': integration['user'],
+                        'account': integration['account']
+                    }
+                }
+
+                try:
+                    ds = dsClass(**picklable['kwargs'])
+                except Exception:
+                    shutil.rmtree(ds_meta_dir)
+                    raise
+
+            elif integration['type'] == 'mongodb':
                 picklable = {
                     'class': dsClass.__name__,
                     'args': [],

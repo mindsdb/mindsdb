@@ -78,8 +78,7 @@ jobs:
         pip install pyinstaller
         pip install winshell
         mkdir -p build
-        cd distributions/windows
-        make.bat
+        python build_installer.py
     
     #   - name: Build linux installer
     #    run: |

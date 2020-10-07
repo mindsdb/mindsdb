@@ -76,11 +76,11 @@ with open(os.path.join(INSTALL_DIR, 'run_server.bat'), 'w') as f:
     ]
     f.write('\n'.join(lines))
 
-link_path = str(Path(winshell.desktop()) / 'MindsDB.lnk')
+link_path = str(Path(winshell.desktop()) / 'MindsDB Server.lnk')
 
 # Create the shortcut on the desktop
 with winshell.shortcut(link_path) as link:
     link.path = os.path.join(INSTALL_DIR, 'run_server.bat')
-    link.description = 'MindsDB'
+    link.description = 'MindsDB Server'
     # TODO
     # link.icon = (@path@, 0)

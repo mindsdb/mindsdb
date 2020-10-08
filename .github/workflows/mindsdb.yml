@@ -75,7 +75,7 @@ jobs:
 
     - name: Build windows installer
       run: |
-        pip install pyinstaller
+        pip install pyinstaller==3.5
         pip install winshell
         mkdir -p build
         python build_installer.py

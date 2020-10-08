@@ -78,15 +78,9 @@ jobs:
         pip install pyinstaller==3.5
         pip install winshell
         mkdir -p build
-        python build_installer.py
+        python distributions/windows/build_installer.py
     
-    #   - name: Build linux installer
-    #    run: |
-    #     mkdir -p build
-    #     mv dist/install.exe ../../build/
-    #     cp distributions/linux/install.sh build/
-
-    - name: Sync installer to s3
+    - name: Sync windows installer to s3
       uses: jakejarvis/s3-sync-action@master
       with:
         args: --acl public-read --follow-symlinks --delete
@@ -95,5 +89,12 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'us-west-2'
-        SOURCE_DIR: 'dist'
+        SOURCE_DIR: 'distributions/windows/dist'
         DEST_DIR: 'mindsdb-installer'
+
+    #   - name: Build linux installer
+    #    run: |
+    #     mkdir -p build
+    #     mv dist/install.exe ../../build/
+    #     cp distributions/linux/install.sh build/
+

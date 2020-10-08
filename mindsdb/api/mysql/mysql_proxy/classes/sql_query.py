@@ -11,7 +11,6 @@
 
 import re
 import traceback
-from collections import OrderedDict
 
 from moz_sql_parser import parse
 

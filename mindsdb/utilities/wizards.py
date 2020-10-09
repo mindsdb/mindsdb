@@ -192,6 +192,11 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
         config['integrations']['default_mongodb']['password'] = _in('MongoDB password: ', '', use_default)
         config['integrations']['default_mongodb']['type'] = 'mongodb'
 
+    for db_name in config['integrations']:
+        if not config['integrations']['enabled']:
+            del config['integrations'][db_name]
+
+
     config_path = os.path.join(config_dir, 'config.json')
     with open(config_path, 'w') as fp:
         json.dump(config, fp, indent=4, sort_keys=True)
@@ -202,12 +207,12 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
 def daemon_creator(python_path, config_path=None):
     daemon_path = '/etc/systemd/system/mindsdb.service'
     service_txt = f"""[Unit]
-Description=Mindsdb
-[Service]
-ExecStart={python_path} -m mindsdb { "--config="+config_path  if config_path else ""}
-[Install]
-WantedBy=multi-user.target
-""".strip(' ')
+        Description=Mindsdb
+        [Service]
+        ExecStart={python_path} -m mindsdb { "--config="+config_path  if config_path else ""}
+        [Install]
+        WantedBy=multi-user.target
+    """.strip(' ')
 
     try:
         with open(daemon_path, 'w') as fp:

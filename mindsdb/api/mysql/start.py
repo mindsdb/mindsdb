@@ -6,7 +6,7 @@ from mindsdb.utilities.log import initialize_log
 def start(config, verbose=False):
     config = Config(config)
     if verbose:
-        config['log']['level']['console'] = 'INFO'
+        config['log']['level']['console'] = 'DEBUG'
 
     initialize_log(config, 'mysql', wrap_print=True)
 

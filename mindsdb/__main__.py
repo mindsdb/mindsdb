@@ -57,9 +57,6 @@ if __name__ == '__main__':
     except Exception:
         from mindsdb_native.__about__ import __version__ as mindsdb_native_version
 
-    if args.verbose:
-        config['log']['level']['console'] = 'INFO'
-
     print(f'Configuration file:\n   {config_path}')
     print(f"Storage path:\n   {config.paths['root']}")
 
@@ -70,8 +67,9 @@ if __name__ == '__main__':
 
     os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
     if args.verbose is True:
-        os.environ['DEFAULT_LOG_LEVEL'] = 'INFO'
-        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'INFO'
+        config['log']['level']['console'] = 'DEBUG'
+        os.environ['DEFAULT_LOG_LEVEL'] = 'DEBUG'
+        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'DEBUG'
     else:
         os.environ['DEFAULT_LOG_LEVEL'] = 'ERROR'
         os.environ['LIGHTWOOD_LOG_LEVEL'] = 'ERROR'

@@ -60,6 +60,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install setuptools wheel twine
+
     - name: Build and publish
       env:
         TWINE_USERNAME:  __token__
@@ -77,28 +78,28 @@ jobs:
         repository: mindsdb/mindsdb
         tag_with_ref: true
 
+    - name: Build windows installer
+      run: |
+        pip install pyinstaller
+        pip install winshell
+        mkdir -p build
+        python distributions/windows/build_installer.py
+    
+    - name: Sync windows installer to s3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks --delete
+      env:
+        AWS_S3_BUCKET: 'mindsdb-installer'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-2'
+        SOURCE_DIR: 'distributions/windows/dist'
+        DEST_DIR: 'mindsdb-installer'
 
-    # Maybe use different build, we need windows here
-    # - name: Build windows installer
-    #   run: |
-    #     mkdir -p build
-    #     cd /distributions/windows
-    #     ./make.bat
-    #
     #   - name: Build linux installer
     #    run: |
     #     mkdir -p build
     #     mv dist/install.exe ../../build/
     #     cp distributions/linux/install.sh build/
 
-    # - name: Sync installer to s3
-    #   uses: jakejarvis/s3-sync-action@master
-    #   with:
-    #     args: --acl public-read --follow-symlinks --delete
-    #   env:
-    #     AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-    #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #     AWS_REGION: 'us-west-2'
-    #     SOURCE_DIR: 'build'
-    #     DEST_DIR: 'mindsdb-installer'

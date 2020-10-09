@@ -103,7 +103,7 @@ jobs:
     - name: Sync linux installer to s3
       uses: jakejarvis/s3-sync-action@master
       with:
-        args: --acl public-read --follow-symlinks --delete
+        args: --acl public-read --follow-symlinks
       env:
         AWS_S3_BUCKET: 'mindsdb-installer'
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

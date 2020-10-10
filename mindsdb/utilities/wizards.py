@@ -193,7 +193,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
         config['integrations']['default_mongodb']['type'] = 'mongodb'
 
     for db_name in config['integrations']:
-        if not config['integrations']['enabled']:
+        if not config['integrations'][db_name]['enabled']:
             del config['integrations'][db_name]
 
 

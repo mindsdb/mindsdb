@@ -49,4 +49,4 @@ dependencies:
 about:
     home: "git@github.com:mindsdb/mindsdb.git"
     license: "GPL-3.0"
-    # description:  maintainers
+    # description:  maintainers and contributors

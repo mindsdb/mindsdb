@@ -6,3 +6,4 @@
 # conda config --set anaconda_upload yes
 # conda build conda.recipe
 # This the shell script to publish in conda
+# It can be used to build

@@ -5,4 +5,4 @@
 # conda install anaconda-client
 # conda config --set anaconda_upload yes
 # conda build conda.recipe
-# This the shell script to publish
+# This the shell script to publish in conda

@@ -2,7 +2,8 @@
 # Run `docker-compose up -d`
 # Shut down and clean up: `docker-compose down`
 
-# Comment out any databases you prefer not to have.
+# Comment out any databases you don't want to run.
+
 version: "3"
 
 services:
@@ -15,8 +16,7 @@ services:
 
   mariadb:
     build: mariadb/.
-    image: mariadb-test:1.0
-    container_name: mindsdb_mariadb-test
+    container_name: mindsdb_mariadb
     command: --default-authentication-plugin=caching_sha2_password
     ports:
       - 3306:3306
@@ -29,7 +29,7 @@ services:
 
   clickhouse:
     image: yandex/clickhouse-server:20.1
-    container_name: mindsdb_clickhouse-test
+    container_name: mindsdb_clickhouse
     volumes:
       - ${PWD}/clickhouse/storage:/var/lib/clickhouse
     ports:
@@ -40,7 +40,7 @@ services:
     network_mode: host
     image: mysql
     command: --default-authentication-plugin=mysql_native_password
-    container_name: mindsdb_mysql-test
+    container_name: mindsdb_mysql
     volumes:
     - ${PWD}/mysql/config.cnf:/etc/mysql/conf.d/config.cnf
     - ${PWD}/mysql/storage:/var/lib/mysql
@@ -54,8 +54,7 @@ services:
   postgres:
     build: postgres/.
     network_mode: host
-    image: postgres-test:1.0
-    container_name: mindsdb_postgres-test
+    container_name: mindsdb_postgres
     ports:
       - 5432:5432
     environment:

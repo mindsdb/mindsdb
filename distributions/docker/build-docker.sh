@@ -19,6 +19,6 @@ read run
 
 if [ "$run" = "yes" ]; then
     echo "Running Mindsdb Server container..."
-    docker run -d -it  --name=mindsdb mindsdb
+    docker run -d -it --name=mindsdb mindsdb
     docker exec -it mindsdb python
 fi

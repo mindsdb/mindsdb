@@ -104,34 +104,23 @@ from pathlib import Path
 import time
 from os.path import expanduser
 
-
 python_path = sys.argv[1]
 pip_path    = sys.argv[2]
 home = expanduser("~")
 mdb_home = os.path.join(home, 'mindsdb')
 
-
 print(f'\nInstalling some large dependencies via pip ({pip_path}), this might take a while\n')
 time.sleep(1)
 
-retcode = os.system(f'{pip_path} install  git+https://github.com/mindsdb/mindsdb_server.git@split --upgrade')
+retcode = os.system(f'{pip_path} install mindsdb')
 if retcode != 0:
-    raise(Exception("Command exited with error"))
+    raise Exception("Command exited with error")
 
-dataskillet_source = None
-lightwood_source = f'git+https://github.com/mindsdb/lightwood.git@stable'
-mindsdb_native_source = f'git+https://github.com/mindsdb/mindsdb_native.git@stable'
-
-for source in [dataskillet_source,lightwood_source,mindsdb_native_source]:
-    if isinstance(source,str):
-        retcode = os.system(f'{pip_path} install {source} --upgrade')
-        if retcode != 0:
-            raise(Exception("Command exited with error"))
 time.sleep(1)
 print('Done installing dependencies')
 print('\nLast step: Configure Mindsdb\n')
 
-from mindsdb_server.utilities.wizards import daemon_creator, make_executable
+from mindsdb.utilities.wizards import daemon_creator, make_executable
 
 daemon_path = daemon_creator(python_path)
 print(f"Created daemon service config {daemon_path}")
@@ -142,8 +131,7 @@ print(f"Created executable at {exec_path}")
 
 print('Installation complete!')
 
-print(f'You can use Mindsdb by running {exec_path}. Or by importing it as the mindsdb_native library from within python.')
-
+print(f'You can use Mindsdb by running {exec_path}. Or by importing it as a python package.')
 
 EOF
 #/Python code

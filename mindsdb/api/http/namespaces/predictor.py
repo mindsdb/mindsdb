@@ -252,7 +252,7 @@ class PredictorPredict(Resource):
         if type(kwargs) != type({}):
             kwargs = {}
 
-        # Not the fanciest semaphor, but should work since restplus is multi-threaded and this condition should rarely be reached
+        # Not the fanciest semaphore, but should work since restplus is multi-threaded and this condition should rarely be reached
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 
@@ -289,7 +289,7 @@ class PredictorPredictFromDataSource(Resource):
         if type(kwargs) != type({}):
             kwargs = {}
 
-        # Not the fanciest semaphor, but should work since restplus is multi-threaded and this condition should rarely be reached
+        # Not the fanciest semaphore, but should work since restplus is multi-threaded and this condition should rarely be reached
         while name in model_swapping_map and model_swapping_map[name] is True:
             time.sleep(1)
 

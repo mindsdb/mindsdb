@@ -17,5 +17,5 @@ model.py
 tests/integration_tests/flows/model.py
 tests/integration_tests/flows/my_model.zip
 tests/docker/mongodb/storage_*
-
 distributions/docker-compose/*/storage
+venv/*

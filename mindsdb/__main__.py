@@ -30,6 +30,28 @@ def close_api_gracefully(apis):
 
 
 if __name__ == '__main__':
+    version_error_msg = """
+MindsDB server requires Python >= 3.6 to run
+
+Once you have Python 3.6 installed you can tun mindsdb as follows:
+
+1. create and activate venv:
+python3.6 -m venv venv
+source venv/bin/activate
+
+2. install MindsDB:
+pip3 install mindsdb
+
+3. Run MindsDB
+python3.6 -m mindsdb
+
+More instructions in https://docs.mindsdb.com
+    """
+
+    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 6):
+        print(version_error_msg)
+        exit(1)
+
     mp.freeze_support()
 
     args = args_parse()

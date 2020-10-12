@@ -7,13 +7,14 @@ import pickle
 
 from mindsdb.interfaces.datastore.sqlite_helpers import get_sqlite_data, cast_df_columns_types, create_sqlite_db
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
+
 
 
 class DataStore():
-    def __init__(self, config, storage_dir=None):
+    def __init__(self, config):
         self.config = config
-        self.dir = storage_dir if isinstance(storage_dir, str) else config.paths['datasources']
+        self.dir = config.paths['datasources']
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):
@@ -26,7 +27,7 @@ class DataStore():
         datasource_arr = []
         for ds_name in os.listdir(self.dir):
             try:
-                with open(os.path.join(self.dir, ds_name, 'datasource', 'metadata.json'), 'r') as fp:
+                with open(os.path.join(self.dir, ds_name, 'metadata.json'), 'r') as fp:
                     try:
                         datasource = json.load(fp)
                         datasource['created_at'] = parse_dt(datasource['created_at'].split('.')[0])
@@ -40,7 +41,7 @@ class DataStore():
 
     def get_data(self, name, where=None, limit=None, offset=None):
         # @TODO Apply filter directly to postgres/mysql/clickhouse/etc...  when the datasource is of that type
-        return get_sqlite_data(os.path.join(self.dir, name, 'datasource', 'sqlite.db'), where=where, limit=limit, offset=offset)
+        return get_sqlite_data(os.path.join(self.dir, name, 'sqlite.db'), where=where, limit=limit, offset=offset)
 
     def get_datasource(self, name):
         for ds in self.get_datasources():
@@ -67,12 +68,9 @@ class DataStore():
         ds_meta_dir = os.path.join(self.dir, name)
         os.mkdir(ds_meta_dir)
 
-        ds_dir = os.path.join(ds_meta_dir, 'datasource')
-        os.mkdir(ds_dir)
-
         if source_type == 'file':
             try:
-                source = os.path.join(ds_dir, source)
+                source = os.path.join(ds_meta_dir, source)
                 shutil.move(file_path, source)
                 ds = FileDS(source)
             except Exception:
@@ -86,45 +84,96 @@ class DataStore():
             }
         elif source_type in self.config['integrations']:
             integration = self.config['integrations'][source_type]
-            dsClass = None
-            picklable = {
-                'args': [],
-                'kwargs': {
-                    'query': source,
-                    'user': integration['user'],
-                    'password': integration['password'],
-                    'host': integration['host'],
-                    'port': integration['port']
-                }
+
+            ds_class_map = {
+                'clickhouse': ClickhouseDS,
+                'mariadb': MariaDS,
+                'mysql': MySqlDS,
+                'postgres': PostgresDS,
+                'mssql': MSSQLDS,
+                'mongodb': MongoDS,
+                'snowflake': SnowflakeDS
             }
-            if integration['type'] == 'clickhouse':
-                dsClass = ClickhouseDS
-                picklable['class'] = 'ClickhouseDS'
-            elif integration['type'] == 'mariadb':
-                dsClass = MariaDS
-                picklable['class'] = 'MariaDS'
-            elif integration['type'] == 'mysql':
-                dsClass = MySqlDS
-                picklable['class'] = 'MySqlDS'
-            elif integration['type'] == 'postgres':
-                dsClass = PostgresDS
-                picklable['class'] = 'PostgresDS'
-            elif integration['type'] == 'mssql':
-                dsClass = MSSQLDS
-                picklable['class'] = 'MSSQLDS'
-            else:
-                raise ValueError(f'Unknown DS source_type: {source_type}')
+
             try:
-                ds = dsClass(
-                    query=source,
-                    user=integration['user'],
-                    password=integration['password'],
-                    host=integration['host'],
-                    port=integration['port']
-                )
-            except Exception:
-                shutil.rmtree(ds_meta_dir)
-                raise
+                dsClass = ds_class_map[integration['type']]
+            except KeyError:
+                raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
+
+            if integration['type'] not in ['mongodb','snowflake']:
+                picklable = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source,
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port']
+                    }
+                }
+
+                try:
+                    ds = dsClass(
+                        query=source,
+                        user=integration['user'],
+                        password=integration['password'],
+                        host=integration['host'],
+                        port=integration['port']
+                    )
+                except Exception:
+                    shutil.rmtree(ds_meta_dir)
+                    raise
+            elif integration['type'] == 'snowflake':
+                picklable = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source['query'],
+                        'schema': source['schema'],
+                        'warehouse': source['warehouse'],
+                        'database': source['database'],
+                        'host': integration['host'],
+                        'password': integration['password'],
+                        'user': integration['user'],
+                        'account': integration['account']
+                    }
+                }
+
+                try:
+                    ds = dsClass(**picklable['kwargs'])
+                except Exception:
+                    shutil.rmtree(ds_meta_dir)
+                    raise
+
+            elif integration['type'] == 'mongodb':
+                picklable = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'database': source['database'],
+                        'collection': source['collection'],
+                        'query': source['find'],
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port']
+                    }
+                }
+
+                try:
+                    ds = dsClass(
+                        database=source['database'],
+                        collection=source['collection'],
+                        query=source['find'],
+                        user=integration['user'],
+                        password=integration['password'],
+                        host=integration['host'],
+                        port=integration['port']
+                    )
+                except Exception:
+                    shutil.rmtree(ds_meta_dir)
+                    raise
         else:
             # This probably only happens for urls
             print('Create URL data source !')
@@ -142,12 +191,12 @@ class DataStore():
         df = ds.df
 
         df_with_types = cast_df_columns_types(df, self.get_analysis(df)['data_analysis_v2'])
-        create_sqlite_db(os.path.join(ds_dir, 'sqlite.db'), df_with_types)
+        create_sqlite_db(os.path.join(ds_meta_dir, 'sqlite.db'), df_with_types)
 
-        with open(os.path.join(ds_dir, 'ds.pickle'), 'wb') as fp:
+        with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
             pickle.dump(picklable, fp)
 
-        with open(os.path.join(ds_dir, 'metadata.json'), 'w') as fp:
+        with open(os.path.join(ds_meta_dir, 'metadata.json'), 'w') as fp:
             meta = {
                 'name': name,
                 'source_type': source_type,
@@ -157,16 +206,18 @@ class DataStore():
                 'row_count': len(df),
                 'columns': [dict(name=x) for x in list(df.keys())]
             }
-            json.dump(meta, fp)
+            json.dump(meta, fp, indent=4, sort_keys=True)
+
+        with open(os.path.join(ds_meta_dir, 'versions.json'), 'wt') as fp:
+            json.dump(self.config.versions, fp, indent=4, sort_keys=True)
 
         return self.get_datasource_obj(name, raw=True), name
 
     def get_datasource_obj(self, name, raw=False):
         ds_meta_dir = os.path.join(self.dir, name)
-        ds_dir = os.path.join(ds_meta_dir, 'datasource')
         ds = None
         try:
-            with open(os.path.join(ds_dir, 'ds.pickle'), 'rb') as fp:
+            with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'rb') as fp:
                 picklable = pickle.load(fp)
                 if raw:
                     return picklable

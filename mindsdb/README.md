@@ -1,4 +1,4 @@
-This simple documentation should guide over how to bring ML capabilities to clickhouse. The idea is that you should be able to treat ML models just as if they were normal Clickhouse tables. What we have built so far allows you to create, train models, and finally query such models straight from the database. 
+This simple documentation should guide over how to bring ML capabilities to clickhouse. The idea is that you should be able to treat ML models just as if they were normal Clickhouse tables. What we have built so far allows you to create, train models, and finally query such models straight from the database.
 
 
 ## How can you try it?
@@ -24,7 +24,7 @@ CREATE TABLE default.home_rentals (number_of_rooms String, number_of_bathrooms S
 First, we'll train a predictor that predict a home's rental price based on the other columns in the table:
 
 ```
-INSERT INTO mindsdb.predictors (name, predict_cols, select_data_query) VALUES('rentals_predictor','rental_price','SELECT * FROM default.home_rentals WHERE days_on_market <= 60');
+INSERT INTO mindsdb.predictors (name, predict, select_data_query) VALUES('rentals_predictor','rental_price','SELECT * FROM default.home_rentals WHERE days_on_market <= 60');
 ```
 
 You should see mindsdb output some training logs, we'll have to wait a few minutes unitl the predictor is fully trained.
@@ -45,5 +45,3 @@ SELECT rental_price FROM mindsdb.rentals_predictor WHERE `select_data_query`='SE
 There's also some explainability features, confidence ranges for numerical predictions and confidence values for prediction but we are still tinkering around how to expose those in clickhouse.
 
 There's also a GUI with which you can visualize your predictors and the data it was trained on, plus a few extra insights about both. You can download it from here: https://www.mindsdb.com/product
-
-

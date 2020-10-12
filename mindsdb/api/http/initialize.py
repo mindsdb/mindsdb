@@ -2,8 +2,11 @@ from distutils.version import LooseVersion
 import requests
 import os
 import shutil
+import threading
+import webbrowser
 from zipfile import ZipFile
 from pathlib import Path
+import logging
 
 from flask import Flask, url_for
 from flask_restx import Api
@@ -12,6 +15,8 @@ from flask_cors import CORS
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom_models import CustomModels
+from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 
 
 class Swagger_Api(Api):
@@ -29,29 +34,44 @@ def initialize_static(config):
     static_path.mkdir(parents=True, exist_ok=True)
 
     try:
-        res = requests.get('https://raw.githubusercontent.com/mindsdb/mindsdb_gui_web/master/compatible-config.json?token=AA7S27R5CPBEUKNEONQJNBC7LPBJK')
-    except ConnectionError as e:
+        res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json')
+    except (ConnectionError, requests.exceptions.ConnectionError) as e:
         print(f'Is no connection. {e}')
         return False
+    except Exception as e:
+        print(f'Is something wrong with getting compatible-config.json: {e}')
+        return False
 
-    versions = res.json()
+    if res.status_code != 200:
+        print(f'Cant get compatible-config.json: returned status code = {res.status_code}')
+        return False
+
+    try:
+        versions = res.json()
+    except Exception as e:
+        print(f'Cant decode compatible-config.json: {e}')
+        return False
 
     current_mindsdb_lv = LooseVersion(mindsdb_version)
 
-    gui_versions = {}
-    gui_version_lv = None
-    max_mindsdb_lv = None
-    for el in versions['mindsdb']:
-        mindsdb_lv = LooseVersion(el['mindsdb_version'])
-        gui_lv = LooseVersion(el['gui_version'])
-        if mindsdb_lv.vstring not in gui_versions or gui_lv > gui_versions[mindsdb_lv.vstring]:
-            gui_versions[mindsdb_lv.vstring] = gui_lv
-        if max_mindsdb_lv is None or max_mindsdb_lv < mindsdb_lv:
-            max_mindsdb_lv = mindsdb_lv
-    if current_mindsdb_lv.vstring in gui_versions:
-        gui_version_lv = gui_versions[current_mindsdb_lv.vstring]
-    else:
-        gui_version_lv = gui_versions[max_mindsdb_lv.vstring]
+    try:
+        gui_versions = {}
+        gui_version_lv = None
+        max_mindsdb_lv = None
+        for el in versions['mindsdb']:
+            mindsdb_lv = LooseVersion(el['mindsdb_version'])
+            gui_lv = LooseVersion(el['gui_version'])
+            if mindsdb_lv.vstring not in gui_versions or gui_lv > gui_versions[mindsdb_lv.vstring]:
+                gui_versions[mindsdb_lv.vstring] = gui_lv
+            if max_mindsdb_lv is None or max_mindsdb_lv < mindsdb_lv:
+                max_mindsdb_lv = mindsdb_lv
+        if current_mindsdb_lv.vstring in gui_versions:
+            gui_version_lv = gui_versions[current_mindsdb_lv.vstring]
+        else:
+            gui_version_lv = gui_versions[max_mindsdb_lv.vstring]
+    except Exception as e:
+        print(f'Error in compatible-config.json structure: {e}')
+        return False
 
     current_gui_version = None
 
@@ -132,12 +152,28 @@ def initialize_flask(config):
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']
-    cors_origin_list = [f'http://{host}:{port}']
+    hosts = ['0.0.0.0', 'localhost', '127.0.0.1']
+    if host not in hosts:
+        hosts.append(host)
+    cors_origin_list = [f'http://{h}:{port}' for h in hosts]
+
+    if 'MINDSDB_CORS_PORT' in os.environ:
+        ports = os.environ['MINDSDB_CORS_PORT'].strip('[]').split(',')
+        ports = [f'http://{host}:{p}' for p in ports]
+        cors_origin_list.extend(ports)
+
     CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
     api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')
 
-    print(f'GUI should be available by http://{host}:{port}/static/index.html')
+    # NOTE rewrite it, that hotfix to see GUI link
+    log = logging.getLogger('mindsdb.http')
+    url = f'http://{host}:{port}/static/index.html'
+    log.error(f' - GUI available at {url}')
+
+    pid = os.getpid()
+    x = threading.Thread(target=_open_webbrowser, args=(url, pid, port), daemon=True)
+    x.start()
 
     return app, api
 
@@ -145,4 +181,21 @@ def initialize_flask(config):
 def initialize_interfaces(config, app):
     app.default_store = DataStore(config)
     app.mindsdb_native = MindsdbNative(config)
+    app.custom_models = CustomModels(config)
     app.config_obj = config
+
+
+def _open_webbrowser(url: str, pid: int, port: int):
+    """Open webbrowser with url when http service is started.
+
+    If some error then do nothing.
+    """
+    logger = logging.getLogger('mindsdb.http')
+    try:
+        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,
+                                           pid=pid, port=port)
+        if is_http_active:
+            webbrowser.open(url)
+    except Exception as e:
+        logger.error(f'Failed to open {url} in webbrowser with exception {e}')
+        logger.error(traceback.format_exc())

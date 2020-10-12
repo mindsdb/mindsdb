@@ -22,13 +22,11 @@ def _in(ask, default, use_default):
 
 def auto_config(python_path, pip_path, storage_dir):
     config = {
-        "debug": False
-        ,"config_version": "1.2"
-        ,"python_interpreter": python_path
-        ,"pip_path": pip_path
-        ,"api": {
-        }
-        ,"integrations": {
+        "debug": False,
+        "config_version": "1.3",
+        "api": {
+        },
+        "integrations": {
             "default_clickhouse": {
                 "enabled": False,
                 "type": 'clickhouse'
@@ -49,26 +47,23 @@ def auto_config(python_path, pip_path, storage_dir):
             "default_mssql": {
                 "enabled": False,
                 "type": 'mssql'
+            },
+            "default_mongodb": {
+                "enabled": False,
+                "type": 'mongodb'
             }
-        }
-        ,"interface":{
-          "mindsdb_native": {
-              "enabled": True
-          }
-          ,"lightwood": {
-               "enabled": True
-          }
-          ,"datastore": {
-               "enabled": True
-          }
-          ,"dataskillet": {
-               "enabled": False
-          }
         },
         'storage_dir': storage_dir
     }
 
+    if isinstance(python_path, str):
+        config['python_interpreter'] = python_path
+
+    if isinstance(pip_path, str):
+        config['pip_path'] = python_path
+
     return config
+
 
 def make_ssl_cert(file_path):
     from cryptography import x509
@@ -99,8 +94,8 @@ def make_ssl_cert(file_path):
         .issuer_name(name)
         .public_key(key.public_key())
         .serial_number(1)
-        .not_valid_before(now)
-        .not_valid_after(now + timedelta(days=10*365))
+        .not_valid_before(now - timedelta(days=10 * 365))
+        .not_valid_after(now + timedelta(days=10 * 365))
         .add_extension(
             x509.BasicConstraints(ca=True, path_length=0),
             False
@@ -121,54 +116,48 @@ def make_ssl_cert(file_path):
 def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False):
     config = auto_config(python_path, pip_path, storage_dir)
 
-    http = _in('Enable HTTP API ? [Y/N]','Y',use_default)
-    if http in ['Y','y']:
+    http = _in('Enable HTTP API ? [Y/N]', 'Y', use_default)
+    if http in ['Y', 'y']:
         config['api']['http'] = {}
-        config['api']['http']['host'] = _in('HTTP interface host: ','0.0.0.0',use_default)
-        config['api']['http']['port'] = _in('HTTP interface port: ','47334',use_default)
+        config['api']['http']['host'] = _in('HTTP interface host: ', '127.0.0.1', use_default)
+        config['api']['http']['port'] = _in('HTTP interface port: ', '47334', use_default)
 
-    mysql = _in('Enable MYSQL API ? [Y/N]','Y',use_default)
-    if mysql in ['Y','y']:
-        crt_path = os.path.join(config_dir, 'cert.pem')
-        if os.path.isfile(crt_path) is False:
-            make_ssl_cert(crt_path)
-        config['api']['mysql'] = {
-            "certificate_path": crt_path,
-            "log": {
-                "format": "%(asctime)s - %(levelname)s - %(message)s",
-                "folder": "logs/",
-                "file": "mysql.log",
-                "file_level": "INFO",
-                "console_level": "INFO"
-            }
-        }
-        config['api']['mysql']['host'] = _in('MYSQL interface host','127.0.0.1',use_default)
-        config['api']['mysql']['port'] = _in('MYSQL interface port','47335',use_default)
-        config['api']['mysql']['user'] = _in('MYSQL interface user','mindsdb',use_default)
-        config['api']['mysql']['password'] = _in('MYSQL interface password','',use_default)
+    mysql = _in('Enable MYSQL API ? [Y/N]', 'Y', use_default)
+    if mysql in ['Y', 'y']:
+        config['api']['mysql'] = {}
+        config['api']['mysql']['host'] = _in('MYSQL interface host', '127.0.0.1', use_default)
+        config['api']['mysql']['port'] = _in('MYSQL interface port', '47335', use_default)
+        config['api']['mysql']['user'] = _in('MYSQL interface user', 'mindsdb', use_default)
+        config['api']['mysql']['password'] = _in('MYSQL interface password', '', use_default)
 
-    clickhouse = _in('Connect to clickhouse ? [Y/N]','Y',use_default)
-    if clickhouse in ['Y','y']:
-        config['integrations']['default_clickhouse']['enabled'] = _in('Enable Clickhouse integration?: ',False,use_default)
-        config['integrations']['default_clickhouse']['host'] = _in('Clickhouse host: ','localhost',use_default)
-        config['integrations']['default_clickhouse']['port'] = _in('Clickhouse port: ',8123,use_default)
-        config['integrations']['default_clickhouse']['user'] = _in('Clickhouse user: ','default',use_default)
-        config['integrations']['default_clickhouse']['password'] = _in('Clickhouse password: ','',use_default)
+    mongodb = _in('Enable Mongo API ? [Y/N]', 'Y', use_default)
+    if mongodb in ['Y', 'y']:
+        config['api']['mongodb'] = {}
+        config['api']['mongodb']['host'] = _in('Mongo interface host: ', '127.0.0.1', use_default)
+        config['api']['mongodb']['port'] = _in('Mongo interface port: ', '47336', use_default)
+
+    clickhouse = _in('Connect to clickhouse ? [Y/N]', 'Y', use_default)
+    if clickhouse in ['Y', 'y']:
+        config['integrations']['default_clickhouse']['enabled'] = _in('Enable Clickhouse integration?: ', False, use_default)
+        config['integrations']['default_clickhouse']['host'] = _in('Clickhouse host: ', '127.0.0.1', use_default)
+        config['integrations']['default_clickhouse']['port'] = _in('Clickhouse port: ', 8123, use_default)
+        config['integrations']['default_clickhouse']['user'] = _in('Clickhouse user: ', 'default', use_default)
+        config['integrations']['default_clickhouse']['password'] = _in('Clickhouse password: ', '', use_default)
         config['integrations']['default_clickhouse']['type'] = 'clickhouse'
 
-    mariadb = _in('Connect to Mariadb ? [Y/N]','Y',use_default)
-    if mariadb in ['Y','y']:
-        config['integrations']['default_mariadb']['enabled'] = _in('Enable Mariadb integration?: ',False,use_default)
-        config['integrations']['default_mariadb']['host'] = _in('Mariadb host: ','localhost',use_default)
-        config['integrations']['default_mariadb']['port'] = _in('Mariadb port: ',3306,use_default)
-        config['integrations']['default_mariadb']['user'] = _in('Mariadb user: ','root',use_default)
-        config['integrations']['default_mariadb']['password'] = _in('Mariadb password: ','',use_default)
+    mariadb = _in('Connect to Mariadb ? [Y/N]', 'Y', use_default)
+    if mariadb in ['Y', 'y']:
+        config['integrations']['default_mariadb']['enabled'] = _in('Enable Mariadb integration?: ', False, use_default)
+        config['integrations']['default_mariadb']['host'] = _in('Mariadb host: ', '127.0.0.1', use_default)
+        config['integrations']['default_mariadb']['port'] = _in('Mariadb port: ', 3306, use_default)
+        config['integrations']['default_mariadb']['user'] = _in('Mariadb user: ', 'root', use_default)
+        config['integrations']['default_mariadb']['password'] = _in('Mariadb password: ', '', use_default)
         config['integrations']['default_mariadb']['type'] = 'mariadb'
 
     mysql = _in('Connect to MySQL ? [Y/N]', 'Y', use_default)
     if mysql in ['Y', 'y']:
         config['integrations']['default_mysql']['enabled'] = _in('Enable MySQL integration?: ', False, use_default)
-        config['integrations']['default_mysql']['host'] = _in('MySQL host: ', 'localhost', use_default)
+        config['integrations']['default_mysql']['host'] = _in('MySQL host: ', '127.0.0.1', use_default)
         config['integrations']['default_mysql']['port'] = _in('MySQL port: ', 3306, use_default)
         config['integrations']['default_mysql']['user'] = _in('MySQL user: ', 'root', use_default)
         config['integrations']['default_mysql']['password'] = _in('MySQL password: ', '', use_default)
@@ -177,9 +166,9 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
     mysql = _in('Connect to PostgreSQL ? [Y/N]', 'Y', use_default)
     if mysql in ['Y', 'y']:
         config['integrations']['default_postgres']['enabled'] = _in('Enable PostgreSQL integration?: ', False, use_default)
-        config['integrations']['default_postgres']['host'] = _in('PostgreSQL host: ', 'localhost', use_default)
-        config['integrations']['default_postgres']['port'] = _in('PostgreSQL port: ', 3306, use_default)
-        config['integrations']['default_postgres']['user'] = _in('PostgreSQL user: ', 'root', use_default)
+        config['integrations']['default_postgres']['host'] = _in('PostgreSQL host: ', '127.0.0.1', use_default)
+        config['integrations']['default_postgres']['port'] = _in('PostgreSQL port: ', 5432, use_default)
+        config['integrations']['default_postgres']['user'] = _in('PostgreSQL user: ', 'postgres', use_default)
         config['integrations']['default_postgres']['password'] = _in('PostgreSQL password: ', '', use_default)
         config['integrations']['default_postgres']['database'] = _in('PostgreSQL database: ', 'postgres', use_default)
         config['integrations']['default_postgres']['type'] = 'postgres'
@@ -187,12 +176,21 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
     mssql = _in('Connect to MSSQL ? [Y/N]', 'Y', use_default)
     if mssql in ['Y', 'y']:
         config['integrations']['default_mssql']['enabled'] = _in('Enable MSSQL integration?: ', False, use_default)
-        config['integrations']['default_mssql']['host'] = _in('MSSQL host: ', 'localhost', use_default)
+        config['integrations']['default_mssql']['host'] = _in('MSSQL host: ', '127.0.0.1', use_default)
         config['integrations']['default_mssql']['port'] = _in('MSSQL port: ', 1433, use_default)
         config['integrations']['default_mssql']['user'] = _in('MSSQL user: ', 'sa', use_default)
         config['integrations']['default_mssql']['password'] = _in('MSSQL password: ', '', use_default)
         config['integrations']['default_mssql']['odbc_driver_name'] = _in('MySQL ODBC driver name: ', 'MySQL ODBC 8.0 Unicode Driver', use_default)
         config['integrations']['default_mssql']['type'] = 'mssql'
+
+    mongodb = _in('Connect to MongoDB ? [Y/N]', 'Y', use_default)
+    if mongodb in ['Y', 'y']:
+        config['integrations']['default_mongodb']['enabled'] = _in('Enable MongoDB integration?: ', False, use_default)
+        config['integrations']['default_mongodb']['host'] = _in('MongoDB host: ', '127.0.0.1', use_default)
+        config['integrations']['default_mongodb']['port'] = _in('MongoDB port: ', 27017, use_default)
+        config['integrations']['default_mongodb']['user'] = _in('MongoDB user: ', '', use_default)
+        config['integrations']['default_mongodb']['password'] = _in('MongoDB password: ', '', use_default)
+        config['integrations']['default_mongodb']['type'] = 'mongodb'
 
     config_path = os.path.join(config_dir, 'config.json')
     with open(config_path, 'w') as fp:

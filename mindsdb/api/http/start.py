@@ -1,6 +1,5 @@
 import os
 import logging
-import sys
 import multiprocessing
 
 from werkzeug.exceptions import HTTPException
@@ -12,23 +11,15 @@ from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import initialize_log
 
 
-def start(config, initial=False):
-    if not initial:
-        print('\n\nWarning, this process should not have been started... nothing is "wrong" but it needlessly ate away a tiny bit of precious comute !\n\n')
+def start(config, verbose=False):
     config = Config(config)
+    if verbose:
+        config['log']['level']['console'] = 'DEBUG'
 
-    if not logging.root.handlers:
-        rootLogger = logging.getLogger()
-
-        outStream = logging.StreamHandler(sys.stdout)
-        outStream.addFilter(lambda record: record.levelno <= logging.INFO)
-        rootLogger.addHandler(outStream)
-
-        errStream = logging.StreamHandler(sys.stderr)
-        errStream.addFilter(lambda record: record.levelno > logging.INFO)
-        rootLogger.addHandler(errStream)
+    initialize_log(config, 'http', wrap_print=True)
 
     initialize_static(config)
 
@@ -51,13 +42,15 @@ def start(config, initial=False):
     port = config['api']['http']['port']
     host = config['api']['http']['host']
 
-    print(f"Start on {host}:{port}")
-
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
 
     if server.lower() == 'waitress':
         serve(app, port=port, host=host)
     elif server.lower() == 'flask':
+        # that will 'disable access' log in console
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.WARNING)
+
         app.run(debug=False, port=port, host=host)
     elif server.lower() == 'gunicorn':
         try:
@@ -65,6 +58,7 @@ def start(config, initial=False):
         except ImportError:
             print("Gunicorn server is not available by default. If you wish to use it, please install 'gunicorn'")
             return
+
         options = {
             'bind': f'{host}:{port}',
             'workers': min(max(multiprocessing.cpu_count(), 2), 3)

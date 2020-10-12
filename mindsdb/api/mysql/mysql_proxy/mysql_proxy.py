@@ -28,10 +28,10 @@ from mindsdb.utilities.wizards import make_ssl_cert
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.controllers.log import init_logger, log
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
+from mindsdb.api.mysql.mysql_proxy.utilities import log
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
@@ -71,6 +71,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.custom.custom_models import CustomModels
 
 
 connection_id = 0
@@ -82,6 +83,7 @@ HARDCODED_PASSWORD = None
 CERT_PATH = None
 default_store = None
 mdb = None
+custom_models = None
 datahub = None
 config = None
 
@@ -318,7 +320,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             Parameters:
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
-        global mdb, default_store, config
+        global mdb, default_store, config, custom_models
 
         for key in insert.keys():
             if insert[key] is SQL_DEFAULT:
@@ -388,7 +390,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     default_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
-        mdb.learn(insert['name'], ds, insert['predict'], kwargs)
+        if insert['name'] in [x['name'] for x in custom_models.get_models()]:
+            custom_models.learn(insert['name'], ds, insert['predict'], kwargs)
+        else:
+            mdb.learn(insert['name'], ds, insert['predict'], kwargs)
 
         self.packet(OkPacket).send()
 
@@ -775,11 +780,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql = 'select schema_name as Database from information_schema.SCHEMATA;'
             statement = SqlStatementParser(sql)
             sql_lower = statement.sql.lower()
+            keyword = statement.keyword
+            struct = statement.struct
         if keyword == 'show' and 'show full tables from' in sql_lower:
             schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
             sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
             statement = SqlStatementParser(sql)
             sql_lower = statement.sql.lower()
+            keyword = statement.keyword
+            struct = statement.struct
+        # TODO show tables;
 
         if keyword == 'start':
             # start transaction
@@ -1395,6 +1405,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     log.info('Session closed, on client disconnect')
                     self.session = None
                     break
+                elif p.type.value == COMMANDS.COM_INIT_DB:
+                    self.session.database = p.database.value.decode()
+                    self.packet(OkPacket).send()
                 else:
                     log.info('Command has no specific handler, return OK msg')
                     log.debug(str(p))
@@ -1435,11 +1448,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         global mdb
         global datahub
         global config
+        global custom_models
         """
         Create a server and wait for incoming connections until Ctrl-C
         """
         config = _config
-        init_logger(config)
 
         HARDCODED_USER = config['api']['mysql']['user']
         HARDCODED_PASSWORD = config['api']['mysql']['password']
@@ -1451,6 +1464,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         default_store = DataStore(config)
         mdb = MindsdbNative(config)
+        custom_models = CustomModels(config)
         datahub = init_datahub(config)
 
         host = config['api']['mysql']['host']

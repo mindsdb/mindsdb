@@ -1,0 +1,4 @@
+# FROM mongo:4.4
+FROM mongo:3.6
+
+CMD mongos --configdb replconf/127.0.0.1:27000 --port 27002

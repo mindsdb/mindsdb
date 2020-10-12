@@ -9,7 +9,7 @@
 
 mkdir mindsdb_docker
 cd mindsdb_docker
-curl https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/Dockerfile > Dockerfile
+curl https://raw.githubusercontent.com/mindsdb/mindsdb/staging/distributions/docker/Dockerfile > Dockerfile
 docker build -t mindsdb .
 cd ..
 rm -rf mindsdb_docker > /dev/null 2>&1

@@ -192,7 +192,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
         config['integrations']['default_mongodb']['password'] = _in('MongoDB password: ', '', use_default)
         config['integrations']['default_mongodb']['type'] = 'mongodb'
 
-    for db_name in config['integrations']:
+    for db_name in list(config['integrations'].keys()):
         if not config['integrations'][db_name]['enabled']:
             del config['integrations'][db_name]
 

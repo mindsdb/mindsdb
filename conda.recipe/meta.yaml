@@ -1,0 +1,42 @@
+package:
+    name: mindsdb
+    version: {{ app['version'] }}
+
+source:
+    git_url: https://github.com/mindsdb/mindsdb.git
+    git_rev: "v2.10.2"
+
+extra:
+    channels:
+        - conda-forge
+    deploy:
+        - anaconda-client
+
+build:
+    noarch: python
+    entry-points:
+        - mindsb = mindsdb.__main__:main
+
+    script:
+        python setup.py install --single-version-externally-managed --record=record.txt
+
+requirements:
+    host:
+        - python
+        - pip
+    build:
+        - yaml
+    run:
+        - python>=3.5
+
+dependencies:
+        - python>=3.5
+        - anaconda
+        - pip
+        - pip:
+            - -r file: requirements.txt
+
+about:
+    home: "git@github.com:mindsdb/mindsdb.git"
+    license: "GPL-3.0"
+    # description:  maintainers and contributors

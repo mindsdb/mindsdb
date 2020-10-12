@@ -90,11 +90,8 @@ More instructions in https://docs.mindsdb.com
     os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
     if args.verbose is True:
         config['log']['level']['console'] = 'DEBUG'
-        os.environ['DEFAULT_LOG_LEVEL'] = 'DEBUG'
-        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'DEBUG'
-    else:
-        os.environ['DEFAULT_LOG_LEVEL'] = 'ERROR'
-        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'ERROR'
+    os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
+    os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
 
     update_versions_file(
         config,

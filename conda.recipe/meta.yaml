@@ -1,6 +1,6 @@
 package:
     name: mindsdb
-    version: "2.10.2"
+    version: {{ app['version'] }}
 
 source:
     git_url: https://github.com/mindsdb/mindsdb.git
@@ -30,21 +30,11 @@ requirements:
         - python>=3.5
 
 dependencies:
+        - python>=3.5
+        - anaconda
+        - pip
         - pip:
-            - mindsdb_native == 2.13.0
-            - flask-restx >= 0.2.0
-            - flask >= 1.0
-            - python-multipart >= 0.0.5
-            - moz-sql-parser == 3.32.20026
-            - pyparsing == 2.3.1
-            - cryptography >= 2.9.2
-            - pg8000 >= 1.15.3
-            - python-tds >= 1.10.0
-            - flask_cors >= 1.1
-            - waitress >= 1.4.4
-            - pymongo >= 3.10.1
-            - setuptools
-            - psutil
+            - -r file: requirements.txt
 
 about:
     home: "git@github.com:mindsdb/mindsdb.git"

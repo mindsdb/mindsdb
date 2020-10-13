@@ -135,7 +135,6 @@ with open(exec_path, 'w') as fp:
 
 os.system(f'chmod +x {exec_path}')
 
-make_executable(python_path, exec_path)
 print(f"Created executable at {exec_path}")
 
 print('Installation complete!')

@@ -57,7 +57,7 @@ class PostgreSQL(Integration):
 
         try:
             rows = cur.fetchall()
-            keys = [k[0].decode('ascii') for k in cur.description]
+            keys = [k[0] if isinstance(k[0], str) else k[0].decode('ascii') for k in cur.description]
             res = [dict(zip(keys, row)) for row in rows]
         except Exception:
             pass

@@ -193,7 +193,7 @@ class MindsDBDataNode(DataNode):
 
                 data.append(row)
 
-            fields = list(model['data_analysis'].keys())
+            fields = model['data_analysis']['columns']
             field_types = {f: model['data_analysis'][f]['typing']['data_subtype'] for f in fields}
             for row in data:
                 cast_row_types(row, field_types)

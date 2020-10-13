@@ -24,7 +24,7 @@ EXTERNAL_DS_NAME = 'test_external'
 config = Config(TEST_CONFIG)
 
 
-def query(query):
+def query(query, fetch=False):
     integration = config['integrations']['default_postgres']
     con = pg8000.connect(
         database=integration.get('database', 'postgres'),
@@ -38,12 +38,10 @@ def query(query):
     res = True
     cur.execute(query)
 
-    try:
+    if fetch is True:
         rows = cur.fetchall()
         keys = [k[0].decode('ascii') for k in cur.description]
         res = [dict(zip(keys, row)) for row in rows]
-    except Exception:
-        pass
 
     con.commit()
     con.close()
@@ -63,7 +61,7 @@ class ClickhouseTest(unittest.TestCase):
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
         query('create schema if not exists test')
-        test_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'test'")
+        test_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'test'", fetch=True)
         test_tables = [x['name'] for x in test_tables]
 
         test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
@@ -124,12 +122,12 @@ class ClickhouseTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print('Test datasource exists')
-        test_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'test'")
+        test_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'test'", fetch=True)
         test_tables = [x['name'] for x in test_tables]
         self.assertTrue(TEST_DATA_TABLE in test_tables)
 
         print('Test predictor table not exists')
-        mindsdb_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'mindsdb'")
+        mindsdb_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'mindsdb'", fetch=True)
         mindsdb_tables = [x['name'] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
@@ -152,12 +150,12 @@ class ClickhouseTest(unittest.TestCase):
         """)
 
         print('predictor record in mindsdb.predictors')
-        res = query(f"select status from mindsdb.predictors where name = '{TEST_PREDICTOR_NAME}'")
+        res = query(f"select status from mindsdb.predictors where name = '{TEST_PREDICTOR_NAME}'", fetch=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
         print('predictor table in mindsdb db')
-        mindsdb_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'mindsdb'")
+        mindsdb_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'mindsdb'", fetch=True)
         mindsdb_tables = [x['name'] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME in mindsdb_tables)
 
@@ -179,12 +177,12 @@ class ClickhouseTest(unittest.TestCase):
         """)
 
         print('predictor record in mindsdb.predictors')
-        res = query(f"select status from mindsdb.predictors where name = '{name}'")
+        res = query(f"select status from mindsdb.predictors where name = '{name}'", fetch=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
         print('predictor table in mindsdb db')
-        mindsdb_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'mindsdb'")
+        mindsdb_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'mindsdb'", fetch=True)
         mindsdb_tables = [x['name'] for x in mindsdb_tables]
         self.assertTrue(name in mindsdb_tables)
 
@@ -194,7 +192,7 @@ class ClickhouseTest(unittest.TestCase):
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
                 mindsdb.{name} where external_datasource='{EXTERNAL_DS_NAME}'
-        """)
+        """, fetch=True)
 
         print('check result')
         self.assertTrue(len(res) > 0)
@@ -209,7 +207,7 @@ class ClickhouseTest(unittest.TestCase):
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
                 mindsdb.{TEST_PREDICTOR_NAME} where sqft=1000
-        """)
+        """, fetch=True)
 
         print('check result')
         self.assertTrue(len(res) == 1)
@@ -234,7 +232,7 @@ class ClickhouseTest(unittest.TestCase):
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
                 mindsdb.{TEST_PREDICTOR_NAME} where select_data_query='select * from test.{TEST_DATA_TABLE} limit 3'
-        """)
+        """, fetch=True)
 
         print('check result')
         self.assertTrue(len(results) == 3)
@@ -258,7 +256,7 @@ class ClickhouseTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print('Test predictor table not exists')
-        mindsdb_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'mindsdb'")
+        mindsdb_tables = query("SELECT table_name as name FROM information_schema.tables WHERE table_schema = 'mindsdb'", fetch=True)
         mindsdb_tables = [x['name'] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 

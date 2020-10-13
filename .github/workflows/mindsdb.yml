@@ -83,19 +83,19 @@ jobs:
       run: |
         pip install pyinstaller
         pip install winshell
-        python distributions/windows/build_installer.py
+        python distributions/windows/build_installers.py
 
     - name: Sync windows installer to s3
       uses: jakejarvis/s3-sync-action@master
       with:
-        args: --acl public-read --follow-symlinks --delete
+        args: --acl public-read --follow-symlinks
       env:
         AWS_S3_BUCKET: 'mindsdb-installer'
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/windows/dist'
-        DEST_DIR: 'mindsdb-installer'
+        DEST_DIR: 'mindsdb-installer/windows'
 
     - name: Rename linux installer
       run: |

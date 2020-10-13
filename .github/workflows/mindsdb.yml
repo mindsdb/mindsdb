@@ -111,4 +111,4 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/linux/dist'
-        DEST_DIR: 'mindsdb-installer'
+        DEST_DIR: 'mindsdb-installer/linux'

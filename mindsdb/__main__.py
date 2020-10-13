@@ -14,7 +14,7 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.fs import get_or_create_dir_struct, update_versions_file
+from mindsdb.utilities.fs import get_or_create_dir_struct, update_versions_file, archive_obsolete_predictors
 from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse
@@ -106,6 +106,8 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
+    archive_obsolete_predictors(config, '2.11.0')
+
     mdb = MindsdbNative(config)
     cst = CustomModels(config)
     # @TODO Maybe just use `get_model_data` directly here ? Seems like a useless abstraction
@@ -116,12 +118,6 @@ if __name__ == '__main__':
             'data_analysis': mdb.get_model_data(x['name'])['data_analysis_v2']
         } for x in mdb.get_models()
     ]
-
-    for m in model_data_arr:
-        if 'columns_to_ignore' in m['data_analysis']:
-            del m['data_analysis']['columns_to_ignore']
-        if 'train_std_dev' in m['data_analysis']:
-            del m['data_analysis']['train_std_dev']
 
     model_data_arr.extend(cst.get_models())
 

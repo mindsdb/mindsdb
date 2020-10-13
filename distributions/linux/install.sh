@@ -91,22 +91,19 @@ $cmdcol
 """
 
 temp_file=$(mktemp)
-trap "rm -f $temp_file" 0 2 3 15 #Making sure the file is deleted after script finishes
+trap "rm -f $temp_file" 0 2 3 15 # Making sure the file is deleted after script finishes
 
 # Python code below
 cat << EOF > $temp_file
 #!$python_path
 
-import traceback
-import sys
 import os
-from pathlib import Path
+import sys
 import time
-from os.path import expanduser
 
 python_path = sys.argv[1]
-pip_path    = sys.argv[2]
-home = expanduser("~")
+pip_path = sys.argv[2]
+home = os.path.expanduser("~")
 mdb_home = os.path.join(home, 'mindsdb')
 
 print(f'\nInstalling some large dependencies via pip ({pip_path}), this might take a while\n')
@@ -125,7 +122,7 @@ from mindsdb.utilities.wizards import daemon_creator, make_executable
 daemon_path = daemon_creator(python_path)
 print(f"Created daemon service config {daemon_path}")
 
-exec_path = str(os.path.join(mdb_home,'run'))
+exec_path = str(os.path.join(mdb_home, 'run'))
 make_executable(python_path, exec_path)
 print(f"Created executable at {exec_path}")
 

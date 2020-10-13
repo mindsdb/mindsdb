@@ -180,7 +180,14 @@ def archive_obsolete_predictors(config, old_version):
         print('These predictors are outdated and moved to {storage_dir}/obsolete/ folder:')
         for p in obsolete_predictors:
             print(f' - {p}')
+            new_path = Path(obsolete_predictors_dir).joinpath(p)
+            if Path(obsolete_predictors_dir).joinpath(p).is_dir():
+                i = 1
+                while Path(obsolete_predictors_dir).joinpath(f'{p}_{i}').is_dir():
+                    i += 1
+                new_path = Path(obsolete_predictors_dir).joinpath(f'{p}_{i}')
+
             shutil.move(
-                str(Path(config.paths['predictors']).joinpath(p)),
-                Path(obsolete_predictors_dir).joinpath(p)
+                Path(config.paths['predictors']).joinpath(p),
+                new_path
             )

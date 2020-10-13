@@ -23,6 +23,7 @@ jobs:
       if: github.ref != 'refs/heads/stable'
       run: |
           pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
+          pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
@@ -84,7 +85,7 @@ jobs:
         pip install winshell
         mkdir -p build
         python distributions/windows/build_installers.py
-    
+
     - name: Sync windows installer to s3
       uses: jakejarvis/s3-sync-action@master
       with:
@@ -102,4 +103,3 @@ jobs:
     #     mkdir -p build
     #     mv dist/install.exe ../../build/
     #     cp distributions/linux/install.sh build/
-

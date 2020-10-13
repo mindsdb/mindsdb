@@ -10,6 +10,24 @@ default_config = {
             "console": "ERROR",
             "file": "WARNING"
         }
+    },
+    "debug": False,
+    "integrations": {},
+    "api": {
+        "http": {
+            "host": "127.0.0.1",
+            "port": "47334"
+        },
+        "mysql": {
+            "host": "127.0.0.1",
+            "password": "",
+            "port": "47335",
+            "user": "mindsdb"
+        },
+        "mongodb": {
+            "host": "127.0.0.1",
+            "port": "47336"
+        }
     }
 }
 

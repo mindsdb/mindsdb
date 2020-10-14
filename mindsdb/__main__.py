@@ -2,10 +2,11 @@ import atexit
 import traceback
 import sys
 import os
+import time
+import asyncio
 
+from pkg_resources import get_distribution
 import torch.multiprocessing as mp
-
-from mindsdb_native.config import CONFIG
 
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
@@ -13,16 +14,18 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.fs import get_or_create_dir_struct
+from mindsdb.utilities.fs import get_or_create_dir_struct, update_versions_file, archive_obsolete_predictors
+from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse
 
 
-def close_api_gracefully(p_arr):
-    for p in p_arr:
+def close_api_gracefully(apis):
+    for api in apis.values():
+        process = api['process']
         sys.stdout.flush()
-        p.terminate()
-        p.join()
+        process.terminate()
+        process.join()
         sys.stdout.flush()
 
 
@@ -36,18 +39,65 @@ if __name__ == '__main__':
         config_dir, _ = get_or_create_dir_struct()
         config_path = os.path.join(config_dir, 'config.json')
 
-    print(f'Using configuration file: {config_path}')
     config = Config(config_path)
+
+    from mindsdb.__about__ import __version__ as mindsdb_version
+
+    if args.version:
+        print(f'MindsDB {mindsdb_version}')
+        sys.exit(0)
+
+    try:
+        lightwood_version = get_distribution('lightwood').version
+    except Exception:
+        from lightwood.__about__ import __version__ as lightwood_version
+
+    try:
+        mindsdb_native_version = get_distribution('mindsdb_native').version
+    except Exception:
+        from mindsdb_native.__about__ import __version__ as mindsdb_native_version
+
+    print(f'Configuration file:\n   {config_path}')
+    print(f"Storage path:\n   {config.paths['root']}")
+
+    print('Versions:')
+    print(f' - lightwood {lightwood_version}')
+    print(f' - MindsDB_native {mindsdb_native_version}')
+    print(f' - MindsDB {mindsdb_version}')
+
+    os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
+    if args.verbose is True:
+        config['log']['level']['console'] = 'DEBUG'
+    os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
+    os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
+
+    update_versions_file(
+        config,
+        {
+            'lightwood': lightwood_version,
+            'mindsdb_native': mindsdb_native_version,
+            'mindsdb': mindsdb_version,
+            'python': sys.version.replace('\n', '')
+        }
+    )
 
     if args.api is None:
         api_arr = ['http', 'mysql']
     else:
         api_arr = args.api.split(',')
 
-    for api in api_arr:
-        if api not in config['api']:
-            print(f"Trying run '{api}' API, but is no config for this api.")
-            print(f"Please, fill config['api']['{api}']")
+    apis = {
+        api: {
+            'port': config['api'][api]['port'],
+            'process': None,
+            'started': False
+        } for api in api_arr
+    }
+
+    for api_name in apis.keys():
+        if api_name not in config['api']:
+            print(f"Trying run '{api_name}' API, but is no config for this api.")
+            print(f"Please, fill config['api']['{api_name}']")
             sys.exit(0)
 
     start_functions = {
@@ -55,6 +105,8 @@ if __name__ == '__main__':
         'mysql': start_mysql,
         'mongodb': start_mongo
     }
+
+    archive_obsolete_predictors(config, '2.11.0')
 
     mdb = MindsdbNative(config)
     cst = CustomModels(config)
@@ -67,12 +119,6 @@ if __name__ == '__main__':
         } for x in mdb.get_models()
     ]
 
-    for m in model_data_arr:
-        if 'columns_to_ignore' in m['data_analysis']:
-            del m['data_analysis']['columns_to_ignore']
-        if 'train_std_dev' in m['data_analysis']:
-            del m['data_analysis']['train_std_dev']
-
     model_data_arr.extend(cst.get_models())
 
     dbw = DatabaseWrapper(config)
@@ -81,22 +127,49 @@ if __name__ == '__main__':
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         print(f'Error failed to integrate with database aliased: {broken_name}')
 
-    p_arr = []
     ctx = mp.get_context('spawn')
-    for api in api_arr:
-        print(f'Starting Mindsdb {api} API !')
+
+    for api_name, api_data in apis.items():
+        print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api], args=(config_path, True,))
+            p = ctx.Process(target=start_functions[api_name], args=(config_path, args.verbose))
             p.start()
-            p_arr.append(p)
-            print(f'Started Mindsdb {api} API !')
+            api_data['process'] = p
         except Exception as e:
-            close_api_gracefully(p_arr)
-            print(f'Failed to start {api} API with exception {e}')
+            close_api_gracefully(apis)
+            print(f'Failed to start {api_name} API with exception {e}')
             print(traceback.format_exc())
             raise
 
-    atexit.register(close_api_gracefully, p_arr=p_arr)
+    atexit.register(close_api_gracefully, apis=apis)
 
-    for p in p_arr:
-        p.join()
+    async def wait_api_start(api_name, pid, port):
+        timeout = 15
+        start_time = time.time()
+        started = is_pid_listen_port(pid, port)
+        while (time.time() - start_time) < timeout and started is False:
+            await asyncio.sleep(0.5)
+            started = is_pid_listen_port(pid, port)
+        return api_name, port, started
+
+    async def wait_apis_start():
+        futures = [
+            wait_api_start(api_name, api_data['process'].pid, api_data['port'])
+            for api_name, api_data in apis.items()
+        ]
+        for i, future in enumerate(asyncio.as_completed(futures)):
+            api_name, port, started = await future
+            if started:
+                print(f"{api_name} API: started on {port}")
+            else:
+                print(f"ERROR: {api_name} API cant start on {port}")
+
+    ioloop = asyncio.get_event_loop()
+    ioloop.run_until_complete(wait_apis_start())
+    ioloop.close()
+
+    try:
+        for api_data in apis.values():
+            api_data['process'].join()
+    except KeyboardInterrupt:
+        print('Closing app...')

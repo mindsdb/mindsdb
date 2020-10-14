@@ -4,15 +4,48 @@ import hashlib
 import datetime
 
 
+default_config = {
+    "log": {
+        "level": {
+            "console": "ERROR",
+            "file": "WARNING"
+        }
+    },
+    "debug": False,
+    "integrations": {},
+    "api": {
+        "http": {
+            "host": "127.0.0.1",
+            "port": "47334"
+        },
+        "mysql": {
+            "host": "127.0.0.1",
+            "password": "",
+            "port": "47335",
+            "user": "mindsdb"
+        },
+        "mongodb": {
+            "host": "127.0.0.1",
+            "port": "47336"
+        }
+    }
+}
+
+
 class Config(object):
-    current_version = '1.2'
+    current_version = '1.3'
     _config = {}
     paths = {
         'root': '',
         'datasources': '',
         'predictors': '',
         'static': '',
-        'tmp': ''
+        'tmp': '',
+        'log': '',
+        'obsolete': {
+            'predictors': '',
+            'datasources': ''
+        }
     }
     versions = {}
 
@@ -26,11 +59,21 @@ class Config(object):
             self._config_hash = self._gen_hash()
 
             storage_dir = self._config['storage_dir']
+            if os.path.isabs(storage_dir) is False:
+                storage_dir = os.path.normpath(
+                    os.path.join(
+                        os.path.dirname(config_path),
+                        storage_dir
+                    )
+                )
             self.paths['root'] = storage_dir
             self.paths['datasources'] = os.path.join(storage_dir, 'datasources')
             self.paths['predictors'] = os.path.join(storage_dir, 'predictors')
             self.paths['static'] = os.path.join(storage_dir, 'static')
             self.paths['tmp'] = os.path.join(storage_dir, 'tmp')
+            self.paths['log'] = os.path.join(storage_dir, 'log')
+            self.paths['obsolete']['predictors'] = os.path.join(storage_dir, 'obsolete', 'predictors')
+            self.paths['obsolete']['datasources'] = os.path.join(storage_dir, 'obsolete', 'datasources')
 
             self._read_versions_file(os.path.join(self.paths['root'], 'versions.json'))
         else:
@@ -61,19 +104,36 @@ class Config(object):
             mdb_storage_path = Path(config['interface']['mindsdb_native']['storage_dir'])
 
             temp_dir_path = tempfile.mkdtemp()
-            shutil.move(
-                str(ds_storage_path),
-                temp_dir_path
-            )
+
+            if ds_storage_path.is_dir():
+                shutil.move(
+                    str(ds_storage_path),
+                    temp_dir_path
+                )
+
             ds_storage_path.mkdir(mode=0o777, exist_ok=True, parents=True)
-            shutil.move(
-                str(Path(temp_dir_path).joinpath('datastore')),
-                str(ds_storage_path.joinpath('datasources'))
-            )
-            shutil.move(
-                str(mdb_storage_path),
-                str(ds_storage_path.joinpath('predictors'))
-            )
+
+            if Path(temp_dir_path).joinpath('datastore').is_dir():
+                shutil.move(
+                    str(Path(temp_dir_path).joinpath('datastore')),
+                    str(ds_storage_path.joinpath('datasources'))
+                )
+            else:
+                ds_storage_path.joinpath('datasources').mkdir(mode=0o777, exist_ok=True)
+
+            if ds_storage_path == mdb_storage_path:
+                shutil.move(
+                    str(Path(temp_dir_path)),
+                    str(ds_storage_path.joinpath('predictors'))
+                )
+            elif mdb_storage_path.is_dir():
+                shutil.move(
+                    str(mdb_storage_path),
+                    str(ds_storage_path.joinpath('predictors'))
+                )
+            else:
+                mdb_storage_path.joinpath('predictors').mkdir(mode=0o777, exist_ok=True)
+
             ds_storage_path.joinpath('tmp').mkdir(mode=0o777, exist_ok=True)
             ds_storage_path.joinpath('static').mkdir(mode=0o777, exist_ok=True)
 
@@ -86,9 +146,32 @@ class Config(object):
             config['config_version'] = '1.2'
             return config
 
+        def m1_2(config):
+            ''' remove no longer needed fields
+            '''
+            try:
+                del config['api']['mysql']['log']
+            except Exception:
+                pass
+
+            try:
+                del config['interface']
+            except Exception:
+                pass
+
+            if 'pip_path' in config and config['pip_path'] is None:
+                del config['pip_path']
+
+            if 'python_interpreter' in config and config['python_interpreter'] is None:
+                del config['python_interpreter']
+
+            config['config_version'] = '1.3'
+            return config
+
         migrations = {
             '1.0': m1_0,
-            '1.1': m1_1
+            '1.1': m1_1,
+            '1.2': m1_2
         }
 
         current_version = self._parse_version(self._config['config_version'])
@@ -131,6 +214,17 @@ class Config(object):
         password = '' if password is None else str(password)
         self._config['api']['mysql']['password'] = str(password)
 
+    def _merge_default_config(self):
+        def merge_key_recursive(target_dict, source_dict, key):
+            if key not in target_dict:
+                target_dict[key] = source_dict[key]
+            elif isinstance(target_dict[key], dict) and isinstance(source_dict[key], dict):
+                for k in source_dict[key]:
+                    merge_key_recursive(target_dict[key], source_dict[key], k)
+
+        for key in default_config:
+            merge_key_recursive(self._config, default_config, key)
+
     def _read(self):
         if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
             with open(self.config_path, 'r') as fp:
@@ -140,6 +234,7 @@ class Config(object):
                     self._save()
                 self._validate()
                 self._format()
+                self._merge_default_config()
         else:
             raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
 

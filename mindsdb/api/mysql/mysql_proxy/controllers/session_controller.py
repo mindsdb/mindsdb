@@ -9,7 +9,7 @@
  *******************************************************
 """
 
-from mindsdb.api.mysql.mysql_proxy.controllers.log import log
+from mindsdb.api.mysql.mysql_proxy.utilities import log
 
 
 class SessionController():
@@ -28,6 +28,7 @@ class SessionController():
         self.logging = log
 
         self.integration = None
+        self.integration_type = None
         self.database = None
 
         self.prepared_stmts = {}

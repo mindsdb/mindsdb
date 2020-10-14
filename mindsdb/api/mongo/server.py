@@ -10,6 +10,7 @@ from mindsdb.api.mongo.classes import RespondersCollection
 # from mindsdb.api.mongo.op_query_responders import responders as op_query_responders
 from mindsdb.api.mongo.op_msg_responders import responders as op_msg_responders
 import mindsdb.api.mongo.functions as helpers
+from mindsdb.api.mongo.utilities import log
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
@@ -131,7 +132,7 @@ class OpMsgResponder(OperationResponder):
         elif remaining != 0:
             raise Exception('is bytes left after msg parsing')
 
-        print(f'GET OpMSG={query}')
+        log.debug(f'GET OpMSG={query}')
 
         responder = self.responders.find_match(query)
         assert responder is not None, 'query cant be processed'
@@ -171,7 +172,7 @@ class OpQueryResponder(OperationResponder):
 
         query = docs[0]  # docs = [query, returnFieldsSelector]
 
-        print(f'GET OpQuery={query}')
+        log.debug(f'GET OpQuery={query}')
 
         responder = self.responders.find_match(query)
         assert responder is not None, 'query cant be processed'
@@ -195,7 +196,7 @@ class OpQueryResponder(OperationResponder):
         reply_id = 123  # TODO
         response_to = request_id
 
-        print(f'RET docs={request}')
+        log.debug(f'RET docs={request}')
 
         data = b''.join([flags, cursor_id, starting_from, number_returned])
         data += b''.join([bson.BSON.encode(doc) for doc in [request]])
@@ -212,15 +213,18 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
     _stopped = False
 
     def handle(self):
-        print('connect')
-        print(str(self.server.socket))
+        log.debug('connect')
+        log.debug(str(self.server.socket))
         while True:
             header = self._read_bytes(16)
+            if header is False:
+                # connection closed by client
+                break
             length, pos = unpack(INT, header)
             request_id, pos = unpack(INT, header, pos)
             response_to, pos = unpack(INT, header, pos)
             opcode, pos = unpack(INT, header, pos)
-            print(f'GET length={length} id={request_id} opcode={opcode}')
+            log.debug(f'GET length={length} id={request_id} opcode={opcode}')
             msg_bytes = self._read_bytes(length - pos)
             answer = self.get_answer(request_id, opcode, msg_bytes)
             self.request.send(answer)
@@ -239,7 +243,8 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         while length:
             chunk = self.request.recv(length)
             if chunk == b'':
-                raise Exception('Connection closed')
+                log.debug('Connection closed')
+                return False
 
             length -= len(chunk)
             buffer += chunk
@@ -252,7 +257,7 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         assert mongodb_config is not None, 'is no mongodb config!'
         host = mongodb_config['host']
         port = mongodb_config['port']
-        print(f'start mongo server on {host}:{port}')
+        log.debug(f'start mongo server on {host}:{port}')
 
         super().__init__((host, int(port)), MongoRequestHandler)
 

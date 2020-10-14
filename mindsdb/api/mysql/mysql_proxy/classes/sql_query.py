@@ -11,13 +11,12 @@
 
 import re
 import traceback
-from collections import OrderedDict
 
 from moz_sql_parser import parse
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, binary_ops, unary_ops, operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
-from mindsdb.api.mysql.mysql_proxy.controllers.log import log
+from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 
 

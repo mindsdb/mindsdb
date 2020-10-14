@@ -28,10 +28,10 @@ from mindsdb.utilities.wizards import make_ssl_cert
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.controllers.log import init_logger, log
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
+from mindsdb.api.mysql.mysql_proxy.utilities import log
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
@@ -780,11 +780,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql = 'select schema_name as Database from information_schema.SCHEMATA;'
             statement = SqlStatementParser(sql)
             sql_lower = statement.sql.lower()
+            keyword = statement.keyword
+            struct = statement.struct
         if keyword == 'show' and 'show full tables from' in sql_lower:
             schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
             sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
             statement = SqlStatementParser(sql)
             sql_lower = statement.sql.lower()
+            keyword = statement.keyword
+            struct = statement.struct
+        # TODO show tables;
 
         if keyword == 'start':
             # start transaction
@@ -1400,6 +1405,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     log.info('Session closed, on client disconnect')
                     self.session = None
                     break
+                elif p.type.value == COMMANDS.COM_INIT_DB:
+                    self.session.database = p.database.value.decode()
+                    self.packet(OkPacket).send()
                 else:
                     log.info('Command has no specific handler, return OK msg')
                     log.debug(str(p))
@@ -1445,7 +1453,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         Create a server and wait for incoming connections until Ctrl-C
         """
         config = _config
-        init_logger(config)
 
         HARDCODED_USER = config['api']['mysql']['user']
         HARDCODED_PASSWORD = config['api']['mysql']['password']

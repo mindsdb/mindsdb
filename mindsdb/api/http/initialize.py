@@ -137,7 +137,7 @@ def initialize_static(config):
 def initialize_flask(config):
     app = Flask(
         __name__,
-        static_url_path='/static',
+        static_url_path='/',
         static_folder=config.paths['static']
     )
 
@@ -164,7 +164,13 @@ def initialize_flask(config):
 
     CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
-    api = Swagger_Api(app, authorizations=authorizations, security=['apikey'], url_prefix=':8000')
+    api = Swagger_Api(
+        app,
+        authorizations=authorizations,
+        security=['apikey'],
+        url_prefix=':8000',
+        prefix='/api'
+    )
 
     # NOTE rewrite it, that hotfix to see GUI link
     log = logging.getLogger('mindsdb.http')

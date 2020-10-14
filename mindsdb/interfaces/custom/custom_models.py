@@ -157,4 +157,5 @@ class CustomModels():
         with open(os.path.join(self._dir(name), '__init__.py') , 'w') as fp:
             fp.write('')
 
-        self.dbw.register_predictors([self.get_model_data(name)], setup=False)
+        if trained_status == 'trained':
+            self.dbw.register_predictors([self.get_model_data(name)], setup=False)

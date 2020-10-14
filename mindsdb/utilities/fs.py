@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import shutil
 import pickle
+from distutils.version import LooseVersion
 
 
 def create_directory(path):
@@ -145,3 +146,48 @@ def update_versions_file(config, versions):
 
     with open(versions_file_path, 'wt') as f:
         json.dump(versions, f, indent=4, sort_keys=True)
+
+
+def create_dirs_recursive(path):
+    if isinstance(path, dict):
+        for p in path.values():
+            create_dirs_recursive(p)
+    elif isinstance(path, str):
+        create_directory(path)
+    else:
+        raise ValueError(f'Wrong path: {path}')
+
+
+def archive_obsolete_predictors(config, old_version):
+    ''' move all predictors trained on mindsdb with version less than
+        old_version to folder for obsolete predictors
+
+        Predictors are outdated in:
+        v2.11.0 - in mindsdb_native added ['data_analysis_v2']['columns']
+    '''
+    obsolete_predictors = []
+    obsolete_predictors_dir = config.paths['obsolete']['predictors']
+    for f in Path(config.paths['predictors']).iterdir():
+        if f.is_dir():
+            if not f.joinpath('versions.json').is_file():
+                obsolete_predictors.append(f.name)
+            else:
+                with open(f.joinpath('versions.json'), 'rt') as vf:
+                    versions = json.loads(vf.read())
+                if LooseVersion(versions['mindsdb']) < LooseVersion(old_version):
+                    obsolete_predictors.append(f.name)
+    if len(obsolete_predictors) > 0:
+        print('These predictors are outdated and moved to {storage_dir}/obsolete/ folder:')
+        for p in obsolete_predictors:
+            print(f' - {p}')
+            new_path = Path(obsolete_predictors_dir).joinpath(p)
+            if Path(obsolete_predictors_dir).joinpath(p).is_dir():
+                i = 1
+                while Path(obsolete_predictors_dir).joinpath(f'{p}_{i}').is_dir():
+                    i += 1
+                new_path = Path(obsolete_predictors_dir).joinpath(f'{p}_{i}')
+
+            shutil.move(
+                Path(config.paths['predictors']).joinpath(p),
+                new_path
+            )

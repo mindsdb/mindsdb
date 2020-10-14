@@ -2,7 +2,7 @@ import os
 import sys
 
 from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
-from mindsdb.utilities.fs import get_or_create_dir_struct, create_directory
+from mindsdb.utilities.fs import get_or_create_dir_struct, create_dirs_recursive
 from mindsdb.utilities.wizards import cli_config
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import args_parse
@@ -24,8 +24,7 @@ except Exception as e:
     sys.exit(1)
 
 paths = mindsdb_config.paths
-for path in paths.values():
-    create_directory(path)
+create_dirs_recursive(paths)
 
 os.environ['MINDSDB_STORAGE_PATH'] = paths['predictors']
 os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')

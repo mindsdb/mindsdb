@@ -45,8 +45,7 @@ class MindsDBDataNode(DataNode):
 
         model = self.mindsdb_native.get_model_data(name=table)
         columns = []
-        columns += [x['column_name'] for x in model['data_analysis']['input_columns_metadata']]
-        columns += [x['column_name'] for x in model['data_analysis']['target_columns_metadata']]
+        columns += model['data_analysis_v2']['columns']
         columns += [f'{x}_original' for x in model['predict']]
         for col in model['predict']:
             if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
@@ -92,7 +91,7 @@ class MindsDBDataNode(DataNode):
                 if isinstance(where_data, list) is False:
                     where_data = [where_data]
             except Exception:
-                raise ValueError(f'''Error while parse 'where_data'="{where_data}"''')
+                raise ValueError(f'''Error while parse 'when_data'="{where_data}"''')
 
         external_datasource = None
         if 'external_datasource' in where:
@@ -194,7 +193,7 @@ class MindsDBDataNode(DataNode):
 
                 data.append(row)
 
-            fields = list(model['data_analysis'].keys())
+            fields = model['data_analysis']['columns']
             field_types = {f: model['data_analysis'][f]['typing']['data_subtype'] for f in fields}
             for row in data:
                 cast_row_types(row, field_types)
@@ -215,8 +214,10 @@ class MindsDBDataNode(DataNode):
                 data.append({key: el[key] for key in keys})
                 explains.append(el.explain())
 
-            fields = [x for x in model['data_analysis_v2'].keys() if x not in ['columns_to_ignore', 'train_std_dev']]
-            field_types = {f: model['data_analysis_v2'][f]['typing']['data_subtype'] for f in fields}
+            field_types = {
+                f: model['data_analysis_v2'][f]['typing']['data_subtype']
+                for f in model['data_analysis_v2']['columns']
+            }
 
             for row in data:
                 cast_row_types(row, field_types)

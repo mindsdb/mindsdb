@@ -27,7 +27,7 @@ class PostgreSQL(Integration):
         }
 
         column_declaration = []
-        for name, column in stats.items():
+        for name in stats['columns']:
             try:
                 col_subtype = stats[name]['typing']['data_subtype']
                 new_type = subtype_map[col_subtype]
@@ -57,7 +57,7 @@ class PostgreSQL(Integration):
 
         try:
             rows = cur.fetchall()
-            keys = [k[0].decode('ascii') for k in cur.description]
+            keys = [k[0] if isinstance(k[0], str) else k[0].decode('ascii') for k in cur.description]
             res = [dict(zip(keys, row)) for row in rows]
         except Exception:
             pass

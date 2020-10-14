@@ -148,19 +148,22 @@ def initialize_static(config):
         log.error(f'Error during downloading files from s3: {e}')
         return False
 
+    static_folder = static_path.joinpath('static')
+    static_folder.mkdir(parents=True, exist_ok=True)
+
     # unzip process
     for zip_path, dir_name in [[js_zip_path, 'js'], [css_zip_path, 'css']]:
         temp_dir = static_path.joinpath(f'temp_{dir_name}')
         temp_dir.mkdir(mode=0o777, exist_ok=True, parents=True)
         ZipFile(zip_path).extractall(temp_dir)
-        files_path = static_path.joinpath(dir_name)
+        files_path = static_path.joinpath('static', dir_name)
         if temp_dir.joinpath('build', 'static', dir_name).is_dir():
             shutil.move(temp_dir.joinpath('build', 'static', dir_name), files_path)
             shutil.rmtree(temp_dir)
         else:
             shutil.move(temp_dir, files_path)
 
-    ZipFile(media_zip_path).extractall(static_path)
+    ZipFile(media_zip_path).extractall(static_folder)
 
     os.remove(js_zip_path)
     os.remove(css_zip_path)

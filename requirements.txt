@@ -1,4 +1,4 @@
-mindsdb_native == 2.13.0
+mindsdb_native == 2.17.0
 flask-restx >= 0.2.0
 flask >= 1.0
 python-multipart >= 0.0.5
@@ -11,3 +11,4 @@ flask_cors >= 1.1
 waitress >= 1.4.4
 pymongo >= 3.10.1
 setuptools
+psutil

@@ -28,6 +28,7 @@ class SessionController():
         self.logging = log
 
         self.integration = None
+        self.integration_type = None
         self.database = None
 
         self.prepared_stmts = {}

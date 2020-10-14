@@ -780,11 +780,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql = 'select schema_name as Database from information_schema.SCHEMATA;'
             statement = SqlStatementParser(sql)
             sql_lower = statement.sql.lower()
+            keyword = statement.keyword
+            struct = statement.struct
         if keyword == 'show' and 'show full tables from' in sql_lower:
             schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
             sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
             statement = SqlStatementParser(sql)
             sql_lower = statement.sql.lower()
+            keyword = statement.keyword
+            struct = statement.struct
+        # TODO show tables;
 
         if keyword == 'start':
             # start transaction
@@ -1400,6 +1405,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     log.info('Session closed, on client disconnect')
                     self.session = None
                     break
+                elif p.type.value == COMMANDS.COM_INIT_DB:
+                    self.session.database = p.database.value.decode()
+                    self.packet(OkPacket).send()
                 else:
                     log.info('Command has no specific handler, return OK msg')
                     log.debug(str(p))

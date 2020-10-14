@@ -2,7 +2,7 @@ name: "MindsDB CLA Assistant"
 on:
   issue_comment:
     types: [created]
-  pull_request:
+  pull_request_target:
     types: [opened,closed,synchronize]
     
 jobs:
@@ -20,5 +20,5 @@ jobs:
           path-to-signatures: 'assets/contributions-agreement/signatures/cla.json'
           # Add path to the CLA here
           path-to-cla-document: 'https://github.com/mindsdb/mindsdb_native/blob/stable/assets/contributions-agreement/individual-contributor.md'
-          branch: 'stable'
+          branch: 'staging'
           allowlist: bot*, George3d6, ZoranPandovski, torrmal, Stpmax, maximlopin, paxcema, mindsdbadmin

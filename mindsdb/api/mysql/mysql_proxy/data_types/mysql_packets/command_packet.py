@@ -111,6 +111,9 @@ class CommandPacket(Packet):
             buffer = self.stmt_id.setFromBuff(buffer)
             self.limit = Datum('int<4>')
             buffer = self.limit.setFromBuff(buffer)
+        elif self.type.value == COMMANDS.COM_INIT_DB:
+            self.database = Datum('str<EOF>')
+            buffer = self.database.setFromBuff(buffer)
         else:
             self.data = Datum('str<EOF>')
             buffer = self.data.setFromBuff(buffer)

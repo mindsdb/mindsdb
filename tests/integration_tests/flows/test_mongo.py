@@ -26,7 +26,7 @@ EXTERNAL_DS_NAME = 'test_external'
 
 config = Config(TEST_CONFIG)
 
-DOCKER_TIMEOUT = 60
+DOCKER_TIMEOUT = 180
 
 
 class MongoTest(unittest.TestCase):

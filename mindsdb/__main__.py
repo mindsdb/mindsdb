@@ -3,6 +3,7 @@ import traceback
 import sys
 import os
 import time
+import asyncio
 
 from pkg_resources import get_distribution
 import torch.multiprocessing as mp
@@ -13,17 +14,18 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.fs import get_or_create_dir_struct, update_versions_file
-from mindsdb.utilities.ps import is_port_in_use
+from mindsdb.utilities.fs import get_or_create_dir_struct, update_versions_file, archive_obsolete_predictors
+from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse
 
 
-def close_api_gracefully(p_arr):
-    for p in p_arr:
+def close_api_gracefully(apis):
+    for api in apis.values():
+        process = api['process']
         sys.stdout.flush()
-        p.terminate()
-        p.join()
+        process.terminate()
+        process.join()
         sys.stdout.flush()
 
 
@@ -77,9 +79,6 @@ More instructions in https://docs.mindsdb.com
     except Exception:
         from mindsdb_native.__about__ import __version__ as mindsdb_native_version
 
-    if args.verbose:
-        config['log']['level']['console'] = 'INFO'
-
     print(f'Configuration file:\n   {config_path}')
     print(f"Storage path:\n   {config.paths['root']}")
 
@@ -90,11 +89,9 @@ More instructions in https://docs.mindsdb.com
 
     os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
     if args.verbose is True:
-        os.environ['DEFAULT_LOG_LEVEL'] = 'INFO'
-        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'INFO'
-    else:
-        os.environ['DEFAULT_LOG_LEVEL'] = 'ERROR'
-        os.environ['LIGHTWOOD_LOG_LEVEL'] = 'ERROR'
+        config['log']['level']['console'] = 'DEBUG'
+    os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
+    os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
 
     update_versions_file(
         config,
@@ -111,14 +108,15 @@ More instructions in https://docs.mindsdb.com
     else:
         api_arr = args.api.split(',')
 
-    api_arr = [{
-        'name': api,
-        'port': config['api'][api]['port'],
-        'started': False
-    } for api in api_arr]
+    apis = {
+        api: {
+            'port': config['api'][api]['port'],
+            'process': None,
+            'started': False
+        } for api in api_arr
+    }
 
-    for api in api_arr:
-        api_name = api['name']
+    for api_name in apis.keys():
         if api_name not in config['api']:
             print(f"Trying run '{api_name}' API, but is no config for this api.")
             print(f"Please, fill config['api']['{api_name}']")
@@ -129,6 +127,8 @@ More instructions in https://docs.mindsdb.com
         'mysql': start_mysql,
         'mongodb': start_mongo
     }
+
+    archive_obsolete_predictors(config, '2.11.0')
 
     mdb = MindsdbNative(config)
     cst = CustomModels(config)
@@ -141,12 +141,6 @@ More instructions in https://docs.mindsdb.com
         } for x in mdb.get_models()
     ]
 
-    for m in model_data_arr:
-        if 'columns_to_ignore' in m['data_analysis']:
-            del m['data_analysis']['columns_to_ignore']
-        if 'train_std_dev' in m['data_analysis']:
-            del m['data_analysis']['train_std_dev']
-
     model_data_arr.extend(cst.get_models())
 
     dbw = DatabaseWrapper(config)
@@ -155,40 +149,49 @@ More instructions in https://docs.mindsdb.com
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         print(f'Error failed to integrate with database aliased: {broken_name}')
 
-    p_arr = []
     ctx = mp.get_context('spawn')
 
-    for api in api_arr:
-        api_name = api['name']
+    for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
             p = ctx.Process(target=start_functions[api_name], args=(config_path, args.verbose))
             p.start()
-            p_arr.append(p)
+            api_data['process'] = p
         except Exception as e:
-            close_api_gracefully(p_arr)
+            close_api_gracefully(apis)
             print(f'Failed to start {api_name} API with exception {e}')
             print(traceback.format_exc())
             raise
 
-    atexit.register(close_api_gracefully, p_arr=p_arr)
+    atexit.register(close_api_gracefully, apis=apis)
 
-    timeout = 15
-    start_time = time.time()
-    all_started = False
-    while (time.time() - start_time) < timeout and all_started is False:
-        all_started = True
-        for i, api in enumerate(api_arr):
-            try:
-                in_use = api['started'] or is_port_in_use(api['port'])
-            except Exception:
-                # NOTE that hotfix for OSX: is_port_in_use will raise AccessDenied error if it runned not as sudo
-                in_use = True
-            if in_use and api['started'] != in_use:
-                api['started'] = in_use
-                print(f"{api['name']} API: started on {api['port']}")
-            all_started = all_started and in_use
-        time.sleep(0.5)
+    async def wait_api_start(api_name, pid, port):
+        timeout = 15
+        start_time = time.time()
+        started = is_pid_listen_port(pid, port)
+        while (time.time() - start_time) < timeout and started is False:
+            await asyncio.sleep(0.5)
+            started = is_pid_listen_port(pid, port)
+        return api_name, port, started
 
-    for p in p_arr:
-        p.join()
+    async def wait_apis_start():
+        futures = [
+            wait_api_start(api_name, api_data['process'].pid, api_data['port'])
+            for api_name, api_data in apis.items()
+        ]
+        for i, future in enumerate(asyncio.as_completed(futures)):
+            api_name, port, started = await future
+            if started:
+                print(f"{api_name} API: started on {port}")
+            else:
+                print(f"ERROR: {api_name} API cant start on {port}")
+
+    ioloop = asyncio.get_event_loop()
+    ioloop.run_until_complete(wait_apis_start())
+    ioloop.close()
+
+    try:
+        for api_data in apis.values():
+            api_data['process'].join()
+    except KeyboardInterrupt:
+        print('Closing app...')

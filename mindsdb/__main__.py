@@ -166,7 +166,7 @@ More instructions in https://docs.mindsdb.com
     atexit.register(close_api_gracefully, apis=apis)
 
     async def wait_api_start(api_name, pid, port):
-        timeout = 15
+        timeout = 60
         start_time = time.time()
         started = is_pid_listen_port(pid, port)
         while (time.time() - start_time) < timeout and started is False:

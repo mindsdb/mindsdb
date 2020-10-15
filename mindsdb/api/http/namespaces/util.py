@@ -24,3 +24,12 @@ class Shutdown(Resource):
             func()
             return '', 200
         abort(403, "")
+
+                
+@ns_conf.route('/util/version')
+class Endpoint(Resource):
+    @ns_conf.doc('get_endpoint')
+    def get(self):
+        '''Checks endpoint'''
+        return {'mindsdb': '2.11.2'}
+    

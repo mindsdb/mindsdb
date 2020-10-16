@@ -7,6 +7,7 @@ from pathlib import Path
 
 assert os.name == 'nt'
 
+
 PY_EMBED_URL = 'https://www.python.org/ftp/python/3.7.4/python-3.7.4-embed-amd64.zip'
 GET_PIP_URL = 'https://bootstrap.pypa.io/get-pip.py'
 VC_REDIST_URL = 'https://aka.ms/vs/16/release/vc_redist.x64.exe'
@@ -23,6 +24,7 @@ if len(sys.argv) < 2:
 else:
     INSTALL_DIR = os.path.join(os.path.abspath(sys.argv[1]), NAME)
 
+
 def make_dir(d):
     if not os.path.isdir(d):
         os.makedirs(d)
@@ -30,8 +32,13 @@ def make_dir(d):
 
 PYTHON_DIR = os.path.join(INSTALL_DIR, 'python')
 
-make_dir(INSTALL_DIR)
-make_dir(PYTHON_DIR)
+try:
+    make_dir(INSTALL_DIR)
+    make_dir(PYTHON_DIR)
+except PermissionError as e:
+    print('Please, run the installer as administrator')
+    os.system('pause')
+    sys.exit(1)
 
 PTH_PATH = os.path.join(PYTHON_DIR, 'python37._pth')
 

@@ -38,6 +38,7 @@ try:
 except PermissionError as e:
     print('Please, run the installer as administrator')
     os.system('pause')
+    sys.exit(1)
 
 PTH_PATH = os.path.join(PYTHON_DIR, 'python37._pth')
 

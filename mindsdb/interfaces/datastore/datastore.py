@@ -82,6 +82,7 @@ class DataStore():
                 'args': [source],
                 'kwargs': {}
             }
+
         elif source_type in self.config['integrations']:
             integration = self.config['integrations'][source_type]
 
@@ -100,12 +101,30 @@ class DataStore():
             except KeyError:
                 raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
 
-            if integration['type'] not in ['mongodb','snowflake']:
+            if integration['type'] in ['clickhouse']:
                 picklable = {
                     'class': dsClass.__name__,
                     'args': [],
                     'kwargs': {
-                        'query': source,
+                        'query': source['query'],
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port']
+                    }
+                }
+                try:
+                    ds = dsClass(**picklable['kwargs'])
+                except Exception:
+                    shutil.rmtree(ds_meta_dir)
+                    raise
+
+            elif integration['type'] in ['mssql','postgres','mariadb','mysql']:
+                picklable = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source['query'],
                         'user': integration['user'],
                         'password': integration['password'],
                         'host': integration['host'],
@@ -113,17 +132,18 @@ class DataStore():
                     }
                 }
 
+                if 'auth_database' in integration:
+                    picklable['kwargs']['database'] = integration['auth_database']
+
+                if 'database' in source:
+                    picklable['kwargs']['database'] = source['database']
+
                 try:
-                    ds = dsClass(
-                        query=source,
-                        user=integration['user'],
-                        password=integration['password'],
-                        host=integration['host'],
-                        port=integration['port']
-                    )
+                    ds = dsClass(**picklable['kwargs'])
                 except Exception:
                     shutil.rmtree(ds_meta_dir)
                     raise
+
             elif integration['type'] == 'snowflake':
                 picklable = {
                     'class': dsClass.__name__,
@@ -162,15 +182,7 @@ class DataStore():
                 }
 
                 try:
-                    ds = dsClass(
-                        database=source['database'],
-                        collection=source['collection'],
-                        query=source['find'],
-                        user=integration['user'],
-                        password=integration['password'],
-                        host=integration['host'],
-                        port=integration['port']
-                    )
+                    ds = dsClass(**picklable['kwargs'])
                 except Exception:
                     shutil.rmtree(ds_meta_dir)
                     raise

@@ -132,8 +132,8 @@ class DataStore():
                     }
                 }
 
-                if 'auth_database' in integration:
-                    picklable['kwargs']['database'] = integration['auth_database']
+                if 'database' in integration:
+                    picklable['kwargs']['database'] = integration['database']
 
                 if 'database' in source:
                     picklable['kwargs']['database'] = source['database']

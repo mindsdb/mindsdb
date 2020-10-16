@@ -24,7 +24,7 @@ Note: Query parameters should come as top level parameters in the application/js
 * password        [str]
 * host            [str]
 * port            [int]
-* auth_database   [optional - str]
+* database   [optional - str]
 
 #### Query parameters (when generating a dataset)
 * query           [str]

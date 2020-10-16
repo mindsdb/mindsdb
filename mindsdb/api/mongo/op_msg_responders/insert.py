@@ -71,7 +71,7 @@ class Responce(Responder):
                 ds, ds_name = mindsdb_env['data_store'].save_datasource(
                     name=doc['name'],
                     source_type='default_mongodb',
-                    source=doc['select_data_query']
+                    source={'query': doc['select_data_query']}
                 )
             elif is_external_datasource:
                 ds = mindsdb_env['data_store'].get_datasource_obj(doc['external_datasource'], raw=True)

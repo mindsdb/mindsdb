@@ -30,7 +30,7 @@ MindsDB is an open-source AI layer for existing databases that allows you to eff
 	* [AI Tables in MySQL](https://docs.mindsdb.com/databases/MySQL/)
 	* [AI Tables in PostgreSQL](https://docs.mindsdb.com/databases/PostgreSQL/)
 * [Learning from Examples](https://docs.mindsdb.com/tutorials/BasicExample/)
-* [MindsDB Explainability GUI](http://mindsdb.com/product)
+* [MindsDB Explainability GUI](https://docs.mindsdb.com/scout/Introduction/)
 * [Frequently Asked Questions](https://docs.mindsdb.com/FAQ/)
 
 ### Installation

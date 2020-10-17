@@ -111,6 +111,14 @@
       "created_at": "2020-10-17T15:39:00Z",
       "repoId": 143328315,
       "pullRequestNo": 825
+    },
+    {
+      "name": "lavandosovich",
+      "id": 15146608,
+      "comment_id": 711056327,
+      "created_at": "2020-10-17T17:49:50Z",
+      "repoId": 143328315,
+      "pullRequestNo": 827
     }
   ]
 }

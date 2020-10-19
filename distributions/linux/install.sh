@@ -105,6 +105,7 @@ python_path = sys.argv[1]
 pip_path = sys.argv[2]
 home = os.path.expanduser("~")
 mdb_home = os.path.join(home, 'mindsdb')
+os.makedirs(mdb_home)
 
 print(f'\nInstalling some large dependencies via pip ({pip_path}), this might take a while\n')
 time.sleep(1)
@@ -130,7 +131,7 @@ text = '\n'.join([
   f'{python_path} -m mindsdb',
 ])
 
-with open(exec_path, 'w+') as fp:
+with open(exec_path, 'w') as fp:
     fp.write(text)
 
 os.system(f'chmod +x {exec_path}')

@@ -1,0 +1,3 @@
+[mysqld]
+federated
+port=3307

@@ -1,5 +1,6 @@
 import os
 import sys
+import atexit
 import zipfile
 import winshell
 import requests
@@ -7,6 +8,12 @@ from pathlib import Path
 
 assert os.name == 'nt'
 
+
+def at_exit():
+    os.system('pause')
+
+
+atexit.register(at_exit)
 
 PY_EMBED_URL = 'https://www.python.org/ftp/python/3.7.4/python-3.7.4-embed-amd64.zip'
 GET_PIP_URL = 'https://bootstrap.pypa.io/get-pip.py'
@@ -101,3 +108,6 @@ with winshell.shortcut(link_path) as link:
     link.description = NAME
     # TODO
     # link.icon = (@path@, 0)
+
+
+print('Success. Shortcut on desktop is created ({})'.format(link_path.rstrip('.lnk')))

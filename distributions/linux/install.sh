@@ -130,7 +130,7 @@ text = '\n'.join([
   f'{python_path} -m mindsdb',
 ])
 
-with open(exec_path, 'w') as fp:
+with open(exec_path, 'w+') as fp:
     fp.write(text)
 
 os.system(f'chmod +x {exec_path}')

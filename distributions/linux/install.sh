@@ -122,20 +122,20 @@ print('\nLast step: Configure Mindsdb\n')
 # daemon_path = daemon_creator(python_path)
 # print(f"Created daemon service config {daemon_path}")
 
-# exec_path = str(os.path.join(mdb_home, 'run'))
+exec_path = str(os.path.join(mdb_home, 'run'))
 
-# text = '\n'.join([
-#   '#!/bin/bash',
-#   f'{pip_path} install mindsdb --upgrade',
-#   f'{python_path} -m mindsdb',
-# ])
+text = '\n'.join([
+  '#!/bin/bash',
+  f'{pip_path} install mindsdb --upgrade',
+  f'{python_path} -m mindsdb',
+])
 
-# with open(exec_path, 'w') as fp:
-#     fp.write(text)
+with open(exec_path, 'w') as fp:
+    fp.write(text)
 
-# os.system(f'chmod +x {exec_path}')
+os.system(f'chmod +x {exec_path}')
 
-# print(f"Created executable at {exec_path}")
+print(f"Created executable at {exec_path}")
 
 print('Installation complete!')
 

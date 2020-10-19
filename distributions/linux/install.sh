@@ -117,10 +117,10 @@ time.sleep(1)
 print('Done installing dependencies')
 print('\nLast step: Configure Mindsdb\n')
 
-from mindsdb.utilities.wizards import daemon_creator
+# from mindsdb.utilities.wizards import daemon_creator
 
-daemon_path = daemon_creator(python_path)
-print(f"Created daemon service config {daemon_path}")
+# daemon_path = daemon_creator(python_path)
+# print(f"Created daemon service config {daemon_path}")
 
 # exec_path = str(os.path.join(mdb_home, 'run'))
 

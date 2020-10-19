@@ -109,18 +109,8 @@ class Datasource(Resource):
             data = request.json
 
         if 'query' in data:
-            query = request.json['query']
-
-            if 'warehouse' in data:
-                query = {
-                    'query': query
-                    ,'warehouse': request.json['warehouse']
-                    ,'database': request.json['database']
-                    ,'schema': request.json['schema']
-                }
-
             source_type = request.json['integration_id']
-            ca.default_store.save_datasource(name, source_type, query)
+            ca.default_store.save_datasource(name, source_type, request.json)
             os.rmdir(temp_dir_path)
             return ca.default_store.get_datasource(name)
 

@@ -135,9 +135,6 @@ class Predictor(Resource):
         if type(kwargs) != type({}):
             kwargs = {}
 
-        if 'stop_training_in_x_seconds' not in kwargs:
-            kwargs['stop_training_in_x_seconds'] = 100
-
         if 'equal_accuracy_for_all_output_categories' not in kwargs:
             kwargs['equal_accuracy_for_all_output_categories'] = True
 

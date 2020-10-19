@@ -376,7 +376,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
             insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-            ds, ds_name = default_store.save_datasource(insert['name'], integration, insert['select_data_query'])
+            ds, ds_name = default_store.save_datasource(insert['name'], integration, {'query': insert['select_data_query']})
         elif is_external_datasource:
             ds = default_store.get_datasource_obj(insert['external_datasource'], raw=True)
             ds_name = insert['external_datasource']

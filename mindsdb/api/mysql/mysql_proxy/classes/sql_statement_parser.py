@@ -6,6 +6,7 @@ from pyparsing import (
     Word,
     alphas,
     printables,
+    Literal,
     QuotedString,
     quotedString,
     originalTextFor,
@@ -22,6 +23,10 @@ import re
 
 RE_INT = re.compile(r'^[-+]?([1-9]\d*|0)$')
 RE_FLOAT = re.compile(r'^[-+]?([1-9]\d*\.\d*|0\.|0\.\d*)$')
+
+
+class SqlStatementParseError(Exception):
+    pass
 
 
 class SQLParameter:
@@ -58,6 +63,8 @@ class SqlStatementParser():
         if init_parse:
             if self._keyword == 'insert':
                 self._struct = self.parse_as_insert()
+            elif self._keyword == 'delete':
+                self._struct = self.parse_as_delete()
 
     @property
     def keyword(self):
@@ -168,6 +175,81 @@ class SqlStatementParser():
 
         self._sql = r.asDict()['original'].strip()
         return True
+
+    def parse_as_delete(self) -> dict:
+        ''' Parse delete. Example: 'delete from database.table where column_a= 1 and column_b = 2;'
+        '''
+
+        result = {
+            'database': None,
+            'table': None,
+            'where': {}
+        }
+
+        suppressed_word = Word(alphas).suppress()
+        and_ = Literal("and")
+
+        from_value = (
+                QuotedString('`')
+                | originalTextFor(
+                    Word(printables, excludeChars='.`')
+                )
+        )
+
+        expr = (
+                suppressed_word + suppressed_word
+                + (delimitedList(from_value, delim='.'))('db_table')
+                + Optional(
+                    Word("where").suppress()
+                    + OneOrMore(
+                        Word(printables).setResultsName('columns', listAllMatches=True)
+                        + Word('=').suppress()
+                        + Word(printables).setResultsName('values', listAllMatches=True)
+                        + Optional(and_).suppress()
+                    )
+                )
+
+        )
+
+        r = expr.parseString(self._sql).asDict()
+
+        if len(r['db_table']) == 2:
+            result['database'] = r['db_table'][0]
+            result['table'] = r['db_table'][1]
+        else:
+            result['table'] = r['db_table'][0]
+
+        if 'columns' in r and 'values' in r:
+            if not isinstance(r['columns'], list) \
+                    and not isinstance(r['values'], list):
+                r['columns'] = [r['columns']]
+                r['values'] = [r['values']]
+            if len(r['columns']) != len(r['values']):
+                raise SqlStatementParseError(f"Columns and values have different amounts")
+
+            for i, val in enumerate(r['values']):
+                if isinstance(val, str) and val.lower() == 'null':
+                    result['where'][r['columns'][i]] = None
+                elif val == '?':
+                    result['where'][r['columns'][i]] = SQL_PARAMETER
+                elif isinstance(val, str) and val.lower() == 'default':
+                    result['where'][r['columns'][i]] = SQL_DEFAULT
+                elif SqlStatementParser.is_int_str(val):
+                    result['where'][r['columns'][i]] = int(val)
+                elif SqlStatementParser.is_float_str(val):
+                    result['where'][r['columns'][i]] = float(val)
+                elif SqlStatementParser.is_quoted_str(val):
+                    result['where'][r['columns'][i]] = SqlStatementParser.unquote(val)
+                elif isinstance(val, str):
+                    # it should be in one case, only if server send function as argument, for example:
+                    # insert into table (datetime) values (now())
+                    raise Exception(f"Error: cant determine type of '{val}'")
+
+        for key, value in result['where'].items():
+            if SqlStatementParser.is_quoted_str(value):
+                result['where'][key] = SqlStatementParser.unquote(value)
+
+        return result
 
     def parse_as_insert(self) -> dict:
         ''' Parse insert. Example: 'insert into database.table (columns) values (values)'
@@ -307,6 +389,44 @@ class SqlStatementParser():
                         'values': [1]
                     }
                 }
+            ], [
+                "delete from database_a.table_a where column_a = 1",
+                {
+                    'keyword': 'delete',
+                    'struct': {
+                        'database': 'database_a',
+                        'table': 'table_a',
+                        'where': {
+                            'column_a': 1
+                        }
+                    }
+                }
+            ], [
+                "delete from table_a where column_a = 1 and column_b = ?;",
+                {
+                    'keyword': 'delete',
+                    'struct': {
+                        'database': None,
+                        'table': 'table_a',
+                        'where': {
+                            'column_a': 1,
+                            'column_b': SQL_PARAMETER
+                        }
+                    }
+                }
+            ], [
+                "delete from database_c.table_a where column_a = ? and column_b = ?;",
+                {
+                    'keyword': 'delete',
+                    'struct': {
+                        'database': 'database_c',
+                        'table': 'table_a',
+                        'where': {
+                            'column_a': SQL_PARAMETER,
+                            'column_b': SQL_PARAMETER
+                        }
+                    }
+                }
             ]
         ]
         for test in tests:
@@ -322,6 +442,9 @@ class SqlStatementParser():
                     assert(struct_check['database'] == statement.struct['database'])
                 if 'table' in struct_check:
                     assert(struct_check['table'] == statement.struct['table'])
+                if 'where' in struct_check:
+                    for idx, key in enumerate(struct_check['where'].keys()):
+                        assert(struct_check['where'][key] == statement.struct['where'][key])
                 for key in ['columns', 'values']:
                     if key in struct_check:
                         assert(len(struct_check[key]) == len(statement.struct[key]))

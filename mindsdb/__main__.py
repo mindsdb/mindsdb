@@ -14,7 +14,12 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.fs import get_or_create_dir_struct, update_versions_file, archive_obsolete_predictors
+from mindsdb.utilities.fs import (
+    get_or_create_dir_struct,
+    update_versions_file,
+    archive_obsolete_predictors,
+    remove_corrupted_predictors
+)
 from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse
@@ -132,6 +137,9 @@ More instructions in https://docs.mindsdb.com
 
     mdb = MindsdbNative(config)
     cst = CustomModels(config)
+
+    remove_corrupted_predictors(config, mdb)
+
     # @TODO Maybe just use `get_model_data` directly here ? Seems like a useless abstraction
     model_data_arr = [
         {

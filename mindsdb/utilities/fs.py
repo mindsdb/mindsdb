@@ -191,3 +191,19 @@ def archive_obsolete_predictors(config, old_version):
                 Path(config.paths['predictors']).joinpath(p),
                 new_path
             )
+
+
+def remove_corrupted_predictors(config, mindsdb_native):
+    for p in [x for x in Path(config.paths['predictors']).iterdir() if x.is_dir()]:
+        model_name = p.name
+        try:
+            mindsdb_native.get_model_data(model_name)
+        except Exception as e:
+            print(f"Error: predictor '{model_name}' corrupted. Move predictor data to '{{storage_dir}}/tmp/corrupted_predictors' dir.")
+            print(f"Reason is: {e}")
+            corrupted_predictors_dir = Path(config.paths['tmp']).joinpath('corrupted_predictors')
+            create_directory(corrupted_predictors_dir)
+            shutil.move(
+                p,
+                corrupted_predictors_dir.joinpath(model_name)
+            )

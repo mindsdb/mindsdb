@@ -22,3 +22,7 @@ distributions/docker-compose/*/storage
 venv/*
 root
 static
+tmp
+predictors
+datasources
+.pytest_cache

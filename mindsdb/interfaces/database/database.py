@@ -19,7 +19,7 @@ class DatabaseWrapper():
                 integration.setup()
                 working_integration_arr.append(integration)
             except Exception as e:
-                print('Failed to integrate with database' + integration.name + f', error: {e}')
+                print('Failed to integrate with database ' + integration.name + f', error: {e}')
 
         return working_integration_arr
 

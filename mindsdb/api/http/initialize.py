@@ -31,7 +31,7 @@ class Swagger_Api(Api):
 
 
 def initialize_static(config):
-    ''' Update Scout files basing on compatible-config.json content. 
+    ''' Update Scout files basing on compatible-config.json content.
         Files will be downloaded and updated if new version of GUI > current.
         Current GUI version stored in static/version.txt.
     '''
@@ -177,9 +177,10 @@ def initialize_static(config):
 
 
 def initialize_flask(config):
+    # Apparently there's a bug that causes the static path not to work if it's '/' -- https://github.com/pallets/flask/issues/3134, I think '' should achieve the same thing (???)
     app = Flask(
         __name__,
-        static_url_path='/',
+        static_url_path='',
         static_folder=config.paths['static']
     )
 

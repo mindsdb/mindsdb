@@ -43,7 +43,7 @@ def start(config, verbose=False):
     host = config['api']['http']['host']
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
-
+    
     if server.lower() == 'waitress':
         serve(app, port=port, host=host)
     elif server.lower() == 'flask':

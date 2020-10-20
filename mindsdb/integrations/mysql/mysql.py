@@ -5,10 +5,6 @@ from mindsdb.integrations.base import Integration
 
 
 class MySQL(Integration):
-    def __init__(self, config, name):
-        self.config = config
-        self.name = name
-
     def _to_mysql_table(self, stats, predicted_cols):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
@@ -76,15 +72,14 @@ class MySQL(Integration):
         return connect
 
     def setup(self):
-        self._query('DROP DATABASE IF EXISTS mindsdb')
-
-        self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
+        self._query(f'DROP DATABASE IF EXISTS {self.mindsdb_database}')
+        self._query(f'CREATE DATABASE IF NOT EXISTS {self.mindsdb_database}')
 
         connect = self._get_connect_string('predictors')
 
         q = f"""
-                CREATE TABLE IF NOT EXISTS mindsdb.predictors
-                (name VARCHAR(500),
+            CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.predictors (
+                name VARCHAR(500),
                 status VARCHAR(500),
                 accuracy VARCHAR(500),
                 predict VARCHAR(500),
@@ -92,14 +87,14 @@ class MySQL(Integration):
                 external_datasource VARCHAR(500),
                 training_options VARCHAR(500),
                 key name_key (name)
-                ) ENGINE=FEDERATED CONNECTION='{connect}';
+            ) ENGINE=FEDERATED CONNECTION='{connect}';
         """
         self._query(q)
 
         connect = self._get_connect_string('commands')
 
         q = f"""
-            CREATE TABLE IF NOT EXISTS mindsdb.commands (
+            CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.commands (
                 command VARCHAR(500),
                 key command_key (command)
             ) ENGINE=FEDERATED CONNECTION='{connect}';
@@ -124,19 +119,18 @@ class MySQL(Integration):
             connect = self._get_connect_string(name)
 
             q = f"""
-                    CREATE TABLE mindsdb.{self._escape_table_name(name)}
-                    (
-                        {columns_sql},
-                        index when_data_index (when_data),
-                        index select_data_query_index (select_data_query),
-                        index external_datasource_index (external_datasource)
-                    ) ENGINE=FEDERATED CONNECTION='{connect}';
+                CREATE TABLE {self.mindsdb_database}.{self._escape_table_name(name)} (
+                    {columns_sql},
+                    index when_data_index (when_data),
+                    index select_data_query_index (select_data_query),
+                    index external_datasource_index (external_datasource)
+                ) ENGINE=FEDERATED CONNECTION='{connect}';
             """
             self._query(q)
 
     def unregister_predictor(self, name):
         q = f"""
-            drop table if exists mindsdb.{self._escape_table_name(name)};
+            drop table if exists {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
 

@@ -14,10 +14,16 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.fs import get_or_create_dir_struct, update_versions_file, archive_obsolete_predictors
+from mindsdb.utilities.fs import (
+    get_or_create_dir_struct,
+    update_versions_file,
+    archive_obsolete_predictors,
+    remove_corrupted_predictors
+)
 from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse
+from mindsdb.utilities.log import initialize_log
 
 
 def close_api_gracefully(apis):
@@ -56,6 +62,12 @@ More instructions in https://docs.mindsdb.com
 
     args = args_parse()
 
+    from mindsdb.__about__ import __version__ as mindsdb_version
+
+    if args.version:
+        print(f'MindsDB {mindsdb_version}')
+        sys.exit(0)
+
     config_path = args.config
     if config_path is None:
         config_dir, _ = get_or_create_dir_struct()
@@ -63,11 +75,12 @@ More instructions in https://docs.mindsdb.com
 
     config = Config(config_path)
 
-    from mindsdb.__about__ import __version__ as mindsdb_version
+    if args.verbose is True:
+        config['log']['level']['console'] = 'DEBUG'
+    os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
+    os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
 
-    if args.version:
-        print(f'MindsDB {mindsdb_version}')
-        sys.exit(0)
+    log = initialize_log(config)
 
     try:
         lightwood_version = get_distribution('lightwood').version
@@ -88,10 +101,6 @@ More instructions in https://docs.mindsdb.com
     print(f' - MindsDB {mindsdb_version}')
 
     os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
-    if args.verbose is True:
-        config['log']['level']['console'] = 'DEBUG'
-    os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
-    os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
 
     update_versions_file(
         config,
@@ -132,6 +141,9 @@ More instructions in https://docs.mindsdb.com
 
     mdb = MindsdbNative(config)
     cst = CustomModels(config)
+
+    remove_corrupted_predictors(config, mdb)
+
     # @TODO Maybe just use `get_model_data` directly here ? Seems like a useless abstraction
     model_data_arr = [
         {
@@ -147,7 +159,7 @@ More instructions in https://docs.mindsdb.com
     dbw.register_predictors(model_data_arr)
 
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
-        print(f'Error failed to integrate with database aliased: {broken_name}')
+        log.error(f'Error failed to integrate with database aliased: {broken_name}')
 
     ctx = mp.get_context('spawn')
 
@@ -159,8 +171,7 @@ More instructions in https://docs.mindsdb.com
             api_data['process'] = p
         except Exception as e:
             close_api_gracefully(apis)
-            print(f'Failed to start {api_name} API with exception {e}')
-            print(traceback.format_exc())
+            log.error(f'Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}')
             raise
 
     atexit.register(close_api_gracefully, apis=apis)
@@ -184,7 +195,7 @@ More instructions in https://docs.mindsdb.com
             if started:
                 print(f"{api_name} API: started on {port}")
             else:
-                print(f"ERROR: {api_name} API cant start on {port}")
+                log.error(f"ERROR: {api_name} API cant start on {port}")
 
     ioloop = asyncio.get_event_loop()
     ioloop.run_until_complete(wait_apis_start())

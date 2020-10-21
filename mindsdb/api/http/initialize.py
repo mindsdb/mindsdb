@@ -184,6 +184,10 @@ def initialize_flask(config):
         static_folder=config.paths['static']
     )
 
+    @app.route('/')
+    def root_index():
+        return app.send_static_file('index.html')
+
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     authorizations = {
         'apikey': {
@@ -212,7 +216,8 @@ def initialize_flask(config):
         authorizations=authorizations,
         security=['apikey'],
         url_prefix=':8000',
-        prefix='/api'
+        prefix='/api',
+        doc='/doc/'
     )
 
     # NOTE rewrite it, that hotfix to see GUI link

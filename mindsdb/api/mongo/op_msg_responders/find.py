@@ -96,9 +96,11 @@ class Responce(Responder):
                         if key in row:
                             del row[key]
 
+        db = mindsdb_env['config']['api']['mongodb']['database']
+
         cursor = {
             'id': Int64(0),
-            'ns': f"mindsdb.$cmd.{query['find']}",
+            'ns': f"{db}.$cmd.{query['find']}",
             'firstBatch': data
         }
         return {

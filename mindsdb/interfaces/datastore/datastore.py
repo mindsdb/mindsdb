@@ -201,6 +201,10 @@ class DataStore():
 
         df = ds.df
 
+        if '' in df.columns or len(df.columns) != len(set(df.columns)):
+            shutil.rmtree(ds_meta_dir)
+            raise Exception('Each column in datasource must have unique name')
+
         df_with_types = cast_df_columns_types(df, self.get_analysis(df)['data_analysis_v2'])
         create_sqlite_db(os.path.join(ds_meta_dir, 'sqlite.db'), df_with_types)
 

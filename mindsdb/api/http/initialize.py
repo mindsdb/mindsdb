@@ -31,7 +31,7 @@ class Swagger_Api(Api):
 
 
 def initialize_static(config):
-    ''' Update Scout files basing on compatible-config.json content. 
+    ''' Update Scout files basing on compatible-config.json content.
         Files will be downloaded and updated if new version of GUI > current.
         Current GUI version stored in static/version.txt.
     '''
@@ -177,11 +177,16 @@ def initialize_static(config):
 
 
 def initialize_flask(config):
+    # Apparently there's a bug that causes the static path not to work if it's '/' -- https://github.com/pallets/flask/issues/3134, I think '' should achieve the same thing (???)
     app = Flask(
         __name__,
-        static_url_path='/',
+        static_url_path='',
         static_folder=config.paths['static']
     )
+
+    @app.route('/')
+    def root_index():
+        return app.send_static_file('index.html')
 
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     authorizations = {
@@ -211,7 +216,8 @@ def initialize_flask(config):
         authorizations=authorizations,
         security=['apikey'],
         url_prefix=':8000',
-        prefix='/api'
+        prefix='/api',
+        doc='/doc/'
     )
 
     # NOTE rewrite it, that hotfix to see GUI link

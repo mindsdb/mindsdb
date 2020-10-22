@@ -20,3 +20,9 @@ tests/docker/mongodb/storage_*
 .vscode
 distributions/docker-compose/*/storage
 venv/*
+root
+static
+tmp
+predictors
+datasources
+.pytest_cache

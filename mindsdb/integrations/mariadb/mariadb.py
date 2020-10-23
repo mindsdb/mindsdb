@@ -5,10 +5,6 @@ from mindsdb.integrations.base import Integration
 
 
 class Mariadb(Integration):
-    def __init__(self, config, name):
-        self.config = config
-        self.name = name
-
     def _to_mariadb_table(self, stats, predicted_cols):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
@@ -76,29 +72,29 @@ class Mariadb(Integration):
         return connect
 
     def setup(self):
-        self._query('DROP DATABASE IF EXISTS mindsdb')
+        self._query(f'DROP DATABASE IF EXISTS {self.mindsdb_database}')
 
-        self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
+        self._query(f'CREATE DATABASE IF NOT EXISTS {self.mindsdb_database}')
 
         connect = self._get_connect_string('predictors')
 
         q = f"""
-                CREATE TABLE IF NOT EXISTS mindsdb.predictors
-                (name VARCHAR(500),
+            CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.predictors (
+                name VARCHAR(500),
                 status VARCHAR(500),
                 accuracy VARCHAR(500),
                 predict VARCHAR(500),
                 select_data_query VARCHAR(500),
                 external_datasource VARCHAR(500),
                 training_options VARCHAR(500)
-                ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+            ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
         self._query(q)
 
         connect = self._get_connect_string('commands')
 
         q = f"""
-            CREATE TABLE IF NOT EXISTS mindsdb.commands (
+            CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.commands (
                 command VARCHAR(500)
             ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
@@ -122,7 +118,7 @@ class Mariadb(Integration):
             connect = self._get_connect_string(name)
 
             q = f"""
-                    CREATE TABLE mindsdb.{self._escape_table_name(name)}
+                    CREATE TABLE {self.mindsdb_database}.{self._escape_table_name(name)}
                     ({columns_sql}
                     ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
             """
@@ -130,7 +126,7 @@ class Mariadb(Integration):
 
     def unregister_predictor(self, name):
         q = f"""
-            drop table if exists mindsdb.{self._escape_table_name(name)};
+            drop table if exists {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
 

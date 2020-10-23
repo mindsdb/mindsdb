@@ -32,7 +32,7 @@ jobs:
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
-          scp -i /home/maxs/.ssh/db_machine ubuntu@3.220.66.106:/home/ubuntu/mindsdb_server_enterprise/database_testing_env/test.txt test.txt
+          scp -i ~/.ssh/db_machine ubuntu@3.220.66.106:/home/ubuntu/mindsdb_server_enterprise/database_testing_env/test.txt test.txt
           cat test.txt
         fi
       shell: bash

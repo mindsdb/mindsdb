@@ -7,45 +7,59 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.6, 3.7, 3.8]
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
+        # python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install --no-cache-dir .
-    - name: Install mindsdb_native/staging if it's not mindsdb/stable
-      if: github.ref != 'refs/heads/stable'
-      run: |
-          pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
-          pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
-    - name: Run integration api and flow tests
+    # - name: Install dependencies
+    #   run: |
+    #     python -m pip install --upgrade pip
+    #     pip install --no-cache-dir .
+    # - name: Install mindsdb_native/staging if it's not mindsdb/stable
+    #   if: github.ref != 'refs/heads/stable'
+    #   run: |
+    #       pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
+    #       pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+    - name: Check copy db file
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
-          cd tests/docker
-          docker-compose -f docker-compose.yml up -d
-          cd ../..
-          pip install -r requirements_test.txt
-          # maybe use TestSuite addTest
-          python tests/integration_tests/flows/test_custom_model.py
-          python tests/integration_tests/flows/test_clickhouse.py
-          python tests/integration_tests/flows/test_mariadb.py
-          python tests/integration_tests/flows/test_mysql.py
-          python tests/integration_tests/flows/test_postgres.py
-          python tests/integration_tests/flows/test_mongo.py
-          sleep 61
-          python tests/integration_tests/api/test_http.py
-          cd tests/docker
-          docker-compose down
+          mkdir -p ~/.ssh/
+          echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
+          sudo chmod 600 ~/.ssh/db_machine
+          scp -i /home/maxs/.ssh/db_machine ubuntu@3.220.66.106:/home/ubuntu/mindsdb_server_enterprise/database_testing_env/test.txt test.txt
+          cat test.txt
         fi
       shell: bash
       env:
-        CHECK_FOR_UPDATES: False
+        DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
+    # - name: Run integration api and flow tests
+    #   run: |
+    #     if [ "$RUNNER_OS" == "Linux" ]; then
+    #       cd tests/docker
+    #       docker-compose -f docker-compose.yml up -d
+    #       cd ../..
+    #       pip install -r requirements_test.txt
+    #       # maybe use TestSuite addTest
+    #       python tests/integration_tests/flows/test_custom_model.py
+    #       python tests/integration_tests/flows/test_clickhouse.py
+    #       python tests/integration_tests/flows/test_mariadb.py
+    #       python tests/integration_tests/flows/test_mysql.py
+    #       python tests/integration_tests/flows/test_postgres.py
+    #       python tests/integration_tests/flows/test_mongo.py
+    #       sleep 61
+    #       python tests/integration_tests/api/test_http.py
+    #       cd tests/docker
+    #       docker-compose down
+    #     fi
+    #   shell: bash
+    #   env:
+    #     CHECK_FOR_UPDATES: False
 
   deploy_windows_installer:
     runs-on: windows-latest

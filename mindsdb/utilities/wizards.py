@@ -229,8 +229,9 @@ def daemon_creator(python_path, config_path=None):
 
 def make_executable(python_path, exec_path, config_path=None, update=False):
     text = f"""#!/bin/bash
-update={update}
-if [ "$update" = True ] 
+update={str(update).lower()}
+
+if [ "$update" = true ] 
     then
     {python_path} -m pip install mindsdb --upgrade 
 fi

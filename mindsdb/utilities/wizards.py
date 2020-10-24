@@ -227,8 +227,14 @@ def daemon_creator(python_path, config_path=None):
     return daemon_path
 
 
-def make_executable(python_path, exec_path, config_path=None):
+def make_executable(python_path, exec_path, config_path=None, update=False):
     text = f"""#!/bin/bash
+update={str(update).lower()}
+
+if [ "$update" = true ] 
+    then
+    {python_path} -m pip install mindsdb --upgrade 
+fi
 {python_path} -m mindsdb { "--config="+config_path  if config_path else ""}
 """
 

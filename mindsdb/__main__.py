@@ -27,13 +27,15 @@ from mindsdb.utilities.log import initialize_log
 
 
 def close_api_gracefully(apis):
-    for api in apis.values():
-        process = api['process']
-        sys.stdout.flush()
-        process.terminate()
-        process.join()
-        sys.stdout.flush()
-
+    try: 
+        for api in apis.values():
+            process = api['process']
+            sys.stdout.flush()
+            process.terminate()
+            process.join()
+            sys.stdout.flush()
+    except KeyboardInterrupt:
+        sys.exit(0)
 
 if __name__ == '__main__':
     version_error_msg = """

@@ -21,7 +21,8 @@ from mindsdb_native import CONFIG
 # USE_EXTERNAL_DB_SERVER = os.getenv('EXTERNAL_DB_SERVER')
 USE_EXTERNAL_DB_SERVER = True
 
-EXTERNAL_DB_CREDENTIALS = str(Path.home().joinpath('.mindsdb_credentials.json'))
+# EXTERNAL_DB_CREDENTIALS = str(Path.home().joinpath('.mindsdb_credentials.json'))
+EXTERNAL_DB_CREDENTIALS = '/home/maxs/dev/mdb/venv_new/sources/mindsdb_server_enterprise/database_testing_env/credentials.json'
 
 MINDSDB_DATABASE = f'mindsdb_{int(time.time()*1000)}' if USE_EXTERNAL_DB_SERVER else 'mindsdb'
 
@@ -74,12 +75,12 @@ def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_i
 
 if USE_EXTERNAL_DB_SERVER:
     config = Config(TEST_CONFIG)
-    r = requests.get('http://127.0.0.1:5005/port')
-    if r.status_code != 200:
-        raise Exception('Cant get port to run mindsdb')
-    mindsdb_port = r.content.decode()
-    print(f'use mindsdb port={mindsdb_port}')
-    config._config['api']['mysql']['port'] = mindsdb_port
+    # r = requests.get('http://127.0.0.1:5005/port')
+    # if r.status_code != 200:
+    #     raise Exception('Cant get port to run mindsdb')
+    # mindsdb_port = r.content.decode()
+    # print(f'use mindsdb port={mindsdb_port}')
+    # config._config['api']['mysql']['port'] = mindsdb_port
 
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())

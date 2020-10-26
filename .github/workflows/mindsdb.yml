@@ -35,10 +35,10 @@ jobs:
           # echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
           scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/db_machine ubuntu@3.220.66.106:/home/ubuntu/mindsdb_server_enterprise/database_testing_env/credentials.json ~/.mindsdb_credentials.json
           sudo chmod 644 ~/.mindsdb_credentials.json
-          ls -ll ~/ | grep mindsdb
+          # ls -ll ~/ | grep mindsdb
           # test
-          pip install -r requirements_test.txt
-          python tests/integration_tests/flows/test_clickhouse.py
+          # pip install -r requirements_test.txt
+          # python tests/integration_tests/flows/test_clickhouse.py
         fi
       shell: bash
       env:

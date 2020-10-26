@@ -72,8 +72,8 @@ class ClickhouseTest(unittest.TestCase):
         }
         if USE_EXTERNAL_DB_SERVER:
             with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
-                cred = json.loads(EXTERNAL_DB_CREDENTIALS)
-                override_integration_config.update(cred['clickhouse'])
+                cred = json.loads(f.read())
+                override_integration_config['default_clickhouse'].update(cred['clickhouse'])
         mdb, datastore = run_environment(
             config,
             apis=['mysql'],

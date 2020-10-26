@@ -47,6 +47,13 @@ def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_i
     for key in config._config['integrations'].keys():
         config._config['integrations'][key]['enabled'] = key in enable_dbs
 
+    if USE_EXTERNAL_DB_SERVER:
+        with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
+            cred = json.loads(f.read())
+            for key in cred:
+                if f'default_{key}' in config._config['integrations']:
+                    config._config['integrations'][f'default_{key}'].update(cred[key])
+
     for integration in override_integration_config.keys():
         config._config['integrations'][integration].update(override_integration_config[integration])
 

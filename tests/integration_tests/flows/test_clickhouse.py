@@ -2,14 +2,12 @@ import unittest
 import requests
 import csv
 import inspect
-import json
 
 from mindsdb.utilities.config import Config
 
 from common import (
     MINDSDB_DATABASE,
     USE_EXTERNAL_DB_SERVER,
-    EXTERNAL_DB_CREDENTIALS,
     run_environment,
     get_test_csv,
     TEST_CONFIG
@@ -65,20 +63,15 @@ def query(query):
 class ClickhouseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        override_integration_config = {
-            'default_clickhouse': {
-                'enabled': True
-            }
-        }
-        if USE_EXTERNAL_DB_SERVER:
-            with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
-                cred = json.loads(f.read())
-                override_integration_config['default_clickhouse'].update(cred['clickhouse'])
         mdb, datastore = run_environment(
             config,
             apis=['mysql'],
             run_docker_db=[] if USE_EXTERNAL_DB_SERVER else ['clickhouse'],
-            override_integration_config=override_integration_config,
+            override_integration_config={
+                'default_clickhouse': {
+                    'enabled': True
+                }
+            },
             mindsdb_database=MINDSDB_DATABASE
         )
         cls.mdb = mdb

@@ -40,6 +40,8 @@ jobs:
           export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
           ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:47335:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
           python tests/integration_tests/flows/test_clickhouse.py
+          export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
+          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:47335:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
           python tests/integration_tests/flows/test_mariadb.py
         fi
       shell: bash

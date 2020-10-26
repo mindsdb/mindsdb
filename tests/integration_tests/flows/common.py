@@ -23,7 +23,7 @@ USE_EXTERNAL_DB_SERVER = True
 
 EXTERNAL_DB_CREDENTIALS = '~/.mindsdb_credentials.json'
 
-MINDSDB_DATABASE = f'mindsdb_{int(time()*1000)}' if USE_EXTERNAL_DB_SERVER else 'mindsdb'
+MINDSDB_DATABASE = f'mindsdb_{int(time.time()*1000)}' if USE_EXTERNAL_DB_SERVER else 'mindsdb'
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 

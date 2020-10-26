@@ -78,6 +78,7 @@ if USE_EXTERNAL_DB_SERVER:
     if r.status_code != 200:
         raise Exception('Cant get port to run mindsdb')
     mindsdb_port = r.content.decode()
+    print(f'use mindsdb port={mindsdb_port}')
     config._config['api']['mysql']['port'] = mindsdb_port
 
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
@@ -94,6 +95,7 @@ def is_port_opened(port, host='127.0.0.1'):
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
         is_open = sock.connect_ex((host, int(port))) == 0
     return is_open
+
 
 def wait_api_ready(config, api='mysql'):
     port_num = config['api'][api]['port']

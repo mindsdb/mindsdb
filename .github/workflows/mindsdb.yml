@@ -34,7 +34,7 @@ jobs:
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
           echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
-          sudo chmod 600 ~/.mindsdb_credentials.json
+          sudo chmod 644 ~/.mindsdb_credentials.json
           ls -ll ~/ | grep mindsdb
           python tests/integration_tests/flows/test_clickhouse.py
         fi

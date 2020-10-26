@@ -74,6 +74,12 @@ def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_i
 
 if USE_EXTERNAL_DB_SERVER:
     config = Config(TEST_CONFIG)
+    r = requests.get('http://127.0.0.1:5005/port')
+    if r.status_code != 200:
+        raise Exception('Cant get port to run mindsdb')
+    mindsdb_port = r.content.decode()
+    config._config['api']['mysql']['port'] = mindsdb_port
+
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())
     override = {}

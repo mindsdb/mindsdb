@@ -37,6 +37,7 @@ jobs:
           sudo chmod 644 ~/.mindsdb_credentials.json
           pip install -r requirements_test.txt
           ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:47335:127.0.0.1:47335 ubuntu@3.220.66.106
+          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 127.0.0.1:5005:127.0.0.1:5005 ubuntu@3.220.66.106
           python tests/integration_tests/flows/test_clickhouse.py
           python tests/integration_tests/flows/test_mariadb.py
         fi

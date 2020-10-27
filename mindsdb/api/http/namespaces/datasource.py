@@ -152,6 +152,8 @@ class Analyze(Resource):
         if name in ds_analysis:
             if ds_analysis[name] is None:
                 return {'status': 'analyzing'}, 200
+            elif (datetime.datetime.utcnow() - ds_analysis[name]['created_at']) > datetime.timedelta(seconds=3600):
+                del ds_analysis[name]
             else:
                 analysis = ds_analysis[name]['data']
                 return analysis, 200

@@ -5,10 +5,6 @@ from mindsdb.integrations.base import Integration
 
 
 class Clickhouse(Integration):
-    def __init__(self, config, name):
-        self.config = config
-        self.name = name
-
     def _to_clickhouse_table(self, stats, predicted_cols):
         subtype_map = {
             DATA_SUBTYPES.INT: 'Nullable(Int64)',
@@ -69,15 +65,15 @@ class Clickhouse(Integration):
         return '`' + name.replace('`', '\\`') + '`'
 
     def setup(self):
-        self._query('DROP DATABASE IF EXISTS mindsdb')
-        self._query('CREATE DATABASE IF NOT EXISTS mindsdb')
+        self._query(f'DROP DATABASE IF EXISTS {self.mindsdb_database}')
+        self._query(f'CREATE DATABASE IF NOT EXISTS {self.mindsdb_database}')
 
         msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
         msqyl_pass = self.config['api']['mysql']['password']
         msqyl_user = self._get_mysql_user()
 
         q = f"""
-            CREATE TABLE IF NOT EXISTS mindsdb.predictors (
+            CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.predictors (
                 name String,
                 status String,
                 accuracy String,
@@ -89,7 +85,7 @@ class Clickhouse(Integration):
         """
         self._query(q)
         q = f"""
-            CREATE TABLE IF NOT EXISTS mindsdb.commands (
+            CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.commands (
                 command String
             ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'commands', '{msqyl_user}', '{msqyl_pass}')
         """
@@ -117,15 +113,15 @@ class Clickhouse(Integration):
             msqyl_user = self._get_mysql_user()
 
             q = f"""
-                    CREATE TABLE mindsdb.{name}
-                    ({columns_sql}
-                    ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', {name}, '{msqyl_user}', '{msqyl_pass}')
+                CREATE TABLE {self.mindsdb_database}.{name}
+                ({columns_sql}
+                ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', {name}, '{msqyl_user}', '{msqyl_pass}')
             """
             self._query(q)
 
     def unregister_predictor(self, name):
         q = f"""
-            drop table if exists mindsdb.{self._escape_table_name(name)};
+            drop table if exists {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
 

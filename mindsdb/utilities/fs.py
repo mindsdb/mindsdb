@@ -5,6 +5,7 @@ import json
 import shutil
 import pickle
 from distutils.version import LooseVersion
+import logging
 
 
 def create_directory(path):
@@ -51,21 +52,21 @@ def get_or_create_dir_struct():
         try:
             for dir in tup:
                 assert(os.path.exists(dir))
-                assert(os.access(dir, os.W_OK) == True)
+                assert(os.access(dir, os.W_OK) is True)
 
             config_dir = tup[0]
             if 'DEV_CONFIG_PATH' in os.environ:
                 config_dir = os.environ['DEV_CONFIG_PATH']
 
             return config_dir, tup[1]
-        except Exception as e:
+        except Exception:
             pass
 
     for tup in get_paths():
         try:
             for dir in tup:
                 create_directory(dir)
-                assert(os.access(dir, os.W_OK) == True)
+                assert(os.access(dir, os.W_OK) is True)
 
             config_dir = tup[0]
             if 'DEV_CONFIG_PATH' in os.environ:
@@ -73,10 +74,10 @@ def get_or_create_dir_struct():
 
             return config_dir, tup[1]
 
-        except Exception as e:
+        except Exception:
             pass
 
-    raise Exception(f'MindsDB storage directory: {path} does not exist and could not be created, trying another directory')
+    raise Exception('MindsDB storage directory does not exist and could not be created')
 
 
 def do_init_migration(paths):
@@ -190,4 +191,24 @@ def archive_obsolete_predictors(config, old_version):
             shutil.move(
                 Path(config.paths['predictors']).joinpath(p),
                 new_path
+            )
+
+
+def remove_corrupted_predictors(config, mindsdb_native):
+    ''' Checking that all predictors can be loaded.
+        If not - then move such predictir to {storage_dir}/tmp/corrupted_predictors
+    '''
+    for p in [x for x in Path(config.paths['predictors']).iterdir() if x.is_dir()]:
+        model_name = p.name
+        try:
+            mindsdb_native.get_model_data(model_name)
+        except Exception as e:
+            log = logging.getLogger('mindsdb.main')
+            log.error(f"Error: predictor '{model_name}' corrupted. Move predictor data to '{{storage_dir}}/tmp/corrupted_predictors' dir.")
+            log.error(f"Reason is: {e}")
+            corrupted_predictors_dir = Path(config.paths['tmp']).joinpath('corrupted_predictors')
+            create_directory(corrupted_predictors_dir)
+            shutil.move(
+                p,
+                corrupted_predictors_dir.joinpath(model_name)
             )

@@ -22,11 +22,13 @@ default_config = {
             "host": "127.0.0.1",
             "password": "",
             "port": "47335",
-            "user": "mindsdb"
+            "user": "mindsdb",
+            "database": "mindsdb"
         },
         "mongodb": {
             "host": "127.0.0.1",
-            "port": "47336"
+            "port": "47336",
+            "database": "mindsdb"
         }
     }
 }

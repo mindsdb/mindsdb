@@ -4,6 +4,7 @@ import sys
 import os
 import time
 import asyncio
+import logging
 
 from pkg_resources import get_distribution
 import torch.multiprocessing as mp
@@ -27,12 +28,15 @@ from mindsdb.utilities.log import initialize_log
 
 
 def close_api_gracefully(apis):
-    for api in apis.values():
-        process = api['process']
-        sys.stdout.flush()
-        process.terminate()
-        process.join()
-        sys.stdout.flush()
+    try: 
+        for api in apis.values():
+            process = api['process']
+            sys.stdout.flush()
+            process.terminate()
+            process.join()
+            sys.stdout.flush()
+    except KeyboardInterrupt:
+        sys.exit(0)
 
 
 if __name__ == '__main__':
@@ -80,7 +84,8 @@ More instructions in https://docs.mindsdb.com
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
 
-    log = initialize_log(config)
+    initialize_log(config)
+    log = logging.getLogger('mindsdb.main')
 
     try:
         lightwood_version = get_distribution('lightwood').version

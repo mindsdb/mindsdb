@@ -1,7 +1,7 @@
 import os
 import boto3
 from pathlib import Path
-from itertools import bisect_left
+from bisect import bisect_left
 
 required_env_variables = [
     'AWS_ACCESS_KEY_ID',

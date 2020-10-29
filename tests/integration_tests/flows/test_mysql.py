@@ -7,6 +7,8 @@ import mysql.connector
 from mindsdb.utilities.config import Config
 
 from common import (
+    MINDSDB_DATABASE,
+    USE_EXTERNAL_DB_SERVER,
     run_environment,
     get_test_csv,
     TEST_CONFIG
@@ -30,7 +32,7 @@ def query(q, as_dict=False):
         port=config['integrations']['default_mysql']['port'],
         user=config['integrations']['default_mysql']['user'],
         passwd=config['integrations']['default_mysql']['password'],
-        db='mindsdb'
+        db=MINDSDB_DATABASE
     )
 
     cur = con.cursor(dictionary=as_dict)
@@ -48,7 +50,17 @@ def query(q, as_dict=False):
 class MariaDBTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment('mysql', config)
+        mdb, datastore = run_environment(
+            config,
+            apis=['mysql'],
+            run_docker_db=[] if USE_EXTERNAL_DB_SERVER else ['mysql'],
+            override_integration_config={
+                'default_mysql': {
+                    'enabled': True
+                }
+            },
+            mindsdb_database=MINDSDB_DATABASE
+        )
         cls.mdb = mdb
 
         models = cls.mdb.get_models()
@@ -58,13 +70,13 @@ class MariaDBTest(unittest.TestCase):
 
         test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
 
-        query('create database if not exists test')
-        test_tables = query('show tables from test')
+        query('create database if not exists test_data')
+        test_tables = query('show tables from test_data')
         test_tables = [x[0] for x in test_tables]
         if TEST_DATA_TABLE not in test_tables:
             print('creating test data table...')
             query(f'''
-                CREATE TABLE test.{TEST_DATA_TABLE} (
+                CREATE TABLE test_data.{TEST_DATA_TABLE} (
                     number_of_rooms int,
                     number_of_bathrooms int,
                     sqft int,
@@ -89,7 +101,7 @@ class MariaDBTest(unittest.TestCase):
                         initial_price = int(row[5])
                         neighborhood = str(row[6])
                         rental_price = int(float(row[7]))
-                        query(f'''INSERT INTO test.{TEST_DATA_TABLE} VALUES (
+                        query(f'''INSERT INTO test_data.{TEST_DATA_TABLE} VALUES (
                             {number_of_rooms},
                             {number_of_bathrooms},
                             {sqft},
@@ -117,12 +129,12 @@ class MariaDBTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print('Test datasource exists')
-        test_tables = query('show tables from test')
+        test_tables = query('show tables from test_data')
         test_tables = [x[0] for x in test_tables]
         self.assertTrue(TEST_DATA_TABLE in test_tables)
 
         print('Test predictor table not exists')
-        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
@@ -135,22 +147,22 @@ class MariaDBTest(unittest.TestCase):
     def test_2_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
-            insert into mindsdb.predictors (name, predict, select_data_query, training_options) values
+            insert into {MINDSDB_DATABASE}.predictors (name, predict, select_data_query, training_options) values
             (
                 '{TEST_PREDICTOR_NAME}',
                 'rental_price, location',
-                'select * from test.{TEST_DATA_TABLE} limit 100',
+                'select * from test_data.{TEST_DATA_TABLE} limit 100',
                 '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
             );
         """)
 
         print('predictor record in mindsdb.predictors')
-        res = query(f"select status from mindsdb.predictors where name = '{TEST_PREDICTOR_NAME}'", as_dict=True)
+        res = query(f"select status from {MINDSDB_DATABASE}.predictors where name = '{TEST_PREDICTOR_NAME}'", as_dict=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
         print('predictor table in mindsdb db')
-        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME in mindsdb_tables)
 
@@ -162,7 +174,7 @@ class MariaDBTest(unittest.TestCase):
             self.mdb.delete_model(name)
 
         query(f"""
-            insert into mindsdb.predictors (name, predict, external_datasource, training_options) values
+            insert into {MINDSDB_DATABASE}.predictors (name, predict, external_datasource, training_options) values
             (
                 '{name}',
                 'rental_price, location',
@@ -172,12 +184,12 @@ class MariaDBTest(unittest.TestCase):
         """)
 
         print('predictor record in mindsdb.predictors')
-        res = query(f"select status from mindsdb.predictors where name = '{name}'", as_dict=True)
+        res = query(f"select status from {MINDSDB_DATABASE}.predictors where name = '{name}'", as_dict=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
         print('predictor table in mindsdb db')
-        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(name in mindsdb_tables)
 
@@ -186,7 +198,7 @@ class MariaDBTest(unittest.TestCase):
                 rental_price, location, sqft, number_of_rooms,
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
-                mindsdb.{name} where external_datasource='{EXTERNAL_DS_NAME}'
+                {MINDSDB_DATABASE}.{name} where external_datasource='{EXTERNAL_DS_NAME}'
         """, as_dict=True)
 
         print('check result')
@@ -201,7 +213,7 @@ class MariaDBTest(unittest.TestCase):
                 rental_price, location, sqft, number_of_rooms,
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
-                mindsdb.{TEST_PREDICTOR_NAME} where when_data='{{"sqft": 1000}}';
+                {MINDSDB_DATABASE}.{TEST_PREDICTOR_NAME} where when_data='{{"sqft": 1000}}';
         """, as_dict=True)
 
         print('check result')
@@ -226,7 +238,7 @@ class MariaDBTest(unittest.TestCase):
                 rental_price, location, sqft, number_of_rooms,
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
-                mindsdb.{TEST_PREDICTOR_NAME} where select_data_query='select * from test.{TEST_DATA_TABLE} limit 3';
+                {MINDSDB_DATABASE}.{TEST_PREDICTOR_NAME} where select_data_query='select * from test_data.{TEST_DATA_TABLE} limit 3';
         """, as_dict=True)
 
         print('check result')
@@ -243,7 +255,7 @@ class MariaDBTest(unittest.TestCase):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
-            insert into mindsdb.commands values ('delete predictor {TEST_PREDICTOR_NAME}');
+            insert into {MINDSDB_DATABASE}.commands values ('delete predictor {TEST_PREDICTOR_NAME}');
         """)
 
         print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
@@ -251,7 +263,7 @@ class MariaDBTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print('Test predictor table not exists')
-        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
@@ -262,7 +274,7 @@ class MariaDBTest(unittest.TestCase):
     def test_8_delete_predictor_by_delete_statement(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
-            delete from mindsdb.predictors where name='{TEST_PREDICTOR_NAME}';
+            delete from {MINDSDB_DATABASE}.predictors where name='{TEST_PREDICTOR_NAME}';
         """)
 
         print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
@@ -270,7 +282,7 @@ class MariaDBTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print('Test predictor table not exists')
-        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
         mindsdb_tables = [x[0] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 

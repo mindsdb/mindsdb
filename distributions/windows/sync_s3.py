@@ -37,12 +37,13 @@ def list_source_objects(source_folder):
 
 
 def sync(source, dest, bucket):
-    for src_filename in list_source_objects(source_folder=source):
-        print('Uploading {}'.format(src_filename))
+    for path in list_source_objects(source_folder=source):
+        src_filename = Path(path).name
+        print('Uploading {} ({})'.format(path, src_filename))
         s3.upload_file(
-            Filename=src_filename,
+            Filename=path,
             Bucket=bucket,
-            Key=str(Path(dest).joinpath(path))
+            Key=str(Path(dest).joinpath(src_filename))
         )
 
 

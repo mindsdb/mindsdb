@@ -26,7 +26,7 @@ jobs:
       run: |
           pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
-    - name: Check copy db file
+    - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
           mkdir -p ~/.ssh/
@@ -36,17 +36,28 @@ jobs:
           scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/db_machine ubuntu@3.220.66.106:/home/ubuntu/mindsdb_server_enterprise/database_testing_env/credentials.json ~/.mindsdb_credentials.json
           sudo chmod 644 ~/.mindsdb_credentials.json
           pip install -r requirements_test.txt
+
           ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 127.0.0.1:5005:127.0.0.1:5005 ubuntu@3.220.66.106
+
+          # MariaDB
+          export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
+          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:47335:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
+          python tests/integration_tests/flows/test_mariadb.py
+
+          # MySQL
+          export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
+          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:47335:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
+          python tests/integration_tests/flows/test_mysql.py
 
           # ClickHouse
           export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
           ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:47335:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
           python tests/integration_tests/flows/test_clickhouse.py
 
-          # MariaDB
+          # PostgreSQL
           export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
           ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:47335:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
-          python tests/integration_tests/flows/test_mariadb.py
+          python tests/integration_tests/flows/test_postgres.py
         fi
       shell: bash
       env:

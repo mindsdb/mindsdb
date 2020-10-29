@@ -35,8 +35,10 @@ def sync(source, dest, bucket):
     for path in paths:
         index = bisect_left(object_keys, path)
         if index == object_keys_length:
+            src_filename = str(Path(source).joinpath(path))
+            print('Uploading {}'.format(src_filename))
             s3.upload_file(
-                Filename=str(Path(source).joinpath(path)),
+                Filename=src_filename,
                 Bucket=bucket,
                 Key=set(Path(dest).joinpath(path))
             )

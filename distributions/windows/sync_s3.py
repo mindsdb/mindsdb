@@ -43,7 +43,7 @@ def sync(source, dest, bucket):
         s3.upload_file(
             Filename=src_filename,
             Bucket=bucket,
-            Key=set(Path(dest).joinpath(path))
+            Key=str(Path(dest).joinpath(path))
         )
 
 

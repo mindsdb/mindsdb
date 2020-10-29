@@ -47,6 +47,39 @@ jobs:
       env:
         CHECK_FOR_UPDATES: False
 
+  deploy_windows_installer:
+    runs-on: windows-latest
+    needs: test
+    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+
+    - name: Build windows installer
+      run: |
+        pip install pyinstaller
+        pip install winshell
+        python distributions/windows/build_installers.py
+
+    - name: Sync windows installer to s3
+      env:
+        AWS_S3_BUCKET: 'mindsdb-installer'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-2'
+        SOURCE_DIR: 'distributions/windows/dist'
+        DEST_DIR: 'mindsdb-installer/windows'
+      run: |
+        pip install boto3
+        python distributions/windows/sync_s3.py
+
   deploy:
     runs-on: ubuntu-latest
     needs: test
@@ -78,24 +111,6 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         repository: mindsdb/mindsdb
         tag_with_ref: true
-
-    - name: Build windows installer
-      run: |
-        pip install pyinstaller
-        pip install winshell
-        python distributions/windows/build_installers.py
-
-    - name: Sync windows installer to s3
-      uses: jakejarvis/s3-sync-action@master
-      with:
-        args: --acl public-read --follow-symlinks
-      env:
-        AWS_S3_BUCKET: 'mindsdb-installer'
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: 'us-west-2'
-        SOURCE_DIR: 'distributions/windows/dist'
-        DEST_DIR: 'mindsdb-installer/windows'
 
     - name: Rename linux installer
       run: |

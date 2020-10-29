@@ -105,6 +105,10 @@ python_path = sys.argv[1]
 pip_path = sys.argv[2]
 home = os.path.expanduser("~")
 mdb_home = os.path.join(home, 'mindsdb')
+try:
+    os.makedirs(mdb_home)
+except FileExistsError:
+    pass
 
 print(f'\nInstalling some large dependencies via pip ({pip_path}), this might take a while\n')
 time.sleep(1)
@@ -117,10 +121,10 @@ time.sleep(1)
 print('Done installing dependencies')
 print('\nLast step: Configure Mindsdb\n')
 
-from mindsdb.utilities.wizards import daemon_creator, make_executable
+# from mindsdb.utilities.wizards import daemon_creator
 
-daemon_path = daemon_creator(python_path)
-print(f"Created daemon service config {daemon_path}")
+# daemon_path = daemon_creator(python_path)
+# print(f"Created daemon service config {daemon_path}")
 
 exec_path = str(os.path.join(mdb_home, 'run'))
 

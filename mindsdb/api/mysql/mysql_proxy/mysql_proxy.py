@@ -376,7 +376,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
             insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-            ds, ds_name = default_store.save_datasource(insert['name'], integration, insert['select_data_query'])
+            ds, ds_name = default_store.save_datasource(insert['name'], integration, {'query': insert['select_data_query']})
         elif is_external_datasource:
             ds = default_store.get_datasource_obj(insert['external_datasource'], raw=True)
             ds_name = insert['external_datasource']
@@ -1472,9 +1472,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         log.info(f'Starting MindsDB Mysql proxy server on tcp://{host}:{port}')
 
-        # Create the server
-        if config.get('debug') is True:
-            SocketServer.TCPServer.allow_reuse_address = True
+        SocketServer.TCPServer.allow_reuse_address = True
         server = SocketServer.ThreadingTCPServer((host, port), MysqlProxy)
 
         atexit.register(MysqlProxy.server_close, srv=server)

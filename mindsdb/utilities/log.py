@@ -21,7 +21,7 @@ class LoggerWrapper(object):
             self._msg = ''
 
 
-def initialize_log(config, logger_name, wrap_print=False):
+def initialize_log(config, logger_name='main', wrap_print=False):
     ''' Create new logger
     :param config: object, app config
     :param logger_name: str, name of logger

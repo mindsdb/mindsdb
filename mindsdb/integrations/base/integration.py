@@ -2,6 +2,11 @@ from abc import ABC, abstractmethod
 
 
 class Integration(ABC):
+    def __init__(self, config, name):
+        self.config = config
+        self.name = name
+        self.mindsdb_database = config['api']['mysql']['database']
+
     @abstractmethod
     def setup(self):
         pass

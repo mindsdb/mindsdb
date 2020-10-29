@@ -2,7 +2,7 @@ from flask import request
 from flask_restx import Resource, abort
 
 from mindsdb.api.http.namespaces.configs.util import ns_conf
-
+from mindsdb import __about__
 
 @ns_conf.route('/ping')
 class Ping(Resource):
@@ -24,3 +24,12 @@ class Shutdown(Resource):
             func()
             return '', 200
         abort(403, "")
+
+                
+@ns_conf.route('/util/version')
+class Version(Resource):
+    @ns_conf.doc('get_endpoint')
+    def get(self):
+        '''Check endpoint'''
+        return {'mindsdb': "{__about__.__version__}"}
+    

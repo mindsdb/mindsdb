@@ -11,17 +11,14 @@ class DatabaseWrapper():
         self.config = config
         self._get_integrations()
 
-    def _setup_integrations(self, integration_arr):
-        # Doesn't really matter if we call this multiple times, but it will waste time so ideally don't
-        working_integration_arr = []
-        for integration in integration_arr:
-            try:
-                integration.setup()
-                working_integration_arr.append(integration)
-            except Exception as e:
-                print('Failed to integrate with database' + integration.name + f', error: {e}')
-
-        return working_integration_arr
+    def _setup_integration(self, integration):
+        success = False
+        try:
+            integration.setup()
+            success = True
+        except Exception as e:
+            print('Failed to integrate with database ' + integration.name + f', error: {e}')
+        return success
 
     def _get_integrations(self):
         # @TODO Once we have a presistent state sorted out this should be simplified as to not refresh the existing integrations every single time
@@ -48,10 +45,14 @@ class DatabaseWrapper():
 
     def register_predictors(self, model_data_arr, setup=True):
         it = self._get_integrations()
-        if setup:
-            it = self._setup_integrations(it)
         for integration in it:
-            integration.register_predictors(model_data_arr)
+            register = True
+            if setup:
+                register = self._setup_integration(integration)
+            if register:
+                integration.register_predictors(model_data_arr)
+
+            integration = [integration]
 
     def unregister_predictor(self, name):
         for integration in self._get_integrations():

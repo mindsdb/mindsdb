@@ -37,7 +37,7 @@ def sync(source, dest, bucket):
     for path in paths:
         print('path', path)
         index = bisect_left(object_keys, path)
-        print('index', 'index')
+        print('index', index)
         if index == object_keys_length:
             src_filename = str(Path(source).joinpath(path))
             print('Uploading {}'.format(src_filename))

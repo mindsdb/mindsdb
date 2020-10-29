@@ -24,39 +24,6 @@ s3 = boto3.client(
 )
 
 
-def sync(source, dest, bucket):
-    paths = list_source_objects(source_folder=source)
-    objects = list_bucket_objects(bucket)
-
-    object_keys = [obj['Key'] for obj in objects]
-    object_keys.sort()
-    object_keys_length = len(object_keys)
-
-    print('object_keys', object_keys)
-
-    for path in paths:
-        print('path', path)
-        index = bisect_left(object_keys, path)
-        print('index', index)
-        if index == object_keys_length:
-            src_filename = str(Path(source).joinpath(path))
-            print('Uploading {}'.format(src_filename))
-            s3.upload_file(
-                Filename=src_filename,
-                Bucket=bucket,
-                Key=set(Path(dest).joinpath(path))
-            )
-
-
-def list_bucket_objects(bucket):
-    try:
-        contents = s3.list_objects(Bucket=bucket)['Contents']
-    except KeyError:
-        return []
-    else:
-        return contents
-
-
 def list_source_objects(source_folder):
     path = Path(source_folder)
     paths = []
@@ -67,6 +34,17 @@ def list_source_objects(source_folder):
         str_file_path = str_file_path.replace(f'{str(path)}/', '')
         paths.append(str_file_path)
     return paths
+
+
+def sync(source, dest, bucket):
+    for path in list_source_objects(source_folder=source):
+        src_filename = str(Path(source).joinpath(path))
+        print('Uploading {}'.format(src_filename))
+        s3.upload_file(
+            Filename=src_filename,
+            Bucket=bucket,
+            Key=set(Path(dest).joinpath(path))
+        )
 
 
 if __name__ == '__main__':

@@ -45,10 +45,10 @@ jobs:
           echo -e "\n=== *** === *** ===\ntest MariaDB, port=$MINDSDB_PORT\n=== *** === *** ===\n"
           python tests/integration_tests/flows/test_mariadb.py
 
-          # # MySQL
-          # export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
-          # ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:$MINDSDB_PORT:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
-          # python tests/integration_tests/flows/test_mysql.py
+          # MySQL
+          export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
+          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:$MINDSDB_PORT:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
+          python tests/integration_tests/flows/test_mysql.py
 
           # ClickHouse
           export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)

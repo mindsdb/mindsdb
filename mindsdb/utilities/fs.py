@@ -209,6 +209,6 @@ def remove_corrupted_predictors(config, mindsdb_native):
             corrupted_predictors_dir = Path(config.paths['tmp']).joinpath('corrupted_predictors')
             create_directory(corrupted_predictors_dir)
             shutil.move(
-                p,
-                corrupted_predictors_dir.joinpath(model_name)
+                str(p),
+                str(corrupted_predictors_dir.joinpath(model_name))
             )

@@ -17,9 +17,9 @@ def cast_row_types(row, field_types):
     keys = [x for x in row.keys() if x in field_types]
     for key in keys:
         t = field_types[key]
-        if t == 'Timestamp' and (isinstance(row[key], int) or isinstance(row[key], float)):
+        if t == 'Timestamp' and isinstance(row[key], (int, float)):
             timestamp = datetime.datetime.utcfromtimestamp(row[key])
             row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-        elif t == 'Date' and (isinstance(row[key], int) or isinstance(row[key], float)):
+        elif t == 'Date' and isinstance(row[key], (int, float)):
             timestamp = datetime.datetime.utcfromtimestamp(row[key])
             row[key] = timestamp.strftime('%Y-%m-%d')

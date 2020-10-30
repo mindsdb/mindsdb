@@ -68,6 +68,8 @@ jobs:
           ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:$MINDSDB_PORT:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
           echo -e "\n=== *** === *** ===\ntest Cutsom model, port=$MINDSDB_PORT\n=== *** === *** ===\n"
           python tests/integration_tests/flows/test_custom_model.py
+
+          python tests/integration_tests/api/test_http.py
         fi
       shell: bash
       env:

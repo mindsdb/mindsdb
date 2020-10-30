@@ -35,7 +35,8 @@ class HTTPTest(unittest.TestCase):
             stdout=None,
             stderr=None
         )
-        for i in range(20):
+        for i in range(60):
+            print(i)
             try:
                 res = requests.get(f'{root}/util/ping')
                 if res.status_code != 200:
@@ -44,7 +45,7 @@ class HTTPTest(unittest.TestCase):
                     break
             except Exception:
                 time.sleep(1)
-                if i == 19:
+                if i == 59:
                     raise Exception("Can't connect!")
 
     @classmethod

@@ -104,6 +104,7 @@ jobs:
         twine upload dist/*
     - name: Install most recent mindsdb
       run: |
+        sleep 10s
         pip install mindsdb
     - name: Build and push mindsdb Docker image
       uses: docker/build-push-action@v1

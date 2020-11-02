@@ -39,7 +39,10 @@ jobs:
 
           ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 127.0.0.1:5005:127.0.0.1:5005 ubuntu@3.220.66.106
 
+          export USE_EXTERNAL_DB_SERVER="0"
           python tests/integration_tests/flows/test_mongo.py
+
+          export USE_EXTERNAL_DB_SERVER="1"
 
           # PostgreSQL
           export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)

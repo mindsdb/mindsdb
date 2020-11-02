@@ -9,6 +9,7 @@ import os
 import socket
 from contextlib import closing
 import asyncio
+import shutil
 
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.config import Config
@@ -58,6 +59,8 @@ def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_i
     config['api']['mongodb']['database'] = mindsdb_database
 
     storage_dir = TEMP_DIR.joinpath('storage')
+    if storage_dir.is_dir():
+        shutil.rmtree(str(storage_dir))
     config._config['storage_dir'] = str(storage_dir)
 
     create_dirs_recursive(config.paths)

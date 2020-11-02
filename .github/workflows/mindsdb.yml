@@ -45,33 +45,23 @@ jobs:
           export USE_EXTERNAL_DB_SERVER="1"
 
           # PostgreSQL
-          export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
-          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:$MINDSDB_PORT:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
-          echo -e "\n=== *** === *** ===\ntest PostgreSQL, port=$MINDSDB_PORT\n=== *** === *** ===\n"
+          echo -e "\n===============\ntest PostgreSQL\n===============\n"
           python tests/integration_tests/flows/test_postgres.py
 
           # MySQL
-          export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
-          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:$MINDSDB_PORT:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
-          echo -e "\n=== *** === *** ===\ntest MySQL, port=$MINDSDB_PORT\n=== *** === *** ===\n"
+          echo -e "\n===============\ntest MySQL\n===============\n"
           python tests/integration_tests/flows/test_mysql.py
 
           # MariaDB
-          export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
-          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:$MINDSDB_PORT:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
-          echo -e "\n=== *** === *** ===\ntest MariaDB, port=$MINDSDB_PORT\n=== *** === *** ===\n"
+          echo -e "\n===============\ntest MariaDB\n===============\n"
           python tests/integration_tests/flows/test_mariadb.py
 
           # ClickHouse
-          export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
-          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:$MINDSDB_PORT:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
-          echo -e "\n=== *** === *** ===\ntest ClickHouse, port=$MINDSDB_PORT\n=== *** === *** ===\n"
+          echo -e "\n===============\ntest ClickHouse\n===============\n"
           python tests/integration_tests/flows/test_clickhouse.py
 
           # Cutsom model
-          export MINDSDB_PORT=$(curl http://127.0.0.1:5005/port)
-          ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 127.0.0.1:$MINDSDB_PORT:127.0.0.1:$MINDSDB_PORT ubuntu@3.220.66.106
-          echo -e "\n=== *** === *** ===\ntest Cutsom model, port=$MINDSDB_PORT\n=== *** === *** ===\n"
+          echo -e "\n===============\ntest Cutsom model\n===============\n"
           python tests/integration_tests/flows/test_custom_model.py
 
           python tests/integration_tests/api/test_http.py

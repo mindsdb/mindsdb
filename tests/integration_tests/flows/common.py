@@ -18,8 +18,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.ps import wait_port, is_port_in_use
 from mindsdb_native import CONFIG
 
-# USE_EXTERNAL_DB_SERVER = os.getenv('EXTERNAL_DB_SERVER')
-USE_EXTERNAL_DB_SERVER = True
+USE_EXTERNAL_DB_SERVER = bool(int(os.getenv('USE_EXTERNAL_DB_SERVER') or "0"))
 
 EXTERNAL_DB_CREDENTIALS = str(Path.home().joinpath('.mindsdb_credentials.json'))
 
@@ -35,8 +34,6 @@ START_TIMEOUT = 15
 
 OUTPUT = None  # [None|subprocess.DEVNULL]
 
-# import time
-# TEMP_DIR = Path(__file__).parent.absolute().joinpath(f'../../temp_{int(time.time()*1000)}/').resolve()
 TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -72,14 +69,32 @@ def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_i
     return temp_config_path
 
 
+def close_ssh_tunnel(sp):
+    sp.kill()
+    sp = subprocess.Popen(f'kill -9 {sp.pid}', shell=True)
+    sp.wait()
+
+
+def open_ssh_tunnel(port, direction='R'):
+    cmd = f'ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
+    sp = subprocess.Popen(
+        cmd.split(' '),
+        stdout=OUTPUT,
+        stderr=OUTPUT
+    )
+    atexit.register(close_ssh_tunnel, sp=sp)
+
+
 if USE_EXTERNAL_DB_SERVER:
     config = Config(TEST_CONFIG)
-    mindsdb_port = int(os.getenv('MINDSDB_PORT') or 47335)
-    # r = requests.get('http://127.0.0.1:5005/port')
-    # if r.status_code != 200:
-    #     raise Exception('Cant get port to run mindsdb')
-    # mindsdb_port = r.content.decode()
-    # print(f'use mindsdb port={mindsdb_port}')
+    open_ssh_tunnel(5005, 'L')
+    wait_port(5005, timeout=10)
+    r = requests.get('http://127.0.0.1:5005/port')
+    if r.status_code != 200:
+        raise Exception('Cant get port to run mindsdb')
+    mindsdb_port = r.content.decode()
+    open_ssh_tunnel(mindsdb_port, 'R')
+    print(f'use mindsdb port={mindsdb_port}')
     config._config['api']['mysql']['port'] = mindsdb_port
 
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:

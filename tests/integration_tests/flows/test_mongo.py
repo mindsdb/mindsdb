@@ -3,16 +3,14 @@ import csv
 import time
 
 from pymongo import MongoClient
-import docker
 
 from mindsdb.utilities.config import Config
 from common import (
     run_environment,
     get_test_csv,
-    TEST_CONFIG,
     run_container,
-    wait_port,
-    is_container_run
+    TEST_CONFIG,
+    MINDSDB_DATABASE
 )
 
 TEST_CSV = {
@@ -26,57 +24,33 @@ EXTERNAL_DS_NAME = 'test_external'
 
 config = Config(TEST_CONFIG)
 
-DOCKER_TIMEOUT = 180
-
 
 class MongoTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        run_container('mongo-config')
-        ready = wait_port(27000, DOCKER_TIMEOUT)
-        assert ready
-
-        run_container('mongo-instance')
-        ready = wait_port(27001, DOCKER_TIMEOUT)
-        assert ready
-
-        cls.config_client = MongoClient('mongodb://localhost:27000/')
-        cls.instance_client = MongoClient('mongodb://localhost:27001/')
-
-        print('init replconf')
-        try:
-            r = cls.config_client.admin.command('replSetInitiate', {
-                '_id': 'replconf',
-                'members': [
-                    {'_id': 0, 'host': '127.0.0.1:27000'}
-                ]
-            })
-        except Exception as e:
-            print('already initialized')
-            if str(e) == 'already initialized':
-                r = {'ok': 1}
-
-        if bool(r['ok']) is not True:
-            assert False
-
-        print('init replmain')
-        try:
-            r = cls.instance_client.admin.command('replSetInitiate', {
-                '_id': 'replmain',
-                'members': [
-                    {'_id': 0, 'host': '127.0.0.1:27001'}
-                ]
-            })
-        except Exception as e:
-            print('already initialized')
-            if str(e) == 'already initialized':
-                r = {'ok': 1}
-
-        if bool(r['ok']) is not True:
-            assert False
-
-        mdb, datastore = run_environment('mongodb', config, run_apis='mongodb')
+        mdb, datastore = run_environment(
+            config,
+            apis=['mongodb'],
+            run_docker_db=[],
+            override_integration_config={
+                'default_mongodb': {
+                    'enabled': True
+                }
+            },
+            mindsdb_database=MINDSDB_DATABASE
+        )
         cls.mdb = mdb
+
+        run_container('mongo-cluster')
+        time.sleep(20)
+
+        cls.mongos_client = MongoClient('mongodb://localhost:27002/')
+        mdb_shard = f"127.0.0.1:{config['api']['mongodb']['port']}"
+        try:
+            cls.mongos_client.admin.command('removeShard', mdb_shard)
+        except Exception:
+            # its ok if shard not exiss
+            pass
 
         models = cls.mdb.get_models()
         models = [x['name'] for x in models]
@@ -85,7 +59,7 @@ class MongoTest(unittest.TestCase):
 
         test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
 
-        db = cls.instance_client['test_data']
+        db = cls.mongos_client['test_data']
         colls = db.list_collection_names()
 
         if 'home_rentals' not in colls:
@@ -108,13 +82,7 @@ class MongoTest(unittest.TestCase):
                 db['home_rentals'].insert_many(data)
             print('done')
 
-        run_container('mongo-mongos')
-        ready = wait_port(27002, DOCKER_TIMEOUT)
-        assert ready
-        cls.mongos_client = MongoClient('mongodb://localhost:27002/')
-
-        cls.mongos_client.admin.command('addShard', 'replmain/127.0.0.1:27001')
-        cls.mongos_client.admin.command('addShard', f"127.0.0.1:{config['api']['mongodb']['port']}")
+        cls.mongos_client.admin.command('addShard', mdb_shard)
 
     def test_1_entitys_exists(self):
         databases = self.mongos_client.list_database_names()

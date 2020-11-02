@@ -36,6 +36,16 @@ elif [ $1 = "postgres" ]; then
     docker-compose up postgres
 elif [ $1 = "postgres-stop" ]; then
     docker-compose stop postgres
+elif [ $1 = "mongo-cluster" ]; then
+    rm -rf mongodb/storage_config/ mongodb/storage_instance/ mongodb/storage_mongos/
+    docker container stop mongo-mongos-test mongo-glue-test mongo-config-test mongo-instance-test
+    docker container rm mongo-mongos-test mongo-glue-test mongo-config-test mongo-instance-test
+    docker-compose -f docker-compose-mongo.yml up
+elif [ $1 = "mongo-cluster-stop" ]; then
+    docker-compose -f docker-compose-mongo.yml stop
+    rm -rf mongodb/storage_config/ mongodb/storage_instance/ mongodb/storage_mongos/
+    docker container stop mongo-mongos-test mongo-glue-test mongo-config-test mongo-instance-test
+    docker container rm mongo-mongos-test mongo-glue-test mongo-config-test mongo-instance-test
 elif [ $1 = "mongo" ]; then
     mkdir -p mongodb/storage/
     docker-compose up mongo

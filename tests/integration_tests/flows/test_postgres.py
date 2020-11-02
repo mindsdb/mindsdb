@@ -51,7 +51,7 @@ def query(query, fetch=False):
     return res
 
 
-class ClickhouseTest(unittest.TestCase):
+class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         mdb, datastore = run_environment(

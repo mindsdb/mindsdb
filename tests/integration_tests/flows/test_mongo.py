@@ -42,7 +42,7 @@ class MongoTest(unittest.TestCase):
         cls.mdb = mdb
 
         run_container('mongo-cluster')
-        time.sleep(20)
+        time.sleep(40)
 
         cls.mongos_client = MongoClient('mongodb://localhost:27002/')
         mdb_shard = f"127.0.0.1:{config['api']['mongodb']['port']}"

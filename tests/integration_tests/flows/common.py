@@ -206,6 +206,7 @@ def run_environment(config, apis=['mysql'], run_docker_db=[], override_integrati
 
     default_databases = [f'default_{db}' for db in run_docker_db]
     temp_config_path = prepare_config(config, default_databases, mindsdb_database, override_integration_config)
+    config = Config(temp_config_path)
 
     db_ready = True
     for db in run_docker_db:

@@ -1,6 +1,5 @@
 import unittest
 import csv
-import time
 
 from pymongo import MongoClient
 
@@ -12,6 +11,8 @@ from common import (
     TEST_CONFIG,
     MINDSDB_DATABASE
 )
+
+from mindsdb.utilities.ps import wait_port
 
 TEST_CSV = {
     'name': 'home_rentals.csv',
@@ -42,7 +43,7 @@ class MongoTest(unittest.TestCase):
         cls.mdb = mdb
 
         run_container('mongo-cluster')
-        time.sleep(40)
+        wait_port(config['api']['mongodb']['port'], timeout=90)
 
         cls.mongos_client = MongoClient('mongodb://localhost:27002/')
         mdb_shard = f"127.0.0.1:{config['api']['mongodb']['port']}"

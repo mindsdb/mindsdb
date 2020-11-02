@@ -36,7 +36,7 @@ jobs:
           pip install -r requirements_test.txt
 
           export USE_EXTERNAL_DB_SERVER="0"
-          # python tests/integration_tests/flows/test_mongo.py
+          python tests/integration_tests/flows/test_mongo.py
 
           export USE_EXTERNAL_DB_SERVER="1"
 
@@ -44,23 +44,23 @@ jobs:
           echo -e "\n===============\ntest PostgreSQL\n===============\n"
           python tests/integration_tests/flows/test_postgres.py
 
-          # # MySQL
-          # echo -e "\n===============\ntest MySQL\n===============\n"
-          # python tests/integration_tests/flows/test_mysql.py
+          # MySQL
+          echo -e "\n===============\ntest MySQL\n===============\n"
+          python tests/integration_tests/flows/test_mysql.py
 
-          # # MariaDB
-          # echo -e "\n===============\ntest MariaDB\n===============\n"
-          # python tests/integration_tests/flows/test_mariadb.py
+          # MariaDB
+          echo -e "\n===============\ntest MariaDB\n===============\n"
+          python tests/integration_tests/flows/test_mariadb.py
 
-          # # ClickHouse
-          # echo -e "\n===============\ntest ClickHouse\n===============\n"
-          # python tests/integration_tests/flows/test_clickhouse.py
+          # ClickHouse
+          echo -e "\n===============\ntest ClickHouse\n===============\n"
+          python tests/integration_tests/flows/test_clickhouse.py
 
-          # # Cutsom model
-          # echo -e "\n===============\ntest Cutsom model\n===============\n"
-          # python tests/integration_tests/flows/test_custom_model.py
+          # Cutsom model
+          echo -e "\n===============\ntest Cutsom model\n===============\n"
+          python tests/integration_tests/flows/test_custom_model.py
 
-          # python tests/integration_tests/api/test_http.py
+          python tests/integration_tests/api/test_http.py
         fi
       shell: bash
       env:

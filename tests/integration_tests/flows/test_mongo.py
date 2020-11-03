@@ -9,7 +9,6 @@ from common import (
     get_test_csv,
     run_container,
     TEST_CONFIG,
-    MINDSDB_DATABASE,
     USE_EXTERNAL_DB_SERVER,
     open_ssh_tunnel
 )
@@ -27,6 +26,8 @@ EXTERNAL_DS_NAME = 'test_external'
 
 config = Config(TEST_CONFIG)
 
+MINDSDB_DATABASE = f"mindsdb_{config['api']['mongodb']['port']}" if USE_EXTERNAL_DB_SERVER else 'mindsdb'
+
 
 class MongoTest(unittest.TestCase):
     @classmethod
@@ -37,7 +38,12 @@ class MongoTest(unittest.TestCase):
             run_docker_db=[],
             override_integration_config={
                 'default_mongodb': {
-                    'enabled': True
+                    'enabled': True,
+                    'port': 27002,
+                    'host': '127.0.0.1',
+                    'type': 'mongodb',
+                    'user': '',
+                    'password': ''
                 }
             },
             mindsdb_database=MINDSDB_DATABASE
@@ -107,7 +113,7 @@ class MongoTest(unittest.TestCase):
 
     def test_2_learn_predictor(self):
         mindsdb = self.mongos_client[MINDSDB_DATABASE]
-        mindsdb.predictors.insert({
+        mindsdb.predictors.insert_one({
             'name': TEST_PREDICTOR_NAME,
             'predict': 'rental_price',
             'select_data_query': {

@@ -35,10 +35,11 @@ jobs:
           sudo chmod 644 ~/.mindsdb_credentials.json
           pip install -r requirements_test.txt
 
-          export USE_EXTERNAL_DB_SERVER="0"
-          python tests/integration_tests/flows/test_mongo.py
-
           export USE_EXTERNAL_DB_SERVER="1"
+
+          # MongoDB
+          echo -e "\n===============\ntest MongoDB\n===============\n"
+          python tests/integration_tests/flows/test_mongo.py
 
           # PostgreSQL
           echo -e "\n===============\ntest PostgreSQL\n===============\n"

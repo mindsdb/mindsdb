@@ -102,6 +102,7 @@ if USE_EXTERNAL_DB_SERVER:
     open_ssh_tunnel(mindsdb_port, 'R')
     print(f'use mindsdb port={mindsdb_port}')
     config._config['api']['mysql']['port'] = mindsdb_port
+    config._config['api']['mongodb']['port'] = mindsdb_port
 
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())

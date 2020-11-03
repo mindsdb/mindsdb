@@ -9,7 +9,9 @@ from common import (
     get_test_csv,
     run_container,
     TEST_CONFIG,
-    MINDSDB_DATABASE
+    MINDSDB_DATABASE,
+    USE_EXTERNAL_DB_SERVER,
+    open_ssh_tunnel
 )
 
 from mindsdb.utilities.ps import wait_port
@@ -42,10 +44,14 @@ class MongoTest(unittest.TestCase):
         )
         cls.mdb = mdb
 
-        run_container('mongo-cluster')
-        wait_port(config['api']['mongodb']['port'], timeout=90)
+        if USE_EXTERNAL_DB_SERVER:
+            open_ssh_tunnel(27002, direction='L')   # 27002 - mongos port
+            wait_port(27002, timeout=10)
+        else:
+            run_container('mongo-cluster')
+            wait_port(config['api']['mongodb']['port'], timeout=90)
 
-        cls.mongos_client = MongoClient('mongodb://localhost:27002/')
+        cls.mongos_client = MongoClient('mongodb://127.0.0.1:27002/')
         mdb_shard = f"127.0.0.1:{config['api']['mongodb']['port']}"
         try:
             cls.mongos_client.admin.command('removeShard', mdb_shard)
@@ -86,11 +92,12 @@ class MongoTest(unittest.TestCase):
         cls.mongos_client.admin.command('addShard', mdb_shard)
 
     def test_1_entitys_exists(self):
-        databases = self.mongos_client.list_database_names()
-        self.assertTrue('test_data' in databases)
-        self.assertTrue('mindsdb' in databases)
+        # we cant check databases exists, becaus in remote db can be many old shards
+        # databases = self.mongos_client.list_database_names()
+        # self.assertTrue('test_data' in databases)
+        # self.assertTrue('mindsdb' in databases)
 
-        mindsdb = self.mongos_client['mindsdb']
+        mindsdb = self.mongos_client[MINDSDB_DATABASE]
         mindsdb_collections = mindsdb.list_collection_names()
         self.assertTrue('predictors' in mindsdb_collections)
         self.assertTrue('commands' in mindsdb_collections)
@@ -104,7 +111,7 @@ class MongoTest(unittest.TestCase):
         self.assertTrue(records_cunt > 0)
 
     def test_2_learn_predictor(self):
-        mindsdb = self.mongos_client['mindsdb']
+        mindsdb = self.mongos_client[MINDSDB_DATABASE]
         mindsdb.predictors.insert({
             'name': TEST_PREDICTOR_NAME,
             'predict': 'rental_price',
@@ -126,7 +133,7 @@ class MongoTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME in mindsdb_collections)
 
     def test_3_predict(self):
-        mindsdb = self.mongos_client['mindsdb']
+        mindsdb = self.mongos_client[MINDSDB_DATABASE]
 
         result = mindsdb[TEST_PREDICTOR_NAME].find_one({'sqft': 1000})
         self.assertTrue(
@@ -139,7 +146,7 @@ class MongoTest(unittest.TestCase):
         self.assertTrue('rental_price_confidence' in result)
 
     def test_4_remove(self):
-        mindsdb = self.mongos_client['mindsdb']
+        mindsdb = self.mongos_client[MINDSDB_DATABASE]
 
         mindsdb.predictors.remove({'name': TEST_PREDICTOR_NAME})
 

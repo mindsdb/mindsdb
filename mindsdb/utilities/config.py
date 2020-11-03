@@ -23,7 +23,8 @@ default_config = {
             "password": "",
             "port": "47335",
             "user": "mindsdb",
-            "database": "mindsdb"
+            "database": "mindsdb",
+            "ssl": True
         },
         "mongodb": {
             "host": "127.0.0.1",

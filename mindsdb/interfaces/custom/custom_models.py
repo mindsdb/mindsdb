@@ -56,7 +56,7 @@ class CustomModels():
 
         to_predict = to_predict if isinstance(to_predict,list) else [to_predict]
         data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-        data_frame = data_source._df
+        data_frame = data_source.df
         model = self._internal_load(name)
         model.to_predict = to_predict
 
@@ -85,7 +85,7 @@ class CustomModels():
     def predict(self, name, when_data=None, from_data=None, kwargs={}):
         if from_data is not None:
             data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-            data_frame = data_source._df
+            data_frame = data_source.df
         elif when_data is not None:
             if isinstance(when_data, dict):
                 for k in when_data:

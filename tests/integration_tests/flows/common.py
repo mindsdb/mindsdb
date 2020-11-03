@@ -39,10 +39,10 @@ TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_integration_config={}):
+def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}):
     if isinstance(enable_dbs, list) is False:
         enable_dbs = [enable_dbs]
-    for key in config._config['integrations'].keys():
+    for key in config._config['integrations']:
         config._config['integrations'][key]['enabled'] = key in enable_dbs
 
     if USE_EXTERNAL_DB_SERVER:
@@ -52,8 +52,11 @@ def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_i
                 if f'default_{key}' in config._config['integrations']:
                     config._config['integrations'][f'default_{key}'].update(cred[key])
 
-    for integration in override_integration_config.keys():
+    for integration in override_integration_config:
         config._config['integrations'][integration].update(override_integration_config[integration])
+
+    for api in override_api_config:
+        config._config['api'].update(override_api_config[api])
 
     config['api']['mysql']['database'] = mindsdb_database
     config['api']['mongodb']['database'] = mindsdb_database
@@ -200,12 +203,12 @@ def stop_mindsdb(sp):
     sp.wait()
 
 
-def run_environment(config, apis=['mysql'], run_docker_db=[], override_integration_config={}, mindsdb_database='mindsdb'):
+def run_environment(config, apis=['mysql'], run_docker_db=[], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb'):
     ''' services = [mindsdb|]
     '''
 
     default_databases = [f'default_{db}' for db in run_docker_db]
-    temp_config_path = prepare_config(config, default_databases, mindsdb_database, override_integration_config)
+    temp_config_path = prepare_config(config, default_databases, mindsdb_database, override_integration_config, override_api_config)
     config = Config(temp_config_path)
 
     db_ready = True

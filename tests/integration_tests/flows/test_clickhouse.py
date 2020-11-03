@@ -72,6 +72,11 @@ class ClickhouseTest(unittest.TestCase):
                     'enabled': True
                 }
             },
+            override_api_config={
+                'mysql': {
+                    'ssl': False
+                }
+            },
             mindsdb_database=MINDSDB_DATABASE
         )
         cls.mdb = mdb

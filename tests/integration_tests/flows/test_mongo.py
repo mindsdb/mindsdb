@@ -92,11 +92,6 @@ class MongoTest(unittest.TestCase):
         cls.mongos_client.admin.command('addShard', mdb_shard)
 
     def test_1_entitys_exists(self):
-        # we cant check databases exists, becaus in remote db can be many old shards
-        # databases = self.mongos_client.list_database_names()
-        # self.assertTrue('test_data' in databases)
-        # self.assertTrue('mindsdb' in databases)
-
         mindsdb = self.mongos_client[MINDSDB_DATABASE]
         mindsdb_collections = mindsdb.list_collection_names()
         self.assertTrue('predictors' in mindsdb_collections)

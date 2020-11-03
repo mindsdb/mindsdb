@@ -56,7 +56,7 @@ def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_i
         config._config['integrations'][integration].update(override_integration_config[integration])
 
     for api in override_api_config:
-        config._config['api'].update(override_api_config[api])
+        config._config['api'][api].update(override_api_config[api])
 
     config['api']['mysql']['database'] = mindsdb_database
     config['api']['mongodb']['database'] = mindsdb_database

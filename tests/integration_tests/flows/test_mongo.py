@@ -149,7 +149,7 @@ class MongoTest(unittest.TestCase):
     def test_4_remove(self):
         mindsdb = self.mongos_client[MINDSDB_DATABASE]
 
-        mindsdb.predictors.remove({'name': TEST_PREDICTOR_NAME})
+        mindsdb.predictors.delete_one({'name': TEST_PREDICTOR_NAME})
 
         predictors = list(mindsdb.predictors.find())
         self.assertTrue(TEST_PREDICTOR_NAME not in [x['name'] for x in predictors])

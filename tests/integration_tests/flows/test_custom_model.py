@@ -233,7 +233,7 @@ class Model(ModelInterface):
     def test_3_retrain_model(self):
         res = query(f"""
             INSERT INTO {MINDSDB_DATABASE}.predictors (name, predict, select_data_query)
-            VALUES ('{PRED_NAME}', 'sqft', 'SELECT * FROM test.{TEST_DATA_TABLE}') """
+            VALUES ('{PRED_NAME}', 'sqft', 'SELECT * FROM test_data.{TEST_DATA_TABLE}') """
         )
         #sqft
 

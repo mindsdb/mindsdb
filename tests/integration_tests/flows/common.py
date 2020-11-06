@@ -80,13 +80,14 @@ def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_i
 
 def close_ssh_tunnel(sp, port):
     sp.kill()
-    sp = subprocess.Popen(f'for pid in $(lsof -i :{port} -t); do kill -9 $pid; done', shell=True)
-    # sp = subprocess.Popen(f'kill -9 {sp.pid}', shell=True)
+    # NOTE line below will close connection in ALL test instances.
+    # sp = subprocess.Popen(f'for pid in $(lsof -i :{port} -t); do kill -9 $pid; done', shell=True)
+    sp = subprocess.Popen(f'ssh -S /tmp/.mindsdb-ssh-ctrl-{port} -O exit ubuntu@3.220.66.106', shell=True)
     sp.wait()
 
 
 def open_ssh_tunnel(port, direction='R'):
-    cmd = f'ssh -i ~/.ssh/db_machine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
+    cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
     sp = subprocess.Popen(
         cmd.split(' '),
         stdout=OUTPUT,

@@ -78,9 +78,10 @@ def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_i
     return temp_config_path
 
 
-def close_ssh_tunnel(sp, port):
+def close_ssh_tunnel(sp):
     sp.kill()
-    sp = subprocess.Popen(f'for pid in $(lsof -i :{port} -t); do kill -9 $pid; done', shell=True)
+    # sp = subprocess.Popen(f'for pid in $(lsof -i :{port} -t); do kill -9 $pid; done', shell=True)
+    sp = subprocess.Popen(f'kill -9 {sp.pid}', shell=True)
     sp.wait()
 
 
@@ -91,7 +92,7 @@ def open_ssh_tunnel(port, direction='R'):
         stdout=OUTPUT,
         stderr=OUTPUT
     )
-    atexit.register(close_ssh_tunnel, sp=sp, port=port)
+    atexit.register(close_ssh_tunnel, sp=sp)
 
 
 if USE_EXTERNAL_DB_SERVER:

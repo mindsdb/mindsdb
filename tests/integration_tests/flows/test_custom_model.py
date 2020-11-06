@@ -249,7 +249,7 @@ class Model(ModelInterface):
             f"""
                 SELECT sqft
                 FROM {MINDSDB_DATABASE}.{PRED_NAME}
-                WHERE select_data_query='SELECT * FROM test.{TEST_DATA_TABLE}'
+                WHERE select_data_query='SELECT * FROM test_data.{TEST_DATA_TABLE}'
             """,
             as_dict=True
         )

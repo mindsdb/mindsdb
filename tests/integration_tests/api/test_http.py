@@ -1,5 +1,3 @@
-from subprocess import Popen
-import time
 import os
 from random import randint
 from pathlib import Path
@@ -27,26 +25,22 @@ class HTTPTest(unittest.TestCase):
     def setUpClass(cls):
         config = Config(common.TEST_CONFIG)
         cls.initial_integrations_names = list(config['integrations'].keys())
-        config_path = common.prepare_config(config, ['default_mariadb', 'default_clickhouse'])
 
-        cls.sp = Popen(
-            ['python3', '-m', 'mindsdb', '--api', 'http', '--config', config_path],
-            close_fds=True,
-            stdout=None,
-            stderr=None
+        mdb, datastore = common.run_environment(
+            config,
+            apis=['http'],
+            run_docker_db=[] if common.USE_EXTERNAL_DB_SERVER else ['mariadb', 'clickhouse'],
+            override_integration_config={
+                'default_mariadb': {
+                    'enabled': True
+                },
+                'default_clickhouse': {
+                    'enabled': True
+                }
+            },
+            mindsdb_database=common.MINDSDB_DATABASE
         )
-        for i in range(60):
-            print(i)
-            try:
-                res = requests.get(f'{root}/util/ping')
-                if res.status_code != 200:
-                    raise Exception('')
-                else:
-                    break
-            except Exception:
-                time.sleep(1)
-                if i == 59:
-                    raise Exception("Can't connect!")
+        cls.mdb = mdb
 
     @classmethod
     def tearDownClass(cls):

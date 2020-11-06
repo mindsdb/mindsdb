@@ -60,7 +60,6 @@ def fetch(q, as_dict=True):
 class CustomModelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # mdb, datastore = run_environment('clickhouse', config, run_apis=['mysql', 'http'])
         mdb, datastore = run_environment(
             config,
             apis=['http', 'mysql'],

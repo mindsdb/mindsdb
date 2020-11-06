@@ -230,6 +230,7 @@ def run_environment(config, apis=['mysql'], run_docker_db=[], override_integrati
     api_str = ','.join(apis)
     sp = subprocess.Popen(
         ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path],
+        close_fds=True,
         stdout=OUTPUT,
         stderr=OUTPUT
     )

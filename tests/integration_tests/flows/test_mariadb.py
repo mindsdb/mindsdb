@@ -131,7 +131,7 @@ class MariaDBTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print('Test datasource exists')
-        test_tables = fetch('show tables from test', as_dict=False)
+        test_tables = fetch('show tables from test_data', as_dict=False)
         test_tables = [x[0] for x in test_tables]
         self.assertTrue(TEST_DATA_TABLE in test_tables)
 

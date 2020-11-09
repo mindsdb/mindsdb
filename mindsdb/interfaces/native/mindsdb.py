@@ -27,6 +27,13 @@ class MindsdbNative():
         with open(str(versions_file_path), 'wt') as f:
             json.dump(self.config.versions, f, indent=4, sort_keys=True)
 
+        # +++ NOTE we cant show err messages from inside of PredictorProcess untill we dont have
+        # websockets (or something other). This should be removed when it will be.
+        data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+        if len(data_source) < 10:
+            raise Exception(f"You must have at least 10 rows to train a model. Current datasource contain only {len(data_source)} rows.")
+        # ---
+
         p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
         p.start()
         if join_learn_process is True:

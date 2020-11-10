@@ -43,3 +43,15 @@ def get_all_models_meta_data(mindsdb_native, custom_models):
     model_data_arr.extend(custom_models.get_models())
 
     return model_data_arr
+
+def is_notebook():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter

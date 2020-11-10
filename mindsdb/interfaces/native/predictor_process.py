@@ -49,7 +49,6 @@ class PredictorProcess(ctx.Process):
 
             predictions = mdb.predict(
                 when_data=when_data,
-                run_confidence_variation_analysis=True,
                 **kwargs
             )
 

@@ -7,7 +7,6 @@ from mindsdb.utilities.config import Config
 from common import (
     run_environment,
     get_test_csv,
-    run_container,
     TEST_CONFIG,
     USE_EXTERNAL_DB_SERVER,
     open_ssh_tunnel
@@ -53,9 +52,6 @@ class MongoTest(unittest.TestCase):
         if USE_EXTERNAL_DB_SERVER:
             open_ssh_tunnel(27002, direction='L')   # 27002 - mongos port
             wait_port(27002, timeout=10)
-        else:
-            run_container('mongo-cluster')
-            wait_port(config['api']['mongodb']['port'], timeout=90)
 
         cls.mongos_client = MongoClient('mongodb://127.0.0.1:27002/')
         mdb_shard = f"127.0.0.1:{config['api']['mongodb']['port']}"

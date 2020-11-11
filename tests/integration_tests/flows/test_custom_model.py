@@ -12,7 +12,6 @@ from common import (
     run_environment,
     get_test_csv,
     TEST_CONFIG,
-    USE_EXTERNAL_DB_SERVER,
     MINDSDB_DATABASE
 )
 
@@ -63,7 +62,6 @@ class CustomModelTest(unittest.TestCase):
         mdb, datastore = run_environment(
             config,
             apis=['http', 'mysql'],
-            run_docker_db=[] if USE_EXTERNAL_DB_SERVER else ['mariadb'],
             override_integration_config={
                 'default_mariadb': {
                     'enabled': True
@@ -230,11 +228,10 @@ class Model(ModelInterface):
         self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
 
     def test_3_retrain_model(self):
-        res = query(f"""
+        query(f"""
             INSERT INTO {MINDSDB_DATABASE}.predictors (name, predict, select_data_query)
-            VALUES ('{PRED_NAME}', 'sqft', 'SELECT * FROM test_data.{TEST_DATA_TABLE}') """
-        )
-        #sqft
+            VALUES ('{PRED_NAME}', 'sqft', 'SELECT * FROM test_data.{TEST_DATA_TABLE}')
+        """)
 
     def test_4_predict_with_retrained_from_sql(self):
         res = fetch(f"""SELECT sqft FROM {MINDSDB_DATABASE}.{PRED_NAME} WHERE initial_price=6000""", as_dict=True)

@@ -157,7 +157,7 @@ class ClickhouseTest(unittest.TestCase):
             (
                 '{TEST_PREDICTOR_NAME}',
                 'rental_price, location',
-                'select * from test.{TEST_DATA_TABLE} limit 100',
+                'select * from test.{TEST_DATA_TABLE} limit 800',
                 '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
             );
         """)

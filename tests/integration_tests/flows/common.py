@@ -1,13 +1,10 @@
 import time
 from pathlib import Path
 import json
-import docker
 import requests
 import subprocess
 import atexit
 import os
-import socket
-from contextlib import closing
 import asyncio
 import shutil
 import csv
@@ -16,13 +13,12 @@ from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.ps import wait_port, is_port_in_use
 from mindsdb_native import CONFIG
 
 DATASETS_PATH = os.getenv('DATASETS_PATH')
 
-USE_EXTERNAL_DB_SERVER = bool(int(os.getenv('USE_EXTERNAL_DB_SERVER') or "0"))
+USE_EXTERNAL_DB_SERVER = bool(int(os.getenv('USE_EXTERNAL_DB_SERVER') or "1"))
 
 EXTERNAL_DB_CREDENTIALS = str(Path.home().joinpath('.mindsdb_credentials.json'))
 
@@ -84,11 +80,9 @@ DATASETS_COLUMN_TYPES = {
 }
 
 
-def prepare_config(config, enable_dbs=[], mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}):
-    if isinstance(enable_dbs, list) is False:
-        enable_dbs = [enable_dbs]
+def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}):
     for key in config._config['integrations']:
-        config._config['integrations'][key]['enabled'] = key in enable_dbs
+        config._config['integrations'][key]['enabled'] = False
 
     if USE_EXTERNAL_DB_SERVER:
         with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
@@ -162,51 +156,10 @@ if USE_EXTERNAL_DB_SERVER:
     TEST_CONFIG = prepare_config(config, override_integration_config=override)
 
 
-def is_port_opened(port, host='127.0.0.1'):
-    ''' try connect to host:port, to check it open or not
-    '''
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-        is_open = sock.connect_ex((host, int(port))) == 0
-    return is_open
-
-
-def wait_api_ready(config, api='mysql'):
-    port_num = config['api'][api]['port']
-    api_ready = wait_port(port_num, START_TIMEOUT)
-    return api_ready
-
-
-def wait_db(config, db_name):
-    m = DatabaseWrapper(config)
-
-    start_time = time.time()
-
-    connected = m.check_connections()[db_name]
-
-    while not connected and (time.time() - start_time) < START_TIMEOUT:
-        time.sleep(2)
-        connected = m.check_connections()[db_name]
-
-    return connected
-
-
-def is_container_run(name):
-    docker_client = docker.from_env()
-    try:
-        containers = docker_client.containers.list()
-    except Exception:
-        # In case docker is running for sudo or another user
-        return True
-    containers = [x.name for x in containers if x.status == 'running']
-    return name in containers
-
-
 def get_test_csv(name, source, lines_count=None, rewrite=False, column_names=None):
     test_csv_path = TESTS_ROOT.joinpath('temp/', name).resolve()
     if not test_csv_path.is_file() or rewrite:
         shutil.copy(source, test_csv_path)
-        # with open(test_csv_path, 'wb') as f:
-        #     f.write(r.content)
         if lines_count is not None:
             fp = str(test_csv_path)
             p = subprocess.Popen(
@@ -226,30 +179,6 @@ def get_test_csv(name, source, lines_count=None, rewrite=False, column_names=Non
     return str(test_csv_path)
 
 
-def run_container(name):
-    env = os.environ.copy()
-    env['UID'] = str(os.getuid())
-    env['GID'] = str(os.getgid())
-    subprocess.Popen(
-        ['./cli.sh', name],
-        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-        stdout=OUTPUT,
-        stderr=OUTPUT,
-        env=env
-    )
-    atexit.register(stop_container, name=name)
-
-
-def stop_container(name):
-    sp = subprocess.Popen(
-        ['./cli.sh', f'{name}-stop'],
-        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-        stdout=OUTPUT,
-        stderr=OUTPUT
-    )
-    sp.wait()
-
-
 def stop_mindsdb(sp):
     sp.kill()
     sp = subprocess.Popen('kill -9 $(lsof -t -i:47334)', shell=True)
@@ -260,23 +189,9 @@ def stop_mindsdb(sp):
     sp.wait()
 
 
-def run_environment(config, apis=['mysql'], run_docker_db=[], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb'):
-    ''' services = [mindsdb|]
-    '''
-
-    default_databases = [f'default_{db}' for db in run_docker_db]
-    temp_config_path = prepare_config(config, default_databases, mindsdb_database, override_integration_config, override_api_config)
+def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb'):
+    temp_config_path = prepare_config(config, mindsdb_database, override_integration_config, override_api_config)
     config = Config(temp_config_path)
-
-    db_ready = True
-    for db in run_docker_db:
-        if is_container_run(f'{db}-test') is False:
-            run_container(db)
-        db_ready = db_ready and wait_db(config, f'default_{db}')
-
-    if db_ready is False:
-        print('Cant start databases.')
-        raise Exception()
 
     api_str = ','.join(apis)
     sp = subprocess.Popen(

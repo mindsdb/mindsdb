@@ -9,7 +9,6 @@ from mindsdb.utilities.config import Config
 
 from common import (
     MINDSDB_DATABASE,
-    USE_EXTERNAL_DB_SERVER,
     run_environment,
     get_test_csv,
     TEST_CONFIG,
@@ -81,7 +80,6 @@ class MySQLDBTest(unittest.TestCase):
         mdb, datastore = run_environment(
             config,
             apis=['mysql'],
-            run_docker_db=[] if USE_EXTERNAL_DB_SERVER else ['mysql'],
             override_integration_config={
                 'default_mysql': {
                     'enabled': True

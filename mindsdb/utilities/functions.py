@@ -23,3 +23,41 @@ def cast_row_types(row, field_types):
         elif t == 'Date' and isinstance(row[key], (int, float)):
             timestamp = datetime.datetime.utcfromtimestamp(row[key])
             row[key] = timestamp.strftime('%Y-%m-%d')
+        elif t == 'Int' and isinstance(row[key], (int, float, str)):
+            try:
+                print(f'cast {row[key]} to {int(row[key])}')
+                row[key] = int(row[key])
+            except Exception:
+                pass
+
+
+def get_all_models_meta_data(mindsdb_native, custom_models):
+    ''' combine custom models and native models to one array
+
+        :param mindsdb_native: instance of MindsdbNative
+        :param custom_models: instance of CustomModels
+        :return: list of models meta data
+    '''
+    model_data_arr = [
+        {
+            'name': x['name'],
+            'predict': x['predict'],
+            'data_analysis': mindsdb_native.get_model_data(x['name'])['data_analysis_v2']
+        } for x in mindsdb_native.get_models()
+    ]
+
+    model_data_arr.extend(custom_models.get_models())
+
+    return model_data_arr
+
+def is_notebook():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter

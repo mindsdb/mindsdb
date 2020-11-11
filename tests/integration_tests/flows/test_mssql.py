@@ -54,7 +54,6 @@ class MSSQLTest(unittest.TestCase):
         mdb, datastore = run_environment(
             config,
             apis=['mysql'],
-            run_docker_db=[],   # NOTE ds should be already runned
             override_integration_config={
                 'default_mssql': {
                     'enabled': True

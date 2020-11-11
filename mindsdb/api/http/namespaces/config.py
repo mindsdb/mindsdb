@@ -7,6 +7,7 @@ from flask import current_app as ca
 
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.utilities.functions import get_all_models_meta_data
 
 
 def get_integration(name):
@@ -59,7 +60,12 @@ class Integration(Resource):
             abort(400, f"Integration with name '{name}' already exists")
         try:
             ca.config_obj.add_db_integration(name, params)
-            DatabaseWrapper(ca.config_obj)
+
+            mdb = ca.mindsdb_native
+            cst = ca.custom_models
+            model_data_arr = get_all_models_meta_data(mdb, cst)
+            dbw = DatabaseWrapper(ca.config_obj)
+            dbw.register_predictors(model_data_arr)
         except Exception as e:
             print(traceback.format_exc())
             abort(500, f'Error during config update: {str(e)}')

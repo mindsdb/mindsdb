@@ -34,7 +34,6 @@ class MongoTest(unittest.TestCase):
         mdb, datastore = run_environment(
             config,
             apis=['mongodb'],
-            run_docker_db=[],
             override_integration_config={
                 'default_mongodb': {
                     'enabled': True,

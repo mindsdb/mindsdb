@@ -29,7 +29,6 @@ class HTTPTest(unittest.TestCase):
         mdb, datastore = common.run_environment(
             config,
             apis=['http'],
-            run_docker_db=[] if common.USE_EXTERNAL_DB_SERVER else ['mariadb', 'clickhouse'],
             override_integration_config={
                 'default_mariadb': {
                     'enabled': True

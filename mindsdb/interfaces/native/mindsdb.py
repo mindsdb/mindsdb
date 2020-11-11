@@ -46,7 +46,6 @@ class MindsdbNative():
 
         predictions = mdb.predict(
             when_data=when_data,
-            run_confidence_variation_analysis=isinstance(when_data, list) is False or len(when_data) == 1,
             **kwargs
         )
 

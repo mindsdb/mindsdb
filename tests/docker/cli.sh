@@ -42,25 +42,32 @@ elif [ $1 = "mongo" ]; then
 elif [ $1 = "mongo-stop" ]; then
     docker-compose stop mongo
 
+elif [ $1 = "mongo-cluster" ]; then
+    rm -rf mongodb/storage_config/ mongodb/storage_instance/ mongodb/storage_mongos/
+    docker container stop mongo-mongos-test mongo-glue-test mongo-config-test mongo-instance-test
+    docker container rm mongo-mongos-test mongo-glue-test mongo-config-test mongo-instance-test
+    docker-compose -f docker-compose-mongo.yml up
+elif [ $1 = "mongo-cluster-stop" ]; then
+    docker-compose -f docker-compose-mongo.yml stop
+    rm -rf mongodb/storage_config/ mongodb/storage_instance/ mongodb/storage_mongos/
+    docker container stop mongo-mongos-test mongo-glue-test mongo-config-test mongo-instance-test
+    docker container rm mongo-mongos-test mongo-glue-test mongo-config-test mongo-instance-test
 elif [ $1 = "mongo-config" ]; then
     rm -rf mongodb/storage_config/
     mkdir -p mongodb/storage_config/
     docker-compose -f docker-compose-mongo.yml up mongo-config
 elif [ $1 = "mongo-config-stop" ]; then
     docker-compose -f docker-compose-mongo.yml stop mongo-config
-
 elif [ $1 = "mongo-instance" ]; then
     rm -rf mongodb/storage_instance/
     mkdir -p mongodb/storage_instance/
     docker-compose -f docker-compose-mongo.yml up mongo-instance
 elif [ $1 = "mongo-instance-stop" ]; then
     docker-compose -f docker-compose-mongo.yml stop mongo-instance
-
 elif [ $1 = "mongo-mongos" ]; then
     rm -rf mongodb/storage_mongos/
     mkdir -p mongodb/storage_mongos/
     docker-compose -f docker-compose-mongo.yml up mongo-mongos
 elif [ $1 = "mongo-mongos-stop" ]; then
     docker-compose -f docker-compose-mongo.yml stop mongo-mongos
-
 fi

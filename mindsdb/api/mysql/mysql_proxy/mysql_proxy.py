@@ -30,6 +30,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
+from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 
@@ -48,7 +49,8 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     SERVER_VARIABLES,
     DEFAULT_AUTH_METHOD,
     SERVER_STATUS,
-    FIELD_FLAG
+    FIELD_FLAG,
+    CAPABILITIES
 )
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
@@ -193,10 +195,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.info('switch to SSL')
             self.session.is_ssl = True
 
-            ssl_socket = ssl.wrap_socket(
+            ssl_context = ssl.SSLContext()
+            ssl_context.load_cert_chain(CERT_PATH)
+            ssl_socket = ssl_context.wrap_socket(
                 self.socket,
                 server_side=True,
-                certfile=CERT_PATH,
                 do_handshake_on_connect=True
             )
 
@@ -1461,6 +1464,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             CERT_PATH = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
             make_ssl_cert(CERT_PATH)
             atexit.register(lambda: os.remove(CERT_PATH))
+
+        server_capabilities.set(
+            CAPABILITIES.CLIENT_SSL,
+            config['api']['mysql']['ssl']
+        )
 
         default_store = DataStore(config)
         mdb = MindsdbNative(config)

@@ -52,3 +52,12 @@ services:
     volumes:
     - ./postgres/storage:/var/lib/postgresql/data
     - ./postgres/share:/share
+  mongo-instance:
+    image: mongo:3.6
+    network_mode: host
+    container_name: mongo-alone-test
+    ports:
+      - 27017:27017
+    command: --dbpath /data/db --port 27017
+    volumes:
+    - ./mongodb/storage:/data/db

@@ -4,12 +4,15 @@ import shutil
 import requests
 import os
 
+import mysql.connector
+
 from mindsdb.utilities.config import Config
 
 from common import (
     run_environment,
     get_test_csv,
-    TEST_CONFIG
+    TEST_CONFIG,
+    MINDSDB_DATABASE
 )
 
 
@@ -26,46 +29,46 @@ config = Config(TEST_CONFIG)
 PRED_NAME = 'this_is_my_custom_sklearnmodel'
 
 
-def query(query):
-    if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
-        query += ' FORMAT JSON'
+config = Config(TEST_CONFIG)
 
-    host = config['integrations']['default_clickhouse']['host']
-    port = config['integrations']['default_clickhouse']['port']
 
-    connect_string = f'http://{host}:{port}'
-
-    params = {'user': 'default'}
-    try:
-        params['user'] = config['integrations']['default_clickhouse']['user']
-    except Exception:
-        pass
-
-    try:
-        params['password'] = config['integrations']['default_clickhouse']['password']
-    except Exception:
-        pass
-
-    res = requests.post(
-        connect_string,
-        data=query,
-        params=params
+def query(q, as_dict=False, fetch=False):
+    con = mysql.connector.connect(
+        host=config['integrations']['default_mariadb']['host'],
+        port=config['integrations']['default_mariadb']['port'],
+        user=config['integrations']['default_mariadb']['user'],
+        passwd=config['integrations']['default_mariadb']['password'],
+        db=MINDSDB_DATABASE,
+        connect_timeout=1000
     )
 
-    if res.status_code != 200:
-        print(f'ERROR: code={res.status_code} msg={res.text}')
-        raise Exception()
-
-    if ' FORMAT JSON' in query:
-        res = res.json()['data']
-
+    cur = con.cursor(dictionary=as_dict)
+    cur.execute(q)
+    res = True
+    if fetch:
+        res = cur.fetchall()
+    con.commit()
+    con.close()
     return res
+
+
+def fetch(q, as_dict=True):
+    return query(q, as_dict, fetch=True)
 
 
 class CustomModelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment('clickhouse', config, run_apis=['mysql', 'http'])
+        mdb, datastore = run_environment(
+            config,
+            apis=['http', 'mysql'],
+            override_integration_config={
+                'default_mariadb': {
+                    'enabled': True
+                }
+            },
+            mindsdb_database=MINDSDB_DATABASE
+        )
         cls.mdb = mdb
 
         models = cls.mdb.get_models()
@@ -73,28 +76,25 @@ class CustomModelTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        query('create database if not exists test')
-        test_tables = query('show tables from test')
-        test_tables = [x['name'] for x in test_tables]
+        query('create database if not exists test_data')
+        test_tables = fetch('show tables from test_data', as_dict=False)
+        test_tables = [x[0] for x in test_tables]
 
         test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
 
         if TEST_DATA_TABLE not in test_tables:
             print('creating test data table...')
             query(f'''
-                CREATE TABLE test.{TEST_DATA_TABLE} (
-                    id Int16,
-                    number_of_rooms Int8,
-                    number_of_bathrooms Int8,
-                    sqft Int32,
-                    location String,
-                    days_on_market Int16,
-                    initial_price Int32,
-                    neighborhood String,
-                    rental_price Int32
-                ) ENGINE = MergeTree()
-                ORDER BY id
-                PARTITION BY location
+                CREATE TABLE test_data.{TEST_DATA_TABLE} (
+                    number_of_rooms int,
+                    number_of_bathrooms int,
+                    sqft int,
+                    location varchar(100),
+                    days_on_market int,
+                    initial_price int,
+                    neighborhood varchar(100),
+                    rental_price int
+                )
             ''')
 
             with open(test_csv_path) as f:
@@ -110,8 +110,7 @@ class CustomModelTest(unittest.TestCase):
                         initial_price = int(row[5])
                         neighborhood = str(row[6])
                         rental_price = int(float(row[7]))
-                        query(f'''INSERT INTO test.{TEST_DATA_TABLE} VALUES (
-                            {i},
+                        query(f'''INSERT INTO test_data.{TEST_DATA_TABLE} VALUES (
                             {number_of_rooms},
                             {number_of_bathrooms},
                             {sqft},
@@ -127,7 +126,7 @@ class CustomModelTest(unittest.TestCase):
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:
             datastore.delete_datasource(EXTERNAL_DS_NAME)
-        short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=300, rewrite=True)
+        short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=30, rewrite=True)
         datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
 
     def test_1_simple_model_upload(self):
@@ -135,7 +134,7 @@ class CustomModelTest(unittest.TestCase):
 
         try:
             os.mkdir(dir_name)
-        except:
+        except Exception:
             pass
 
         with open(dir_name + '/model.py', 'w') as fp:
@@ -176,7 +175,7 @@ class Model(ModelInterface):
         shutil.make_archive(base_name='my_model', format='zip', root_dir=dir_name)
 
         # Upload the model (new endpoint)
-        res = requests.put(f'{root}/predictors/custom/{PRED_NAME}', files=dict(file=open('my_model.zip','rb')), json={
+        res = requests.put(f'{root}/predictors/custom/{PRED_NAME}', files=dict(file=open('my_model.zip', 'rb')), json={
             'trained_status': 'untrained'
         })
         print(res.status_code)
@@ -211,29 +210,45 @@ class Model(ModelInterface):
         res = requests.post(url, json=params)
 
         assert res.status_code == 200
-        assert(len(res.json()) == 299)
+        assert(len(res.json()) == 29)
         for pred in res.json():
             assert isinstance(pred['rental_price']['predicted_value'], float)
 
     def test_2_db_predict_from_external_datasource(self):
-        res = query(f"""SELECT rental_price FROM mindsdb.{PRED_NAME} WHERE external_datasource='{EXTERNAL_DS_NAME}'""")
+        res = fetch(
+            f"""
+                SELECT rental_price
+                FROM {MINDSDB_DATABASE}.{PRED_NAME}
+                WHERE external_datasource='{EXTERNAL_DS_NAME}'
+            """,
+            as_dict=True
+        )
 
         self.assertTrue(len(res) > 0)
         self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
 
     def test_3_retrain_model(self):
-        res = query(f""" INSERT INTO mindsdb.predictors (name, predict, select_data_query) VALUES ('{PRED_NAME}', 'sqft', 'SELECT * FROM test.{TEST_DATA_TABLE}') """)
-        #sqft
+        query(f"""
+            INSERT INTO {MINDSDB_DATABASE}.predictors (name, predict, select_data_query)
+            VALUES ('{PRED_NAME}', 'sqft', 'SELECT * FROM test_data.{TEST_DATA_TABLE}')
+        """)
 
     def test_4_predict_with_retrained_from_sql(self):
-        res = query(f"""SELECT sqft FROM mindsdb.{PRED_NAME} WHERE initial_price=6000""")
+        res = fetch(f"""SELECT sqft FROM {MINDSDB_DATABASE}.{PRED_NAME} WHERE initial_price=6000""", as_dict=True)
 
         self.assertTrue(len(res) > 0)
         print(res)
         self.assertTrue(res[0]['sqft'] is not None and res[0]['sqft'] != 'None')
 
     def test_5_predict_with_retrained_from_select(self):
-        res = query(f"""SELECT sqft FROM mindsdb.{PRED_NAME} WHERE select_data_query='SELECT * FROM test.{TEST_DATA_TABLE}'""")
+        res = fetch(
+            f"""
+                SELECT sqft
+                FROM {MINDSDB_DATABASE}.{PRED_NAME}
+                WHERE select_data_query='SELECT * FROM test_data.{TEST_DATA_TABLE}'
+            """,
+            as_dict=True
+        )
 
         self.assertTrue(len(res) > 0)
         print(res)
@@ -255,7 +270,7 @@ class Model(ModelInterface):
         res = requests.post(url, json=params)
 
         assert res.status_code == 200
-        assert(len(res.json()) == 299)
+        assert(len(res.json()) == 29)
         for pred in res.json():
             assert isinstance(pred['sqft']['predicted_value'], float)
 
@@ -266,18 +281,19 @@ class Model(ModelInterface):
         for ele in res.json():
             print(ele)
             if ele['name'] == PRED_NAME:
-                assert ele['is_custom'] == True
+                assert ele['is_custom'] is True
 
         res = requests.get(f'{root}/predictors/{PRED_NAME}')
         assert res.status_code == 200
         assert res.json()['name'] == PRED_NAME
-        assert res.json()['is_custom'] == True
+        assert res.json()['is_custom'] is True
 
     def test_8_delete_from_http_api(self):
         res = requests.delete(f'{root}/predictors/{PRED_NAME}')
         assert res.status_code == 200
         res = requests.get(f'{root}/predictors')
         assert PRED_NAME not in [x['name'] for x in res.json()]
+
 
 if __name__ == "__main__":
     unittest.main(failfast=True)

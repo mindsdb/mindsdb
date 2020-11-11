@@ -9,7 +9,8 @@ from mindsdb.utilities.config import Config
 from common import (
     run_environment,
     get_test_csv,
-    TEST_CONFIG
+    TEST_CONFIG,
+    MINDSDB_DATABASE
 )
 
 TEST_CSV = {
@@ -50,7 +51,16 @@ def query(query, fetch=False, as_dict=True, db='mindsdb_test'):
 class MSSQLTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment('mssql', config)
+        mdb, datastore = run_environment(
+            config,
+            apis=['mysql'],
+            override_integration_config={
+                'default_mssql': {
+                    'enabled': True
+                }
+            },
+            mindsdb_database=MINDSDB_DATABASE
+        )
         cls.mdb = mdb
 
         models = cls.mdb.get_models()

@@ -6,6 +6,7 @@ import inspect
 from mindsdb.utilities.config import Config
 
 from common import (
+    MINDSDB_DATABASE,
     run_environment,
     get_test_csv,
     TEST_CONFIG
@@ -61,7 +62,21 @@ def query(query):
 class ClickhouseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment('clickhouse', config)
+        mdb, datastore = run_environment(
+            config,
+            apis=['mysql'],
+            override_integration_config={
+                'default_clickhouse': {
+                    'enabled': True
+                }
+            },
+            override_api_config={
+                'mysql': {
+                    'ssl': False
+                }
+            },
+            mindsdb_database=MINDSDB_DATABASE
+        )
         cls.mdb = mdb
 
         models = cls.mdb.get_models()
@@ -69,8 +84,8 @@ class ClickhouseTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        query('create database if not exists test')
-        test_tables = query('show tables from test')
+        query('create database if not exists test_data')
+        test_tables = query('show tables from test_data')
         test_tables = [x['name'] for x in test_tables]
 
         test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
@@ -78,7 +93,7 @@ class ClickhouseTest(unittest.TestCase):
         if TEST_DATA_TABLE not in test_tables:
             print('creating test data table...')
             query(f'''
-                CREATE TABLE test.{TEST_DATA_TABLE} (
+                CREATE TABLE test_data.{TEST_DATA_TABLE} (
                     id Int16,
                     number_of_rooms Int8,
                     number_of_bathrooms Int8,
@@ -106,7 +121,7 @@ class ClickhouseTest(unittest.TestCase):
                         initial_price = int(row[5])
                         neighborhood = str(row[6])
                         rental_price = int(float(row[7]))
-                        query(f'''INSERT INTO test.{TEST_DATA_TABLE} VALUES (
+                        query(f'''INSERT INTO test_data.{TEST_DATA_TABLE} VALUES (
                             {i},
                             {number_of_rooms},
                             {number_of_bathrooms},
@@ -140,7 +155,7 @@ class ClickhouseTest(unittest.TestCase):
         self.assertTrue(TEST_DATA_TABLE in test_tables)
 
         print('Test predictor table not exists')
-        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
         mindsdb_tables = [x['name'] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 
@@ -153,22 +168,22 @@ class ClickhouseTest(unittest.TestCase):
     def test_2_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
-            insert into mindsdb.predictors (name, predict, select_data_query, training_options) values
+            insert into {MINDSDB_DATABASE}.predictors (name, predict, select_data_query, training_options) values
             (
                 '{TEST_PREDICTOR_NAME}',
                 'rental_price, location',
-                'select * from test.{TEST_DATA_TABLE} limit 100',
+                'select * from test_data.{TEST_DATA_TABLE} limit 800',
                 '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
             );
         """)
 
         print('predictor record in mindsdb.predictors')
-        res = query(f"select status from mindsdb.predictors where name = '{TEST_PREDICTOR_NAME}'")
+        res = query(f"select status from {MINDSDB_DATABASE}.predictors where name = '{TEST_PREDICTOR_NAME}'")
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
         print('predictor table in mindsdb db')
-        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
         mindsdb_tables = [x['name'] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME in mindsdb_tables)
 
@@ -180,7 +195,7 @@ class ClickhouseTest(unittest.TestCase):
             self.mdb.delete_model(name)
 
         query(f"""
-            insert into mindsdb.predictors (name, predict, external_datasource, training_options) values
+            insert into {MINDSDB_DATABASE}.predictors (name, predict, external_datasource, training_options) values
             (
                 '{name}',
                 'rental_price, location',
@@ -190,12 +205,12 @@ class ClickhouseTest(unittest.TestCase):
         """)
 
         print('predictor record in mindsdb.predictors')
-        res = query(f"select status from mindsdb.predictors where name = '{name}'")
+        res = query(f"select status from {MINDSDB_DATABASE}.predictors where name = '{name}'")
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
         print('predictor table in mindsdb db')
-        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
         mindsdb_tables = [x['name'] for x in mindsdb_tables]
         self.assertTrue(name in mindsdb_tables)
 
@@ -204,7 +219,7 @@ class ClickhouseTest(unittest.TestCase):
                 rental_price, location, sqft, number_of_rooms,
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
-                mindsdb.{name} where external_datasource='{EXTERNAL_DS_NAME}'
+                {MINDSDB_DATABASE}.{name} where external_datasource='{EXTERNAL_DS_NAME}'
         """)
 
         print('check result')
@@ -219,7 +234,7 @@ class ClickhouseTest(unittest.TestCase):
                 rental_price, location, sqft, number_of_rooms,
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
-                mindsdb.{TEST_PREDICTOR_NAME} where sqft=1000
+                {MINDSDB_DATABASE}.{TEST_PREDICTOR_NAME} where sqft=1000
         """)
 
         print('check result')
@@ -245,7 +260,7 @@ class ClickhouseTest(unittest.TestCase):
                 rental_price, location, sqft, number_of_rooms,
                 rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
             from
-                mindsdb.{TEST_PREDICTOR_NAME} where select_data_query='select * from test.{TEST_DATA_TABLE} limit 3'
+                {MINDSDB_DATABASE}.{TEST_PREDICTOR_NAME} where select_data_query='select * from test_data.{TEST_DATA_TABLE} limit 3'
         """)
 
         print('check result')
@@ -262,7 +277,7 @@ class ClickhouseTest(unittest.TestCase):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
-            insert into mindsdb.commands values ('delete predictor {TEST_PREDICTOR_NAME}');
+            insert into {MINDSDB_DATABASE}.commands values ('delete predictor {TEST_PREDICTOR_NAME}');
         """)
 
         print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
@@ -270,7 +285,7 @@ class ClickhouseTest(unittest.TestCase):
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         print('Test predictor table not exists')
-        mindsdb_tables = query('show tables from mindsdb')
+        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
         mindsdb_tables = [x['name'] for x in mindsdb_tables]
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
 

@@ -5,10 +5,9 @@ services:
         image: mongo:3.6
         network_mode: host
         container_name: mongo-config-test
-        user: "${UID}:${GID}"
         ports:
           - 27000:27000
-        command: --configsvr --dbpath /data/db --port 27000 --replSet replconf
+        command: --configsvr --dbpath /data/db --port 27000 --replSet replconf --bind_ip 127.0.0.1
         volumes:
         - ./mongodb/storage_config:/data/db
     mongo-instance:
@@ -16,12 +15,23 @@ services:
         image: mongo:3.6
         network_mode: host
         container_name: mongo-instance-test
-        user: "${UID}:${GID}"
         ports:
             - 27001:27001
-        command: --dbpath /data/db --port 27001 --shardsvr --replSet replmain --sslMode disabled
+        command: --dbpath /data/db --port 27001 --shardsvr --replSet replmain --sslMode disabled --bind_ip 127.0.0.1
         volumes:
         - ./mongodb/storage_instance:/data/db
+    glue:
+        build:
+            context: mongodb/glue/.
+            dockerfile: Dockerfile
+        image: mongo-glue-test:1.0
+        network_mode: host
+        container_name: mongo-glue-test
+        depends_on:
+            - mongo-config
+            - mongo-instance
+        volumes:
+        - ./mongodb/glue/data:/data
     mongo-mongos:
         build:
             context: mongodb/mongos/.
@@ -31,7 +41,8 @@ services:
         container_name: mongo-mongos-test
         depends_on:
             - mongo-config
-        user: "${UID}:${GID}"
+            - mongo-instance
+            - glue
         ports:
             - 27002:27002
         volumes:

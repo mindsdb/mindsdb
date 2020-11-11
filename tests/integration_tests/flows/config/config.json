@@ -68,6 +68,10 @@
             "port": 27001,
             "type": "mongodb",
             "user": ""
+        },
+        "default_snowflake": {
+            "enabled": false,
+            "type": "snowflake"
         }
     },
     "interface": {

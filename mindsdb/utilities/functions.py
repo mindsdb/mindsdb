@@ -23,6 +23,12 @@ def cast_row_types(row, field_types):
         elif t == 'Date' and isinstance(row[key], (int, float)):
             timestamp = datetime.datetime.utcfromtimestamp(row[key])
             row[key] = timestamp.strftime('%Y-%m-%d')
+        elif t == 'Int' and isinstance(row[key], (int, float, str)):
+            try:
+                print(f'cast {row[key]} to {int(row[key])}')
+                row[key] = int(row[key])
+            except Exception:
+                pass
 
 
 def get_all_models_meta_data(mindsdb_native, custom_models):

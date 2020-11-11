@@ -11,14 +11,12 @@
 
 # https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::HandshakeResponse
 
-import traceback
-from pprint import pformat
-
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DEFAULT_CAPABILITIES, CAPABILITIES
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CAPABILITIES
+from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 
 
 class HandshakeResponsePacket(Packet):
@@ -69,12 +67,12 @@ class HandshakeResponsePacket(Packet):
             buffer = self.reserved.setFromBuff(buffer)
             buffer = self.username.setFromBuff(buffer)
 
-            if DEFAULT_CAPABILITIES & CAPABILITIES.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA > 0 \
-                and capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA:
+            if server_capabilities.has(CAPABILITIES.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA) \
+                    and capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA:
                 self.enc_password = Datum('string<lenenc>')
                 buffer = self.enc_password.setFromBuff(buffer)
-            elif DEFAULT_CAPABILITIES & CAPABILITIES.CLIENT_SECURE_CONNECTION > 0 \
-                and capabilities.SECURE_CONNECTION:
+            elif server_capabilities.has(CAPABILITIES.CLIENT_SECURE_CONNECTION) \
+                    and capabilities.SECURE_CONNECTION:
                 self.auth_resp_len = Datum('int<1>')
                 buffer = self.auth_resp_len.setFromBuff(buffer)
                 self.enc_password = Datum(f'string<{self.auth_resp_len.value}>')

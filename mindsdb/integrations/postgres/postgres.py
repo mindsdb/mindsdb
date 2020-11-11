@@ -84,19 +84,19 @@ class PostgreSQL(Integration):
 
         self._query(f'DROP SCHEMA IF EXISTS {self.mindsdb_database} CASCADE')
 
-        self._query(f"DROP USER MAPPING IF EXISTS FOR {self.config['integrations'][self.name]['user']} SERVER mindsdb_server")
+        self._query(f"DROP USER MAPPING IF EXISTS FOR {self.config['integrations'][self.name]['user']} SERVER server_{self.mindsdb_database}")
 
-        self._query('DROP SERVER IF EXISTS mindsdb_server CASCADE')
+        self._query(f'DROP SERVER IF EXISTS server_{self.mindsdb_database} CASCADE')
 
         self._query(f'''
-            CREATE SERVER mindsdb_server
+            CREATE SERVER server_{self.mindsdb_database}
                 FOREIGN DATA WRAPPER mysql_fdw
                 OPTIONS (host '{host}', port '{port}');
         ''')
 
         self._query(f'''
            CREATE USER MAPPING FOR {self.config['integrations'][self.name]['user']}
-                SERVER mindsdb_server
+                SERVER server_{self.mindsdb_database}
                 OPTIONS (username '{user}', password '{password}');
         ''')
 
@@ -112,7 +112,7 @@ class PostgreSQL(Integration):
                 external_datasource text,
                 training_options text
             )
-            SERVER mindsdb_server
+            SERVER server_{self.mindsdb_database}
             OPTIONS (dbname 'mindsdb', table_name 'predictors');
         """
         self._query(q)
@@ -120,7 +120,7 @@ class PostgreSQL(Integration):
         q = f"""
             CREATE FOREIGN TABLE IF NOT EXISTS {self.mindsdb_database}.commands (
                 command text
-            ) SERVER mindsdb_server
+            ) SERVER server_{self.mindsdb_database}
             OPTIONS (dbname 'mindsdb', table_name 'commands');
         """
         self._query(q)
@@ -142,7 +142,7 @@ class PostgreSQL(Integration):
             q = f"""
                 CREATE FOREIGN TABLE {self.mindsdb_database}.{self._escape_table_name(name)} (
                     {columns_sql}
-                ) SERVER mindsdb_server
+                ) SERVER server_{self.mindsdb_database}
                 OPTIONS (dbname 'mindsdb', table_name '{name}');
             """
             self._query(q)

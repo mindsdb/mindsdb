@@ -29,7 +29,7 @@ DB_TYPES_MAP = {
 }
 
 TO_PREDICT = {
-    'engineSize': float,
+    'enginesize': float,
     'model': str
 }
 CONDITION = {

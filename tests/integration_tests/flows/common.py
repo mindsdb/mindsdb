@@ -64,10 +64,10 @@ DATASETS_COLUMN_TYPES = {
         ('price', int),
         ('transmission', str),
         ('mileage', int),
-        ('fuelType', str),
+        ('fueltype', str),
         ('tax', int),
         ('mpg', float),
-        ('engineSize', float)
+        ('enginesize', float)
     ],
     'home_rentals': [
         ('number_of_rooms', int),

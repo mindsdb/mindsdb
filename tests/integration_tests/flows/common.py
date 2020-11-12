@@ -76,6 +76,18 @@ DATASETS_COLUMN_TYPES = {
         ('initial_price', int),
         ('neighborhood', str),
         ('rental_price', int)
+    ],
+    'concrete_strength': [
+        ('id', int),
+        ('cement', float),
+        ('slag', float),
+        ('flyAsh', float),
+        ('water', float),
+        ('superPlasticizer', float),
+        ('coarseAggregate', float),
+        ('fineAggregate', float),
+        ('age', int),
+        ('concrete_strength', float)
     ]
 }
 
@@ -307,7 +319,7 @@ def check_prediction_values(row, to_predict):
                 assert False
 
             assert isinstance(row[f'{field_name}_confidence'], (int, float))
-            assert isinstance(row[f'{field_name}_explain'], str)
+            assert isinstance(row[f'{field_name}_explain'], (str, dict))
     except Exception:
         print('Wrong values in row:')
         print(row)

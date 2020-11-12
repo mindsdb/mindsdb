@@ -115,6 +115,8 @@ class MongoTest(unittest.TestCase):
 
         test_data = self.mongos_client['test_data']
         test_data_collections = test_data.list_collection_names()
+        print('collection')
+        print(test_data_collections)
         self.assertTrue(TEST_DATASET in test_data_collections)
 
         records_cunt = test_data[TEST_DATASET].count_documents({})

@@ -7,6 +7,7 @@ from dateutil.parser import parse as parse_datetime
 import mindsdb_native
 from mindsdb_native import F
 from mindsdb.utilities.fs import create_directory
+from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 from mindsdb.interfaces.native.predictor_process import PredictorProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
@@ -54,8 +55,21 @@ class MindsdbNative():
     def analyse_dataset(self, ds):
         return F.analyse_dataset(ds)
 
-    def get_model_data(self, name):
-        return F.get_model_data(name)
+    def get_model_data(self, name, native_view=False):
+        model = F.get_model_data(name)
+        if native_view:
+            return model
+
+        data_analysis = model['data_analysis_v2']
+        for column in data_analysis['columns']:
+            if len(data_analysis[column]) == 0:
+                data_analysis[column] = {
+                    'typing': {
+                        'data_subtype': DATA_SUBTYPES.INT
+                    }
+                }
+
+        return model
 
     def get_models(self, status='any'):
         models = F.get_models()

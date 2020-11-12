@@ -16,7 +16,8 @@ from common import (
     DATASETS_COLUMN_TYPES,
     DATASETS_PATH,
     get_all_pridict_fields,
-    check_prediction_values
+    check_prediction_values,
+    USE_EXTERNAL_DB_SERVER
 )
 
 # +++ define test data
@@ -94,18 +95,20 @@ class MySQLDBTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
-
         query('create database if not exists test_data')
-        if TEST_DATA_TABLE not in cls.get_tables_in(cls, 'test_data'):
-            print('creating test data table...')
-            upload_csv(
-                query=query,
-                columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
-                db_types_map=DB_TYPES_MAP,
-                table_name=TEST_DATA_TABLE,
-                csv_path=test_csv_path
-            )
+
+        if not USE_EXTERNAL_DB_SERVER:
+            test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
+
+            if TEST_DATA_TABLE not in cls.get_tables_in(cls, 'test_data'):
+                print('creating test data table...')
+                upload_csv(
+                    query=query,
+                    columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
+                    db_types_map=DB_TYPES_MAP,
+                    table_name=TEST_DATA_TABLE,
+                    csv_path=test_csv_path
+                )
 
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:

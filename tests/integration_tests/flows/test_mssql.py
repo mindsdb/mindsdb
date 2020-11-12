@@ -10,7 +10,8 @@ from common import (
     run_environment,
     get_test_csv,
     TEST_CONFIG,
-    MINDSDB_DATABASE
+    MINDSDB_DATABASE,
+    USE_EXTERNAL_DB_SERVER
 )
 
 TEST_CSV = {
@@ -81,54 +82,54 @@ class MSSQLTest(unittest.TestCase):
                 create schema [mindsdb_schema];
             ''')
 
-        # query('create database if not exists test')
-        # show tables from test
-        test_tables = query(f'''
-            select 1 from sysobjects where name='{TEST_DATA_TABLE}' and xtype='U';
-        ''', fetch=True)
-        if len(test_tables) == 0:
-            print('creating test data table...')
-            query(f'''
-                CREATE TABLE mindsdb_schema.{TEST_DATA_TABLE} (
-                    number_of_rooms int,
-                    number_of_bathrooms int,
-                    sqft int,
-                    location varchar(100),
-                    days_on_market int,
-                    initial_price int,
-                    neighborhood varchar(100),
-                    rental_price int
-                )
-            ''')
+        if not USE_EXTERNAL_DB_SERVER:
+            # show tables from test
+            test_tables = query(f'''
+                select 1 from sysobjects where name='{TEST_DATA_TABLE}' and xtype='U';
+            ''', fetch=True)
+            if len(test_tables) == 0:
+                print('creating test data table...')
+                query(f'''
+                    CREATE TABLE mindsdb_schema.{TEST_DATA_TABLE} (
+                        number_of_rooms int,
+                        number_of_bathrooms int,
+                        sqft int,
+                        location varchar(100),
+                        days_on_market int,
+                        initial_price int,
+                        neighborhood varchar(100),
+                        rental_price int
+                    )
+                ''')
 
-            with open(test_csv_path) as f:
-                csvf = csv.reader(f)
-                i = 0
-                for row in csvf:
-                    if i > 0:
-                        number_of_rooms = int(row[0])
-                        number_of_bathrooms = int(row[1])
-                        sqft = int(float(row[2].replace(',', '.')))
-                        location = str(row[3])
-                        days_on_market = int(row[4])
-                        initial_price = int(row[5])
-                        neighborhood = str(row[6])
-                        rental_price = int(float(row[7]))
-                        query(f'''
-                            INSERT INTO mindsdb_schema.{TEST_DATA_TABLE} VALUES (
-                            {number_of_rooms},
-                            {number_of_bathrooms},
-                            {sqft},
-                            '{location}',
-                            {days_on_market},
-                            {initial_price},
-                            '{neighborhood}',
-                            {rental_price}
-                        )''')
-                    i += 1
-                    if i % 100 == 0:
-                        print(i)
-            print('done')
+                with open(test_csv_path) as f:
+                    csvf = csv.reader(f)
+                    i = 0
+                    for row in csvf:
+                        if i > 0:
+                            number_of_rooms = int(row[0])
+                            number_of_bathrooms = int(row[1])
+                            sqft = int(float(row[2].replace(',', '.')))
+                            location = str(row[3])
+                            days_on_market = int(row[4])
+                            initial_price = int(row[5])
+                            neighborhood = str(row[6])
+                            rental_price = int(float(row[7]))
+                            query(f'''
+                                INSERT INTO mindsdb_schema.{TEST_DATA_TABLE} VALUES (
+                                {number_of_rooms},
+                                {number_of_bathrooms},
+                                {sqft},
+                                '{location}',
+                                {days_on_market},
+                                {initial_price},
+                                '{neighborhood}',
+                                {rental_price}
+                            )''')
+                        i += 1
+                        if i % 100 == 0:
+                            print(i)
+                print('done')
 
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:

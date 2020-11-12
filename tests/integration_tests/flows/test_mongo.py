@@ -82,26 +82,27 @@ class MongoTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
+        if not USE_EXTERNAL_DB_SERVER:
+            test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
 
-        db = cls.mongos_client['test_data']
-        colls = db.list_collection_names()
+            db = cls.mongos_client['test_data']
+            colls = db.list_collection_names()
 
-        if TEST_DATASET not in colls:
-            print('creatating test data')
-            with open(test_csv_path) as f:
-                csvf = csv.reader(f)
-                data = []
-                DS = DATASETS_COLUMN_TYPES[TEST_DATASET]
-                for i, row in enumerate(csvf):
-                    if i == 0:
-                        continue
-                    data.append({
-                        column[0]: column[1](row[i])
-                        for i, column in enumerate(DS)
-                    })
-                db[TEST_DATASET].insert_many(data)
-            print('done')
+            if TEST_DATASET not in colls:
+                print('creatating test data')
+                with open(test_csv_path) as f:
+                    csvf = csv.reader(f)
+                    data = []
+                    DS = DATASETS_COLUMN_TYPES[TEST_DATASET]
+                    for i, row in enumerate(csvf):
+                        if i == 0:
+                            continue
+                        data.append({
+                            column[0]: column[1](row[i])
+                            for i, column in enumerate(DS)
+                        })
+                    db[TEST_DATASET].insert_many(data)
+                print('done')
 
         cls.mongos_client.admin.command('addShard', mdb_shard)
 

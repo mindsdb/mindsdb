@@ -15,7 +15,8 @@ from common import (
     DATASETS_COLUMN_TYPES,
     DATASETS_PATH,
     check_prediction_values,
-    condition_dict_to_str
+    condition_dict_to_str,
+    USE_EXTERNAL_DB_SERVER
 )
 
 # +++ define test data
@@ -37,15 +38,6 @@ CONDITION = {
     'mpg': 60.0
 }
 # ---
-
-# TEST_CSV = {
-#     'name': 'home_rentals.csv',
-#     'url': 'https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv'
-# }
-# TEST_DATA_TABLE = 'home_rentals'
-# TEST_PREDICTOR_NAME = 'test_predictor'
-
-# EXTERNAL_DS_NAME = 'test_external'
 
 TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
@@ -110,18 +102,20 @@ class PostgresTest(unittest.TestCase):
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
         query('create schema if not exists test_data')
-        test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
 
-        if TEST_DATA_TABLE not in cls.get_tables_in(cls, 'test_data'):
-            print('creating test data table...')
-            upload_csv(
-                query=query,
-                columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
-                db_types_map=DB_TYPES_MAP,
-                table_name=TEST_DATA_TABLE,
-                csv_path=test_csv_path,
-                escape='"'
-            )
+        if not USE_EXTERNAL_DB_SERVER:
+            test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
+
+            if TEST_DATA_TABLE not in cls.get_tables_in(cls, 'test_data'):
+                print('creating test data table...')
+                upload_csv(
+                    query=query,
+                    columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
+                    db_types_map=DB_TYPES_MAP,
+                    table_name=TEST_DATA_TABLE,
+                    csv_path=test_csv_path,
+                    escape='"'
+                )
 
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:

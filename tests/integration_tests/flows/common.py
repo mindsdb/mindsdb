@@ -9,6 +9,8 @@ import asyncio
 import shutil
 import csv
 
+from pandas import DataFrame
+
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
@@ -168,26 +170,10 @@ if USE_EXTERNAL_DB_SERVER:
     TEST_CONFIG = prepare_config(config, override_integration_config=override)
 
 
-def get_test_csv(name, source, lines_count=None, rewrite=False, column_names=None):
-    test_csv_path = TESTS_ROOT.joinpath('temp/', name).resolve()
-    if not test_csv_path.is_file() or rewrite:
-        shutil.copy(source, test_csv_path)
-        if lines_count is not None:
-            fp = str(test_csv_path)
-            p = subprocess.Popen(
-                f"mv {fp} {fp}_2; sed -n '1,{lines_count}p' {fp}_2 >> {fp}; rm {fp}_2",
-                cwd=TESTS_ROOT.resolve(),
-                stdout=OUTPUT,
-                stderr=OUTPUT,
-                shell=True
-            )
-            p.wait()
-    if isinstance(column_names, list):
-        with open(test_csv_path, 'rt') as f:
-            data = f.readlines()
-        data[0] = ','.join(column_names) + '\n'
-        with open(test_csv_path, 'wt') as f:
-            f.write(''.join(data))
+def make_test_csv(name, data):
+    test_csv_path = TESTS_ROOT.joinpath('temp/', f'{name}.csv').resolve()
+    df = DataFrame(data)
+    df.to_csv(test_csv_path, index=False)
     return str(test_csv_path)
 
 

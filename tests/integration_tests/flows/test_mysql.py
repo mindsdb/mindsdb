@@ -10,7 +10,7 @@ from mindsdb.utilities.config import Config
 from common import (
     MINDSDB_DATABASE,
     run_environment,
-    get_test_csv,
+    make_test_csv,
     TEST_CONFIG,
     upload_csv,
     DATASETS_COLUMN_TYPES,
@@ -113,15 +113,10 @@ class MySQLDBTest(unittest.TestCase):
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:
             datastore.delete_datasource(EXTERNAL_DS_NAME)
-        
-        short_csv_file_path = get_test_csv(
-            f'{EXTERNAL_DS_NAME}.csv',
-            test_csv_path,
-            lines_count=100,
-            rewrite=True,
-            column_names=[x[0] for x in DATASETS_COLUMN_TYPES[TEST_DATASET]]
-        )
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
+
+        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50', as_dict=True)
+        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
+        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

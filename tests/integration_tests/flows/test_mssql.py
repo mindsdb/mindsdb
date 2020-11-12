@@ -1,6 +1,7 @@
 import unittest
 import csv
 import inspect
+from pathlib import Path
 
 import pytds
 
@@ -8,10 +9,11 @@ from mindsdb.utilities.config import Config
 
 from common import (
     run_environment,
-    get_test_csv,
+    make_test_csv,
     TEST_CONFIG,
     MINDSDB_DATABASE,
-    USE_EXTERNAL_DB_SERVER
+    USE_EXTERNAL_DB_SERVER,
+    DATASETS_PATH
 )
 
 TEST_CSV = {
@@ -69,7 +71,7 @@ class MSSQLTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
+        test_csv_path = Path(DATASETS_PATH).joinpath('home_rentals').joinpath('data.csv')
 
         res = query("SELECT name FROM master.dbo.sysdatabases where name = 'mindsdb_test'", fetch=True)
         if len(res) == 0:
@@ -134,8 +136,10 @@ class MSSQLTest(unittest.TestCase):
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:
             datastore.delete_datasource(EXTERNAL_DS_NAME)
-        short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=300, rewrite=True)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
+
+        data = query(f'select * from test_data.{TEST_DATA_TABLE} limit 50', fetch=True, as_dict=True)
+        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
+        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

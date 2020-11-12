@@ -82,7 +82,7 @@ class MongoTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        if not USE_EXTERNAL_DB_SERVER:
+        if USE_EXTERNAL_DB_SERVER:
             test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
 
             db = cls.mongos_client['test_data']
@@ -115,8 +115,6 @@ class MongoTest(unittest.TestCase):
 
         test_data = self.mongos_client['test_data']
         test_data_collections = test_data.list_collection_names()
-        print('collection')
-        print(test_data_collections)
         self.assertTrue(TEST_DATASET in test_data_collections)
 
         records_cunt = test_data[TEST_DATASET].count_documents({})

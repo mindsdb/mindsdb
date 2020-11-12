@@ -62,11 +62,9 @@ class MindsdbNative():
 
         data_analysis = model['data_analysis_v2']
         for column in data_analysis['columns']:
-            if len(data_analysis[column]) == 0:
-                data_analysis[column] = {
-                    'typing': {
-                        'data_subtype': DATA_SUBTYPES.INT
-                    }
+            if len(data_analysis[column]) == 0 or data_analysis[column].get('empty', {}).get('is_empty', False):
+                data_analysis[column]['typing'] = {
+                    'data_subtype': DATA_SUBTYPES.INT
                 }
 
         return model

@@ -66,7 +66,7 @@ class MindsDBDataNode(DataNode):
             'status': x['status'],
             'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
             'predict': ', '.join(x['predict']),
-            'select_data_query': x['data_source'],
+            'select_data_query': '',
             'external_datasource': '',  # TODO
             'training_options': ''  # TODO ?
         } for x in models]

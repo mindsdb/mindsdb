@@ -161,7 +161,7 @@ class Predictor(Resource):
             name = name + '_retrained'
 
         ca.mindsdb_native.learn(name, from_data, to_predict, kwargs)
-        for i in range(60):
+        for i in range(20):
             try:
                 ca.mindsdb_native.get_model_data(name)
                 break

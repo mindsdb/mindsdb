@@ -135,7 +135,7 @@ class ClickhouseTest(unittest.TestCase):
         if ds is not None:
             datastore.delete_datasource(EXTERNAL_DS_NAME)
 
-        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50', as_dict=True)
+        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50')
         external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
         datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
 

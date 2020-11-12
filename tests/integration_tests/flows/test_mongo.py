@@ -82,7 +82,7 @@ class MongoTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        if USE_EXTERNAL_DB_SERVER:
+        if not USE_EXTERNAL_DB_SERVER:
             test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
 
             db = cls.mongos_client['test_data']

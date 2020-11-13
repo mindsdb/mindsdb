@@ -173,7 +173,7 @@ if USE_EXTERNAL_DB_SERVER:
 
 
 def make_test_csv(name, data):
-    test_csv_path = TESTS_ROOT.joinpath('temp/', f'{name}.csv').resolve()
+    test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()
     df = DataFrame(data)
     df.to_csv(test_csv_path, index=False)
     return str(test_csv_path)

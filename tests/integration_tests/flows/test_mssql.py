@@ -8,12 +8,12 @@ import pytds
 from mindsdb.utilities.config import Config
 
 from common import (
+    USE_EXTERNAL_DB_SERVER,
+    MINDSDB_DATABASE,
+    DATASETS_PATH,
     run_environment,
     make_test_csv,
-    TEST_CONFIG,
-    MINDSDB_DATABASE,
-    USE_EXTERNAL_DB_SERVER,
-    DATASETS_PATH
+    TEST_CONFIG
 )
 
 TEST_CSV = {

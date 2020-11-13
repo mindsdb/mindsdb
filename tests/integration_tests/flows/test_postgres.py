@@ -7,16 +7,16 @@ import pg8000
 from mindsdb.utilities.config import Config
 
 from common import (
-    MINDSDB_DATABASE,
-    run_environment,
-    make_test_csv,
-    TEST_CONFIG,
-    upload_csv,
+    USE_EXTERNAL_DB_SERVER,
     DATASETS_COLUMN_TYPES,
+    MINDSDB_DATABASE,
     DATASETS_PATH,
     check_prediction_values,
     condition_dict_to_str,
-    USE_EXTERNAL_DB_SERVER
+    run_environment,
+    make_test_csv,
+    TEST_CONFIG,
+    upload_csv
 )
 
 # +++ define test data
@@ -187,7 +187,7 @@ class PostgresTest(unittest.TestCase):
         print('predictor table in mindsdb db')
         self.assertTrue(name in self.get_tables_in(MINDSDB_DATABASE))
 
-        res = query(f"""
+        res = fetch(f"""
             select
                 *
             from
@@ -203,7 +203,7 @@ class PostgresTest(unittest.TestCase):
 
     def test_4_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-        res = query(f"""
+        res = fetch(f"""
             select
                 *
             from
@@ -219,7 +219,7 @@ class PostgresTest(unittest.TestCase):
     def test_5_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
-        res = query(f"""
+        res = fetch(f"""
             select
                 *
             from

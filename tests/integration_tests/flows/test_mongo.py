@@ -6,13 +6,13 @@ from pymongo import MongoClient
 
 from mindsdb.utilities.config import Config
 from common import (
-    run_environment,
-    TEST_CONFIG,
     USE_EXTERNAL_DB_SERVER,
-    open_ssh_tunnel,
-    DATASETS_PATH,
     DATASETS_COLUMN_TYPES,
-    check_prediction_values
+    check_prediction_values,
+    TEST_CONFIG,
+    run_environment,
+    open_ssh_tunnel,
+    DATASETS_PATH
 )
 
 from mindsdb.utilities.ps import wait_port

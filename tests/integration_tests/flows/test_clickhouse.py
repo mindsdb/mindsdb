@@ -6,15 +6,15 @@ from pathlib import Path
 from mindsdb.utilities.config import Config
 
 from common import (
+    USE_EXTERNAL_DB_SERVER,
+    DATASETS_COLUMN_TYPES,
     MINDSDB_DATABASE,
+    DATASETS_PATH,
+    TEST_CONFIG,
+    condition_dict_to_str,
     run_environment,
     make_test_csv,
-    TEST_CONFIG,
-    DATASETS_PATH,
-    upload_csv,
-    DATASETS_COLUMN_TYPES,
-    condition_dict_to_str,
-    USE_EXTERNAL_DB_SERVER
+    upload_csv
 )
 
 # +++ define test data
@@ -190,13 +190,13 @@ class ClickhouseTest(unittest.TestCase):
             );
         """)
 
-        res = query(f"select status from {MINDSDB_DATABASE}.predictors where name = '{name}'")
+        res = fetch(f"select status from {MINDSDB_DATABASE}.predictors where name = '{name}'")
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
         self.assertTrue(name in self.get_tables_in(MINDSDB_DATABASE))
 
-        res = query(f"""
+        res = fetch(f"""
             select
                 *
             from
@@ -212,7 +212,7 @@ class ClickhouseTest(unittest.TestCase):
 
     def test_4_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-        res = query(f"""
+        res = fetch(f"""
             select
                 *
             from
@@ -239,7 +239,7 @@ class ClickhouseTest(unittest.TestCase):
     def test_5_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
-        results = query(f"""
+        results = fetch(f"""
             select
                 *
             from

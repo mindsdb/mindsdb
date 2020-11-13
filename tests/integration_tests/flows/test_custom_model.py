@@ -9,13 +9,13 @@ import mysql.connector
 from mindsdb.utilities.config import Config
 
 from common import (
+    USE_EXTERNAL_DB_SERVER,
+    DATASETS_COLUMN_TYPES,
+    MINDSDB_DATABASE,
+    DATASETS_PATH,
+    TEST_CONFIG,
     run_environment,
     make_test_csv,
-    DATASETS_COLUMN_TYPES,
-    TEST_CONFIG,
-    MINDSDB_DATABASE,
-    USE_EXTERNAL_DB_SERVER,
-    DATASETS_PATH,
     upload_csv
 )
 

@@ -7,17 +7,17 @@ import mysql.connector
 from mindsdb.utilities.config import Config
 
 from common import (
+    USE_EXTERNAL_DB_SERVER,
+    DATASETS_COLUMN_TYPES,
     MINDSDB_DATABASE,
+    DATASETS_PATH,
+    TEST_CONFIG,
+    check_prediction_values,
+    get_all_pridict_fields,
+    condition_dict_to_str,
     run_environment,
     make_test_csv,
-    TEST_CONFIG,
-    upload_csv,
-    DATASETS_COLUMN_TYPES,
-    DATASETS_PATH,
-    condition_dict_to_str,
-    get_all_pridict_fields,
-    check_prediction_values,
-    USE_EXTERNAL_DB_SERVER
+    upload_csv
 )
 
 # +++ define test data

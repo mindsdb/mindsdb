@@ -99,7 +99,7 @@ class Predictor(Resource):
             if is_custom(name):
                 model = ca.custom_models.get_model_data(name)
             else:
-                model = ca.mindsdb_native.get_model_data(name)
+                model = ca.mindsdb_native.get_model_data(name, native_view=True)
         except Exception as e:
             abort(404, "")
 
@@ -205,7 +205,7 @@ class PredictorColumns(Resource):
             if is_custom(name):
                 model = ca.custom_models.get_model_data(name)
             else:
-                model = ca.mindsdb_native.get_model_data(name)
+                model = ca.mindsdb_native.get_model_data(name, native_view=True)
         except Exception:
             abort(404, 'Invalid predictor name')
 

@@ -43,12 +43,9 @@ def cast_df_columns_types(df, stats):
     for column in columns:
         try:
             name = column['name']
-            if stats[name].get('empty', {}).get('is_empty', False):
-                new_type = types_map[DATA_TYPES.NUMERIC][DATA_SUBTYPES.INT]
-            else:
-                col_type = stats[name]['typing']['data_type']
-                col_subtype = stats[name]['typing']['data_subtype']
-                new_type = types_map[col_type][col_subtype]
+            col_type = stats[name]['typing']['data_type']
+            col_subtype = stats[name]['typing']['data_subtype']
+            new_type = types_map[col_type][col_subtype]
             if new_type == 'int64' or new_type == 'float64':
                 df[name] = df[name].apply(lambda x: x.replace(',', '.') if isinstance(x, str) else x)
             if new_type == 'int64':

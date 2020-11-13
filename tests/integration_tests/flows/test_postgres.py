@@ -194,7 +194,7 @@ class PostgresTest(unittest.TestCase):
                 {MINDSDB_DATABASE}.{name}
             where
                 external_datasource='{EXTERNAL_DS_NAME}'
-        """, fetch=True)
+        """)
 
         print('check result')
         self.assertTrue(len(res) > 0)
@@ -210,7 +210,7 @@ class PostgresTest(unittest.TestCase):
                 {MINDSDB_DATABASE}.{TEST_PREDICTOR_NAME}
             where
                 {condition_dict_to_str(CONDITION)};
-        """, fetch=True)
+        """)
 
         print('check result')
         self.assertTrue(len(res) == 1)
@@ -226,7 +226,7 @@ class PostgresTest(unittest.TestCase):
                 {MINDSDB_DATABASE}.{TEST_PREDICTOR_NAME}
             where
                 select_data_query='select * from test_data.{TEST_DATA_TABLE} limit 3'
-        """, fetch=True)
+        """)
 
         self.assertTrue(len(res) == 3)
         for r in res:

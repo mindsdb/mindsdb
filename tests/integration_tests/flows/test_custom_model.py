@@ -1,8 +1,8 @@
 import unittest
-import csv
 import shutil
 import requests
 import os
+from pathlib import Path
 
 import mysql.connector
 
@@ -10,12 +10,33 @@ from mindsdb.utilities.config import Config
 
 from common import (
     run_environment,
-    get_test_csv,
+    make_test_csv,
+    DATASETS_COLUMN_TYPES,
     TEST_CONFIG,
     MINDSDB_DATABASE,
-    USE_EXTERNAL_DB_SERVER
+    USE_EXTERNAL_DB_SERVER,
+    DATASETS_PATH,
+    upload_csv
 )
 
+# +++ define test data
+TEST_DATASET = 'home_rentals'
+
+DB_TYPES_MAP = {
+    int: 'int',
+    float: 'float',
+    str: 'varchar(255)'
+}
+
+TO_PREDICT = {
+    'rental_price': float,
+    'location': str
+}
+CONDITION = {
+    'sqft': 1000,
+    'neighborhood': 'downtown'
+}
+# ---
 
 root = 'http://127.0.0.1:47334/api'
 TEST_CSV = {
@@ -77,59 +98,76 @@ class CustomModelTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        query('create database if not exists test_data')
-        test_tables = fetch('show tables from test_data', as_dict=False)
-        test_tables = [x[0] for x in test_tables]
-
         if not USE_EXTERNAL_DB_SERVER:
-            test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
+            query('create database if not exists test_data')
+            test_tables = fetch('show tables from test_data', as_dict=False)
+            test_tables = [x[0] for x in test_tables]
 
             if TEST_DATA_TABLE not in test_tables:
-                print('creating test data table...')
-                query(f'''
-                    CREATE TABLE test_data.{TEST_DATA_TABLE} (
-                        number_of_rooms int,
-                        number_of_bathrooms int,
-                        sqft int,
-                        location varchar(100),
-                        days_on_market int,
-                        initial_price int,
-                        neighborhood varchar(100),
-                        rental_price int
-                    )
-                ''')
+                test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
+                # test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
+                upload_csv(
+                    query=query,
+                    columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
+                    db_types_map=DB_TYPES_MAP,
+                    table_name=TEST_DATA_TABLE,
+                    csv_path=test_csv_path
+                )
 
-                with open(test_csv_path) as f:
-                    csvf = csv.reader(f)
-                    i = 0
-                    for row in csvf:
-                        if i > 0:
-                            number_of_rooms = int(row[0])
-                            number_of_bathrooms = int(row[1])
-                            sqft = int(float(row[2].replace(',', '.')))
-                            location = str(row[3])
-                            days_on_market = int(row[4])
-                            initial_price = int(row[5])
-                            neighborhood = str(row[6])
-                            rental_price = int(float(row[7]))
-                            query(f'''INSERT INTO test_data.{TEST_DATA_TABLE} VALUES (
-                                {number_of_rooms},
-                                {number_of_bathrooms},
-                                {sqft},
-                                '{location}',
-                                {days_on_market},
-                                {initial_price},
-                                '{neighborhood}',
-                                {rental_price}
-                            )''')
-                        i += 1
-                print('done')
+            # if TEST_DATA_TABLE not in test_tables:
+            #     print('creating test data table...')
+            #     query(f'''
+            #         CREATE TABLE test_data.{TEST_DATA_TABLE} (
+            #             number_of_rooms int,
+            #             number_of_bathrooms int,
+            #             sqft int,
+            #             location varchar(100),
+            #             days_on_market int,
+            #             initial_price int,
+            #             neighborhood varchar(100),
+            #             rental_price int
+            #         )
+            #     ''')
+
+            #     with open(test_csv_path) as f:
+            #         csvf = csv.reader(f)
+            #         i = 0
+            #         for row in csvf:
+            #             if i > 0:
+            #                 number_of_rooms = int(row[0])
+            #                 number_of_bathrooms = int(row[1])
+            #                 sqft = int(float(row[2].replace(',', '.')))
+            #                 location = str(row[3])
+            #                 days_on_market = int(row[4])
+            #                 initial_price = int(row[5])
+            #                 neighborhood = str(row[6])
+            #                 rental_price = int(float(row[7]))
+            #                 query(f'''INSERT INTO test_data.{TEST_DATA_TABLE} VALUES (
+            #                     {number_of_rooms},
+            #                     {number_of_bathrooms},
+            #                     {sqft},
+            #                     '{location}',
+            #                     {days_on_market},
+            #                     {initial_price},
+            #                     '{neighborhood}',
+            #                     {rental_price}
+            #                 )''')
+            #             i += 1
+            #     print('done')
+
+        # ds = datastore.get_datasource(EXTERNAL_DS_NAME)
+        # if ds is not None:
+        #     datastore.delete_datasource(EXTERNAL_DS_NAME)
+        # short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=30, rewrite=True)
+        # datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
 
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:
             datastore.delete_datasource(EXTERNAL_DS_NAME)
-        short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=30, rewrite=True)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
+
+        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50')
+        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
+        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
 
     def test_1_simple_model_upload(self):
         dir_name = 'test_custom_model'
@@ -212,7 +250,7 @@ class Model(ModelInterface):
         res = requests.post(url, json=params)
 
         assert res.status_code == 200
-        assert(len(res.json()) == 29)
+        assert(len(res.json()) == 50)
         for pred in res.json():
             assert isinstance(pred['rental_price']['predicted_value'], float)
 
@@ -272,7 +310,7 @@ class Model(ModelInterface):
         res = requests.post(url, json=params)
 
         assert res.status_code == 200
-        assert(len(res.json()) == 29)
+        assert(len(res.json()) == 50)
         for pred in res.json():
             assert isinstance(pred['sqft']['predicted_value'], float)
 

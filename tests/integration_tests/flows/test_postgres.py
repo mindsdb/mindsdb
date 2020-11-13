@@ -180,7 +180,7 @@ class PostgresTest(unittest.TestCase):
         """)
 
         print('predictor record in mindsdb.predictors')
-        res = query(f"select status from {MINDSDB_DATABASE}.predictors where name = '{name}'", fetch=True)
+        res = fetch(f"select status from {MINDSDB_DATABASE}.predictors where name = '{name}'")
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 

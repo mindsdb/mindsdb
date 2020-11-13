@@ -1,8 +1,8 @@
 import unittest
 import shutil
 import requests
-import os
 from pathlib import Path
+import textwrap
 
 import mysql.connector
 
@@ -14,6 +14,7 @@ from common import (
     MINDSDB_DATABASE,
     DATASETS_PATH,
     TEST_CONFIG,
+    TEMP_DIR,
     run_environment,
     make_test_csv,
     upload_csv
@@ -115,49 +116,46 @@ class CustomModelTest(unittest.TestCase):
         datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
 
     def test_1_simple_model_upload(self):
-        dir_name = 'test_custom_model'
+        model_dir = TEMP_DIR.joinpath('test_custom_model/')
+        if model_dir.is_dir():
+            shutil.rmtree(str(model_dir))
+        model_dir.mkdir(parents=True, exist_ok=True)
 
-        try:
-            os.mkdir(dir_name)
-        except Exception:
-            pass
+        with open(str(model_dir.joinpath('model.py')), 'w') as fp:
+            fp.write(textwrap.dedent("""
+                from sklearn.linear_model import LinearRegression
+                import numpy as np
+                import pandas as pd
+                from mindsdb import ModelInterface
 
-        with open(dir_name + '/model.py', 'w') as fp:
-            fp.write("""
-from sklearn.linear_model import LinearRegression
-import numpy as np
-import pandas as pd
-from mindsdb import ModelInterface
+                class Model(ModelInterface):
+                    def setup(self):
+                        print('Setting up model !')
+                        self.model = LinearRegression()
 
-class Model(ModelInterface):
-    def setup(self):
-        print('Setting up model !')
-        self.model = LinearRegression()
+                    def get_x(self, data):
+                        initial_price = np.array([int(x) for x in data['initial_price']])
+                        initial_price = initial_price.reshape(-1, 1)
+                        return initial_price
 
-    def get_x(self, data):
-        initial_price = np.array([int(x) for x in data['initial_price']])
-        initial_price = initial_price.reshape(-1, 1)
-        return initial_price
+                    def get_y(self, data, to_predict_str):
+                        to_predict = np.array(data[to_predict_str])
+                        return to_predict
 
-    def get_y(self, data, to_predict_str):
-        to_predict = np.array(data[to_predict_str])
-        return to_predict
+                    def predict(self, from_data, kwargs):
+                        initial_price = self.get_x(from_data)
+                        rental_price = self.model.predict(initial_price)
+                        df = pd.DataFrame({self.to_predict[0]: rental_price})
+                        return df
 
-    def predict(self, from_data, kwargs):
-        initial_price = self.get_x(from_data)
-        rental_price = self.model.predict(initial_price)
-        df = pd.DataFrame({self.to_predict[0]: rental_price})
-        return df
+                    def fit(self, from_data, to_predict, data_analysis, kwargs):
+                        self.model = LinearRegression()
+                        Y = self.get_y(from_data, to_predict[0])
+                        X = self.get_x(from_data)
+                        self.model.fit(X, Y)
+        """))
 
-    def fit(self, from_data, to_predict, data_analysis, kwargs):
-        self.model = LinearRegression()
-        Y = self.get_y(from_data, to_predict[0])
-        X = self.get_x(from_data)
-        self.model.fit(X, Y)
-
-                     """)
-
-        shutil.make_archive(base_name='my_model', format='zip', root_dir=dir_name)
+        shutil.make_archive(base_name='my_model', format='zip', root_dir=str(model_dir))
 
         # Upload the model (new endpoint)
         res = requests.put(f'{root}/predictors/custom/{TEST_PREDICTOR_NAME}', files=dict(file=open('my_model.zip', 'rb')), json={

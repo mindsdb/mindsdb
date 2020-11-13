@@ -161,6 +161,13 @@ class Predictor(Resource):
             name = name + '_retrained'
 
         ca.mindsdb_native.learn(name, from_data, to_predict, kwargs)
+        for i in range(20):
+            try:
+                # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
+                ca.mindsdb_native.get_model_data(name)
+                break
+            except Exception:
+                time.sleep(1)
 
         if retrain is True:
             try:

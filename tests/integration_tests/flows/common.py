@@ -37,7 +37,7 @@ START_TIMEOUT = 15
 OUTPUT = None  # [None|subprocess.DEVNULL]
 
 TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
-    f'temp/storage_{int(time.time()*1000)}/' if USE_EXTERNAL_DB_SERVER else 'temp/storage/'
+    f'temp/test_storage_{int(time.time()*1000)}/' if USE_EXTERNAL_DB_SERVER else 'temp/test_storage/'
 ).resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 

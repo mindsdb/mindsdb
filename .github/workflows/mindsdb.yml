@@ -68,11 +68,6 @@ jobs:
         CHECK_FOR_UPDATES: False
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
-    - name: Install latest version from pypi (just testing)
-      run: |
-        sleep 20
-        pip install mindsdb
-        pip show mindsdb
   deploy_windows_installer:
     runs-on: windows-latest
     needs: test

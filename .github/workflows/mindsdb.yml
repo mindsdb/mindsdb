@@ -68,6 +68,11 @@ jobs:
         CHECK_FOR_UPDATES: False
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
+    - name: Install latest version from pypi (just testing)
+      run: |
+        sleep 20
+        pip install mindsdb
+        pip show mindsdb
   deploy_windows_installer:
     runs-on: windows-latest
     needs: test
@@ -123,6 +128,11 @@ jobs:
       run: |
         python setup.py sdist
         twine upload dist/*
+
+    - name: Install latest version from pypi
+      run: |
+        sleep 20
+        pip install mindsdb
 
     - name: Build and push mindsdb Docker image
       uses: docker/build-push-action@v1

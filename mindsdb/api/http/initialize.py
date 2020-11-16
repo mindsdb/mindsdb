@@ -180,14 +180,11 @@ def initialize_flask(config):
     # Apparently there's a bug that causes the static path not to work if it's '/' -- https://github.com/pallets/flask/issues/3134, I think '' should achieve the same thing (???)
     app = Flask(
         __name__,
-        static_url_path='',
-        static_folder=config.paths['static']
+        static_url_path='/static',
+        static_folder=os.path.join(config.paths['static'], 'static/')
     )
 
-    @app.route('/')
-    def root_index():
-        return app.send_static_file('index.html')
-
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     authorizations = {
         'apikey': {

@@ -99,7 +99,7 @@ class Predictor(Resource):
             if is_custom(name):
                 model = ca.custom_models.get_model_data(name)
             else:
-                model = ca.mindsdb_native.get_model_data(name)
+                model = ca.mindsdb_native.get_model_data(name, native_view=True)
         except Exception as e:
             abort(404, "")
 
@@ -161,6 +161,13 @@ class Predictor(Resource):
             name = name + '_retrained'
 
         ca.mindsdb_native.learn(name, from_data, to_predict, kwargs)
+        for i in range(20):
+            try:
+                # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
+                ca.mindsdb_native.get_model_data(name)
+                break
+            except Exception:
+                time.sleep(1)
 
         if retrain is True:
             try:
@@ -205,7 +212,7 @@ class PredictorColumns(Resource):
             if is_custom(name):
                 model = ca.custom_models.get_model_data(name)
             else:
-                model = ca.mindsdb_native.get_model_data(name)
+                model = ca.mindsdb_native.get_model_data(name, native_view=True)
         except Exception:
             abort(404, 'Invalid predictor name')
 

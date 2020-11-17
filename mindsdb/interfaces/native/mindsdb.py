@@ -26,9 +26,9 @@ class MindsdbNative():
 
     def create(self, name):
         self._setup_for_creation(name)
-        predictor = mindsdb_native.Predictor(name=name)
+        predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
-    
+
     def learn(self, name, from_data, to_predict, kwargs={}):
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
@@ -51,7 +51,7 @@ class MindsdbNative():
         p.start()
         predictions = p.join()
         '''
-        mdb = mindsdb_native.Predictor(name=name)
+        mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         predictions = mdb.predict(
             when_data=when_data,

@@ -12,6 +12,7 @@ from common import (
     DATASETS_COLUMN_TYPES,
     MINDSDB_DATABASE,
     DATASETS_PATH,
+    HTTP_API_ROOT,
     TEST_CONFIG,
     run_environment,
     make_test_csv,
@@ -26,8 +27,6 @@ from http_test_helpers import (
     check_ds_exists,
     check_ds_analyzable
 )
-
-api_root = 'http://localhost:47334/api'
 
 # +++ define test data
 TEST_DATASET = 'us_health_insurance'
@@ -60,16 +59,13 @@ TEST_PREDICTOR_CSV = 'test_predictor_csv'
 
 config = Config(TEST_CONFIG)
 
-to_predict_column_names = list(TO_PREDICT.keys())
-
 
 def query(q, as_dict=False, fetch=False):
     con = mysql.connector.connect(
         host=config['integrations']['default_mariadb']['host'],
         port=config['integrations']['default_mariadb']['port'],
         user=config['integrations']['default_mariadb']['user'],
-        passwd=config['integrations']['default_mariadb']['password'],
-        db=MINDSDB_DATABASE
+        passwd=config['integrations']['default_mariadb']['password']
     )
 
     cur = con.cursor(dictionary=as_dict)
@@ -114,7 +110,6 @@ class UserFlowTest_1(unittest.TestCase):
                     csv_path=test_csv_path
                 )
 
-
         data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50', as_dict=True)
         cls.external_datasource_csv_path = make_test_csv(EXTERNAL_DS_NAME, data)
 
@@ -124,17 +119,17 @@ class UserFlowTest_1(unittest.TestCase):
         create integration
         check new integration values
         '''
-        res = requests.get(f'{api_root}/config/integrations/{TEST_INTEGRATION}')
+        res = requests.get(f'{HTTP_API_ROOT}/config/integrations/{TEST_INTEGRATION}')
         assert res.status_code == 404
 
         test_integration_data = {}
         test_integration_data.update(config['integrations']['default_mariadb'])
         test_integration_data['enabled'] = True
         test_integration_data['database_name'] = TEST_INTEGRATION
-        res = requests.put(f'{api_root}/config/integrations/{TEST_INTEGRATION}', json={'params': test_integration_data})
+        res = requests.put(f'{HTTP_API_ROOT}/config/integrations/{TEST_INTEGRATION}', json={'params': test_integration_data})
         assert res.status_code == 200
 
-        res = requests.get(f'{api_root}/config/integrations/{TEST_INTEGRATION}')
+        res = requests.get(f'{HTTP_API_ROOT}/config/integrations/{TEST_INTEGRATION}')
         assert res.status_code == 200
         test_integration = res.json()
         assert test_integration['password'] is None
@@ -154,7 +149,7 @@ class UserFlowTest_1(unittest.TestCase):
             "name": TEST_DS,
             "query": f"select * from test_data.{TEST_DATASET} limit 100;"
         }
-        res = requests.put(f'{api_root}/datasources/{TEST_DS}', json=data)
+        res = requests.put(f'{HTTP_API_ROOT}/datasources/{TEST_DS}', json=data)
         assert res.status_code == 200
 
         check_ds_exists(TEST_DS)
@@ -169,7 +164,7 @@ class UserFlowTest_1(unittest.TestCase):
         with open(self.external_datasource_csv_path, 'rb') as f:
             d = f.read()
         res = requests.put(
-            f'{api_root}/datasources/{TEST_DS_CSV}',
+            f'{HTTP_API_ROOT}/datasources/{TEST_DS_CSV}',
             files={
                 'file': ('data.csv', d, 'text/csv'),
                 'name': (None, TEST_DS_CSV),
@@ -195,17 +190,17 @@ class UserFlowTest_1(unittest.TestCase):
                 'to_predict': list(TO_PREDICT.keys()),
                 'data_source_name': datasource_name
             }
-            res = requests.put(f'{api_root}/predictors/{predictior_name}', json=data)
+            res = requests.put(f'{HTTP_API_ROOT}/predictors/{predictior_name}', json=data)
             assert res.status_code == 200
 
-            time.sleep(5)
+            time.sleep(10)
 
             check_predictor_exists(predictior_name)
 
             wait_predictor_learn(predictior_name)
 
             res = requests.post(
-                f'{api_root}/predictors/{predictior_name}/predict',
+                f'{HTTP_API_ROOT}/predictors/{predictior_name}/predict',
                 json={'when': CONDITION}
             )
             assert res.status_code == 200
@@ -222,12 +217,12 @@ class UserFlowTest_1(unittest.TestCase):
 
     def test_6_delete(self):
         for predictor_name in [TEST_PREDICTOR, TEST_PREDICTOR_CSV]:
-            res = requests.delete(f'{api_root}/predictors/{predictor_name}')
+            res = requests.delete(f'{HTTP_API_ROOT}/predictors/{predictor_name}')
             assert res.status_code == 200
             check_predictor_not_exists(predictor_name)
 
         for ds_name in [TEST_DS_CSV, TEST_DS]:
-            res = requests.delete(f'{api_root}/datasources/{ds_name}')
+            res = requests.delete(f'{HTTP_API_ROOT}/datasources/{ds_name}')
             assert res.status_code == 200
             check_ds_not_exists(ds_name)
 

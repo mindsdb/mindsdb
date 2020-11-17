@@ -1,7 +1,6 @@
 import unittest
 import requests
 from pathlib import Path
-import time
 
 import mysql.connector
 
@@ -192,8 +191,6 @@ class UserFlowTest_1(unittest.TestCase):
             }
             res = requests.put(f'{HTTP_API_ROOT}/predictors/{predictior_name}', json=data)
             assert res.status_code == 200
-
-            time.sleep(10)
 
             check_predictor_exists(predictior_name)
 

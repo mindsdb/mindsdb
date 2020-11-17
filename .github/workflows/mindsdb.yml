@@ -67,7 +67,7 @@ jobs:
 
           # user flow 1
           echo -e "\n===============\ntest user flow 1\n===============\n"
-          python tests/integration_tests/api/test_user_flow_1.py
+          python tests/integration_tests/flows/test_user_flow_1.py
         fi
       shell: bash
       env:

@@ -187,9 +187,6 @@ class HTTPTest(unittest.TestCase):
         Call utilities ping endpoint
         THEN check the response is success
 
-        Call utilities ping version
-        THEN check the response is success
-
         Call utilities report_uuid endpoint
         THEN check the response is success
         THEN check if the report_uuid is present in the report json and well fromated
@@ -197,9 +194,6 @@ class HTTPTest(unittest.TestCase):
         """
 
         response = requests.get(f'{root}/util/ping')
-        assert response.status_code == 200
-
-        response = requests.get(f'{root}/util/util/version')
         assert response.status_code == 200
 
         response = requests.get(f'{root}/util/report_uuid')

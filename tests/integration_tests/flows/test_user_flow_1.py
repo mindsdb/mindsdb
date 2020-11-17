@@ -86,7 +86,7 @@ def fetch(q, as_dict=True):
     return query(q, as_dict, fetch=True)
 
 
-class MariaDBTest(unittest.TestCase):
+class UserFlowTest_1(unittest.TestCase):
     def get_tables_in(self, schema):
         test_tables = fetch(f'show tables from {schema}', as_dict=False)
         return [x[0] for x in test_tables]
@@ -99,11 +99,6 @@ class MariaDBTest(unittest.TestCase):
             mindsdb_database=MINDSDB_DATABASE
         )
         cls.mdb = mdb
-
-        models = cls.mdb.get_models()
-        models = [x['name'] for x in models]
-        if TEST_PREDICTOR_NAME in models:
-            cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
         query('create database if not exists test_data')
 
@@ -119,9 +114,6 @@ class MariaDBTest(unittest.TestCase):
                     csv_path=test_csv_path
                 )
 
-        ds = datastore.get_datasource(EXTERNAL_DS_NAME)
-        if ds is not None:
-            datastore.delete_datasource(EXTERNAL_DS_NAME)
 
         data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50', as_dict=True)
         cls.external_datasource_csv_path = make_test_csv(EXTERNAL_DS_NAME, data)
@@ -190,8 +182,11 @@ class MariaDBTest(unittest.TestCase):
         check_ds_exists(TEST_DS_CSV)
         check_ds_analyzable(TEST_DS_CSV)
 
-    def test_5_whaat(self):
+    def test_5_create_and_query_predictors(self):
         '''
+        check predictor not exists
+        learn predictor
+        query
         '''
         def test_predictor(predictior_name, datasource_name):
             check_predictor_not_exists(predictior_name)

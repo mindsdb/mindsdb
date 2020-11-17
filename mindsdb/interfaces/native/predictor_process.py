@@ -22,7 +22,7 @@ class PredictorProcess(ctx.Process):
 
         name, from_data, to_predict, kwargs, config, trx_type = self._args
 
-        mdb = mindsdb_native.Predictor(name=name)
+        mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         if trx_type == 'learn':
             to_predict = to_predict if isinstance(to_predict, list) else [to_predict]

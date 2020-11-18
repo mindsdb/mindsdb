@@ -1,16 +1,19 @@
 import unittest
 import csv
 import inspect
+from pathlib import Path
 
 import pytds
 
 from mindsdb.utilities.config import Config
 
 from common import (
+    USE_EXTERNAL_DB_SERVER,
+    MINDSDB_DATABASE,
+    DATASETS_PATH,
     run_environment,
-    get_test_csv,
-    TEST_CONFIG,
-    MINDSDB_DATABASE
+    make_test_csv,
+    TEST_CONFIG
 )
 
 TEST_CSV = {
@@ -68,7 +71,7 @@ class MSSQLTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
+        test_csv_path = Path(DATASETS_PATH).joinpath('home_rentals').joinpath('data.csv')
 
         res = query("SELECT name FROM master.dbo.sysdatabases where name = 'mindsdb_test'", fetch=True)
         if len(res) == 0:
@@ -81,60 +84,62 @@ class MSSQLTest(unittest.TestCase):
                 create schema [mindsdb_schema];
             ''')
 
-        # query('create database if not exists test')
-        # show tables from test
-        test_tables = query(f'''
-            select 1 from sysobjects where name='{TEST_DATA_TABLE}' and xtype='U';
-        ''', fetch=True)
-        if len(test_tables) == 0:
-            print('creating test data table...')
-            query(f'''
-                CREATE TABLE mindsdb_schema.{TEST_DATA_TABLE} (
-                    number_of_rooms int,
-                    number_of_bathrooms int,
-                    sqft int,
-                    location varchar(100),
-                    days_on_market int,
-                    initial_price int,
-                    neighborhood varchar(100),
-                    rental_price int
-                )
-            ''')
+        if not USE_EXTERNAL_DB_SERVER:
+            # show tables from test
+            test_tables = query(f'''
+                select 1 from sysobjects where name='{TEST_DATA_TABLE}' and xtype='U';
+            ''', fetch=True)
+            if len(test_tables) == 0:
+                print('creating test data table...')
+                query(f'''
+                    CREATE TABLE mindsdb_schema.{TEST_DATA_TABLE} (
+                        number_of_rooms int,
+                        number_of_bathrooms int,
+                        sqft int,
+                        location varchar(100),
+                        days_on_market int,
+                        initial_price int,
+                        neighborhood varchar(100),
+                        rental_price int
+                    )
+                ''')
 
-            with open(test_csv_path) as f:
-                csvf = csv.reader(f)
-                i = 0
-                for row in csvf:
-                    if i > 0:
-                        number_of_rooms = int(row[0])
-                        number_of_bathrooms = int(row[1])
-                        sqft = int(float(row[2].replace(',', '.')))
-                        location = str(row[3])
-                        days_on_market = int(row[4])
-                        initial_price = int(row[5])
-                        neighborhood = str(row[6])
-                        rental_price = int(float(row[7]))
-                        query(f'''
-                            INSERT INTO mindsdb_schema.{TEST_DATA_TABLE} VALUES (
-                            {number_of_rooms},
-                            {number_of_bathrooms},
-                            {sqft},
-                            '{location}',
-                            {days_on_market},
-                            {initial_price},
-                            '{neighborhood}',
-                            {rental_price}
-                        )''')
-                    i += 1
-                    if i % 100 == 0:
-                        print(i)
-            print('done')
+                with open(test_csv_path) as f:
+                    csvf = csv.reader(f)
+                    i = 0
+                    for row in csvf:
+                        if i > 0:
+                            number_of_rooms = int(row[0])
+                            number_of_bathrooms = int(row[1])
+                            sqft = int(float(row[2].replace(',', '.')))
+                            location = str(row[3])
+                            days_on_market = int(row[4])
+                            initial_price = int(row[5])
+                            neighborhood = str(row[6])
+                            rental_price = int(float(row[7]))
+                            query(f'''
+                                INSERT INTO mindsdb_schema.{TEST_DATA_TABLE} VALUES (
+                                {number_of_rooms},
+                                {number_of_bathrooms},
+                                {sqft},
+                                '{location}',
+                                {days_on_market},
+                                {initial_price},
+                                '{neighborhood}',
+                                {rental_price}
+                            )''')
+                        i += 1
+                        if i % 100 == 0:
+                            print(i)
+                print('done')
 
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:
             datastore.delete_datasource(EXTERNAL_DS_NAME)
-        short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=300, rewrite=True)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
+
+        data = query(f'select * from test_data.{TEST_DATA_TABLE} limit 50', fetch=True, as_dict=True)
+        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
+        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

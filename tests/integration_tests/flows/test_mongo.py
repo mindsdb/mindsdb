@@ -1,27 +1,44 @@
 import unittest
 import csv
+from pathlib import Path
 
 from pymongo import MongoClient
 
 from mindsdb.utilities.config import Config
 from common import (
-    run_environment,
-    get_test_csv,
-    TEST_CONFIG,
     USE_EXTERNAL_DB_SERVER,
-    open_ssh_tunnel
+    DATASETS_COLUMN_TYPES,
+    check_prediction_values,
+    TEST_CONFIG,
+    run_environment,
+    open_ssh_tunnel,
+    DATASETS_PATH
 )
 
 from mindsdb.utilities.ps import wait_port
 
-TEST_CSV = {
-    'name': 'home_rentals.csv',
-    'url': 'https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv'
-}
-TEST_DATA_TABLE = 'home_rentals'
-TEST_PREDICTOR_NAME = 'test_predictor'
+# +++ define test data
+TEST_DATASET = 'concrete_strength'
 
-EXTERNAL_DS_NAME = 'test_external'
+DB_TYPES_MAP = {
+    int: 'int',
+    float: 'float',
+    str: 'text'
+}
+
+TO_PREDICT = {
+    'concrete_strength': float,
+    'cement': float
+}
+CONDITION = {
+    'water': 162.5,
+    'age': 28
+}
+# ---
+
+TEST_DATA_TABLE = TEST_DATASET
+TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
+EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 config = Config(TEST_CONFIG)
 
@@ -65,30 +82,27 @@ class MongoTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
+        if not USE_EXTERNAL_DB_SERVER:
+            test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
 
-        db = cls.mongos_client['test_data']
-        colls = db.list_collection_names()
+            db = cls.mongos_client['test_data']
+            colls = db.list_collection_names()
 
-        if 'home_rentals' not in colls:
-            print('creatating test data')
-            with open(test_csv_path) as f:
-                csvf = csv.reader(f)
-                data = []
-                for i, row in enumerate(csvf):
-                    if i > 0:
-                        data.append(dict(
-                            number_of_rooms=int(row[0]),
-                            number_of_bathrooms=int(row[1]),
-                            sqft=int(float(row[2].replace(',', '.'))),
-                            location=str(row[3]),
-                            days_on_market=int(row[4]),
-                            initial_price=int(row[5]),
-                            neighborhood=str(row[6]),
-                            rental_price=int(float(row[7]))
-                        ))
-                db['home_rentals'].insert_many(data)
-            print('done')
+            if TEST_DATASET not in colls:
+                print('creatating test data')
+                with open(test_csv_path) as f:
+                    csvf = csv.reader(f)
+                    data = []
+                    DS = DATASETS_COLUMN_TYPES[TEST_DATASET]
+                    for i, row in enumerate(csvf):
+                        if i == 0:
+                            continue
+                        data.append({
+                            column[0]: column[1](row[i])
+                            for i, column in enumerate(DS)
+                        })
+                    db[TEST_DATASET].insert_many(data)
+                print('done')
 
         cls.mongos_client.admin.command('addShard', mdb_shard)
 
@@ -101,19 +115,19 @@ class MongoTest(unittest.TestCase):
 
         test_data = self.mongos_client['test_data']
         test_data_collections = test_data.list_collection_names()
-        self.assertTrue('home_rentals' in test_data_collections)
+        self.assertTrue(TEST_DATASET in test_data_collections)
 
-        records_cunt = test_data['home_rentals'].count_documents({})
+        records_cunt = test_data[TEST_DATASET].count_documents({})
         self.assertTrue(records_cunt > 0)
 
     def test_2_learn_predictor(self):
         mindsdb = self.mongos_client[MINDSDB_DATABASE]
         mindsdb.predictors.insert_one({
             'name': TEST_PREDICTOR_NAME,
-            'predict': 'rental_price',
+            'predict': list(TO_PREDICT.keys()),
             'select_data_query': {
                 'database': 'test_data',
-                'collection': 'home_rentals',
+                'collection': TEST_DATASET,
                 'find': {}
             },
             'training_options': {
@@ -131,15 +145,9 @@ class MongoTest(unittest.TestCase):
     def test_3_predict(self):
         mindsdb = self.mongos_client[MINDSDB_DATABASE]
 
-        result = mindsdb[TEST_PREDICTOR_NAME].find_one({'sqft': 1000})
-        self.assertTrue(
-            isinstance(result['rental_price'], int) or isinstance(result['rental_price'], float)
-        )
-        self.assertTrue(result['sqft'] == 1000)
-        self.assertTrue('rental_price_min' in result)
-        self.assertTrue('rental_price_max' in result)
-        self.assertTrue('rental_price_explain' in result)
-        self.assertTrue('rental_price_confidence' in result)
+        result = mindsdb[TEST_PREDICTOR_NAME].find_one(CONDITION)
+        self.assertIsInstance(result, dict)
+        self.assertTrue(check_prediction_values(result, TO_PREDICT))
 
     def test_4_remove(self):
         mindsdb = self.mongos_client[MINDSDB_DATABASE]

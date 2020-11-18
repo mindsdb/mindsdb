@@ -180,7 +180,7 @@ class HTTPTest(unittest.TestCase):
         Call unexisting datasource
         then check the response is NOT FOUND
         """
-        response = requests.get(f'{root}/datasource/dummy_source')
+        response = requests.get(f'{root}/datasources/dummy_source')
         assert response.status_code == 404
 
     def test_6_utils(self):

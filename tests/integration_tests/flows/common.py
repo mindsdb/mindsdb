@@ -18,6 +18,7 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.ps import wait_port, is_port_in_use
 from mindsdb_native import CONFIG
 
+
 HTTP_API_ROOT = 'http://localhost:47334/api'
 
 DATASETS_PATH = os.getenv('DATASETS_PATH')
@@ -301,7 +302,7 @@ def get_all_pridict_fields(fields):
 def check_prediction_values(row, to_predict):
     try:
         for field_name, field_type in to_predict.items():
-            if field_type is int or field_type is float:
+            if field_type in [int, float]:
                 assert isinstance(row[field_name], (int, float))
                 assert isinstance(row[f'{field_name}_min'], (int, float))
                 assert isinstance(row[f'{field_name}_max'], (int, float))

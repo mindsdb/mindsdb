@@ -43,7 +43,7 @@ def get_all_models_meta_data(mindsdb_native, custom_models):
             'name': x['name'],
             'predict': x['predict'],
             'data_analysis': mindsdb_native.get_model_data(x['name'])['data_analysis_v2']
-        } for x in mindsdb_native.get_models()
+        } for x in mindsdb_native.get_models() if x['status'] == 'complete'
     ]
 
     model_data_arr.extend(custom_models.get_models())

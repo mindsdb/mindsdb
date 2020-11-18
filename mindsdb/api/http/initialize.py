@@ -144,9 +144,9 @@ def initialize_static(config):
                 response = requests.get(resource['url'])
                 if response.status_code != requests.status_codes.codes.ok:
                     return Exception(f"Error {response.status_code} GET {resource['url']}")
+                open(resource['path'], 'wb').write(response.content)
             except Exception as e:
                 return e
-            open(resource['path'], 'wb').write(response.content)
             return None
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:

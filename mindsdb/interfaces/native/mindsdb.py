@@ -17,16 +17,24 @@ class MindsdbNative():
         self.config = config
         self.dbw = DatabaseWrapper(self.config)
 
+    def _setup_for_creation(self, name):
+            predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
+            create_directory(predictor_dir)
+            versions_file_path = predictor_dir.joinpath('versions.json')
+            with open(str(versions_file_path), 'wt') as f:
+                json.dump(self.config.versions, f, indent=4, sort_keys=True)
+
+    def create(self, name):
+        self._setup_for_creation(name)
+        predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
+        return predictor
+
     def learn(self, name, from_data, to_predict, kwargs={}):
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
 
-        predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
-        create_directory(predictor_dir)
-        versions_file_path = predictor_dir.joinpath('versions.json')
-        with open(str(versions_file_path), 'wt') as f:
-            json.dump(self.config.versions, f, indent=4, sort_keys=True)
+        self._setup_for_creation(name)
 
         p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
         p.start()
@@ -43,7 +51,7 @@ class MindsdbNative():
         p.start()
         predictions = p.join()
         '''
-        mdb = mindsdb_native.Predictor(name=name)
+        mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         predictions = mdb.predict(
             when_data=when_data,

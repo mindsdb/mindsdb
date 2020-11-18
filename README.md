@@ -70,7 +70,7 @@ MindsDB is an open-source AI layer for existing databases that allows you to eff
 * **Docker**: If you would like to run it all in a container simply:  
 
 ```bash
-sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/master/distributions/docker/build-docker.sh)"
+sh -c "$(curl -sSL https://raw.githubusercontent.com/mindsdb/mindsdb/stable/distributions/docker/build-docker.sh)"
 ```
 
 ## MindsDB AI tables demo using MariaDB (Video tutorial)

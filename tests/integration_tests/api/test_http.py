@@ -3,6 +3,7 @@ from random import randint
 from pathlib import Path
 import unittest
 import requests
+import time
 
 import psutil
 
@@ -23,11 +24,11 @@ root = 'http://localhost:47334/api'
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config = Config(common.TEST_CONFIG)
-        cls.initial_integrations_names = list(config['integrations'].keys())
+        cls.config = Config(common.TEST_CONFIG)
+        cls.initial_integrations_names = list(cls.config['integrations'].keys())
 
         mdb, datastore = common.run_environment(
-            config,
+            cls.config,
             apis=['http'],
             override_integration_config={
                 'default_mariadb': {
@@ -220,6 +221,19 @@ class HTTPTest(unittest.TestCase):
         """
         response = requests.get(f'{root}/predictors/dummy_predictor')
         assert response.status_code == 404
+
+    def test_9_gui_is_served(self):
+        """
+        GUI downloaded and available
+        """
+        start_time = time.time()
+        index = Path(self.config.paths['static']).joinpath('index.html')
+        while index.is_file() is False and (time.time() - start_time) > 30:
+            time.sleep(1)
+        assert index.is_file()
+        response = requests.get('http://localhost:47334/')
+        assert response.status_code == 200
+        assert response.content.decode().find('<head>') > 0
 
 
 if __name__ == '__main__':

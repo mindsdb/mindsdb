@@ -50,6 +50,7 @@ def get_all_models_meta_data(mindsdb_native, custom_models):
 
     return model_data_arr
 
+
 def is_notebook():
     try:
         shell = get_ipython().__class__.__name__

@@ -1,6 +1,7 @@
 import os
 import logging
 import multiprocessing
+import threading
 from pathlib import Path
 
 from werkzeug.exceptions import HTTPException
@@ -23,7 +24,9 @@ def start(config, verbose=False):
 
     initialize_log(config, 'http', wrap_print=True)
 
-    initialize_static(config)
+    # initialize_static(config)
+    init_static_thread = threading.Thread(target=initialize_static, args=(config,))
+    init_static_thread.start()
 
     app, api = initialize_flask(config)
     initialize_interfaces(config, app)
@@ -58,6 +61,8 @@ def start(config, verbose=False):
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
 
+    # waiting static initialization
+    init_static_thread.join()
     if server.lower() == 'waitress':
         serve(app, port=port, host=host)
     elif server.lower() == 'flask':

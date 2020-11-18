@@ -1,9 +1,11 @@
 import os
 import logging
 import multiprocessing
+from pathlib import Path
 
 from werkzeug.exceptions import HTTPException
 from waitress import serve
+from flask import send_from_directory
 
 from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
@@ -26,6 +28,18 @@ def start(config, verbose=False):
     app, api = initialize_flask(config)
     initialize_interfaces(config, app)
 
+    static_root = Path(config.paths['static'])
+
+    @app.route('/', defaults={'path': ''}, methods=['GET'])
+    @app.route('/<path:path>', methods=['GET'])
+    def root_index(path):
+        if path.startswith('api/'):
+            return {'message': 'wrong query'}, 400
+        if static_root.joinpath(path).is_file():
+            return send_from_directory(config.paths['static'], path)
+        else:
+            return send_from_directory(config.paths['static'], 'index.html')
+
     api.add_namespace(predictor_ns)
     api.add_namespace(datasource_ns)
     api.add_namespace(utils_ns)
@@ -43,7 +57,7 @@ def start(config, verbose=False):
     host = config['api']['http']['host']
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
-    
+
     if server.lower() == 'waitress':
         serve(app, port=port, host=host)
     elif server.lower() == 'flask':

@@ -72,7 +72,7 @@ jobs:
         dockerfile: distributions/docker/Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: mindsdb/mindsdb_beta
+        repository: mindsdb/mindsdb
         tag_with_ref: true
 
     - name: Build linux sh installer
@@ -93,7 +93,7 @@ jobs:
 
     - name: Build OSX sh installer
       run: |
-        python distributions/osx/rename_installers.py release 
+        python distributions/osx/rename_installers.py release
 
     - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master

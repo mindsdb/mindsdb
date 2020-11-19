@@ -87,7 +87,7 @@ jobs:
       run: |
         pip install pyinstaller
         pip install winshell
-        python distributions/windows/build_installers.py
+        python distributions/windows/build_installers.py beta
 
     - name: Sync windows installer to s3
       env:
@@ -135,14 +135,14 @@ jobs:
         dockerfile: distributions/docker/Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: mindsdb/mindsdb
+        repository: mindsdb/mindsdb_beta
         tag_with_ref: true
 
-    - name: Rename linux installer
+    - name: Build linux sh installer
       run: |
-        python distributions/linux/rename_installer.py
+        python distributions/linux/rename_installers.py beta
 
-    - name: Sync linux installer to s3
+    - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master
       with:
         args: --acl public-read --follow-symlinks
@@ -153,3 +153,19 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/linux/dist'
         DEST_DIR: 'mindsdb-installer/linux'
+
+    - name: Build OSX sh installer
+      run: |
+        python distributions/osx/rename_installers.py beta
+
+    - name: Sync linux sh installer to s3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks
+      env:
+        AWS_S3_BUCKET: 'mindsdb-installer'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-2'
+        SOURCE_DIR: 'distributions/osx/dist'
+        DEST_DIR: 'mindsdb-installer/osx'

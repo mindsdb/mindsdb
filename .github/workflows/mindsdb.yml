@@ -87,7 +87,7 @@ jobs:
       run: |
         pip install pyinstaller
         pip install winshell
-        python distributions/windows/build_installers.py
+        python distributions/windows/build_installers.py beta
 
     - name: Sync windows installer to s3
       env:

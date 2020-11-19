@@ -149,6 +149,7 @@ def initialize_static(config):
                 return e
             return None
 
+        # to make downloading faster download each resource in a separate thread
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_url = {executor.submit(get_resources, r): r for r in resources}
             for future in concurrent.futures.as_completed(future_to_url):

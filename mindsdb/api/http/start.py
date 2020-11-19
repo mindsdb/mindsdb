@@ -24,6 +24,7 @@ def start(config, verbose=False):
 
     initialize_log(config, 'http', wrap_print=True)
 
+    # start static initialization in a separate thread
     init_static_thread = threading.Thread(target=initialize_static, args=(config,))
     init_static_thread.start()
 

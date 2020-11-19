@@ -154,7 +154,7 @@ def initialize_static(config):
             future_to_url = {executor.submit(get_resources, r): r for r in resources}
             for future in concurrent.futures.as_completed(future_to_url):
                 res = future.result()
-                if res:
+                if res is not None:
                     raise res
 
     except Exception as e:

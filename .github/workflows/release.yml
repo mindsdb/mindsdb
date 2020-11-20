@@ -68,6 +68,7 @@ jobs:
         dockerfile: distributions/docker/Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+        tags: "latest"
         repository: mindsdb/mindsdb
         tag_with_ref: true
 

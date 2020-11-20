@@ -10,6 +10,7 @@ default_config = {
             "console": "ERROR",
             "file": "WARNING"
         }
+        
     },
     "debug": False,
     "integrations": {},

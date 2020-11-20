@@ -6,6 +6,6 @@ if sys.argv[1] == 'beta':
 elif sys.argv[1] == 'release':
     filename = 'MindsDB_OSX_Latest.sh'
 
-os.system('cd distributions/linux && mkdir dist')
-os.system('cd distributions/linux && cp ../linux/install.sh dist/')
-os.system('cd distributions/linux/dist && mv install.sh {}'.format(filename))
+os.system('mkdir distributions/osx/dist')
+os.system('cp distributions/linux/install.sh distributions/osx/dist/')
+os.system('mv distributions/osx/dist/install.sh distributions/osx/dist/{}'.format(filename))

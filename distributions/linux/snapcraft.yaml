@@ -1,0 +1,19 @@
+name: mindsdb
+version: latest
+summary: From https://forum.snapcraft.io/t/python-apps/6741 && https://forum.snapcraft.io/t/the-python-plugin/8529
+description: |
+  Mindsdb
+base: core18
+confinement: devmode
+
+
+parts:
+  test-offlineimap:
+    plugin: python
+    python-version: python3.7
+    source: .
+    requirements: /path/to/requirments.txt
+
+apps:
+  start-mindsdb:
+    command: bin/mindsdb

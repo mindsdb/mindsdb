@@ -1,4 +1,5 @@
 import os
+import sys
 
 about = {}
 with open("mindsdb/__about__.py") as fp:
@@ -7,8 +8,12 @@ with open("mindsdb/__about__.py") as fp:
 with open('distributions/windows/install.py', 'r') as f:
     install_py = f.read()
 
-LATEST_NAME = 'MindsDB-Server-Latest'
-FIXED_NAME = 'MindsDB-Server-{}'.format(about['__version__'])
+if sys.argv[1] == 'beta':
+    LATEST_NAME = 'MindsDB_Latest_Beta'
+    FIXED_NAME = 'MindsDB_{}_Beta'.format(about['__version__'])
+elif sys.argv[1] == 'release':
+    LATEST_NAME = 'MindsDB_Latest'
+    FIXED_NAME = 'MindsDB-{}'.format(about['__version__'])
 
 with open('distributions/windows/latest.py', 'w+') as f:
     f.write(install_py.replace('$name', LATEST_NAME).replace('$version', ''))

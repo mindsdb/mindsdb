@@ -8,6 +8,7 @@ from zipfile import ZipFile
 from pathlib import Path
 import logging
 import traceback
+import concurrent.futures
 
 from flask import Flask, url_for
 from flask_restx import Api
@@ -138,11 +139,23 @@ def initialize_static(config):
             }
         ]
 
-        for r in resources:
-            response = requests.get(r['url'])
-            if response.status_code != 200:
-                raise Exception(f"Error {response.status_code} GET {r['url']}")
-            open(r['path'], 'wb').write(response.content)
+        def get_resources(resource):
+            try:
+                response = requests.get(resource['url'])
+                if response.status_code != requests.status_codes.codes.ok:
+                    return Exception(f"Error {response.status_code} GET {resource['url']}")
+                open(resource['path'], 'wb').write(response.content)
+            except Exception as e:
+                return e
+            return None
+
+        # to make downloading faster download each resource in a separate thread
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_url = {executor.submit(get_resources, r): r for r in resources}
+            for future in concurrent.futures.as_completed(future_to_url):
+                res = future.result()
+                if res is not None:
+                    raise res
 
     except Exception as e:
         log.error(f'Error during downloading files from s3: {e}')
@@ -180,14 +193,11 @@ def initialize_flask(config):
     # Apparently there's a bug that causes the static path not to work if it's '/' -- https://github.com/pallets/flask/issues/3134, I think '' should achieve the same thing (???)
     app = Flask(
         __name__,
-        static_url_path='',
-        static_folder=config.paths['static']
+        static_url_path='/static',
+        static_folder=os.path.join(config.paths['static'], 'static/')
     )
 
-    @app.route('/')
-    def root_index():
-        return app.send_static_file('index.html')
-
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     authorizations = {
         'apikey': {
@@ -222,7 +232,7 @@ def initialize_flask(config):
 
     # NOTE rewrite it, that hotfix to see GUI link
     log = logging.getLogger('mindsdb.http')
-    url = f'http://{host}:{port}/index.html'
+    url = f'http://{host}:{port}/'
     log.error(f' - GUI available at {url}')
 
     pid = os.getpid()

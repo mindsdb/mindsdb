@@ -1,5 +1,6 @@
 import inspect
 import os
+import time
 from pathlib import Path
 import json
 import shutil
@@ -210,5 +211,5 @@ def remove_corrupted_predictors(config, mindsdb_native):
             create_directory(corrupted_predictors_dir)
             shutil.move(
                 str(p),
-                str(corrupted_predictors_dir.joinpath(model_name))
+                str(corrupted_predictors_dir.joinpath( model_name + str(int(time.time())) ))
             )

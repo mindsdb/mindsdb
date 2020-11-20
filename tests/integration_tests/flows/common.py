@@ -7,6 +7,9 @@ import atexit
 import os
 import asyncio
 import shutil
+import csv
+
+from pandas import DataFrame
 
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.config import Config
@@ -14,6 +17,8 @@ from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.ps import wait_port, is_port_in_use
 from mindsdb_native import CONFIG
+
+DATASETS_PATH = os.getenv('DATASETS_PATH')
 
 USE_EXTERNAL_DB_SERVER = bool(int(os.getenv('USE_EXTERNAL_DB_SERVER') or "1"))
 
@@ -31,8 +36,64 @@ START_TIMEOUT = 15
 
 OUTPUT = None  # [None|subprocess.DEVNULL]
 
-TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../temp/').resolve()
+TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
+    f'temp/test_storage_{int(time.time()*1000)}/' if USE_EXTERNAL_DB_SERVER else 'temp/test_storage/'
+).resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+DATASETS_COLUMN_TYPES = {
+    'us_health_insurance': [
+        ('age', int),
+        ('sex', str),
+        ('bmi', float),
+        ('children', int),
+        ('smoker', str),
+        ('region', str),
+        ('charges', float)
+    ],
+    'hdi': [
+        ('Population', int),
+        ('Area', int),
+        ('Pop_Density', int),
+        ('GDP_per_capita_USD', int),
+        ('Literacy', float),
+        ('Infant_mortality', int),
+        ('Development_Index', float)
+    ],
+    'used_car_price': [
+        ('model', str),
+        ('year', int),
+        ('price', int),
+        ('transmission', str),
+        ('mileage', int),
+        ('fueltype', str),
+        ('tax', int),
+        ('mpg', float),
+        ('enginesize', float)
+    ],
+    'home_rentals': [
+        ('number_of_rooms', int),
+        ('number_of_bathrooms', int),
+        ('sqft', int),
+        ('location', str),
+        ('days_on_market', int),
+        ('initial_price', int),
+        ('neighborhood', str),
+        ('rental_price', int)
+    ],
+    'concrete_strength': [
+        ('id', int),
+        ('cement', float),
+        ('slag', float),
+        ('flyAsh', float),
+        ('water', float),
+        ('superPlasticizer', float),
+        ('coarseAggregate', float),
+        ('fineAggregate', float),
+        ('age', int),
+        ('concrete_strength', float)
+    ]
+}
 
 
 def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}):
@@ -111,22 +172,10 @@ if USE_EXTERNAL_DB_SERVER:
     TEST_CONFIG = prepare_config(config, override_integration_config=override)
 
 
-def get_test_csv(name, url, lines_count=None, rewrite=False):
-    test_csv_path = TESTS_ROOT.joinpath('temp/', name).resolve()
-    if not test_csv_path.is_file() or rewrite:
-        r = requests.get(url)
-        with open(test_csv_path, 'wb') as f:
-            f.write(r.content)
-        if lines_count is not None:
-            fp = str(test_csv_path)
-            p = subprocess.Popen(
-                f"mv {fp} {fp}_2; sed -n '1,{lines_count}p' {fp}_2 >> {fp}; rm {fp}_2",
-                cwd=TESTS_ROOT.resolve(),
-                stdout=OUTPUT,
-                stderr=OUTPUT,
-                shell=True
-            )
-            p.wait()
+def make_test_csv(name, data):
+    test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()
+    df = DataFrame(data)
+    df.to_csv(test_csv_path, index=False)
     return str(test_csv_path)
 
 
@@ -181,3 +230,86 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
     datastore = DataStore(config)
 
     return mdb, datastore
+
+
+def upload_csv(query, columns_map, db_types_map, table_name, csv_path, escape='`', template=None):
+    template = template or 'create table test_data.%s (%s);'
+    query(template % (
+        table_name,
+        ','.join([f'{escape}{col_name}{escape} {db_types_map[col_type]}' for col_name, col_type in columns_map])
+    ))
+
+    with open(csv_path) as f:
+        csvf = csv.reader(f)
+        for i, row in enumerate(csvf):
+            if i == 0:
+                continue
+            if i % 100 == 0:
+                print(f'inserted {i} rows')
+            vals = []
+            for i, col in enumerate(columns_map):
+                col_type = col[1]
+                try:
+                    if col_type is int:
+                        vals.append(str(int(float(row[i]))))
+                    elif col_type is str:
+                        vals.append(f"'{row[i]}'")
+                    else:
+                        vals.append(str(col_type(row[i])))
+                except Exception:
+                    vals.append('null')
+
+            query(f'''INSERT INTO test_data.{table_name} VALUES ({','.join(vals)})''')
+
+
+def condition_dict_to_str(condition):
+    ''' convert dict to sql WHERE conditions
+
+        :param condition: dict
+        :return: str
+    '''
+    s = []
+    for name, value in condition.items():
+        if isinstance(value, str):
+            s.append(f"{name}='{value}'")
+        elif value is None:
+            s.append(f'{name} is null')
+        else:
+            s.append(f'{name}={value}')
+
+    return ' AND '.join(s)
+
+
+def get_all_pridict_fields(fields):
+    ''' make list off all prediciton fields
+    '''
+    fieldes = list(fields.keys())
+    for field_name, field_type in fields.items():
+        fieldes.append(f'{field_name}_confidence')
+        fieldes.append(f'{field_name}_explain')
+        if field_type in [int, float]:
+            fieldes.append(f'{field_name}_min')
+            fieldes.append(f'{field_name}_max')
+    return fieldes
+
+
+def check_prediction_values(row, to_predict):
+    try:
+        for field_name, field_type in to_predict.items():
+            if field_type in [int, float]:
+                assert isinstance(row[field_name], (int, float))
+                assert isinstance(row[f'{field_name}_min'], (int, float))
+                assert isinstance(row[f'{field_name}_max'], (int, float))
+                assert row[f'{field_name}_max'] > row[f'{field_name}_min']
+            elif field_type is str:
+                assert isinstance(row[field_name], str)
+            else:
+                assert False
+
+            assert isinstance(row[f'{field_name}_confidence'], (int, float))
+            assert isinstance(row[f'{field_name}_explain'], (str, dict))
+    except Exception:
+        print('Wrong values in row:')
+        print(row)
+        return False
+    return True

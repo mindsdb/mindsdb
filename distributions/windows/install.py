@@ -12,7 +12,6 @@ assert os.name == 'nt'
 def at_exit():
     os.system('pause')
 
-
 atexit.register(at_exit)
 
 PY_EMBED_URL = 'https://www.python.org/ftp/python/3.7.4/python-3.7.4-embed-amd64.zip'

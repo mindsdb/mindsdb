@@ -7,7 +7,6 @@ on:
 jobs:
   deploy_windows_installer:
     runs-on: windows-latest
-    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
@@ -39,7 +38,6 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python

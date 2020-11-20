@@ -10,7 +10,7 @@ default_config = {
             "console": "ERROR",
             "file": "WARNING"
         }
-        
+
     },
     "debug": False,
     "integrations": {},
@@ -34,7 +34,6 @@ default_config = {
         }
     }
 }
-
 
 class Config(object):
     current_version = '1.3'

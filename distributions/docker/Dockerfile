@@ -7,7 +7,7 @@ EXPOSE 47336/tcp
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y git && \
-    pip install git+https://github.com/mindsdb/mindsdb.git@staging
+    pip install mindsdb
 
 ENV PYTHONUNBUFFERED=1
 

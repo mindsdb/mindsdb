@@ -50,17 +50,8 @@ jobs:
         pip install setuptools wheel twine
 
     - name: Build and publish
-      env:
-        TWINE_USERNAME:  __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
         python setup.py sdist
-        twine upload dist/*
-
-    - name: Install latest version from pypi
-      run: |
-        sleep 20
-        pip install mindsdb
 
     - name: Build and push mindsdb Docker image
       uses: docker/build-push-action@v1

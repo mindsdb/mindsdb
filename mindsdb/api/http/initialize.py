@@ -8,7 +8,7 @@ from zipfile import ZipFile
 from pathlib import Path
 import logging
 import traceback
-import concurrent.futures
+#import concurrent.futures
 
 from flask import Flask, url_for
 from flask_restx import Api
@@ -149,6 +149,10 @@ def initialize_static(config):
                 return e
             return None
 
+        for r in resources:
+            get_resources(r)
+
+        '''
         # to make downloading faster download each resource in a separate thread
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_url = {executor.submit(get_resources, r): r for r in resources}
@@ -156,6 +160,7 @@ def initialize_static(config):
                 res = future.result()
                 if res is not None:
                     raise res
+        '''
 
     except Exception as e:
         log.error(f'Error during downloading files from s3: {e}')

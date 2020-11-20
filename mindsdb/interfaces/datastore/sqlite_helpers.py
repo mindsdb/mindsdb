@@ -2,10 +2,12 @@ import sqlite3
 from mindsdb_native.libs.constants.mindsdb import DATA_TYPES, DATA_SUBTYPES
 import re
 
+
 def create_sqlite_db(path, data_frame):
     con = sqlite3.connect(path)
     data_frame.to_sql(name='data', con=con, index=False)
     con.close()
+
 
 def cast_df_columns_types(df, stats):
     types_map = {
@@ -45,7 +47,7 @@ def cast_df_columns_types(df, stats):
             col_subtype = stats[name]['typing']['data_subtype']
             new_type = types_map[col_type][col_subtype]
             if new_type == 'int64' or new_type == 'float64':
-                df[name] = df[name].apply(lambda x: x.replace(',','.') if isinstance(x, str) else x)
+                df[name] = df[name].apply(lambda x: x.replace(',', '.') if isinstance(x, str) else x)
             if new_type == 'int64':
                 df = df.astype({name: 'float64'})
             df = df.astype({name: new_type})
@@ -54,6 +56,7 @@ def cast_df_columns_types(df, stats):
             print(f'Error: cant convert type of DS column {name} to {new_type}')
 
     return df
+
 
 def parse_filter(key, value):
     result = re.search(r'filter(_*.*)\[(.*)\]', key)
@@ -96,11 +99,13 @@ def prepare_sql_where(where):
         where = ''
     return where, marks
 
+
 def get_sqlite_columns_names(cursor):
     cursor.execute('pragma table_info(data);')
     column_name_index = [x[0] for x in cursor.description].index('name')
     columns = cursor.fetchall()
     return [x[column_name_index] for x in columns]
+
 
 def get_sqlite_data(db_path, where, limit, offset):
     where = [] if where is None else where

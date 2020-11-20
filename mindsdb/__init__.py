@@ -5,7 +5,7 @@ from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
 from mindsdb.utilities.fs import get_or_create_dir_struct, create_dirs_recursive
 from mindsdb.utilities.wizards import cli_config
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.functions import args_parse
+from mindsdb.utilities.functions import args_parse, is_notebook
 
 config_dir, storage_dir = get_or_create_dir_struct()
 
@@ -13,9 +13,15 @@ config_path = os.path.join(config_dir, 'config.json')
 if not os.path.exists(config_path):
     _ = cli_config(None, None, storage_dir, config_dir, use_default=True)
 
-args = args_parse()
-if args.config is not None:
-    config_path = args.config
+
+try:
+    if not is_notebook():
+        args = args_parse()
+        if args.config is not None:
+            config_path = args.config
+except:
+    # This fials in some notebooks
+    pass
 
 try:
     mindsdb_config = Config(config_path)

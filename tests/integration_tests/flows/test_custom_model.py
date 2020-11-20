@@ -1,71 +1,90 @@
 import unittest
-import csv
 import shutil
 import requests
-import os
+from pathlib import Path
+import textwrap
+
+import mysql.connector
 
 from mindsdb.utilities.config import Config
 
 from common import (
+    USE_EXTERNAL_DB_SERVER,
+    DATASETS_COLUMN_TYPES,
+    MINDSDB_DATABASE,
+    DATASETS_PATH,
+    TEST_CONFIG,
+    TEMP_DIR,
     run_environment,
-    get_test_csv,
-    TEST_CONFIG
+    make_test_csv,
+    upload_csv
 )
 
+# +++ define test data
+TEST_DATASET = 'home_rentals'
+
+DB_TYPES_MAP = {
+    int: 'int',
+    float: 'float',
+    str: 'varchar(255)'
+}
+
+TO_PREDICT = {
+    'rental_price': float,
+    'location': str
+}
+CONDITION = {
+    'sqft': 1000,
+    'neighborhood': 'downtown'
+}
+# ---
 
 root = 'http://127.0.0.1:47334/api'
-TEST_CSV = {
-    'name': 'home_rentals.csv',
-    'url': 'https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv'
-}
-TEST_DATA_TABLE = 'home_rentals'
-TEST_PREDICTOR_NAME = 'test_predictor'
 
-EXTERNAL_DS_NAME = 'test_external'
+TEST_DATA_TABLE = TEST_DATASET
+TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
+EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
+
 config = Config(TEST_CONFIG)
-PRED_NAME = 'this_is_my_custom_sklearnmodel'
 
 
-def query(query):
-    if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
-        query += ' FORMAT JSON'
-
-    host = config['integrations']['default_clickhouse']['host']
-    port = config['integrations']['default_clickhouse']['port']
-
-    connect_string = f'http://{host}:{port}'
-
-    params = {'user': 'default'}
-    try:
-        params['user'] = config['integrations']['default_clickhouse']['user']
-    except Exception:
-        pass
-
-    try:
-        params['password'] = config['integrations']['default_clickhouse']['password']
-    except Exception:
-        pass
-
-    res = requests.post(
-        connect_string,
-        data=query,
-        params=params
+def query(q, as_dict=False, fetch=False):
+    con = mysql.connector.connect(
+        host=config['integrations']['default_mariadb']['host'],
+        port=config['integrations']['default_mariadb']['port'],
+        user=config['integrations']['default_mariadb']['user'],
+        passwd=config['integrations']['default_mariadb']['password'],
+        db=MINDSDB_DATABASE,
+        connect_timeout=1000
     )
 
-    if res.status_code != 200:
-        print(f'ERROR: code={res.status_code} msg={res.text}')
-        raise Exception()
-
-    if ' FORMAT JSON' in query:
-        res = res.json()['data']
-
+    cur = con.cursor(dictionary=as_dict)
+    cur.execute(q)
+    res = True
+    if fetch:
+        res = cur.fetchall()
+    con.commit()
+    con.close()
     return res
+
+
+def fetch(q, as_dict=True):
+    return query(q, as_dict, fetch=True)
 
 
 class CustomModelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment('clickhouse', config, run_apis=['mysql', 'http'])
+        mdb, datastore = run_environment(
+            config,
+            apis=['http', 'mysql'],
+            override_integration_config={
+                'default_mariadb': {
+                    'enabled': True
+                }
+            },
+            mindsdb_database=MINDSDB_DATABASE
+        )
         cls.mdb = mdb
 
         models = cls.mdb.get_models()
@@ -73,110 +92,73 @@ class CustomModelTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        query('create database if not exists test')
-        test_tables = query('show tables from test')
-        test_tables = [x['name'] for x in test_tables]
+        if not USE_EXTERNAL_DB_SERVER:
+            query('create database if not exists test_data')
+            test_tables = fetch('show tables from test_data', as_dict=False)
+            test_tables = [x[0] for x in test_tables]
 
-        test_csv_path = get_test_csv(TEST_CSV['name'], TEST_CSV['url'])
-
-        if TEST_DATA_TABLE not in test_tables:
-            print('creating test data table...')
-            query(f'''
-                CREATE TABLE test.{TEST_DATA_TABLE} (
-                    id Int16,
-                    number_of_rooms Int8,
-                    number_of_bathrooms Int8,
-                    sqft Int32,
-                    location String,
-                    days_on_market Int16,
-                    initial_price Int32,
-                    neighborhood String,
-                    rental_price Int32
-                ) ENGINE = MergeTree()
-                ORDER BY id
-                PARTITION BY location
-            ''')
-
-            with open(test_csv_path) as f:
-                csvf = csv.reader(f)
-                i = 0
-                for row in csvf:
-                    if i > 0:
-                        number_of_rooms = int(row[0])
-                        number_of_bathrooms = int(row[1])
-                        sqft = int(float(row[2].replace(',', '.')))
-                        location = str(row[3])
-                        days_on_market = int(row[4])
-                        initial_price = int(row[5])
-                        neighborhood = str(row[6])
-                        rental_price = int(float(row[7]))
-                        query(f'''INSERT INTO test.{TEST_DATA_TABLE} VALUES (
-                            {i},
-                            {number_of_rooms},
-                            {number_of_bathrooms},
-                            {sqft},
-                            '{location}',
-                            {days_on_market},
-                            {initial_price},
-                            '{neighborhood}',
-                            {rental_price}
-                        )''')
-                    i += 1
-            print('done')
+            if TEST_DATA_TABLE not in test_tables:
+                test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
+                upload_csv(
+                    query=query,
+                    columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
+                    db_types_map=DB_TYPES_MAP,
+                    table_name=TEST_DATA_TABLE,
+                    csv_path=test_csv_path
+                )
 
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:
             datastore.delete_datasource(EXTERNAL_DS_NAME)
-        short_csv_file_path = get_test_csv(f'{EXTERNAL_DS_NAME}.csv', TEST_CSV['url'], lines_count=300, rewrite=True)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', short_csv_file_path)
+
+        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50')
+        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
+        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
 
     def test_1_simple_model_upload(self):
-        dir_name = 'test_custom_model'
+        model_dir = TEMP_DIR.joinpath('test_custom_model/')
+        if model_dir.is_dir():
+            shutil.rmtree(str(model_dir))
+        model_dir.mkdir(parents=True, exist_ok=True)
 
-        try:
-            os.mkdir(dir_name)
-        except:
-            pass
+        with open(str(model_dir.joinpath('model.py')), 'w') as fp:
+            fp.write(textwrap.dedent("""
+                from sklearn.linear_model import LinearRegression
+                import numpy as np
+                import pandas as pd
+                from mindsdb import ModelInterface
 
-        with open(dir_name + '/model.py', 'w') as fp:
-            fp.write("""
-from sklearn.linear_model import LinearRegression
-import numpy as np
-import pandas as pd
-from mindsdb import ModelInterface
+                class Model(ModelInterface):
+                    def setup(self):
+                        print('Setting up model !')
+                        self.model = LinearRegression()
 
-class Model(ModelInterface):
-    def setup(self):
-        print('Setting up model !')
-        self.model = LinearRegression()
+                    def get_x(self, data):
+                        initial_price = np.array([int(x) for x in data['initial_price']])
+                        initial_price = initial_price.reshape(-1, 1)
+                        return initial_price
 
-    def get_x(self, data):
-        initial_price = np.array([int(x) for x in data['initial_price']])
-        initial_price = initial_price.reshape(-1, 1)
-        return initial_price
+                    def get_y(self, data, to_predict_str):
+                        to_predict = np.array(data[to_predict_str])
+                        return to_predict
 
-    def get_y(self, data, to_predict_str):
-        to_predict = np.array(data[to_predict_str])
-        return to_predict
+                    def predict(self, from_data, kwargs):
+                        initial_price = self.get_x(from_data)
+                        rental_price = self.model.predict(initial_price)
+                        df = pd.DataFrame({self.to_predict[0]: rental_price})
+                        return df
 
-    def predict(self, from_data, kwargs):
-        initial_price = self.get_x(from_data)
-        rental_price = self.model.predict(initial_price)
-        df = pd.DataFrame({self.to_predict[0]: rental_price})
-        return df
+                    def fit(self, from_data, to_predict, data_analysis, kwargs):
+                        self.model = LinearRegression()
+                        Y = self.get_y(from_data, to_predict[0])
+                        X = self.get_x(from_data)
+                        self.model.fit(X, Y)
+        """))
 
-    def fit(self, from_data, to_predict, data_analysis, kwargs):
-        self.model = LinearRegression()
-        Y = self.get_y(from_data, to_predict[0])
-        X = self.get_x(from_data)
-        self.model.fit(X, Y)
-
-                     """)
-
-        shutil.make_archive(base_name='my_model', format='zip', root_dir=dir_name)
+        shutil.make_archive(base_name='my_model', format='zip', root_dir=str(model_dir))
 
         # Upload the model (new endpoint)
-        res = requests.put(f'{root}/predictors/custom/{PRED_NAME}', files=dict(file=open('my_model.zip','rb')), json={
+        res = requests.put(f'{root}/predictors/custom/{TEST_PREDICTOR_NAME}', files=dict(file=open('my_model.zip', 'rb')), json={
             'trained_status': 'untrained'
         })
         print(res.status_code)
@@ -189,7 +171,7 @@ class Model(ModelInterface):
             'to_predict': 'rental_price',
             'kwargs': {}
         }
-        res = requests.post(f'{root}/predictors/{PRED_NAME}/learn', json=params)
+        res = requests.post(f'{root}/predictors/{TEST_PREDICTOR_NAME}/learn', json=params)
         print(res.status_code)
         print(res.text)
         assert res.status_code == 200
@@ -198,7 +180,7 @@ class Model(ModelInterface):
         params = {
             'when': {'initial_price': 5000}
         }
-        url = f'{root}/predictors/{PRED_NAME}/predict'
+        url = f'{root}/predictors/{TEST_PREDICTOR_NAME}/predict'
         res = requests.post(url, json=params)
         assert res.status_code == 200
         assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
@@ -207,33 +189,49 @@ class Model(ModelInterface):
         params = {
             'data_source_name': EXTERNAL_DS_NAME
         }
-        url = f'{root}/predictors/{PRED_NAME}/predict_datasource'
+        url = f'{root}/predictors/{TEST_PREDICTOR_NAME}/predict_datasource'
         res = requests.post(url, json=params)
 
         assert res.status_code == 200
-        assert(len(res.json()) == 299)
+        assert(len(res.json()) == 50)
         for pred in res.json():
             assert isinstance(pred['rental_price']['predicted_value'], float)
 
     def test_2_db_predict_from_external_datasource(self):
-        res = query(f"""SELECT rental_price FROM mindsdb.{PRED_NAME} WHERE external_datasource='{EXTERNAL_DS_NAME}'""")
+        res = fetch(
+            f"""
+                SELECT rental_price
+                FROM {MINDSDB_DATABASE}.{TEST_PREDICTOR_NAME}
+                WHERE external_datasource='{EXTERNAL_DS_NAME}'
+            """,
+            as_dict=True
+        )
 
         self.assertTrue(len(res) > 0)
         self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
 
     def test_3_retrain_model(self):
-        res = query(f""" INSERT INTO mindsdb.predictors (name, predict, select_data_query) VALUES ('{PRED_NAME}', 'sqft', 'SELECT * FROM test.{TEST_DATA_TABLE}') """)
-        #sqft
+        query(f"""
+            INSERT INTO {MINDSDB_DATABASE}.predictors (name, predict, select_data_query)
+            VALUES ('{TEST_PREDICTOR_NAME}', 'sqft', 'SELECT * FROM test_data.{TEST_DATA_TABLE} where sqft is not null')
+        """)
 
     def test_4_predict_with_retrained_from_sql(self):
-        res = query(f"""SELECT sqft FROM mindsdb.{PRED_NAME} WHERE initial_price=6000""")
+        res = fetch(f"""SELECT sqft FROM {MINDSDB_DATABASE}.{TEST_PREDICTOR_NAME} WHERE initial_price=6000""", as_dict=True)
 
         self.assertTrue(len(res) > 0)
         print(res)
         self.assertTrue(res[0]['sqft'] is not None and res[0]['sqft'] != 'None')
 
     def test_5_predict_with_retrained_from_select(self):
-        res = query(f"""SELECT sqft FROM mindsdb.{PRED_NAME} WHERE select_data_query='SELECT * FROM test.{TEST_DATA_TABLE}'""")
+        res = fetch(
+            f"""
+                SELECT sqft
+                FROM {MINDSDB_DATABASE}.{TEST_PREDICTOR_NAME}
+                WHERE select_data_query='SELECT * FROM test_data.{TEST_DATA_TABLE}'
+            """,
+            as_dict=True
+        )
 
         self.assertTrue(len(res) > 0)
         print(res)
@@ -243,7 +241,7 @@ class Model(ModelInterface):
         params = {
             'when': {'initial_price': 5000, 'rental_price': 4000}
         }
-        url = f'{root}/predictors/{PRED_NAME}/predict'
+        url = f'{root}/predictors/{TEST_PREDICTOR_NAME}/predict'
         res = requests.post(url, json=params)
         assert res.status_code == 200
         assert isinstance(res.json()[0]['sqft']['predicted_value'], float)
@@ -251,33 +249,34 @@ class Model(ModelInterface):
         params = {
             'data_source_name': EXTERNAL_DS_NAME
         }
-        url = f'{root}/predictors/{PRED_NAME}/predict_datasource'
+        url = f'{root}/predictors/{TEST_PREDICTOR_NAME}/predict_datasource'
         res = requests.post(url, json=params)
 
         assert res.status_code == 200
-        assert(len(res.json()) == 299)
+        assert(len(res.json()) == 50)
         for pred in res.json():
             assert isinstance(pred['sqft']['predicted_value'], float)
 
     def test_7_utils_from_http_api(self):
         res = requests.get(f'{root}/predictors')
         assert res.status_code == 200
-        assert PRED_NAME in [x['name'] for x in res.json()]
+        assert TEST_PREDICTOR_NAME in [x['name'] for x in res.json()]
         for ele in res.json():
             print(ele)
-            if ele['name'] == PRED_NAME:
-                assert ele['is_custom'] == True
+            if ele['name'] == TEST_PREDICTOR_NAME:
+                assert ele['is_custom'] is True
 
-        res = requests.get(f'{root}/predictors/{PRED_NAME}')
+        res = requests.get(f'{root}/predictors/{TEST_PREDICTOR_NAME}')
         assert res.status_code == 200
-        assert res.json()['name'] == PRED_NAME
-        assert res.json()['is_custom'] == True
+        assert res.json()['name'] == TEST_PREDICTOR_NAME
+        assert res.json()['is_custom'] is True
 
     def test_8_delete_from_http_api(self):
-        res = requests.delete(f'{root}/predictors/{PRED_NAME}')
+        res = requests.delete(f'{root}/predictors/{TEST_PREDICTOR_NAME}')
         assert res.status_code == 200
         res = requests.get(f'{root}/predictors')
-        assert PRED_NAME not in [x['name'] for x in res.json()]
+        assert TEST_PREDICTOR_NAME not in [x['name'] for x in res.json()]
+
 
 if __name__ == "__main__":
     unittest.main(failfast=True)

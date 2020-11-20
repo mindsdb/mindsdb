@@ -18,7 +18,7 @@ class Responce(Responder):
                 'status': x['status'],
                 'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
                 'predict': ', '.join(x['predict']),
-                'select_data_query': x['data_source'],
+                'select_data_query': '',
                 'external_datasource': '',
                 'training_options': ''
             } for x in models]

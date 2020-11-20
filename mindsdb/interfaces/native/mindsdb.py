@@ -7,6 +7,7 @@ from dateutil.parser import parse as parse_datetime
 import mindsdb_native
 from mindsdb_native import F
 from mindsdb.utilities.fs import create_directory
+from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 from mindsdb.interfaces.native.predictor_process import PredictorProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
@@ -16,16 +17,24 @@ class MindsdbNative():
         self.config = config
         self.dbw = DatabaseWrapper(self.config)
 
+    def _setup_for_creation(self, name):
+            predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
+            create_directory(predictor_dir)
+            versions_file_path = predictor_dir.joinpath('versions.json')
+            with open(str(versions_file_path), 'wt') as f:
+                json.dump(self.config.versions, f, indent=4, sort_keys=True)
+
+    def create(self, name):
+        self._setup_for_creation(name)
+        predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
+        return predictor
+
     def learn(self, name, from_data, to_predict, kwargs={}):
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
 
-        predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
-        create_directory(predictor_dir)
-        versions_file_path = predictor_dir.joinpath('versions.json')
-        with open(str(versions_file_path), 'wt') as f:
-            json.dump(self.config.versions, f, indent=4, sort_keys=True)
+        self._setup_for_creation(name)
 
         p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
         p.start()
@@ -42,11 +51,10 @@ class MindsdbNative():
         p.start()
         predictions = p.join()
         '''
-        mdb = mindsdb_native.Predictor(name=name)
+        mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         predictions = mdb.predict(
             when_data=when_data,
-            run_confidence_variation_analysis=isinstance(when_data, list) is False or len(when_data) == 1,
             **kwargs
         )
 
@@ -55,8 +63,19 @@ class MindsdbNative():
     def analyse_dataset(self, ds):
         return F.analyse_dataset(ds)
 
-    def get_model_data(self, name):
-        return F.get_model_data(name)
+    def get_model_data(self, name, native_view=False):
+        model = F.get_model_data(name)
+        if native_view:
+            return model
+
+        data_analysis = model['data_analysis_v2']
+        for column in data_analysis['columns']:
+            if len(data_analysis[column]) == 0 or data_analysis[column].get('empty', {}).get('is_empty', False):
+                data_analysis[column]['typing'] = {
+                    'data_subtype': DATA_SUBTYPES.INT
+                }
+
+        return model
 
     def get_models(self, status='any'):
         models = F.get_models()

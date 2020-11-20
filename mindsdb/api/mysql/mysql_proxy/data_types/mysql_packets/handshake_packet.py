@@ -13,12 +13,12 @@
 import logging
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
-    DEFAULT_CAPABILITIES,
     DEFAULT_AUTH_METHOD,
     DEFAULT_COALLITION_ID,
     FILLER_FOR_WIRESHARK_DUMP,
     SERVER_STATUS_AUTOCOMMIT
 )
+from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 
 
@@ -29,15 +29,16 @@ class HandshakePacket(Packet):
     '''
 
     def setup(self):
+        capabilities = server_capabilities.value
         self.protocol_version = Datum('int<1>', 10)
         self.server_version = Datum('string<NUL>', '5.7.1-MindsDB-1.0')
         self.connection_id = Datum('int<4>', self.proxy.connection_id)
         self.scramble_1st_part = Datum('string<8>', self.proxy.salt[:8])
         self.reserved_byte = Datum('string<1>', '')
-        self.server_capabilities_1st_part = Datum('int<2>', DEFAULT_CAPABILITIES)
+        self.server_capabilities_1st_part = Datum('int<2>', capabilities)
         self.server_default_collation = Datum('int<1>', DEFAULT_COALLITION_ID)
         self.status_flags = Datum('int<2>', SERVER_STATUS_AUTOCOMMIT)
-        self.server_capabilities_2nd_part = Datum('int<2>', DEFAULT_CAPABILITIES >> 16)
+        self.server_capabilities_2nd_part = Datum('int<2>', capabilities >> 16)
         self.wireshark_filler = Datum('int<1>', FILLER_FOR_WIRESHARK_DUMP)
         # self.wireshark_filler = Datum('int<1>', len(self.proxy.salt))
         self.reserved_filler1 = Datum('string<6>', '')

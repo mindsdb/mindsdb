@@ -23,7 +23,7 @@ from mindsdb.utilities.fs import (
 )
 from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.utilities.functions import args_parse
+from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
 from mindsdb.utilities.log import initialize_log
 
 
@@ -149,16 +149,7 @@ More instructions in https://docs.mindsdb.com
 
     remove_corrupted_predictors(config, mdb)
 
-    # @TODO Maybe just use `get_model_data` directly here ? Seems like a useless abstraction
-    model_data_arr = [
-        {
-            'name': x['name'],
-            'predict': x['predict'],
-            'data_analysis': mdb.get_model_data(x['name'])['data_analysis_v2']
-        } for x in mdb.get_models()
-    ]
-
-    model_data_arr.extend(cst.get_models())
+    model_data_arr = get_all_models_meta_data(mdb, cst)
 
     dbw = DatabaseWrapper(config)
     dbw.register_predictors(model_data_arr)

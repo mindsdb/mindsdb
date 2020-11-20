@@ -1,73 +1,10 @@
 name: MindsDB workflow
 
-on: [push, pull_request]
+on:
+  release:
+    types: [published]
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.6, 3.7, 3.8]
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install --no-cache-dir .
-    - name: Install mindsdb_native/staging if it's not mindsdb/stable
-      if: github.ref != 'refs/heads/stable'
-      run: |
-          pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
-          pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
-    - name: Run integration api and flow tests
-      run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          mkdir -p ~/.ssh/
-          echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
-          sudo chmod 600 ~/.ssh/db_machine
-          echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
-          sudo chmod 644 ~/.mindsdb_credentials.json
-
-          pip install -r requirements_test.txt
-
-          export USE_EXTERNAL_DB_SERVER="1"
-
-          # MongoDB
-          echo -e "\n===============\ntest MongoDB\n===============\n"
-          python tests/integration_tests/flows/test_mongo.py
-
-          # PostgreSQL
-          echo -e "\n===============\ntest PostgreSQL\n===============\n"
-          python tests/integration_tests/flows/test_postgres.py
-
-          # MySQL
-          echo -e "\n===============\ntest MySQL\n===============\n"
-          python tests/integration_tests/flows/test_mysql.py
-
-          # MariaDB
-          echo -e "\n===============\ntest MariaDB\n===============\n"
-          python tests/integration_tests/flows/test_mariadb.py
-
-          # ClickHouse
-          echo -e "\n===============\ntest ClickHouse\n===============\n"
-          python tests/integration_tests/flows/test_clickhouse.py
-
-          # Cutsom model
-          echo -e "\n===============\ntest Cutsom model\n===============\n"
-          python tests/integration_tests/flows/test_custom_model.py
-
-          python tests/integration_tests/api/test_http.py
-        fi
-      shell: bash
-      env:
-        CHECK_FOR_UPDATES: False
-        DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
-        DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
   deploy_windows_installer:
     runs-on: windows-latest
     needs: test
@@ -87,7 +24,7 @@ jobs:
       run: |
         pip install pyinstaller
         pip install winshell
-        python distributions/windows/build_installers.py beta
+        python distributions/windows/build_installers.py release
 
     - name: Sync windows installer to s3
       env:
@@ -135,12 +72,12 @@ jobs:
         dockerfile: distributions/docker/Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: mindsdb/mindsdb_beta
+        repository: mindsdb/mindsdb
         tag_with_ref: true
 
     - name: Build linux sh installer
       run: |
-        python distributions/linux/rename_installers.py beta
+        python distributions/linux/rename_installers.py release
 
     - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master
@@ -156,7 +93,7 @@ jobs:
 
     - name: Build OSX sh installer
       run: |
-        python distributions/osx/rename_installers.py beta
+        python distributions/osx/rename_installers.py release
 
     - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master

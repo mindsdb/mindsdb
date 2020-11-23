@@ -120,7 +120,7 @@ pip_path = sys.argv[2]
 print(f'\nInstalling some large dependencies via pip ({pip_path}), this might take a while\n')
 time.sleep(1)
 
-retcode = os.system(f'{pip_path} install mindsdb')
+retcode = os.system(f'{pip_path} install mindsdb==$version')
 if retcode != 0:
     raise Exception("Command exited with error")
 

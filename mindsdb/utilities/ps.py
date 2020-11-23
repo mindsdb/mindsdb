@@ -9,6 +9,7 @@ def is_port_in_use(port_num):
     portsinuse.sort()
     return int(port_num) in portsinuse
 
+
 def wait_func_is_true(func, timeout, *args, **kwargs):
     start_time = time.time()
 

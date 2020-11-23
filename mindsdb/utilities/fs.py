@@ -14,7 +14,6 @@ def create_directory(path):
     path.mkdir(mode=0o777, exist_ok=True, parents=True)
 
 
-
 def get_paths():
     this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
     mindsdb_path = os.path.abspath(Path(this_file_path).parent.parent.parent)

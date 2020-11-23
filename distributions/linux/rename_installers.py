@@ -25,5 +25,5 @@ with open(f'distributions/linux/dist/{filename}', 'r') as fp:
 with open(f'distributions/linux/dist/{filename}', 'w') as fp:
     fp.write(content)
 
-with open(f'distributions/osx/dist/{versioned_filename}', 'w') as fp:
+with open(f'distributions/linux/dist/{versioned_filename}', 'w') as fp:
     fp.write(content)

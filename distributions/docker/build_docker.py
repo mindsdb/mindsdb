@@ -5,7 +5,7 @@ version = about['__version__']
 
 with open('distributions/docker/Dockerfile', 'r') as fp:
     content = fp.read()
-    content.replace('$version', version)
+    content = content.replace('$version', version)
 
 with open('distributions/docker/Dockerfile', 'w') as fp:
     fp.write(content)

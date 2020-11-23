@@ -10,7 +10,6 @@ def args_parse():
     parser.add_argument('-v', '--version', action='store_true')
     return parser.parse_args()
 
-
 def cast_row_types(row, field_types):
     '''
     '''

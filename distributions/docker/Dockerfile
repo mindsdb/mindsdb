@@ -43,4 +43,4 @@ RUN echo '{' \
     '}' \
 '}' > /root/mindsdb_config.json
 
-CMD ["python", "-m", "mindsdb", "--api=http,mysql,mongo", "--config=/root/mindsdb_config.json"]
+CMD ["python", "-m", "mindsdb", "--api=http,mysql,mongodb", "--config=/root/mindsdb_config.json"]

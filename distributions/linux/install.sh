@@ -134,7 +134,7 @@ exec_path = os.path.join(os.getcwd(), 'mindsdb')
 text = '\n'.join([
   '#!/bin/bash',
   '$MDB_SOURCE_VENV',
-  f'{python_path} -m mindsdb',
+  f'{python_path} -m mindsdb --api=http,mysql,mongodb',
 ])
 
 with open(exec_path, 'w') as fp:

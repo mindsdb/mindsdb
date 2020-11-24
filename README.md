@@ -24,6 +24,9 @@ MindsDB is an open-source AI layer for existing databases that allows you to eff
 ## Try it out
 
 * [Installing MindsDB](https://docs.mindsdb.com/Installing/)
+	* [Install on Linux](https://docs.mindsdb.com/installation/Linux/)
+	* [Install on Windows](https://docs.mindsdb.com/installation/Windows/)
+	* [Install on MacOS](https://docs.mindsdb.com/installation/MacOS/)
 * [AI Tables](https://docs.mindsdb.com/databases/)
 	* [AI Tables in MariaDB](https://docs.mindsdb.com/databases/MariaDB/)
 	* [AI Tables in ClickHouse](https://docs.mindsdb.com/databases/Clickhouse/)

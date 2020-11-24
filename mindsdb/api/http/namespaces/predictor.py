@@ -228,7 +228,6 @@ class PredictorColumns(Resource):
 
         return columns, 200
 
-
 @ns_conf.route('/<name>/predict')
 @ns_conf.param('name', 'The predictor identifier')
 class PredictorPredict(Resource):

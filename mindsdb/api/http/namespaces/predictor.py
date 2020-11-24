@@ -19,8 +19,6 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
 from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
 
 
-model_swapping_map = {}
-
 def debug_pkey_type(model, keys=None, reset_keyes=True, type_to_check=list, append_key=True):
     if type(model) != dict:
         return
@@ -122,8 +120,6 @@ class Predictor(Resource):
     @ns_conf.doc('put_predictor', params=put_predictor_params)
     def put(self, name):
         '''Learning new predictor'''
-        global model_swapping_map
-
         data = request.json
         to_predict = data.get('to_predict')
 
@@ -174,12 +170,10 @@ class Predictor(Resource):
 
         if retrain is True:
             try:
-                model_swapping_map[original_name] = True
                 ca.mindsdb_native.delete_model(original_name)
                 ca.mindsdb_native.rename_model(name, original_name)
-                model_swapping_map[original_name] = False
             except:
-                model_swapping_map[original_name] = False
+                pass
 
         return '', 200
 
@@ -241,7 +235,6 @@ class PredictorPredict(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
         '''Queries predictor'''
-        global model_swapping_map
 
         data = request.json
 
@@ -259,10 +252,6 @@ class PredictorPredict(Resource):
         if type(kwargs) != type({}):
             kwargs = {}
 
-        # Not the fanciest semaphore, but should work since restplus is multi-threaded and this condition should rarely be reached
-        while name in model_swapping_map and model_swapping_map[name] is True:
-            time.sleep(1)
-
         if is_custom(name):
             return ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
@@ -276,7 +265,6 @@ class PredictorPredict(Resource):
 class PredictorPredictFromDataSource(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
-        global model_swapping_map
         data = request.json
 
         from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=True)
@@ -295,10 +283,6 @@ class PredictorPredictFromDataSource(Resource):
 
         if type(kwargs) != type({}):
             kwargs = {}
-
-        # Not the fanciest semaphore, but should work since restplus is multi-threaded and this condition should rarely be reached
-        while name in model_swapping_map and model_swapping_map[name] is True:
-            time.sleep(1)
 
         if is_custom(name):
             return ca.custom_models.predict(name, from_data=from_data, **kwargs)

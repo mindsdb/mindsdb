@@ -12,7 +12,6 @@ assert os.name == 'nt'
 def at_exit():
     os.system('pause')
 
-
 atexit.register(at_exit)
 
 PY_EMBED_URL = 'https://www.python.org/ftp/python/3.7.4/python-3.7.4-embed-amd64.zip'
@@ -95,9 +94,7 @@ else:
 print('generating run_server.bat')
 with open(os.path.join(INSTALL_DIR, 'run_server.bat'), 'w') as f:
     lines = []
-    if VERSION == '':
-        lines.append('{} -m pip install mindsdb --upgrade --no-warn-script-location'.format(PYTHON_EXE))
-    lines.append('{} -m mindsdb'.format(PYTHON_EXE))
+    lines.append('{} -m mindsdb --api=http,mysql,mongodb'.format(PYTHON_EXE))
     f.write('\n'.join(lines))
 
 link_path = str(Path(winshell.desktop()) / '{}.lnk'.format(NAME))

@@ -18,6 +18,7 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.ps import wait_port, is_port_in_use
 from mindsdb_native import CONFIG
 
+
 HTTP_API_ROOT = 'http://localhost:47334/api'
 
 DATASETS_PATH = os.getenv('DATASETS_PATH')

@@ -10,6 +10,7 @@ default_config = {
             "console": "ERROR",
             "file": "WARNING"
         }
+
     },
     "debug": False,
     "integrations": {},
@@ -34,7 +35,6 @@ default_config = {
     }
 }
 
-
 class Config(object):
     current_version = '1.3'
     _config = {}
@@ -57,7 +57,7 @@ class Config(object):
         self._config_hash = None
         self._config = None
         if isinstance(config_path, str):
-            self.config_path = config_path
+            self.config_path = os.path.abspath(config_path)
             self._read()
             self._config_hash = self._gen_hash()
 
@@ -65,7 +65,7 @@ class Config(object):
             if os.path.isabs(storage_dir) is False:
                 storage_dir = os.path.normpath(
                     os.path.join(
-                        os.path.dirname(config_path),
+                        os.path.dirname(self.config_path),
                         storage_dir
                     )
                 )

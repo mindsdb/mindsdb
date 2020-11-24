@@ -59,7 +59,7 @@ def check_ds_analyzable(ds_name):
 def wait_predictor_learn(predictor_name):
     start_time = time.time()
     learn_done = False
-    while learn_done is False and (time.time() - start_time) < 60:
+    while learn_done is False and (time.time() - start_time) < 120:
         learn_done = get_predictor_data(predictor_name)['status'] == 'complete'
         time.sleep(1)
     assert learn_done

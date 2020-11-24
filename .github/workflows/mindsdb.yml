@@ -134,10 +134,13 @@ jobs:
         python setup.py sdist
         twine upload dist/*
 
-    - name: Install latest version from pypi
+    - name: Install latest version from pypi to see that all is working
       run: |
         sleep 20
         pip install mindsdb
+
+    - name: Prep docker image
+      run: python distributions/docker/build_docker.py
 
     - name: Build and push mindsdb Docker image
       uses: docker/build-push-action@v1

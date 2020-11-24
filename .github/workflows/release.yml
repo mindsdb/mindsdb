@@ -53,6 +53,9 @@ jobs:
       run: |
         python setup.py sdist
 
+    - name: Prep docker image
+      run: python distributions/docker/build_docker.py
+
     - name: Build and push mindsdb Docker image
       uses: docker/build-push-action@v1
       with:

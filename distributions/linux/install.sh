@@ -49,12 +49,25 @@ fi
 
 printf "Detected python: $python_path\ndetected pip: $pip_path"
 
-# Check that it's indeed python 3.6 and that pip works
+# Check that it's indeed python > 3.6 and that pip works
 ${python_path} -c "import sys; print('Sorry, MindsDB requires Python 3.6+') and exit(1) if sys.version_info < (3,6) else exit(0)"
 ${pip_path} --version > /dev/null 2>&1
 
 export MDB_INSTALL_PYTHONPATH="$python_path"
 export MDB_INSTALL_PIPPATH="$pip_path"
+export MDB_SOURCE_VENV=""
+
+if [ "$1" != "native" ]; then
+  printf "Creating virtual environment in which to install and run mindsdb. If you'd prefer to install in your local environment, please call this script again and provide `native` as its first argumnet."
+
+  "${MDB_INSTALL_PIPPATH}" install --user --upgrade pip
+  "${MDB_INSTALL_PIPPATH}" install --user virtualenv
+  "${MDB_INSTALL_PYTHONPATH}" -m virtualenv mindsdb_env --python="${MDB_INSTALL_PYTHONPATH}"
+  export MDB_SOURCE_VENV="source mindsdb_env/bin/activate"
+
+fi;
+
+eval $MDB_SOURCE_VENV
 
 cmdcol="$(tput sgr0)$(tput bold)"
 normalcol="$(tput sgr0)"
@@ -103,17 +116,11 @@ import time
 
 python_path = sys.argv[1]
 pip_path = sys.argv[2]
-home = os.path.expanduser("~")
-mdb_home = os.path.join(home, 'mindsdb')
-try:
-    os.makedirs(mdb_home)
-except FileExistsError:
-    pass
 
 print(f'\nInstalling some large dependencies via pip ({pip_path}), this might take a while\n')
 time.sleep(1)
 
-retcode = os.system(f'{pip_path} install mindsdb')
+retcode = os.system(f'{pip_path} install mindsdb==$version')
 if retcode != 0:
     raise Exception("Command exited with error")
 
@@ -121,35 +128,34 @@ time.sleep(1)
 print('Done installing dependencies')
 print('\nLast step: Configure Mindsdb\n')
 
-# from mindsdb.utilities.wizards import daemon_creator
-
-# daemon_path = daemon_creator(python_path)
-# print(f"Created daemon service config {daemon_path}")
-
-exec_path = str(os.path.join(mdb_home, 'run'))
+# home = os.path.expanduser("~")
+exec_path = os.path.join(os.getcwd(), 'mindsdb')
 
 text = '\n'.join([
   '#!/bin/bash',
-  f'{pip_path} install mindsdb --upgrade',
-  f'{python_path} -m mindsdb',
+  '$MDB_SOURCE_VENV',
+  f'{python_path} -m mindsdb --api=http,mysql,mongodb',
 ])
 
 with open(exec_path, 'w') as fp:
     fp.write(text)
 
-os.system(f'chmod +x {exec_path}')
+try:
+  os.system(f'chmod +x {exec_path}')
+except:
+  pass
 
 print(f"Created executable at {exec_path}")
 
 print('Installation complete!')
 
-print(f'You can use Mindsdb by running {exec_path}. Or by importing it as a python package.')
+print(f'You can use Mindsdb by running {exec_path}. Or by importing it as a python package, if you installed with `native` as the first argument.')
 
 EOF
 #/Python code
 
-chmod 755 $temp_file
+chmod 755 $temp_file;
 
-INSTALLER_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+INSTALLER_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)" &&
 
-"${MDB_INSTALL_PYTHONPATH}" "$temp_file" "$MDB_INSTALL_PYTHONPATH" "$MDB_INSTALL_PIPPATH"
+"${MDB_INSTALL_PYTHONPATH}" "$temp_file" "$MDB_INSTALL_PYTHONPATH" "$MDB_INSTALL_PIPPATH";

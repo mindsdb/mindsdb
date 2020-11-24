@@ -28,7 +28,7 @@ from mindsdb.utilities.log import initialize_log
 
 
 def close_api_gracefully(apis):
-    try: 
+    try:
         for api in apis.values():
             process = api['process']
             sys.stdout.flush()
@@ -78,6 +78,7 @@ More instructions in https://docs.mindsdb.com
         config_path = os.path.join(config_dir, 'config.json')
 
     config = Config(config_path)
+    config.set(['mindsdb_last_started_at'], datetime.datetime.now())
 
     if args.verbose is True:
         config['log']['level']['console'] = 'DEBUG'

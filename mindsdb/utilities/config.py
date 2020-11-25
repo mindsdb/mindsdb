@@ -289,8 +289,8 @@ class Config(object):
         dict['date_last_update'] = str(datetime.datetime.now()).split('.')[0]
         if 'database_name' not in dict:
             dict['database_name'] = name
-        if 'enabled' not in dict:
-            dict['enabled'] = True
+        if 'publish' not in dict:
+            dict['publish'] = True
 
         self.set(['integrations', name], dict)
 

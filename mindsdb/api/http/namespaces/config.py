@@ -59,6 +59,9 @@ class Integration(Resource):
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
         try:
+            if 'enabled' in params:
+                params['publish'] = params['enabled']
+                del params['enabled']
             ca.config_obj.add_db_integration(name, params)
 
             mdb = ca.mindsdb_native
@@ -92,6 +95,9 @@ class Integration(Resource):
         if integration is None:
             abort(400, f"Nothin to modify. '{name}' not exists.")
         try:
+            if 'enabled' in params:
+                params['publish'] = params['enabled']
+                del params['enabled']
             ca.config_obj.modify_db_integration(name, params)
             DatabaseWrapper(ca.config_obj)
         except Exception as e:

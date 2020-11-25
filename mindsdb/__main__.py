@@ -79,12 +79,13 @@ More instructions in https://docs.mindsdb.com
         config_path = os.path.join(config_dir, 'config.json')
 
     config = Config(config_path)
-    config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
 
     if args.verbose is True:
         config['log']['level']['console'] = 'DEBUG'
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
+
+    config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
 
     initialize_log(config)
     log = logging.getLogger('mindsdb.main')

@@ -269,9 +269,7 @@ class Config(object):
         return self._config
 
     def set(self, key_chain, value, delete=False):
-        with open(self.config_path, 'r') as fp:
-            self._config = json.load(fp)
-
+        self._read()
         c = self._config
         for i, k in enumerate(key_chain):
             if k in c and i + 1 < len(key_chain):

@@ -117,7 +117,8 @@ jobs:
 
   deploy_osx_intaller:
     runs-on: macos-latest
-    if: github.ref != 'refs/heads/stable'
+    needs: test
+    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
@@ -202,10 +203,6 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/linux/dist'
         DEST_DIR: 'mindsdb-installer/linux'
-
-    - name: Build OSX sh installer
-      run: |
-        python distributions/osx/rename_installers.py beta
 
     - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master

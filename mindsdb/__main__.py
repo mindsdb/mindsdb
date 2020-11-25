@@ -79,7 +79,7 @@ More instructions in https://docs.mindsdb.com
         config_path = os.path.join(config_dir, 'config.json')
 
     config = Config(config_path)
-    config.set(['mindsdb_last_started_at'], datetime.datetime.now())
+    config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
 
     if args.verbose is True:
         config['log']['level']['console'] = 'DEBUG'

@@ -30,9 +30,7 @@ def list_source_objects(source_folder):
     for file_path in path.rglob('*'):
         if file_path.is_dir():
             continue
-        str_file_path = str(file_path)
-        str_file_path = str_file_path.replace(f'{str(path)}/', '')
-        paths.append(str_file_path)
+        paths.append(str(file_path))
     return paths
 
 

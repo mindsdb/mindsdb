@@ -117,8 +117,7 @@ jobs:
 
   deploy_osx_intaller:
     runs-on: macos-latest
-    needs: test
-    if: github.ref == 'refs/heads/staging' && github.actor != 'mindsdbadmin'
+    if: github.ref != 'refs/heads/stable'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python

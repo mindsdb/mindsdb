@@ -167,6 +167,30 @@ class Analyze(Resource):
         x.start()
         return {'status': 'analyzing'}, 200
 
+@ns_conf.route('/<name>/analyze_refresh')
+@ns_conf.param('name', 'Datasource name')
+class Analyze(Resource):
+    @ns_conf.doc('analyze_refresh_dataset')
+    def get(self, name):
+        global ds_analysis
+        if name in ds_analysis:
+            if ds_analysis[name] is None:
+                return {'status': 'analyzing'}, 200
+            elif (datetime.datetime.utcnow() - ds_analysis[name]['created_at']) > datetime.timedelta(seconds=3600):
+                del ds_analysis[name]
+            else:
+                analysis = ds_analysis[name]['data']
+                return analysis, 200
+
+        ds = ca.default_store.get_datasource(name)
+        if ds is None:
+            print('No valid datasource given')
+            abort(400, 'No valid datasource given')
+
+        x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))
+        x.start()
+        return {'status': 'analyzing'}, 200
+
 
 @ns_conf.route('/<name>/analyze_subset')
 @ns_conf.param('name', 'Datasource name')

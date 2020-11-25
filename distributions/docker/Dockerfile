@@ -7,7 +7,7 @@ EXPOSE 47336/tcp
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y git && \
-    pip install mindsdb
+    pip install mindsdb==$version
 
 ENV PYTHONUNBUFFERED=1
 
@@ -43,4 +43,4 @@ RUN echo '{' \
     '}' \
 '}' > /root/mindsdb_config.json
 
-CMD ["python", "-m", "mindsdb", "--api=http,mysql", "--config=/root/mindsdb_config.json"]
+CMD ["python", "-m", "mindsdb", "--api=http,mysql,mongodb", "--config=/root/mindsdb_config.json"]

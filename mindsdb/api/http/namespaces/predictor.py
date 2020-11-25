@@ -150,11 +150,14 @@ class Predictor(Resource):
                 retrain = True
             else:
                 retrain = False
-        except:
+        except Exception:
             retrain = None
 
         ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
         from_data = ca.default_store.get_datasource_obj(ds_name, raw=True)
+
+        if from_data is None:
+            return {'message': f'Can not find datasource: {ds_name}'}, 400
 
         if retrain is True:
             original_name = name

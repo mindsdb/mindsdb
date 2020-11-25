@@ -94,9 +94,7 @@ else:
 print('generating run_server.bat')
 with open(os.path.join(INSTALL_DIR, 'run_server.bat'), 'w') as f:
     lines = []
-    if VERSION == '':
-        lines.append('{} -m pip install mindsdb --upgrade --no-warn-script-location'.format(PYTHON_EXE))
-    lines.append('{} -m mindsdb'.format(PYTHON_EXE))
+    lines.append('{} -m mindsdb --api=http,mysql,mongodb'.format(PYTHON_EXE))
     f.write('\n'.join(lines))
 
 link_path = str(Path(winshell.desktop()) / '{}.lnk'.format(NAME))

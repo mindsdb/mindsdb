@@ -99,12 +99,17 @@ with open(os.path.join(INSTALL_DIR, 'run_server.bat'), 'w') as f:
 
 link_path = str(Path(winshell.desktop()) / '{}.lnk'.format(NAME))
 
+icon_path = os.path.join(INSTALL_DIR, 'mdb-icon.ico')
+
+with open(icon_path, 'wb') as f:
+    f.write(
+        requests.get('https://mindsdb-installer.s3-us-west-2.amazonaws.com/mdb-icon.ico').content
+    )
+
 # Create the shortcut on the desktop
 with winshell.shortcut(link_path) as link:
     link.path = os.path.join(INSTALL_DIR, 'run_server.bat')
     link.description = NAME
-    # TODO
-    # link.icon = (@path@, 0)
+    link.icon_location = (icon_path, 0)
 
-
-print('Success. Shortcut on desktop is created ({})'.format(link_path.rstrip('.lnk')))
+print('Success. A desktop shortcut has been created ({})'.format(link_path.rstrip('.lnk')))

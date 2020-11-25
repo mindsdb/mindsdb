@@ -1,5 +1,6 @@
 import os
 import sys
+import requests
 
 about = {}
 with open("mindsdb/__about__.py") as fp:
@@ -21,5 +22,13 @@ with open('distributions/windows/latest.py', 'w+') as f:
 with open('distributions/windows/fixed.py', 'w+') as f:
     f.write(install_py.replace('$name', FIXED_NAME).replace('$version', about['__version__']))
 
-os.system('cd distributions/windows && pyinstaller latest.py -F --onefile -n {}-Setup.exe'.format(LATEST_NAME))
-os.system('cd distributions/windows && pyinstaller fixed.py -F --onefile -n {}-Setup.exe'.format(FIXED_NAME))
+icon_name = 'mdb-icon.ico'
+
+with open(icon_name, 'wb') as f:
+    f.write(
+        requests.get('https://mindsdb-installer.s3-us-west-2.amazonaws.com/mdb-icon.ico').content
+    )
+
+os.system('cd distributions/windows && pyinstaller latest.py --icon={} -F --onefile -n {}-Setup.exe'.format(icon_name, LATEST_NAME))
+os.system('cd distributions/windows && pyinstaller fixed.py --icon={} -F --onefile -n {}-Setup.exe'.format(icon_name, FIXED_NAME))
+

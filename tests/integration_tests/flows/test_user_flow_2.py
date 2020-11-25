@@ -137,7 +137,7 @@ class UserFlowTest_2(unittest.TestCase):
     def test_2_add_integration(self):
         test_integration_data = {}
         test_integration_data.update(config['integrations']['default_mariadb'])
-        test_integration_data['enabled'] = True
+        test_integration_data['publish'] = True
         test_integration_data['database_name'] = TEST_INTEGRATION
         res = requests.put(f'{HTTP_API_ROOT}/config/integrations/{TEST_INTEGRATION}', json={'params': test_integration_data})
         assert res.status_code == 200
@@ -150,7 +150,7 @@ class UserFlowTest_2(unittest.TestCase):
             apis=['mysql'],
             override_integration_config={
                 'default_mariadb': {
-                    'enabled': True
+                    'publish': True
                 }
             },
             mindsdb_database=MINDSDB_DATABASE,

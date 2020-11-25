@@ -20,7 +20,7 @@
     "debug": true,
     "integrations": {
         "default_clickhouse": {
-            "enabled": true,
+            "publish": true,
             "host": "localhost",
             "password": "",
             "port": 8123,
@@ -28,7 +28,7 @@
             "user": "default"
         },
         "default_mariadb": {
-            "enabled": true,
+            "publish": true,
             "host": "localhost",
             "password": "root",
             "port": 3306,
@@ -36,7 +36,7 @@
             "user": "root"
         },
         "default_mongodb": {
-            "enabled": false,
+            "publish": false,
             "host": "127.0.0.1",
             "password": "",
             "port": 27001,
@@ -44,7 +44,7 @@
             "user": ""
         },
         "default_mssql": {
-            "enabled": true,
+            "publish": true,
             "host": "127.0.0.1",
             "odbc_driver_name": "MySQL ODBC 8.0 Unicode Driver",
             "password": "password",
@@ -53,7 +53,7 @@
             "user": "sa"
         },
         "default_mysql": {
-            "enabled": true,
+            "publish": true,
             "host": "localhost",
             "password": "root",
             "port": 3307,
@@ -62,7 +62,7 @@
         },
         "default_postgres": {
             "database": "postgres",
-            "enabled": true,
+            "publish": true,
             "host": "localhost",
             "password": "",
             "port": 5432,
@@ -70,7 +70,7 @@
             "user": "postgres"
         },
         "default_snowflake": {
-            "enabled": false,
+            "publish": false,
             "type": "snowflake"
         }
     },

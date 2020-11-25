@@ -83,7 +83,7 @@ class MySQLDBTest(unittest.TestCase):
             apis=['mysql'],
             override_integration_config={
                 'default_mysql': {
-                    'enabled': True
+                    'publish': True
                 }
             },
             mindsdb_database=MINDSDB_DATABASE

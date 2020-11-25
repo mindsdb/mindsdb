@@ -101,7 +101,7 @@ DATASETS_COLUMN_TYPES = {
 
 def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}, clear_storage=True):
     for key in config._config['integrations']:
-        config._config['integrations'][key]['enabled'] = False
+        config._config['integrations'][key]['publish'] = False
 
     if USE_EXTERNAL_DB_SERVER:
         with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:

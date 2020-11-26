@@ -46,7 +46,7 @@ config = Config(TEST_CONFIG)
 class UserFlowTest_1(unittest.TestCase):
     def test_1_wrong_integration(self):
         '''
-        start mindsdb with enabled integration with wrong password
+        start mindsdb with publish integration with wrong password
         try create ds
         change password to correct
         '''
@@ -56,7 +56,7 @@ class UserFlowTest_1(unittest.TestCase):
             apis=['mysql', 'http'],
             override_integration_config={
                 'default_mariadb': {
-                    'enabled': True,
+                    'publish': True,
                     'password': 'broken'
                 }
             },
@@ -117,7 +117,7 @@ class UserFlowTest_1(unittest.TestCase):
             apis=['mysql', 'http'],
             override_integration_config={
                 'default_mariadb': {
-                    'enabled': True
+                    'publish': True
                 }
             },
             mindsdb_database=MINDSDB_DATABASE,
@@ -157,7 +157,7 @@ class UserFlowTest_1(unittest.TestCase):
             apis=['mysql', 'http'],
             override_integration_config={
                 'default_mariadb': {
-                    'enabled': True
+                    'publish': True
                 }
             },
             mindsdb_database=MINDSDB_DATABASE,
@@ -199,7 +199,7 @@ class UserFlowTest_1(unittest.TestCase):
             apis=['mysql', 'http'],
             override_integration_config={
                 'default_mariadb': {
-                    'enabled': True
+                    'publish': True
                 }
             },
             mindsdb_database=MINDSDB_DATABASE,

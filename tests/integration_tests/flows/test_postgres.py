@@ -89,7 +89,7 @@ class PostgresTest(unittest.TestCase):
             apis=['mysql'],
             override_integration_config={
                 'default_postgres': {
-                    'enabled': True
+                    'publish': True
                 }
             },
             mindsdb_database=MINDSDB_DATABASE

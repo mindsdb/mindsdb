@@ -53,7 +53,7 @@ class MongoTest(unittest.TestCase):
             apis=['mongodb'],
             override_integration_config={
                 'default_mongodb': {
-                    'enabled': True,
+                    'publish': True,
                     'port': 27002,
                     'host': '127.0.0.1',
                     'type': 'mongodb',

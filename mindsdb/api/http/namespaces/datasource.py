@@ -260,7 +260,6 @@ class DatasourceData(Resource):
                     abort(400, f'Not valid filter "{key}"')
                 where.append(param)
 
-        print(where)
         data_dict = ca.default_store.get_data(name, where, params['page[size]'], params['page[offset]'])
 
         return data_dict, 200

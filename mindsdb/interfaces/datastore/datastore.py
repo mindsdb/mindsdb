@@ -9,6 +9,26 @@ from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
 
 
+def parse_filter(key, value):
+    result = re.search(r'filter(_*.*)\[(.*)\]', key)
+    operator = result.groups()[0].strip('_') or 'like'
+    field = result.groups()[1]
+    operators_map = {
+        'like': 'like',
+        'in': 'in',
+        'nin': 'not in',
+        'gt': '>',
+        'lt': '<',
+        'gte': '>=',
+        'lte': '<=',
+        'eq': '=',
+        'neq': '!='
+    }
+    if operator not in operators_map:
+        return None
+    operator = operators_map[operator]
+    return {'field': field, 'value': value, 'operator': operator}
+
 
 class DataStore():
     def __init__(self, config):
@@ -39,13 +59,19 @@ class DataStore():
         return datasource_arr
 
     def get_data(self, name, where=None, limit=None, offset=None):
+        if offset is None:
+            offset = 0
         ds = self.get_datasource_obj(name)
-        filtered_ds = ds.filter(where=where, limit=limit)
-        data = filtered_ds.to_dict()
+
+        # @TODO Remove and add `offset` to the `filter` method of the datasource
+        filtered_ds = ds.filter(where=where, limit=limit+offset)
+        filtered_ds = filtered_ds.iloc[offset:]
+
+        data = filtered_ds.to_dict(orient='records')
         retr = {
             'data': data,
-            'rowcount': len(filtered_ds),
-            'columns_names': list(data.keys())
+            'rowcount': len(ds),
+            'columns_names': filtered_ds.columns
         }
         print(retr)
         return retr

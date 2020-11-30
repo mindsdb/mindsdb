@@ -55,6 +55,11 @@ class Integration(Resource):
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
+
+        is_test = params.get('test', False)
+        if is_test:
+            del params['test']
+
         integration = get_integration(name)
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
@@ -72,6 +77,12 @@ class Integration(Resource):
         except Exception as e:
             print(traceback.format_exc())
             abort(500, f'Error during config update: {str(e)}')
+
+        if is_test:
+            cons = dbw.check_connections()
+            ca.config_obj.remove_db_integration(name)
+            return {'success': cons[name]}, 200
+
         return '', 200
 
     @ns_conf.doc('delete_integration')

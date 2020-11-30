@@ -183,7 +183,6 @@ class DataStore():
                     ds = dsClass(**picklable['kwargs'])
             else:
                 # This probably only happens for urls
-                print('Create URL data source !')
                 ds = FileDS(source)
                 picklable = {
                     'class': 'FileDS',

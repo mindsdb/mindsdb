@@ -88,7 +88,6 @@ class Datasource(Resource):
         data = {}
 
         def on_field(field):
-            print(f'\n\n{field}\n\n')
             name = field.field_name.decode()
             value = field.value.decode()
             data[name] = value

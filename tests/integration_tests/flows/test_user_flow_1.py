@@ -123,7 +123,7 @@ class UserFlowTest_1(unittest.TestCase):
 
         test_integration_data = {}
         test_integration_data.update(config['integrations']['default_mariadb'])
-        test_integration_data['enabled'] = True
+        test_integration_data['publish'] = True
         test_integration_data['database_name'] = TEST_INTEGRATION
         res = requests.put(f'{HTTP_API_ROOT}/config/integrations/{TEST_INTEGRATION}', json={'params': test_integration_data})
         assert res.status_code == 200
@@ -132,7 +132,7 @@ class UserFlowTest_1(unittest.TestCase):
         assert res.status_code == 200
         test_integration = res.json()
         assert test_integration['password'] is None
-        for key in ['user', 'port', 'host', 'enabled']:
+        for key in ['user', 'port', 'host', 'publish']:
             assert test_integration[key] == test_integration_data[key]
 
     def test_3_create_ds_from_sql_by_http(self):

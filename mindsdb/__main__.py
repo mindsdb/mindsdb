@@ -5,6 +5,7 @@ import os
 import time
 import asyncio
 import logging
+import datetime
 
 from pkg_resources import get_distribution
 import torch.multiprocessing as mp
@@ -28,7 +29,7 @@ from mindsdb.utilities.log import initialize_log
 
 
 def close_api_gracefully(apis):
-    try: 
+    try:
         for api in apis.values():
             process = api['process']
             sys.stdout.flush()
@@ -83,6 +84,8 @@ More instructions in https://docs.mindsdb.com
         config['log']['level']['console'] = 'DEBUG'
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
+
+    config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
 
     initialize_log(config)
     log = logging.getLogger('mindsdb.main')

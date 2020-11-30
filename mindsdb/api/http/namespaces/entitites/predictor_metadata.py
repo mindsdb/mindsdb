@@ -21,6 +21,7 @@ predictor_metadata = ns_conf.model('PredictorMetadata', {
     'model_analysis': fields.List(fields.Nested(target_column_metadata), required=False, description='The model analysis stage, in which we extract statistical information from the input data for each target variable, thus, this is a list; one item per target column')
     ,'data_analysis_v2': fields.Raw(default={})
     ,'is_custom': fields.Boolean(default=False)
+    ,'data_source': fields.String(required=False, description='The data source it\'s learning from')
 })
 
 predictor_query_params = OrderedDict([

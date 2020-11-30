@@ -40,10 +40,16 @@ class DataStore():
     def get_data(self, name, where=None, limit=None, offset=None):
         if offset is None:
             offset = 0
+
         ds = self.get_datasource_obj(name)
 
         # @TODO Remove and add `offset` to the `filter` method of the datasource
-        filtered_ds = ds.filter(where=where, limit=limit+offset)
+        if limit is not None:
+            filtered_ds = ds.filter(where=where, limit=limit+offset)
+        else:
+            filtered_ds = ds.filter(where=where)
+
+        print(type(filtered_ds))
         filtered_ds = filtered_ds.iloc[offset:]
 
         data = filtered_ds.to_dict(orient='records')

@@ -131,7 +131,9 @@ if __name__ == '__main__':
     print("python location: {}".format(PYTHON_EXEC))
     os.system("{} -V".format(PYTHON_EXEC))
 
-    if os.system('{} -m pip install torch==1.5.0 torchvision==0.6.0 -f https://download.pytorch.org/whl/torch_stable.html --no-warn-script-location'.format(PYTHON_EXEC)):
+    # it is a clutch to avoid conflicts since old mindsdb_native versions also install torch
+    # ideally we just need to install mindsdb. And torch with other dependencies would be installed properly as mindsdb dependency
+    if os.system('{} -m pip install "torch >= 1.4.0, <= 1.6.0" "torchvision >= 0.5.0, <= 0.7.0" -f https://download.pytorch.org/whl/torch_stable.html --no-warn-script-location'.format(PYTHON_EXEC)):
         sys.exit("python packages installation finished with error(s)")
     if VERSION == '':
         os.system('{} -m pip install mindsdb --no-warn-script-location'.format(PYTHON_EXEC))

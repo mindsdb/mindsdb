@@ -9,27 +9,6 @@ from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
 
 
-def parse_filter(key, value):
-    result = re.search(r'filter(_*.*)\[(.*)\]', key)
-    operator = result.groups()[0].strip('_') or 'like'
-    field = result.groups()[1]
-    operators_map = {
-        'like': 'like',
-        'in': 'in',
-        'nin': 'not in',
-        'gt': '>',
-        'lt': '<',
-        'gte': '>=',
-        'lte': '<=',
-        'eq': '=',
-        'neq': '!='
-    }
-    if operator not in operators_map:
-        return None
-    operator = operators_map[operator]
-    return {'field': field, 'value': value, 'operator': operator}
-
-
 class DataStore():
     def __init__(self, config):
         self.config = config
@@ -68,13 +47,11 @@ class DataStore():
         filtered_ds = filtered_ds.iloc[offset:]
 
         data = filtered_ds.to_dict(orient='records')
-        retr = {
+        return {
             'data': data,
             'rowcount': len(ds),
             'columns_names': filtered_ds.columns
         }
-        print(retr)
-        return retr
 
     def get_datasource(self, name):
         for ds in self.get_datasources():
@@ -215,7 +192,8 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique name')
 
-            summary_analysis = self.get_analysis(ds.filter(limit=200))['data_analysis_v2']
+            # Not sure if needed
+            #summary_analysis = self.get_analysis(ds.filter(limit=200))['data_analysis_v2']
 
             with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
                 pickle.dump(picklable, fp)

@@ -2,7 +2,7 @@ import datetime
 import os
 import threading
 import tempfile
-
+import re
 import multipart
 
 import mindsdb
@@ -27,6 +27,27 @@ from mindsdb.api.http.namespaces.entitites.datasources.datasource_missed_files i
     datasource_missed_files_metadata,
     get_datasource_missed_files_params
 )
+
+
+def parse_filter(key, value):
+    result = re.search(r'filter(_*.*)\[(.*)\]', key)
+    operator = result.groups()[0].strip('_') or 'like'
+    field = result.groups()[1]
+    operators_map = {
+        'like': 'like',
+        'in': 'in',
+        'nin': 'not in',
+        'gt': '>',
+        'lt': '<',
+        'gte': '>=',
+        'lte': '<=',
+        'eq': '=',
+        'neq': '!='
+    }
+    if operator not in operators_map:
+        return None
+    operator = operators_map[operator]
+    return [field, operator, value]
 
 
 @ns_conf.route('/')
@@ -239,6 +260,7 @@ class DatasourceData(Resource):
                     abort(400, f'Not valid filter "{key}"')
                 where.append(param)
 
+        print(where)
         data_dict = ca.default_store.get_data(name, where, params['page[size]'], params['page[offset]'])
 
         return data_dict, 200

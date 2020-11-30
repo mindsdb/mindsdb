@@ -49,7 +49,6 @@ class DataStore():
         else:
             filtered_ds = ds.filter(where=where)
 
-        print(type(filtered_ds))
         filtered_ds = filtered_ds.iloc[offset:]
 
         data = filtered_ds.to_dict(orient='records')

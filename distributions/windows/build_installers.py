@@ -14,6 +14,8 @@ if sys.argv[1] == 'beta':
 elif sys.argv[1] == 'release':
     LATEST_NAME = 'MindsDB_Latest'
     FIXED_NAME = 'MindsDB-{}'.format(about['__version__'])
+else:
+    exit('Expected sys.argv[1] to be "beta" or "release"')
 
 with open('distributions/windows/latest.py', 'w+') as f:
     f.write(install_py.replace('$name', LATEST_NAME).replace('$version', ''))

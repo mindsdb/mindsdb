@@ -84,7 +84,7 @@ get_pip_filename = download_file(GET_PIP_URL)
 os.system('{} "{}" --no-warn-script-location'.format(PYTHON_EXE, get_pip_filename))
 os.remove(get_pip_filename)
 
-
+os.system('{} -m pip install --upgrade pip==20.2.4 --no-warn-script-location'.format(PYTHON_EXE))
 os.system('{} -m pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html --no-warn-script-location'.format(PYTHON_EXE))
 if VERSION == '':
     os.system('{} -m pip install mindsdb --no-warn-script-location'.format(PYTHON_EXE))

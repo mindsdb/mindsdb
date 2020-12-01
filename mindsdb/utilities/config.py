@@ -173,13 +173,13 @@ class Config(object):
             return config
 
         def m1_3(config):
-            ''' rename integration['enabled'] to integration['published']
+            ''' rename integration['enabled'] to integration['publish']
             '''
-            for integration in config.get('integrations', []):
+            for integration in config.get('integrations', []).values():
                 if 'enabled' in integration:
                     enabled = integration['enabled']
                     del integration['enabled']
-                    integration['published'] = enabled
+                    integration['publish'] = enabled
 
             config['config_version'] = '1.4'
             return config

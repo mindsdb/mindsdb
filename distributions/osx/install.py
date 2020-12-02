@@ -8,6 +8,7 @@ import argparse
 
 import requests
 
+PIP_VERSION = "20.2.4"
 REQUIRED_UTILS = {"make": "brew install make",
                   "openssl": "brew install openssl",
                   "zlib": "brew install zlib",
@@ -135,6 +136,7 @@ if __name__ == '__main__':
     # ideally we just need to install mindsdb. And torch with other dependencies would be installed properly as mindsdb dependency
     if os.system('{} -m pip install "torch >= 1.4.0, <= 1.6.0" "torchvision >= 0.5.0, <= 0.7.0" -f https://download.pytorch.org/whl/torch_stable.html --no-warn-script-location'.format(PYTHON_EXEC)):
         sys.exit("python packages installation finished with error(s)")
+    os.system('{} -m pip install --upgrade pip=={} --no-cache-dir'.format(PYTHON_EXEC, PIP_VERSION))
     if VERSION == '':
         os.system('{} -m pip install mindsdb --no-warn-script-location'.format(PYTHON_EXEC))
     else:

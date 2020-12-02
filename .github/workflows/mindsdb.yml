@@ -208,7 +208,11 @@ jobs:
         SOURCE_DIR: 'distributions/linux/dist'
         DEST_DIR: 'mindsdb-installer/linux'
 
-    - name: Sync linux sh installer to s3
+    - name: Build OSX sh installer
+      run: |
+        python distributions/osx/rename_installers.py beta
+
+    - name: Sync osx sh installer to s3
       uses: jakejarvis/s3-sync-action@master
       with:
         args: --acl public-read --follow-symlinks

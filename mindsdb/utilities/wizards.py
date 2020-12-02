@@ -23,7 +23,7 @@ def _in(ask, default, use_default):
 def auto_config(python_path, pip_path, storage_dir):
     config = {
         "debug": False,
-        "config_version": "1.3",
+        "config_version": "1.4",
         "api": {
         },
         "integrations": {
@@ -195,7 +195,6 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
     for db_name in list(config['integrations'].keys()):
         if not config['integrations'][db_name]['publish']:
             del config['integrations'][db_name]
-
 
     config_path = os.path.join(config_dir, 'config.json')
     with open(config_path, 'w') as fp:

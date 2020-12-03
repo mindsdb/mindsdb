@@ -40,8 +40,8 @@ def get_paths():
                 '/var/lib/mindsdb'
             ),
             (
-                '{}/.local/etc/mindsdb'.format(os.environ["HOME"]),
-                '{}/.local/var/lib/mindsdb'.format(os.environ["HOME"])
+                '{}/.local/etc/mindsdb'.format(Path.home()),
+                '{}/.local/var/lib/mindsdb'.format(Path.home())
             )
         ])
 

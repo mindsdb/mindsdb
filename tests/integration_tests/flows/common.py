@@ -27,7 +27,7 @@ USE_EXTERNAL_DB_SERVER = bool(int(os.getenv('USE_EXTERNAL_DB_SERVER') or "1"))
 
 EXTERNAL_DB_CREDENTIALS = str(Path.home().joinpath('.mindsdb_credentials.json'))
 
-MINDSDB_DATABASE = f'mindsdb_{int(time.time()*1000)}' if USE_EXTERNAL_DB_SERVER else 'mindsdb'
+MINDSDB_DATABASE = 'mindsdb'
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -166,6 +166,8 @@ if USE_EXTERNAL_DB_SERVER:
     print(f'use mindsdb port={mindsdb_port}')
     config._config['api']['mysql']['port'] = mindsdb_port
     config._config['api']['mongodb']['port'] = mindsdb_port
+
+    MINDSDB_DATABASE = f'mindsdb_{mindsdb_port}'
 
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())

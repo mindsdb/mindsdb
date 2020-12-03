@@ -32,10 +32,10 @@ class HTTPTest(unittest.TestCase):
             apis=['http'],
             override_integration_config={
                 'default_mariadb': {
-                    'enabled': True
+                    'publish': True
                 },
                 'default_clickhouse': {
-                    'enabled': True
+                    'publish': True
                 }
             },
             mindsdb_database=common.MINDSDB_DATABASE
@@ -60,7 +60,7 @@ class HTTPTest(unittest.TestCase):
         for integration_name in integration_names['integrations']:
             assert integration_name in self.initial_integrations_names
 
-        test_integration_data = {'enabled': False, 'host': 'test', 'type': 'clickhouse'}
+        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
         assert res.status_code == 200
 
@@ -85,7 +85,7 @@ class HTTPTest(unittest.TestCase):
             assert res.status_code == 200
 
             integration = res.json()
-            for k in ['enabled', 'host', 'port', 'type', 'user']:
+            for k in ['publish', 'host', 'port', 'type', 'user']:
                 assert k in integration
                 assert integration[k] is not None
             assert integration['password'] is None

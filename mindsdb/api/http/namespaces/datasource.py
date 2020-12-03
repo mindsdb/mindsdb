@@ -2,7 +2,7 @@ import datetime
 import os
 import threading
 import tempfile
-
+import re
 import multipart
 
 import mindsdb
@@ -11,7 +11,6 @@ from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 from flask import current_app as ca
 
-from mindsdb.interfaces.datastore.sqlite_helpers import *
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
 from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
     datasource_metadata,
@@ -28,6 +27,27 @@ from mindsdb.api.http.namespaces.entitites.datasources.datasource_missed_files i
     datasource_missed_files_metadata,
     get_datasource_missed_files_params
 )
+
+
+def parse_filter(key, value):
+    result = re.search(r'filter(_*.*)\[(.*)\]', key)
+    operator = result.groups()[0].strip('_') or 'like'
+    field = result.groups()[1]
+    operators_map = {
+        'like': 'like',
+        'in': 'in',
+        'nin': 'not in',
+        'gt': '>',
+        'lt': '<',
+        'gte': '>=',
+        'lte': '<=',
+        'eq': '=',
+        'neq': '!='
+    }
+    if operator not in operators_map:
+        return None
+    operator = operators_map[operator]
+    return [field, operator, value]
 
 
 @ns_conf.route('/')
@@ -68,7 +88,6 @@ class Datasource(Resource):
         data = {}
 
         def on_field(field):
-            print(f'\n\n{field}\n\n')
             name = field.field_name.decode()
             value = field.value.decode()
             data[name] = value
@@ -152,11 +171,30 @@ class Analyze(Resource):
         if name in ds_analysis:
             if ds_analysis[name] is None:
                 return {'status': 'analyzing'}, 200
-            elif (datetime.datetime.utcnow() - ds_analysis[name]['created_at']) > datetime.timedelta(seconds=3600):
-                del ds_analysis[name]
             else:
                 analysis = ds_analysis[name]['data']
                 return analysis, 200
+
+        ds = ca.default_store.get_datasource(name)
+        if ds is None:
+            print('No valid datasource given')
+            abort(400, 'No valid datasource given')
+
+        x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))
+        x.start()
+        return {'status': 'analyzing'}, 200
+
+@ns_conf.route('/<name>/analyze_refresh')
+@ns_conf.param('name', 'Datasource name')
+class Analyze(Resource):
+    @ns_conf.doc('analyze_refresh_dataset')
+    def get(self, name):
+        global ds_analysis
+        if name in ds_analysis:
+            if ds_analysis[name] is None:
+                return {'status': 'analyzing'}, 200
+            else:
+                del ds_analysis[name]
 
         ds = ca.default_store.get_datasource(name)
         if ds is None:

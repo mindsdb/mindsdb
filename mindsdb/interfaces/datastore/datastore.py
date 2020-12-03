@@ -5,10 +5,8 @@ import shutil
 import os
 import pickle
 
-from mindsdb.interfaces.datastore.sqlite_helpers import get_sqlite_data, cast_df_columns_types, create_sqlite_db
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
-
 
 
 class DataStore():
@@ -40,8 +38,25 @@ class DataStore():
         return datasource_arr
 
     def get_data(self, name, where=None, limit=None, offset=None):
-        # @TODO Apply filter directly to postgres/mysql/clickhouse/etc...  when the datasource is of that type
-        return get_sqlite_data(os.path.join(self.dir, name, 'sqlite.db'), where=where, limit=limit, offset=offset)
+        if offset is None:
+            offset = 0
+
+        ds = self.get_datasource_obj(name)
+
+        # @TODO Remove and add `offset` to the `filter` method of the datasource
+        if limit is not None:
+            filtered_ds = ds.filter(where=where, limit=limit+offset)
+        else:
+            filtered_ds = ds.filter(where=where)
+
+        filtered_ds = filtered_ds.iloc[offset:]
+
+        data = filtered_ds.to_dict(orient='records')
+        return {
+            'data': data,
+            'rowcount': len(ds),
+            'columns_names': filtered_ds.columns
+        }
 
     def get_datasource(self, name):
         for ds in self.get_datasources():
@@ -168,7 +183,6 @@ class DataStore():
                     ds = dsClass(**picklable['kwargs'])
             else:
                 # This probably only happens for urls
-                print('Create URL data source !')
                 ds = FileDS(source)
                 picklable = {
                     'class': 'FileDS',
@@ -182,8 +196,8 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique name')
 
-            df_with_types = cast_df_columns_types(df, self.get_analysis(df)['data_analysis_v2'])
-            create_sqlite_db(os.path.join(ds_meta_dir, 'sqlite.db'), df_with_types)
+            # Not sure if needed
+            #summary_analysis = self.get_analysis(ds.filter(limit=200))['data_analysis_v2']
 
             with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
                 pickle.dump(picklable, fp)

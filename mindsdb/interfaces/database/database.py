@@ -24,7 +24,7 @@ class DatabaseWrapper():
         # @TODO Once we have a presistent state sorted out this should be simplified as to not refresh the existing integrations every single time
         integration_arr = []
         for db_alias in self.config['integrations']:
-            if self.config['integrations'][db_alias]['enabled']:
+            if self.config['integrations'][db_alias]['publish']:
                 db_type = self.config['integrations'][db_alias]['type']
                 if db_type == 'clickhouse':
                     integration_arr.append(Clickhouse(self.config, db_alias))

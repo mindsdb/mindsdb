@@ -23,33 +23,33 @@ def _in(ask, default, use_default):
 def auto_config(python_path, pip_path, storage_dir):
     config = {
         "debug": False,
-        "config_version": "1.3",
+        "config_version": "1.4",
         "api": {
         },
         "integrations": {
             "default_clickhouse": {
-                "enabled": False,
+                "publish": False,
                 "type": 'clickhouse'
             },
             "default_mariadb": {
-                "enabled": False,
+                "publish": False,
                 "type": 'mariadb'
             },
             "default_mysql": {
-                "enabled": False,
+                "publish": False,
                 "type": 'mysql'
             },
             "default_postgres": {
-                "enabled": False,
+                "publish": False,
                 "type": 'postgres',
                 "database": 'postgres'
             },
             "default_mssql": {
-                "enabled": False,
+                "publish": False,
                 "type": 'mssql'
             },
             "default_mongodb": {
-                "enabled": False,
+                "publish": False,
                 "type": 'mongodb'
             }
         },
@@ -138,7 +138,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
 
     clickhouse = _in('Connect to clickhouse ? [Y/N]', 'Y', use_default)
     if clickhouse in ['Y', 'y']:
-        config['integrations']['default_clickhouse']['enabled'] = _in('Enable Clickhouse integration?: ', False, use_default)
+        config['integrations']['default_clickhouse']['publish'] = _in('Enable Clickhouse integration?: ', False, use_default)
         config['integrations']['default_clickhouse']['host'] = _in('Clickhouse host: ', '127.0.0.1', use_default)
         config['integrations']['default_clickhouse']['port'] = _in('Clickhouse port: ', 8123, use_default)
         config['integrations']['default_clickhouse']['user'] = _in('Clickhouse user: ', 'default', use_default)
@@ -147,7 +147,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
 
     mariadb = _in('Connect to Mariadb ? [Y/N]', 'Y', use_default)
     if mariadb in ['Y', 'y']:
-        config['integrations']['default_mariadb']['enabled'] = _in('Enable Mariadb integration?: ', False, use_default)
+        config['integrations']['default_mariadb']['publish'] = _in('Enable Mariadb integration?: ', False, use_default)
         config['integrations']['default_mariadb']['host'] = _in('Mariadb host: ', '127.0.0.1', use_default)
         config['integrations']['default_mariadb']['port'] = _in('Mariadb port: ', 3306, use_default)
         config['integrations']['default_mariadb']['user'] = _in('Mariadb user: ', 'root', use_default)
@@ -156,7 +156,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
 
     mysql = _in('Connect to MySQL ? [Y/N]', 'Y', use_default)
     if mysql in ['Y', 'y']:
-        config['integrations']['default_mysql']['enabled'] = _in('Enable MySQL integration?: ', False, use_default)
+        config['integrations']['default_mysql']['publish'] = _in('Enable MySQL integration?: ', False, use_default)
         config['integrations']['default_mysql']['host'] = _in('MySQL host: ', '127.0.0.1', use_default)
         config['integrations']['default_mysql']['port'] = _in('MySQL port: ', 3306, use_default)
         config['integrations']['default_mysql']['user'] = _in('MySQL user: ', 'root', use_default)
@@ -165,7 +165,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
 
     mysql = _in('Connect to PostgreSQL ? [Y/N]', 'Y', use_default)
     if mysql in ['Y', 'y']:
-        config['integrations']['default_postgres']['enabled'] = _in('Enable PostgreSQL integration?: ', False, use_default)
+        config['integrations']['default_postgres']['publish'] = _in('Enable PostgreSQL integration?: ', False, use_default)
         config['integrations']['default_postgres']['host'] = _in('PostgreSQL host: ', '127.0.0.1', use_default)
         config['integrations']['default_postgres']['port'] = _in('PostgreSQL port: ', 5432, use_default)
         config['integrations']['default_postgres']['user'] = _in('PostgreSQL user: ', 'postgres', use_default)
@@ -175,7 +175,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
 
     mssql = _in('Connect to MSSQL ? [Y/N]', 'Y', use_default)
     if mssql in ['Y', 'y']:
-        config['integrations']['default_mssql']['enabled'] = _in('Enable MSSQL integration?: ', False, use_default)
+        config['integrations']['default_mssql']['publish'] = _in('Enable MSSQL integration?: ', False, use_default)
         config['integrations']['default_mssql']['host'] = _in('MSSQL host: ', '127.0.0.1', use_default)
         config['integrations']['default_mssql']['port'] = _in('MSSQL port: ', 1433, use_default)
         config['integrations']['default_mssql']['user'] = _in('MSSQL user: ', 'sa', use_default)
@@ -185,7 +185,7 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
 
     mongodb = _in('Connect to MongoDB ? [Y/N]', 'Y', use_default)
     if mongodb in ['Y', 'y']:
-        config['integrations']['default_mongodb']['enabled'] = _in('Enable MongoDB integration?: ', False, use_default)
+        config['integrations']['default_mongodb']['publish'] = _in('Enable MongoDB integration?: ', False, use_default)
         config['integrations']['default_mongodb']['host'] = _in('MongoDB host: ', '127.0.0.1', use_default)
         config['integrations']['default_mongodb']['port'] = _in('MongoDB port: ', 27017, use_default)
         config['integrations']['default_mongodb']['user'] = _in('MongoDB user: ', '', use_default)
@@ -193,9 +193,8 @@ def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False
         config['integrations']['default_mongodb']['type'] = 'mongodb'
 
     for db_name in list(config['integrations'].keys()):
-        if not config['integrations'][db_name]['enabled']:
+        if not config['integrations'][db_name]['publish']:
             del config['integrations'][db_name]
-
 
     config_path = os.path.join(config_dir, 'config.json')
     with open(config_path, 'w') as fp:

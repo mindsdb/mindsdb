@@ -98,7 +98,7 @@ class ClickhouseTest(unittest.TestCase):
             apis=['mysql'],
             override_integration_config={
                 'default_clickhouse': {
-                    'enabled': True
+                    'publish': True
                 }
             },
             override_api_config={

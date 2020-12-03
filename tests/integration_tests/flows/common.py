@@ -18,13 +18,16 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.ps import wait_port, is_port_in_use
 from mindsdb_native import CONFIG
 
+
+HTTP_API_ROOT = 'http://localhost:47334/api'
+
 DATASETS_PATH = os.getenv('DATASETS_PATH')
 
 USE_EXTERNAL_DB_SERVER = bool(int(os.getenv('USE_EXTERNAL_DB_SERVER') or "1"))
 
 EXTERNAL_DB_CREDENTIALS = str(Path.home().joinpath('.mindsdb_credentials.json'))
 
-MINDSDB_DATABASE = f'mindsdb_{int(time.time()*1000)}' if USE_EXTERNAL_DB_SERVER else 'mindsdb'
+MINDSDB_DATABASE = 'mindsdb'
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -96,9 +99,9 @@ DATASETS_COLUMN_TYPES = {
 }
 
 
-def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}):
+def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}, clear_storage=True):
     for key in config._config['integrations']:
-        config._config['integrations'][key]['enabled'] = False
+        config._config['integrations'][key]['publish'] = False
 
     if USE_EXTERNAL_DB_SERVER:
         with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
@@ -120,7 +123,7 @@ def prepare_config(config, mindsdb_database='mindsdb', override_integration_conf
     config['api']['mongodb']['database'] = mindsdb_database
 
     storage_dir = TEMP_DIR.joinpath('storage')
-    if storage_dir.is_dir():
+    if storage_dir.is_dir() and clear_storage:
         shutil.rmtree(str(storage_dir))
     config._config['storage_dir'] = str(storage_dir)
 
@@ -164,6 +167,8 @@ if USE_EXTERNAL_DB_SERVER:
     config._config['api']['mysql']['port'] = mindsdb_port
     config._config['api']['mongodb']['port'] = mindsdb_port
 
+    MINDSDB_DATABASE = f'mindsdb_{mindsdb_port}'
+
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())
     override = {}
@@ -179,8 +184,9 @@ def make_test_csv(name, data):
     return str(test_csv_path)
 
 
-def stop_mindsdb(sp):
-    sp.kill()
+def stop_mindsdb(sp=None):
+    if sp:
+        sp.kill()
     sp = subprocess.Popen('kill -9 $(lsof -t -i:47334)', shell=True)
     sp.wait()
     sp = subprocess.Popen('kill -9 $(lsof -t -i:47335)', shell=True)
@@ -189,8 +195,8 @@ def stop_mindsdb(sp):
     sp.wait()
 
 
-def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb'):
-    temp_config_path = prepare_config(config, mindsdb_database, override_integration_config, override_api_config)
+def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb', clear_storage=True):
+    temp_config_path = prepare_config(config, mindsdb_database, override_integration_config, override_api_config, clear_storage)
     config = Config(temp_config_path)
 
     api_str = ','.join(apis)
@@ -220,6 +226,8 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
     ports_to_wait = [config['api'][api]['port'] for api in apis]
 
     ioloop = asyncio.get_event_loop()
+    if ioloop.is_closed():
+        ioloop = asyncio.new_event_loop()
     success = ioloop.run_until_complete(wait_apis_start(ports_to_wait))
     ioloop.close()
     if not success:

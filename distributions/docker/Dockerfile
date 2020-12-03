@@ -12,7 +12,7 @@ RUN apt-get update && \
 ENV PYTHONUNBUFFERED=1
 
 RUN echo '{' \
-    '"config_version":"1.3",' \
+    '"config_version":"1.4",' \
     '"storage_dir": "/root/mdb_storage",' \
     '"log": {' \
         '"level": {' \

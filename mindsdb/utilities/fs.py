@@ -40,8 +40,8 @@ def get_paths():
                 '/var/lib/mindsdb'
             ),
             (
-                '~/.local/etc/mindsdb',
-                '~/.local/var/lib/mindsdb'
+                '{}/.local/etc/mindsdb'.format(Path.home()),
+                '{}/.local/var/lib/mindsdb'.format(Path.home())
             )
         ])
 
@@ -51,9 +51,9 @@ def get_paths():
 def get_or_create_dir_struct():
     for tup in get_paths():
         try:
-            for dir in tup:
-                assert(os.path.exists(dir))
-                assert(os.access(dir, os.W_OK) is True)
+            for _dir in tup:
+                assert os.path.exists(_dir)
+                assert os.access(_dir, os.W_OK) is True
 
             config_dir = tup[0]
             if 'DEV_CONFIG_PATH' in os.environ:
@@ -65,9 +65,9 @@ def get_or_create_dir_struct():
 
     for tup in get_paths():
         try:
-            for dir in tup:
-                create_directory(dir)
-                assert(os.access(dir, os.W_OK) is True)
+            for _dir in tup:
+                create_directory(_dir)
+                assert os.access(_dir, os.W_OK) is True
 
             config_dir = tup[0]
             if 'DEV_CONFIG_PATH' in os.environ:

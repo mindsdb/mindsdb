@@ -38,7 +38,6 @@ jobs:
 
   deploy_osx_intaller:
     runs-on: macos-latest
-    needs: test
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2

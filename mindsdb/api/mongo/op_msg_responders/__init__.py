@@ -15,6 +15,9 @@ from .find import responder as responder_find
 from .insert import responder as responder_insert
 from .delete import responder as responder_delete
 
+from .sasl_start import responder as sasl_start
+from .sasl_continue import responder as sasl_continue
+
 responders = [
     # service queries
     responder_whatsmyuri,
@@ -31,5 +34,8 @@ responders = [
     responder_list_databases,
     responder_find,
     responder_insert,
-    responder_delete
+    responder_delete,
+    # auth
+    sasl_start,
+    sasl_continue
 ]

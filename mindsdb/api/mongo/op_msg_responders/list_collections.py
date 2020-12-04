@@ -9,7 +9,7 @@ import mindsdb.api.mongo.functions as helpers
 class Responce(Responder):
     when = {'listCollections': helpers.is_true}
 
-    def result(self, query, request_env, mindsdb_env):
+    def result(self, query, request_env, mindsdb_env, session):
         models = mindsdb_env['mindsdb_native'].get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
         models += ['predictors', 'commands']

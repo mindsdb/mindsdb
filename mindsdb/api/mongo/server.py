@@ -5,7 +5,7 @@ from bson import codec_options
 from collections import OrderedDict
 from abc import abstractmethod
 
-from mindsdb.api.mongo.classes import RespondersCollection
+from mindsdb.api.mongo.classes import RespondersCollection, Session
 
 # from mindsdb.api.mongo.op_query_responders import responders as op_query_responders
 from mindsdb.api.mongo.op_msg_responders import responders as op_msg_responders
@@ -70,7 +70,7 @@ class OperationResponder():
 
 # NOTE probably, it need only for mongo version < 3.6
 class OpInsertResponder(OperationResponder):
-    def handle(self, buffer, request_id, mindsdb_env):
+    def handle(self, buffer, request_id, mindsdb_env, session):
         flags, pos = unpack(UINT, buffer)
         namespace, pos = get_utf8_string(buffer, pos)
         query = bson.decode_all(buffer[pos:], CODEC_OPTIONS)
@@ -81,7 +81,7 @@ class OpInsertResponder(OperationResponder):
             'request_id': request_id
         }
 
-        documents = responder.handle(query, request_args, mindsdb_env)
+        documents = responder.handle(query, request_args, mindsdb_env, session)
 
         return documents
 
@@ -98,7 +98,7 @@ OP_MSG_FLAGS = {
 
 # NOTE used in mongo version > 3.6
 class OpMsgResponder(OperationResponder):
-    def handle(self, buffer, request_id, mindsdb_env):
+    def handle(self, buffer, request_id, mindsdb_env, session):
         query = OrderedDict()
         flags, pos = unpack(UINT, buffer)
 
@@ -142,7 +142,7 @@ class OpMsgResponder(OperationResponder):
             'database': query['$db']
         }
 
-        documents = responder.handle(query, request_args, mindsdb_env)
+        documents = responder.handle(query, request_args, mindsdb_env, session)
 
         return documents
 
@@ -161,7 +161,7 @@ class OpMsgResponder(OperationResponder):
 
 # NOTE used in any mongo shell version
 class OpQueryResponder(OperationResponder):
-    def handle(self, buffer, request_id, mindsdb_env):
+    def handle(self, buffer, request_id, mindsdb_env, session):
         # https://docs.mongodb.com/manual/reference/mongodb-wire-protocol/#wire-op-query
         flags, pos = unpack(UINT, buffer)
         namespace, pos = get_utf8_string(buffer, pos)
@@ -184,7 +184,7 @@ class OpQueryResponder(OperationResponder):
             'is_command': is_command
         }
 
-        documents = responder.handle(query, request_args, mindsdb_env)
+        documents = responder.handle(query, request_args, mindsdb_env, session)
 
         return documents
 
@@ -215,6 +215,9 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         log.debug('connect')
         log.debug(str(self.server.socket))
+
+        self.session = Session(self.server.mindsdb_env['config'])
+
         while True:
             header = self._read_bytes(16)
             if header is False:
@@ -234,7 +237,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             raise NotImplementedError(f'Unknown opcode {opcode}')
         responder = self.server.operationsHandlersMap[opcode]
         assert responder is not None, 'error'
-        response = responder.handle(msg_bytes, request_id, self.server.mindsdb_env)
+        response = responder.handle(msg_bytes, request_id, self.server.mindsdb_env, self.session)
         assert response is not None, 'error'
         return responder.to_bytes(response, request_id)
 

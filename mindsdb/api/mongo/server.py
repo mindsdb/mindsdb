@@ -1,4 +1,5 @@
 import socketserver as SocketServer
+import socket
 import struct
 import bson
 from bson import codec_options
@@ -212,11 +213,37 @@ class OpQueryResponder(OperationResponder):
 class MongoRequestHandler(SocketServer.BaseRequestHandler):
     _stopped = False
 
+    def _init_ssl(self):
+        import ssl
+        import tempfile
+        import atexit
+        import os
+
+        from mindsdb.utilities.wizards import make_ssl_cert
+
+        CERT_PATH = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
+        make_ssl_cert(CERT_PATH)
+        atexit.register(lambda: os.remove(CERT_PATH))
+
+        ssl_context = ssl.SSLContext()
+        ssl_context.load_cert_chain(CERT_PATH)
+        ssl_socket = ssl_context.wrap_socket(
+            self.request,
+            server_side=True,
+            do_handshake_on_connect=True
+        )
+        self.request = ssl_socket
+
     def handle(self):
         log.debug('connect')
         log.debug(str(self.server.socket))
 
         self.session = Session(self.server.mindsdb_env['config'])
+
+        first_byte = self.request.recv(1, socket.MSG_PEEK)
+        if first_byte == b'\x16':
+            # TLS 'client hello' starts from \x16
+            self._init_ssl()
 
         while True:
             header = self._read_bytes(16)
@@ -310,7 +337,6 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 def run_server(config):
-    if config.get('debug') is True:
-        SocketServer.TCPServer.allow_reuse_address = True
+    SocketServer.TCPServer.allow_reuse_address = True
     with MongoServer(config) as srv:
         srv.serve_forever()

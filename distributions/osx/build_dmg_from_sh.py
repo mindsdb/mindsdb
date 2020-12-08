@@ -28,4 +28,4 @@ for filename in os.listdir('distributions/osx/dmg_from_sh/build'):
         new_names.append(versioned_filename, latest_filename)
 
 for new_name in new_names:
-os.system(f'cp distributions/osx/dmg_from_sh/build/{filename} distributions/osx/dist/{new_name}')
+    os.system(f'cp distributions/osx/dmg_from_sh/build/{filename} distributions/osx/dist/{new_name}')

@@ -238,7 +238,7 @@ jobs:
         python-version: '3.7'
     - name: Deploy version files
       run: |
-        python distributions/ver/deploy_version.py beta
+        python distributions/ver/deploy_version.py release
 
     - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master

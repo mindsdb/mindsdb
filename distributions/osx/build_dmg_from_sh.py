@@ -11,7 +11,7 @@ with open('distributions/osx/dmg_from_sh/src/mindsdb.installer.sh.template', 'r'
 with open('distributions/osx/dmg_from_sh/src/mindsdb.installer.sh', 'w') as fp:
     fp.write(content)
 
-os.system('cd distributions/osx/dmg_from_sh/src && chmod +x build_macos_installer.sh && ./build_macos_installer.sh')
+os.system('cd distributions/osx/dmg_from_sh && chmod +x build_macos_installer.sh && ./build_macos_installer.sh')
 
 if sys.argv[1] == 'beta':
     prefix = '_Beta'

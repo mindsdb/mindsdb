@@ -231,10 +231,13 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/new_osx_installers' && github.actor != 'mindsdbadmin'
     steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
     - name: Deploy version files
       run: |
-        ls
-        pwd
         python distributions/ver/deploy_version.py beta
 
     - name: Sync linux sh installer to s3

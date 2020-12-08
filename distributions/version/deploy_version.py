@@ -9,7 +9,7 @@ version = about['__version__']
 
 if sys.argv[1] == 'beta':
     filename = 'beta_version.txt'
-elif  == 'release':
+elif sys.argv[1] == 'release':
     filename = 'stable_version.txt'
 
 os.system('mkdir distributions/version/dist')

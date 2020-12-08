@@ -38,7 +38,6 @@ jobs:
 
   deploy_osx_intaller:
     runs-on: macos-latest
-    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
@@ -66,6 +65,37 @@ jobs:
       run: |
         pip install boto3
         python distributions/osx/sync_s3.py
+
+  deploy_osx_dmg:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+
+    - name: Build osx installer
+      run: |
+        pip install pyinstaller
+        python distributions/osx/build_dmg_from_sh.py release
+
+    - name: Sync osx dmg installer to s3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks
+      env:
+        AWS_S3_BUCKET: 'mindsdb-installer'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-2'
+        SOURCE_DIR: 'distributions/osx/dist'
+        DEST_DIR: 'mindsdb-installer/osx'
+
 
   deploy:
     runs-on: ubuntu-latest

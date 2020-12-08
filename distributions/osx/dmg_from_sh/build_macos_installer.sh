@@ -1,6 +1,7 @@
 #!/bin/bash
 
 echo "This script will build a .dmg file to Install MindsDB on Mac OS"
+mkdir -p build
 
 MINDSDB_VERSION="$(cat src/mindsdb.installer.sh | grep  MINDSDB_VERSION= | tr '=' '\n' | grep -v MINDSDB_VERSION)"
 

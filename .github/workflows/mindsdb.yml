@@ -230,6 +230,7 @@ jobs:
   deploy_version_file:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/new_osx_installers' && github.actor != 'mindsdbadmin'
+    steps:
     - name: Deploy version files
       run: |
         python distributions/version/deploy_version.py beta

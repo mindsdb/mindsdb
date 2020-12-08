@@ -159,8 +159,10 @@ jobs:
         SOURCE_DIR: 'distributions/osx/dist'
         DEST_DIR: 'mindsdb-installer/osx'
 
+
   deploy_version_file:
     runs-on: ubuntu-latest
+    steps:
     - name: Deploy version files
       run: |
         python distributions/version/deploy_version.py release

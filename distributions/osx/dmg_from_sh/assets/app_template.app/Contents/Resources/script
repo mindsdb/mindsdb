@@ -1,0 +1,51 @@
+#!/bin/bash
+# This script is the main script in the MindsDB Server.app
+# We use the Platypus app to create a .app and then a .dmg
+#
+# When building in Platypus make sure to include the following files as bundled files:
+# - mindsdb.sh
+# - mindsdb.installer.sh
+
+
+
+
+if [ -f $HOME/.mindsdb/installed ]; then
+   chmod +x $HOME/.mindsdb/mindsdb.sh
+
+
+
+   osascript -e 'tell application "Terminal" to do script "/$HOME/.mindsdb/mindsdb.sh start"'
+
+else
+   mkdir $HOME/.mindsdb
+   mkdir $HOME/.mindsdb/logs
+   cp mindsdb*.sh $HOME/.mindsdb/
+   chmod +x $HOME/.mindsdb/mindsdb*.sh
+
+   SomeString="alias mindsdb=$HOME/.mindsdb/mindsdb.sh"
+
+   File='~/.bashrc'
+   if grep -q SomeString "$File"; then
+       echo ".bashrc alias set"
+   else
+        if [ ! -f "~/.bashrc"  ]
+        then
+          touch ~/.bashrc
+        fi
+        echo  $SomeString >> ~/.bashrc
+   fi
+
+   File='~/.bash_profile'
+   if grep -q SomeString "$File"; then
+       echo "~/.bash_profile alias set"
+   else
+       if [ ! -f "~/.bash_profile"  ]
+       then
+         touch ~/.bash_profile
+       fi
+       echo  $SomeString >> ~/.bash_profile
+
+   fi
+
+   osascript -e 'tell application "Terminal" to do script "/$HOME/.mindsdb/mindsdb.installer.sh"'
+fi

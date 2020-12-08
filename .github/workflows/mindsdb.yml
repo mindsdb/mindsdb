@@ -233,6 +233,7 @@ jobs:
     steps:
     - name: Deploy version files
       run: |
+        ls
         python distributions/version/deploy_version.py beta
 
     - name: Sync linux sh installer to s3

@@ -30,4 +30,6 @@ for filename in os.listdir('distributions/osx/dmg_from_sh/build'):
 
 
 for new_name in new_names:
+    print(f'Running command: cp distributions/osx/dmg_from_sh/build/{original_name} distributions/osx/dist/{new_name}')
+    
     os.system(f'cp distributions/osx/dmg_from_sh/build/{original_name} distributions/osx/dist/{new_name}')

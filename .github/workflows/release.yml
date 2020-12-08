@@ -38,7 +38,6 @@ jobs:
 
   deploy_osx_intaller:
     runs-on: macos-latest
-    needs: test
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2
@@ -54,7 +53,7 @@ jobs:
     - name: Build osx installer
       run: |
         pip install pyinstaller
-        python distributions/osx/build_installers.py release
+        python distributions/osx/build_pyinstaller.py release
 
     - name: Sync osx installer to s3
       env:
@@ -100,7 +99,7 @@ jobs:
 
     - name: Build linux sh installer
       run: |
-        python distributions/linux/rename_installers.py release
+        python distributions/linux/build_simple_script.py release
 
     - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master
@@ -116,7 +115,7 @@ jobs:
 
     - name: Build OSX sh installer
       run: |
-        python distributions/osx/rename_installers.py release
+        python distributions/osx/build_simple_script.py release
 
     - name: Sync osx sh installer to s3
       uses: jakejarvis/s3-sync-action@master

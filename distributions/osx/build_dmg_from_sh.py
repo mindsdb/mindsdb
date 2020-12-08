@@ -7,7 +7,7 @@ with open("mindsdb/__about__.py") as fp:
 version = about['__version__']
 
 with open('distributions/osx/dmg_from_sh/src/mindsdb.installer.sh.template', 'r') as fp:
-    content = fp.read()
+    content = fp.read().replace('$version', version)
 with open('distributions/osx/dmg_from_sh/src/mindsdb.installer.sh', 'w') as fp:
     fp.write(content)
 

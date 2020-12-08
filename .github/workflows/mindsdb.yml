@@ -234,7 +234,8 @@ jobs:
     - name: Deploy version files
       run: |
         ls
-        python distributions/version/deploy_version.py beta
+        pwd
+        python distributions/ver/deploy_version.py beta
 
     - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master
@@ -245,5 +246,5 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'us-west-2'
-        SOURCE_DIR: 'distributions/version/dist'
-        DEST_DIR: 'mindsdb-installer/version'
+        SOURCE_DIR: 'distributions/ver/dist'
+        DEST_DIR: 'mindsdb-installer/ver'

@@ -107,6 +107,7 @@ jobs:
     - name: Build windows installer
       run: |
         pip install pyinstaller
+        pip install pywin32
         pip install winshell
         python distributions/windows/build_installers.py beta
 

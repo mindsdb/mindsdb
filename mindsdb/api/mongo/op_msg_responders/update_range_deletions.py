@@ -4,7 +4,7 @@ from mindsdb.api.mongo.classes import Responder
 class Responce(Responder):
     when = {'update': 'rangeDeletions'}
 
-    result = response = {
+    result = {
         "ok": 1
     }
 

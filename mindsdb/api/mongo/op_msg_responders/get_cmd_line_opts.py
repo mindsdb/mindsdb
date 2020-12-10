@@ -3,10 +3,15 @@ import mindsdb.api.mongo.functions as helpers
 
 
 class Responce(Responder):
-    when = {'_recvChunkStart': helpers.is_true}
+    when = {'getCmdLineOpts': helpers.is_true}
 
     result = {
-        "ok": 0
+        'argv': [
+            'mongod'
+        ],
+        'parsed': {
+        },
+        'ok': 1
     }
 
 

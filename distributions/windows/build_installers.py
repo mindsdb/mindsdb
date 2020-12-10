@@ -32,7 +32,7 @@ with open(icon_path, 'wb') as f:
 
 img = Image.open(icon_path)
 new_path = icon_path.rstrip('.png') + '.ico'
-img.save(new_path, sizes=[(32, 32)])
+img.save(new_path, sizes=[(96, 96)])
 
 icon_abspath = os.path.abspath(new_path)
 

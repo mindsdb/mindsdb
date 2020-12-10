@@ -4,6 +4,7 @@ import atexit
 import zipfile
 import winshell
 import requests
+from PIL import Image
 from pathlib import Path
 
 assert os.name == 'nt'
@@ -11,6 +12,7 @@ assert os.name == 'nt'
 
 def at_exit():
     os.system('pause')
+
 
 atexit.register(at_exit)
 
@@ -42,9 +44,7 @@ try:
     make_dir(INSTALL_DIR)
     make_dir(PYTHON_DIR)
 except PermissionError as e:
-    print('Please, run the installer as administrator')
-    os.system('pause')
-    sys.exit(1)
+    sys.exit('Please, run the installer as administrator')
 
 PTH_PATH = os.path.join(PYTHON_DIR, 'python37._pth')
 
@@ -103,13 +103,19 @@ icon_path = os.path.join(INSTALL_DIR, 'mdb-icon.ico')
 
 with open(icon_path, 'wb') as f:
     f.write(
-        requests.get('https://mindsdb-installer.s3-us-west-2.amazonaws.com/mdb-icon.ico').content
+        requests.get('https://mindsdb-installer.s3-us-west-2.amazonaws.com/mdb-icon.png').content
     )
+
+img = Image.open(icon_path)
+new_path = icon_path.rstrip('.png') + '.ico'
+img.save(new_path, sizes=[(96, 96)])
+
+icon_abspath = os.path.abspath(new_path)
 
 # Create the shortcut on the desktop
 with winshell.shortcut(link_path) as link:
     link.path = os.path.join(INSTALL_DIR, 'run_server.bat')
     link.description = NAME
-    link.icon_location = (icon_path, 0)
+    link.icon_location = (icon_abspath, 0)
 
 print('Success. A desktop shortcut has been created ({})'.format(link_path.rstrip('.lnk')))

@@ -21,7 +21,10 @@ jobs:
     - name: Build windows installer
       run: |
         pip install pyinstaller
+        pip install pywin32
         pip install winshell
+        pip install requests
+        pip install pillow
         python distributions/windows/build_installers.py release
 
     - name: Sync windows installer to s3

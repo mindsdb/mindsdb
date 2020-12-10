@@ -1,0 +1,14 @@
+{
+  "title": "MindsDB_v1",
+  "icon": "../assets/Mindsdb_icon.icns",
+  "background": "../assets/bg4.png",
+  "background-color": "rgba(255,255,255,255)",
+  "window": {
+      "position": {"x":50,"y":50},
+      "size": {"width":640, "height":480}
+  },
+  "contents": [
+    { "x": 575, "y": 310, "type": "link", "path": "/Applications" },
+    { "x": 575, "y": 110, "type": "file", "path": "MindsDB Server.app" }
+  ]
+}

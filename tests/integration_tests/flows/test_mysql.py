@@ -137,14 +137,13 @@ class MySQLDBTest(unittest.TestCase):
 
     def test_2_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-        # FIXME add {"stop_training_in_x_seconds": 3} after https://github.com/mindsdb/mindsdb_native/issues/291
         query(f"""
             insert into {MINDSDB_DATABASE}.predictors (name, predict, select_data_query, training_options) values
             (
                 '{TEST_PREDICTOR_NAME}',
                 '{','.join(to_predict_column_names)}',
                 'select * from test_data.{TEST_DATA_TABLE} limit 50',
-                '{{"join_learn_process": true}}'
+                '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
             );
         """)
 
@@ -169,7 +168,7 @@ class MySQLDBTest(unittest.TestCase):
                 '{name}',
                 '{','.join(to_predict_column_names)}',
                 '{EXTERNAL_DS_NAME}',
-                '{{"join_learn_process": true}}'
+                '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
             );
         """)
 

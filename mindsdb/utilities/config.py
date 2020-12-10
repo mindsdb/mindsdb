@@ -35,8 +35,9 @@ default_config = {
     }
 }
 
+
 class Config(object):
-    current_version = '1.3'
+    current_version = '1.4'
     _config = {}
     paths = {
         'root': '',
@@ -171,10 +172,23 @@ class Config(object):
             config['config_version'] = '1.3'
             return config
 
+        def m1_3(config):
+            ''' rename integration['enabled'] to integration['publish']
+            '''
+            for integration in config.get('integrations', []).values():
+                if 'enabled' in integration:
+                    enabled = integration['enabled']
+                    del integration['enabled']
+                    integration['publish'] = enabled
+
+            config['config_version'] = '1.4'
+            return config
+
         migrations = {
             '1.0': m1_0,
             '1.1': m1_1,
-            '1.2': m1_2
+            '1.2': m1_2,
+            '1.3': m1_3
         }
 
         current_version = self._parse_version(self._config['config_version'])

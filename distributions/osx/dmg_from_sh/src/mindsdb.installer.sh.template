@@ -1,0 +1,219 @@
+#!/bin/bash
+MINDSDB_VERSION=$version
+
+
+echo """
+
+
+          ____________________
+        /░                    ---------________
+      /░                                       --_
+    /░                                            --_
+   /░                                                --_
+  /░                                                    --_
+ /░                                         __--__         --_
+|░                                      __--       ---___      _
+|░                                     -       /|      ---___-
+|░         _________________          |      /░  |
+|░        /              |░           |     /░    |
+|░       /                |░         |     /░      |
+ |░     /       / \        |░        |     \░      |
+ |░    /       /░   \       |░      |       \░     |
+ |░    /        \░   \       |░     |        \░    |
+ |░___/          \░___\       |░___|          \░___|
+
+
+"""
+echo """
+           █▀▄▀█ ░▀░ █▀▀▄ █▀▀▄ █▀▀ █▀▀▄ █▀▀▄
+           █░▀░█ ▀█▀ █░░█ █░░█ ▀▀█ █░░█ █▀▀▄
+           ▀░░░▀ ▀▀▀ ▀░░▀ ▀▀▀░ ▀▀▀ ▀▀▀░ ▀▀▀░
+
+"""
+
+echo "Installing MindsDB. Installer Version ($MINDSDB_VERSION)...."
+
+
+brew_path="$(which brew)"
+python_path="/usr/local/opt/python@3.7/bin/python3"
+
+# if python 3.7 not installed, then try to install it
+
+if [ ! -f "$python_path"  ]
+then
+    echo "You will need XCode installed"
+    xcode-select --install
+    if [ -z "${brew_path}" ]
+    then
+        echo "We will try to install python 3 via MacOS package manager brew..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+    brew_path="$(which brew)"
+    if [ -z "${brew_path}" ]
+    then
+        echo "Was not able to install brew..."
+        exit
+    fi
+
+    echo "Making sure that package manager 'brew' is up to date and useful (you may need to authenticate)"
+    echo "Mac user: $USER"
+    brew update
+
+    echo "Installing python3.7.."
+    brew install python@3.7
+    brew upgrade python@3.7
+fi
+
+
+doEmergencyCleanup() {
+
+  echo """
+
+  So! Your Mac computer needs some help getting in shape.
+  Some simple steps and we can solve the current issue otherwise
+  it will continiously fail to install any python based machine learning packages.
+
+  This script will do the following
+
+  - Clean homebrew (a package manager for Macos) install.
+  - Clean Python3.7 and pip3.7 install
+
+  """
+
+
+  echo "Clean homebrew install... (you will probably be asked to authenticate)"
+  echo "Mac user: $USER"
+  sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall.sh)"
+  sudo rm -rf /usr/local/Homebrew
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  brew update
+
+  echo "Clean Python3.7 install..."
+  brew uninstall python@3.7
+  brew install python@3.7
+
+  echo "Making sure pip 3.7 is on its best shape ..."
+  echo "Updating pip... (you will probably be asked to authenticate)"
+  echo "Mac user: $USER"
+  sudo ${python_path} -m pip install --force-reinstall pip
+  echo "Great! pip is up to date! lets setup your mindsdb VENV"
+  ${python_path} -m pip install --user --upgrade pip
+  ${python_path} -m pip install --user --upgrade virtualenv
+
+  rm -rf $HOME/.mindsdb/installed
+
+}
+
+# if python3.7 not installed anyways, exit
+
+pip_path="/usr/local/opt/python@3.7/bin/pip3"
+
+if [ -z "${python_path}" ]
+then
+    echo "No python installation"
+    doEmergencyCleanup
+
+fi
+
+if [ -z "${pip_path}" ]
+then
+    echo "No pip3.7"
+    doEmergencyCleanup
+
+fi
+
+# if even after emergency macos cleanup there is no python3.7 then we should stop
+
+if [ -z "${python_path}" ]
+then
+    echo "Install script is not working for you, sorry :("
+    echo "==============================================="
+    echo "Dont give up, please reach out"
+    echo "Visit: https://community.mindsdb.com"
+    echo "We are here to help!"
+    exit;
+fi
+
+echo "Detected python: $python_path\ndetected pip: $pip_path"
+
+
+export MDB_INSTALL_PYTHONPATH="$python_path"
+export MDB_INSTALL_PIPPATH="$pip_path"
+
+echo "Creating $HOME/.mindsdb"
+mkdir $HOME/.mindsdb
+mkdir $HOME/.mindsdb/logs
+cd $HOME/.mindsdb
+
+echo "Making sure pip is on its best shape ..."
+${python_path} -m pip install --user --upgrade pip
+echo "Great! pip is up to date! lets setup your mindsdb VENV"
+${python_path} -m pip install --user --upgrade virtualenv
+
+
+
+echo "Creating VENV..."
+
+${python_path} -m venv $HOME/.mindsdb/mindsdb
+
+if [ ! -f "$HOME/.mindsdb/mindsdb/bin/activate"  ]
+then
+  echo "Failed to create VENV"
+  doEmergencyCleanup
+  ${python_path} -m venv $HOME/.mindsdb/mindsdb
+fi
+
+source $HOME/.mindsdb/mindsdb/bin/activate
+
+
+echo """
+ Installing MindsDB Python dependencies ...
+
+ This might take a few minutes
+
+         ..
+             ..
+          ..
+ ##       ..    ####
+ ##.............##  ##
+ ##.............##   ##    You can grab a coffee while you wait
+ ##.............## ##
+ ##.............###
+  ##...........##
+   #############
+ #################
+
+
+"""
+pip install mindsdb==$version
+
+
+
+# setup installer version in installed file
+echo $MINDSDB_VERSION > $HOME/.mindsdb/installed
+
+echo """
+Creating mindsdb command line tool:
+sudo ln -s $HOME/.mindsdb/mindsdb.sh /usr/local/bin/mindsdb
+(you will probably be asked to authenticate)
+Mac user: $USER
+"""
+
+sudo ln -s $HOME/.mindsdb/mindsdb.sh /usr/local/bin/mindsdb
+
+echo """
+#############################
+#  Installation complete!   #
+#############################
+
+You can now call the 'mindsdb' command from your terminal at will.
+
+\$> mindsdb
+MindsDB Server usage  { start | stop | restart | status | upgrade }
+
+----------------------------------
+ Lets launch your MindsDB Server! ...
+"""
+
+
+sh $HOME/.mindsdb/mindsdb.sh start

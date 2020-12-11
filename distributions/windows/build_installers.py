@@ -36,5 +36,5 @@ img.save(new_path, sizes=[(96, 96)])
 
 icon_abspath = os.path.abspath(new_path)
 
-os.system('cd distributions/windows && pyinstaller latest.py --icon="{}" -F --onefile -n {}-Setup.exe'.format(icon_abspath, LATEST_NAME))
-os.system('cd distributions/windows && pyinstaller fixed.py --icon="{}" -F --onefile -n {}-Setup.exe'.format(icon_abspath, FIXED_NAME))
+os.system('cd distributions/windows && pyinstaller latest.py --icon="{}" -F --onefile --uac-admin -n {}-Setup.exe'.format(icon_abspath, LATEST_NAME))
+os.system('cd distributions/windows && pyinstaller fixed.py --icon="{}" -F --onefile --uac-admin -n {}-Setup.exe'.format(icon_abspath, FIXED_NAME))

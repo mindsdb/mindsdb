@@ -1,11 +1,12 @@
 import socketserver as SocketServer
+import socket
 import struct
 import bson
 from bson import codec_options
 from collections import OrderedDict
 from abc import abstractmethod
 
-from mindsdb.api.mongo.classes import RespondersCollection
+from mindsdb.api.mongo.classes import RespondersCollection, Session
 
 # from mindsdb.api.mongo.op_query_responders import responders as op_query_responders
 from mindsdb.api.mongo.op_msg_responders import responders as op_msg_responders
@@ -70,7 +71,7 @@ class OperationResponder():
 
 # NOTE probably, it need only for mongo version < 3.6
 class OpInsertResponder(OperationResponder):
-    def handle(self, buffer, request_id, mindsdb_env):
+    def handle(self, buffer, request_id, mindsdb_env, session):
         flags, pos = unpack(UINT, buffer)
         namespace, pos = get_utf8_string(buffer, pos)
         query = bson.decode_all(buffer[pos:], CODEC_OPTIONS)
@@ -81,7 +82,7 @@ class OpInsertResponder(OperationResponder):
             'request_id': request_id
         }
 
-        documents = responder.handle(query, request_args, mindsdb_env)
+        documents = responder.handle(query, request_args, mindsdb_env, session)
 
         return documents
 
@@ -98,7 +99,7 @@ OP_MSG_FLAGS = {
 
 # NOTE used in mongo version > 3.6
 class OpMsgResponder(OperationResponder):
-    def handle(self, buffer, request_id, mindsdb_env):
+    def handle(self, buffer, request_id, mindsdb_env, session):
         query = OrderedDict()
         flags, pos = unpack(UINT, buffer)
 
@@ -142,7 +143,7 @@ class OpMsgResponder(OperationResponder):
             'database': query['$db']
         }
 
-        documents = responder.handle(query, request_args, mindsdb_env)
+        documents = responder.handle(query, request_args, mindsdb_env, session)
 
         return documents
 
@@ -161,7 +162,7 @@ class OpMsgResponder(OperationResponder):
 
 # NOTE used in any mongo shell version
 class OpQueryResponder(OperationResponder):
-    def handle(self, buffer, request_id, mindsdb_env):
+    def handle(self, buffer, request_id, mindsdb_env, session):
         # https://docs.mongodb.com/manual/reference/mongodb-wire-protocol/#wire-op-query
         flags, pos = unpack(UINT, buffer)
         namespace, pos = get_utf8_string(buffer, pos)
@@ -184,7 +185,7 @@ class OpQueryResponder(OperationResponder):
             'is_command': is_command
         }
 
-        documents = responder.handle(query, request_args, mindsdb_env)
+        documents = responder.handle(query, request_args, mindsdb_env, session)
 
         return documents
 
@@ -212,9 +213,38 @@ class OpQueryResponder(OperationResponder):
 class MongoRequestHandler(SocketServer.BaseRequestHandler):
     _stopped = False
 
+    def _init_ssl(self):
+        import ssl
+        import tempfile
+        import atexit
+        import os
+
+        from mindsdb.utilities.wizards import make_ssl_cert
+
+        CERT_PATH = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
+        make_ssl_cert(CERT_PATH)
+        atexit.register(lambda: os.remove(CERT_PATH))
+
+        ssl_context = ssl.SSLContext()
+        ssl_context.load_cert_chain(CERT_PATH)
+        ssl_socket = ssl_context.wrap_socket(
+            self.request,
+            server_side=True,
+            do_handshake_on_connect=True
+        )
+        self.request = ssl_socket
+
     def handle(self):
         log.debug('connect')
         log.debug(str(self.server.socket))
+
+        self.session = Session(self.server.mindsdb_env['config'])
+
+        first_byte = self.request.recv(1, socket.MSG_PEEK)
+        if first_byte == b'\x16':
+            # TLS 'client hello' starts from \x16
+            self._init_ssl()
+
         while True:
             header = self._read_bytes(16)
             if header is False:
@@ -234,7 +264,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             raise NotImplementedError(f'Unknown opcode {opcode}')
         responder = self.server.operationsHandlersMap[opcode]
         assert responder is not None, 'error'
-        response = responder.handle(msg_bytes, request_id, self.server.mindsdb_env)
+        response = responder.handle(msg_bytes, request_id, self.server.mindsdb_env, self.session)
         assert response is not None, 'error'
         return responder.to_bytes(response, request_id)
 
@@ -307,7 +337,6 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 def run_server(config):
-    if config.get('debug') is True:
-        SocketServer.TCPServer.allow_reuse_address = True
+    SocketServer.TCPServer.allow_reuse_address = True
     with MongoServer(config) as srv:
         srv.serve_forever()

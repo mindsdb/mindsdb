@@ -29,16 +29,17 @@ class Responder():
         else:
             return self.when(query)
 
-    def handle(self, query, args, env):
+    def handle(self, query, args, env, session):
         """ making answer based on params:
 
         query (dict): document(s) from request
         args (dict): all other significant information from request: flags, collection name, rows to return, etc
         env (dict): config, mindsdb_native instance, and other mindsdb related stuff
+        session (object): current session
 
         returns documents as dict or list of dicts
         """
         if isinstance(self.result, dict):
             return self.result
         else:
-            return self.result(query, args, env)
+            return self.result(query, args, env, session)

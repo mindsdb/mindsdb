@@ -3,14 +3,17 @@ import mindsdb.api.mongo.functions as helpers
 
 
 class Responce(Responder):
-    when = {'whatsmyuri': helpers.is_true}
+    when = {'count': helpers.is_true}
 
     def result(self, query, request_env, mindsdb_env, session):
-        mongodb_config = mindsdb_env['config']['api']['mongodb']
-        host = mongodb_config['host']
-        port = mongodb_config['port']
+        collection = query['count']
+
+        count = 0
+        if collection == 'predictors':
+            count = len(mindsdb_env['mindsdb_native'].get_models())
+
         return {
-            'you': f'{host}:{port}',
+            'n': count,
             'ok': 1
         }
 

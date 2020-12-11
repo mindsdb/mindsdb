@@ -21,7 +21,10 @@ jobs:
     - name: Build windows installer
       run: |
         pip install pyinstaller
+        pip install pywin32
         pip install winshell
+        pip install requests
+        pip install pillow
         python distributions/windows/build_installers.py release
 
     - name: Sync windows installer to s3
@@ -52,7 +55,7 @@ jobs:
     - name: Build osx installer
       run: |
         pip install pyinstaller
-        python distributions/osx/build_installers.py release
+        python distributions/osx/build_pyinstaller.py release
 
     - name: Sync osx installer to s3
       env:
@@ -65,6 +68,37 @@ jobs:
       run: |
         pip install boto3
         python distributions/osx/sync_s3.py
+
+  deploy_osx_dmg:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+
+    - name: Build osx installer
+      run: |
+        pip install pyinstaller
+        python distributions/osx/build_dmg_from_sh.py release
+
+    - name: Sync osx dmg installer to s3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks
+      env:
+        AWS_S3_BUCKET: 'mindsdb-installer'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-2'
+        SOURCE_DIR: 'distributions/osx/dist'
+        DEST_DIR: 'mindsdb-installer/osx'
+
 
   deploy:
     runs-on: ubuntu-latest
@@ -98,7 +132,7 @@ jobs:
 
     - name: Build linux sh installer
       run: |
-        python distributions/linux/rename_installers.py release
+        python distributions/linux/build_simple_script.py release
 
     - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master
@@ -114,7 +148,7 @@ jobs:
 
     - name: Build OSX sh installer
       run: |
-        python distributions/osx/rename_installers.py release
+        python distributions/osx/build_simple_script.py release
 
     - name: Sync osx sh installer to s3
       uses: jakejarvis/s3-sync-action@master
@@ -127,3 +161,27 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/osx/dist'
         DEST_DIR: 'mindsdb-installer/osx'
+
+  deploy_version_file:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+    - name: Deploy version files
+      run: |
+        python distributions/ver/deploy_version.py release
+
+    - name: Sync linux sh installer to s3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks
+      env:
+        AWS_S3_BUCKET: 'mindsdb-installer'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-2'
+        SOURCE_DIR: 'distributions/ver/dist'
+        DEST_DIR: 'mindsdb-installer/ver'

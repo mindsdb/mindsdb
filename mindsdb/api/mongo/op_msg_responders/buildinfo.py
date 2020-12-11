@@ -11,7 +11,7 @@ class Responce(Responder):
         )
 
     result = {
-        'version': f'MindsDB {mindsdb_version}',   # TODO set real
+        'version': f'MindsDB {mindsdb_version}',
         'ok': 1
     }
 

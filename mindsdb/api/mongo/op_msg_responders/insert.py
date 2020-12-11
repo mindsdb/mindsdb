@@ -5,7 +5,7 @@ import mindsdb.api.mongo.functions as helpers
 class Responce(Responder):
     when = {'insert': helpers.is_true}
 
-    def result(self, query, request_env, mindsdb_env):
+    def result(self, query, request_env, mindsdb_env, session):
         try:
             res = self._result(query, request_env, mindsdb_env)
         except Exception as e:

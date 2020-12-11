@@ -1,5 +1,7 @@
 import os
 import sys
+import requests
+from PIL import Image
 
 about = {}
 with open("mindsdb/__about__.py") as fp:
@@ -21,5 +23,18 @@ with open('distributions/windows/latest.py', 'w+') as f:
 with open('distributions/windows/fixed.py', 'w+') as f:
     f.write(install_py.replace('$name', FIXED_NAME).replace('$version', about['__version__']))
 
-os.system('cd distributions/windows && pyinstaller latest.py -F --onefile -n {}-Setup.exe'.format(LATEST_NAME))
-os.system('cd distributions/windows && pyinstaller fixed.py -F --onefile -n {}-Setup.exe'.format(FIXED_NAME))
+icon_path = 'distributions/windows/mdb-icon.png'
+
+with open(icon_path, 'wb') as f:
+    f.write(
+        requests.get('https://mindsdb-installer.s3-us-west-2.amazonaws.com/mdb-icon.png').content
+    )
+
+img = Image.open(icon_path)
+new_path = icon_path.rstrip('.png') + '.ico'
+img.save(new_path, sizes=[(96, 96)])
+
+icon_abspath = os.path.abspath(new_path)
+
+os.system('cd distributions/windows && pyinstaller latest.py --icon="{}" -F --onefile --uac-admin -n {}-Setup.exe'.format(icon_abspath, LATEST_NAME))
+os.system('cd distributions/windows && pyinstaller fixed.py --icon="{}" -F --onefile --uac-admin -n {}-Setup.exe'.format(icon_abspath, FIXED_NAME))

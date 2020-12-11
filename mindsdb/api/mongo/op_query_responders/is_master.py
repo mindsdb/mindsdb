@@ -5,7 +5,7 @@ import mindsdb.api.mongo.functions as helpers
 class Responce(Responder):
     when = {'isMaster': helpers.is_true}
 
-    result = response = {
+    result = {
         "ismaster": True,
         "minWireVersion": 0,
         "maxWireVersion": 9,  # 6 - 3.6, 9 - 4.4

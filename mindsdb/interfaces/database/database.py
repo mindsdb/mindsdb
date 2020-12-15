@@ -64,7 +64,7 @@ class DatabaseWrapper():
             if integration.check_connection():
                 integration.unregister_predictor(name)
             else:
-                logger.warning(f"There is not connection to {integration.name}. predictor wouldn't be unregisted")
+                logger.warning(f"There is no connection to {integration.name}. predictor wouldn't be unregisted")
 
     def check_connections(self):
         connections = {}

@@ -18,6 +18,8 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
 )
 from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
 
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
+
 
 def debug_pkey_type(model, keys=None, reset_keyes=True, type_to_check=list, append_key=True):
     if type(model) != dict:
@@ -290,6 +292,131 @@ class PredictorPredictFromDataSource(Resource):
 
         return preparse_results(results, format_flag)
 
+@ns_conf.route('/<name>/predict_query')
+@ns_conf.param('name', 'The predictor identifier')
+class PredictorPredictFromQuery(Resource):
+    @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
+    def post(self, name):
+        data = request.json
+        if is_custom(name): # unsure if needed, if configs are same just use native
+            mdbConfig = ca.custom_models.config.get_all()
+        else:
+            mdbConfig = ca.mindsdb_native.config.get_all()
+
+        integration_id = data.get('integration_id')
+
+        if integration_id not in mdbConfig['integrations']:
+            abort(400, 'Invalid integration_id {integration_id}')
+        
+        integration = mdbConfig['integrations'][integration_id]
+        
+        # copied from mindsdb/interfaces/datastore/datastore.py, 
+        # if there's a dedicated function please replace
+
+        ds_class_map = {
+            'clickhouse': ClickhouseDS,
+            'mariadb': MariaDS,
+            'mysql': MySqlDS,
+            'postgres': PostgresDS,
+            'mssql': MSSQLDS,
+            'mongodb': MongoDS,
+            'snowflake': SnowflakeDS
+        }
+
+        try:
+            dsClass = ds_class_map[integration['type']]
+        except KeyError:
+            raise KeyError(f"Unknown DS type: {integration_id}, type is {integration['type']}")
+
+        if integration['type'] in ['clickhouse']:
+            picklable = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'query': data['query'],
+                    'user': integration['user'],
+                    'password': integration['password'],
+                    'host': integration['host'],
+                    'port': integration['port']
+                }
+            }
+            ds = dsClass(**picklable['kwargs'])
+
+        elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql']:
+            picklable = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'query': data['query'],
+                    'user': integration['user'],
+                    'password': integration['password'],
+                    'host': integration['host'],
+                    'port': integration['port']
+                }
+            }
+
+            if 'database' in integration:
+                picklable['kwargs']['database'] = integration['database']
+
+            if 'database' in data:
+                picklable['kwargs']['database'] = data['database']
+
+            ds = dsClass(**picklable['kwargs'])
+
+        elif integration['type'] == 'snowflake':
+            picklable = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'query': data['query'],
+                    'schema': data['schema'],
+                    'warehouse': data['warehouse'],
+                    'database': data['database'],
+                    'host': integration['host'],
+                    'password': integration['password'],
+                    'user': integration['user'],
+                    'account': integration['account']
+                }
+            }
+
+            ds = dsClass(**picklable['kwargs'])
+
+        elif integration['type'] == 'mongodb':
+            picklable = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'database': data['database'],
+                    'collection': data['collection'],
+                    'query': data['find'],
+                    'user': integration['user'],
+                    'password': integration['password'],
+                    'host': integration['host'],
+                    'port': integration['port']
+                }
+            }
+
+            ds = dsClass(**picklable['kwargs'])
+
+        try:
+            format_flag = data.get('format_flag')
+        except:
+            format_flag = 'explain'
+
+        try:
+            kwargs = data.get('kwargs')
+        except:
+            kwargs = {}
+
+        if type(kwargs) != type({}):
+            kwargs = {}
+
+        if is_custom(name):
+            return ca.custom_models.predict(name, from_data=ds, **kwargs)
+        else:
+            results = ca.mindsdb_native.predict(name, when_data=ds, **kwargs)
+
+        return preparse_results(results, format_flag)
 
 @ns_conf.route('/upload')
 class PredictorUpload(Resource):

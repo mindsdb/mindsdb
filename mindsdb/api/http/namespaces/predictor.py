@@ -18,7 +18,8 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
 )
 from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
 
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
+# for creating datasources for predict_query endpoint
+from mindsdb_native import ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
 
 
 def debug_pkey_type(model, keys=None, reset_keyes=True, type_to_check=list, append_key=True):

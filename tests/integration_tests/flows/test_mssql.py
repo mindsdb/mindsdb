@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytds
 
-from mindsdb.utilities.config import Config
+from mindsdb.state.config import Config
 
 from common import (
     USE_EXTERNAL_DB_SERVER,

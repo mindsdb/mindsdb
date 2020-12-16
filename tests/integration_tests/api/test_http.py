@@ -7,7 +7,7 @@ import time
 
 import psutil
 
-from mindsdb.utilities.config import Config
+from mindsdb.state.config import Config
 
 import importlib.util
 common_path = Path(__file__).parent.parent.absolute().joinpath('flows/common.py').resolve()

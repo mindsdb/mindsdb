@@ -10,7 +10,7 @@ import datetime
 from pkg_resources import get_distribution
 import torch.multiprocessing as mp
 
-from mindsdb.utilities.config import Config
+from mindsdb.state.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http

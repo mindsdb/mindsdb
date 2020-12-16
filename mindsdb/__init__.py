@@ -2,7 +2,7 @@ import os
 import sys
 
 from mindsdb.__about__ import __package_name__ as name, __version__
-from mindsdb.utilities.config import Config
+from mindsdb.state.config import Config
 from mindsdb.utilities.functions import args_parse, is_notebook
 
 

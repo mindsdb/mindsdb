@@ -1,19 +1,16 @@
 from mindsdb.interfaces.state.schemas import session, Integration, Datasource, Predictor, Configuration, Semaphor, Registration
 from mindsdb.interfaces.state.storage import StorageEngine
+from mindsdb.interfaces.state.config import Config
 from mindsdb.interfaces.database.database import DatabaseWrapper
 import mindsdb_native
 
 class State():
     def __init__(self, config, company_id=None):
-        self.config = config
-        self.storage = StorageEngine(self.config)
-        self.company_id = company_id
-        if self.company_id is None:
-            self.company_id = 199925
-        self.dbw = DatabaseWrapper(self.config)
+        self.storage = StorageEngine()
+        self.config = Config()
+        self.company_id = self.config['company_id']
+        self.dbw = DatabaseWrapper()
         self.update_registrations(setup=True)
-
-    def get_config(self):
 
 
     def update_registrations(self, setup=False):

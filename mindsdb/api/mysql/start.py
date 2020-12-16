@@ -1,5 +1,5 @@
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
-from mindsdb.state.config import Config
+from mindsdb.interfaces.state.config import Config
 from mindsdb.utilities.log import initialize_log
 
 

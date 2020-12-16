@@ -1,4 +1,3 @@
-import inspect
 import os
 import time
 from pathlib import Path
@@ -12,24 +11,6 @@ import logging
 def create_directory(path):
     path = Path(path)
     path.mkdir(mode=0o777, exist_ok=True, parents=True)
-
-
-def get_paths():
-    this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
-    mindsdb_path = os.path.abspath(Path(this_file_path).parent.parent.parent)
-
-    return f'{mindsdb_path}/var/'
-
-    # if windows
-    if os.name == 'nt':
-        return os.path.join(os.environ['APPDATA'], 'mindsdb')
-    else:
-        tuples.extend([
-            '/var/lib/mindsdb'
-            ,'{}/.local/var/lib/mindsdb'.format(Path.home())
-        ])
-
-    return tuples
 
 def do_init_migration(paths):
     ''' That initial migration for storage structure. Should be called once after user updates to 2.8.0.

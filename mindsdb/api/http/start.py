@@ -13,7 +13,7 @@ from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
-from mindsdb.state.config import Config
+from mindsdb.interfaces.state.config import Config
 from mindsdb.utilities.log import initialize_log
 
 

@@ -1,4 +1,4 @@
-from mindsdb.state.config import Config
+from mindsdb.interfaces.state.config import Config
 from mindsdb.api.mongo.server import run_server
 from mindsdb.utilities.log import initialize_log
 

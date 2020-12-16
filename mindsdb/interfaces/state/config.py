@@ -1,8 +1,10 @@
+import inspect
+from pathlib import Path
 import os
 import json
 import hashlib
 import datetime
-from mindsdb.interfaces.state.schemas import Configuration,
+from mindsdb.interfaces.state.schemas import Configuration, session
 from mindsdb.utilities.fs import create_dirs_recursive
 
 default_config = {
@@ -35,10 +37,30 @@ default_config = {
         }
     }
     ,"company_id": 199925
+    ,"paths": {
+
+    }
 }
 
+def _get_paths():
+    this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
+    mindsdb_path = os.path.abspath(Path(this_file_path).parent.parent.parent)
+
+    return f'{mindsdb_path}/var/'
+
+    # if windows
+    if os.name == 'nt':
+        return os.path.join(os.environ['APPDATA'], 'mindsdb')
+    else:
+        tuples.extend([
+            '/var/lib/mindsdb'
+            ,'{}/.local/var/lib/mindsdb'.format(Path.home())
+        ])
+
+    return tuples
+
 def _get_or_create_dir_struct():
-    for _dir in get_paths():
+    for _dir in _get_paths():
         try:
             assert os.path.exists(_dir)
             assert os.access(_dir, os.W_OK) is True
@@ -46,7 +68,7 @@ def _get_or_create_dir_struct():
         except Exception:
             pass
 
-    for _dir in get_paths():
+    for _dir in _get_paths():
         try:
             create_directory(_dir)
             assert os.access(_dir, os.W_OK) is True
@@ -64,7 +86,7 @@ def _null_to_empty(config):
         password = '' if password is None else str(password)
         integration['password'] = str(password)
 
-    password = self._config['api']['mysql'].get('password')
+    password = config['api']['mysql'].get('password')
     password = '' if password is None else str(password)
     config['api']['mysql']['password'] = str(password)
     return config
@@ -77,26 +99,31 @@ def _merge_key_recursive(target_dict, source_dict, key):
             _merge_key_recursive(target_dict[key], source_dict[key], k)
 
 def _merge_configs(config, other_config):
-    for key in default_config:
+    for key in other_config:
         _merge_key_recursive(config, other_config, key)
     return config
 
 class Config(object):
     def __init__(self, config_path=None):
-        if config_path is None:
-            config = json.loads(Configuration.query.filter_by(company_id=config).first().data)
+        self._read()
+        if self._config is None:
+            if config_path is not None:
+                with open(config_path, 'r') as fp:
+                    config = json.load(fp)
+            else:
+                config = {}
 
-            with open(config_path, 'r') as fp:
-                config = _merge_configs(config, json.load(fp))
+            self._read(config.get('company_id', None))
+            if self._config is not None:
+                config = _merge_configs(config, self._config)
 
             storage_dir = config.get('storage_dir', _get_or_create_dir_struct())
             if os.path.isabs(storage_dir) is False:
-                storage_dir = os.path.normpath(
-                    os.path.join(
-                        os.path.dirname(config_path),
-                        storage_dir
-                    )
-                )
+                storage_dir = os.path.normpath(storage_dir)
+            config['storage_dir'] = storage_dir
+
+            config = _merge_configs(config, default_config)
+            config = _null_to_empty(config)
 
             config['paths']['root'] = storage_dir
             config['paths']['datasources'] = os.path.join(storage_dir, 'datasources')
@@ -111,23 +138,31 @@ class Config(object):
 
             create_dirs_recursive(config['paths'])
 
-            config = _merge_configs(config, default_config)
-            config = _null_to_empty(config)
+            self._config = config
 
-        self._read()
         self._save()
 
     @property
     def paths(self):
         return self._config['paths']
 
-    def _read(self):
-        self._config = json.loads(Configuration.query.filter_by(company_id=config).first().data)
+    def _read(self, company_id=None):
+        try:
+            company_id = self._config['company_id'] if company_id is None else None
+            self._config = json.loads(Configuration.query.filter_by(company_id=company_id).first().data)
+        except:
+            self._config = None
 
     def _save(self):
-        config_record = Configuration(company_id=self._config['company_id'],data=self._config)
-        session.save_or_update(config_record)
-        session.commit())
+        try:
+            config_record = Configuration.query.filter_by(company_id=self._config['company_id']).first()
+            config_record.data = json.dumps(self._config)
+        except Exception as e:
+            print(e)
+            config_record = Configuration(company_id=self._config['company_id'],data=json.dumps(self._config))
+            session.add(config_record)
+
+        session.commit()
 
     def __getitem__(self, key):
         self._read()

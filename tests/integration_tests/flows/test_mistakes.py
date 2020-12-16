@@ -3,7 +3,7 @@ import requests
 import asyncio
 import time
 
-from mindsdb.state.config import Config
+from mindsdb.interfaces.state.config import Config
 
 from common import (
     MINDSDB_DATABASE,

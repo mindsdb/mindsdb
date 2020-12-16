@@ -1,9 +1,10 @@
 import shutil
 import os
+from mindsdb.interfaces.state.config import Config
 
 class StorageEngine():
-    def __init__(self, config, location='local', connect_data=None):
-        self.config = config
+    def __init__(self, location='local', connect_data=None):
+        self.config = Config()
         self.location = location
         if self.location == 'local':
             self.prefix = os.path.join(self.config.paths['root'],'storage_engine')

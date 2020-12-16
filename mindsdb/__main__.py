@@ -10,7 +10,7 @@ import datetime
 from pkg_resources import get_distribution
 import torch.multiprocessing as mp
 
-from mindsdb.state.config import Config
+from mindsdb.interfaces.state.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
@@ -148,7 +148,7 @@ More instructions in https://docs.mindsdb.com
 
     model_data_arr = get_all_models_meta_data(mdb, cst)
 
-    dbw = DatabaseWrapper(config)
+    dbw = DatabaseWrapper()
 
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         log.error(f'Error failed to integrate with database aliased: {broken_name}')

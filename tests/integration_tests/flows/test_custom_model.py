@@ -6,7 +6,7 @@ import textwrap
 
 import mysql.connector
 
-from mindsdb.state.config import Config
+from mindsdb.interfaces.state.config import Config
 
 from common import (
     USE_EXTERNAL_DB_SERVER,

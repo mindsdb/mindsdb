@@ -3,12 +3,13 @@ from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
+from mindsdb.interfaces.state.config import Config
 
 
 class DatabaseWrapper():
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
+        self.config = Config()
         self._get_integrations()
 
     def _setup_integration(self, integration):

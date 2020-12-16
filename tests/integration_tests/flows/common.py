@@ -12,7 +12,7 @@ import csv
 from pandas import DataFrame
 
 from mindsdb.utilities.fs import create_dirs_recursive
-from mindsdb.state.config import Config
+from mindsdb.interfaces.state.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.ps import wait_port, is_port_in_use

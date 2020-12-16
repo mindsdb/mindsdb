@@ -42,16 +42,16 @@ class Telemetry(Resource):
             disable_telemetry()
 
 
-def disable_telemetry():
+def enable_telemetry():
     path = os.path.join(ca.config_obj['storage_dir'], TELEMETRY_FILE)
     if os.path.exists(path):
         os.remove(path)
 
-def enable_telemetry():
+def disable_telemetry():
     path = os.path.join(ca.config_obj['storage_dir'], TELEMETRY_FILE)
     with open(path, 'w') as _:
         pass
 
 def is_telemetry_active():
     path = os.path.join(ca.config_obj['storage_dir'], TELEMETRY_FILE)
-    return os.path.exists(path)
+    return not os.path.exists(path)

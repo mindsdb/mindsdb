@@ -3,8 +3,8 @@ from mindsdb.api.mongo.server import run_server
 from mindsdb.utilities.log import initialize_log
 
 
-def start(config, verbose=False):
-    config = Config(config)
+def start(verbose=False):
+    config = Config()
     if verbose:
         config['log']['level']['console'] = 'DEBUG'
 

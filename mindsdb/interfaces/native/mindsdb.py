@@ -9,13 +9,12 @@ from mindsdb_native import F
 from mindsdb.utilities.fs import create_directory
 from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 from mindsdb.interfaces.native.predictor_process import PredictorProcess
-from mindsdb.interfaces.database.database import DatabaseWrapper
-
+from mindsdb.interfaces.state.state import State
 
 class MindsdbNative():
     def __init__(self, config):
         self.config = config
-        self.dbw = DatabaseWrapper(self.config)
+        self.state = State(config)
 
     def _setup_for_creation(self, name):
             predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
@@ -25,11 +24,13 @@ class MindsdbNative():
                 json.dump(self.config.versions, f, indent=4, sort_keys=True)
 
     def create(self, name):
+        # Just used for getting the report uuid, don't bother registering this
         self._setup_for_creation(name)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
 
     def learn(self, name, from_data, to_predict, kwargs={}):
+        self.state.make_predicotr(name, None, to_predict)
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
@@ -51,6 +52,7 @@ class MindsdbNative():
         p.start()
         predictions = p.join()
         '''
+        self.state()
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         predictions = mdb.predict(
@@ -94,17 +96,12 @@ class MindsdbNative():
 
     def delete_model(self, name):
         F.delete_model(name)
-        self.dbw.unregister_predictor(name)
 
     def rename_model(self, name, new_name):
-        self.dbw.unregister_predictor(self.get_model_data(name))
         F.rename_model(name, new_name)
-        self.dbw.register_predictors(self.get_model_data(new_name), setup=False)
 
     def load_model(self, fpath):
         F.import_model(model_archive_path=fpath)
-        # @TODO How do we figure out the name here ?
-        # dbw.register_predictors(...)
 
     def export_model(self, name):
         F.export_predictor(model_name=name)

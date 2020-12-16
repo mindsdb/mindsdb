@@ -13,12 +13,10 @@ from mindsdb.interfaces.native.mindsdb import MindsdbNative
 class CustomModels():
     def __init__(self, config):
         self.config = config
-        self.dbw = DatabaseWrapper(self.config)
         self.storage_dir = os.path.join(config['storage_dir'], 'misc')
         os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
         self.mindsdb_native = MindsdbNative(self.config)
-        self.dbw = DatabaseWrapper(self.config)
 
     def _dir(self, name):
         return str(os.path.join(self.storage_dir, 'custom_model_' + name))
@@ -79,9 +77,6 @@ class CustomModels():
         model_data['status'] = 'completed'
         self.save_model_data(name, model_data)
 
-        self.dbw.unregister_predictor(name)
-        self.dbw.register_predictors([self.get_model_data(name)], setup=False)
-
     def predict(self, name, when_data=None, from_data=None, kwargs={}):
         if from_data is not None:
             data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
@@ -129,13 +124,10 @@ class CustomModels():
 
     def delete_model(self, name):
         shutil.rmtree(self._dir(name))
-        self.dbw.unregister_predictor(name)
 
     def rename_model(self, name, new_name):
-        self.dbw.unregister_predictor(name)
         shutil.move(self._dir(name), self._dir(new_name))
         shutil.move(os.path.join(self._dir(new_name) + f'{name}.py'), os.path.join(self._dir(new_name) ,f'{new_name}.py'))
-        self.dbw.register_predictors([self.get_model_data(new_name)], setup=False)
 
     def export_model(self, name):
         shutil.make_archive(base_name=name, format='zip', root_dir=self._dir(name))
@@ -158,4 +150,4 @@ class CustomModels():
             fp.write('')
 
         if trained_status == 'trained':
-            self.dbw.register_predictors([self.get_model_data(name)], setup=False)
+            pass

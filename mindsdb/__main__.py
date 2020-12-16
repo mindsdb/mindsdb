@@ -74,10 +74,6 @@ More instructions in https://docs.mindsdb.com
         sys.exit(0)
 
     config_path = args.config
-    if config_path is None:
-        config_dir, _ = get_or_create_dir_struct()
-        config_path = os.path.join(config_dir, 'config.json')
-
     config = Config(config_path)
 
     if args.verbose is True:
@@ -100,7 +96,6 @@ More instructions in https://docs.mindsdb.com
     except Exception:
         from mindsdb_native.__about__ import __version__ as mindsdb_native_version
 
-    print(f'Configuration file:\n   {config_path}')
     print(f"Storage path:\n   {config.paths['root']}")
 
     print('Versions:')
@@ -155,7 +150,6 @@ More instructions in https://docs.mindsdb.com
     model_data_arr = get_all_models_meta_data(mdb, cst)
 
     dbw = DatabaseWrapper(config)
-    dbw.register_predictors(model_data_arr)
 
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         log.error(f'Error failed to integrate with database aliased: {broken_name}')
@@ -165,7 +159,7 @@ More instructions in https://docs.mindsdb.com
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(config_path, args.verbose))
+            p = ctx.Process(target=start_functions[api_name], args=(args.verbose))
             p.start()
             api_data['process'] = p
         except Exception as e:

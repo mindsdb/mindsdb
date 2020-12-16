@@ -1,6 +1,6 @@
 import torch.multiprocessing as mp
 from mindsdb.interfaces.database.database import DatabaseWrapper
-
+from mindsdb.interfaces.state.state import State
 
 ctx = mp.get_context('spawn')
 
@@ -22,6 +22,8 @@ class PredictorProcess(ctx.Process):
 
         name, from_data, to_predict, kwargs, config, trx_type = self._args
 
+        state = State(config)
+
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         if trx_type == 'learn':
@@ -34,12 +36,8 @@ class PredictorProcess(ctx.Process):
             )
 
             stats = mindsdb_native.F.get_model_data(name)['data_analysis_v2']
+            state.update_predictor(name=name, status=stats['status'], path=None, metadata=stats)
 
-            DatabaseWrapper(config).register_predictors([{
-                'name': name,
-                'predict': to_predict,
-                'data_analysis': stats
-            }], setup=False)
 
         if trx_type == 'predict':
             if isinstance(from_data, dict):

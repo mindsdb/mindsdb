@@ -18,68 +18,18 @@ def get_paths():
     this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
     mindsdb_path = os.path.abspath(Path(this_file_path).parent.parent.parent)
 
-    tuples = [
-        (
-            f'{mindsdb_path}/etc/',
-            f'{mindsdb_path}/var/'
-        )
-    ]
+    return f'{mindsdb_path}/var/'
 
     # if windows
     if os.name == 'nt':
-        tuples.extend([
-            (
-                os.path.join(os.environ['APPDATA'], 'mindsdb'),
-                os.path.join(os.environ['APPDATA'], 'mindsdb'),
-            )
-        ])
+        return os.path.join(os.environ['APPDATA'], 'mindsdb')
     else:
         tuples.extend([
-            (
-                '/etc/mindsdb',
-                '/var/lib/mindsdb'
-            ),
-            (
-                '{}/.local/etc/mindsdb'.format(Path.home()),
-                '{}/.local/var/lib/mindsdb'.format(Path.home())
-            )
+            '/var/lib/mindsdb'
+            ,'{}/.local/var/lib/mindsdb'.format(Path.home())
         ])
 
     return tuples
-
-
-def get_or_create_dir_struct():
-    for tup in get_paths():
-        try:
-            for _dir in tup:
-                assert os.path.exists(_dir)
-                assert os.access(_dir, os.W_OK) is True
-
-            config_dir = tup[0]
-            if 'DEV_CONFIG_PATH' in os.environ:
-                config_dir = os.environ['DEV_CONFIG_PATH']
-
-            return config_dir, tup[1]
-        except Exception:
-            pass
-
-    for tup in get_paths():
-        try:
-            for _dir in tup:
-                create_directory(_dir)
-                assert os.access(_dir, os.W_OK) is True
-
-            config_dir = tup[0]
-            if 'DEV_CONFIG_PATH' in os.environ:
-                config_dir = os.environ['DEV_CONFIG_PATH']
-
-            return config_dir, tup[1]
-
-        except Exception:
-            pass
-
-    raise Exception('MindsDB storage directory does not exist and could not be created')
-
 
 def do_init_migration(paths):
     ''' That initial migration for storage structure. Should be called once after user updates to 2.8.0.

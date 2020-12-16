@@ -1,17 +1,9 @@
 import os
 import sys
 
-from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
-from mindsdb.utilities.fs import get_or_create_dir_struct, create_dirs_recursive
-from mindsdb.utilities.wizards import cli_config
+from mindsdb.__about__ import __package_name__ as name, __version__
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import args_parse, is_notebook
-
-config_dir, storage_dir = get_or_create_dir_struct()
-
-config_path = os.path.join(config_dir, 'config.json')
-if not os.path.exists(config_path):
-    _ = cli_config(None, None, storage_dir, config_dir, use_default=True)
 
 
 try:
@@ -21,18 +13,11 @@ try:
             config_path = args.config
 except:
     # This fials in some notebooks
-    pass
+    config_path = None
 
-try:
-    mindsdb_config = Config(config_path)
-except Exception as e:
-    print(str(e))
-    sys.exit(1)
+mindsdb_config = Config(config_path)
 
-paths = mindsdb_config.paths
-create_dirs_recursive(paths)
-
-os.environ['MINDSDB_STORAGE_PATH'] = paths['predictors']
+os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config['paths']['predictors']
 os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')
 os.environ['LIGHTWOOD_LOG_LEVEL'] = os.environ.get('LIGHTWOOD_LOG_LEVEL', 'ERROR')
 

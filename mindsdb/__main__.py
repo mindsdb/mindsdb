@@ -17,7 +17,6 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.fs import (
-    get_or_create_dir_struct,
     update_versions_file,
     archive_obsolete_predictors,
     remove_corrupted_predictors

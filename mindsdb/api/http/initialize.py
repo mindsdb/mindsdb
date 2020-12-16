@@ -19,6 +19,7 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
+from mindsdb.interfaces.state.config import Config
 
 
 class Swagger_Api(Api):
@@ -31,11 +32,12 @@ class Swagger_Api(Api):
         return url_for(self.endpoint("specs"), _external=False)
 
 
-def initialize_static(config):
+def initialize_static():
     ''' Update Scout files basing on compatible-config.json content.
         Files will be downloaded and updated if new version of GUI > current.
         Current GUI version stored in static/version.txt.
     '''
+    config = Config()
     log = logging.getLogger('mindsdb.http')
     static_path = Path(config.paths['static'])
     static_path.mkdir(parents=True, exist_ok=True)

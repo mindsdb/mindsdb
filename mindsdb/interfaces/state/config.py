@@ -6,6 +6,8 @@ import hashlib
 import datetime
 from mindsdb.interfaces.state.schemas import Configuration, session
 from mindsdb.utilities.fs import create_dirs_recursive
+from mindsdb.utilities.fs import create_directory
+
 
 default_config = {
     "log": {
@@ -44,18 +46,18 @@ default_config = {
 
 def _get_paths():
     this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
-    mindsdb_path = os.path.abspath(Path(this_file_path).parent.parent.parent)
+    mindsdb_path = os.path.abspath(Path(this_file_path).parent.parent.parent.parent)
 
-    return f'{mindsdb_path}/var/'
+    return [f'{mindsdb_path}/var/']
 
     # if windows
     if os.name == 'nt':
-        return os.path.join(os.environ['APPDATA'], 'mindsdb')
+        return [os.path.join(os.environ['APPDATA'], 'mindsdb')]
     else:
-        tuples.extend([
+        retrun [
             '/var/lib/mindsdb'
             ,'{}/.local/var/lib/mindsdb'.format(Path.home())
-        ])
+        ]
 
     return tuples
 
@@ -137,7 +139,6 @@ class Config(object):
             }
 
             create_dirs_recursive(config['paths'])
-
             self._config = config
 
         self._save()
@@ -165,15 +166,15 @@ class Config(object):
         session.commit()
 
     def __getitem__(self, key):
-        self._read()
+        #self._read()
         return self._config[key]
 
     def get(self, key, default=None):
-        self._read()
+        #self._read()
         return self._config.get(key, default)
 
     def get_all(self):
-        self._read()
+        #self._read()
         return self._config
 
     def set(self, key_chain, value, delete=False):
@@ -192,6 +193,7 @@ class Config(object):
                 else:
                     c[k] = value
         self._save()
+        self._read()
 
     # Higher level interface
     def add_db_integration(self, name, dict):

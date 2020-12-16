@@ -158,7 +158,7 @@ More instructions in https://docs.mindsdb.com
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(args.verbose))
+            p = ctx.Process(target=start_functions[api_name], args=(args.verbose,))
             p.start()
             api_data['process'] = p
         except Exception as e:

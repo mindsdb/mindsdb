@@ -19,13 +19,13 @@ from mindsdb.utilities.log import initialize_log
 
 def start(verbose=False):
     config = Config()
+    print('\n\n\n\n', config, '\n\n\n\n')
     if verbose:
         config['log']['level']['console'] = 'DEBUG'
 
     initialize_log(config, 'http', wrap_print=True)
-
     # start static initialization in a separate thread
-    init_static_thread = threading.Thread(target=initialize_static, args=(config,))
+    init_static_thread = threading.Thread(target=initialize_static)
     init_static_thread.start()
 
     app, api = initialize_flask(config)

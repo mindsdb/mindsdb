@@ -19,9 +19,6 @@ class MindsdbNative():
     def _setup_for_creation(self, name):
             predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
             create_directory(predictor_dir)
-            versions_file_path = predictor_dir.joinpath('versions.json')
-            with open(str(versions_file_path), 'wt') as f:
-                json.dump(self.config.versions, f, indent=4, sort_keys=True)
 
     def create(self, name):
         # Just used for getting the report uuid, don't bother registering this

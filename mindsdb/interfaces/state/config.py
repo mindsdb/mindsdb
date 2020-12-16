@@ -141,7 +141,7 @@ class Config(object):
             create_dirs_recursive(config['paths'])
             self._config = config
 
-        self._save()
+            self._save()
 
     @property
     def paths(self):
@@ -166,15 +166,15 @@ class Config(object):
         session.commit()
 
     def __getitem__(self, key):
-        #self._read()
+        self._read()
         return self._config[key]
 
     def get(self, key, default=None):
-        #self._read()
+        self._read()
         return self._config.get(key, default)
 
     def get_all(self):
-        #self._read()
+        self._read()
         return self._config
 
     def set(self, key_chain, value, delete=False):

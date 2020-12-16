@@ -22,7 +22,7 @@ class State():
                     if predictor.data is not None:
                         register_predictors.append({
                             'name': predictor.name,
-                            'predict': predictor.to_predict,
+                            'predict': predictor.to_predict.split(','),
                             'data_analysis': predictor.data
                         })
                         # We re-register with every integration for now, so no need to keep itterating
@@ -32,7 +32,7 @@ class State():
 
 
     def make_predicotr(self, name, datasource_id, to_predict):
-        predictor = Predictor(name=name, datasource_id=datasource_id, native_version=mindsdb_native.__version__, to_predict=to_predict, company_id=self.company_id, status='training')
+        predictor = Predictor(name=name, datasource_id=datasource_id, native_version=mindsdb_native.__version__, to_predict=','.join(to_predict), company_id=self.company_id, status='training')
         session.add(predictor)
         session.commit()
 

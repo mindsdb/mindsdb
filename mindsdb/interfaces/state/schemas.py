@@ -10,6 +10,7 @@ engine = create_engine('sqlite:///test.db', echo=True)
 Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine,autoflush=True))
 Base.query = session.query_property()
+entitiy_version = 1
 
 class Semaphor(Base):
     __tablename__ = 'semaphor'
@@ -63,6 +64,7 @@ class Datasource(Base):
     analysis = Column(String)  # A JSON
     company_id = Column(Integer)
     storage_path = Column(String)
+    version = Column(Integer, default=entitiy_version)
     integration_id = Column(Integer, ForeignKey('integration.id'))
 
 
@@ -79,6 +81,7 @@ class Predictor(Base):
     status = Column(String)
     company_id = Column(Integer)
     storage_path = Column(String)
+    version = Column(Integer, default=entitiy_version)
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
 
 Base.metadata.create_all(engine)

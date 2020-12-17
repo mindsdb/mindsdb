@@ -246,6 +246,9 @@ class HTTPTest(unittest.TestCase):
         for flag in ["False", "false", "f"]:
             response = requests.get(f'{root}/config/telemetry/{flag}')
             assert response.status_code == 200
+        flag = "error"
+        response = requests.get(f'{root}/config/telemetry/{flag}')
+        assert response.status_code == 404
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

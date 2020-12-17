@@ -135,5 +135,6 @@ class ToggleTelemetry(Resource):
     def get(self, flag):
         if flag in ["True", "true", "t"]:
             return 'Enabled telemetry', 200
-        else:
+        elif flag in ["False", "false", "f"]:
             return 'Disabled telemetry', 200
+        abort(404, f'Flag not recognized: {flag}')

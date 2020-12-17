@@ -240,8 +240,12 @@ class HTTPTest(unittest.TestCase):
         Call telemetry enabled
         then check the response is status 200
         """
-        response = requests.get(f'{root}/config/telemetry/true')
-        assert response.status_code == 200
+        for flag in ["True", "true", "t"]:
+            response = requests.get(f'{root}/config/telemetry/{flag}')
+            assert response.status_code == 200
+        for flag in ["False", "false", "f"]:
+            response = requests.get(f'{root}/config/telemetry/{flag}')
+            assert response.status_code == 200
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

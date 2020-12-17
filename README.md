@@ -17,7 +17,7 @@ MindsDB is an open-source AI layer for existing databases that allows you to eff
 <h2 align="center">
    Predictive AI layer for existing databases
    <br/>
-  <img width="600" src="https://assets.website-files.com/5f500135c5852524c3845958/5f5024f70d3e5f408250a4a9_Mindsdb%20AI%20tables.gif" alt="MindsDB">	
+  <img width="600" src="https://mindsdbuploads.s3-us-west-2.amazonaws.com/ai-tables.gif" alt="MindsDB">	
 </h2>
 
 

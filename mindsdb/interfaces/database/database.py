@@ -5,6 +5,8 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.interfaces.state.config import Config
 
+from mindsdb.utilities.log import log as logger
+
 
 class DatabaseWrapper():
 
@@ -51,13 +53,19 @@ class DatabaseWrapper():
             if setup:
                 register = self._setup_integration(integration)
             if register:
-                integration.register_predictors(model_data_arr)
+                if integration.check_connection():
+                    integration.register_predictors(model_data_arr)
+                else:
+                    logger.warning(f"There is no connection to {integration.name}. predictor wouldn't be registred.")
 
             integration = [integration]
 
     def unregister_predictor(self, name):
         for integration in self._get_integrations():
-            integration.unregister_predictor(name)
+            if integration.check_connection():
+                integration.unregister_predictor(name)
+            else:
+                logger.warning(f"There is no connection to {integration.name}. predictor wouldn't be unregistred")
 
     def check_connections(self):
         connections = {}

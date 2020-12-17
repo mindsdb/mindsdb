@@ -122,3 +122,13 @@ class Check(Resource):
         dbw = DatabaseWrapper(ca.config_obj)
         connections = dbw.check_connections()
         return connections.get(name, False), 200
+
+@ns_conf.route('/telemetry/<flag>')
+@ns_conf.param('flag', 'Turn telemtry on or off')
+class ToggleTelemetry(Resource):
+    @ns_conf.doc('check')
+    def get(self, flag):
+        if flag in ["True", "true", "t"]:
+            return 'Enabled telemetry', 200
+        else:
+            return 'Disabled telemetry', 200

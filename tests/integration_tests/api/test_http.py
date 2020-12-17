@@ -235,6 +235,13 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
 
+    def test_10_telemetry_enabled(self):
+        """
+        Call telemetry enabled
+        then check the response is status 200
+        """
+        response = requests.get(f'{root}/config/telemetry/true')
+        assert response.status_code == 200
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

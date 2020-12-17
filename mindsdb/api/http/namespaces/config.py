@@ -2,8 +2,8 @@ import copy
 import traceback
 
 from flask import request
-from flask_restx import Resource, abort
 from flask import current_app as ca
+from flask_restx import Resource, abort
 
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -135,6 +135,7 @@ class ToggleTelemetry(Resource):
     def get(self, flag):
         if flag in ["True", "true", "t"]:
             return 'Enabled telemetry', 200
-        elif flag in ["False", "false", "f"]:
+        if flag in ["False", "false", "f"]:
             return 'Disabled telemetry', 200
         abort(404, f'Flag not recognized: {flag}')
+        return '', 200

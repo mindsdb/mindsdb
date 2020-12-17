@@ -313,7 +313,7 @@ class PredictorPredictFromQuery(Resource):
         integration = mdb_config['integrations'][integration_id]
 
         data_store = DataStore(mdb_config)
-        data_source = data_store.datasource_from_query(integration, data, integration_id)
+        ds = data_store.datasource_from_query(integration, data, integration_id)
 
         try:
             format_flag = data.get('format_flag')

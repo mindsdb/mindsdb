@@ -129,11 +129,11 @@ class Check(Resource):
         return connections.get(name, False), 200
 
 @ns_conf.route('/telemetry/<flag>')
-@ns_conf.param('flag', 'Checks whether telemetry is on or off')
+@ns_conf.param('flag', 'Turn telemtry on or off')
 class ToggleTelemetry(Resource):
     @ns_conf.doc('check')
     def get(self, flag):
         if flag in ["True", "true", "t"]:
-            return 'enable telemetry', 200
+            return 'Enabled telemetry', 200
         else:
-            return 'disable telemetry', 200
+            return 'Disabled telemetry', 200

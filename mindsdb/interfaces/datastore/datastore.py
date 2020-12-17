@@ -66,8 +66,10 @@ class DataStore():
 
     def delete_datasource(self, name):
         shutil.rmtree(os.path.join(self.dir, name))
+    
+    def datasource_from_query(self, source, integration_id):
+        integration = self.config['integrations'][integration_id]
 
-    def datasource_from_query(self, integration, source, source_type):
         ds_class_map = {
             'clickhouse': ClickhouseDS,
             'mariadb': MariaDS,
@@ -81,7 +83,7 @@ class DataStore():
         try:
             dsClass = ds_class_map[integration['type']]
         except KeyError:
-            raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
+            raise KeyError(f"Unknown DS type: {integration_id}, type is {integration['type']}")
 
         if integration['type'] in ['clickhouse']:
             picklable = {
@@ -152,6 +154,8 @@ class DataStore():
             }
 
             ds = dsClass(**picklable['kwargs'])
+        
+        return ds, picklable
 
     def save_datasource(self, name, source_type, source, file_path=None):
         if source_type == 'file' and (file_path is None):
@@ -181,10 +185,7 @@ class DataStore():
                 }
 
             elif source_type in self.config['integrations']:
-                integration = self.config['integrations'][source_type]
-
-                ds = self.datasource_from_query(integration, source, source_type)
-
+                ds, picklable = self.datasource_from_query(source, source_type)
             else:
                 # This probably only happens for urls
                 ds = FileDS(source)

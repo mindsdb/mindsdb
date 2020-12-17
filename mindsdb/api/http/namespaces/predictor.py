@@ -61,6 +61,27 @@ def is_custom(name):
         return True
     return False
 
+def make_prediction(name, req_data, when_data):
+    try:
+        format_flag = req_data.get('format_flag')
+    except:
+        format_flag = 'explain'
+
+    try:
+        kwargs = req_data.get('kwargs')
+    except:
+        kwargs = {}
+
+    if type(kwargs) != type({}):
+        kwargs = {}
+
+    if is_custom(name):
+        return ca.custom_models.predict(name, from_data=when_data, **kwargs)
+    else:
+        results = ca.mindsdb_native.predict(name, when_data=when_data, **kwargs)
+
+    return preparse_results(results, format_flag)
+
 @ns_conf.route('/')
 class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
@@ -242,25 +263,8 @@ class PredictorPredict(Resource):
         data = request.json
 
         when = data.get('when') or {}
-        try:
-            format_flag = data.get('format_flag')
-        except:
-            format_flag = 'explain'
 
-        try:
-            kwargs = data.get('kwargs')
-        except:
-            kwargs = {}
-
-        if type(kwargs) != type({}):
-            kwargs = {}
-
-        if is_custom(name):
-            return ca.custom_models.predict(name, when_data=when, **kwargs)
-        else:
-            results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
-
-        return preparse_results(results, format_flag)
+        return make_prediction(name, data, when)
 
 
 @ns_conf.route('/<name>/predict_datasource')
@@ -274,25 +278,7 @@ class PredictorPredictFromDataSource(Resource):
         if from_data is None:
             abort(400, 'No valid datasource given')
 
-        try:
-            format_flag = data.get('format_flag')
-        except:
-            format_flag = 'explain'
-
-        try:
-            kwargs = data.get('kwargs')
-        except:
-            kwargs = {}
-
-        if type(kwargs) != type({}):
-            kwargs = {}
-
-        if is_custom(name):
-            return ca.custom_models.predict(name, from_data=from_data, **kwargs)
-        else:
-            results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
-
-        return preparse_results(results, format_flag)
+        return make_prediction(name, data, from_data)
 
 @ns_conf.route('/<name>/predict_query')
 @ns_conf.param('name', 'The predictor identifier')
@@ -300,40 +286,15 @@ class PredictorPredictFromQuery(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
         data = request.json
-        if is_custom(name): # unsure if needed, if configs are same just use native
-            mdb_config = ca.custom_models.config.get_all()
-        else:
-            mdb_config = ca.mindsdb_native.config.get_all()
 
         integration_id = data.get('integration_id')
-
-        if integration_id not in mdb_config['integrations']:
-            abort(400, 'Invalid integration_id {integration_id}')
         
-        integration = mdb_config['integrations'][integration_id]
-
-        data_store = DataStore(mdb_config)
-        data_source = data_store.datasource_from_query(integration, data, integration_id)
-
         try:
-            format_flag = data.get('format_flag')
-        except:
-            format_flag = 'explain'
+            ds, _ = ca.default_store.datasource_from_query(data, integration_id)
+        except KeyError as err:
+            abort(400, 'Error: {err}')
 
-        try:
-            kwargs = data.get('kwargs')
-        except:
-            kwargs = {}
-
-        if type(kwargs) != type({}):
-            kwargs = {}
-
-        if is_custom(name):
-            return ca.custom_models.predict(name, from_data=ds, **kwargs)
-        else:
-            results = ca.mindsdb_native.predict(name, when_data=ds, **kwargs)
-
-        return preparse_results(results, format_flag)
+        return make_prediction(name, data, ds)
 
 @ns_conf.route('/upload')
 class PredictorUpload(Resource):

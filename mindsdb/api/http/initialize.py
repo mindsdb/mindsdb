@@ -12,7 +12,6 @@ import traceback
 
 from flask import Flask, url_for
 from flask_restx import Api
-from flask_cors import CORS
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -217,14 +216,6 @@ def initialize_flask(config):
     hosts = ['0.0.0.0', 'localhost', '127.0.0.1']
     if host not in hosts:
         hosts.append(host)
-    cors_origin_list = [f'http://{h}:{port}' for h in hosts]
-
-    if 'MINDSDB_CORS_PORT' in os.environ:
-        ports = os.environ['MINDSDB_CORS_PORT'].strip('[]').split(',')
-        ports = [f'http://{host}:{p}' for p in ports]
-        cors_origin_list.extend(ports)
-
-    CORS(app, resources={r"/*": {"origins": cors_origin_list}})
 
     api = Swagger_Api(
         app,

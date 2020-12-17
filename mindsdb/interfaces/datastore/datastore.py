@@ -67,6 +67,92 @@ class DataStore():
     def delete_datasource(self, name):
         shutil.rmtree(os.path.join(self.dir, name))
 
+    def datasource_from_query(self, integration, source, source_type):
+        ds_class_map = {
+            'clickhouse': ClickhouseDS,
+            'mariadb': MariaDS,
+            'mysql': MySqlDS,
+            'postgres': PostgresDS,
+            'mssql': MSSQLDS,
+            'mongodb': MongoDS,
+            'snowflake': SnowflakeDS
+        }
+
+        try:
+            dsClass = ds_class_map[integration['type']]
+        except KeyError:
+            raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
+
+        if integration['type'] in ['clickhouse']:
+            picklable = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'query': source['query'],
+                    'user': integration['user'],
+                    'password': integration['password'],
+                    'host': integration['host'],
+                    'port': integration['port']
+                }
+            }
+            ds = dsClass(**picklable['kwargs'])
+
+        elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql']:
+            picklable = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'query': source['query'],
+                    'user': integration['user'],
+                    'password': integration['password'],
+                    'host': integration['host'],
+                    'port': integration['port']
+                }
+            }
+
+            if 'database' in integration:
+                picklable['kwargs']['database'] = integration['database']
+
+            if 'database' in source:
+                picklable['kwargs']['database'] = source['database']
+
+            ds = dsClass(**picklable['kwargs'])
+
+        elif integration['type'] == 'snowflake':
+            picklable = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'query': source['query'],
+                    'schema': source['schema'],
+                    'warehouse': source['warehouse'],
+                    'database': source['database'],
+                    'host': integration['host'],
+                    'password': integration['password'],
+                    'user': integration['user'],
+                    'account': integration['account']
+                }
+            }
+
+            ds = dsClass(**picklable['kwargs'])
+
+        elif integration['type'] == 'mongodb':
+            picklable = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'database': source['database'],
+                    'collection': source['collection'],
+                    'query': source['find'],
+                    'user': integration['user'],
+                    'password': integration['password'],
+                    'host': integration['host'],
+                    'port': integration['port']
+                }
+            }
+
+            ds = dsClass(**picklable['kwargs'])
+
     def save_datasource(self, name, source_type, source, file_path=None):
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
@@ -97,90 +183,8 @@ class DataStore():
             elif source_type in self.config['integrations']:
                 integration = self.config['integrations'][source_type]
 
-                ds_class_map = {
-                    'clickhouse': ClickhouseDS,
-                    'mariadb': MariaDS,
-                    'mysql': MySqlDS,
-                    'postgres': PostgresDS,
-                    'mssql': MSSQLDS,
-                    'mongodb': MongoDS,
-                    'snowflake': SnowflakeDS
-                }
+                ds = self.datasource_from_query(integration, source, source_type)
 
-                try:
-                    dsClass = ds_class_map[integration['type']]
-                except KeyError:
-                    raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
-
-                if integration['type'] in ['clickhouse']:
-                    picklable = {
-                        'class': dsClass.__name__,
-                        'args': [],
-                        'kwargs': {
-                            'query': source['query'],
-                            'user': integration['user'],
-                            'password': integration['password'],
-                            'host': integration['host'],
-                            'port': integration['port']
-                        }
-                    }
-                    ds = dsClass(**picklable['kwargs'])
-
-                elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql']:
-                    picklable = {
-                        'class': dsClass.__name__,
-                        'args': [],
-                        'kwargs': {
-                            'query': source['query'],
-                            'user': integration['user'],
-                            'password': integration['password'],
-                            'host': integration['host'],
-                            'port': integration['port']
-                        }
-                    }
-
-                    if 'database' in integration:
-                        picklable['kwargs']['database'] = integration['database']
-
-                    if 'database' in source:
-                        picklable['kwargs']['database'] = source['database']
-
-                    ds = dsClass(**picklable['kwargs'])
-
-                elif integration['type'] == 'snowflake':
-                    picklable = {
-                        'class': dsClass.__name__,
-                        'args': [],
-                        'kwargs': {
-                            'query': source['query'],
-                            'schema': source['schema'],
-                            'warehouse': source['warehouse'],
-                            'database': source['database'],
-                            'host': integration['host'],
-                            'password': integration['password'],
-                            'user': integration['user'],
-                            'account': integration['account']
-                        }
-                    }
-
-                    ds = dsClass(**picklable['kwargs'])
-
-                elif integration['type'] == 'mongodb':
-                    picklable = {
-                        'class': dsClass.__name__,
-                        'args': [],
-                        'kwargs': {
-                            'database': source['database'],
-                            'collection': source['collection'],
-                            'query': source['find'],
-                            'user': integration['user'],
-                            'password': integration['password'],
-                            'host': integration['host'],
-                            'port': integration['port']
-                        }
-                    }
-
-                    ds = dsClass(**picklable['kwargs'])
             else:
                 # This probably only happens for urls
                 ds = FileDS(source)

@@ -27,7 +27,6 @@ class MindsdbNative():
         return predictor
 
     def learn(self, name, from_data, to_predict, kwargs={}):
-        self.state.make_predicotr(name, None, to_predict)
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
@@ -49,7 +48,7 @@ class MindsdbNative():
         p.start()
         predictions = p.join()
         '''
-        self.state()
+        self.state.load_predictor(name)
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         predictions = mdb.predict(

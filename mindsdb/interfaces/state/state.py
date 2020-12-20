@@ -36,16 +36,16 @@ class State():
         session.add(predictor)
         session.commit()
 
-    def update_predictor(self, name, status, path, data):
-        predictor = Predictor.query.filter_by(name=name, data=data, company_id=self.company_id).first()
+    def update_predictor(self, name, status, original_path, data):
+        predictor = Predictor.query.filter_by(name=name, company_id=self.company_id).first()
 
         predictor.status = status
+        predictor.data = data
 
         if self.storage.location != 'local':
             storage_path = f'predictor_{predictor.company_id}_{predictor.name}'
             predictor.storage_path = storage_path
-            self.storage.put_fs_node(storage_path, path)
-
+            self.storage.put_fs_node(storage_path, original_path)
         session.commit()
         self.update_registrations()
 
@@ -58,13 +58,20 @@ class State():
         if self.storage.location != 'local':
             self.storage.del_fs_node(storage_path)
 
+    def get_predictor(self, name):
+        predictor = Predictor.query.filter_by(name=name, company_id=self.company_id).first()
+        return {
+            'status': predictor['status']
+            ,'stats': predictor['stats']
+        }
+
     def load_predictor(self, name):
+        predictor = Predictor.query.filter_by(name=name, company_id=self.company_id).first()
         if self.storage.location != 'local':
             pass
 
     def list_predictors(self):
         return Predictor.query.filter_by(company_id=self.company_id)
-
 
     def list_integrations(self):
         return Integration.query.filter_by(company_id=self.company_id)

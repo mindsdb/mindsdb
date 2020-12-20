@@ -100,32 +100,34 @@ DATASETS_COLUMN_TYPES = {
 
 
 def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}, clear_storage=True):
-    for key in config._config['integrations']:
-        config._config['integrations'][key]['publish'] = False
+    for key in config['integrations']:
+        config.set('integrations', key ,'publish'], False)
 
     if USE_EXTERNAL_DB_SERVER:
         with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
             cred = json.loads(f.read())
             for key in cred:
-                if f'default_{key}' in config._config['integrations']:
-                    config._config['integrations'][f'default_{key}'].update(cred[key])
+                if f'default_{key}' in config['integrations']:
+                    config.modify_db_integration(f'default_{key}', cred[key])
 
     for integration in override_integration_config:
-        if integration in config._config['integrations']:
-            config._config['integrations'][integration].update(override_integration_config[integration])
+        if integration in config['integrations']:
+            config.modify_db_integration(integration, override_integration_config[integration])
         else:
-            config._config['integrations'][integration] = override_integration_config[integration]
+            config.add_db_integration(integration, override_integration_config[integration])
 
     for api in override_api_config:
-        config._config['api'][api].update(override_api_config[api])
+        new_api_cfg = config['api'][api]
+        new_api_cfg.update(override_api_config[api])
+        config.set(['api', api], new_api_cfg)
 
-    config['api']['mysql']['database'] = mindsdb_database
-    config['api']['mongodb']['database'] = mindsdb_database
+    config.set(['api', 'mysql', 'database'], mindsdb_database)
+    config.set(['api', 'mongodb', 'database'], mindsdb_database)
 
     storage_dir = TEMP_DIR.joinpath('storage')
     if storage_dir.is_dir() and clear_storage:
         shutil.rmtree(str(storage_dir))
-    config._config['storage_dir'] = str(storage_dir)
+    config.set(['storage_dir'], storage_dir)
 
     create_dirs_recursive(config.paths)
 
@@ -164,8 +166,8 @@ if USE_EXTERNAL_DB_SERVER:
     mindsdb_port = r.content.decode()
     open_ssh_tunnel(mindsdb_port, 'R')
     print(f'use mindsdb port={mindsdb_port}')
-    config._config['api']['mysql']['port'] = mindsdb_port
-    config._config['api']['mongodb']['port'] = mindsdb_port
+    config.set(['api', 'mysql', 'port'], mindsdb_port)
+    config.set(['api', 'mongodb', 'port'], mindsdb_port)
 
     MINDSDB_DATABASE = f'mindsdb_{mindsdb_port}'
 

@@ -6,7 +6,7 @@ import os
 import pickle
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
 
 
 class DataStore():
@@ -104,7 +104,8 @@ class DataStore():
                     'postgres': PostgresDS,
                     'mssql': MSSQLDS,
                     'mongodb': MongoDS,
-                    'snowflake': SnowflakeDS
+                    'snowflake': SnowflakeDS,
+                    'athena': AthenaDS
                 }
 
                 try:
@@ -177,6 +178,22 @@ class DataStore():
                             'password': integration['password'],
                             'host': integration['host'],
                             'port': integration['port']
+                        }
+                    }
+
+                    ds = dsClass(**picklable['kwargs'])
+
+                elif integration['type'] == 'athena':
+                    picklable = {
+                        'class': dsClass.__name__,
+                        'args': [],
+                        'kwargs': {
+                            'query': source['query'],
+                            'staging_dir': source['staging_dir'],
+                            'database': source['database'],
+                            'access_key': source['access_key'],
+                            'secret_key': source['secret_key'],
+                            'region_name': source['region_name']
                         }
                     }
 

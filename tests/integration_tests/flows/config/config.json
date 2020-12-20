@@ -72,6 +72,10 @@
         "default_snowflake": {
             "publish": false,
             "type": "snowflake"
+        },
+        "default_athena": {
+            "publish": false,
+            "type": "athena"
         }
     },
     "log": {

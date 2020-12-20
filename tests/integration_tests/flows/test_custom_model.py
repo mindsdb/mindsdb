@@ -45,7 +45,7 @@ TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
-config = Config(TEST_CONFIG)
+config = Config(TEST_CONFIG, no_db=True)
 
 
 def query(q, as_dict=False, fetch=False):

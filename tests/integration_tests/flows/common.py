@@ -155,7 +155,7 @@ def open_ssh_tunnel(port, direction='R'):
 
 
 if USE_EXTERNAL_DB_SERVER:
-    config = Config(TEST_CONFIG)
+    config = Config(TEST_CONFIG, no_db=True)
     open_ssh_tunnel(5005, 'L')
     wait_port(5005, timeout=10)
     r = requests.get('http://127.0.0.1:5005/port')
@@ -197,7 +197,6 @@ def stop_mindsdb(sp=None):
 
 def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb', clear_storage=True):
     temp_config_path = prepare_config(config, mindsdb_database, override_integration_config, override_api_config, clear_storage)
-    config = Config(temp_config_path)
 
     api_str = ','.join(apis)
     sp = subprocess.Popen(

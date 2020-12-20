@@ -57,7 +57,7 @@ TEST_DS_CSV = 'test_ds_csv'
 TEST_PREDICTOR = 'test_predictor'
 TEST_PREDICTOR_CSV = 'test_predictor_csv'
 
-config = Config(TEST_CONFIG)
+config = Config(TEST_CONFIG, no_db=True)
 
 to_predict_column_names = list(TO_PREDICT.keys())
 

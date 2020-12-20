@@ -25,7 +25,7 @@ TEST_PREDICTOR_NAME = 'test_predictor'
 
 EXTERNAL_DS_NAME = 'test_external'
 
-config = Config(TEST_CONFIG)
+config = Config(TEST_CONFIG, no_db=True)
 
 
 def query(query, fetch=False, as_dict=True, db='mindsdb_test'):

@@ -106,7 +106,10 @@ def _merge_configs(config, other_config):
     return config
 
 class Config(object):
-    def __init__(self, config_path=None):
+    def __init__(self, config_path=None, no_db=False):
+        self._config = None
+        self.no_db = no_db
+
         if config_path is not None:
             with open(config_path, 'r') as fp:
                 config = json.load(fp)
@@ -147,17 +150,18 @@ class Config(object):
         return self._config['paths']
 
     def _read(self, company_id=None):
+        if self.no_db:
+            return
         try:
-            try:
-                if company_id is None:
-                    company_id = self._config['company_id']
-            except Exception as e:
-                company_id = None
-            self._config = json.loads(Configuration.query.filter_by(company_id=company_id).first().data)
+            if company_id is None:
+                company_id = self._config['company_id']
         except Exception as e:
-            self._config = None
+            company_id = None
+        self._config = json.loads(Configuration.query.filter_by(company_id=company_id).first().data)
 
     def _save(self):
+        if self.no_db:
+            return
         try:
             config_record = Configuration.query.filter_by(company_id=self._config['company_id']).first()
             config_record.data = json.dumps(self._config)
@@ -196,9 +200,6 @@ class Config(object):
                 else:
                     c[k] = value
         self._save()
-        print('\n\n\n\n\n')
-        print(self._config)
-        print('\n\n\n\n\n')
         self._read()
 
     # Higher level interface

@@ -40,7 +40,7 @@ TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'
 TEST_PREDICTOR = 'test_predictor'
 
-config = Config(TEST_CONFIG)
+config = Config(TEST_CONFIG, no_db=True)
 
 
 class UserFlowTest_1(unittest.TestCase):

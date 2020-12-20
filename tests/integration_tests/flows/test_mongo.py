@@ -40,7 +40,7 @@ TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
-config = Config(TEST_CONFIG)
+config = Config(TEST_CONFIG, no_db=True)
 
 MINDSDB_DATABASE = f"mindsdb_{config['api']['mongodb']['port']}" if USE_EXTERNAL_DB_SERVER else 'mindsdb'
 

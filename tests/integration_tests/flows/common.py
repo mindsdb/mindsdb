@@ -33,8 +33,6 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 TEST_CONFIG = dir_path + '/config/config.json'
 
-TESTS_ROOT = Path(__file__).parent.absolute().joinpath('../../').resolve()
-
 START_TIMEOUT = 15
 
 OUTPUT = None  # [None|subprocess.DEVNULL]
@@ -101,7 +99,7 @@ DATASETS_COLUMN_TYPES = {
 
 def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}, clear_storage=True):
     for key in config['integrations']:
-        config.set('integrations', key ,'publish'], False)
+        config.set(['integrations', key ,'publish'], False)
 
     if USE_EXTERNAL_DB_SERVER:
         with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
@@ -127,7 +125,7 @@ def prepare_config(config, mindsdb_database='mindsdb', override_integration_conf
     storage_dir = TEMP_DIR.joinpath('storage')
     if storage_dir.is_dir() and clear_storage:
         shutil.rmtree(str(storage_dir))
-    config.set(['storage_dir'], storage_dir)
+    config.set(['storage_dir'], str(storage_dir))
 
     create_dirs_recursive(config.paths)
 

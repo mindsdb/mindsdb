@@ -38,7 +38,7 @@ default_config = {
             "database": "mindsdb"
         }
     }
-    ,"company_id": 199925
+    ,"company_id": None
     ,"paths": {
 
     }
@@ -107,41 +107,40 @@ def _merge_configs(config, other_config):
 
 class Config(object):
     def __init__(self, config_path=None):
-        self._read()
-        if self._config is None:
-            if config_path is not None:
-                with open(config_path, 'r') as fp:
-                    config = json.load(fp)
-            else:
-                config = {}
+        if config_path is not None:
+            with open(config_path, 'r') as fp:
+                config = json.load(fp)
+        else:
+            config = {}
 
-            self._read(config.get('company_id', None))
-            if self._config is not None:
-                config = _merge_configs(config, self._config)
+        self._read(config.get('company_id', None))
 
-            storage_dir = config.get('storage_dir', _get_or_create_dir_struct())
-            if os.path.isabs(storage_dir) is False:
-                storage_dir = os.path.normpath(storage_dir)
-            config['storage_dir'] = storage_dir
+        if self._config is not None:
+            config = _merge_configs(config, self._config)
 
-            config = _merge_configs(config, default_config)
-            config = _null_to_empty(config)
+        storage_dir = config.get('storage_dir', _get_or_create_dir_struct())
+        if os.path.isabs(storage_dir) is False:
+            storage_dir = os.path.normpath(storage_dir)
+        config['storage_dir'] = storage_dir
 
-            config['paths']['root'] = storage_dir
-            config['paths']['datasources'] = os.path.join(storage_dir, 'datasources')
-            config['paths']['predictors'] = os.path.join(storage_dir, 'predictors')
-            config['paths']['static'] = os.path.join(storage_dir, 'static')
-            config['paths']['tmp'] = os.path.join(storage_dir, 'tmp')
-            config['paths']['log'] = os.path.join(storage_dir, 'log')
-            config['paths']['obsolete'] = {
-                'predictors': os.path.join(storage_dir, 'obsolete', 'predictors'),
-                'datasources': os.path.join(storage_dir, 'obsolete', 'datasources')
-            }
+        config = _merge_configs(config, default_config)
+        config = _null_to_empty(config)
 
-            create_dirs_recursive(config['paths'])
-            self._config = config
+        config['paths']['root'] = storage_dir
+        config['paths']['datasources'] = os.path.join(storage_dir, 'datasources')
+        config['paths']['predictors'] = os.path.join(storage_dir, 'predictors')
+        config['paths']['static'] = os.path.join(storage_dir, 'static')
+        config['paths']['tmp'] = os.path.join(storage_dir, 'tmp')
+        config['paths']['log'] = os.path.join(storage_dir, 'log')
+        config['paths']['obsolete'] = {
+            'predictors': os.path.join(storage_dir, 'obsolete', 'predictors'),
+            'datasources': os.path.join(storage_dir, 'obsolete', 'datasources')
+        }
 
-            self._save()
+        create_dirs_recursive(config['paths'])
+        self._config = config
+
+        self._save()
 
     @property
     def paths(self):
@@ -149,9 +148,13 @@ class Config(object):
 
     def _read(self, company_id=None):
         try:
-            company_id = self._config['company_id'] if company_id is None else None
+            try:
+                if company_id is None:
+                    company_id = self._config['company_id']
+            except Exception as e:
+                company_id = None
             self._config = json.loads(Configuration.query.filter_by(company_id=company_id).first().data)
-        except:
+        except Exception as e:
             self._config = None
 
     def _save(self):
@@ -193,6 +196,9 @@ class Config(object):
                 else:
                     c[k] = value
         self._save()
+        print('\n\n\n\n\n')
+        print(self._config)
+        print('\n\n\n\n\n')
         self._read()
 
     # Higher level interface

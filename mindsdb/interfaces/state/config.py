@@ -154,10 +154,6 @@ class Config(object):
         return self._config['paths']
 
     def _read(self, company_id=None):
-        #if (datetime.datetime.now() - self.last_updated).total_seconds() < 2:
-        #    return
-
-        print('\n\n\n!!!!!!!!!!!!!: ', Configuration.query.filter_by(company_id=company_id and modified_at > self.last_updated).first(), '\n\n\n')
         if Configuration.query.filter_by(company_id=company_id and modified_at > self.last_updated).first() is None:
             return
 

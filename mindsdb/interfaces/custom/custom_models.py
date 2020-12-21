@@ -52,7 +52,7 @@ class CustomModels():
         return model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
-        self.state.make_predictor(name, None, to_predict, is_custom=True)
+        self.state.make_predictor(name, None, to_predict)
         model_data = self.get_model_data(name)
         model_data['status'] = 'training'
         self.save_model_data(name, model_data)
@@ -150,7 +150,7 @@ class CustomModels():
         model = self._internal_load(name)
         model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
 
-        self.state.make_predictor(name, None, model.to_predict, is_custom=True)
+        self.state.make_predictor(name, None, model.to_predict)
 
         self.save_model_data(name,{
             'name': name

@@ -116,7 +116,7 @@ More instructions in https://docs.mindsdb.com
     )
 
     state = State(config)
-    state.populate_registrations(setup=True)
+    state.populate_registrations()
 
     if args.api is None:
         api_arr = ['http', 'mysql']

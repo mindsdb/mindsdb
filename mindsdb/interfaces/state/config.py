@@ -8,7 +8,6 @@ from mindsdb.interfaces.state.schemas import Configuration, session
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.fs import create_directory
 
-
 default_config = {
     "log": {
         "level": {
@@ -111,7 +110,7 @@ class Config(object):
 
     def __init__(self, config_path=None, no_db=False):
         self.no_db = no_db
-
+        self.last_updated = datetime.datetime.now() - datetime.timedelta(hours=1)
         if config_path is not None:
             if isinstance(config_path, dict):
                 config = config_path
@@ -155,6 +154,13 @@ class Config(object):
         return self._config['paths']
 
     def _read(self, company_id=None):
+        #if (datetime.datetime.now() - self.last_updated).total_seconds() < 2:
+        #    return
+
+        print('\n\n\n!!!!!!!!!!!!!: ', Configuration.query.filter_by(company_id=company_id and modified_at > self.last_updated).first(), '\n\n\n')
+        if Configuration.query.filter_by(company_id=company_id and modified_at > self.last_updated).first() is None:
+            return
+
         if self.no_db:
             return
         try:
@@ -165,6 +171,7 @@ class Config(object):
 
         try:
             self._config = json.loads(Configuration.query.filter_by(company_id=company_id).first().data)
+            self.last_updated = datetime.datetime.now()
         except Exception as e:
             self._config = None
 

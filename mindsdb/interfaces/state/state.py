@@ -13,7 +13,7 @@ class State():
         self.dbw = DatabaseWrapper()
 
 
-    def populate_registrations(self, setup=False):
+    def populate_registrations(self):
         register_predictors = []
         for predictor in self.list_predictors():
             predictor_id = predictor.id
@@ -51,10 +51,11 @@ class State():
 
     def delete_predictor(self, name):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id).first()
-        predictor.delete()
-        session.commit()
-        self.dbw.unregister_predictor(name)
         storage_path = predictor.storage_path
+        session.delete(predictor)
+        session.commit()
+        self.populate_registrations()
+        # self.dbw.unregister_predictor(name) <--- broken, but this should be the way we do it
 
         if self.storage.location != 'local':
             self.storage.del_fs_node(storage_path)

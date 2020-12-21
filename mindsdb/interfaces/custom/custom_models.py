@@ -9,6 +9,8 @@ import pandas as pd
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.state.state import State
+from mindsdb.interfaces.state.config import Config
 
 class CustomModels():
     def __init__(self, config):
@@ -16,7 +18,9 @@ class CustomModels():
         self.storage_dir = os.path.join(config['storage_dir'], 'misc')
         os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
-        self.mindsdb_native = MindsdbNative(self.config)
+        self.config = Config()
+        self.state = State(self.config)
+        self.mindsdb_native = MindsdbNative(self.config.as_dict())
 
     def _dir(self, name):
         return str(os.path.join(self.storage_dir, 'custom_model_' + name))

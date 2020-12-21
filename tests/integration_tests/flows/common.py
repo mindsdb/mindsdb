@@ -200,7 +200,7 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
 
     api_str = ','.join(apis)
     sp = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path],
+        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path, '--verbose'],
         close_fds=True,
         stdout=OUTPUT,
         stderr=OUTPUT

@@ -26,7 +26,7 @@ class State():
         self.dbw.register_predictors(register_predictors, True)
 
 
-    def make_predicotr(self, name, datasource_id, to_predict):
+    def make_predictor(self, name, datasource_id, to_predict):
         predictor = Predictor(name=name, datasource_id=datasource_id, native_version=mindsdb_native.__version__, to_predict=','.join(to_predict), company_id=self.company_id, status='training')
         session.add(predictor)
         session.commit()

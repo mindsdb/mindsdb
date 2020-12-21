@@ -52,6 +52,7 @@ class CustomModels():
         return model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
+        self.state.make_predictor(name, None, to_predict)
         model_data = self.get_model_data(name)
         model_data['status'] = 'training'
         self.save_model_data(name, model_data)
@@ -79,9 +80,11 @@ class CustomModels():
 
         model_data = self.get_model_data(name)
         model_data['status'] = 'completed'
+
         self.save_model_data(name, model_data)
 
     def predict(self, name, when_data=None, from_data=None, kwargs={}):
+        self.state.load_predictor(name)
         if from_data is not None:
             data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
             data_frame = data_source.df
@@ -113,6 +116,8 @@ class CustomModels():
     def save_model_data(self, name, data):
         with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
             json.dump(data, fp)
+        self.state.update_predictor(name=name, status=data['status'], original_path=None, data=json.dumps(data))
+
 
     def get_models(self, status='any'):
         models = []
@@ -127,6 +132,7 @@ class CustomModels():
         return models
 
     def delete_model(self, name):
+        self.state.delete_predictor(name)
         shutil.rmtree(self._dir(name))
 
     def rename_model(self, name, new_name):

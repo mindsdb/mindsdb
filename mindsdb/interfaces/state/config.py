@@ -108,7 +108,7 @@ def _merge_configs(config, other_config):
 class Config(object):
     _config = None
     _no_db = None
-    
+
     def __init__(self, config_path=None, no_db=False):
         self.no_db = no_db
 
@@ -172,7 +172,6 @@ class Config(object):
             config_record = Configuration.query.filter_by(company_id=self._config['company_id']).first()
             config_record.data = json.dumps(self._config)
         except Exception as e:
-            print(e)
             config_record = Configuration(company_id=self._config['company_id'],data=json.dumps(self._config))
             session.add(config_record)
 

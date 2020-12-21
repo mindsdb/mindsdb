@@ -6,7 +6,7 @@ from sqlalchemy.schema import ForeignKey
 import datetime
 
 
-engine = create_engine('sqlite:///test.db', echo=True)
+engine = create_engine('sqlite:///test.db', echo=False)
 Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine,autoflush=True))
 Base.query = session.query_property()

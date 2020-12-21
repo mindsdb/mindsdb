@@ -137,7 +137,7 @@ class PostgresTest(unittest.TestCase):
         self.assertTrue(TEST_DATA_TABLE in self.get_tables_in('test_data'))
 
         mindsdb_tables = self.get_tables_in(MINDSDB_DATABASE)
-
+        print(mindsdb_tables)
         self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
         self.assertTrue('predictors' in mindsdb_tables)
         self.assertTrue('commands' in mindsdb_tables)

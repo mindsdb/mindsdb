@@ -10,11 +10,12 @@ from mindsdb.utilities.fs import create_directory
 from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 from mindsdb.interfaces.native.predictor_process import PredictorProcess
 from mindsdb.interfaces.state.state import State
+from mindsdb.interfaces.state.config import Config
 
 class MindsdbNative():
     def __init__(self, config):
-        self.config = config
-        self.state = State(config)
+        self.config = Config()
+        self.state = State(self.config)
 
     def _setup_for_creation(self, name):
             predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
@@ -33,7 +34,7 @@ class MindsdbNative():
 
         self._setup_for_creation(name)
 
-        p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
+        p = PredictorProcess(name, from_data, to_predict, kwargs, 'learn')
         p.start()
         if join_learn_process is True:
             p.join()

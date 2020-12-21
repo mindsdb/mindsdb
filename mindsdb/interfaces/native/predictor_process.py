@@ -2,6 +2,7 @@ import json
 import torch.multiprocessing as mp
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.state.state import State
+from mindsdb.interfaces.state.config import Config
 
 ctx = mp.get_context('spawn')
 
@@ -21,8 +22,9 @@ class PredictorProcess(ctx.Process):
         '''
         import mindsdb_native
 
-        name, from_data, to_predict, kwargs, config, trx_type = self._args
+        name, from_data, to_predict, kwargs, trx_type = self._args
 
+        config = Config()
         state = State(config)
 
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})

@@ -53,6 +53,9 @@ class DatabaseWrapper():
             if setup:
                 register = self._setup_integration(integration)
             if register:
+                print('Got nr of models: ', len(model_data_arr))
+                if len(model_data_arr) > 0:
+                    print('\n\n\n\nIntegrating predictor: ',model_data_arr[0]['name'], '\n\n\n\n')
                 if integration.check_connection():
                     integration.register_predictors(model_data_arr)
                 else:

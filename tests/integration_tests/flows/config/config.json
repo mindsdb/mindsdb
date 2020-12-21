@@ -76,8 +76,8 @@
     },
     "log": {
         "level": {
-            "console": "DEBUG",
-            "file": "DEBUG"
+            "console": "INFO",
+            "file": "INFO"
         }
     },
     "storage_dir": "/tmp/mindsdb_storage"

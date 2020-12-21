@@ -2,6 +2,8 @@ from mindsdb.interfaces.state.schemas import session, Integration, Datasource, P
 from mindsdb.interfaces.state.storage import StorageEngine
 from mindsdb.interfaces.database.database import DatabaseWrapper
 import mindsdb_native
+import json
+
 
 class State():
     def __init__(self, config):
@@ -19,7 +21,7 @@ class State():
                 register_predictors.append({
                     'name': predictor.name,
                     'predict': predictor.to_predict.split(','),
-                    'data_analysis': predictor.data
+                    'data_analysis': json.loads(predictor.data)
                 })
         self.dbw.register_predictors(register_predictors, True)
 
@@ -44,14 +46,15 @@ class State():
         self.dbw.register_predictors([{
             'name': predictor.name,
             'predict': predictor.to_predict.split(','),
-            'data_analysis': predictor.data
-        }], True)
+            'data_analysis': json.loads(predictor.data)
+        }], False)
 
     def delete_predictor(self, name):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id).first()
+        predictor.delete()
+        session.commit()
         self.dbw.unregister_predictor(name)
         storage_path = predictor.storage_path
-        predictor.delete()
 
         if self.storage.location != 'local':
             self.storage.del_fs_node(storage_path)

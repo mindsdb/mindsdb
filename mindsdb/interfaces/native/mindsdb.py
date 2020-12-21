@@ -92,6 +92,7 @@ class MindsdbNative():
         return models
 
     def delete_model(self, name):
+        self.state.delete_predictor(name)
         F.delete_model(name)
 
     def rename_model(self, name, new_name):

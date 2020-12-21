@@ -266,28 +266,27 @@ class PredictorPredictFromDataSource(Resource):
     def post(self, name):
         data = request.json
 
-        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=True)
+        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'))
         if from_data is None:
             abort(400, 'No valid datasource given')
 
         try:
             format_flag = data.get('format_flag')
-        except:
+        except Exception:
             format_flag = 'explain'
 
         try:
             kwargs = data.get('kwargs')
-        except:
+        except Exception:
             kwargs = {}
 
-        if type(kwargs) != type({}):
+        if not isinstance(kwargs, dict):
             kwargs = {}
 
         if is_custom(name):
             return ca.custom_models.predict(name, from_data=from_data, **kwargs)
-        else:
-            results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
 
+        results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
         return preparse_results(results, format_flag)
 
 

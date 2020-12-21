@@ -11,7 +11,7 @@ from pkg_resources import get_distribution
 import torch.multiprocessing as mp
 
 from mindsdb.interfaces.state.config import Config
-from mindsdb.interfaces.state.state import Sate
+from mindsdb.interfaces.state.state import State
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
@@ -116,8 +116,8 @@ More instructions in https://docs.mindsdb.com
     )
 
     state = State(config)
-    state.update_registrations(setup=True)
-    
+    state.populate_registrations(setup=True)
+
     if args.api is None:
         api_arr = ['http', 'mysql']
     else:

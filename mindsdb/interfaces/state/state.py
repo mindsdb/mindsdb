@@ -10,22 +10,18 @@ class State():
         self.company_id = self.config['company_id']
         self.dbw = DatabaseWrapper()
 
-    def update_registrations(self, setup=False):
+
+    def populate_registrations(self, setup=False):
         register_predictors = []
         for predictor in self.list_predictors():
             predictor_id = predictor.id
-            for integration_id in [x.id for x in self.list_integrations()]:
-                if len(Registration.query.filter_by(company_id=self.company_id,integration_id=integration_id,predictor_id=predictor_id)) < 1:
-                    if predictor.data is not None:
-                        register_predictors.append({
-                            'name': predictor.name,
-                            'predict': predictor.to_predict.split(','),
-                            'data_analysis': predictor.data
-                        })
-                        # We re-register with every integration for now, so no need to keep itterating
-                        break
-
-        self.dbw.register_predictors(register_predictors,setup=setup)
+            if predictor.data is not None:
+                register_predictors.append({
+                    'name': predictor.name,
+                    'predict': predictor.to_predict.split(','),
+                    'data_analysis': predictor.data
+                })
+        self.dbw.register_predictors(register_predictors, True)
 
 
     def make_predicotr(self, name, datasource_id, to_predict):
@@ -44,7 +40,12 @@ class State():
             predictor.storage_path = storage_path
             self.storage.put_fs_node(storage_path, original_path)
         session.commit()
-        self.update_registrations()
+
+        self.dbw.register_predictors([{
+            'name': predictor.name,
+            'predict': predictor.to_predict.split(','),
+            'data_analysis': predictor.data
+        }], True)
 
     def delete_predictor(self, name):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id).first()

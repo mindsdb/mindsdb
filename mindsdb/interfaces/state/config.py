@@ -107,7 +107,6 @@ def _merge_configs(config, other_config):
 
 class Config(object):
     def __init__(self, config_path=None, no_db=False):
-        self._config = None
         self.no_db = no_db
 
         if config_path is not None:
@@ -157,7 +156,11 @@ class Config(object):
                 company_id = self._config['company_id']
         except Exception as e:
             company_id = None
-        self._config = json.loads(Configuration.query.filter_by(company_id=company_id).first().data)
+
+        try:
+            self._config = json.loads(Configuration.query.filter_by(company_id=company_id).first().data)
+        except Exception as e:
+            self._config = None
 
     def _save(self):
         if self.no_db:

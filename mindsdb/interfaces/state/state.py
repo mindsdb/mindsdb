@@ -27,7 +27,7 @@ class State():
 
 
     def make_predictor(self, name, datasource_id, to_predict):
-        predictor = Predictor(name=name, datasource_id=datasource_id, native_version=mindsdb_native.__version__, to_predict=','.join(to_predict), company_id=self.company_id, status='training')
+        predictor = Predictor(name=name, datasource_id=datasource_id, native_version=mindsdb_native.__version__, to_predict=','.join(to_predict), company_id=self.company_id, status='training', data=None)
         session.add(predictor)
         session.commit()
 

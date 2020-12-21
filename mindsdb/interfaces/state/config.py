@@ -113,8 +113,11 @@ class Config(object):
         self.no_db = no_db
 
         if config_path is not None:
-            with open(config_path, 'r') as fp:
-                config = json.load(fp)
+            if isinstance(config_path, dict):
+                config = config_path
+            else:
+                with open(config_path, 'r') as fp:
+                    config = json.load(fp)
         else:
             config = {}
 
@@ -185,7 +188,7 @@ class Config(object):
         self._read()
         return self._config.get(key, default)
 
-    def get_all(self):
+    def as_dict(self):
         self._read()
         return self._config
 

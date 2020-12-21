@@ -45,7 +45,7 @@ class MindsdbNative():
         # @TODO Separate into two paths, one for "normal" predictions and one for "real time" predictions. Use the multiprocessing code commented out bellow for normal (once we figure out how to return the prediction object... else use the inline code but with the "real time" predict functionality of mindsdb_native taht will be implemented later)
         '''
         from_data = when if when is not None else when_data
-        p = PredictorProcess(name, from_data, to_predict=None, kwargs=kwargs, config=self.config.get_all(), 'predict')
+        p = PredictorProcess(name, from_data, to_predict=None, kwargs=kwargs, config=self.config.as_dict(), 'predict')
         p.start()
         predictions = p.join()
         '''

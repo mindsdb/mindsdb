@@ -9,8 +9,6 @@ class State():
         self.config = config
         self.company_id = self.config['company_id']
         self.dbw = DatabaseWrapper()
-        self.update_registrations(setup=True)
-
 
     def update_registrations(self, setup=False):
         register_predictors = []

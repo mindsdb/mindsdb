@@ -52,7 +52,7 @@ class CustomModels():
         return model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
-        self.state.make_predictor(name, None, to_predict)
+        self.state.make_predictor(name, None, to_predict, is_custom=True)
         model_data = self.get_model_data(name)
         model_data['status'] = 'training'
         self.save_model_data(name, model_data)
@@ -116,7 +116,7 @@ class CustomModels():
     def save_model_data(self, name, data):
         with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
             json.dump(data, fp)
-        if data is not None and 'status' in data:
+        if data is not None and 'status' in data and 'data_analysis' in data and 'columns' in data['data_analysis'] and 'Empty_target' not in data['data_analysis']:
             self.state.update_predictor(name=name, status=data['status'], original_path=None, data=json.dumps(data['data_analysis']))
 
 
@@ -145,13 +145,12 @@ class CustomModels():
         return str(self._dir(name)) + '.zip'
 
     def load_model(self, fpath, name, trained_status):
-
         shutil.unpack_archive(fpath, self._dir(name), 'zip')
         shutil.move( os.path.join(self._dir(name), 'model.py') ,  os.path.join(self._dir(name), f'{name}.py') )
         model = self._internal_load(name)
         model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
 
-        self.state.make_predictor(name, None, model.to_predict)
+        self.state.make_predictor(name, None, model.to_predict, is_custom=True)
 
         self.save_model_data(name,{
             'name': name

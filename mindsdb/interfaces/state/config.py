@@ -106,6 +106,9 @@ def _merge_configs(config, other_config):
     return config
 
 class Config(object):
+    _config = None
+    _no_db = None
+    
     def __init__(self, config_path=None, no_db=False):
         self.no_db = no_db
 

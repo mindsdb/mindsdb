@@ -249,7 +249,8 @@ class PostgresTest(unittest.TestCase):
 
 if __name__ == "__main__":
     try:
+        print('\n\nPostgres tests started!\n\n')
         unittest.main(failfast=True)
-        print('Tests passed!')
+        print('\n\nPostgres tests passed!\n\n')
     except Exception as e:
         print(f'Tests Failed!\n{e}')

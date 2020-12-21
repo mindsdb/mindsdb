@@ -7,12 +7,15 @@ import pickle
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
+from mindsdb.interfaces.state.state import State
+from mindsdb.interfaces.state.config import Config
 
 
 class DataStore():
     def __init__(self, config):
-        self.config = config
         self.dir = config.paths['datasources']
+        self.config = Config()
+        self.state = State(self.config)
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):

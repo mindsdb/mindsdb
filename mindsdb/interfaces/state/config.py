@@ -109,6 +109,9 @@ class Config(object):
     _no_db = None
 
     def __init__(self, config_path=None, no_db=False):
+        if isinstance(config_path, Config):
+            config_path = config_path.as_dict()
+            
         self.no_db = no_db
         self.last_updated = datetime.datetime.now() - datetime.timedelta(hours=1)
         if config_path is not None:

@@ -14,7 +14,7 @@ from mindsdb.interfaces.state.config import Config
 
 class MindsdbNative():
     def __init__(self, config):
-        self.config = Config()
+        self.config = Config(config)
         self.state = State(self.config)
 
     def _setup_for_creation(self, name):
@@ -99,6 +99,7 @@ class MindsdbNative():
         F.rename_model(name, new_name)
 
     def load_model(self, fpath):
+        # self.state.make_predictor(name, None, to_predict) <--- fix
         F.import_model(model_archive_path=fpath)
 
     def export_model(self, name):

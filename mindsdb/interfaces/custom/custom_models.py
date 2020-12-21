@@ -116,7 +116,8 @@ class CustomModels():
     def save_model_data(self, name, data):
         with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
             json.dump(data, fp)
-        self.state.update_predictor(name=name, status=data['status'], original_path=None, data=json.dumps(data))
+        if data is not None and 'status' in data:
+            self.state.update_predictor(name=name, status=data['status'], original_path=None, data=json.dumps(data['data_analysis']))
 
 
     def get_models(self, status='any'):
@@ -144,10 +145,14 @@ class CustomModels():
         return str(self._dir(name)) + '.zip'
 
     def load_model(self, fpath, name, trained_status):
+
         shutil.unpack_archive(fpath, self._dir(name), 'zip')
         shutil.move( os.path.join(self._dir(name), 'model.py') ,  os.path.join(self._dir(name), f'{name}.py') )
         model = self._internal_load(name)
         model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
+
+        self.state.make_predictor(name, None, model.to_predict)
+
         self.save_model_data(name,{
             'name': name
             ,'data_analysis': model.column_type_map

@@ -44,11 +44,13 @@ jobs:
           # MongoDB
           echo -e "\n===============\ntest MongoDB\n===============\n"
           python tests/integration_tests/flows/test_mongo.py
+          rm test.db
 
           # PostgreSQL
           echo -e "\n===============\ntest PostgreSQL\n===============\n"
           python tests/integration_tests/flows/test_postgres.py
-
+          rm test.db
+          
           # MySQL
           echo -e "\n===============\ntest MySQL\n===============\n"
           python tests/integration_tests/flows/test_mysql.py

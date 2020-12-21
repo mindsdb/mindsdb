@@ -216,14 +216,14 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
         return started
 
     async def wait_apis_start(ports):
-        futures = [wait_port_async(port, 60) for port in ports]
+        futures = [wait_port_async(port, 120) for port in ports]
         success = True
         for i, future in enumerate(asyncio.as_completed(futures)):
             success = success and await future
         return success
 
     ports_to_wait = [config['api'][api]['port'] for api in apis]
-
+    print(f'\n\nWaiting on ports: {ports_to_wait} \n\n')
     ioloop = asyncio.get_event_loop()
     if ioloop.is_closed():
         ioloop = asyncio.new_event_loop()

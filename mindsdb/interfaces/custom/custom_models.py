@@ -70,7 +70,7 @@ class CustomModels():
         data_analysis = self.mindsdb_native.analyse_dataset(data_source)['data_analysis_v2']
 
         model_data = self.get_model_data(name)
-        model_data['data_analysis'] = data_analysis
+        model_data['data_analysis'] = dict(data_analysis)
         self.save_model_data(name, model_data)
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
@@ -117,9 +117,9 @@ class CustomModels():
         with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
             json.dump(data, fp)
 
-        print('\n\n\n', data['data_analysis'], 'Empty_target' not in data['data_analysis'], '\n\n\n')
+        print('\n\n\n', json.dumps(data['data_analysis']), 'Empty_target' not in data['data_analysis'], '\n\n\n')
         if data is not None and 'status' in data and 'data_analysis' in data and 'columns' in data['data_analysis'] and 'Empty_target' not in data['data_analysis']:
-            self.state.update_predictor(name=name, status=data['status'], original_path=None, data=json.dumps(data['data_analysis']))
+            self.state.update_predictor(name=name, status=data['status'], original_path=None, data=json.dumps(data['data_analysis']), to_predict=data['to_predict'])
 
 
     def get_models(self, status='any'):

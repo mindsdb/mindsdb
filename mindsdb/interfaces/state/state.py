@@ -31,11 +31,13 @@ class State():
         session.add(predictor)
         session.commit()
 
-    def update_predictor(self, name, status, original_path, data):
+    def update_predictor(self, name, status, original_path, data, to_predict=None):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id).first()
 
         predictor.status = status
         predictor.data = data
+        if to_predict is not None:
+            predictor.to_predict = ','.join(to_predict)
 
         if self.storage.location != 'local':
             storage_path = f'predictor_{predictor.company_id}_{predictor.name}'

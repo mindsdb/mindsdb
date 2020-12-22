@@ -1,15 +1,15 @@
 import os
+import time
+import unittest
+import importlib.util
 from random import randint
 from pathlib import Path
-import unittest
-import requests
-import time
 
-import psutil
+import requests
 
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.ps import net_connections
 
-import importlib.util
 common_path = Path(__file__).parent.parent.absolute().joinpath('flows/common.py').resolve()
 spec = importlib.util.spec_from_file_location("common", str(common_path))
 common = importlib.util.module_from_spec(spec)
@@ -45,11 +45,10 @@ class HTTPTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         try:
-            conns = psutil.net_connections()
+            conns = net_connections()
             pid = [x.pid for x in conns if x.status == 'LISTEN' and x.laddr[1] == 47334 and x.pid is not None]
             if len(pid) > 0:
                 os.kill(pid[0], 9)
-            cls.sp.kill()
         except Exception:
             pass
 

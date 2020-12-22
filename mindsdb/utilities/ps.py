@@ -1,10 +1,30 @@
-import psutil
+import sys
 import time
+import psutil
+
+
+def net_connections():
+    all_connections = []
+    for p in psutil.process_iter(['pid']):
+        try:
+            process = psutil.Process(p.pid)
+            connections = process.connections()
+            if connections:
+                all_connections += connections
+
+        except (psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    return all_connections
 
 
 def is_port_in_use(port_num):
     portsinuse = []
-    conns = psutil.net_connections()
+    if sys.platform in ['darwin']:
+        connection_func = net_connections
+    else:
+        connection_func = psutil.net_connections
+    # conns = psutil.net_connections()
+    conns = connection_func()
     portsinuse = [x.laddr[1] for x in conns if x.status == 'LISTEN']
     portsinuse.sort()
     return int(port_num) in portsinuse

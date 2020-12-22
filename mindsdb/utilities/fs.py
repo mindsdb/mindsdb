@@ -92,6 +92,7 @@ def create_dirs_recursive(path):
 
 
 def archive_obsolete_predictors(config, old_version):
+    print('\n\n\n\n\n\n\n\n OBSOLITING \n\n\n\n\n\n\n\n')
     ''' move all predictors trained on mindsdb with version less than
         old_version to folder for obsolete predictors
 
@@ -103,8 +104,10 @@ def archive_obsolete_predictors(config, old_version):
     for f in Path(config.paths['predictors']).iterdir():
         if f.is_dir():
             if not f.joinpath('versions.json').is_file():
+                print('\n\n\n HERE 1 \n\n\n\n', f.name)
                 obsolete_predictors.append(f.name)
             else:
+                print('\n\n\n HERE 2 \n\n\n\n', f.name)
                 with open(f.joinpath('versions.json'), 'rt') as vf:
                     versions = json.loads(vf.read())
                 if LooseVersion(versions['mindsdb']) < LooseVersion(old_version):

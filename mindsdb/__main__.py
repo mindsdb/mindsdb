@@ -143,12 +143,12 @@ More instructions in https://docs.mindsdb.com
         'mongodb': start_mongo
     }
 
-    archive_obsolete_predictors(config, '2.11.0')
+    #archive_obsolete_predictors(config, '2.11.0')
 
     mdb = MindsdbNative(config)
     cst = CustomModels(config)
 
-    remove_corrupted_predictors(config, mdb)
+    #remove_corrupted_predictors(config, mdb)
 
     model_data_arr = get_all_models_meta_data(mdb, cst)
 

@@ -190,7 +190,7 @@ class UserFlowTest_1(unittest.TestCase):
                 json={'when': CONDITION}
             )
         )
-        time.sleep(0.5)
+        time.sleep(1)
         stop_mindsdb()
         ioloop.close()
 

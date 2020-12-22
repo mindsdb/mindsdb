@@ -45,11 +45,14 @@ class State():
             self.storage.put_fs_node(storage_path, original_path)
         session.commit()
 
-        self.dbw.register_predictors([{
-            'name': predictor.name,
-            'predict': predictor.to_predict.split(','),
-            'data_analysis': json.loads(predictor.data)
-        }], False)
+        try:
+            self.dbw.register_predictors([{
+                'name': predictor.name,
+                'predict': predictor.to_predict.split(','),
+                'data_analysis': json.loads(predictor.data)
+            }], False)
+        except Exception as e:
+            print(e)
 
     def delete_predictor(self, name):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id).first()

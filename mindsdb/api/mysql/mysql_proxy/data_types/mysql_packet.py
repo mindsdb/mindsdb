@@ -60,7 +60,7 @@ class Packet:
         return packet
 
     def get(self):
-        self.session.logging.info(f'Get packet: {self.__class__.__name__}')
+        self.session.logging.debug(f'Get packet: {self.__class__.__name__}')
 
         len_header = MAX_PACKET_SIZE
         body = b''
@@ -76,20 +76,20 @@ class Packet:
             if len_header == 0:
                 break
             body += self.mysql_socket.recv(len_header)
-        self.session.logging.info(f'Got packet: {str(body)}')
+        self.session.logging.debug(f'Got packet: {str(body)}')
         self.proxy.count = (int(count_header) + 1) % 256
         self.setup(len(body), count_header, body)
         return True
 
     def send(self):
         string = self.getPacketString()
-        self.session.logging.info(f'Sending packet: {self.__class__.__name__}')
+        self.session.logging.debug(f'Sending packet: {self.__class__.__name__}')
         self.session.logging.debug(string)
         self.mysql_socket.sendall(string)
 
     def accum(self):
         string = self.getPacketString()
-        self.session.logging.info(f'Accumulating packet: {self.__class__.__name__}')
+        self.session.logging.debug(f'Accumulating packet: {self.__class__.__name__}')
         self.session.logging.debug(string)
         return string
 

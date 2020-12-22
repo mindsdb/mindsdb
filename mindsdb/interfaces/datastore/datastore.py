@@ -19,21 +19,38 @@ class DataStore():
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):
+        datasource = self.state.get_datasource()
+        if datasource['analysis'] is not None:
+            return datasource['analysis']
         if isinstance(ds, str):
-            return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
+            analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
         else:
-            return self.mindsdb_native.analyse_dataset(ds)
+            analysis = self.mindsdb_native.analyse_dataset(ds)
+
+        self.state.update_datasource(analysis=analysis)
+        return analysis
+
+
+    def _datasource_to_dict(self, datasource):
+        metadata = json.dumps(datasource.data) if datasource.data is not None else {}
+        datasource_dict = {}
+        datasource_dict['name'] = datasource.name
+        datasource_dict['source_type'] = metadata.get('source_type' None)
+        datasource_dict['source'] = metadata.get('source' None)
+        datasource_dict['row_count'] = metadata.get('row_count' None)
+        datasource_dict['columns'] = metadata.get('columns' None)
+        datasource_dict['created_at'] = datasource.created_at
+        datasource_dict['updated_at'] = (datasource.modified_at
+        return datasource_dict
 
     def get_datasources(self):
         datasource_arr = []
         for ds_name in os.listdir(self.dir):
             try:
-                with open(os.path.join(self.dir, ds_name, 'metadata.json'), 'r') as fp:
+                for datasource in self.state.list_datasource():
                     try:
-                        datasource = json.load(fp)
-                        datasource['created_at'] = parse_dt(datasource['created_at'].split('.')[0])
-                        datasource['updated_at'] = parse_dt(datasource['updated_at'].split('.')[0])
-                        datasource_arr.append(datasource)
+                        datasource_dict = self._datasource_to_dict(datasource)
+                        datasource_arr.append(datasource_dict)
                     except Exception as e:
                         print(e)
             except Exception as e:
@@ -62,12 +79,12 @@ class DataStore():
         }
 
     def get_datasource(self, name):
-        for ds in self.get_datasources():
-            if ds['name'] == name:
-                return ds
-        return None
+        datasource = self.state.get_datasource(name)
+        datasource_dict = self._datasource_to_dict(datasource)
+        return datasource_dict
 
     def delete_datasource(self, name):
+        self.state.delete_datasource(name)
         shutil.rmtree(os.path.join(self.dir, name))
 
     def save_datasource(self, name, source_type, source, file_path=None):
@@ -205,26 +222,16 @@ class DataStore():
             with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
                 pickle.dump(picklable, fp)
 
-            with open(os.path.join(ds_meta_dir, 'metadata.json'), 'w') as fp:
-                meta = {
-                    'name': name,
-                    'source_type': source_type,
-                    'source': source,
-                    'created_at': str(datetime.datetime.now()).split('.')[0],
-                    'updated_at': str(datetime.datetime.now()).split('.')[0],
-                    'row_count': len(df),
-                    'columns': [dict(name=x) for x in list(df.keys())]
-                }
-                json.dump(meta, fp, indent=4, sort_keys=True)
-
-        except Exception:
+        except Exception as e:
             if os.path.isdir(ds_meta_dir):
                 shutil.rmtree(ds_meta_dir)
-            raise
+            raise e
 
+        self.state.make_datasource(name=name, analysis=None, storage_path=ds_meta_dir, data=meta)
         return self.get_datasource_obj(name, raw=True), name
 
     def get_datasource_obj(self, name, raw=False):
+        self.state.load_datasource(name)
         ds_meta_dir = os.path.join(self.dir, name)
         ds = None
         try:
@@ -240,3 +247,6 @@ class DataStore():
         except Exception as e:
             print(f'\n{e}\n')
             return None
+
+# make_datasource(self, name, data, analysis, storage_path)
+# delete_datasource(self, name)

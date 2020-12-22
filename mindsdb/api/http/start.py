@@ -19,7 +19,6 @@ from mindsdb.utilities.log import initialize_log
 
 def start(config, verbose=False):
     config = Config(config)
-    print('\n\n\n\n', config, '\n\n\n\n')
     if verbose:
         config['log']['level']['console'] = 'DEBUG'
 

@@ -17,55 +17,61 @@ class Semaphor(Base):
 
     id = Column(Integer, primary_key=True)
     modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    create_at = Column(DateTime, default=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
     entity_type = Column(String)
     entity_id = Column(String)
 
+'''
+| <--- Unused as of now
 class Registration(Base):
     __tablename__ = 'registration'
 
     id = Column(Integer, primary_key=True)
     modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    create_at = Column(DateTime, default=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
     integration_id = Column(Integer, ForeignKey('integration.id'))
     predictor_id = Column(Integer, ForeignKey('predictor.id'))
     company_id = Column(Integer)
+'''
 
 class Configuration(Base):
     __tablename__ = 'configuration'
 
     id = Column(Integer, primary_key=True)
     modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    create_at = Column(DateTime, default=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
     data = Column(String) # A JSON
     company_id = Column(Integer, unique=True)
 
+'''
+| <--- Unused as of now
 class Integration(Base):
     __tablename__ = 'integration'
 
     id = Column(Integer, primary_key=True)
     modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    create_at = Column(DateTime, default=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
     tpye = Column(String)
     attributes = Column(String) # A JSON
     status = Column(String)
     publishable = Column(Boolean)
     company_id = Column(Integer)
+'''
 
 class Datasource(Base):
     __tablename__ = 'datasource'
 
     id = Column(Integer, primary_key=True)
     modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    create_at = Column(DateTime, default=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
     data = Column(String) # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
     analysis = Column(String)  # A JSON
     company_id = Column(Integer)
     storage_path = Column(String)
     version = Column(Integer, default=entitiy_version)
-    integration_id = Column(Integer, ForeignKey('integration.id'))
+    integration_id = Column(Integer)
 
 
 class Predictor(Base):
@@ -73,7 +79,7 @@ class Predictor(Base):
 
     id = Column(Integer, primary_key=True)
     modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    create_at = Column(DateTime, default=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
     data = Column(String) # A JSON
     native_version = Column(String)

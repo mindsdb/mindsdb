@@ -245,8 +245,8 @@ class HTTPTest(unittest.TestCase):
         data = {"integration_id": f'unexists_integration_{uuid1()}',
                 "name": ds_name,
                 "query": "select * from test_data.any_data limit 100;"}
-        response = requests.put(f'{root}/api/datasources/{ds_name}', json=data)
-        assert response.status_code == 400, "expected 400 but got " + str(response.status_code) + ", " + str(response.text)
+        response = requests.put(f'{root}/datasources/{ds_name}', json=data)
+        assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

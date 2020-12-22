@@ -9,9 +9,8 @@ from mindsdb.utilities.log import log as logger
 
 
 class DatabaseWrapper():
-
-    def __init__(self):
-        self.config = Config()
+    def __init__(self, config):
+        self.config = Config(config)
         self._get_integrations()
 
     def _setup_integration(self, integration):

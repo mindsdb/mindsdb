@@ -152,7 +152,7 @@ More instructions in https://docs.mindsdb.com
 
     model_data_arr = get_all_models_meta_data(mdb, cst)
 
-    dbw = DatabaseWrapper()
+    dbw = DatabaseWrapper(config)
 
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         log.error(f'Error failed to integrate with database aliased: {broken_name}')
@@ -162,7 +162,7 @@ More instructions in https://docs.mindsdb.com
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(args.verbose,))
+            p = ctx.Process(target=start_functions[api_name], args=(config.as_dict(), args.verbose,))
             p.start()
             api_data['process'] = p
         except Exception as e:

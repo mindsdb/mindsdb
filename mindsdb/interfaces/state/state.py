@@ -10,7 +10,7 @@ class State():
         self.storage = StorageEngine()
         self.config = config
         self.company_id = self.config['company_id']
-        self.dbw = DatabaseWrapper()
+        self.dbw = DatabaseWrapper(self.config)
 
 
     def populate_registrations(self):

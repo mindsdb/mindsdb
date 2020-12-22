@@ -8,7 +8,7 @@ from flask import current_app as ca
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import get_all_models_meta_data
-
+from mindsdb.interfaces.state.state import State
 
 def get_integration(name):
     integrations = ca.config_obj.get('integrations', {})

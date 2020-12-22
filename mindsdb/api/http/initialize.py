@@ -31,12 +31,12 @@ class Swagger_Api(Api):
         return url_for(self.endpoint("specs"), _external=False)
 
 
-def initialize_static():
+def initialize_static(config):
     ''' Update Scout files basing on compatible-config.json content.
         Files will be downloaded and updated if new version of GUI > current.
         Current GUI version stored in static/version.txt.
     '''
-    config = Config()
+    config = Config(config)
     log = logging.getLogger('mindsdb.http')
     static_path = Path(config.paths['static'])
     static_path.mkdir(parents=True, exist_ok=True)

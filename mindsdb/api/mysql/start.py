@@ -3,8 +3,8 @@ from mindsdb.interfaces.state.config import Config
 from mindsdb.utilities.log import initialize_log
 
 
-def start(verbose=False):
-    config = Config()
+def start(config, verbose=False):
+    config = Config(config)
     if verbose:
         config['log']['level']['console'] = 'DEBUG'
 

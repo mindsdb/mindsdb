@@ -1,21 +1,21 @@
 import time
-from pathlib import Path
+import os
 import json
-import requests
 import subprocess
 import atexit
-import os
 import asyncio
 import shutil
 import csv
+from pathlib import Path
 
+import requests
 from pandas import DataFrame
 
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.interfaces.state.config import Config
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.utilities.ps import wait_port, is_port_in_use
+from mindsdb.utilities.ps import wait_port, is_port_in_use, net_connections
 from mindsdb_native import CONFIG
 
 
@@ -187,12 +187,17 @@ def make_test_csv(name, data):
 def stop_mindsdb(sp=None):
     if sp:
         sp.kill()
-    sp = subprocess.Popen('kill -9 $(lsof -t -i:47334)', shell=True)
-    sp.wait()
-    sp = subprocess.Popen('kill -9 $(lsof -t -i:47335)', shell=True)
-    sp.wait()
-    sp = subprocess.Popen('kill -9 $(lsof -t -i:47336)', shell=True)
-    sp.wait()
+    conns = net_connections()
+    pids = [x.pid for x in conns
+            if x.pid is not None and x.status in ['LISTEN', 'CLOSE_WAIT']
+            and x.laddr[1] in (47334, 47335, 47336)]
+
+    for pid in pids:
+        try:
+            os.kill(pid, 9)
+        # process may be killed by OS due to some reasons in that moment
+        except ProcessLookupError:
+            pass
 
 
 def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb', clear_storage=True):

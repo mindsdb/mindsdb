@@ -83,10 +83,17 @@ class CustomModels():
 
         self.save_model_data(name, model_data)
 
-    def predict(self, name, when_data=None, from_data=None, kwargs={}):
+    def predict(self, name, when_data=None, from_data=None, kwargs=None):
+        if kwargs is None:
+            kwargs = {}
         self.state.load_predictor(name)
         if from_data is not None:
-            data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+            if isinstance(from_data, dict):
+                data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'],
+                                                                          **from_data['kwargs'])
+            # assume that particular instance of any DataSource class is provided
+            else:
+                data_source = from_data
             data_frame = data_source.df
         elif when_data is not None:
             if isinstance(when_data, dict):

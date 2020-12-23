@@ -1,15 +1,16 @@
 import os
+import time
+import unittest
+import importlib.util
 from random import randint
 from pathlib import Path
-import unittest
-import requests
-import time
+from uuid import uuid1
 
-import psutil
+import requests
 
 from mindsdb.interfaces.state.config import Config
+from mindsdb.utilities.ps import net_connections
 
-import importlib.util
 common_path = Path(__file__).parent.parent.absolute().joinpath('flows/common.py').resolve()
 spec = importlib.util.spec_from_file_location("common", str(common_path))
 common = importlib.util.module_from_spec(spec)
@@ -45,11 +46,10 @@ class HTTPTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         try:
-            conns = psutil.net_connections()
+            conns = net_connections()
             pid = [x.pid for x in conns if x.status == 'LISTEN' and x.laddr[1] == 47334 and x.pid is not None]
             if len(pid) > 0:
                 os.kill(pid[0], 9)
-            cls.sp.kill()
         except Exception:
             pass
 
@@ -235,13 +235,17 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
 
-    def test_10_telemetry_enabled(self):
+    def test_10_ds_from_unexist_integration(self):
         """
         Call telemetry enabled
         then check the response is status 200
         """
-        response = requests.get(f'{root}/config/telemetry/true')
-        assert response.status_code == 200
+        ds_name = f"ds_{uuid1()}"
+        data = {"integration_id": f'unexists_integration_{uuid1()}',
+                "name": ds_name,
+                "query": "select * from test_data.any_data limit 100;"}
+        response = requests.put(f'{root}/datasources/{ds_name}', json=data)
+        assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

@@ -20,21 +20,11 @@ class DataStore():
 
     def get_analysis(self, name):
         datasource = self.state.get_datasource(name)
-        print('\n\n\n1\n\n\n')
-        print(datasource.analysis)
-        print('\n\n\n2\n\n\n')
         if datasource.analysis is not None:
             return json.loads(datasource.analysis)
 
         ds = self.get_datasource_obj(name)
-        print('\n\n\n3\n\n\n')
-        print(ds)
-        print('\n\n\n4\n\n\n')
-
         analysis = self.mindsdb_native.analyse_dataset(ds)
-        print('\n\n\n5\n\n\n')
-        print(analysis)
-        print('\n\n\n6\n\n\n')
         self.state.update_datasource(name=name, analysis=json.dumps(analysis))
         return analysis
 
@@ -265,6 +255,3 @@ class DataStore():
         except Exception as e:
             print(f'\n{e}\n')
             return None
-
-# make_datasource(self, name, data, analysis, storage_path)
-# delete_datasource(self, name)

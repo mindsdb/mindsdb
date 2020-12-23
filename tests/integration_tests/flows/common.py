@@ -189,7 +189,7 @@ def stop_mindsdb(sp=None):
         sp.kill()
     conns = net_connections()
     pids = [x.pid for x in conns
-            if x.pid is not None and x.status == 'LISTEN'
+            if x.pid is not None and x.status in ['LISTEN', 'CLOSE_WAIT']
             and x.laddr[1] in (47334, 47335, 47336)]
 
     for pid in pids:

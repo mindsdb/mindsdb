@@ -211,12 +211,6 @@ def initialize_flask(config):
         }
     }
 
-    port = config['api']['http']['port']
-    host = config['api']['http']['host']
-    hosts = ['0.0.0.0', 'localhost', '127.0.0.1']
-    if host not in hosts:
-        hosts.append(host)
-
     api = Swagger_Api(
         app,
         authorizations=authorizations,
@@ -225,6 +219,9 @@ def initialize_flask(config):
         prefix='/api',
         doc='/doc/'
     )
+
+    port = config['api']['http']['port']
+    host = config['api']['http']['host']
 
     # NOTE rewrite it, that hotfix to see GUI link
     log = logging.getLogger('mindsdb.http')

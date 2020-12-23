@@ -5,6 +5,7 @@ import psutil
 
 
 def net_connections():
+    """Cross-platform psutil.net_connections like interface"""
     if sys.platform.lower().startswith('linux'):
         return psutil.net_connections()
 

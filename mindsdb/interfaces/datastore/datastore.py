@@ -227,6 +227,14 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
             raise e
 
+        meta = {
+            'name': name,
+            'source_type': source_type,
+            'source': source,
+            'row_count': len(df),
+            'columns': [dict(name=x) for x in list(df.keys())]
+        }
+        
         self.state.make_datasource(name=name, analysis=None, storage_path=ds_meta_dir, data=meta)
         return self.get_datasource_obj(name, raw=True), name
 

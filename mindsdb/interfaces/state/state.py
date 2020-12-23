@@ -115,5 +115,6 @@ class State():
         if self.storage.location != 'local':
             pass
 
-    def list_datasource(self, as_dict=False):
+    def list_datasources(self, as_dict=False):
         datasources = Datasource.query.filter_by(company_id=self.company_id)
+        return datasources

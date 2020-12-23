@@ -14,18 +14,21 @@ from mindsdb.interfaces.state.config import Config
 class DataStore():
     def __init__(self, config):
         self.dir = config.paths['datasources']
-        self.config = Config()
+        self.config = Config(config)
         self.state = State(self.config)
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):
-        datasource = self.state.get_datasource()
+        if isinstance(ds, str):
+            datasource_name = ds
+        else:
+            datasource_name = ds['name']
+
+        datasource = self.state.get_datasource(datasource_name)
         if datasource['analysis'] is not None:
             return datasource['analysis']
-        if isinstance(ds, str):
-            analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
-        else:
-            analysis = self.mindsdb_native.analyse_dataset(ds)
+
+        analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(datasource_name))
 
         self.state.update_datasource(analysis=analysis)
         return analysis
@@ -47,7 +50,10 @@ class DataStore():
         datasource_arr = []
         for ds_name in os.listdir(self.dir):
             try:
-                for datasource in self.state.list_datasource():
+                print('\n\n\n\n\n')
+                print(self.state.list_datasources())
+                print('\n\n\n\n\n')
+                for datasource in self.state.list_datasources():
                     try:
                         datasource_dict = self._datasource_to_dict(datasource)
                         datasource_arr.append(datasource_dict)

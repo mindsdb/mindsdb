@@ -88,6 +88,8 @@ class DataStore():
 
     def get_datasource(self, name):
         datasource = self.state.get_datasource(name)
+        if datasource is None:
+            return None
         datasource_dict = self._datasource_to_dict(datasource)
         return datasource_dict
 

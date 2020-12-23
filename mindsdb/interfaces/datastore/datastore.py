@@ -30,7 +30,7 @@ class DataStore():
 
         analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(datasource_name))
 
-        self.state.update_datasource(analysis=analysis)
+        self.state.update_datasource(name=datasource_name, analysis=analysis)
         return analysis
 
 
@@ -50,9 +50,6 @@ class DataStore():
         datasource_arr = []
         for ds_name in os.listdir(self.dir):
             try:
-                print('\n\n\n\n\n')
-                print(self.state.list_datasources())
-                print('\n\n\n\n\n')
                 for datasource in self.state.list_datasources():
                     try:
                         datasource_dict = self._datasource_to_dict(datasource)

@@ -95,7 +95,10 @@ class DataStore():
 
     def delete_datasource(self, name):
         self.state.delete_datasource(name)
-        shutil.rmtree(os.path.join(self.dir, name))
+        try:
+            shutil.rmtree(os.path.join(self.dir, name))
+        except Exception as e:
+            pass
 
     def save_datasource(self, name, source_type, source, file_path=None):
         if source_type == 'file' and (file_path is None):

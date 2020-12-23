@@ -8,8 +8,7 @@ from abc import abstractmethod
 
 from mindsdb.api.mongo.classes import RespondersCollection, Session
 
-# from mindsdb.api.mongo.op_query_responders import responders as op_query_responders
-from mindsdb.api.mongo.op_msg_responders import responders as op_msg_responders
+from mindsdb.api.mongo.responders import responders
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.utilities import log
 
@@ -333,7 +332,7 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         )
         # OpMSG=OrderedDict([('ismaster', 1), ('$db', 'admin'), ('$clusterTime', OrderedDict([('clusterTime', Timestamp(1599749031, 1)), ('signature', OrderedDict([('hash', b'6\x87\xd5Y\xa7\xc7\xcf$\xab\x1e\xa2{\xe5B\xe5\x99\xdbl\x8d\xf4'), ('keyId', 6870854312365391875)]))])), ('$client', OrderedDict([('application', OrderedDict([('name', 'MongoDB Shell')])), ('driver', OrderedDict([('name', 'MongoDB Internal Client'), ('version', '3.6.3')])), ('os', OrderedDict([('type', 'Linux'), ('name', 'Ubuntu'), ('architecture', 'x86_64'), ('version', '18.04')])), ('mongos', OrderedDict([('host', 'maxs-comp:27103'), ('client', '127.0.0.1:52148'), ('version', '3.6.3')]))])), ('$configServerState', OrderedDict([('opTime', OrderedDict([('ts', Timestamp(1599749031, 1)), ('t', 1)]))]))])
 
-        respondersCollection.responders += op_msg_responders
+        respondersCollection.responders += responders
 
 
 def run_server(config):

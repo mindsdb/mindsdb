@@ -82,9 +82,16 @@ class CustomModels():
         self.dbw.unregister_predictor(name)
         self.dbw.register_predictors([self.get_model_data(name)], setup=False)
 
-    def predict(self, name, when_data=None, from_data=None, kwargs={}):
+    def predict(self, name, when_data=None, from_data=None, kwargs=None):
+        if kwargs is None:
+            kwargs = {}
         if from_data is not None:
-            data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+            if isinstance(from_data, dict):
+                data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'],
+                                                                          **from_data['kwargs'])
+            # assume that particular instance of any DataSource class is provided
+            else:
+                data_source = from_data
             data_frame = data_source.df
         elif when_data is not None:
             if isinstance(when_data, dict):

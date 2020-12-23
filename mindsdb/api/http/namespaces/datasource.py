@@ -129,7 +129,14 @@ class Datasource(Resource):
 
         if 'query' in data:
             source_type = request.json['integration_id']
-            ca.default_store.save_datasource(name, source_type, request.json)
+            if source_type not in ca.default_store.config['integrations']:
+                # integration doens't exist
+                abort(400, f"{source_type} integration doesn't exist")
+
+            if ca.default_store.config['integrations'][source_type]['type'] == 'mongodb':
+                data['find'] = data['query']
+
+            ca.default_store.save_datasource(name, source_type, data)
             os.rmdir(temp_dir_path)
             return ca.default_store.get_datasource(name)
 

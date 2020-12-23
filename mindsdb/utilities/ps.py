@@ -16,6 +16,8 @@ def net_connections():
             connections = process.connections()
             if connections:
                 for conn in connections:
+                    # Adding pid to the returned instance
+                    # for consistency with psutil.net_connections()
                     if Pconn is None:
                         fields = list(conn._fields)
                         fields.append('pid')
@@ -31,6 +33,7 @@ def net_connections():
 
 
 def is_port_in_use(port_num):
+    """Check does any of child process uses specified port."""
     parent_process = psutil.Process()
     child_pids = [x.pid for x in parent_process.children(recursive=True)]
     conns = net_connections()

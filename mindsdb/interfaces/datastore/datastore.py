@@ -35,12 +35,12 @@ class DataStore():
         metadata = json.dumps(datasource.data) if datasource.data is not None else {}
         datasource_dict = {}
         datasource_dict['name'] = datasource.name
-        datasource_dict['source_type'] = metadata.get('source_type' None)
-        datasource_dict['source'] = metadata.get('source' None)
-        datasource_dict['row_count'] = metadata.get('row_count' None)
-        datasource_dict['columns'] = metadata.get('columns' None)
+        datasource_dict['source_type'] = metadata.get('source_type', None)
+        datasource_dict['source'] = metadata.get('source', None)
+        datasource_dict['row_count'] = metadata.get('row_count', None)
+        datasource_dict['columns'] = metadata.get('columns', None)
         datasource_dict['created_at'] = datasource.created_at
-        datasource_dict['updated_at'] = (datasource.modified_at
+        datasource_dict['updated_at'] = datasource.modified_at
         return datasource_dict
 
     def get_datasources(self):

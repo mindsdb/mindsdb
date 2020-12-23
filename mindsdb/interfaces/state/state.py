@@ -1,4 +1,4 @@
-from mindsdb.interfaces.state.schemas import session, Integration, Datasource, Predictor, Configuration, Semaphor, Registration
+from mindsdb.interfaces.state.schemas import session, Datasource, Predictor, Configuration, Semaphor
 from mindsdb.interfaces.state.storage import StorageEngine
 from mindsdb.interfaces.database.database import DatabaseWrapper
 import mindsdb_native

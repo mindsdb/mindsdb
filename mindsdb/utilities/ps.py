@@ -1,16 +1,29 @@
 import sys
 import time
+from collections import namedtuple
 import psutil
 
 
 def net_connections():
+    if sys.platform.lower().startswith('linux'):
+        return psutil.net_connections()
+
     all_connections = []
+    Pconn = None
     for p in psutil.process_iter(['pid']):
         try:
             process = psutil.Process(p.pid)
             connections = process.connections()
             if connections:
-                all_connections += connections
+                for conn in connections:
+                    if Pconn is None:
+                        fields = list(conn._fields)
+                        fields.append('pid')
+                        _conn = namedtuple('Pconn', fields)
+                    for attr in conn._fields:
+                        setattr(_conn, attr, getattr(conn, attr))
+                    _conn.pid = p.pid
+                    all_connections.append(_conn)
 
         except (psutil.AccessDenied, psutil.ZombieProcess, psutil.NoSuchProcess):
             pass
@@ -18,13 +31,7 @@ def net_connections():
 
 
 def is_port_in_use(port_num):
-    portsinuse = []
-    if sys.platform in ['darwin']:
-        connection_func = net_connections
-    else:
-        connection_func = psutil.net_connections
-    # conns = psutil.net_connections()
-    conns = connection_func()
+    conns = net_connections()
     portsinuse = [x.laddr[1] for x in conns if x.status == 'LISTEN']
     portsinuse.sort()
     return int(port_num) in portsinuse

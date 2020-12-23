@@ -31,8 +31,10 @@ def net_connections():
 
 
 def is_port_in_use(port_num):
+    parent_process = psutil.Process()
+    child_pids = [x.pid for x in parent_process.children(recursive=True)]
     conns = net_connections()
-    portsinuse = [x.laddr[1] for x in conns if x.status == 'LISTEN']
+    portsinuse = [x.laddr[1] for x in conns if x.pid in child_pids and x.status == 'LISTEN']
     portsinuse.sort()
     return int(port_num) in portsinuse
 

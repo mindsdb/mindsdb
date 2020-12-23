@@ -65,17 +65,6 @@ class UserFlowTest_1(unittest.TestCase):
 
         check_ds_not_exists(TEST_DS)
 
-        # TODO creating DS from unexists integration raise not critical error in code.
-        # need fix it and return human-readable error
-        # related issue: https://github.com/mindsdb/mindsdb/issues/945
-        # data = {
-        #     "integration_id": 'unexists_integration',
-        #     "name": TEST_DS,
-        #     "query": f"select * from test_data.{TEST_DATASET} limit 50;"
-        # }
-        # res = requests.put(f'{HTTP_API_ROOT}/datasources/{TEST_DS}', json=data)
-        # assert res ?
-
         # check create DS with wrong integration password
         data = {
             "integration_id": 'default_mariadb',

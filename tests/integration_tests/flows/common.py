@@ -198,12 +198,6 @@ def stop_mindsdb(sp=None):
         # process may be killed by OS due to some reasons in that moment
         except ProcessLookupError:
             pass
-    # sp = subprocess.Popen('kill -9 $(lsof -t -i:47334)', shell=True)
-    # sp.wait()
-    # sp = subprocess.Popen('kill -9 $(lsof -t -i:47335)', shell=True)
-    # sp.wait()
-    # sp = subprocess.Popen('kill -9 $(lsof -t -i:47336)', shell=True)
-    # sp.wait()
 
 
 def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb', clear_storage=True):

@@ -1,11 +1,6 @@
 import os
 import sys
-
-from mindsdb.__about__ import __package_name__ as name, __version__
-from mindsdb.interfaces.state.config import Config
 from mindsdb.utilities.functions import args_parse, is_notebook
-
-
 try:
     if not is_notebook():
         args = args_parse()
@@ -15,6 +10,22 @@ try:
 except:
     # This fials in some notebooks
     config_path = None
+
+try:
+    with open(args.db_config, 'r') as fp:
+        db_config = json.loads(fp)
+except:
+    db_config = {
+        'type': 'sqlite'
+        ,'path': 'mindsdb.sqlite.db'
+    }
+
+# @TODO Figure out a smart way to inject this into the environment later...
+os.environ['MINDSDB_SQLITE_PATH'] = db_config['path']
+os.environ['MINDSDB_DATABASE_TYPE'] = db_config['type']
+
+from mindsdb.__about__ import __package_name__ as name, __version__
+from mindsdb.interfaces.state.config import Config
 
 mindsdb_config = Config(config_path)
 

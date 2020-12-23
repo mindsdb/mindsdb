@@ -1,3 +1,4 @@
+import os
 from sqlalchemy import create_engine, orm
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -5,8 +6,11 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, MetaDa
 from sqlalchemy.schema import ForeignKey
 import datetime
 
+if os.environ['MINDSDB_DATABASE_TYPE'] == 'sqlite':
+    engine = create_engine('sqlite:///' + os.environ['MINDSDB_SQLITE_PATH'], echo=False)
+elif os.environ['MINDSDB_DATABASE_TYPE'] == 'mariadb':
+    raise Exception('Mariadb not supported !')
 
-engine = create_engine('sqlite:///test.db', echo=False)
 Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine,autoflush=True))
 Base.query = session.query_property()

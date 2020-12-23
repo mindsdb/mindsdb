@@ -18,19 +18,24 @@ class DataStore():
         self.state = State(self.config)
         self.mindsdb_native = MindsdbNative(config)
 
-    def get_analysis(self, ds):
-        if isinstance(ds, str):
-            datasource_name = ds
-        else:
-            datasource_name = ds['name']
-
-        datasource = self.state.get_datasource(datasource_name)
+    def get_analysis(self, name):
+        datasource = self.state.get_datasource(name)
+        print('\n\n\n1\n\n\n')
+        print(datasource.analysis)
+        print('\n\n\n2\n\n\n')
         if datasource.analysis is not None:
-            return datasource.analysis
+            return json.loads(datasource.analysis)
 
-        analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(datasource_name))
+        ds = self.get_datasource_obj(name)
+        print('\n\n\n3\n\n\n')
+        print(ds)
+        print('\n\n\n4\n\n\n')
 
-        self.state.update_datasource(name=datasource_name, analysis=analysis)
+        analysis = self.mindsdb_native.analyse_dataset(ds)
+        print('\n\n\n5\n\n\n')
+        print(analysis)
+        print('\n\n\n6\n\n\n')
+        self.state.update_datasource(name=name, analysis=json.dumps(analysis))
         return analysis
 
 
@@ -218,9 +223,6 @@ class DataStore():
             if '' in df.columns or len(df.columns) != len(set(df.columns)):
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique name')
-
-            # Not sure if needed
-            #summary_analysis = self.get_analysis(ds.filter(limit=200))['data_analysis_v2']
 
             with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
                 pickle.dump(picklable, fp)

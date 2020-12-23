@@ -25,8 +25,8 @@ class DataStore():
             datasource_name = ds['name']
 
         datasource = self.state.get_datasource(datasource_name)
-        if datasource['analysis'] is not None:
-            return datasource['analysis']
+        if datasource.analysis is not None:
+            return datasource.analysis
 
         analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(datasource_name))
 

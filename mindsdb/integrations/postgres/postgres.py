@@ -64,12 +64,11 @@ class PostgreSQL(Integration):
         return res
 
     def setup(self):
-        print('\n\n\n1111\n\n\n')
         user = f"{self.config['api']['mysql']['user']}_{self.name}"
         password = self.config['api']['mysql']['password']
         host = self.config['api']['mysql']['host']
         port = self.config['api']['mysql']['port']
-        print('\n\n\n22\n\n\n')
+
         try:
             self._query('''
                 DO $$
@@ -82,27 +81,20 @@ class PostgreSQL(Integration):
             ''')
         except Exception:
             print('Error: cant find or activate mysql_fdw extension for PostgreSQL.')
-        print('\n\n\n33\n\n\n')
         self._query(f'DROP SCHEMA IF EXISTS {self.mindsdb_database} CASCADE')
-        print('\n\n\n44\n\n\n')
         self._query(f"DROP USER MAPPING IF EXISTS FOR {self.config['integrations'][self.name]['user']} SERVER server_{self.mindsdb_database}")
-        print('\n\n\n55\n\n\n')
         self._query(f'DROP SERVER IF EXISTS server_{self.mindsdb_database} CASCADE')
-        print('\n\n\n66\n\n\n')
         self._query(f'''
             CREATE SERVER server_{self.mindsdb_database}
                 FOREIGN DATA WRAPPER mysql_fdw
                 OPTIONS (host '{host}', port '{port}');
         ''')
-        print('\n\n\n77\n\n\n')
         self._query(f'''
            CREATE USER MAPPING FOR {self.config['integrations'][self.name]['user']}
                 SERVER server_{self.mindsdb_database}
                 OPTIONS (username '{user}', password '{password}');
         ''')
-        print('\n\n\n88\n\n\n')
         self._query(f'CREATE SCHEMA {self.mindsdb_database}')
-        print('\n\n\n99\n\n\n')
         q = f"""
             CREATE FOREIGN TABLE IF NOT EXISTS {self.mindsdb_database}.predictors (
                 name text,
@@ -117,7 +109,6 @@ class PostgreSQL(Integration):
             OPTIONS (dbname 'mindsdb', table_name 'predictors');
         """
         self._query(q)
-        print('\n\n\n1010\n\n\n')
         q = f"""
             CREATE FOREIGN TABLE IF NOT EXISTS {self.mindsdb_database}.commands (
                 command text
@@ -125,7 +116,6 @@ class PostgreSQL(Integration):
             OPTIONS (dbname 'mindsdb', table_name 'commands');
         """
         self._query(q)
-        print('\n\n\n2020\n\n\n')
 
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:

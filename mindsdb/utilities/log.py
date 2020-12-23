@@ -32,11 +32,11 @@ class DbHandler(logging.Handler):
         log_type = record.levelname
         source = f'file: {record.pathname} - line: {record.lineno}'
         payload = record.msg
-        self.state.record_log(log_type=log_type, source=source, payload=payload)
+        self.state.record_log(log_type=str(log_type), source=source, payload=str(payload))
 
         if log_type in ['ERROR', 'WARNING']:
             trace = traceback.format_exc()
-            self.state.record_log(log_type='traceback', source=source, payload=trace)
+            self.state.record_log(log_type='traceback', source=source, payload=str(trace))
 
 def initialize_log(config, logger_name='main', wrap_print=False):
     ''' Create new logger

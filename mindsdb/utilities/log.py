@@ -1,6 +1,9 @@
 import os
 import sys
 import logging
+import traceback
+from mindsdb.interfaces.state.state import State
+from mindsdb.interfaces.state.config import Config
 
 
 class LoggerWrapper(object):
@@ -20,6 +23,20 @@ class LoggerWrapper(object):
             self._writer(self._msg)
             self._msg = ''
 
+class DbHandler(logging.Handler):
+    def __init__(self, config):
+        logging.Handler.__init__(self)
+        self.state = State(config)
+
+    def emit(self, record):
+        log_type = record.levelname
+        source = f'file: {record.pathname} - line: {record.lineno}'
+        payload = record.msg
+        self.state.record_log(log_type=log_type, source=source, payload=payload)
+
+        if log_type in ['ERROR', 'WARNING']:
+            trace = traceback.format_exc()
+            self.state.record_log(log_type='traceback', source=source, payload=trace)
 
 def initialize_log(config, logger_name='main', wrap_print=False):
     ''' Create new logger
@@ -27,6 +44,7 @@ def initialize_log(config, logger_name='main', wrap_print=False):
     :param logger_name: str, name of logger
     :param wrap_print: bool, if true, then print() calls will be wrapped by log.debug() function.
     '''
+
     log = logging.getLogger(f'mindsdb.{logger_name}')
     log.propagate = False
     log.setLevel(min(
@@ -39,6 +57,9 @@ def initialize_log(config, logger_name='main', wrap_print=False):
     ch = logging.StreamHandler()
     ch.setLevel(config['log']['level']['console'])       # that level will be in console
     log.addHandler(ch)
+
+    db_handler = DbHandler(config)
+    log.addHandler(db_handler)
 
     log_path = os.path.join(config.paths['log'], logger_name)
     if not os.path.isdir(log_path):
@@ -56,7 +77,7 @@ def initialize_log(config, logger_name='main', wrap_print=False):
     log.addHandler(fh)
 
     if wrap_print:
-        sys.stdout = LoggerWrapper(log.debug)
+        sys.stdout = LoggerWrapper(log.debug,)
 
 
 log = logging.getLogger('mindsdb')

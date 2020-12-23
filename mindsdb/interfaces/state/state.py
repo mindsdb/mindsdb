@@ -1,6 +1,6 @@
-from mindsdb.interfaces.state.schemas import session, Datasource, Predictor, Configuration, Semaphor
+from sqlalchemy import or_
+from mindsdb.interfaces.state.schemas import session, Datasource, Predictor, Configuration, Semaphor, Log
 from mindsdb.interfaces.state.storage import StorageEngine
-from mindsdb.interfaces.database.database import DatabaseWrapper
 import mindsdb_native
 import json
 
@@ -10,7 +10,12 @@ class State():
         self.storage = StorageEngine()
         self.config = config
         self.company_id = self.config['company_id']
-        self.dbw = DatabaseWrapper(self.config)
+        self.dbw = None
+
+    def init_wrapper(self):
+        from mindsdb.interfaces.database.database import DatabaseWrapper
+        if self.dbw is None:
+         self.dbw = DatabaseWrapper(self.config)
 
     # Predictors
     def make_predictor(self, name, datasource_id, to_predict):
@@ -32,6 +37,7 @@ class State():
             self.storage.put_fs_node(storage_path, original_path)
         session.commit()
 
+        self.init_wrapper()
         try:
             self.dbw.register_predictors([{
                 'name': predictor.name,
@@ -47,6 +53,7 @@ class State():
         session.delete(predictor)
         session.commit()
         #self.populate_registrations()
+        self.init_wrapper()
         self.dbw.unregister_predictor(name) #<--- broken, but this should be the way we do it
 
         if self.storage.location != 'local':
@@ -78,6 +85,7 @@ class State():
                     'predict': predictor.to_predict.split(','),
                     'data_analysis': json.loads(predictor.data)
                 })
+        self.init_wrapper()
         self.dbw.register_predictors(register_predictors, True)
 
     # Datasources
@@ -118,3 +126,25 @@ class State():
     def list_datasources(self, as_dict=False):
         datasources = Datasource.query.filter_by(company_id=self.company_id)
         return datasources
+
+    # Log
+    def record_log(self, log_type, source, payload):
+        log = Log(log_type=log_type, source=source, payload=payload, company_id=self.company_id)
+
+        session.add(log)
+        session.commit()
+
+    def _log_to_json(self, log_record):
+        return {
+            'log_type': log_record.log_type
+            ,'source': log_record.source
+            ,'payload': log_record.payload
+        }
+
+    def latest_logs(self):
+        return [self._log_to_json(x) for x in Log.query.filter_by(company_id=self.company_id).limit(50)]
+
+    def latest_error_logs(self):
+        return [self._log_to_json(x) for x in Log.query
+                .filter(Log.company_id == self.company_id)
+                .filter((Log.log_type == 'ERROR') | (Log.log_type == 'WARNING')).limit(50)]

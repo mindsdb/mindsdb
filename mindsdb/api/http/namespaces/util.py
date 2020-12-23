@@ -8,6 +8,20 @@ from mindsdb import __about__
 
 TELEMETRY_FILE = 'telemetry.lock'
 
+def enable_telemetry():
+    path = os.path.join(ca.config_obj['storage_dir'], TELEMETRY_FILE)
+    if os.path.exists(path):
+        os.remove(path)
+
+def disable_telemetry():
+    path = os.path.join(ca.config_obj['storage_dir'], TELEMETRY_FILE)
+    with open(path, 'w') as _:
+        pass
+
+def is_telemetry_active():
+    path = os.path.join(ca.config_obj['storage_dir'], TELEMETRY_FILE)
+    return not os.path.exists(path)
+
 @ns_conf.route('/ping')
 class Ping(Resource):
     @ns_conf.doc('get_ping')
@@ -41,17 +55,14 @@ class Telemetry(Resource):
         else:
             disable_telemetry()
 
+@ns_conf.route('/log/latest')
+class LatestLogs(Resource):
+    @ns_conf.doc('get_telemetry_status')
+    def get(self):
+        return ca.state.latest_logs()
 
-def enable_telemetry():
-    path = os.path.join(ca.config_obj['storage_dir'], TELEMETRY_FILE)
-    if os.path.exists(path):
-        os.remove(path)
-
-def disable_telemetry():
-    path = os.path.join(ca.config_obj['storage_dir'], TELEMETRY_FILE)
-    with open(path, 'w') as _:
-        pass
-
-def is_telemetry_active():
-    path = os.path.join(ca.config_obj['storage_dir'], TELEMETRY_FILE)
-    return not os.path.exists(path)
+@ns_conf.route('/error/latest')
+class LatestLogs(Resource):
+    @ns_conf.doc('get_telemetry_status')
+    def get(self):
+        return ca.state.latest_error_logs()

@@ -19,7 +19,7 @@ from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.interfaces.state.config import Config
-
+from mindsdb.interfaces.state.state import State
 
 class Swagger_Api(Api):
     """
@@ -245,7 +245,7 @@ def initialize_interfaces(config, app):
     app.mindsdb_native = MindsdbNative(config)
     app.custom_models = CustomModels(config)
     app.config_obj = config
-
+    app.state = State(config)
 
 def _open_webbrowser(url: str, pid: int, port: int):
     """Open webbrowser with url when http service is started.

@@ -12,7 +12,7 @@ def net_connections():
             if connections:
                 all_connections += connections
 
-        except (psutil.AccessDenied, psutil.ZombieProcess):
+        except (psutil.AccessDenied, psutil.ZombieProcess, psutil.NoSuchProcess):
             pass
     return all_connections
 

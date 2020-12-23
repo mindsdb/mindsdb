@@ -21,19 +21,6 @@ class Semaphor(Base):
     entity_type = Column(String)
     entity_id = Column(String)
 
-'''
-| <--- Unused as of now
-class Registration(Base):
-    __tablename__ = 'registration'
-
-    id = Column(Integer, primary_key=True)
-    modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    integration_id = Column(Integer, ForeignKey('integration.id'))
-    predictor_id = Column(Integer, ForeignKey('predictor.id'))
-    company_id = Column(Integer)
-'''
-
 class Configuration(Base):
     __tablename__ = 'configuration'
 
@@ -42,22 +29,6 @@ class Configuration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     data = Column(String) # A JSON
     company_id = Column(Integer, unique=True)
-
-'''
-| <--- Unused as of now
-class Integration(Base):
-    __tablename__ = 'integration'
-
-    id = Column(Integer, primary_key=True)
-    modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    name = Column(String)
-    tpye = Column(String)
-    attributes = Column(String) # A JSON
-    status = Column(String)
-    publishable = Column(Boolean)
-    company_id = Column(Integer)
-'''
 
 class Datasource(Base):
     __tablename__ = 'datasource'
@@ -90,5 +61,42 @@ class Predictor(Base):
     version = Column(Integer, default=entitiy_version)
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
 
+class Log(Base):
+    __tablename__ = 'log'
+
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
 Base.metadata.create_all(engine)
 orm.configure_mappers()
+
+
+
+'''
+| <--- Unused as of now
+class Integration(Base):
+    __tablename__ = 'integration'
+
+    id = Column(Integer, primary_key=True)
+    modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    name = Column(String)
+    tpye = Column(String)
+    attributes = Column(String) # A JSON
+    status = Column(String)
+    publishable = Column(Boolean)
+    company_id = Column(Integer)
+'''
+
+'''
+| <--- Unused as of now
+class Registration(Base):
+    __tablename__ = 'registration'
+
+    id = Column(Integer, primary_key=True)
+    modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    integration_id = Column(Integer, ForeignKey('integration.id'))
+    predictor_id = Column(Integer, ForeignKey('predictor.id'))
+    company_id = Column(Integer)
+'''

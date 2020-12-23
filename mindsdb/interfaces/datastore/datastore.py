@@ -32,7 +32,7 @@ class DataStore():
 
 
     def _datasource_to_dict(self, datasource):
-        metadata = json.dumps(datasource.data) if datasource.data is not None else {}
+        metadata = json.loads(datasource.data) if datasource.data is not None else {}
         datasource_dict = {}
         datasource_dict['name'] = datasource.name
         datasource_dict['source_type'] = metadata.get('source_type', None)
@@ -234,8 +234,8 @@ class DataStore():
             'row_count': len(df),
             'columns': [dict(name=x) for x in list(df.keys())]
         }
-        
-        self.state.make_datasource(name=name, analysis=None, storage_path=ds_meta_dir, data=meta)
+
+        self.state.make_datasource(name=name, analysis=None, storage_path=ds_meta_dir, data=json.dumps(meta))
         return self.get_datasource_obj(name, raw=True), name
 
     def get_datasource_obj(self, name, raw=False):

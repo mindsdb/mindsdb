@@ -29,8 +29,6 @@ jobs:
           pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
     - name: Run integration api and flow tests
-      with: 
-        os: 'windows-latest'
       run: |
         mkdir -p ~/.ssh/
         echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
@@ -81,7 +79,7 @@ jobs:
         # flow with mistakes
         echo -e "\n===============\nflow with mistakes\n===============\n"
         python tests/integration_tests/flows/test_mistakes.py
-      shell: powershell
+      shell: bash
       env:
         CHECK_FOR_UPDATES: False
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}

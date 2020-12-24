@@ -1,19 +1,35 @@
 import shutil
 import os
 from mindsdb.interfaces.state.config import Config
+try:
+    import boto3
+    from botocore import UNSIGNED
+    from botocore.client import Config
+except Exception as e:
+    # Only required for remote storage on s3
+    pass
 
 class StorageEngine():
-    def __init__(self, location='local', connect_data=None):
-        self.config = Config()
+    def __init__(self, config, location='local'  ):
+        self.config = Config(config)
         self.location = location
         if self.location == 'local':
-            self.prefix = os.path.join(self.config.paths['root'],'storage_engine')
-            self.tmp_prefix = os.path.join(self.prefix,'tmp')
+            pass
             os.makedirs(self.tmp_prefix, mode=0o777, exist_ok=True)
+        elif self.location == 's3':
+            self.s3 = boto3.client('s3')
+            self.bucket = os.environ.get('MINDSDB_S3_BUCKET', 'mindsdb-cloud-storage-v1')
+        else:
+            raise Exception('Location: ' + self.location + 'not supported')
 
-    def _put(self, key, path):
+
+    def _put(self, filename, remote_name, local_path):
         if self.location == 'local':
-            shutil.make_archive(f'{key}.zip', 'gztar',root_dir=self.prefix, base_dir=path)
+            shutil.make_archive(f'{remote_name}.zip', 'gztar',root_dir=local_path, base_dir=filename)
+        elif self.location == 's3':
+            self.s3()
+            s3.upload_file('/tmp/hello.txt', 'mybucket', 'hello.txt')
+
         else:
             raise Exception('Location: ' + self.location + 'not supported')
 

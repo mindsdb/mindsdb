@@ -5,6 +5,7 @@ from torch.multiprocessing import Process
 def periodic_executor(freq, func, args):
     while True:
         func(*args)
+        
         time.sleep(freq)
 
 def register(freq, func, args):

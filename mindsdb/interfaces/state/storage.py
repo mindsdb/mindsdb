@@ -23,42 +23,25 @@ class StorageEngine():
             raise Exception('Location: ' + self.location + 'not supported')
 
 
-    def _put(self, filename, remote_name, local_path):
+    def put(self, filename, remote_name, local_path):
         if self.location == 'local':
-            shutil.make_archive(f'{remote_name}.zip', 'gztar',root_dir=local_path, base_dir=filename)
+            pass
         elif self.location == 's3':
-            self.s3()
-            s3.upload_file('/tmp/hello.txt', 'mybucket', 'hello.txt')
+            remote_ziped_name = f'{remote_name}.zip'
+            shutil.make_archive(remote_ziped_name, 'gztar',root_dir=local_path, base_dir=filename)
+            self.s3.upload_file(os.path.join(local_path, remote_ziped_name), self.bucket, remote_ziped_name)
 
-        else:
-            raise Exception('Location: ' + self.location + 'not supported')
 
-    def _get(self, key):
+    def get(self, remote_name, local_path):
         if self.location == 'local':
             shutil.unpack_archive()
-        else:
-            raise Exception('Location: ' + self.location + 'not supported')
+        elif self.location == 's3':
+            remote_ziped_name = f'{remote_name}.zip'
+            self.s3.download_file(self.bucket, remote_ziped_name, os.path.join(local_path, remote_ziped_name))
+            shtuil.unpack_archive(os.path.join(local_path, remote_ziped_name))
 
-    def _del(self, key):
+    def del(self, remote_name):
         if self.location == 'local':
-            shutil.rmtree(path, ignore_errors=False, onerror=None)
-        else:
-            raise Exception('Location: ' + self.location + 'not supported')
-
-    def put_object(self, key, object):
-        pass
-
-    def put_fs_node(self, key, path):
-        pass
-
-    def get_object(self, key):
-        pass
-
-    def get_fs_node(self, key, path):
-        pass
-
-    def del_obj(self, key):
-        pass
-
-    def del_fs_node(self, key):
-        pass
+            pass
+        elif self.location == 's3':
+            self.s3.delete_object(self.bucket, remote_name)

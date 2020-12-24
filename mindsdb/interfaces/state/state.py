@@ -17,6 +17,13 @@ class State():
         if self.dbw is None:
          self.dbw = DatabaseWrapper(self.config)
 
+    # utility
+    def _gen_remote_predictor_name(self, name):
+        return f'predictor_{self.company_id}_{name}'
+
+    def _gen_remote_datasource_name(self, name):
+        return f'predictor_{self.company_id}_{name}'
+
     # Predictors
     def make_predictor(self, name, datasource_id, to_predict):
         predictor = Predictor(name=name, datasource_id=datasource_id, native_version=mindsdb_native.__version__, to_predict=','.join(to_predict), company_id=self.company_id, status='training', data=None)
@@ -31,10 +38,8 @@ class State():
         if to_predict is not None:
             predictor.to_predict = ','.join(to_predict)
 
-        if self.storage.location != 'local':
-            storage_path = f'predictor_{predictor.company_id}_{predictor.name}'
-            predictor.storage_path = storage_path
-            self.storage.put_fs_node(storage_path, original_path)
+        self.storage.put(filename=predictor.name, remote_name=_gen_remote_predictor_name(predictor.name), local_path=self.config['paths']['predictors'])
+
         session.commit()
 
         self.init_wrapper()
@@ -49,15 +54,11 @@ class State():
 
     def delete_predictor(self, name):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id, native_version=mindsdb_native.__version__).first()
-        storage_path = predictor.storage_path
+        self.storage.delete(_gen_remote_predictor_name(predictor.name))
         session.delete(predictor)
         session.commit()
-        #self.populate_registrations()
         self.init_wrapper()
-        self.dbw.unregister_predictor(name) #<--- broken, but this should be the way we do it
-
-        if self.storage.location != 'local':
-            self.storage.del_fs_node(storage_path)
+        self.dbw.unregister_predictor(name) # <--- broken, but this should be the way we do it
 
     def get_predictor(self, name):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id, native_version=mindsdb_native.__version__).first()
@@ -65,8 +66,7 @@ class State():
 
     def load_predictor(self, name):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id, native_version=mindsdb_native.__version__).first()
-        if self.storage.location != 'local':
-            pass
+        self.storage.get(_gen_remote_predictor_name(predictor.name), self.config['paths']['predictors'])
 
     def list_predictors(self):
         return Predictor.query.filter_by(company_id=self.company_id, native_version=mindsdb_native.__version__)
@@ -97,6 +97,7 @@ class State():
 
         datasource = Datasource(name=name, data=data, analysis=analysis, company_id=self.company_id, storage_path=storage_path)
 
+        self.storage.put(filename=datasource.name, remote_name=_gen_remote_datasource_name(datasource.name), local_path=self.config['paths']['datasources'])
         session.add(datasource)
         session.commit()
 
@@ -110,9 +111,7 @@ class State():
         storage_path = datasource.storage_path
         session.delete(datasource)
         session.commit()
-        if self.storage.location != 'local':
-            # Delete from storage
-            pass
+        self.storage.delete(_gen_remote_datasource_name(predictor.name))
 
     def get_datasource(self, name):
         datasource = Datasource.query.filter_by(name=name, company_id=self.company_id).first()
@@ -120,8 +119,7 @@ class State():
 
     def load_datasource(self, name):
         datasource = Datasource.query.filter_by(name=name, company_id=self.company_id).first()
-        if self.storage.location != 'local':
-            pass
+        self.storage.get(_gen_remote_predictor_name(datasource.name), self.config['paths']['predictors'])
 
     def list_datasources(self, as_dict=False):
         datasources = Datasource.query.filter_by(company_id=self.company_id)

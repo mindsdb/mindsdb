@@ -200,44 +200,6 @@ class PredictorLearn(Resource):
         return '', 200
 
 
-@ns_conf.route('/<name>/columns')
-@ns_conf.param('name', 'The predictor identifier')
-class PredictorColumns(Resource):
-    @ns_conf.doc('get_predictor_columns')
-    def get(self, name):
-        '''List of predictors colums'''
-        columns = []
-        try:
-            if is_custom(name):
-                model = ca.custom_models.get_model_data(name)
-                for columns_name in model['data_analysis']:
-                    columns_type = model['data_analysis'][columns_name].get('typing', {'data_type': 'Numeric'}).get('data_type', 'Numeric')
-                    column = {
-                        'name': columns_name,
-                        'data_type': columns_type.lower(),
-                        'is_target_column': columns_name in model['predict']
-                    }
-                    if columns_type == 'Categorical':
-                        column['distribution'] = model['data_analysis'][columns_name]['histogram']['x']
-                    columns.append(column)
-            else:
-                model = ca.mindsdb_native.get_model_data(name, native_view=True)
-                for columns_name in model['data_analysis_v2']['columns']:
-                    columns_type = model['data_analysis_v2'][columns_name].get('typing', {'data_type': 'Numeric'}).get('data_type', 'Numeric')
-                    column = {
-                        'name': columns_name,
-                        'data_type': columns_type.lower(),
-                        'is_target_column': columns_name in model['predict']
-                    }
-                    if columns_type == 'Categorical':
-                        column['distribution'] = model['data_analysis_v2'][columns_name]['histogram']['x']
-                    columns.append(column)
-        except Exception:
-            abort(404, 'Invalid predictor name')
-
-        return columns, 200
-
-
 @ns_conf.route('/<name>/predict')
 @ns_conf.param('name', 'The predictor identifier')
 class PredictorPredict(Resource):

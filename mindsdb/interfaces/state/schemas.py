@@ -44,7 +44,6 @@ class Datasource(Base):
     data = Column(String) # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
     analysis = Column(String)  # A JSON
     company_id = Column(Integer)
-    storage_path = Column(String)
     version = Column(Integer, default=entitiy_version)
     integration_id = Column(Integer)
 
@@ -61,7 +60,6 @@ class Predictor(Base):
     to_predict = Column(String)
     status = Column(String)
     company_id = Column(Integer)
-    storage_path = Column(String)
     version = Column(Integer, default=entitiy_version)
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
 

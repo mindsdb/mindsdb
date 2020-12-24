@@ -30,6 +30,7 @@ class StorageEngine():
         if self.location == 'local':
             pass
         elif self.location == 's3':
+            print('\n\n1:\n\n', self.bucket, filename, remote_name, local_path)
             shutil.make_archive(os.path.join(local_path, remote_name), 'gztar',root_dir=local_path, base_dir=filename)
             self.s3.upload_file(os.path.join(local_path, f'{remote_name}.tar.gz'), self.bucket, f'{remote_name}.tar.gz')
 
@@ -39,6 +40,7 @@ class StorageEngine():
             shutil.unpack_archive()
         elif self.location == 's3':
             remote_ziped_name = f'{remote_name}.tar.gz'
+            print('\n\n2:\n\n', self.bucket, remote_ziped_name, os.path.join(local_path, remote_ziped_name))
             self.s3.download_file(self.bucket, remote_ziped_name, os.path.join(local_path, remote_ziped_name))
             shtuil.unpack_archive(os.path.join(local_path, remote_ziped_name))
 

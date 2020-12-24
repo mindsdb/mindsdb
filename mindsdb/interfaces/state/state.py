@@ -90,12 +90,7 @@ class State():
 
     # Datasources
     def make_datasource(self, name, data, analysis, storage_path):
-        if self.storage.location != 'local':
-            storage_path = self._gen_remote_datasource_name(name)
-        else:
-            storage_path = 'local'
-
-        datasource = Datasource(name=name, data=data, analysis=analysis, company_id=self.company_id, storage_path=storage_path)
+        datasource = Datasource(name=name, data=data, analysis=analysis, company_id=self.company_id)
 
         self.storage.put(filename=datasource.name, remote_name=self._gen_remote_datasource_name(datasource.name), local_path=self.config['paths']['datasources'])
         session.add(datasource)
@@ -119,7 +114,7 @@ class State():
 
     def load_datasource(self, name):
         datasource = Datasource.query.filter_by(name=name, company_id=self.company_id).first()
-        self.storage.get(self._gen_remote_predictor_name(datasource.name), self.config['paths']['datasources'])
+        self.storage.get(self._gen_remote_datasource_name(datasource.name), self.config['paths']['datasources'])
 
     def list_datasources(self, as_dict=False):
         datasources = Datasource.query.filter_by(company_id=self.company_id)

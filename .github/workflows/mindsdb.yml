@@ -30,7 +30,8 @@ jobs:
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
     - name: Run integration api and flow tests
       run: |
-        if [ "$RUNNER_OS" == "Linux" ]  || [ "$RUNNER_OS" == "macOS" ]; then
+        # if [ "$RUNNER_OS" == "Linux" ]  || [ "$RUNNER_OS" == "macOS" ]; then
+        if [ "$RUNNER_OS" == "Windows" ]; then
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
@@ -81,7 +82,7 @@ jobs:
           echo -e "\n===============\nflow with mistakes\n===============\n"
           python tests/integration_tests/flows/test_mistakes.py
         fi
-      shell: bash
+      shell: powershell
       env:
         CHECK_FOR_UPDATES: False
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}

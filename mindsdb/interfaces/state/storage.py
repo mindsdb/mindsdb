@@ -8,18 +8,15 @@ except Exception as e:
     pass
 
 class StorageEngine():
-    def __init__(self, config, location='local'):
-        # Debug
-        #location = 's3'
-        # Debug
+    def __init__(self, config):
         self.config = Config(config)
-        self.location = location
+        self.location = self.config['permanent_storage']['location']
         if self.location == 'local':
             pass
             os.makedirs(self.tmp_prefix, mode=0o777, exist_ok=True)
         elif self.location == 's3':
             self.s3 = boto3.client('s3')
-            self.bucket = os.environ.get('MINDSDB_S3_BUCKET', 'mindsdb-cloud-storage-v1')
+            self.bucket = self.config['permanent_storage']['bucket']
         else:
             raise Exception('Location: ' + self.location + 'not supported')
 

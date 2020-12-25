@@ -41,6 +41,13 @@ default_config = {
     ,"paths": {
 
     }
+    ,"permanent_storage": {
+        "location": "local"
+        '''
+        Keys if storage == s3
+        "bucket"
+        '''
+    }
 }
 
 def _get_paths():

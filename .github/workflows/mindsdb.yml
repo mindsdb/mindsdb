@@ -70,7 +70,7 @@ jobs:
 
           # HTTP
           echo -e "\n===============\ntest HTTP\n===============\n"
-          python tests/integration_tests/api/test_http.py
+          python tests/integration_tests/flows/test_http.py
           rm mindsdb.sqlite.db
 
           # user flow 1

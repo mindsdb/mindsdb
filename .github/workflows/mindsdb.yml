@@ -32,6 +32,7 @@ jobs:
       run: |
         if [ "$RUNNER_OS" == "Linux" ] || [ "$RUNNER_OS" == "macOS" ]; then
           mkdir -p ~/.ssh/
+          echo $(pip show pymongo)
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
           echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json

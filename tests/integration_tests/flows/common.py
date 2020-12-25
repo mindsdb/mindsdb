@@ -241,6 +241,7 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
     CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
     mdb = MindsdbNative(config)
     datastore = DataStore(config)
+    time.sleep(120)
 
     return mdb, datastore
 

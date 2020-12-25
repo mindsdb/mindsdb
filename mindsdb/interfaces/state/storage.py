@@ -3,8 +3,6 @@ import os
 from mindsdb.interfaces.state.config import Config
 try:
     import boto3
-    from botocore import UNSIGNED
-    from botocore.client import Config
 except Exception as e:
     # Only required for remote storage on s3
     pass
@@ -42,10 +40,10 @@ class StorageEngine():
             remote_ziped_name = f'{remote_name}.tar.gz'
             print('\n\n2:\n\n', self.bucket, remote_ziped_name, os.path.join(local_path, remote_ziped_name))
             self.s3.download_file(self.bucket, remote_ziped_name, os.path.join(local_path, remote_ziped_name))
-            shtuil.unpack_archive(os.path.join(local_path, remote_ziped_name))
+            shutil.unpack_archive(os.path.join(local_path, remote_ziped_name))
 
     def delete(self, remote_name):
         if self.location == 'local':
             pass
         elif self.location == 's3':
-            self.s3.delete_object(self.bucket, remote_name)
+            self.s3.delete_object(Bucket=self.bucket, Key=remote_name)

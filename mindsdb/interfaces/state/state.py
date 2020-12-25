@@ -103,7 +103,6 @@ class State():
 
     def delete_datasource(self, name):
         datasource = Datasource.query.filter_by(name=name, company_id=self.company_id).first()
-        storage_path = datasource.storage_path
         session.delete(datasource)
         session.commit()
         self.storage.delete(self._gen_remote_datasource_name(predictor.name))

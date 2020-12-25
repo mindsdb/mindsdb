@@ -158,6 +158,7 @@ if USE_EXTERNAL_DB_SERVER:
     config = Config(TEST_CONFIG, no_db=True)
     open_ssh_tunnel(5005, 'L')
     wait_port(5005, timeout=10)
+    # This is a remote service we run to generate separate ports for all mindsdb instances during testing
     r = requests.get('http://127.0.0.1:5005/port')
     if r.status_code != 200:
         raise Exception('Cant get port to run mindsdb')
@@ -168,6 +169,9 @@ if USE_EXTERNAL_DB_SERVER:
     config.set(['api', 'mongodb', 'port'], mindsdb_port)
 
     MINDSDB_DATABASE = f'mindsdb_{mindsdb_port}'
+    TEST_COMPANY_ID = mindsdb_port
+
+    config.set(['company_id'], TEST_COMPANY_ID)
 
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())

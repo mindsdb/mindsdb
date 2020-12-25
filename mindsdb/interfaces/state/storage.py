@@ -10,7 +10,7 @@ except Exception as e:
 class StorageEngine():
     def __init__(self, config, location='local'):
         # Debug
-        location = 's3'
+        #location = 's3'
         # Debug
         self.config = Config(config)
         self.location = location

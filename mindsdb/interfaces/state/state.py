@@ -105,7 +105,7 @@ class State():
         datasource = Datasource.query.filter_by(name=name, company_id=self.company_id).first()
         session.delete(datasource)
         session.commit()
-        self.storage.delete(self._gen_remote_datasource_name(predictor.name))
+        self.storage.delete(self._gen_remote_datasource_name(datasource.name))
 
     def get_datasource(self, name):
         datasource = Datasource.query.filter_by(name=name, company_id=self.company_id).first()

@@ -34,7 +34,7 @@ class MindsdbNative():
 
         self._setup_for_creation(name)
 
-        p = PredictorProcess(name, from_data, to_predict, kwargs, 'learn')
+        p = PredictorProcess(name, from_data, to_predict, kwargs, 'learn', self.config._config)
         p.start()
         if join_learn_process is True:
             p.join()

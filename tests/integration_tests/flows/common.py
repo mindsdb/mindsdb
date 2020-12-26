@@ -174,7 +174,6 @@ if USE_EXTERNAL_DB_SERVER:
     config.set(['company_id'], TEST_COMPANY_ID)
     config.set(['permanent_storage', 'location'], 's3')
     config.set(['permanent_storage', 'bucket'], 'mindsdb-cloud-storage-v1')
-
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())
     override = {}

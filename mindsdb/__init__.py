@@ -27,6 +27,7 @@ os.environ['MINDSDB_DATABASE_TYPE'] = db_config['type']
 from mindsdb.__about__ import __package_name__ as name, __version__
 from mindsdb.interfaces.state.config import Config
 
+config_path = {} if config_path is None else config_path
 mindsdb_config = Config(config_path)
 
 

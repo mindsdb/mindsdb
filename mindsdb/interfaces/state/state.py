@@ -1,4 +1,5 @@
 from sqlalchemy import or_
+import logging
 from mindsdb.interfaces.state.schemas import session, Datasource, Predictor, Configuration, Semaphor, Log
 from mindsdb.interfaces.state.storage import StorageEngine
 import mindsdb_native

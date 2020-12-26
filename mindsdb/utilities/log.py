@@ -35,7 +35,7 @@ class DbHandler(logging.Handler):
         self.state.record_log(log_type=str(log_type), source=source, payload=str(payload))
 
         if log_type in ['ERROR', 'WARNING']:
-            trace = traceback.format_exc()
+            trace = traceback.print_stack(limit=30)
             self.state.record_log(log_type='traceback', source=source, payload=str(trace))
 
 def initialize_log(config, logger_name='main', wrap_print=False):

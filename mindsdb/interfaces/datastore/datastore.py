@@ -4,6 +4,7 @@ from dateutil.parser import parse as parse_dt
 import shutil
 import os
 import pickle
+from mindsdb.utilities.log import log as logger
 
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
@@ -13,8 +14,8 @@ from mindsdb.interfaces.state.config import Config
 
 class DataStore():
     def __init__(self, config):
-        self.dir = config.paths['datasources']
         self.config = Config(config)
+        self.dir = config['paths']['datasources']
         self.state = State(self.config)
         self.mindsdb_native = MindsdbNative(config)
 
@@ -104,6 +105,7 @@ class DataStore():
 
         ds_meta_dir = os.path.join(self.dir, name)
         os.mkdir(ds_meta_dir)
+        print(f'\n\n\n\n{ds_meta_dir}\n\n\n\n')
 
         try:
             if source_type == 'file':
@@ -223,6 +225,7 @@ class DataStore():
                 pickle.dump(picklable, fp)
 
         except Exception as e:
+            logger.error(f'Can\'t create datasource {name} due to exception: "{e}" | Will proceede to delet it\'s directory: {ds_meta_dir}')
             if os.path.isdir(ds_meta_dir):
                 shutil.rmtree(ds_meta_dir)
             raise e

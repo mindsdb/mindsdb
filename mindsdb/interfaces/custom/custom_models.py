@@ -14,12 +14,13 @@ from mindsdb.interfaces.state.config import Config
 
 class CustomModels():
     def __init__(self, config):
-        self.config = config
+        self.config = Config(config)
+        self.state = State(self.config)
+
         self.storage_dir = os.path.join(config['storage_dir'], 'misc')
         os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
-        self.config = Config()
-        self.state = State(self.config)
+        
         self.mindsdb_native = MindsdbNative(self.config.as_dict())
 
     def _dir(self, name):

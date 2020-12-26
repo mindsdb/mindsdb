@@ -21,9 +21,9 @@ class PredictorProcess(ctx.Process):
         this is work for celery worker here?
         '''
         import mindsdb_native
-        name, from_data, to_predict, kwargs, trx_type = self._args
+        name, from_data, to_predict, kwargs, trx_type, config = self._args
 
-        config = Config()
+        config = Config(config)
         state = State(config)
 
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})

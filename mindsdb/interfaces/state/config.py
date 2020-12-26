@@ -43,10 +43,6 @@ default_config = {
     }
     ,"permanent_storage": {
         "location": "local"
-        '''
-        Keys if storage == s3
-        "bucket"
-        '''
     }
 }
 
@@ -102,12 +98,14 @@ def _null_to_empty(config):
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
         target_dict[key] = source_dict[key]
-    elif isinstance(target_dict[key], dict) and isinstance(source_dict[key], dict):
-        for k in source_dict[key]:
+    elif not isinstance(target_dict[key], dict) or not isinstance(source_dict[key], dict):
+        target_dict[key] = source_dict[key]
+    else:
+        for k in list(source_dict[key].keys()):
             _merge_key_recursive(target_dict[key], source_dict[key], k)
 
 def _merge_configs(config, other_config):
-    for key in other_config:
+    for key in list(other_config.keys()):
         _merge_key_recursive(config, other_config, key)
     return config
 
@@ -115,32 +113,33 @@ class Config(object):
     _config = None
     _no_db = None
 
-    def __init__(self, config_path=None, no_db=False):
+    def __init__(self, config_path, no_db=False):
+        self.no_db = no_db
+        self.last_updated = datetime.datetime.now() - datetime.timedelta(hours=1)
+
         if isinstance(config_path, Config):
             config_path = config_path.as_dict()
 
-        self.no_db = no_db
-        self.last_updated = datetime.datetime.now() - datetime.timedelta(hours=1)
-        if config_path is not None:
-            if isinstance(config_path, dict):
-                config = config_path
-            else:
-                with open(config_path, 'r') as fp:
-                    config = json.load(fp)
+        if isinstance(config_path, dict):
+            config = config_path
         else:
-            config = {}
+            with open(config_path, 'r') as fp:
+                config = json.load(fp)
 
+        import traceback
+        print(config.get('company_id', "WABAJACK"))
+        print('\n\n\n\n\n\n CREATING CONFIG WITH COMAPNY ID: ', config.get('company_id', None), '\n\n\n', traceback.print_stack(limit=30), '\n\n\n\n\n')
         self._read(config.get('company_id', None))
 
         if self._config is not None:
-            config = _merge_configs(config, self._config)
+            config = _merge_configs(self._config, config)
 
         storage_dir = config.get('storage_dir', _get_or_create_dir_struct())
         if os.path.isabs(storage_dir) is False:
             storage_dir = os.path.normpath(storage_dir)
         config['storage_dir'] = storage_dir
 
-        config = _merge_configs(config, default_config)
+        config = _merge_configs(default_config, config)
         config = _null_to_empty(config)
 
         config['paths']['root'] = storage_dir
@@ -164,16 +163,17 @@ class Config(object):
         return self._config['paths']
 
     def _read(self, company_id=None):
-        if Configuration.query.filter_by(company_id=company_id and modified_at > self.last_updated).first() is None:
-            return
-
-        if self.no_db:
-            return
         try:
             if company_id is None:
                 company_id = self._config['company_id']
         except Exception as e:
             company_id = None
+
+        if Configuration.query.filter(Configuration.company_id == company_id).filter(Configuration.modified_at > self.last_updated).first() is None:
+            return
+
+        if self.no_db:
+            return
 
         try:
             self._config = json.loads(Configuration.query.filter_by(company_id=company_id).first().data)

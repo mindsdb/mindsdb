@@ -126,9 +126,6 @@ class Config(object):
             with open(config_path, 'r') as fp:
                 config = json.load(fp)
 
-        import traceback
-        print(config.get('company_id', "WABAJACK"))
-        print('\n\n\n\n\n\n CREATING CONFIG WITH COMAPNY ID: ', config.get('company_id', None), '\n\n\n', traceback.print_stack(limit=30), '\n\n\n\n\n')
         self._read(config.get('company_id', None))
 
         if self._config is not None:

@@ -51,9 +51,6 @@ def check_ds_analyzable(ds_name):
     while analyze_done is False and (time.time() - start_time) < 30:
         res = requests.get(f'{HTTP_API_ROOT}/datasources/{ds_name}/analyze')
         assert res.status_code == 200
-        print('\n\n\n\n')
-        print(res.json())
-        print('\n\n\n\n')
         analyze_done = res.json().get('status', '') != 'analyzing'
         time.sleep(1)
     assert analyze_done

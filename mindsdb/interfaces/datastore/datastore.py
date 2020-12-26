@@ -105,7 +105,6 @@ class DataStore():
 
         ds_meta_dir = os.path.join(self.dir, name)
         os.mkdir(ds_meta_dir)
-        print(f'\n\n\n\n{ds_meta_dir}\n\n\n\n')
 
         try:
             if source_type == 'file':

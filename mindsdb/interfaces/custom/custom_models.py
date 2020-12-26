@@ -20,7 +20,7 @@ class CustomModels():
         self.storage_dir = os.path.join(config['storage_dir'], 'misc')
         os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
-        
+
         self.mindsdb_native = MindsdbNative(self.config.as_dict())
 
     def _dir(self, name):
@@ -125,7 +125,6 @@ class CustomModels():
         with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
             json.dump(data, fp)
 
-        print('\n\n\n', json.dumps(data['data_analysis']), 'Empty_target' not in data['data_analysis'], '\n\n\n')
         if data is not None and 'status' in data and 'data_analysis' in data and 'columns' in data['data_analysis'] and 'Empty_target' not in data['data_analysis']:
             self.state.update_predictor(name=name, status=data['status'], original_path=None, data=json.dumps(data['data_analysis']), to_predict=data['predict'])
 

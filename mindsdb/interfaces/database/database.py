@@ -52,7 +52,6 @@ class DatabaseWrapper():
             if setup:
                 register = self._setup_integration(integration)
             if register:
-                if len(model_data_arr) > 0:
                 if integration.check_connection():
                     integration.register_predictors(model_data_arr)
                 else:

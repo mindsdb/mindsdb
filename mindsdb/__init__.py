@@ -28,7 +28,7 @@ from mindsdb.__about__ import __package_name__ as name, __version__
 from mindsdb.interfaces.state.config import Config
 
 config_path = {} if config_path is None else config_path
-mindsdb_config = Config(config_path)
+mindsdb_config = Config(config_path, no_db=True)
 
 
 os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config['paths']['predictors']

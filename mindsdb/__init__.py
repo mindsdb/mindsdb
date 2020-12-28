@@ -17,7 +17,7 @@ try:
 except:
     db_config = {
         'type': 'sqlite'
-        ,'path': 'mindsdb.sqlite.db'
+        ,'path': 'mindsdb.sqlite3.db'
     }
 
 

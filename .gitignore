@@ -18,4 +18,7 @@ root
 static
 tmp
 .pytest_cache
-*mindsdb.sqlite3.db*
+*mindsdb.sqlite3.db
+*mindsdb.sqlite.db
+mindsdb.sqlite3.db
+mindsdb.sqlite.db

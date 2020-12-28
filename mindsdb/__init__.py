@@ -20,6 +20,7 @@ except:
         ,'path': 'mindsdb.sqlite.db'
     }
 
+
 # @TODO Figure out a smart way to inject this into the environment later...
 os.environ['MINDSDB_SQLITE_PATH'] = db_config['path']
 os.environ['MINDSDB_DATABASE_TYPE'] = db_config['type']

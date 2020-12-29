@@ -3,6 +3,7 @@ from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
+from mindsdb.integrations.mongodb.mongodb import MongoDB
 
 from mindsdb.utilities.log import log as logger
 
@@ -39,7 +40,7 @@ class DatabaseWrapper():
                 elif db_type == 'mssql':
                     integration_arr.append(MSSQL(self.config, db_alias))
                 elif db_type == 'mongodb':
-                    pass
+                    integration_arr.append(MongoDB(self.config, db_alias))
                 else:
                     print(f'Uknown integration type: {db_type} for database called: {db_alias}')
 

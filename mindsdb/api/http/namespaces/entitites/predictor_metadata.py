@@ -1,7 +1,6 @@
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.data_preparation_metadata import data_preparation_metadata, EXAMPLE as PREPARATION_METADATA_EXAMPLE
-from mindsdb.api.http.namespaces.entitites.data_analysis_metadata import data_analysis_metadata#, EXAMPLE as DATA_ANALYSIS_METADATA_EXAMPLE
-from mindsdb.api.http.namespaces.entitites.target_column_metadata import target_column_metadata#, EXAMPLES as TARGET_COLUMN_METADATA_EXAMPLES
+from mindsdb.api.http.namespaces.entitites.target_column_metadata import target_column_metadata  # , EXAMPLES as TARGET_COLUMN_METADATA_EXAMPLES
 from flask_restx import fields
 from collections import OrderedDict
 
@@ -14,10 +13,9 @@ predictor_metadata = ns_conf.model('PredictorMetadata', {
     # other attributes
     'data_preparation': fields.Nested(data_preparation_metadata, required=False, description='The metadata used in the preparation stage, in which we break the data into train, test, validation'),
     'accuracy': fields.Float(description='The current accuracy of the model'),
-    'train_data_accuracy': fields.Float(description='The current accuracy of the model',required=False),
+    'train_data_accuracy': fields.Float(description='The current accuracy of the model', required=False),
     'test_data_accuracy': fields.Float(description='The current accuracy of the model', required=False),
     'valid_data_accuracy': fields.Float(description='The current accuracy of the model', required=False),
-    'data_analysis': fields.Nested(data_analysis_metadata, required=False, description='The metadata used in the analysis stage, in which we extract statistical information from the input data'),
     'model_analysis': fields.List(fields.Nested(target_column_metadata), required=False, description='The model analysis stage, in which we extract statistical information from the input data for each target variable, thus, this is a list; one item per target column')
     ,'data_analysis_v2': fields.Raw(default={})
     ,'timeseries': fields.Raw()

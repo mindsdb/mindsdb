@@ -12,6 +12,10 @@ $env:USE_EXTERNAL_DB_SERVER = "1"
 echo "USE_EXTERNAL_DB_SERVER:"
 Get-ChildItem Env:USE_EXTERNAL_DB_SERVER
 
+echo "Attempt to create SSH tunnel"
+ssh -i ~/.ssh/db_machine -S /tmp/.mindsdb-ssh-ctrl-5005 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMNL 127.0.0.1:5005:127.0.0.1:5005 ubuntu@3.220.66.106
+python.exe -c """import requests; r = requests.get('http://127.0.0.1:5005/port'); print(r.status_code, r.text)"""
+
 # # MongoDB
 # echo -e "\n===============\ntest MongoDB\n===============\n"
 # python tests/integration_tests/flows/test_mongo.py
@@ -37,8 +41,8 @@ Get-ChildItem Env:USE_EXTERNAL_DB_SERVER
 # python tests/integration_tests/flows/test_custom_model.py
 
 # HTTP
-echo "\n===============\ntest HTTP\n===============\n"
-python tests\integration_tests\api\test_http.py
+# echo "\n===============\ntest HTTP\n===============\n"
+# python tests\integration_tests\api\test_http.py
 
 # # user flow 1
 # echo -e "\n===============\ntest user flow 1\n===============\n"

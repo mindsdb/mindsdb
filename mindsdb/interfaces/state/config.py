@@ -135,8 +135,8 @@ class Config(object):
         else:
             with open(config_path, 'r') as fp:
                 config = json.load(fp)
-                
-        config = deecopy(config)
+
+        config = deepcopy(config)
 
         self._read(config.get('company_id', None))
 

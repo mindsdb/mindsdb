@@ -1,20 +1,25 @@
 mkdir -p ~/.ssh/
 echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
 echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
+pip install -r requirements_test.txt
 
-echo "Installing OpenSSH Client"
+echo "-----------------------Installing OpenSSH Client-----------------------"
 Add-WindowsCapability -Online -Name OpenSSH.Client*
 
-pip install -r requirements_test.txt
+echo "-----------------------Intalling WSL (Windows Subsystem for Linux)-----------------------"
+wsl --install
+
+echo "-----------------------Attempt to create SSH tunnel-----------------------"
+ssh -i ~/.ssh/db_machine -S /tmp/.mindsdb-ssh-ctrl-5005 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMNL 127.0.0.1:5005:127.0.0.1:5005 ubuntu@3.220.66.106
+echo "-----------------------Checking that tunnel has been created successfully-----------------------"
+python.exe -c """import requests; r = requests.get('http://127.0.0.1:5005/port'); print(r.status_code, r.text)"""
+
 
 $env:USE_EXTERNAL_DB_SERVER = "1"
 
 echo "USE_EXTERNAL_DB_SERVER:"
 Get-ChildItem Env:USE_EXTERNAL_DB_SERVER
 
-echo "Attempt to create SSH tunnel"
-ssh -i ~/.ssh/db_machine -S /tmp/.mindsdb-ssh-ctrl-5005 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMNL 127.0.0.1:5005:127.0.0.1:5005 ubuntu@3.220.66.106
-python.exe -c """import requests; r = requests.get('http://127.0.0.1:5005/port'); print(r.status_code, r.text)"""
 
 # # MongoDB
 # echo -e "\n===============\ntest MongoDB\n===============\n"

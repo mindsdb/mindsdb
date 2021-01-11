@@ -133,8 +133,11 @@ class Config(object):
         if isinstance(config_path, dict):
             config = config_path
         else:
-            with open(config_path, 'r') as fp:
-                config = json.load(fp)
+            try:
+                with open(config_path, 'r') as fp:
+                    config = json.load(fp)
+            except:
+                config = {}
 
         config = deepcopy(config)
 

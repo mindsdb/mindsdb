@@ -14,12 +14,7 @@ class StorageEngine():
         if self.location == 'local':
             pass
         elif self.location == 's3':
-            print('\n\n\n\n')
-            print(self.config['permanent_storage']['credentials'])
-            print('\n\n\n\n')
             if 'credentials' in self.config['permanent_storage']:
-                print('HERE !')
-                print('\n\n\n\n')
                 self.s3 = boto3.client('s3', **self.config['permanent_storage']['credentials'])
             else:
                 self.s3 = boto3.client('s3')

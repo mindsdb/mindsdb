@@ -2,10 +2,15 @@ mkdir -p ~/.ssh/
 echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
 echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
 
+echo "Installing OpenSSH Client"
+Add-WindowsCapability -Online -Name OpenSSH.Client*
+
 pip install -r requirements_test.txt
 
 [Environment]::SetEnvironmentVariable
      ("USE_EXTERNAL_DB_SERVER", "1", [System.EnvironmentVariableTarget]::Machine)
+
+echo "USE_EXTERNAL_DB_SERVER = $USE_EXTERNAL_DB_SERVER"
 
 # # MongoDB
 # echo -e "\n===============\ntest MongoDB\n===============\n"

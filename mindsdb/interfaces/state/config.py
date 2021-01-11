@@ -7,6 +7,8 @@ import datetime
 from mindsdb.interfaces.state.schemas import Configuration, session
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.fs import create_directory
+from copy import deepcopy
+
 
 default_config = {
     "log": {
@@ -133,6 +135,8 @@ class Config(object):
         else:
             with open(config_path, 'r') as fp:
                 config = json.load(fp)
+                
+        config = deecopy(config)
 
         self._read(config.get('company_id', None))
 
@@ -212,6 +216,7 @@ class Config(object):
 
     def set(self, key_chain, value, delete=False):
         # @TOOD Maybe add a mutex here ? But that seems a bit overkill to be honest
+        value = deepcopy(value)
         self._read()
         c = self._config
         for i, k in enumerate(key_chain):
@@ -230,6 +235,7 @@ class Config(object):
 
     # Higher level interface
     def add_db_integration(self, name, dict):
+        dict = deepcopy(dict)
         dict['date_last_update'] = str(datetime.datetime.now()).split('.')[0]
         if 'database_name' not in dict:
             dict['database_name'] = name
@@ -239,6 +245,7 @@ class Config(object):
         self.set(['integrations', name], dict)
 
     def modify_db_integration(self, name, dict):
+        dict = deepcopy(dict)
         old_dict = self._config['integrations'][name]
         for k in old_dict:
             if k not in dict:

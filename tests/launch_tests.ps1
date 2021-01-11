@@ -4,7 +4,8 @@ echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
 
 pip install -r requirements_test.txt
 
-export USE_EXTERNAL_DB_SERVER="1"
+[Environment]::SetEnvironmentVariable
+     ("USE_EXTERNAL_DB_SERVER", "1", [System.EnvironmentVariableTarget]::Machine)
 
 # # MongoDB
 # echo -e "\n===============\ntest MongoDB\n===============\n"

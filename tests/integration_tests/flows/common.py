@@ -106,8 +106,10 @@ def prepare_config(config, mindsdb_database='mindsdb', override_integration_conf
             cred = json.loads(f.read())
             for key in cred:
                 if f'default_{key}' in config['integrations']:
+                    if key == 's3_storage':
+                        continue
                     config.modify_db_integration(f'default_{key}', cred[key])
-                    
+
             config.set(['permanent_storage', 'credentials'], cred['s3_storage'])
 
     for integration in override_integration_config:
@@ -174,7 +176,12 @@ if USE_EXTERNAL_DB_SERVER:
     TEST_COMPANY_ID = mindsdb_port
 
     config.set(['company_id'], TEST_COMPANY_ID)
-    config.set(['permanent_storage', 'location'], 's3')
+    # Test both local and s3 storage backends
+    if int(mindsdb_port) % 2 == 0:
+        config.set(['permanent_storage', 'location'], 's3')
+    else:
+        config.set(['permanent_storage', 'location'], 'local')
+
     config.set(['permanent_storage', 'bucket'], 'mindsdb-cloud-storage-v1')
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())

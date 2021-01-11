@@ -59,6 +59,9 @@ class UserFlowTest_1(unittest.TestCase):
                     'publish': True,
                     'password': 'broken'
                 }
+                ,'permanent_storage': {
+                    'location': 'local'
+                }
             },
             mindsdb_database=MINDSDB_DATABASE
         )

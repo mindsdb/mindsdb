@@ -91,6 +91,9 @@ class PostgresTest(unittest.TestCase):
                 'default_postgres': {
                     'publish': True
                 }
+                ,'permanent_storage': {
+                    'location': 'local'
+                }
             },
             mindsdb_database=MINDSDB_DATABASE
         )

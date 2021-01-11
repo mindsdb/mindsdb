@@ -152,6 +152,9 @@ class UserFlowTest_2(unittest.TestCase):
                 'default_mariadb': {
                     'publish': True
                 }
+                ,'permanent_storage': {
+                    'location': 'local'
+                }
             },
             mindsdb_database=MINDSDB_DATABASE,
             clear_storage=False

@@ -1,5 +1,7 @@
 import os
 import sys
+import json
+
 from mindsdb.utilities.functions import args_parse, is_notebook
 try:
     if not is_notebook():

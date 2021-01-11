@@ -20,7 +20,7 @@ class StorageEngine():
                 self.s3 = boto3.client('s3')
             self.bucket = self.config['permanent_storage']['bucket']
         else:
-            raise Exception('Location: ' + self.location + 'not supported')
+            raise Exception('Location: ' + self.location + ' not supported')
 
 
     def put(self, filename, remote_name, local_path):

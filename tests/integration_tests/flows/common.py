@@ -177,10 +177,10 @@ if USE_EXTERNAL_DB_SERVER:
 
     config.set(['company_id'], TEST_COMPANY_ID)
     # Test both local and s3 storage backends
-    if int(mindsdb_port) % 2 == 0:
-        config.set(['permanent_storage', 'location'], 's3')
-    else:
-        config.set(['permanent_storage', 'location'], 'local')
+    #if int(mindsdb_port) % 2 == 0:
+    config.set(['permanent_storage', 'location'], 's3')
+    #else:
+    #    config.set(['permanent_storage', 'location'], 'local')
 
     config.set(['permanent_storage', 'bucket'], 'mindsdb-cloud-storage-v1')
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:

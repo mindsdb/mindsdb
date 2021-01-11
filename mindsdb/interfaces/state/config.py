@@ -230,7 +230,7 @@ class Config(object):
 
     # Higher level interface
     def add_db_integration(self, name, dict):
-        dict = deepcopy(dict)
+        #dict = deepcopy(dict)
         dict['date_last_update'] = str(datetime.datetime.now()).split('.')[0]
         if 'database_name' not in dict:
             dict['database_name'] = name
@@ -240,7 +240,7 @@ class Config(object):
         self.set(['integrations', name], dict)
 
     def modify_db_integration(self, name, dict):
-        dict = deepcopy(dict)
+        #dict = deepcopy(dict)
         old_dict = self._config['integrations'][name]
         for k in old_dict:
             if k not in dict:

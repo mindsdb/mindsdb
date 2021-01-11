@@ -7,10 +7,10 @@ Add-WindowsCapability -Online -Name OpenSSH.Client*
 
 pip install -r requirements_test.txt
 
-[Environment]::SetEnvironmentVariable
-     ("USE_EXTERNAL_DB_SERVER", "1", [System.EnvironmentVariableTarget]::Machine)
+$env:USE_EXTERNAL_DB_SERVER = "1"
 
-echo "USE_EXTERNAL_DB_SERVER = $USE_EXTERNAL_DB_SERVER"
+echo "USE_EXTERNAL_DB_SERVER:"
+Get-ChildItem Env:USE_EXTERNAL_DB_SERVER
 
 # # MongoDB
 # echo -e "\n===============\ntest MongoDB\n===============\n"

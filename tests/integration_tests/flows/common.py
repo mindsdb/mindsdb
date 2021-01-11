@@ -108,6 +108,8 @@ def prepare_config(config, mindsdb_database='mindsdb', override_integration_conf
                 if f'default_{key}' in config['integrations']:
                     config.modify_db_integration(f'default_{key}', cred[key])
 
+        config.set(['permanent_storage', 'credentials'], cred['s3'])
+
     for integration in override_integration_config:
         if integration in config['integrations']:
             config.modify_db_integration(integration, override_integration_config[integration])

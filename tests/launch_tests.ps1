@@ -32,7 +32,7 @@ export USE_EXTERNAL_DB_SERVER="1"
 
 # HTTP
 echo "\n===============\ntest HTTP\n===============\n"
-python tests/integration_tests/api/test_http.py
+python tests\integration_tests\api\test_http.py
 
 # # user flow 1
 # echo -e "\n===============\ntest user flow 1\n===============\n"

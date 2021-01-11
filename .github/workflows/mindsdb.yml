@@ -14,9 +14,9 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: windows-latest
-            script_name: .\launch_tests.ps1
+            script_name: .\tests\launch_tests.ps1
           - os: ubuntu-latest
-            script_name: ./launch_tests.sh
+            script_name: ./tests/launch_tests.sh
           - os: macos-latest
             script_name: ./launch_tests.sh
         python-version: [3.6, 3.7, 3.8]

@@ -131,7 +131,7 @@ class Config(object):
             except:
                 config = {}
 
-        config = deepcopy(config)
+        #config = deepcopy(config)
 
         self._read(config.get('company_id', None))
 
@@ -211,7 +211,7 @@ class Config(object):
 
     def set(self, key_chain, value, delete=False):
         # @TOOD Maybe add a mutex here ? But that seems a bit overkill to be honest
-        value = deepcopy(value)
+        #value = deepcopy(value)
         self._read()
         c = self._config
         for i, k in enumerate(key_chain):

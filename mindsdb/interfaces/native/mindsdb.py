@@ -50,7 +50,7 @@ class MindsdbNative():
         self._setup_for_creation(name)
 
         to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
-        state.make_predictor(name, None, to_predict)
+        self.state.make_predictor(name, None, to_predict)
 
         p = PredictorProcess(name, from_data, to_predict, kwargs, 'learn', self.config._config)
         p.start()

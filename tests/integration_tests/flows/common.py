@@ -99,8 +99,6 @@ DATASETS_COLUMN_TYPES = {
 
 def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}, clear_storage=True):
     for key in config['integrations']:
-        if key == 's3_storage':
-            continue
         config.set(['integrations', key ,'publish'], False)
 
     if USE_EXTERNAL_DB_SERVER:
@@ -187,6 +185,8 @@ if USE_EXTERNAL_DB_SERVER:
         credentials = json.loads(f.read())
     override = {}
     for key, value in credentials.items():
+        if key == 's3_storage':
+            continue
         override[f'default_{key}'] = value
     TEST_CONFIG = prepare_config(config, override_integration_config=override)
 

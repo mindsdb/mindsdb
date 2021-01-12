@@ -97,7 +97,7 @@ DATASETS_COLUMN_TYPES = {
 }
 
 
-def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}, clear_storage=True):
+def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}, clear_storage=True, storage='local'):
     for key in config['integrations']:
         config.set(['integrations', key ,'publish'], False)
 
@@ -117,6 +117,8 @@ def prepare_config(config, mindsdb_database='mindsdb', override_integration_conf
             config.modify_db_integration(integration, override_integration_config[integration])
         else:
             config.add_db_integration(integration, override_integration_config[integration])
+
+    config.set(['permanent_storage', 'location'], storage)
 
     for api in override_api_config:
         new_api_cfg = config['api'][api]
@@ -178,7 +180,7 @@ if USE_EXTERNAL_DB_SERVER:
     config.set(['company_id'], TEST_COMPANY_ID)
     # Test both local and s3 storage backends
     #if int(mindsdb_port) % 2 == 0:
-    config.set(['permanent_storage', 'location'], 's3')
+    config.set(['permanent_storage', 'location'], 'local')
 
     config.set(['permanent_storage', 'bucket'], 'mindsdb-cloud-storage-v1')
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:

@@ -61,11 +61,9 @@ class MSSQLTest(unittest.TestCase):
                 'default_mssql': {
                     'publish': True
                 }
-                ,'permanent_storage': {
-                    'location': 'local'
-                }
             },
             mindsdb_database=MINDSDB_DATABASE
+            ,storage='s3'
         )
         cls.mdb = mdb
 

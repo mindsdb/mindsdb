@@ -82,11 +82,9 @@ class CustomModelTest(unittest.TestCase):
                 'default_mariadb': {
                     'publish': True
                 }
-                ,'permanent_storage': {
-                    'location': 'local'
-                }
             },
             mindsdb_database=MINDSDB_DATABASE
+            ,storage='local'
         )
         cls.mdb = mdb
 

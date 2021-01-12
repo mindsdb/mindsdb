@@ -49,10 +49,12 @@ class State():
 
         self.init_wrapper()
         try:
+            data = json.loads(predictor.data)
+            data_analysis = data.get('data_analysis_v2', data)
             self.dbw.register_predictors([{
                 'name': predictor.name,
                 'predict': predictor.to_predict.split(','),
-                'data_analysis': json.loads(predictor.data)['data_analysis_v2']
+                'data_analysis': data_analysis
             }], False)
         except Exception as e:
             print(e)

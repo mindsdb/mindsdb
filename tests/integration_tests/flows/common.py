@@ -216,8 +216,8 @@ def stop_mindsdb(sp=None):
             pass
 
 
-def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb', clear_storage=True):
-    temp_config_path = prepare_config(config, mindsdb_database, override_integration_config, override_api_config, clear_storage)
+def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb', clear_storage=True, storage='local'):
+    temp_config_path = prepare_config(config, mindsdb_database, override_integration_config, override_api_config, clear_storage, storage)
 
     api_str = ','.join(apis)
     sp = subprocess.Popen(

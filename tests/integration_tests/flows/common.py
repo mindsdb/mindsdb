@@ -182,15 +182,16 @@ if USE_EXTERNAL_DB_SERVER:
 
     close_all_ssh_tunnels()
 
-    port_forwarding_status = 1
-    i = 10
-    while port_forwarding_status != 0 and i > 0:
-        i = i - 1
+    for _ in range(10):
         r = requests.get('http://127.0.0.1:5005/port')
         if r.status_code != 200:
             raise Exception('Cant get port to run mindsdb')
         mindsdb_port = r.content.decode()
-        port_forwarding_status = open_ssh_tunnel(mindsdb_port, 'R')
+        status = open_ssh_tunnel(mindsdb_port, 'R')
+        if status == 0:
+            break
+    else:
+        raise Exception('Cant get empty port to run mindsdb')
 
     print(f'use mindsdb port={mindsdb_port}')
     config._config['api']['mysql']['port'] = mindsdb_port

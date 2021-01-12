@@ -20,3 +20,8 @@ tmp
 .pytest_cache
 *mindsdb.sqlite3.db
 mindsdb.sqlite3.db
+tests/used_car_price_external/ds.pickle
+tests/used_car_price_external/test.csv
+used_car_price_external/ds.pickle
+used_car_price_external/test.csv
+used_car_price_predictor/ds.pickle

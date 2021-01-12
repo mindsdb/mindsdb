@@ -30,7 +30,6 @@ class PredictorProcess(ctx.Process):
 
         if trx_type == 'learn':
             to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
-            state.make_predictor(name, None, to_predict)
             data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
 
             try:

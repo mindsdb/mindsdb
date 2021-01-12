@@ -18,8 +18,8 @@ class MindsdbNative():
         self.state = State(self.config)
 
     def _setup_for_creation(self, name):
-            predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
-            create_directory(predictor_dir)
+        predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
+        create_directory(predictor_dir)
 
     def _predictor_to_dict(self, predictor):
         predictor_dict = {}
@@ -48,6 +48,9 @@ class MindsdbNative():
             del kwargs['join_learn_process']
 
         self._setup_for_creation(name)
+
+        to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
+        state.make_predictor(name, None, to_predict)
 
         p = PredictorProcess(name, from_data, to_predict, kwargs, 'learn', self.config._config)
         p.start()

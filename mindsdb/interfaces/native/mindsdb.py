@@ -21,6 +21,15 @@ class MindsdbNative():
             predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
             create_directory(predictor_dir)
 
+    def _predictor_to_dict(self, predictor):
+        predictor_dict = {}
+        predictor_dict['name'] = predictor.name
+        predictor_dict['status'] = predictor.status
+        predictor_dict['data_analysis'] = predictor.data
+        predictor_dict['created_at'] = str(predictor.created_at)
+        predictor_dict['updated_at'] = str(predictor.modified_at)
+        return predictor_dict
+
     def create(self, name):
         # Just used for getting the report uuid, don't bother registering this
         self._setup_for_creation(name)
@@ -77,7 +86,8 @@ class MindsdbNative():
         return model
 
     def get_models(self, status='any'):
-        models = F.get_models()
+        models = self.state.list_predictors()
+        models = [self._predictor_to_dict(x) for x in models]
         if status != 'any':
             models = [x for x in models if x['status'] == status]
         models = [x for x in models if x['status'] != 'training' or parse_datetime(x['created_at']) > parse_datetime(self.config['mindsdb_last_started_at'])]

@@ -44,14 +44,10 @@ class DataStore():
 
     def get_datasources(self):
         datasource_arr = []
-        for ds_name in os.listdir(self.dir):
+        for datasource in self.state.list_datasources():
             try:
-                for datasource in self.state.list_datasources():
-                    try:
-                        datasource_dict = self._datasource_to_dict(datasource)
-                        datasource_arr.append(datasource_dict)
-                    except Exception as e:
-                        print(e)
+                datasource_dict = self._datasource_to_dict(datasource)
+                datasource_arr.append(datasource_dict)
             except Exception as e:
                 print(e)
         return datasource_arr

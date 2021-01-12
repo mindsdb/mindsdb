@@ -99,6 +99,8 @@ DATASETS_COLUMN_TYPES = {
 
 def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}, clear_storage=True):
     for key in config['integrations']:
+        if key == 's3_storage':
+            continue
         config.set(['integrations', key ,'publish'], False)
 
     if USE_EXTERNAL_DB_SERVER:

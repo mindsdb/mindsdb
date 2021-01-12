@@ -52,7 +52,7 @@ class State():
             self.dbw.register_predictors([{
                 'name': predictor.name,
                 'predict': predictor.to_predict.split(','),
-                'data_analysis': json.loads(predictor.data)
+                'data_analysis': json.loads(predictor.data['data_analysis_v2'])
             }], False)
         except Exception as e:
             print(e)

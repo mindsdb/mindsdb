@@ -101,6 +101,7 @@ class MindsdbNative():
             models = [x for x in models if x['status'] == status]
         models = [x for x in models if x['status'] != 'training' or parse_datetime(x['created_at']) > parse_datetime(self.config['mindsdb_last_started_at'])]
 
+        print(len(models), models)
         for i in range(len(models)):
             for k in ['train_end_at', 'updated_at', 'created_at']:
                 if k in models[i] and models[i][k] is not None:
@@ -108,6 +109,7 @@ class MindsdbNative():
                         models[i][k] = parse_datetime(str(models[i][k]).split('.')[0])
                     except Exception:
                         models[i][k] = parse_datetime(str(models[i][k]))
+        print(len(models), models)
         return models
 
     def delete_model(self, name):

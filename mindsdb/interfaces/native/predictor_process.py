@@ -33,17 +33,21 @@ class PredictorProcess(ctx.Process):
             state.make_predictor(name, None, to_predict)
             data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
 
-            mdb.learn(
-                from_data=data_source,
-                to_predict=to_predict,
-                **kwargs
-            )
+            try:
+                mdb.learn(
+                    from_data=data_source,
+                    to_predict=to_predict,
+                    **kwargs
+                )
 
-            analysis = mindsdb_native.F.get_model_data(name)
-            stats = analysis['data_analysis_v2']
-            status = analysis['status']
+                analysis = mindsdb_native.F.get_model_data(name)
+                status = analysis['status']
 
-            state.update_predictor(name=name, status=status, original_path=None, data=json.dumps(stats))
+                state.update_predictor(name=name, status=status, original_path=None, data=json.dumps(analysis))
+            except Exception as e:
+                analysis = mindsdb_native.F.get_model_data(name)
+                status = analysis['status']
+                state.update_predictor(name=name, status=status, original_path=None, data=json.dumps(analysis))
 
         if trx_type == 'predict':
             if isinstance(from_data, dict):

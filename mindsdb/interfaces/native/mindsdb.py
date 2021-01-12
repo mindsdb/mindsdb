@@ -25,9 +25,15 @@ class MindsdbNative():
         predictor_dict = {}
         predictor_dict['name'] = predictor.name
         predictor_dict['status'] = predictor.status
-        predictor_dict['data_analysis'] = predictor.data
+        predictor_dict['version'] = predictor.native_version
         predictor_dict['created_at'] = str(predictor.created_at)
         predictor_dict['updated_at'] = str(predictor.modified_at)
+        predictor_dict['predict'] = predictor.to_predict.split(',')
+
+        data = json.loads(predictor.data) if predictor.data is not None else {}
+        for key in ['is_active', 'train_end_at','current_phase', 'accuracy']:
+            predictor_dict[key] = data.get(key, None)
+
         return predictor_dict
 
     def create(self, name):
@@ -72,7 +78,7 @@ class MindsdbNative():
         return F.analyse_dataset(ds)
 
     def get_model_data(self, name, native_view=False):
-        model = F.get_model_data(name)
+        model = json.loads(self.state.get_predictor(name).data)
         if native_view:
             return model
 

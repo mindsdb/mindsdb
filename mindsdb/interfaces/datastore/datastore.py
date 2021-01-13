@@ -237,10 +237,10 @@ class DataStore():
         return self.get_datasource_obj(name, raw=True), name
 
     def get_datasource_obj(self, name, raw=False):
-        self.state.load_datasource(name)
-        ds_meta_dir = os.path.join(self.dir, name)
-        ds = None
         try:
+            self.state.load_datasource(name)
+            ds_meta_dir = os.path.join(self.dir, name)
+            ds = None
             with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'rb') as fp:
                 picklable = pickle.load(fp)
                 if raw:

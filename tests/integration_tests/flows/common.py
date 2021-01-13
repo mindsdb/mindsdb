@@ -6,6 +6,7 @@ import atexit
 import asyncio
 import shutil
 import csv
+import re
 from pathlib import Path
 
 import requests
@@ -136,33 +137,62 @@ def prepare_config(config, mindsdb_database='mindsdb', override_integration_conf
     return temp_config_path
 
 
+def close_all_ssh_tunnels():
+    RE_PORT_CONTROL = re.compile(r'^\.mindsdb-ssh-ctrl-\d+$')
+    for p in Path('/tmp/mindsdb').iterdir():
+        if p.is_socket() and p.name != '.mindsdb-ssh-ctrl-5005' and RE_PORT_CONTROL.match(p.name):
+            sp = subprocess.Popen(f'ssh -S /tmp/mindsdb/{p.name} -O exit ubuntu@3.220.66.106', shell=True)
+            sp.wait()
+
+
 def close_ssh_tunnel(sp, port):
     sp.kill()
     # NOTE line below will close connection in ALL test instances.
     # sp = subprocess.Popen(f'for pid in $(lsof -i :{port} -t); do kill -9 $pid; done', shell=True)
-    sp = subprocess.Popen(f'ssh -S /tmp/.mindsdb-ssh-ctrl-{port} -O exit ubuntu@3.220.66.106', shell=True)
+    sp = subprocess.Popen(f'ssh -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -O exit ubuntu@3.220.66.106', shell=True)
     sp.wait()
 
 
 def open_ssh_tunnel(port, direction='R'):
-    cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
+    path = Path('/tmp/mindsdb')
+    if not path.is_dir():
+        path.mkdir(mode=0o777, exist_ok=True, parents=True)
+
+    cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
     sp = subprocess.Popen(
         cmd.split(' '),
         stdout=OUTPUT,
         stderr=OUTPUT
     )
-    atexit.register(close_ssh_tunnel, sp=sp, port=port)
+    try:
+        status = sp.wait(5)
+    except subprocess.TimeoutExpired:
+        status = 1
+        sp.kill()
+
+    if status == 0:
+        atexit.register(close_ssh_tunnel, sp=sp, port=port)
+    return status
 
 
 if USE_EXTERNAL_DB_SERVER:
     config = Config(TEST_CONFIG)
     open_ssh_tunnel(5005, 'L')
     wait_port(5005, timeout=10)
-    r = requests.get('http://127.0.0.1:5005/port')
-    if r.status_code != 200:
-        raise Exception('Cant get port to run mindsdb')
-    mindsdb_port = r.content.decode()
-    open_ssh_tunnel(mindsdb_port, 'R')
+
+    close_all_ssh_tunnels()
+
+    for _ in range(10):
+        r = requests.get('http://127.0.0.1:5005/port')
+        if r.status_code != 200:
+            raise Exception('Cant get port to run mindsdb')
+        mindsdb_port = r.content.decode()
+        status = open_ssh_tunnel(mindsdb_port, 'R')
+        if status == 0:
+            break
+    else:
+        raise Exception('Cant get empty port to run mindsdb')
+
     print(f'use mindsdb port={mindsdb_port}')
     config._config['api']['mysql']['port'] = mindsdb_port
     config._config['api']['mongodb']['port'] = mindsdb_port

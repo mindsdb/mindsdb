@@ -62,6 +62,7 @@ class Predictor(Base):
     company_id = Column(Integer)
     version = Column(Integer, default=entitiy_version)
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
+    is_custom = Column(Boolean)
 
 class Log(Base):
     __tablename__ = 'log'

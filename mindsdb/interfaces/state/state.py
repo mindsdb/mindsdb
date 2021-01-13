@@ -26,14 +26,29 @@ class State():
         return f'datasources_{self.company_id}_{name}'
 
     # Predictors
-    def make_predictor(self, name, datasource_id, to_predict):
+    def make_predictor(self, name, datasource_id, to_predict, is_custom):
         predictor = Predictor(name=name, datasource_id=datasource_id, native_version=mindsdb_native.__version__, to_predict=','.join(to_predict), company_id=self.company_id, status='training', data=json.dumps({
             "is_active": False
             ,"data_source": datasource_id
             ,"current_phase": "Training"
-        }))
+        }), is_custom=is_custom)
         session.add(predictor)
         session.commit()
+
+    def rename_predictor(self, name, new_name):
+        predictor = Predictor.query.filter_by(name=name, company_id=self.company_id, native_version=mindsdb_native.__version__).first()
+        predictor.name = new_name
+        session.commit()
+
+        self.init_wrapper()
+        try:
+            self.dbw.register_predictors([{
+                'name': predictor.name,
+                'predict': predictor.to_predict.split(','),
+                'data_analysis': data_analysis
+            }], False)
+        except Exception as e:
+            pass
 
     def update_predictor(self, name, status, original_path, data, to_predict=None):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id, native_version=mindsdb_native.__version__).first()

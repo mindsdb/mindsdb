@@ -29,6 +29,7 @@ class MindsdbNative():
         predictor_dict['created_at'] = str(predictor.created_at)
         predictor_dict['updated_at'] = str(predictor.modified_at)
         predictor_dict['predict'] = predictor.to_predict.split(',')
+        predictor_dict['is_custom'] = predictor.is_custom
 
         data = json.loads(predictor.data) if predictor.data is not None else {}
         for key in ['is_active', 'train_end_at','current_phase', 'accuracy']:
@@ -50,7 +51,7 @@ class MindsdbNative():
         self._setup_for_creation(name)
 
         to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
-        self.state.make_predictor(name, None, to_predict)
+        self.state.make_predictor(name, None, to_predict, False)
 
         p = PredictorProcess(name, from_data, to_predict, kwargs, 'learn', self.config._config)
         p.start()
@@ -118,10 +119,18 @@ class MindsdbNative():
 
     def rename_model(self, name, new_name):
         F.rename_model(name, new_name)
+        self.state.rename_predictor(name, new_name)
 
     def load_model(self, fpath):
         # self.state.make_predictor(name, None, to_predict) <--- fix
         F.import_model(model_archive_path=fpath)
+        self.state.make_predictor(name, None, to_predict, False)
+
+        analysis = mindsdb_native.F.get_model_data(name)
+
+        self.state.make_predictor(name, None, analysis['to_predict'], False)
+        self.state.update_predictor(name=name, status=analysis['status'], original_path=None, data=json.dumps(analysis))
 
     def export_model(self, name):
+        self.state.load_predictor(name)
         F.export_predictor(model_name=name)

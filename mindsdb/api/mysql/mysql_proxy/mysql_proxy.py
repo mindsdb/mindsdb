@@ -348,6 +348,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
 
         models = mdb.get_models()
+        models = [x for x in models if not x['is_custom']]
         if insert['name'] in [x['name'] for x in models]:
             self.packet(
                 ErrPacket,

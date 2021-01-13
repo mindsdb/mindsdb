@@ -47,7 +47,11 @@ class DatabaseWrapper():
 
     def register_predictors(self, model_data_arr, setup=True):
         it = self._get_integrations()
-        for model in model_data_arr:
+        for model in [*model_data_arr,None]:
+            if model is None:
+                model_arr = []
+            else:
+                model_arr = [model]
             try:
                 for integration in it:
                     register = True
@@ -55,7 +59,7 @@ class DatabaseWrapper():
                         register = self._setup_integration(integration)
                     if register:
                         if integration.check_connection():
-                            integration.register_predictors([model])
+                            integration.register_predictors(model_arr)
                         else:
                             logger.error(f"There is no connection to {integration.name}. predictor wouldn't be registred.")
 

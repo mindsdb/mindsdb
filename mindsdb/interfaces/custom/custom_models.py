@@ -142,8 +142,8 @@ class CustomModels():
         return models
 
     def delete_model(self, name):
-        self.state.delete_predictor(name)
         shutil.rmtree(self._dir(name))
+        self.state.delete_predictor(name)
 
     def rename_model(self, name, new_name):
         shutil.move(self._dir(name), self._dir(new_name))

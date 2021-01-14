@@ -247,7 +247,7 @@ class PredictorPredictFromDataSource(Resource):
         if not isinstance(kwargs, dict):
             kwargs = {}
 
-        if ca.mindsdb_native.get_model_data(name)['is_custom']::
+        if ca.mindsdb_native.get_model_data(name)['is_custom']:
             return ca.custom_models.predict(name, from_data=from_data, **kwargs)
 
         results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)

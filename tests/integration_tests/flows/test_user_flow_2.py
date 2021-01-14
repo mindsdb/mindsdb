@@ -92,9 +92,10 @@ class UserFlowTest_2(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         mdb, datastore = run_environment(
-            config,
-            apis=['http'],
-            mindsdb_database=MINDSDB_DATABASE
+            config
+            ,apis=['http']
+            ,mindsdb_database=MINDSDB_DATABASE
+            ,storage='s3'
         )
         cls.mdb = mdb
 

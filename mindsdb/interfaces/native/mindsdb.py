@@ -98,6 +98,7 @@ class MindsdbNative():
     def get_models(self, status='any'):
         models = self.state.list_predictors()
         models = [self._predictor_to_dict(x) for x in models]
+        models = [x for x in models if not x['is_custom']]
         if status != 'any':
             models = [x for x in models if x['status'] == status]
         models = [x for x in models if x['status'] != 'training' or parse_datetime(x['created_at']) > parse_datetime(self.config['mindsdb_last_started_at'])]

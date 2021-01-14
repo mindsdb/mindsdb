@@ -113,7 +113,6 @@ class State():
     # Datasources
     def make_datasource(self, name, data, analysis, storage_path):
         datasource = Datasource(name=name, data=data, analysis=analysis, company_id=self.company_id)
-        print('\n\n\n\n\n', self.config['paths']['datasources'], datasource.name, '\n\n\n\n\n')
         self.storage.put(filename=datasource.name, remote_name=self._gen_remote_datasource_name(datasource.name), local_path=self.config['paths']['datasources'])
         session.add(datasource)
         session.commit()

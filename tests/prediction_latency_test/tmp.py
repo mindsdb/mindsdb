@@ -1,25 +1,36 @@
 import os
 import time
 import csv
+import shutil 
 import pandas as pd
 import docker
 import requests
 
+predictors_dir = "/home/itsyplen/work/repos/MindsDB/mindsdb/var/predictors"
+os.environ["MINDSDB_STORAGE_PATH"] = predictors_dir
 from mindsdb_native import Predictor
 import schemas as schema
 
-DATASETS_PATH = "/Users/itsyplen/repos/MindsDB/private-benchmarks/benchmarks/datasets"
+# DATASETS_PATH = "/Users/itsyplen/repos/MindsDB/private-benchmarks/benchmarks/datasets"
+DATASETS_PATH = "/home/itsyplen/work/repos/MindsDB/private-benchmarks/benchmarks/datasets"
 datasets = ["monthly_sunspots", "metro_traffic_ts"]
 
 handlers = {"monthly_sunspots": lambda df: monthly_sunspots_handler(df)}
 predict_targets = {"monthly_sunspots": 'Sunspots',
         "metro_traffic_ts": 'traffic_volume'}
 
+# CONFIG_PATH = 
+
 def monthly_sunspots_handler(df):
     months = df['Month']
     for i, val in enumerate(months):
         months[i] = val + "-01"
 
+
+def copy_version_info(dataset):
+    dst = os.path.join(predictors_dir, dataset, "versions.json")
+    src = os.path.join(predictors_dir, "..", "versions.json")
+    shutil.copyfile(src, dst)
 
 def create_models():
     for dataset in datasets:
@@ -37,6 +48,8 @@ def create_models():
             print(f"model {dataset} doesn't exist")
             print("creating....")
             model.learn(to_predict=to_predict, from_data=data_path)
+        copy_version_info(dataset)
+
 
 
 def split_datasets():
@@ -50,6 +63,7 @@ def split_datasets():
         train_len = int(float(all_len) * 0.8)
         train_df = df[:train_len]
         test_df = df[train_len:]
+        test_df = test_df.drop(columns=[predict_targets[dataset],])
         train_df.to_csv(f"{dataset}_train.csv", index=False)
         test_df.to_csv(f"{dataset}_test.csv", index=False)
 
@@ -59,9 +73,9 @@ def run_clickhouse():
     image = "yandex/clickhouse-server:latest"
     container_params = {'name': 'clickhouse-latency-test',
             'remove': True,
-            # 'network_mode': 'host',
-            'ports': {"9000/tcp": 9000,
-                "8123/tcp": 8123},
+            'network_mode': 'host',
+            # 'ports': {"9000/tcp": 9000,
+            #     "8123/tcp": 8123},
             'environment': {"CLICKHOUSE_PASSWORD": "iyDNE5g9fw9kdrCLIKoS3bkOJkE",
                 "CLICKHOUSE_USER": "root"}}
     container = docker_client.containers.run(image, detach=True, **container_params)
@@ -100,12 +114,12 @@ def query(query):
     if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
         query += ' FORMAT JSON'
 
-    host = "localhost"
+    host = "127.0.0.1"
     port = 8123
-    user = "default"
-    password = ""
-    # user = "root"
-    # password = "iyDNE5g9fw9kdrCLIKoS3bkOJkE"
+    # user = "default"
+    # password = ""
+    user = "root"
+    password = "iyDNE5g9fw9kdrCLIKoS3bkOJkE"
 
     connect_string = f'http://{host}:{port}'
 
@@ -114,7 +128,8 @@ def query(query):
     res = requests.post(
         connect_string,
         data=query,
-        params=params
+        params=params,
+        headers={"Connection": "close"}
     )
 
     if res.status_code != 200:
@@ -123,14 +138,17 @@ def query(query):
     assert res.status_code == 200
 
 if __name__ == "__main__":
+    for dataset in datasets:
+        copy_version_info(dataset)
+
     # split_datasets()
     # create_models()
 
 
-    container = run_clickhouse()
-    time.sleep(5)
-    print("preparing db")
-    prepare_db()
+    # container = run_clickhouse()
+    # time.sleep(5)
+    # print("preparing db")
+    # prepare_db()
     # try:
     #     prepare_db()
     # finally:

@@ -6,6 +6,8 @@ import os
 import pickle
 from mindsdb.utilities.log import log as logger
 
+import pandas as pd
+
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
 from mindsdb.interfaces.state.state import State
@@ -59,11 +61,13 @@ class DataStore():
 
         # @TODO Remove and add `offset` to the `filter` method of the datasource
         if limit is not None:
-            filtered_ds = ds.filter(where=where, limit=limit+offset)
+            filtered_ds = ds.filter(where=where, limit=limit + offset)
         else:
             filtered_ds = ds.filter(where=where)
 
         filtered_ds = filtered_ds.iloc[offset:]
+
+        filtered_ds = filtered_ds.where(pd.notnull(filtered_ds), None)
 
         data = filtered_ds.to_dict(orient='records')
         return {

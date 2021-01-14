@@ -70,8 +70,10 @@
             "user": "postgres"
         },
         "default_snowflake": {
-            "publish": false,
             "type": "snowflake"
+        },
+        "default_s3_storage": {
+            "type": "s3_storage"
         }
     },
     "log": {

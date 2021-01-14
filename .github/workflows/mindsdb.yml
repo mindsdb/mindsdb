@@ -115,7 +115,7 @@ jobs:
 
   deploy_version_file:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/new_osx_installers' && github.actor != 'mindsdbadmin'
+    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python

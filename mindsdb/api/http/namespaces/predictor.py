@@ -52,11 +52,6 @@ def preparse_results(results, format_flag='explain'):
     else:
         abort(400, "")
 
-def is_custom(name):
-    if name in [x['name'] for x in ca.custom_models.get_models()]:
-        return True
-    return False
-
 @ns_conf.route('/')
 class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
@@ -64,7 +59,7 @@ class PredictorList(Resource):
     def get(self):
         '''List all predictors'''
 
-        return [*ca.mindsdb_native.get_models(),*ca.custom_models.get_models()]
+        return ca.mindsdb_native.get_models()
 
 @ns_conf.route('/custom/<name>')
 @ns_conf.param('name', 'The predictor identifier')
@@ -94,10 +89,7 @@ class Predictor(Resource):
     @ns_conf.marshal_with(predictor_metadata, skip_none=True)
     def get(self, name):
         try:
-            if is_custom(name):
-                model = ca.custom_models.get_model_data(name)
-            else:
-                model = ca.mindsdb_native.get_model_data(name, native_view=True)
+            model = ca.mindsdb_native.get_model_data(name, native_view=True)
         except Exception as e:
             abort(404, "")
 
@@ -110,7 +102,7 @@ class Predictor(Resource):
     @ns_conf.doc('delete_predictor')
     def delete(self, name):
         '''Remove predictor'''
-        if is_custom(name):
+        if ca.mindsdb_native.get_model_data(name)['is_custom']:
             ca.custom_models.delete_model(name)
         else:
             ca.mindsdb_native.delete_model(name)
@@ -223,7 +215,7 @@ class PredictorPredict(Resource):
         if type(kwargs) != type({}):
             kwargs = {}
 
-        if is_custom(name):
+        if ca.mindsdb_native.get_model_data(name)['is_custom']::
             return ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
             results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
@@ -255,7 +247,7 @@ class PredictorPredictFromDataSource(Resource):
         if not isinstance(kwargs, dict):
             kwargs = {}
 
-        if is_custom(name):
+        if ca.mindsdb_native.get_model_data(name)['is_custom']::
             return ca.custom_models.predict(name, from_data=from_data, **kwargs)
 
         results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
@@ -318,7 +310,7 @@ class PredictorDownload(Resource):
         '''Export predictor to file'''
         try:
             new_name = request.args.get('new_name')
-            if is_custom(name):
+            if ca.mindsdb_native.get_model_data(name)['is_custom']:
                 ca.custom_models.rename_model(name, new_name)
             else:
                 ca.mindsdb_native.rename_model(name, new_name)

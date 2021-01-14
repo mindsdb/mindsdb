@@ -94,7 +94,8 @@ class UserFlowTest_2(unittest.TestCase):
         mdb, datastore = run_environment(
             config,
             apis=['http'],
-            mindsdb_database=MINDSDB_DATABASE
+            mindsdb_database=MINDSDB_DATABASE,
+            storage='s3'
         )
         cls.mdb = mdb
 

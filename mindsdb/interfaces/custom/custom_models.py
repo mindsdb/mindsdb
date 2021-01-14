@@ -128,19 +128,6 @@ class CustomModels():
         if data is not None and 'status' in data and 'data_analysis' in data and 'columns' in data['data_analysis'] and 'Empty_target' not in data['data_analysis']:
             self.state.update_predictor(name=name, status=data['status'], original_path=None, data=json.dumps(data['data_analysis']), to_predict=data['predict'])
 
-
-    def get_models(self, status='any'):
-        models = []
-        for model_dir in os.listdir(self.storage_dir):
-            if 'custom_model_' in model_dir:
-                name = model_dir.replace('custom_model_','')
-                try:
-                    models.append(self.get_model_data(name))
-                except:
-                    print(f'Model {name} not found !')
-
-        return models
-
     def delete_model(self, name):
         shutil.rmtree(self._dir(name))
         self.state.delete_predictor(name)

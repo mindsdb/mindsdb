@@ -25,3 +25,5 @@ tests/used_car_price_external/test.csv
 used_car_price_external/ds.pickle
 used_car_price_external/test.csv
 used_car_price_predictor/ds.pickle
+used_car_price*
+*used_car_price*

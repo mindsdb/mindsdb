@@ -1,7 +1,6 @@
 import os
 import time
 import csv
-import importlib.util
 import pandas as pd
 import docker
 import requests
@@ -12,24 +11,28 @@ import schemas as schema
 DATASETS_PATH = "/Users/itsyplen/repos/MindsDB/private-benchmarks/benchmarks/datasets"
 datasets = ["monthly_sunspots", "metro_traffic_ts"]
 
-models = {}
-# spec = importlib.util.spec_from_file_location("common", str(common_path))
-# common = importlib.util.module_from_spec(spec)
+handlers = {"monthly_sunspots": lambda df: monthly_sunspots_handler(df)}
+predict_targets = {"monthly_sunspots": 'Sunspots',
+        "metro_traffic_ts": 'traffic_volume'}
+
+def monthly_sunspots_handler(df):
+    months = df['Month']
+    for i, val in enumerate(months):
+        months[i] = val + "-01"
 
 
 def create_models():
     for dataset in datasets:
         dataset_root_path = os.path.join(DATASETS_PATH, dataset)
-        # getting benchmark prediction target
-        spec = importlib.util.spec_from_file_location("info", os.path.join(dataset_root_path, "info.py"))
-        info = importlib.util.module_from_spec(spec)
-        to_predict = info.target
+        print(f"dataset_root_path: {dataset_root_path}")
+        to_predict = predict_targets[dataset]
 
         data_path = f"{dataset}_train.csv"
         print(f"data_path: {data_path}")
         model = Predictor(name=dataset)
         try:
-            model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=False)
+            # model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=False)
+            model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=True)
         except FileNotFoundError:
             print(f"model {dataset} doesn't exist")
             print("creating....")
@@ -40,6 +43,8 @@ def split_datasets():
     for dataset in datasets:
         data_path = os.path.join(DATASETS_PATH, dataset, "data.csv")
         df = pd.read_csv(data_path)
+        if dataset in handlers:
+            handlers[dataset](df)
         all_len = len(df)
         print(f"{dataset} len: {all_len}")
         train_len = int(float(all_len) * 0.8)
@@ -117,15 +122,19 @@ def query(query):
         print(res.text, res.status_code)
     assert res.status_code == 200
 
-container = run_clickhouse()
-print("after creating")
-print(container.status)
-time.sleep(5)
-print("preparing db")
-try:
+if __name__ == "__main__":
+    # split_datasets()
+    # create_models()
+
+
+    container = run_clickhouse()
+    time.sleep(5)
+    print("preparing db")
     prepare_db()
-finally:
-    print("before removing", container.status)
-    container.stop()
-    print("after removing")
-    print(container.status)
+    # try:
+    #     prepare_db()
+    # finally:
+    #     print("before removing", container.status)
+    #     container.stop()
+    #     print("after removing")
+    #     print(container.status)

@@ -1,11 +1,11 @@
 database = 'test_data'
-# datasets = ['monthly_sunspots', 'metro_traffic_ts']
-datasets = ['monthly_sunspots', ]
+datasets = ['monthly_sunspots', 'metro_traffic_ts']
+# datasets = ['monthly_sunspots', ]
 tables = {
     'monthly_sunspots': f"""
     CREATE TABLE IF NOT EXISTS {database}.monthly_sunspots (
         Month Date,
-        Sunspot Float64
+        Sunspots Float64
     ) ENGINE = MergeTree()
     ORDER BY Month
     PARTITION BY Month

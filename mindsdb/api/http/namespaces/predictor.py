@@ -215,7 +215,7 @@ class PredictorPredict(Resource):
         if type(kwargs) != type({}):
             kwargs = {}
 
-        if ca.mindsdb_native.get_model_data(name)['is_custom']::
+        if ca.mindsdb_native.get_model_data(name)['is_custom']:
             return ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
             results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)

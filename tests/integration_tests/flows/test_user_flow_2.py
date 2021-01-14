@@ -155,7 +155,7 @@ class UserFlowTest_2(unittest.TestCase):
             },
             mindsdb_database=MINDSDB_DATABASE,
             clear_storage=False
-            ,storage='local'
+            ,storage='s3'
         )
         self.mdb = mdb
 

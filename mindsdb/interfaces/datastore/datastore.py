@@ -15,7 +15,6 @@ from mindsdb.interfaces.state.config import Config
 class DataStore():
     def __init__(self, config):
         self.config = Config(config)
-        self.dir = config['paths']['datasources']
         self.state = State(self.config)
         self.mindsdb_native = MindsdbNative(config)
 
@@ -83,7 +82,7 @@ class DataStore():
     def delete_datasource(self, name):
         self.state.delete_datasource(name)
         try:
-            shutil.rmtree(os.path.join(self.dir, name))
+            shutil.rmtree(os.path.join(self.config['paths']['datasources'], name))
         except Exception as e:
             pass
 
@@ -99,7 +98,7 @@ class DataStore():
             else:
                 break
 
-        ds_meta_dir = os.path.join(self.dir, name)
+        ds_meta_dir = os.path.join(self.config['paths']['datasources'], name)
         os.mkdir(ds_meta_dir)
 
         try:
@@ -239,7 +238,7 @@ class DataStore():
     def get_datasource_obj(self, name, raw=False):
         try:
             self.state.load_datasource(name)
-            ds_meta_dir = os.path.join(self.dir, name)
+            ds_meta_dir = os.path.join(self.config['paths']['datasources'], name)
             ds = None
             with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'rb') as fp:
                 picklable = pickle.load(fp)
@@ -251,5 +250,5 @@ class DataStore():
                     ds = picklable
             return ds
         except Exception as e:
-            print(f'\n{e}\n')
+            print(f'\nError getting datasource object: {e}\n')
             return None

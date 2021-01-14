@@ -2,6 +2,9 @@ import os
 import time
 import csv
 import shutil 
+import json
+from subprocess import Popen
+
 import pandas as pd
 import docker
 import requests
@@ -19,7 +22,8 @@ handlers = {"monthly_sunspots": lambda df: monthly_sunspots_handler(df)}
 predict_targets = {"monthly_sunspots": 'Sunspots',
         "metro_traffic_ts": 'traffic_volume'}
 
-# CONFIG_PATH = 
+CONFIG_PATH = "/home/itsyplen/work/repos/MindsDB/mindsdb/etc/config.json"
+
 
 def monthly_sunspots_handler(df):
     months = df['Month']
@@ -50,6 +54,20 @@ def create_models():
             model.learn(to_predict=to_predict, from_data=data_path)
         copy_version_info(dataset)
 
+def add_integration():
+    with open(CONFIG_PATH, 'r') as f:
+        config = json.load(f)
+    integration_name = "prediction_clickhouse"
+    # integrations = config['integrations']
+    config['integrations'][integration_name] = {}
+    config['integrations'][integration_name]['publish'] = True
+    config['integrations'][integration_name]['host'] = "127.0.0.1"
+    config['integrations'][integration_name]['port'] = 8123
+    config['integrations'][integration_name]['user'] = 'root'
+    config['integrations'][integration_name]['password'] = "iyDNE5g9fw9kdrCLIKoS3bkOJkE"
+    config['integrations'][integration_name]['type'] = 'clickhouse'
+    with open(CONFIG_PATH, 'w') as f:
+        json.dump(config, f, indent=4, sort_keys=True)
 
 
 def split_datasets():
@@ -67,6 +85,13 @@ def split_datasets():
         train_df.to_csv(f"{dataset}_train.csv", index=False)
         test_df.to_csv(f"{dataset}_test.csv", index=False)
 
+
+def run_mindsdb():
+    sp = Popen(['python', '-m', 'mindsdb'],
+               close_fds=True)
+
+    time.sleep(30)
+    return sp
 
 def run_clickhouse():
     docker_client = docker.from_env(version='auto')
@@ -137,18 +162,46 @@ def query(query):
         print(res.text, res.status_code)
     assert res.status_code == 200
 
+def ping_clickhouse():
+    queries = ["SELECT * FROM mindsdb.predictors",
+               "SELECT traffic_volume AS predicted FROM mindsdb.metro_traffic_ts WHERE weather_description=='sky is clear' AND weather_main=='Mist'"]
+    # query = "SHOW TABLES FROM mindsdb FORMAT JSON"
+    # query = "SELECT * FROM mindsdb.metro_traffic_ts LIMIT 1 FORMAT JSON"
+    host = "127.0.0.1"
+    port = 8123
+    # user = "default"
+    # password = ""
+    user = "root"
+    password = "iyDNE5g9fw9kdrCLIKoS3bkOJkE"
+
+    connect_string = f'http://{host}:{port}'
+
+    params = {'user': user, 'password': password}
+
+    for query in queries:
+        res = requests.post(
+            connect_string,
+            data=query,
+            params=params
+        )
+
+        print(res.text, res.status_code)
+
+
 if __name__ == "__main__":
-    for dataset in datasets:
-        copy_version_info(dataset)
 
-    # split_datasets()
-    # create_models()
-
-
-    # container = run_clickhouse()
-    # time.sleep(5)
-    # print("preparing db")
-    # prepare_db()
+    split_datasets()
+    create_models()
+    print("adding integration")
+    add_integration()
+    container = run_clickhouse()
+    time.sleep(5)
+    print("preparing db")
+    prepare_db()
+    print("running mindsb")
+    run_mindsdb()
+    print("ping clickhouse")
+    ping_clickhouse()
     # try:
     #     prepare_db()
     # finally:

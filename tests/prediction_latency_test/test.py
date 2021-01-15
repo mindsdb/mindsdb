@@ -66,6 +66,7 @@ parser.add_argument("--config_path", type=str, default=os.path.abspath(os.path.j
 parser.add_argument("--use_docker", type=bool, default=True, help="launch clickhouse in docker, if False will use local DB assuming that it is installed.")
 parser.add_argument("--prepare_datasource", type=bool, default=True, help="prepare train/test sets from initial benchmark datasets")
 parser.add_argument("--prepare_db", type=bool, default=True, help="fulfill database by test data")
+parser.add_argument("--train_models", type=bool, default=True, help="May be set in False if model is exists")
 
 
 if __name__ == '__main__':
@@ -86,7 +87,8 @@ if __name__ == '__main__':
 
     prepare_env(prepare_data=args.prepare_datasource,
                 use_docker=args.use_docker,
-                setup_db=args.prepare_db)
+                setup_db=args.prepare_db,
+                train_models=args.train_models)
 
     rows = [1, ] + list(range(20, 101))
     for_report = {}

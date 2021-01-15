@@ -173,10 +173,12 @@ def query(query):
 
 def prepare_env(prepare_data=True,
                 use_docker=True,
-                setup_db=True):
+                setup_db=True,
+                train_models=True):
     if prepare_data:
         split_datasets()
-    create_models()
+    if train_models:
+        create_models()
     add_integration()
     if use_docker:
         print("running docker")

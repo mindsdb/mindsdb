@@ -1,7 +1,7 @@
 # Mindsdb native interface
 from pathlib import Path
 import json
-
+import datetime
 from dateutil.parser import parse as parse_datetime
 
 import mindsdb_native
@@ -16,13 +16,25 @@ class MindsdbNative():
     def __init__(self, config):
         self.config = config
         self.dbw = DatabaseWrapper(self.config)
+        self.predictor_cache = {}
+        self._load_counter = 0
+
+    def _invalidate_cached_predictors(self):
+        for predictor_name in list(predictor_cache.keys()):
+            if (datetime.datetime.now() - predictor_cache[predictor_name]['created']).total_seconds() > 1200:
+                del predictor_cache[predictor_name]
 
     def _setup_for_creation(self, name):
-            predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
-            create_directory(predictor_dir)
-            versions_file_path = predictor_dir.joinpath('versions.json')
-            with open(str(versions_file_path), 'wt') as f:
-                json.dump(self.config.versions, f, indent=4, sort_keys=True)
+        if name in predictor_cache:
+            del predictor_cache[name]
+        # Here for no particular reason, because we want to run this sometimes but not too often
+        self._invalidate_cached_predictors()
+
+        predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
+        create_directory(predictor_dir)
+        versions_file_path = predictor_dir.joinpath('versions.json')
+        with open(str(versions_file_path), 'wt') as f:
+            json.dump(self.config.versions, f, indent=4, sort_keys=True)
 
     def create(self, name):
         self._setup_for_creation(name)
@@ -44,10 +56,15 @@ class MindsdbNative():
                 raise Exception('Learning process failed !')
 
     def predict(self, name, when_data=None, kwargs={}):
-        # @TODO Separate into two paths, one for "normal" predictions and one for "real time" predictions. Use the multiprocessing code commented out bellow for normal (once we figure out how to return the prediction object... else use the inline code but with the "real time" predict functionality of mindsdb_native taht will be implemented later)
-        mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
-
-        predictions = mdb.predict(
+        if name not in predictor_cache:
+            # @TODO Add some almost-OOM check and invalidate some of the older predictors if we are running OOM
+            if F.get_model_data(name)['status'] == 'complete':
+                predictor_cache[name] = {
+                    'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
+                    'created': datetime.datetime.now()
+                }
+                
+        predictions = predictor_cache[name]['predictor'].predict(
             when_data=when_data,
             **kwargs
         )

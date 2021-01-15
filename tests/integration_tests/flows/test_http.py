@@ -11,10 +11,11 @@ import requests
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import net_connections
 
-common_path = Path(__file__).parent.parent.absolute().joinpath('flows/common.py').resolve()
-spec = importlib.util.spec_from_file_location("common", str(common_path))
-common = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(common)
+from common import (
+    run_environment
+    TEST_CONFIG
+    MINDSDB_DATABASE
+)
 
 rand = randint(0, pow(10, 12))
 ds_name = f'hr_ds_{rand}'

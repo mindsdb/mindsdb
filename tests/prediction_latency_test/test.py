@@ -11,7 +11,6 @@ class NativeDataFrame:
         self.predictor = Predictor(name=dataset)
 
     def predict(self, row_number=1):
-        # print(f"{self.__class__.__name__}_{self.dataset} call predict with {row_number} rows")
         return self.predictor.predict(self.df[:row_number])
 
     def __repr__(self):
@@ -22,8 +21,8 @@ class NativeDataFrame:
 
 class NativeClickhouse:
     host = '127.0.0.1'
-    user = 'root'
-    password = "iyDNE5g9fw9kdrCLIKoS3bkOJkE"
+    user = 'default'
+    password = ''
 
     def __init__(self, dataset):
         self.dataset = dataset
@@ -32,7 +31,6 @@ class NativeClickhouse:
 
     def predict(self, row_number=1):
         _query = self.query_template % row_number
-        # print(f"{self.__class__.__name__}_{self.dataset} call predict with {_query}")
         return self.predictor.predict(when_data=ClickhouseDS(_query,
                                                              host=self.host,
                                                              user=self.user,
@@ -53,7 +51,6 @@ class AutoML:
     def predict(self, row_number=1):
         where = self.where_template % row_number
         _query = self.query_template % where
-        # print(f"{self.__class__.__name__}_{self.dataset} call predict with {_query}")
         return query(_query)
 
     def __repr__(self):
@@ -107,4 +104,7 @@ if __name__ == '__main__':
     df = pd.DataFrame(for_report)
     df.index = rows
 
+    print("GOT NEXT TEST RESULTS:")
     print(df)
+    df.to_csv("latency_prediction_result.csv")
+    print("Done. Results saved to latency_prediction_result.csv")

@@ -27,7 +27,6 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
 from mindsdb.utilities.log import initialize_log
 
-
 def close_api_gracefully(apis):
     try:
         for api in apis.values():

@@ -250,8 +250,8 @@ class Config(object):
                     self._migrate()
                     self._save()
                 self._validate()
-                self._format()
                 self._merge_default_config()
+                self._format()
         else:
             raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
 

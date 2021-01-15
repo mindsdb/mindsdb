@@ -1,18 +1,15 @@
 import os
 import sys
+import json
 
 from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
 from mindsdb.utilities.fs import get_or_create_dir_struct, create_dirs_recursive
-from mindsdb.utilities.wizards import gen_default_config
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import args_parse, is_notebook
 
-config_dir, storage_dir = get_or_create_dir_struct()
 
+config_dir, storage_dir = get_or_create_dir_struct()
 config_path = os.path.join(config_dir, 'config.json')
-if not os.path.exists(config_path):
-    with open(config_path, 'w') as fp:
-        json.dump({}, fp)
 
 try:
     if not is_notebook():
@@ -20,14 +17,15 @@ try:
         if args.config is not None:
             config_path = args.config
 except:
-    # This fials in some notebooks
+    # This fials in some notebooks ... check above for is_notebook is still needed because even if the exception is caught trying to read the arg still leads to failure in other notebooks... notebooks a
     pass
 
-try:
-    mindsdb_config = Config(config_path)
-except Exception as e:
-    print(str(e))
-    sys.exit(1)
+if not os.path.isfile(config_path):
+    with open(config_path, 'w') as fp:
+        json.dump({'config_version': '1.4', 'storage_dir': storage_dir, 'api': {}}, fp)
+
+mindsdb_config = Config(config_path)
+
 
 paths = mindsdb_config.paths
 create_dirs_recursive(paths)

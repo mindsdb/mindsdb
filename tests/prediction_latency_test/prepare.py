@@ -1,4 +1,5 @@
 import os
+import atexit
 import time
 import csv
 import shutil
@@ -8,21 +9,21 @@ from subprocess import Popen
 import pandas as pd
 import docker
 import requests
+import psutil
 
-predictors_dir = "/home/itsyplen/repos/work/MindsDB/mindsdb/var/predictors"
-os.environ["MINDSDB_STORAGE_PATH"] = predictors_dir
+# os.environ["MINDSDB_STORAGE_PATH"] = predictors_dir
 from mindsdb_native import Predictor
 import schemas as schema
 
-# DATASETS_PATH = "/Users/itsyplen/repos/MindsDB/private-benchmarks/benchmarks/datasets"
-DATASETS_PATH = "/home/itsyplen/repos/work/MindsDB/private-benchmarks/benchmarks/datasets"
+DATASETS_PATH = os.getenv("DATASETS_PATH")
+CONFIG_PATH = os.getenv("CONFIG_PATH")
+predictors_dir = os.getenv("MINDSDB_STORAGE_PATH")
 datasets = ["monthly_sunspots", "metro_traffic_ts"]
 
 handlers = {"monthly_sunspots": lambda df: monthly_sunspots_handler(df)}
 predict_targets = {"monthly_sunspots": 'Sunspots',
         "metro_traffic_ts": 'traffic_volume'}
 
-CONFIG_PATH = "/home/itsyplen/repos/work/MindsDB/mindsdb/etc/config.json"
 
 
 def monthly_sunspots_handler(df):
@@ -46,8 +47,8 @@ def create_models():
         print(f"data_path: {data_path}")
         model = Predictor(name=dataset)
         try:
-            model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=False)
-            # model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=True)
+            # model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=False)
+            model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=True)
         except FileNotFoundError:
             print(f"model {dataset} doesn't exist")
             print("creating....")
@@ -85,13 +86,24 @@ def split_datasets():
         train_df.to_csv(f"{dataset}_train.csv", index=False)
         test_df.to_csv(f"{dataset}_test.csv", index=False)
 
+def stop_mindsdb(ppid):
+    pprocess = psutil.Process(ppid)
+    pids = [x.pid for x in pprocess.children(recursive=True)]
+    pids.append(ppid)
+    for pid in pids:
+        try:
+            os.kill(pid, 9)
+        # process may be killed by OS due to some reasons in that moment
+        except ProcessLookupError:
+            pass
 
 def run_mindsdb():
-    sp = Popen(['python', '-m', 'mindsdb'],
+    print("running mindsdb")
+    sp = Popen(['python', '-m', 'mindsdb', '--config', CONFIG_PATH],
                close_fds=True)
 
     time.sleep(30)
-    return sp
+    atexit.register(stop_mindsdb, sp.pid)
 
 def run_clickhouse():
     docker_client = docker.from_env(version='auto')
@@ -104,6 +116,7 @@ def run_clickhouse():
             'environment': {"CLICKHOUSE_PASSWORD": "iyDNE5g9fw9kdrCLIKoS3bkOJkE",
                 "CLICKHOUSE_USER": "root"}}
     container = docker_client.containers.run(image, detach=True, **container_params)
+    atexit.register(container.stop)
     return container
 
 def prepare_db():
@@ -187,6 +200,24 @@ def ping_clickhouse():
         )
 
         print(res.text, res.status_code)
+
+def prepare_env(prepare_data=True,
+                use_docker=True,
+                setup_db=True):
+    # if prepare_data:
+    #     split_datasets()
+    # create_models()
+    # add_integration()
+    if use_docker:
+        print("running docker")
+        run_clickhouse()
+        time.sleep(5)
+    if setup_db:
+        print("preparing db")
+        prepare_db()
+    print("running mindsdb")
+    run_mindsdb()
+
 
 
 if __name__ == "__main__":

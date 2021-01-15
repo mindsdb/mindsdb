@@ -1,14 +1,8 @@
 import os
 import time
+import argparse
 
 import pandas as pd
-
-predictors_dir = "/home/itsyplen/repos/work/MindsDB/mindsdb/var/predictors"
-os.environ["MINDSDB_STORAGE_PATH"] = predictors_dir
-from mindsdb_native import Predictor, ClickhouseDS
-
-from prepare import query, datasets, predict_targets
-
 
 class NativeDataFrame:
     def __init__(self, dataset):
@@ -68,21 +62,49 @@ class AutoML:
     def __str__(self):
         return self.__repr__()
 
+parser = argparse.ArgumentParser(description='Prediction latency test.')
+parser.add_argument("datasets_path", type=str, help="path to private-benchmarks/benchmarks/datasets dir")
+parser.add_argument("--predictors_dir", type=str, default=os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../var/predictors')), help="path to mindsdb predictors dir. if not specified related path from this file will be used.")
+parser.add_argument("--config_path", type=str, default=os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../etc/config.json')), help="full path to config.json. if not specified related path from this file will be used.")
+parser.add_argument("--use_docker", type=bool, default=True, help="launch clickhouse in docker, if False will use local DB assuming that it is installed.")
+parser.add_argument("--prepare_datasource", type=bool, default=True, help="prepare train/test sets from initial benchmark datasets")
+parser.add_argument("--prepare_db", type=bool, default=True, help="fulfill database by test data")
 
-rows = [1, ] + list(range(20, 101))
-for_report = {}
-for dataset in datasets:
-    for predictor_type in [NativeDataFrame, NativeClickhouse, AutoML]:
-        predictor = predictor_type(dataset)
-        for_report[str(predictor)] = []
-        for row_num in rows:
-            started = time.time()
-            predictor.predict(row_number=row_num)
-            duration = time.time() - started
-            duration = round(duration, 5)
-            for_report[str(predictor)].append(duration)
 
-df = pd.DataFrame(for_report)
-df.index = rows
+if __name__ == '__main__':
+    args = parser.parse_args()
+    print(f"DATASETS_PATH: {args.datasets_path}")
+    print(f"MINDSDB_STORAGE_PATH: {args.predictors_dir}")
+    print(f"CONFIG_PATH: {args.config_path}")
 
-print(df)
+    os.environ["MINDSDB_STORAGE_PATH"] = args.predictors_dir
+    os.environ["CONFIG_PATH"] = args.config_path
+    os.environ["DATASETS_PATH"] = args.datasets_path
+
+
+
+
+    from mindsdb_native import Predictor, ClickhouseDS
+    from prepare import query, datasets, predict_targets, prepare_env
+
+    prepare_env(prepare_data=args.prepare_datasource,
+                use_docker=args.use_docker,
+                setup_db=args.prepare_db)
+
+    rows = [1, ] + list(range(20, 101))
+    for_report = {}
+    for dataset in datasets:
+        for predictor_type in [NativeDataFrame, NativeClickhouse, AutoML]:
+            predictor = predictor_type(dataset)
+            for_report[str(predictor)] = []
+            for row_num in rows:
+                started = time.time()
+                predictor.predict(row_number=row_num)
+                duration = time.time() - started
+                duration = round(duration, 5)
+                for_report[str(predictor)].append(duration)
+
+    df = pd.DataFrame(for_report)
+    df.index = rows
+
+    print(df)

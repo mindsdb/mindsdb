@@ -19,7 +19,8 @@ class Clickhouse(Integration):
             DATA_SUBTYPES.AUDIO: 'Nullable(String)',
             DATA_SUBTYPES.SHORT: 'Nullable(String)',
             DATA_SUBTYPES.RICH: 'Nullable(String)',
-            DATA_SUBTYPES.ARRAY: 'Nullable(String)'
+            DATA_SUBTYPES.ARRAY: 'Nullable(String)',
+            DATA_SUBTYPES.TAGS: 'Nullable(String)'
         }
 
         column_declaration = []

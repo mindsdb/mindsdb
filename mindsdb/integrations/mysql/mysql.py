@@ -19,7 +19,8 @@ class MySQL(Integration):
             DATA_SUBTYPES.AUDIO: 'VARCHAR(500)',
             DATA_SUBTYPES.SHORT: 'VARCHAR(500)',
             DATA_SUBTYPES.RICH: 'VARCHAR(500)',
-            DATA_SUBTYPES.ARRAY: 'VARCHAR(500)'
+            DATA_SUBTYPES.ARRAY: 'VARCHAR(500)',
+            DATA_SUBTYPES.TAGS: 'VARCHAR(500)'
         }
 
         column_declaration = []

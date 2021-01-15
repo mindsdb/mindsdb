@@ -19,7 +19,8 @@ class PostgreSQL(Integration):
             DATA_SUBTYPES.AUDIO: 'text',
             DATA_SUBTYPES.SHORT: 'text',
             DATA_SUBTYPES.RICH: 'text',
-            DATA_SUBTYPES.ARRAY: 'text'
+            DATA_SUBTYPES.ARRAY: 'text',
+            DATA_SUBTYPES.TAGS: 'text'
         }
 
         column_declaration = []

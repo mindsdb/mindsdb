@@ -5,7 +5,7 @@ from mindsdb.integrations.base import Integration
 
 
 class Mariadb(Integration):
-    
+
     def _to_mariadb_table(self, stats, predicted_cols):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
@@ -20,7 +20,8 @@ class Mariadb(Integration):
             DATA_SUBTYPES.AUDIO: 'VARCHAR(500)',
             DATA_SUBTYPES.SHORT: 'VARCHAR(500)',
             DATA_SUBTYPES.RICH: 'VARCHAR(500)',
-            DATA_SUBTYPES.ARRAY: 'VARCHAR(500)'
+            DATA_SUBTYPES.ARRAY: 'VARCHAR(500)',
+            DATA_SUBTYPES.TAGS: 'VARCHAR(500)'
         }
 
         column_declaration = []

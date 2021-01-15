@@ -11,7 +11,8 @@ config_dir, storage_dir = get_or_create_dir_struct()
 
 config_path = os.path.join(config_dir, 'config.json')
 if not os.path.exists(config_path):
-    gen_default_config(config_path)
+    with open(config_path, 'w') as fp:
+        json.dump({}, fp)
 
 try:
     if not is_notebook():

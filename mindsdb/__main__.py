@@ -65,8 +65,6 @@ if __name__ == '__main__':
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config.paths['root']}")
 
-    
-
     update_versions_file(
         config,
         {
@@ -122,13 +120,13 @@ if __name__ == '__main__':
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(config_path, args.verbose))
+            p = ctx.Process(target=start_functions[api_name], args=(config.config_path, args.verbose))
             p.start()
             api_data['process'] = p
         except Exception as e:
-            close_api_gracefully(apis)
             log.error(f'Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}')
-            raise
+            close_api_gracefully(apis)
+            raise e
 
     atexit.register(close_api_gracefully, apis=apis)
 

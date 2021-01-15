@@ -26,10 +26,10 @@ root = 'http://localhost:47334/api'
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config = Config(common.TEST_CONFIG)
+        cls.config = Config(TEST_CONFIG)
         cls.initial_integrations_names = list(cls.config['integrations'].keys())
 
-        mdb, datastore = common.run_environment(
+        mdb, datastore = run_environment(
             cls.config,
             apis=['http'],
             override_integration_config={
@@ -40,7 +40,7 @@ class HTTPTest(unittest.TestCase):
                     'publish': True
                 }
             },
-            mindsdb_database=common.MINDSDB_DATABASE
+            mindsdb_database=MINDSDB_DATABASE
         )
         cls.mdb = mdb
 

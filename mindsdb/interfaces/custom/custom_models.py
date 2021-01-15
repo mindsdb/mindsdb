@@ -122,7 +122,7 @@ class CustomModels():
         with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
             json.dump(data, fp)
 
-    def get_models(self, status='any'):
+    def get_models(self):
         models = []
         for model_dir in os.listdir(self.storage_dir):
             if 'custom_model_' in model_dir:

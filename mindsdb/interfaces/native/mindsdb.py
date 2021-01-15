@@ -124,6 +124,12 @@ class MindsdbNative():
     def load_model(self, fpath):
         # self.state.make_predictor(name, None, to_predict) <--- fix
         F.import_model(model_archive_path=fpath)
+        # Very hacky way of figuring out the name, *but*, oh well, should work in most cases
+        if '/' in str(fpath):
+            name = fpath.split('/')[-1].split('.')[0]
+        elif '/' in str(fpath):
+            name = fpath.split('\\')[-1].split('.')[0]
+
         self.state.make_predictor(name, None, to_predict, False)
 
         analysis = mindsdb_native.F.get_model_data(name)

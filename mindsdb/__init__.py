@@ -53,15 +53,12 @@ else:
             json.dump({'config_version': '1.4', 'storage_dir': storage_dir, 'api': {}}, fp)
 
 mindsdb_config = Config(config_path)
+create_dirs_recursive(mindsdb_config.paths)
 
-
-paths = mindsdb_config.paths
-create_dirs_recursive(paths)
-
-os.environ['MINDSDB_STORAGE_PATH'] = paths['predictors']
 os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')
 os.environ['LIGHTWOOD_LOG_LEVEL'] = os.environ.get('LIGHTWOOD_LOG_LEVEL', 'ERROR')
 os.environ['MINDSDB_CONFIG_PATH'] = config_path
+os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config.paths['predictors']
 
 from mindsdb_native import *
 # Figure out how to add this as a module

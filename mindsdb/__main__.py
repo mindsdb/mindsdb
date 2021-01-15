@@ -7,7 +7,6 @@ import asyncio
 import logging
 import datetime
 
-from pkg_resources import get_distribution
 import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
@@ -55,25 +54,18 @@ if __name__ == '__main__':
     initialize_log(config)
     log = logging.getLogger('mindsdb.main')
 
-    try:
-        lightwood_version = get_distribution('lightwood').version
-    except Exception:
-        from lightwood.__about__ import __version__ as lightwood_version
-
-    try:
-        mindsdb_native_version = get_distribution('mindsdb_native').version
-    except Exception:
-        from mindsdb_native.__about__ import __version__ as mindsdb_native_version
-
-    print(f'Configuration file:\n   {config_path}')
-    print(f"Storage path:\n   {config.paths['root']}")
-
+    from lightwood.__about__ import __version__ as lightwood_version
+    from mindsdb_native.__about__ import __version__ as mindsdb_native_version
+    from mindsdb.__about__ import __version__ as mindsdb_version
     print('Versions:')
     print(f' - lightwood {lightwood_version}')
     print(f' - MindsDB_native {mindsdb_native_version}')
     print(f' - MindsDB {mindsdb_version}')
 
-    os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
+    print(f'Configuration file:\n   {config.config_path}')
+    print(f"Storage path:\n   {config.paths['root']}")
+
+    
 
     update_versions_file(
         config,

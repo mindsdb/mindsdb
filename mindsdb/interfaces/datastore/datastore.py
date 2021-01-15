@@ -18,10 +18,7 @@ class DataStore():
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):
-        if isinstance(ds, str):
-            return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
-        else:
-            return self.mindsdb_native.analyse_dataset(ds)
+        return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
 
     def get_datasources(self):
         datasource_arr = []

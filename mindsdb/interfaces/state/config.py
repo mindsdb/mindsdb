@@ -167,11 +167,18 @@ class Config(object):
         return self._config['paths']
 
     def _read(self, company_id=None):
+        # No need for instant sync unless we're on the same API
+        # Hacky, but doesn't break any constraints that we were imposing before
+        # There's no guarantee of syncing for the calls from the different APIs anyway, doing this doesn't change that
+        if (datetime.datetime.now() - self.last_updated).total_seconds() < 2:
+            return
+
         try:
             if company_id is None:
                 company_id = self._config['company_id']
         except Exception as e:
             company_id = None
+
 
         if Configuration.query.filter(Configuration.company_id == company_id).filter(Configuration.modified_at > self.last_updated).first() is None:
             return

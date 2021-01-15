@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import datetime
 from dateutil.parser import parse as parse_datetime
+import psutil
 
 import mindsdb_native
 from mindsdb_native import F
@@ -17,16 +18,16 @@ class MindsdbNative():
         self.config = config
         self.dbw = DatabaseWrapper(self.config)
         self.predictor_cache = {}
-        self._load_counter = 0
 
     def _invalidate_cached_predictors(self):
-        for predictor_name in list(predictor_cache.keys()):
-            if (datetime.datetime.now() - predictor_cache[predictor_name]['created']).total_seconds() > 1200:
-                del predictor_cache[predictor_name]
+        # @TODO: Cache will become stale if the respective MindsdbNative is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
+        for predictor_name in list(self.predictor_cache.keys()):
+            if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
+                del self.predictor_cache[predictor_name]
 
     def _setup_for_creation(self, name):
-        if name in predictor_cache:
-            del predictor_cache[name]
+        if name in self.predictor_cache:
+            del self.predictor_cache[name]
         # Here for no particular reason, because we want to run this sometimes but not too often
         self._invalidate_cached_predictors()
 
@@ -56,15 +57,18 @@ class MindsdbNative():
                 raise Exception('Learning process failed !')
 
     def predict(self, name, when_data=None, kwargs={}):
-        if name not in predictor_cache:
-            # @TODO Add some almost-OOM check and invalidate some of the older predictors if we are running OOM
+        if name not in self.predictor_cache:
+            # Clear the cache entirely if we have less than .12 GB left
+            if psutil.virtual_memory().available < 1.2 * pow(10,9):
+                self.predictor_cache = {}
+
             if F.get_model_data(name)['status'] == 'complete':
-                predictor_cache[name] = {
+                self.predictor_cache[name] = {
                     'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
                     'created': datetime.datetime.now()
                 }
-                
-        predictions = predictor_cache[name]['predictor'].predict(
+
+        predictions = self.predictor_cache[name]['predictor'].predict(
             when_data=when_data,
             **kwargs
         )

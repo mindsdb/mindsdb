@@ -8,7 +8,7 @@ import mindsdb_native
 from mindsdb_native import F
 from mindsdb.utilities.fs import create_directory
 from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-from mindsdb.interfaces.native.predictor_process import PredictorProcess
+from mindsdb.interfaces.native.learn_process import LearnProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
 
@@ -36,7 +36,7 @@ class MindsdbNative():
 
         self._setup_for_creation(name)
 
-        p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
+        p = LearnProcess(name, from_data, to_predict, kwargs, self.config.get_all())
         p.start()
         if join_learn_process is True:
             p.join()
@@ -45,12 +45,6 @@ class MindsdbNative():
 
     def predict(self, name, when_data=None, kwargs={}):
         # @TODO Separate into two paths, one for "normal" predictions and one for "real time" predictions. Use the multiprocessing code commented out bellow for normal (once we figure out how to return the prediction object... else use the inline code but with the "real time" predict functionality of mindsdb_native taht will be implemented later)
-        '''
-        from_data = when if when is not None else when_data
-        p = PredictorProcess(name, from_data, to_predict=None, kwargs=kwargs, config=self.config.get_all(), 'predict')
-        p.start()
-        predictions = p.join()
-        '''
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         predictions = mdb.predict(

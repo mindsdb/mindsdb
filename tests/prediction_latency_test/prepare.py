@@ -1,7 +1,7 @@
 import os
 import time
 import csv
-import shutil 
+import shutil
 import json
 from subprocess import Popen
 
@@ -9,20 +9,20 @@ import pandas as pd
 import docker
 import requests
 
-predictors_dir = "/home/itsyplen/work/repos/MindsDB/mindsdb/var/predictors"
+predictors_dir = "/home/itsyplen/repos/work/MindsDB/mindsdb/var/predictors"
 os.environ["MINDSDB_STORAGE_PATH"] = predictors_dir
 from mindsdb_native import Predictor
 import schemas as schema
 
 # DATASETS_PATH = "/Users/itsyplen/repos/MindsDB/private-benchmarks/benchmarks/datasets"
-DATASETS_PATH = "/home/itsyplen/work/repos/MindsDB/private-benchmarks/benchmarks/datasets"
+DATASETS_PATH = "/home/itsyplen/repos/work/MindsDB/private-benchmarks/benchmarks/datasets"
 datasets = ["monthly_sunspots", "metro_traffic_ts"]
 
 handlers = {"monthly_sunspots": lambda df: monthly_sunspots_handler(df)}
 predict_targets = {"monthly_sunspots": 'Sunspots',
         "metro_traffic_ts": 'traffic_volume'}
 
-CONFIG_PATH = "/home/itsyplen/work/repos/MindsDB/mindsdb/etc/config.json"
+CONFIG_PATH = "/home/itsyplen/repos/work/MindsDB/mindsdb/etc/config.json"
 
 
 def monthly_sunspots_handler(df):
@@ -46,8 +46,8 @@ def create_models():
         print(f"data_path: {data_path}")
         model = Predictor(name=dataset)
         try:
-            # model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=False)
-            model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=True)
+            model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=False)
+            # model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=True)
         except FileNotFoundError:
             print(f"model {dataset} doesn't exist")
             print("creating....")
@@ -161,6 +161,7 @@ def query(query):
         print(f"error uploading: {query}")
         print(res.text, res.status_code)
     assert res.status_code == 200
+    return res.text
 
 def ping_clickhouse():
     queries = ["SELECT * FROM mindsdb.predictors",
@@ -190,10 +191,10 @@ def ping_clickhouse():
 
 if __name__ == "__main__":
 
-    split_datasets()
-    create_models()
-    print("adding integration")
-    add_integration()
+    # split_datasets()
+    # create_models()
+    # print("adding integration")
+    # add_integration()
     container = run_clickhouse()
     time.sleep(5)
     print("preparing db")

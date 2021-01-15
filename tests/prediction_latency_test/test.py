@@ -10,22 +10,14 @@ from mindsdb_native import Predictor, ClickhouseDS
 from prepare import query, datasets, predict_targets
 
 
-def native_predictor_call(dataset, rows_number=1):
-    p = Predictor(name=dataset)
-    _query = f"SELECT * FROM test_data.{dataset} LIMIT {rows_number}"
-    print(f"native_call query: {_query}")
-    p.predict(when_data=ClickhouseDS(_query,
-                                     host='127.0.0.1',
-                                     user='root',
-                                     password="iyDNE5g9fw9kdrCLIKoS3bkOJkE"))
-
-class NativePredictorWithDataFrame:
+class NativeDataFrame:
     def __init__(self, dataset):
         self.dataset = dataset
         self.df = pd.read_csv(f"{dataset}_test.csv")
         self.predictor = Predictor(name=dataset)
 
     def predict(self, row_number=1):
+        # print(f"{self.__class__.__name__}_{self.dataset} call predict with {row_number} rows")
         return self.predictor.predict(self.df[:row_number])
 
     def __repr__(self):
@@ -34,7 +26,7 @@ class NativePredictorWithDataFrame:
     def __str__(self):
         return self.__repr__()
 
-class NativePredictorWithClickhouseDS:
+class NativeClickhouse:
     host = '127.0.0.1'
     user = 'root'
     password = "iyDNE5g9fw9kdrCLIKoS3bkOJkE"
@@ -46,6 +38,7 @@ class NativePredictorWithClickhouseDS:
 
     def predict(self, row_number=1):
         _query = self.query_template % row_number
+        # print(f"{self.__class__.__name__}_{self.dataset} call predict with {_query}")
         return self.predictor.predict(when_data=ClickhouseDS(_query,
                                                              host=self.host,
                                                              user=self.user,
@@ -66,34 +59,28 @@ class AutoML:
     def predict(self, row_number=1):
         where = self.where_template % row_number
         _query = self.query_template % where
+        # print(f"{self.__class__.__name__}_{self.dataset} call predict with {_query}")
         return query(_query)
 
+    def __repr__(self):
+        return f"{self.dataset}_{self.__class__.__name__}"
 
-def automl_call(dataset, rows_number=1):
-    where = f"SELECT * FROM test_data.{dataset} LIMIT {rows_number}"
-    _query = f"SELECT {predict_targets[dataset]} FROM mindsdb.{dataset} WHERE select_data_query='{where}'"
-    print(f"automl_call query: {_query}")
-    query(_query)
+    def __str__(self):
+        return self.__repr__()
 
 
-sep = "-" * 50
-# rows = [1, ] + list(range(20, 101))
-rows = [1, ] + list(range(20, 30))
+rows = [1, ] + list(range(20, 101))
 for_report = {}
-# for dataset in datasets:
-#     print(f"{sep}{dataset}{sep}")
-#     for row_number in rows:
-#         for func in [native_predictor_call, automl_call]:
-#             started = time.time()
-#             func(dataset, rows_number=row_number)
-#             finished = time.time()
-#             print(f"{func.__name__} with rows={row_number} took {finished-started}")
-#             duration = round(finished - started, 5)
-#             key = f"{dataset}_{func.__name__}"
-#             if key not in for_report:
-#                 for_report[key] = [duration]
-#             else:
-#                 for_report[key].append(duration)
+for dataset in datasets:
+    for predictor_type in [NativeDataFrame, NativeClickhouse, AutoML]:
+        predictor = predictor_type(dataset)
+        for_report[str(predictor)] = []
+        for row_num in rows:
+            started = time.time()
+            predictor.predict(row_number=row_num)
+            duration = time.time() - started
+            duration = round(duration, 5)
+            for_report[str(predictor)].append(duration)
 
 df = pd.DataFrame(for_report)
 df.index = rows

@@ -49,32 +49,3 @@ def make_ssl_cert(file_path):
 
     with open(file_path, 'wb') as f:
         f.write(key_pem + cert_pem)
-
-
-def gen_default_config(config_path):
-    config = {
-            "debug": False,
-            "config_version": "1.4",
-            "api": {
-                'http': {
-                    'host': '127.0.0.1',
-                    'port': '47334'
-                },
-                'mysql': {
-                    'host': '127.0.0.1',
-                    'port': '47335',
-                    'user': 'mindsdb',
-                    'password': ''
-                },
-                'mongodb': {
-                    'host': '127.0.0.1',
-                    'port': '47336'
-                }
-            },
-            "integrations": {},
-            'storage_dir': storage_dir
-        }
-
-    config_path = os.path.join(config_dir, 'config.json')
-    with open(config_path, 'w') as fp:
-        json.dump(config, fp, indent=4, sort_keys=True)

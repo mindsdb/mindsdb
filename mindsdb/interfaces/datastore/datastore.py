@@ -35,6 +35,7 @@ class DataStore():
         metadata = json.loads(datasource.data) if datasource.data is not None else {}
         datasource_dict = {}
         datasource_dict['name'] = datasource.name
+        datasource_dict['id'] = datasource.id
         datasource_dict['source_type'] = metadata.get('source_type', None)
         datasource_dict['source'] = metadata.get('source', None)
         datasource_dict['row_count'] = metadata.get('row_count', None)

@@ -74,6 +74,7 @@ class Integration(Resource):
             abort(500, f'Error during config update: {str(e)}')
 
         if is_test:
+            dbw = DatabaseWrapper(ca.config_obj)
             cons = dbw.check_connections()
             ca.config_obj.remove_db_integration(name)
             return {'success': cons[name]}, 200

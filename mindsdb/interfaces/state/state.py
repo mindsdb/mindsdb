@@ -50,7 +50,7 @@ class State():
         except Exception as e:
             pass
 
-    def update_predictor(self, name, status, original_path, data, to_predict=None):
+    def update_predictor(self, name, status, original_path, data, ds_name, to_predict=None):
         predictor = Predictor.query.filter_by(name=name, company_id=self.company_id, native_version=mindsdb_native.__version__).first()
 
         predictor.status = status

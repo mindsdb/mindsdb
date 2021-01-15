@@ -47,7 +47,7 @@ class DatabaseWrapper():
 
         return integration_arr
 
-    def register_predictors(self, model_data_arr, setup=True):
+    def register_predictors(self, model_data_arr, setup=False):
         it = self._get_integrations()
         for model in [*model_data_arr,None]:
             if model is None:

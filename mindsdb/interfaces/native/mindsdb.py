@@ -103,9 +103,8 @@ class MindsdbNative():
         self.dbw.register_predictors(self.get_model_data(new_name), setup=False)
 
     def load_model(self, fpath):
-        F.import_model(model_archive_path=fpath)
-        # @TODO How do we figure out the name here ?
-        # dbw.register_predictors(...)
+        name = F.import_model(model_archive_path=fpath)
+        self.dbw.register_predictors(self.get_model_data(new_name), setup=False)
 
     def export_model(self, name):
         F.export_predictor(model_name=name)

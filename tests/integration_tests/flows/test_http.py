@@ -12,8 +12,8 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import net_connections
 
 from common import (
-    run_environment
-    TEST_CONFIG
+    run_environment,
+    TEST_CONFIG,
     MINDSDB_DATABASE
 )
 

@@ -37,16 +37,11 @@ class Clickhouse(Integration):
         return column_declaration
 
     def _query(self, query):
-        params = {'user': 'default'}
-        try:
-            params['user'] = self.config['integrations'][self.name]['user']
-        except Exception:
-            pass
+        params = {'user': self.config['integrations'][self.name].get('user', 'default')}
 
-        try:
-            params['password'] = self.config['integrations'][self.name]['password']
-        except Exception:
-            pass
+        if 'password' in self.config['integrations'][self.name]:
+            if self.config['integrations'][self.name]['password'] != '' and self.config['integrations'][self.name]['password'] is not None:
+                params['password'] = self.config['integrations'][self.name]['password']
 
         host = self.config['integrations'][self.name]['host']
         port = self.config['integrations'][self.name]['port']
@@ -102,7 +97,7 @@ class Clickhouse(Integration):
             columns_sql += ',`external_datasource` Nullable(String)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
-                
+
                 if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
                     columns_sql += f',`{col}_min` Nullable(Float64)'
                     columns_sql += f',`{col}_max` Nullable(Float64)'

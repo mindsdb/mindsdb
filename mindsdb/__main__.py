@@ -17,7 +17,6 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.fs import (
-    get_or_create_dir_struct,
     update_versions_file,
     archive_obsolete_predictors,
     remove_corrupted_predictors
@@ -40,44 +39,11 @@ def close_api_gracefully(apis):
 
 
 if __name__ == '__main__':
-    version_error_msg = """
-MindsDB server requires Python >= 3.6 to run
-
-Once you have Python 3.6 installed you can tun mindsdb as follows:
-
-1. create and activate venv:
-python3.6 -m venv venv
-source venv/bin/activate
-
-2. install MindsDB:
-pip3 install mindsdb
-
-3. Run MindsDB
-python3.6 -m mindsdb
-
-More instructions in https://docs.mindsdb.com
-    """
-
-    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 6):
-        print(version_error_msg)
-        exit(1)
-
     mp.freeze_support()
 
     args = args_parse()
 
-    from mindsdb.__about__ import __version__ as mindsdb_version
-
-    if args.version:
-        print(f'MindsDB {mindsdb_version}')
-        sys.exit(0)
-
-    config_path = args.config
-    if config_path is None:
-        config_dir, _ = get_or_create_dir_struct()
-        config_path = os.path.join(config_dir, 'config.json')
-
-    config = Config(config_path)
+    config = Config(os.environ['MINDSDB_CONFIG_PATH'])
 
     if args.verbose is True:
         config['log']['level']['console'] = 'DEBUG'

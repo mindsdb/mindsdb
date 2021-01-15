@@ -3,68 +3,6 @@ import json
 from datetime import datetime, timedelta
 
 
-def _in(ask, default, use_default):
-    if use_default:
-        return default
-
-    user_input = input(f'{ask} (Default: {default})')
-    if user_input is None or user_input == '':
-        user_input = default
-
-    if type(default) == int:
-        user_input = int(user_input)
-
-    if type(default) == bool:
-        user_input = int(user_input)
-
-    return user_input
-
-
-def auto_config(python_path, pip_path, storage_dir):
-    config = {
-        "debug": False,
-        "config_version": "1.4",
-        "api": {
-        },
-        "integrations": {
-            "default_clickhouse": {
-                "publish": False,
-                "type": 'clickhouse'
-            },
-            "default_mariadb": {
-                "publish": False,
-                "type": 'mariadb'
-            },
-            "default_mysql": {
-                "publish": False,
-                "type": 'mysql'
-            },
-            "default_postgres": {
-                "publish": False,
-                "type": 'postgres',
-                "database": 'postgres'
-            },
-            "default_mssql": {
-                "publish": False,
-                "type": 'mssql'
-            },
-            "default_mongodb": {
-                "publish": False,
-                "type": 'mongodb'
-            }
-        },
-        'storage_dir': storage_dir
-    }
-
-    if isinstance(python_path, str):
-        config['python_interpreter'] = python_path
-
-    if isinstance(pip_path, str):
-        config['pip_path'] = python_path
-
-    return config
-
-
 def make_ssl_cert(file_path):
     from cryptography import x509
     from cryptography.x509.oid import NameOID
@@ -114,7 +52,14 @@ def make_ssl_cert(file_path):
 
 
 def cli_config(python_path, pip_path, storage_dir, config_dir, use_default=False):
-    config = auto_config(python_path, pip_path, storage_dir)
+    config = {
+            "debug": False,
+            "config_version": "1.4",
+            "api": {
+            },
+            "integrations": {},
+            'storage_dir': storage_dir
+        }
 
     http = _in('Enable HTTP API ? [Y/N]', 'Y', use_default)
     if http in ['Y', 'y']:

@@ -18,7 +18,7 @@ class DatabaseWrapper():
     def setup_integration(self, db_alias):
         try:
             # If this is the name of an integration
-            integration = _get_integration(db_alias)
+            integration = self._get_integration(db_alias)
             if integration != True:
                 integration.setup()
         except Exception as e:
@@ -45,7 +45,7 @@ class DatabaseWrapper():
         return True
 
     def _get_integrations(self):
-        return [_get_integration(x) for x in self.config['integrations']]
+        return [self._get_integration(x) for x in self.config['integrations']]
 
     def register_predictors(self, model_data_arr):
         for integration in self._get_integrations():

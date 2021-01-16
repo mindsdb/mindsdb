@@ -39,7 +39,7 @@ class PredictorProcess(ctx.Process):
                 'name': name,
                 'predict': to_predict,
                 'data_analysis': stats
-            }], setup=False)
+            }])
 
         if trx_type == 'predict':
             if isinstance(from_data, dict):

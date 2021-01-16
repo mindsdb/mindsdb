@@ -45,8 +45,10 @@ class DatabaseWrapper():
         return True
 
     def _get_integrations(self):
-        return [self._get_integration(x) for x in self.config['integrations']]
-
+        integrations = [self._get_integration(x) for x in self.config['integrations']]
+        integrations = [x for x in integrations if x is not None and x != False]
+        return integrations
+    
     def register_predictors(self, model_data_arr):
         for integration in self._get_integrations():
             if integration.check_connection():

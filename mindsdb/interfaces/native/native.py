@@ -94,16 +94,41 @@ class NativeInterface():
         return model
 
     def get_models(self):
-        models = F.get_models()
-        models = [x for x in models if x['status'] != 'training' or parse_datetime(x['created_at']) > parse_datetime(self.config['mindsdb_last_started_at'])]
+        models = []
+        predictors = [
+            x for x in Path(self.config.paths['predictors']).iterdir() if
+                x.is_dir()
+                and x.joinpath('light_model_metadata.pickle').is_file()
+                and x.joinpath('heavy_model_metadata.pickle').is_file()
+        ]
+        for p in predictors:
+            model_name = p.name
+            try:
+                model_data = self.get_model_data(model_name)
+                if model_data['status'] != 'training' or parse_datetime(model_data['created_at']) > parse_datetime(self.config['mindsdb_last_started_at']):
+                    continue
 
-        for i in range(len(models)):
-            for k in ['train_end_at', 'updated_at', 'created_at']:
-                if k in models[i] and models[i][k] is not None:
-                    try:
-                        models[i][k] = parse_datetime(str(models[i][k]).split('.')[0])
-                    except Exception:
-                        models[i][k] = parse_datetime(str(models[i][k]))
+                reduced_model_data = {}
+
+                KEYS =
+
+                for k in ['name', 'version', 'is_active', 'predict', 'status''current_phase', 'accuracy', 'data_source']:
+                    reduced_model_data[k] = model_data.get(k, None)
+
+                for k in ['train_end_at', 'updated_at', 'created_at']:
+                    reduced_model_data[k] = model_data.get(k, None)
+                    if model_data[k] is not None:
+                        try:
+                            model_data[k] = parse_datetime(str(model_data[k]).split('.')[0])
+                        except Exception as e:
+                            # @TODO Does this ever happen
+                            print(f'Date parsing exception while parsing: {k} in get_models: ', e)
+                            model_data[k] = parse_datetime(str(model_data[k]))
+
+                models.append(reduced_model_data)
+            except Exception as e:
+                print(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
+
         return models
 
     def delete_model(self, name):

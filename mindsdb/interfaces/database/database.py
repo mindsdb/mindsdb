@@ -12,8 +12,6 @@ class DatabaseWrapper():
 
     def __init__(self, config):
         self.config = config
-        for db_alias in self.config['integrations']:
-            self.setup_integration(db_alias)
 
     def setup_integration(self, db_alias):
         try:

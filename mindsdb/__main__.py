@@ -10,7 +10,7 @@ import datetime
 import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     archive_obsolete_predictors(config, '2.11.0')
 
-    mdb = MindsdbNative(config)
+    mdb = NativeInterface(config)
     cst = CustomModels(config)
 
     remove_corrupted_predictors(config, mdb)

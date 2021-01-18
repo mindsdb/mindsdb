@@ -1,0 +1,12 @@
+---
+database:
+    host: "127.0.0.1"
+    port: 8123
+    user: "default"
+    password: ""
+datasets:
+    monthly_sunspots:
+        target: "Sunspots"
+        handler_file: "sunspots_handler.py"
+    metro_traffic_ts:
+        target: "traffic_volume"

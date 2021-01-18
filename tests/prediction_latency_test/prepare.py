@@ -17,18 +17,6 @@ import schemas as schema
 from config import CONFIG
 
 
-
-DATASETS_PATH = os.getenv("DATASETS_PATH")
-CONFIG_PATH = os.getenv("CONFIG_PATH")
-predictors_dir = os.getenv("MINDSDB_STORAGE_PATH")
-# datasets = ["monthly_sunspots", "metro_traffic_ts"]
-# datasets = CONFIG['datasets'].keys()
-
-# handlers = {"monthly_sunspots": lambda df: monthly_sunspots_handler(df)}
-# predict_targets = {"monthly_sunspots": 'Sunspots',
-#         "metro_traffic_ts": 'traffic_volume'}
-
-
 class Dataset:
     def __init__(self, name, **kwargs):
         self.name = name
@@ -45,6 +33,10 @@ class Dataset:
         spec.loader.exec_module(handler)
         return handler.handler
 
+
+DATASETS_PATH = os.getenv("DATASETS_PATH")
+CONFIG_PATH = os.getenv("CONFIG_PATH")
+PREDICTORS_DIR = os.getenv("MINDSDB_STORAGE_PATH")
 datasets = [Dataset(key, **CONFIG['datasets'][key]) for key  in CONFIG['datasets'].keys()]
 
 
@@ -55,8 +47,8 @@ def monthly_sunspots_handler(df):
 
 
 def copy_version_info(dataset):
-    dst = os.path.join(predictors_dir, dataset, "versions.json")
-    src = os.path.join(predictors_dir, "..", "versions.json")
+    dst = os.path.join(PREDICTORS_DIR, dataset, "versions.json")
+    src = os.path.join(PREDICTORS_DIR, "..", "versions.json")
     shutil.copyfile(src, dst)
 
 def get_handler(handler_path):

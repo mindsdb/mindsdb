@@ -31,6 +31,6 @@ class LearnProcess(ctx.Process):
             **kwargs
         )
 
-        model_data = mindsdb_native.F.get_model_data(name)['data_analysis_v2']
+        model_data = mindsdb_native.F.get_model_data(name)
 
         DatabaseWrapper(config).register_predictors([model_data])

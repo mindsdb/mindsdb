@@ -192,9 +192,6 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique name')
 
-            # Not sure if needed
-            #summary_analysis = self.get_analysis(ds.filter(limit=200))['data_analysis_v2']
-
             with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
                 pickle.dump(picklable, fp)
 

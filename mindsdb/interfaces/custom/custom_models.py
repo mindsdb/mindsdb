@@ -155,7 +155,7 @@ class CustomModels():
         model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
         self.save_model_data(name,{
             'name': name
-            ,'data_analysis': model.column_type_map
+            ,'data_analysis_v2': model.column_type_map
             ,'predict': model.to_predict
             ,'status': trained_status
             ,'is_custom': True

@@ -13,14 +13,14 @@ from mindsdb.interfaces.native.learn_process import LearnProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
 
-class MindsdbNative():
+class NativeInterface():
     def __init__(self, config):
         self.config = config
         self.dbw = DatabaseWrapper(self.config)
         self.predictor_cache = {}
 
     def _invalidate_cached_predictors(self):
-        # @TODO: Cache will become stale if the respective MindsdbNative is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
+        # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
         for predictor_name in list(self.predictor_cache.keys()):
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
                 del self.predictor_cache[predictor_name]

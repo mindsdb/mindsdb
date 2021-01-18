@@ -14,7 +14,7 @@ from pandas import DataFrame
 
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.ps import wait_port, is_port_in_use, net_connections
 from mindsdb_native import CONFIG
@@ -269,7 +269,7 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
         raise Exception('Cant start mindsdb apis')
 
     CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
-    mdb = MindsdbNative(config)
+    mdb = NativeInterface(config)
     datastore = DataStore(config)
 
     return mdb, datastore

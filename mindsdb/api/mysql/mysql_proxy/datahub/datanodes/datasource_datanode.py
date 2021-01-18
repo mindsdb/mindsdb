@@ -8,7 +8,7 @@ class DataSourceDataNode(DataNode):
     def __init__(self, config):
         self.config = config
         self.datastore = DataStore(config)
-        # self.mindsdb_native = MindsdbNative(config)
+        # self.mindsdb_native = NativeInterface(config)
 
     def getTables(self):
         dss = self.datastore.get_datasources()

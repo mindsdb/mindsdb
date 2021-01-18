@@ -104,7 +104,7 @@ class MindsdbNative():
 
     def load_model(self, fpath):
         name = F.import_model(model_archive_path=fpath)
-        self.dbw.register_predictors(self.get_model_data(new_name), setup=False)
+        self.dbw.register_predictors(self.get_model_data(name), setup=False)
 
     def export_model(self, name):
         F.export_predictor(model_name=name)

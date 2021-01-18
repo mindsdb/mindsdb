@@ -19,7 +19,7 @@ class BasePredictor:
 class NativeDataFrame(BasePredictor):
     def __init__(self, dataset):
         super().__init__(dataset)
-        self.df = pd.read_csv(f"{self.dataset}_test.csv")
+        self.df = pd.read_csv(f"{self.dataset.name}_test.csv")
         self.predictor = Predictor(name=self.dataset.name)
 
     def predict(self, row_number=1):
@@ -112,27 +112,27 @@ if __name__ == '__main__':
                 setup_db=not args.skip_db,
                 train_models=not args.skip_train_models)
 
-    # rows = [1, ] + list(range(20, 101))
-    # for_report = {}
-    # for dataset in datasets:
-    #     for predictor_type in [NativeDataFrame, NativeClickhouse, AITable, AITableWhere]:
-    #         predictor = predictor_type(dataset)
-    #         for_report[str(predictor)] = []
-    #         for row_num in rows:
-    #             if isinstance(predictor, AITableWhere) and row_num != 1:
-    #                 for_report[str(predictor)].append(None)
-    #             else:
-    #                 started = time.time()
-    #                 predictor.predict(row_number=row_num)
-    #                 duration = time.time() - started
-    #                 duration = round(duration, 5)
-    #                 for_report[str(predictor)].append(duration)
+    rows = [1, ] + list(range(20, 101))
+    for_report = {}
+    for dataset in datasets:
+        for predictor_type in [NativeDataFrame, NativeClickhouse, AITable, AITableWhere]:
+            predictor = predictor_type(dataset)
+            for_report[str(predictor)] = []
+            for row_num in rows:
+                if isinstance(predictor, AITableWhere) and row_num != 1:
+                    for_report[str(predictor)].append(None)
+                else:
+                    started = time.time()
+                    predictor.predict(row_number=row_num)
+                    duration = time.time() - started
+                    duration = round(duration, 5)
+                    for_report[str(predictor)].append(duration)
 
-    # df = pd.DataFrame(for_report)
-    # df.index = rows
-    # df.index.name = "nr of rows"
+    df = pd.DataFrame(for_report)
+    df.index = rows
+    df.index.name = "nr of rows"
 
-    # print("GOT NEXT TEST RESULTS:")
-    # print(df)
-    # df.to_csv("latency_prediction_result.csv")
-    # print("Done. Results saved to latency_prediction_result.csv")
+    print("GOT NEXT TEST RESULTS:")
+    print(df)
+    df.to_csv("latency_prediction_result.csv")
+    print("Done. Results saved to latency_prediction_result.csv")

@@ -152,9 +152,9 @@ def prepare_db():
     query(f'DROP DATABASE IF EXISTS {db}')
     query(f'CREATE DATABASE {db}')
 
-    for dataset in schema.datasets:
-        query(schema.tables[dataset])
-        with open(f'{dataset}_train.csv') as fp:
+    for dataset in datasets:
+        query(schema.tables[dataset.name])
+        with open(f'{dataset.name}_train.csv') as fp:
             csv_fp = csv.reader(fp)
             for i, row in enumerate(csv_fp):
                 if i == 0:
@@ -170,7 +170,7 @@ def prepare_db():
                     except Exception as e:
                         print(e)
 
-                query('INSERT INTO ' + schema.database + '.' + dataset + ' VALUES ({})'.format(
+                query('INSERT INTO ' + schema.database + '.' + dataset.name + ' VALUES ({})'.format(
                     str(row).lstrip('[').rstrip(']')
                 ))
 
@@ -212,12 +212,12 @@ def prepare_env(prepare_data=True,
     if train_models:
         create_models()
     add_integration()
-    # if use_docker:
-    #     print("running docker")
-    #     run_clickhouse()
-    #     time.sleep(5)
-    # if setup_db:
-    #     print("preparing db")
-    #     prepare_db()
-    # print("running mindsdb")
-    # run_mindsdb()
+    if use_docker:
+        print("running docker")
+        run_clickhouse()
+        time.sleep(5)
+    if setup_db:
+        print("preparing db")
+        prepare_db()
+    print("running mindsdb")
+    run_mindsdb()

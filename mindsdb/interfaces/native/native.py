@@ -104,7 +104,7 @@ class NativeInterface():
         for p in predictors:
             model_name = p.name
             try:
-                model_data = self.get_model_data(model_name)
+                model_data = self.get_model_data(model_name, db_fix=False)
                 if model_data['status'] != 'training' or parse_datetime(model_data['created_at']) > parse_datetime(self.config['mindsdb_last_started_at']):
                     continue
 

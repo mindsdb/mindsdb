@@ -110,7 +110,7 @@ class NativeInterface():
 
                 reduced_model_data = {}
 
-                for k in ['name', 'version', 'is_active', 'predict', 'status''current_phase', 'accuracy', 'data_source']:
+                for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source']:
                     reduced_model_data[k] = model_data.get(k, None)
 
                 for k in ['train_end_at', 'updated_at', 'created_at']:

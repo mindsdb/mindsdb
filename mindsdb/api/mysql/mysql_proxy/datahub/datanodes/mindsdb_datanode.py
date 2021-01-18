@@ -165,6 +165,7 @@ class MindsDBDataNode(DataNode):
             res = self.custom_models.predict(name=table, when_data=where_data)
 
             data = []
+            fields = model['data_analysis_v2']['columns']
             for i, ele in enumerate(res):
                 row = {}
                 row['select_data_query'] = select_data_query
@@ -174,10 +175,10 @@ class MindsDBDataNode(DataNode):
                 for key in ele:
                     row[key] = ele[key]['predicted_value']
                     # FIXME prefer get int from mindsdb_native in this case
-                    if model['data_analysis'][key]['typing']['data_subtype'] == 'Int':
+                    if model['data_analysis_v2'][key]['typing']['data_subtype'] == 'Int':
                         row[key] = int(row[key])
 
-                for k in model['data_analysis']:
+                for k in fields:
                     if k not in ele:
                         if isinstance(where_data, list):
                             if k in where_data[i]:
@@ -194,7 +195,6 @@ class MindsDBDataNode(DataNode):
 
                 data.append(row)
 
-            fields = model['data_analysis']['columns']
             field_types = {f: model['data_analysis'][f]['typing']['data_subtype'] for f in fields}
             for row in data:
                 cast_row_types(row, field_types)

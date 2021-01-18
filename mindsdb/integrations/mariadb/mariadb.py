@@ -14,6 +14,7 @@ class Mariadb(Integration):
             DATA_SUBTYPES.TIMESTAMP: 'Datetime',
             DATA_SUBTYPES.SINGLE: 'VARCHAR(500)',
             DATA_SUBTYPES.MULTIPLE: 'VARCHAR(500)',
+            DATA_SUBTYPES.TAGS: 'VARCHAR(500)',
             DATA_SUBTYPES.IMAGE: 'VARCHAR(500)',
             DATA_SUBTYPES.VIDEO: 'VARCHAR(500)',
             DATA_SUBTYPES.AUDIO: 'VARCHAR(500)',

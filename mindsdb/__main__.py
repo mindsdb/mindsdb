@@ -156,7 +156,7 @@ More instructions in https://docs.mindsdb.com
 
     dbw = DatabaseWrapper(config)
     for db_alias in config['integrations']:
-        self.setup_integration(db_alias)
+        dbw.setup_integration(db_alias)
     dbw.register_predictors(model_data_arr)
 
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:

@@ -16,7 +16,7 @@ def create_directory(path):
 
 def get_paths():
     this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
-    mindsdb_path = os.path.abspath(Path(this_file_path).parent.parent.parent)
+    mindsdb_path = os.path.abspath(Path(this_file_path).parent.parent)
 
     tuples = [
         (

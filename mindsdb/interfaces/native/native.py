@@ -115,13 +115,13 @@ class NativeInterface():
 
                 for k in ['train_end_at', 'updated_at', 'created_at']:
                     reduced_model_data[k] = model_data.get(k, None)
-                    if model_data[k] is not None:
+                    if reduced_model_data[k] is not None:
                         try:
-                            model_data[k] = parse_datetime(str(model_data[k]).split('.')[0])
+                            reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]).split('.')[0])
                         except Exception as e:
                             # @TODO Does this ever happen
                             print(f'Date parsing exception while parsing: {k} in get_models: ', e)
-                            model_data[k] = parse_datetime(str(model_data[k]))
+                            reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]))
 
                 models.append(reduced_model_data)
             except Exception as e:

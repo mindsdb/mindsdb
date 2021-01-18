@@ -33,7 +33,7 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         try:
-            columns = list(self.custom_models.get_model_data(table)['data_analysis'].keys())
+            columns = self.custom_models.get_model_data(table)['data_analysis_v2']['columns']
             columns += ['external_datasource', 'select_data_query', 'when_data']
             return columns
         except Exception:

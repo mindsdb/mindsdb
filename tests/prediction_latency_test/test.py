@@ -71,10 +71,7 @@ class AITableWhere:
         condition = []
         for header, value in zip(columns, row):
             # if isinstance(value, str) and ' ' in value:
-            if isinstance(value, str):
-                condition.append(f"{header}='{value}'")
-            else:
-                condition.append(f"{header}={value}")
+            condition.append(f"{header}='{value}'")
 
         return " AND ".join(condition)
 

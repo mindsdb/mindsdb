@@ -95,7 +95,6 @@ def stop_mindsdb(ppid):
             pass
 
 def run_mindsdb():
-    print("running mindsdb")
     sp = Popen(['python', '-m', 'mindsdb', '--config', CONFIG_PATH],
                close_fds=True)
 

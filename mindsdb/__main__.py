@@ -110,6 +110,8 @@ if __name__ == '__main__':
     model_data_arr = get_all_models_meta_data(mdb, cst)
 
     dbw = DatabaseWrapper(config)
+    for db_alias in config['integrations']:
+        dbw.setup_integration(db_alias)
     dbw.register_predictors(model_data_arr)
 
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:

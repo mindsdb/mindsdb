@@ -80,7 +80,7 @@ class CustomModels():
         self.save_model_data(name, model_data)
 
         self.dbw.unregister_predictor(name)
-        self.dbw.register_predictors([self.get_model_data(name)], setup=False)
+        self.dbw.register_predictors([self.get_model_data(name)])
 
     def predict(self, name, when_data=None, from_data=None, kwargs=None):
         if kwargs is None:
@@ -142,7 +142,7 @@ class CustomModels():
         self.dbw.unregister_predictor(name)
         shutil.move(self._dir(name), self._dir(new_name))
         shutil.move(os.path.join(self._dir(new_name) + f'{name}.py'), os.path.join(self._dir(new_name) ,f'{new_name}.py'))
-        self.dbw.register_predictors([self.get_model_data(new_name)], setup=False)
+        self.dbw.register_predictors([self.get_model_data(new_name)])
 
     def export_model(self, name):
         shutil.make_archive(base_name=name, format='zip', root_dir=self._dir(name))
@@ -165,4 +165,4 @@ class CustomModels():
             fp.write('')
 
         if trained_status == 'trained':
-            self.dbw.register_predictors([self.get_model_data(name)], setup=False)
+            self.dbw.register_predictors([self.get_model_data(name)])

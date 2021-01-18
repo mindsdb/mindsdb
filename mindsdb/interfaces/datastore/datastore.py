@@ -18,10 +18,7 @@ class DataStore():
         self.mindsdb_native = MindsdbNative(config)
 
     def get_analysis(self, ds):
-        if isinstance(ds, str):
-            return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
-        else:
-            return self.mindsdb_native.analyse_dataset(ds)
+        return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
 
     def get_datasources(self):
         datasource_arr = []
@@ -40,20 +37,15 @@ class DataStore():
         return datasource_arr
 
     def get_data(self, name, where=None, limit=None, offset=None):
-        if offset is None:
-            offset = 0
+        offset = 0 if offset is None else offset
 
         ds = self.get_datasource_obj(name)
 
-        # @TODO Remove and add `offset` to the `filter` method of the datasource
         if limit is not None:
-            filtered_ds = ds.filter(where=where, limit=limit + offset)
+            # @TODO Add `offset` to the `filter` method of the datasource and get rid of `offset`
+            filtered_ds = ds.filter(where=where, limit=limit + offset).iloc[offset:]
         else:
             filtered_ds = ds.filter(where=where)
-
-        filtered_ds = filtered_ds.iloc[offset:]
-
-        filtered_ds = filtered_ds.where(pd.notnull(filtered_ds), None)
 
         data = filtered_ds.to_dict(orient='records')
         return {

@@ -1,5 +1,6 @@
 import os
 import atexit
+import importlib.util
 import time
 import csv
 import shutil
@@ -13,16 +14,38 @@ import psutil
 
 from mindsdb_native import Predictor
 import schemas as schema
+from config import CONFIG
+
+
 
 DATASETS_PATH = os.getenv("DATASETS_PATH")
 CONFIG_PATH = os.getenv("CONFIG_PATH")
 predictors_dir = os.getenv("MINDSDB_STORAGE_PATH")
-datasets = ["monthly_sunspots", "metro_traffic_ts"]
+# datasets = ["monthly_sunspots", "metro_traffic_ts"]
+# datasets = CONFIG['datasets'].keys()
 
-handlers = {"monthly_sunspots": lambda df: monthly_sunspots_handler(df)}
-predict_targets = {"monthly_sunspots": 'Sunspots',
-        "metro_traffic_ts": 'traffic_volume'}
+# handlers = {"monthly_sunspots": lambda df: monthly_sunspots_handler(df)}
+# predict_targets = {"monthly_sunspots": 'Sunspots',
+#         "metro_traffic_ts": 'traffic_volume'}
 
+
+class Dataset:
+    def __init__(self, name, **kwargs):
+        self.name = name
+        self.target = kwargs.get("target")
+        self.handler_file = kwargs.get("handler_file", None)
+        if self.handler_file is not None:
+            self.handler = self._get_handler()
+        else:
+            self.handler = None
+
+    def _get_handler(self):
+        spec = importlib.util.spec_from_file_location("common", os.path.abspath(self.handler_file))
+        handler = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(handler)
+        return handler.handler
+
+datasets = [Dataset(key, **CONFIG['datasets'][key]) for key  in CONFIG['datasets'].keys()]
 
 
 def monthly_sunspots_handler(df):
@@ -36,34 +59,42 @@ def copy_version_info(dataset):
     src = os.path.join(predictors_dir, "..", "versions.json")
     shutil.copyfile(src, dst)
 
+def get_handler(handler_path):
+    spec = importlib.util.spec_from_file_location("common", os.path.abspath(handler_path))
+    handler = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(handler)
+    return handler.handler
+
+
 def create_models():
     for dataset in datasets:
-        dataset_root_path = os.path.join(DATASETS_PATH, dataset)
+        dataset_root_path = os.path.join(DATASETS_PATH, dataset.name)
         print(f"dataset_root_path: {dataset_root_path}")
-        to_predict = predict_targets[dataset]
+        to_predict = dataset.target
 
-        data_path = f"{dataset}_train.csv"
+        data_path = f"{dataset.name}_train.csv"
         print(f"data_path: {data_path}")
-        model = Predictor(name=dataset)
+        model = Predictor(name=dataset.name)
         try:
             # model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=False)
             model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=True)
         except FileNotFoundError:
-            print(f"model {dataset} doesn't exist")
+            print(f"model {dataset.name} doesn't exist")
             print("creating....")
             model.learn(to_predict=to_predict, from_data=data_path)
-        copy_version_info(dataset)
+        copy_version_info(dataset.name)
 
 def add_integration():
+    db_info = CONFIG['database']
     with open(CONFIG_PATH, 'r') as f:
         config = json.load(f)
     integration_name = "prediction_clickhouse"
     config['integrations'][integration_name] = {}
     config['integrations'][integration_name]['publish'] = True
-    config['integrations'][integration_name]['host'] = "127.0.0.1"
-    config['integrations'][integration_name]['port'] = 8123
-    config['integrations'][integration_name]['user'] = 'default'
-    config['integrations'][integration_name]['password'] = ""
+    config['integrations'][integration_name]['host'] = db_info["host"]
+    config['integrations'][integration_name]['port'] = db_info["port"]
+    config['integrations'][integration_name]['user'] = db_info["user"]
+    config['integrations'][integration_name]['password'] = db_info["password"]
     config['integrations'][integration_name]['type'] = 'clickhouse'
     with open(CONFIG_PATH, 'w') as f:
         json.dump(config, f, indent=4, sort_keys=True)
@@ -71,17 +102,17 @@ def add_integration():
 
 def split_datasets():
     for dataset in datasets:
-        data_path = os.path.join(DATASETS_PATH, dataset, "data.csv")
+        data_path = os.path.join(DATASETS_PATH, dataset.name, "data.csv")
         df = pd.read_csv(data_path)
-        if dataset in handlers:
-            handlers[dataset](df)
+        if dataset.handler is not None:
+            dataset.handler(df)
         all_len = len(df)
         train_len = int(float(all_len) * 0.8)
         train_df = df[:train_len]
         test_df = df[train_len:]
-        test_df = test_df.drop(columns=[predict_targets[dataset],])
-        train_df.to_csv(f"{dataset}_train.csv", index=False)
-        test_df.to_csv(f"{dataset}_test.csv", index=False)
+        test_df = test_df.drop(columns=[dataset.target,])
+        train_df.to_csv(f"{dataset.name}_train.csv", index=False)
+        test_df.to_csv(f"{dataset.name}_test.csv", index=False)
 
 def stop_mindsdb(ppid):
     pprocess = psutil.Process(ppid)
@@ -148,10 +179,12 @@ def query(query):
     if 'CREATE ' not in query.upper() and 'INSERT ' not in query.upper():
         query += ' FORMAT JSON'
 
-    host = "127.0.0.1"
-    port = 8123
-    user = "default"
-    password = ""
+    db_info = CONFIG['database']
+
+    host = db_info['host']
+    port = db_info['port']
+    user = db_info['user']
+    password = db_info['password']
 
     connect_string = f'http://{host}:{port}'
 
@@ -179,12 +212,12 @@ def prepare_env(prepare_data=True,
     if train_models:
         create_models()
     add_integration()
-    if use_docker:
-        print("running docker")
-        run_clickhouse()
-        time.sleep(5)
-    if setup_db:
-        print("preparing db")
-        prepare_db()
-    print("running mindsdb")
-    run_mindsdb()
+    # if use_docker:
+    #     print("running docker")
+    #     run_clickhouse()
+    #     time.sleep(5)
+    # if setup_db:
+    #     print("preparing db")
+    #     prepare_db()
+    # print("running mindsdb")
+    # run_mindsdb()

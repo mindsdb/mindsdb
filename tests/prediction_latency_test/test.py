@@ -4,30 +4,37 @@ import argparse
 
 import pandas as pd
 
-class NativeDataFrame:
+from config import CONFIG
+
+class BasePredictor:
     def __init__(self, dataset):
         self.dataset = dataset
-        self.df = pd.read_csv(f"{dataset}_test.csv")
-        self.predictor = Predictor(name=dataset)
-
-    def predict(self, row_number=1):
-        return self.predictor.predict(self.df[:row_number])
 
     def __repr__(self):
-        return f"{self.dataset}_{self.__class__.__name__}"
+        return f"{self.dataset.name}_{self.__class__.__name__}"
 
     def __str__(self):
         return self.__repr__()
 
-class NativeClickhouse:
-    host = '127.0.0.1'
-    user = 'default'
-    password = ''
+class NativeDataFrame(BasePredictor):
+    def __init__(self, dataset):
+        super().__init__(dataset)
+        self.df = pd.read_csv(f"{self.dataset}_test.csv")
+        self.predictor = Predictor(name=self.dataset.name)
+
+    def predict(self, row_number=1):
+        return self.predictor.predict(self.df[:row_number])
+
+class NativeClickhouse(BasePredictor):
+    host = CONFIG['database']['host']
+    port = CONFIG['database']['port']
+    user = CONFIG['database']['user']
+    password = CONFIG['database']['password']
 
     def __init__(self, dataset):
-        self.dataset = dataset
-        self.predictor = Predictor(name=dataset)
-        self.query_template = f"SELECT * FROM test_data.{dataset} LIMIT %s"
+        super().__init__(dataset)
+        self.predictor = Predictor(name=self.dataset.name)
+        self.query_template = f"SELECT * FROM test_data.{self.dataset.name} LIMIT %s"
 
     def predict(self, row_number=1):
         _query = self.query_template % row_number
@@ -36,35 +43,24 @@ class NativeClickhouse:
                                                              user=self.user,
                                                              password=self.password))
 
-    def __repr__(self):
-        return f"{self.dataset}_{self.__class__.__name__}"
 
-    def __str__(self):
-        return self.__repr__()
-
-class AITable:
+class AITable(BasePredictor):
     def __init__(self, dataset):
-        self.dataset = dataset
-        self.where_template = f"SELECT * FROM test_data.{self.dataset} LIMIT %s"
-        self.query_template = f"SELECT {predict_targets[self.dataset]} FROM mindsdb.{self.dataset} WHERE select_data_query='%s'"
+        super().__init__(dataset)
+        self.where_template = f"SELECT * FROM test_data.{self.dataset.name} LIMIT %s"
+        self.query_template = f"SELECT {self.dataset.target} FROM mindsdb.{self.dataset.name} WHERE select_data_query='%s'"
 
     def predict(self, row_number=1):
         where = self.where_template % row_number
         _query = self.query_template % where
         return query(_query)
 
-    def __repr__(self):
-        return f"{self.dataset}_{self.__class__.__name__}"
 
-    def __str__(self):
-        return self.__repr__()
-
-
-class AITableWhere:
+class AITableWhere(BasePredictor):
     def __init__(self, dataset):
-        self.dataset = dataset
-        self.query_template = f"SELECT {predict_targets[self.dataset]} FROM mindsdb.{self.dataset} WHERE %s"
-        self.df = pd.read_csv(f"{dataset}_test.csv")
+        super().__init__(dataset)
+        self.query_template = f"SELECT {self.dataset.target} FROM mindsdb.{self.dataset.name} WHERE %s"
+        self.df = pd.read_csv(f"{self.dataset.name}_test.csv")
 
     def _get_select_condition(self, row):
         columns = list(self.df.columns)
@@ -81,12 +77,6 @@ class AITableWhere:
         _query = self.query_template % condition
         print(f"{self}: {_query}")
         return query(_query)
-
-    def __repr__(self):
-        return f"{self.dataset}_{self.__class__.__name__}"
-
-    def __str__(self):
-        return self.__repr__()
 
 
 parser = argparse.ArgumentParser(description='Prediction latency test.')
@@ -114,34 +104,35 @@ if __name__ == '__main__':
     os.environ["DATASETS_PATH"] = args.datasets_path
 
     from mindsdb_native import Predictor, ClickhouseDS
-    from prepare import query, datasets, predict_targets, prepare_env
+    # from prepare import query, datasets, predict_targets, prepare_env
+    from prepare import query, datasets, prepare_env
 
     prepare_env(prepare_data=not args.skip_datasource,
                 use_docker=not args.no_docker,
                 setup_db=not args.skip_db,
                 train_models=not args.skip_train_models)
 
-    rows = [1, ] + list(range(20, 101))
-    for_report = {}
-    for dataset in datasets:
-        for predictor_type in [NativeDataFrame, NativeClickhouse, AITable, AITableWhere]:
-            predictor = predictor_type(dataset)
-            for_report[str(predictor)] = []
-            for row_num in rows:
-                if isinstance(predictor, AITableWhere) and row_num != 1:
-                    for_report[str(predictor)].append(None)
-                else:
-                    started = time.time()
-                    predictor.predict(row_number=row_num)
-                    duration = time.time() - started
-                    duration = round(duration, 5)
-                    for_report[str(predictor)].append(duration)
+    # rows = [1, ] + list(range(20, 101))
+    # for_report = {}
+    # for dataset in datasets:
+    #     for predictor_type in [NativeDataFrame, NativeClickhouse, AITable, AITableWhere]:
+    #         predictor = predictor_type(dataset)
+    #         for_report[str(predictor)] = []
+    #         for row_num in rows:
+    #             if isinstance(predictor, AITableWhere) and row_num != 1:
+    #                 for_report[str(predictor)].append(None)
+    #             else:
+    #                 started = time.time()
+    #                 predictor.predict(row_number=row_num)
+    #                 duration = time.time() - started
+    #                 duration = round(duration, 5)
+    #                 for_report[str(predictor)].append(duration)
 
-    df = pd.DataFrame(for_report)
-    df.index = rows
-    df.index.name = "nr of rows"
+    # df = pd.DataFrame(for_report)
+    # df.index = rows
+    # df.index.name = "nr of rows"
 
-    print("GOT NEXT TEST RESULTS:")
-    print(df)
-    df.to_csv("latency_prediction_result.csv")
-    print("Done. Results saved to latency_prediction_result.csv")
+    # print("GOT NEXT TEST RESULTS:")
+    # print(df)
+    # df.to_csv("latency_prediction_result.csv")
+    # print("Done. Results saved to latency_prediction_result.csv")

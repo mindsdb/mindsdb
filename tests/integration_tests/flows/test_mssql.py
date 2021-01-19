@@ -3,7 +3,7 @@ import csv
 import inspect
 from pathlib import Path
 
-import pytds
+import pymssql
 
 from mindsdb.utilities.config import Config
 
@@ -30,14 +30,14 @@ config = Config(TEST_CONFIG)
 
 def query(query, fetch=False, as_dict=True, db='mindsdb_test'):
     integration = config['integrations']['default_mssql']
-    conn = pytds.connect(
+    conn = pymssql.connect(
+        server=integration['host'],
+        host=integration['host'],
         user=integration['user'],
         password=integration['password'],
-        dsn=integration['host'],
+        database='master',  # change?
         port=integration['port'],
-        as_dict=as_dict,
-        database=db,
-        autocommit=True
+        autocommit=True  # that need for CRUD operations
     )
 
     cur = conn.cursor()
@@ -136,10 +136,6 @@ class MSSQLTest(unittest.TestCase):
         ds = datastore.get_datasource(EXTERNAL_DS_NAME)
         if ds is not None:
             datastore.delete_datasource(EXTERNAL_DS_NAME)
-
-        data = query(f'select * from test_data.{TEST_DATA_TABLE} limit 50', fetch=True, as_dict=True)
-        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

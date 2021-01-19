@@ -174,6 +174,28 @@ def open_ssh_tunnel(port, direction='R'):
         atexit.register(close_ssh_tunnel, sp=sp, port=port)
     return status
 
+def open_ssh_tunnel_ms(port, direction='R'):
+    path = Path('/tmp/mindsdb')
+    if not path.is_dir():
+        path.mkdir(mode=0o777, exist_ok=True, parents=True)
+
+    # cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
+    cmd = f'ssh -i ~/.ssh/db_machine_ms -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} Administrator@54.175.3.245'
+    sp = subprocess.Popen(
+        cmd.split(' '),
+        stdout=OUTPUT,
+        stderr=OUTPUT
+    )
+    try:
+        status = sp.wait(20)
+    except subprocess.TimeoutExpired:
+        status = 1
+        sp.kill()
+
+    if status == 0:
+        atexit.register(close_ssh_tunnel, sp=sp, port=port)
+    return status
+
 
 if USE_EXTERNAL_DB_SERVER:
     config = Config(TEST_CONFIG)
@@ -187,7 +209,8 @@ if USE_EXTERNAL_DB_SERVER:
         if r.status_code != 200:
             raise Exception('Cant get port to run mindsdb')
         mindsdb_port = r.content.decode()
-        status = open_ssh_tunnel(mindsdb_port, 'R')
+        # status = open_ssh_tunnel(mindsdb_port, 'R')
+        status = open_ssh_tunnel_ms(mindsdb_port, 'R')
         if status == 0:
             break
     else:

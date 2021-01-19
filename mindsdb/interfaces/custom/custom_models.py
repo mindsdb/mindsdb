@@ -67,7 +67,7 @@ class CustomModels():
         data_analysis = self.mindsdb_native.analyse_dataset(data_source)['data_analysis_v2']
 
         model_data = self.get_model_data(name)
-        model_data['data_analysis'] = data_analysis
+        model_data['data_analysis_v2'] = data_analysis
         self.save_model_data(name, model_data)
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
@@ -155,7 +155,7 @@ class CustomModels():
         model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
         self.save_model_data(name,{
             'name': name
-            ,'data_analysis': model.column_type_map
+            ,'data_analysis_v2': model.column_type_map
             ,'predict': model.to_predict
             ,'status': trained_status
             ,'is_custom': True

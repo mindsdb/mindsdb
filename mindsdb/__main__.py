@@ -7,17 +7,15 @@ import asyncio
 import logging
 import datetime
 
-from pkg_resources import get_distribution
 import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.fs import (
-    get_or_create_dir_struct,
     update_versions_file,
     archive_obsolete_predictors,
     remove_corrupted_predictors
@@ -26,7 +24,6 @@ from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
 from mindsdb.utilities.log import initialize_log
-
 
 def close_api_gracefully(apis):
     try:
@@ -41,44 +38,11 @@ def close_api_gracefully(apis):
 
 
 if __name__ == '__main__':
-    version_error_msg = """
-MindsDB server requires Python >= 3.6 to run
-
-Once you have Python 3.6 installed you can tun mindsdb as follows:
-
-1. create and activate venv:
-python3.6 -m venv venv
-source venv/bin/activate
-
-2. install MindsDB:
-pip3 install mindsdb
-
-3. Run MindsDB
-python3.6 -m mindsdb
-
-More instructions in https://docs.mindsdb.com
-    """
-
-    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 6):
-        print(version_error_msg)
-        exit(1)
-
     mp.freeze_support()
 
     args = args_parse()
 
-    from mindsdb.__about__ import __version__ as mindsdb_version
-
-    if args.version:
-        print(f'MindsDB {mindsdb_version}')
-        sys.exit(0)
-
-    config_path = args.config
-    if config_path is None:
-        config_dir, _ = get_or_create_dir_struct()
-        config_path = os.path.join(config_dir, 'config.json')
-
-    config = Config(config_path)
+    config = Config(os.environ['MINDSDB_CONFIG_PATH'])
 
     if args.verbose is True:
         config['log']['level']['console'] = 'DEBUG'
@@ -90,25 +54,16 @@ More instructions in https://docs.mindsdb.com
     initialize_log(config)
     log = logging.getLogger('mindsdb.main')
 
-    try:
-        lightwood_version = get_distribution('lightwood').version
-    except Exception:
-        from lightwood.__about__ import __version__ as lightwood_version
-
-    try:
-        mindsdb_native_version = get_distribution('mindsdb_native').version
-    except Exception:
-        from mindsdb_native.__about__ import __version__ as mindsdb_native_version
-
-    print(f'Configuration file:\n   {config_path}')
-    print(f"Storage path:\n   {config.paths['root']}")
-
+    from lightwood.__about__ import __version__ as lightwood_version
+    from mindsdb_native.__about__ import __version__ as mindsdb_native_version
+    from mindsdb.__about__ import __version__ as mindsdb_version
     print('Versions:')
     print(f' - lightwood {lightwood_version}')
     print(f' - MindsDB_native {mindsdb_native_version}')
     print(f' - MindsDB {mindsdb_version}')
 
-    os.environ['MINDSDB_STORAGE_PATH'] = config.paths['predictors']
+    print(f'Configuration file:\n   {config.config_path}')
+    print(f"Storage path:\n   {config.paths['root']}")
 
     update_versions_file(
         config,
@@ -147,7 +102,7 @@ More instructions in https://docs.mindsdb.com
 
     archive_obsolete_predictors(config, '2.11.0')
 
-    mdb = MindsdbNative(config)
+    mdb = NativeInterface(config)
     cst = CustomModels(config)
 
     remove_corrupted_predictors(config, mdb)
@@ -155,6 +110,8 @@ More instructions in https://docs.mindsdb.com
     model_data_arr = get_all_models_meta_data(mdb, cst)
 
     dbw = DatabaseWrapper(config)
+    for db_alias in config['integrations']:
+        dbw.setup_integration(db_alias)
     dbw.register_predictors(model_data_arr)
 
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
@@ -165,13 +122,13 @@ More instructions in https://docs.mindsdb.com
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(config_path, args.verbose))
+            p = ctx.Process(target=start_functions[api_name], args=(config.config_path, args.verbose))
             p.start()
             api_data['process'] = p
         except Exception as e:
-            close_api_gracefully(apis)
             log.error(f'Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}')
-            raise
+            close_api_gracefully(apis)
+            raise e
 
     atexit.register(close_api_gracefully, apis=apis)
 

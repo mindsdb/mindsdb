@@ -14,6 +14,7 @@ class PostgreSQL(Integration):
             DATA_SUBTYPES.TIMESTAMP: 'timestamp',
             DATA_SUBTYPES.SINGLE: 'text',
             DATA_SUBTYPES.MULTIPLE: 'text',
+            DATA_SUBTYPES.TAGS: 'text',
             DATA_SUBTYPES.IMAGE: 'text',
             DATA_SUBTYPES.VIDEO: 'text',
             DATA_SUBTYPES.AUDIO: 'text',

@@ -2,7 +2,7 @@ import json
 import pandas
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
@@ -18,7 +18,7 @@ class MindsDBDataNode(DataNode):
 
     def __init__(self, config):
         self.config = config
-        self.mindsdb_native = MindsdbNative(config)
+        self.mindsdb_native = NativeInterface(config)
         self.custom_models = CustomModels(config)
 
     def getTables(self):

@@ -1,28 +1,41 @@
 # Mindsdb native interface
 from pathlib import Path
 import json
-
+import datetime
 from dateutil.parser import parse as parse_datetime
+import psutil
 
 import mindsdb_native
 from mindsdb_native import F
 from mindsdb.utilities.fs import create_directory
 from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-from mindsdb.interfaces.native.predictor_process import PredictorProcess
+from mindsdb.interfaces.native.learn_process import LearnProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
 
 
-class MindsdbNative():
+class NativeInterface():
     def __init__(self, config):
         self.config = config
         self.dbw = DatabaseWrapper(self.config)
+        self.predictor_cache = {}
+
+    def _invalidate_cached_predictors(self):
+        # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
+        for predictor_name in list(self.predictor_cache.keys()):
+            if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
+                del self.predictor_cache[predictor_name]
 
     def _setup_for_creation(self, name):
-            predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
-            create_directory(predictor_dir)
-            versions_file_path = predictor_dir.joinpath('versions.json')
-            with open(str(versions_file_path), 'wt') as f:
-                json.dump(self.config.versions, f, indent=4, sort_keys=True)
+        if name in self.predictor_cache:
+            del self.predictor_cache[name]
+        # Here for no particular reason, because we want to run this sometimes but not too often
+        self._invalidate_cached_predictors()
+
+        predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
+        create_directory(predictor_dir)
+        versions_file_path = predictor_dir.joinpath('versions.json')
+        with open(str(versions_file_path), 'wt') as f:
+            json.dump(self.config.versions, f, indent=4, sort_keys=True)
 
     def create(self, name):
         self._setup_for_creation(name)
@@ -36,7 +49,7 @@ class MindsdbNative():
 
         self._setup_for_creation(name)
 
-        p = PredictorProcess(name, from_data, to_predict, kwargs, self.config.get_all(), 'learn')
+        p = LearnProcess(name, from_data, to_predict, kwargs, self.config.get_all())
         p.start()
         if join_learn_process is True:
             p.join()
@@ -44,16 +57,18 @@ class MindsdbNative():
                 raise Exception('Learning process failed !')
 
     def predict(self, name, when_data=None, kwargs={}):
-        # @TODO Separate into two paths, one for "normal" predictions and one for "real time" predictions. Use the multiprocessing code commented out bellow for normal (once we figure out how to return the prediction object... else use the inline code but with the "real time" predict functionality of mindsdb_native taht will be implemented later)
-        '''
-        from_data = when if when is not None else when_data
-        p = PredictorProcess(name, from_data, to_predict=None, kwargs=kwargs, config=self.config.get_all(), 'predict')
-        p.start()
-        predictions = p.join()
-        '''
-        mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
+        if name not in self.predictor_cache:
+            # Clear the cache entirely if we have less than .12 GB left
+            if psutil.virtual_memory().available < 1.2 * pow(10,9):
+                self.predictor_cache = {}
 
-        predictions = mdb.predict(
+            if F.get_model_data(name)['status'] == 'complete':
+                self.predictor_cache[name] = {
+                    'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
+                    'created': datetime.datetime.now()
+                }
+
+        predictions = self.predictor_cache[name]['predictor'].predict(
             when_data=when_data,
             **kwargs
         )
@@ -70,17 +85,16 @@ class MindsdbNative():
 
         data_analysis = model['data_analysis_v2']
         for column in data_analysis['columns']:
-            if len(data_analysis[column]) == 0 or data_analysis[column].get('empty', {}).get('is_empty', False):
+            analysis = data_analysis.get(column)
+            if isinstance(analysis, dict) and (len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False)):
                 data_analysis[column]['typing'] = {
                     'data_subtype': DATA_SUBTYPES.INT
                 }
 
         return model
 
-    def get_models(self, status='any'):
+    def get_models(self):
         models = F.get_models()
-        if status != 'any':
-            models = [x for x in models if x['status'] == status]
         models = [x for x in models if x['status'] != 'training' or parse_datetime(x['created_at']) > parse_datetime(self.config['mindsdb_last_started_at'])]
 
         for i in range(len(models)):
@@ -99,12 +113,11 @@ class MindsdbNative():
     def rename_model(self, name, new_name):
         self.dbw.unregister_predictor(self.get_model_data(name))
         F.rename_model(name, new_name)
-        self.dbw.register_predictors(self.get_model_data(new_name), setup=False)
+        self.dbw.register_predictors(self.get_model_data(new_name))
 
     def load_model(self, fpath):
-        F.import_model(model_archive_path=fpath)
-        # @TODO How do we figure out the name here ?
-        # dbw.register_predictors(...)
+        name = F.import_model(model_archive_path=fpath)
+        self.dbw.register_predictors(self.get_model_data(name), setup=False)
 
     def export_model(self, name):
         F.export_predictor(model_name=name)

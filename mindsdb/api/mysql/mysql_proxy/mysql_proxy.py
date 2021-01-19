@@ -72,7 +72,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 )
 
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 
 
@@ -1471,7 +1471,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         )
 
         default_store = DataStore(config)
-        mdb = MindsdbNative(config)
+        mdb = NativeInterface(config)
         custom_models = CustomModels(config)
         datahub = init_datahub(config)
 

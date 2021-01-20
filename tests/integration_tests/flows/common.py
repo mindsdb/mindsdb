@@ -159,7 +159,7 @@ def open_ssh_tunnel(port, direction='R'):
     if not path.is_dir():
         path.mkdir(mode=0o777, exist_ok=True, parents=True)
 
-    if is_mssql_test():
+    if is_mssql_test() and port != 5005:
         cmd = f'ssh -i ~/.ssh/db_machine_ms -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} Administrator@107.21.140.172'
     else:
         cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'

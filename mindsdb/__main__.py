@@ -44,6 +44,10 @@ if __name__ == '__main__':
 
     config = Config(os.environ['MINDSDB_CONFIG_PATH'])
 
+    disable_telemetry = os.getenv('CHECK_FOR_UPDATES').lower() in ['0', 'false']
+    if disable_telemetry:
+        print('\n ✓ telemetry is disabled \n')
+
     if args.verbose is True:
         config['log']['level']['console'] = 'DEBUG'
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']

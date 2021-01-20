@@ -194,7 +194,7 @@ def initialize_static(config):
     return True
 
 
-def initialize_flask(config):
+def initialize_flask(config, init_static_thread):
     # Apparently there's a bug that causes the static path not to work if it's '/' -- https://github.com/pallets/flask/issues/3134, I think '' should achieve the same thing (???)
     app = Flask(
         __name__,
@@ -230,7 +230,7 @@ def initialize_flask(config):
     log.error(f' - GUI available at {url}')
 
     pid = os.getpid()
-    x = threading.Thread(target=_open_webbrowser, args=(url, pid, port), daemon=True)
+    x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config.paths['static']), daemon=True)
     x.start()
 
     return app, api
@@ -244,11 +244,34 @@ def initialize_interfaces(config, app):
     app.config_obj = config
 
 
-def _open_webbrowser(url: str, pid: int, port: int):
+def inject_disable_telemetry(static_folder):
+    TEXT = '<script>localStorage.isTestUser = true;</script>'
+    index = Path(static_folder).joinpath('index.html')
+    disable_telemetry = os.getenv('CHECK_FOR_UPDATES').lower() in ['0', 'false']
+    if index.is_file():
+        with open(str(index), 'rt') as f:
+            content = f.read()
+        script_index = content.find('<script>')
+        need_update = True
+        if TEXT not in content and disable_telemetry:
+            content = content[:script_index] + TEXT + content[script_index:]
+        elif not disable_telemetry and TEXT in content:
+            content = content.replace(TEXT, '')
+        else:
+            need_update = False
+
+        if need_update:
+            with open(str(index), 'wt') as f:
+                f.write(content)
+
+
+def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_folder):
     """Open webbrowser with url when http service is started.
 
     If some error then do nothing.
     """
+    init_static_thread.join()
+    inject_disable_telemetry(static_folder)
     logger = logging.getLogger('mindsdb.http')
     try:
         is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,

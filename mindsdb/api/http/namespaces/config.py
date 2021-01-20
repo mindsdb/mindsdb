@@ -72,13 +72,14 @@ class Integration(Resource):
             cst = ca.custom_models
             model_data_arr = get_all_models_meta_data(mdb, cst)
             ca.dbw.setup_integration(name)
-            ca.dbw.register_predictors(model_data_arr)
+            if is_test is False:
+                ca.dbw.register_predictors(model_data_arr)
         except Exception as e:
             print(traceback.format_exc())
             abort(500, f'Error during config update: {str(e)}')
 
         if is_test:
-            cons = dbw.check_connections()
+            cons = ca.dbw.check_connections()
             ca.config_obj.remove_db_integration(name)
             return {'success': cons[name]}, 200
 
@@ -125,6 +126,7 @@ class Check(Resource):
             abort(404, f'Can\'t find database integration: {name}')
         connections = ca.dbw.check_connections()
         return connections.get(name, False), 200
+
 
 @ns_conf.route('/telemetry/<flag>')
 @ns_conf.param('flag', 'Turn telemtry on or off')

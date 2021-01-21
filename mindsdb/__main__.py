@@ -24,6 +24,8 @@ from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
 from mindsdb.utilities.log import initialize_log
+from mindsdb.utilities.telemetry import is_telemetry_file_exists, disable_telemetry
+
 
 def close_api_gracefully(apis):
     try:
@@ -44,9 +46,17 @@ if __name__ == '__main__':
 
     config = Config(os.environ['MINDSDB_CONFIG_PATH'])
 
-    disable_telemetry = os.getenv('CHECK_FOR_UPDATES').lower() in ['0', 'false']
-    if disable_telemetry:
-        print('\n ✓ telemetry is disabled \n')
+    telemetry_disabled = False
+    storage_dir = config['storage_dir']
+    if is_telemetry_file_exists(storage_dir):
+        os.environ['CHECK_FOR_UPDATES'] = '0'
+        telemetry_disabled = True
+    elif os.getenv('CHECK_FOR_UPDATES').lower() in ['0', 'false']:
+        disable_telemetry(storage_dir)
+        telemetry_disabled = True
+
+    if telemetry_disabled:
+        print('\n ✓ telemetry disabled \n')
 
     if args.verbose is True:
         config['log']['level']['console'] = 'DEBUG'

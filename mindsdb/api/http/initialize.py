@@ -19,6 +19,7 @@ from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.utilities.telemetry import inject_telemetry_to_static
 
 
 class Swagger_Api(Api):
@@ -244,34 +245,13 @@ def initialize_interfaces(config, app):
     app.config_obj = config
 
 
-def inject_disable_telemetry(static_folder):
-    TEXT = '<script>localStorage.isTestUser = true;</script>'
-    index = Path(static_folder).joinpath('index.html')
-    disable_telemetry = os.getenv('CHECK_FOR_UPDATES').lower() in ['0', 'false']
-    if index.is_file():
-        with open(str(index), 'rt') as f:
-            content = f.read()
-        script_index = content.find('<script>')
-        need_update = True
-        if TEXT not in content and disable_telemetry:
-            content = content[:script_index] + TEXT + content[script_index:]
-        elif not disable_telemetry and TEXT in content:
-            content = content.replace(TEXT, '')
-        else:
-            need_update = False
-
-        if need_update:
-            with open(str(index), 'wt') as f:
-                f.write(content)
-
-
 def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_folder):
     """Open webbrowser with url when http service is started.
 
     If some error then do nothing.
     """
     init_static_thread.join()
-    inject_disable_telemetry(static_folder)
+    inject_telemetry_to_static(static_folder)
     logger = logging.getLogger('mindsdb.http')
     try:
         is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,

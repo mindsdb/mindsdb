@@ -89,6 +89,7 @@ jobs:
       env:
         CHECK_FOR_UPDATES: False
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
+        DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
 
   deploy_to_pypi:

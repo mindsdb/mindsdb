@@ -19,6 +19,7 @@ from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.utilities.telemetry import inject_telemetry_to_static
 
 
 class Swagger_Api(Api):
@@ -194,7 +195,7 @@ def initialize_static(config):
     return True
 
 
-def initialize_flask(config):
+def initialize_flask(config, init_static_thread):
     # Apparently there's a bug that causes the static path not to work if it's '/' -- https://github.com/pallets/flask/issues/3134, I think '' should achieve the same thing (???)
     app = Flask(
         __name__,
@@ -230,7 +231,7 @@ def initialize_flask(config):
     log.error(f' - GUI available at {url}')
 
     pid = os.getpid()
-    x = threading.Thread(target=_open_webbrowser, args=(url, pid, port), daemon=True)
+    x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config.paths['static']), daemon=True)
     x.start()
 
     return app, api
@@ -244,11 +245,13 @@ def initialize_interfaces(config, app):
     app.config_obj = config
 
 
-def _open_webbrowser(url: str, pid: int, port: int):
+def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_folder):
     """Open webbrowser with url when http service is started.
 
     If some error then do nothing.
     """
+    init_static_thread.join()
+    inject_telemetry_to_static(static_folder)
     logger = logging.getLogger('mindsdb.http')
     try:
         is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,

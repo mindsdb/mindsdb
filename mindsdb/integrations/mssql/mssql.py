@@ -1,22 +1,23 @@
-import pytds
+import pymssql
 from mindsdb.integrations.base import Integration
 
 
 class MSSQL(Integration):
     def _get_connnection(self):
         integration = self.config['integrations'][self.name]
-        return pytds.connect(
+        return pymssql.connect(
+            server=integration['host'],
+            host=integration['host'],
             user=integration['user'],
             password=integration['password'],
-            dsn=integration['host'],
+            database=integration.get('database', 'master'),
             port=integration['port'],
-            as_dict=True,
-            autocommit=True     # connection.commit() not work
+            autocommit=True  # that need for CRUD operations
         )
 
     def _query(self, query, fetch=False):
         conn = self._get_connnection()
-        cur = conn.cursor()
+        cur = conn.cursor(as_dict=True)
         cur.execute(query)
         res = True
         if fetch:

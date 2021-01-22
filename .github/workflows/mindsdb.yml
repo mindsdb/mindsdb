@@ -34,6 +34,8 @@ jobs:
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
+          echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
+          sudo chmod 600 ~/.ssh/db_machine_ms
           echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
           sudo chmod 644 ~/.mindsdb_credentials.json
 
@@ -42,6 +44,10 @@ jobs:
           # HTTP
           echo -e "\n===============\ntest HTTP\n===============\n"
           python tests/integration_tests/flows/test_http.py
+
+          # MsSQL
+          echo -e "\n===============\ntest MsSQL\n===============\n"
+          python tests/integration_tests/flows/test_mssql.py
 
           # MongoDB
           echo -e "\n===============\ntest MongoDB\n===============\n"
@@ -83,6 +89,7 @@ jobs:
       env:
         CHECK_FOR_UPDATES: False
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
+        DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
 
   deploy_to_pypi:

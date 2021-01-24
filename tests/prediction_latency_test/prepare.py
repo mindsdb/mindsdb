@@ -78,20 +78,32 @@ def create_models():
             model.learn(to_predict=to_predict, from_data=data_path)
         copy_version_info(dataset.name)
 
+# def add_integration():
+#     db_info = CONFIG['database']
+#     with open(CONFIG_PATH, 'r') as f:
+#         config = json.load(f)
+#     integration_name = "prediction_clickhouse"
+#     config['integrations'][integration_name] = {}
+#     config['integrations'][integration_name]['publish'] = True
+#     config['integrations'][integration_name]['host'] = db_info["host"]
+#     config['integrations'][integration_name]['port'] = db_info["port"]
+#     config['integrations'][integration_name]['user'] = db_info["user"]
+#     config['integrations'][integration_name]['password'] = db_info["password"]
+#     config['integrations'][integration_name]['type'] = 'clickhouse'
+#     with open(CONFIG_PATH, 'w') as f:
+#         json.dump(config, f, indent=4, sort_keys=True)
+
 def add_integration():
     db_info = CONFIG['database']
-    with open(CONFIG_PATH, 'r') as f:
-        config = json.load(f)
-    integration_name = "prediction_clickhouse"
-    config['integrations'][integration_name] = {}
-    config['integrations'][integration_name]['publish'] = True
-    config['integrations'][integration_name]['host'] = db_info["host"]
-    config['integrations'][integration_name]['port'] = db_info["port"]
-    config['integrations'][integration_name]['user'] = db_info["user"]
-    config['integrations'][integration_name]['password'] = db_info["password"]
-    config['integrations'][integration_name]['type'] = 'clickhouse'
-    with open(CONFIG_PATH, 'w') as f:
-        json.dump(config, f, indent=4, sort_keys=True)
+    db_info['enabled'] = True
+    db_info['type'] = 'clickhouse'
+    url = "http://127.0.0.1:47334/api/config/integrations/prediction_clickhouse"
+    exist_request = requests.get(url)
+    if exist_request.status_code == requests.status_codes.codes.ok:
+        print("integration is already exists")
+        return
+    res = requests.put(url, json={'params': db_info})
+    res.raise_for_status()
 
 
 def split_datasets():
@@ -127,19 +139,48 @@ def upload_datasets():
             res.raise_for_status()
 
 
-def create_predictors():
-    base_url = "http://127.0.0.1:47334/api/predictors/%s"
-    for dataset in datasets:
-        url = base_url % dataset.name
-        data = {'to_predict': dataset.target,
-                'data_source_name': f"{dataset.name}_train"}
+class Predictor():
+    def __init__(self, name):
+        self.name = name
+        self.base_url = "http://127.0.0.1:47334/api"
 
-        res = requests.put(url, json=data)
+    def get_info(self):
+        return requests.get(f'{self.base_url}/predictors/{self.name}').json()
+
+    def is_ready(self):
+        return self.get_info()["status"] == 'complete'
+
+    def is_exists(self):
+        if "status" in self.get_info():
+            return True
+        return False
+
+    def learn(self, to_predict):
+        datasource_name = f"{self.name}_train"
+        res = requests.put(f'{self.base_url}/predictors/{self.name}', json={
+            'data_source_name': datasource_name,
+            'to_predict': to_predict
+        })
         res.raise_for_status()
 
 
+def create_predictors():
+    predictors = []
+    for dataset in datasets:
+        predictor = Predictor(dataset.name)
+        if not predictor.is_exists():
+            print(f"creating {dataset.name} predictor")
+            predictor.learn(dataset.target)
+        predictors.append(predictor)
 
 
+    while predictors:
+        for predictor in predictors[:]:
+            if predictor.is_ready():
+                print(f"predictor {predictor.name} is ready")
+                predictors.remove(predictor)
+                continue
+            time.sleep(5)
 
 def stop_mindsdb(ppid):
     pprocess = psutil.Process(ppid)
@@ -235,16 +276,22 @@ def prepare_env(prepare_data=True,
                 setup_db=True,
                 train_models=True):
     if prepare_data:
+        print("preparing_datasets")
         split_datasets()
-    if train_models:
-        create_models()
-    add_integration()
     if use_docker:
         print("running docker")
         run_clickhouse()
-        time.sleep(5)
+        time.sleep(10)
     if setup_db:
         print("preparing db")
         prepare_db()
     print("running mindsdb")
     run_mindsdb()
+    print("uploading train datasets to mindsdb")
+    upload_datasets()
+    if train_models:
+        print("creating and training models")
+        create_predictors()
+        # create_models()
+
+    add_integration()

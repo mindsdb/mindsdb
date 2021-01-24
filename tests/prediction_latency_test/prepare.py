@@ -37,6 +37,8 @@ class Dataset:
 DATASETS_PATH = os.getenv("DATASETS_PATH")
 CONFIG_PATH = os.getenv("CONFIG_PATH")
 PREDICTORS_DIR = os.getenv("MINDSDB_STORAGE_PATH")
+if not os.path.exists(PREDICTORS_DIR):
+    os.makedirs(PREDICTORS_DIR, exist_ok=True)
 datasets = [Dataset(key, **CONFIG['datasets'][key]) for key  in CONFIG['datasets'].keys()]
 
 
@@ -105,6 +107,39 @@ def split_datasets():
         test_df = test_df.drop(columns=[dataset.target,])
         train_df.to_csv(f"{dataset.name}_train.csv", index=False)
         test_df.to_csv(f"{dataset.name}_test.csv", index=False)
+
+
+def upload_datasets():
+    """Upload train dataset to mindsdb via API."""
+    base_url = "http://127.0.0.1:47334/api/datasources/%s"
+    for dataset in datasets:
+        files = {}
+        file_name = f"{dataset.name}_train.csv"
+        datasource_name = "".join(file_name.split('.')[:-1])
+        print(datasource_name)
+        url = base_url % datasource_name
+        with open(file_name, 'r') as fd:
+            files['file'] = (file_name, fd, 'text/csv')
+            files['source_type'] = (None, 'file')
+            files['source'] = (None, file_name)
+            print(f"calling {url} with files={files}")
+            res = requests.put(url, files=files)
+            res.raise_for_status()
+
+
+def create_predictors():
+    base_url = "http://127.0.0.1:47334/api/predictors/%s"
+    for dataset in datasets:
+        url = base_url % dataset.name
+        data = {'to_predict': dataset.target,
+                'data_source_name': f"{dataset.name}_train"}
+
+        res = requests.put(url, json=data)
+        res.raise_for_status()
+
+
+
+
 
 def stop_mindsdb(ppid):
     pprocess = psutil.Process(ppid)

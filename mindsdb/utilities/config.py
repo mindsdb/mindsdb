@@ -5,7 +5,7 @@ import datetime
 from copy import deepcopy
 
 from mindsdb.utilities.fs import create_directory
-from mindsdb.interfaces.state.db import session, Coonfiguration
+from mindsdb.interfaces.storage.db import session, Configuration
 
 
 def _null_to_empty(config):
@@ -49,13 +49,13 @@ class Config():
     }
 
     def __init__(self):
-        if os.environ['MINDSDB_CONFIG_PATH'] != 'absent':
+        if os.environ['MINDSDB_CONFIG_PATH'] == 'absent':
             self._override_config = {}
         else:
             with open(os.environ['MINDSDB_CONFIG_PATH'], 'r') as fp:
                 self._override_config = json.load(fp)
 
-        self.company_id = os.envrion.get('MINDSDB_COMPANY_ID', None)
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self._db_config = None
         self.last_updated = datetime.datetime.now() - datetime.timedelta(days=3600)
         self._read()
@@ -93,12 +93,12 @@ class Config():
                     }
                 }
             }
-            self._db_config['paths']['root'] = os.envrion['MINDSDB_STORAGE_DIR']
-            self._db_config['paths']['datasources'] = os.path.join(storage_dir, 'datasources')
-            self._db_config['paths']['predictors'] = os.path.join(storage_dir, 'predictors')
-            self._db_config['paths']['static'] = os.path.join(storage_dir, 'static')
-            self._db_config['paths']['tmp'] = os.path.join(storage_dir, 'tmp')
-            self._db_config['paths']['log'] = os.path.join(storage_dir, 'log')
+            self._db_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']
+            self._db_config['paths']['datasources'] = os.path.join(self._db_config['paths']['root'], 'datasources')
+            self._db_config['paths']['predictors'] = os.path.join(self._db_config['paths']['root'], 'predictors')
+            self._db_config['paths']['static'] = os.path.join(self._db_config['paths']['root'], 'static')
+            self._db_config['paths']['tmp'] = os.path.join(self._db_config['paths']['root'], 'tmp')
+            self._db_config['paths']['log'] = os.path.join(self._db_config['paths']['root'], 'log')
             for path in self._db_config['paths']:
                 create_directory(path)
             self._save()
@@ -114,8 +114,8 @@ class Config():
 
             if config_record is not None:
                 self._db_config = json.loads(config_record.data)
-                self._config = _merge_configs(self._db_config, self._override_config)
 
+            self._config = _merge_configs(self._db_config, self._override_config)
             self.last_updated = datetime.datetime.now()
 
 

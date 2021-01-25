@@ -4,7 +4,6 @@ import json
 
 from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
 from mindsdb.utilities.fs import get_or_create_dir_struct, create_dirs_recursive
-from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import args_parse, is_notebook
 from mindsdb.__about__ import __version__ as mindsdb_version
 
@@ -50,12 +49,13 @@ if args is not None and args.config is not None:
 else:
     user_config = {}
     config_path = 'absent'
+os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
 if 'storage_db' in user_config:
     for k in user_config['storage_db']:
-        os.envrion['MINDSDB_' + key.uppercase()] = user_config['storage_db'][k]
-elif os.envrion.get('MINDSDB_DATABASE_TYPE', None) is not None:
-    os.envrion['MINDSDB_DATABASE_TYPE'] = 'sqlite'
+        os.environ['MINDSDB_' + key.uppercase()] = user_config['storage_db'][k]
+elif os.environ.get('MINDSDB_DATABASE_TYPE', None) is None:
+    os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
     if 'paths' in user_config:
         if 'root' in user_config['paths']:
             db_path = user_config['paths']['root']
@@ -64,10 +64,11 @@ elif os.envrion.get('MINDSDB_DATABASE_TYPE', None) is not None:
     os.environ['MINDSDB_SQLITE_PATH'] = os.path.join(db_path,'mindsdb.sqlite3.db')
 
 if 'company_id' in user_config:
-    os.envrion['MINDSDB_COMPANY_ID'] = user_config['company_id']
+    os.environ['MINDSDB_COMPANY_ID'] = user_config['company_id']
 
-os.envrion['MINDSDB_STORAGE_DIR'] = db_path
-os.environ['MINDSDB_CONFIG_PATH'] = config_path
+os.environ['MINDSDB_STORAGE_DIR'] = db_path
+
+from mindsdb.utilities.config import Config
 mindsdb_config = Config()
 create_dirs_recursive(mindsdb_config.paths)
 

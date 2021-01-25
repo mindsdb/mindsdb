@@ -1,6 +1,6 @@
 import shutil
 import os
-from mindsdb.interfaces.state.config import Config
+
 try:
     import boto3
 except Exception as e:
@@ -9,7 +9,7 @@ except Exception as e:
 
 class FsSotre():
     def __init__(self, config):
-        self.config = Config(config)
+        self.config = config
         self.location = self.config['permanent_storage']['location']
         if self.location == 'local':
             pass

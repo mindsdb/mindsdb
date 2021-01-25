@@ -13,6 +13,7 @@ from pathlib import Path
 import requests
 from pandas import DataFrame
 
+import mindsdb
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.native.native import NativeInterface

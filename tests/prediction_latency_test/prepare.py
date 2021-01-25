@@ -91,7 +91,8 @@ class Predictor():
             datasource_name = f"{self.name}_train"
             res = requests.put(self.url, json={
                 'data_source_name': datasource_name,
-                'to_predict': to_predict
+                'to_predict': to_predict,
+                'stop_training_in_x_seconds': 10,
             })
             res.raise_for_status()
 
@@ -175,7 +176,7 @@ def stop_mindsdb(ppid):
             pass
 
 def run_mindsdb():
-    sp = Popen(['python', '-m', 'mindsdb', '--config', CONFIG_PATH],
+    sp = Popen(['python3', '-m', 'mindsdb', '--config', CONFIG_PATH],
                close_fds=True)
 
     time.sleep(30)

@@ -18,3 +18,4 @@ root
 static
 tmp
 .pytest_cache
+tests/prediction_latency_test/*.csv

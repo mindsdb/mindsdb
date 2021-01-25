@@ -58,7 +58,7 @@ elif os.envrion.get('MINDSDB_DATABASE_TYPE', None) is not None:
     os.envrion['MINDSDB_DATABASE_TYPE'] = 'sqlite'
     if 'paths' in user_config:
         if 'root' in user_config['paths']:
-            db_path user_config['paths']['root']
+            db_path = user_config['paths']['root']
     else:
         _, db_path = get_or_create_dir_struct()
     os.environ['MINDSDB_SQLITE_PATH'] = os.path.join(db_path,'mindsdb.sqlite3.db')

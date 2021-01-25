@@ -113,8 +113,6 @@ if __name__ == '__main__':
     mdb = NativeInterface(config)
     cst = CustomModels(config)
 
-    remove_corrupted_predictors(config, mdb)
-
     model_data_arr = get_all_models_meta_data(mdb, cst)
 
     dbw = DatabaseWrapper(config)
@@ -130,7 +128,7 @@ if __name__ == '__main__':
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(args.verbose))
+            p = ctx.Process(target=start_functions[api_name], args=(args.verbose,))
             p.start()
             api_data['process'] = p
         except Exception as e:

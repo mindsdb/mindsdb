@@ -60,6 +60,7 @@ class Config():
         self._db_config = None
         self.last_updated = datetime.datetime.now() - datetime.timedelta(days=3600)
         self._read()
+        self.last_updated = datetime.datetime.now() - datetime.timedelta(days=3600)
 
         # Now comes the stuff that gets stored in the db
         if self._db_config is None:
@@ -122,12 +123,14 @@ class Config():
 
     def _save(self):
         self._db_config = _null_to_empty(self._db_config)
-        try:
-            config_record = Configuration.query.filter_by(company_id=self.company_id).first()
+        config_record = Configuration.query.filter_by(company_id=self.company_id).first()
+
+        if config_record is not None:
             config_record.data = json.dumps(self._db_config)
-        except Exception as e:
+        else:
             config_record = Configuration(company_id=self.company_id, data=json.dumps(self._db_config))
-            session.add(config_record)
+
+        session.add(config_record)
 
         session.commit()
 

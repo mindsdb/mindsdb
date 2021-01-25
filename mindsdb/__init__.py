@@ -51,22 +51,23 @@ else:
     config_path = 'absent'
 os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
+if 'paths' in user_config:
+    if 'root' in user_config['paths']:
+        db_path = user_config['paths']['root']
+else:
+    _, db_path = get_or_create_dir_struct()
+os.environ['MINDSDB_STORAGE_DIR'] = db_path
+
 if 'storage_db' in user_config:
     for k in user_config['storage_db']:
         os.environ['MINDSDB_' + key.uppercase()] = user_config['storage_db'][k]
 elif os.environ.get('MINDSDB_DATABASE_TYPE', None) is None:
     os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
-    if 'paths' in user_config:
-        if 'root' in user_config['paths']:
-            db_path = user_config['paths']['root']
-    else:
-        _, db_path = get_or_create_dir_struct()
-    os.environ['MINDSDB_SQLITE_PATH'] = os.path.join(db_path,'mindsdb.sqlite3.db')
+    os.environ['MINDSDB_SQLITE_PATH'] = os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db')
 
 if 'company_id' in user_config:
     os.environ['MINDSDB_COMPANY_ID'] = user_config['company_id']
 
-os.environ['MINDSDB_STORAGE_DIR'] = db_path
 
 from mindsdb.utilities.config import Config
 mindsdb_config = Config()

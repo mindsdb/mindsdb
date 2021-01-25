@@ -15,7 +15,7 @@ from pandas import DataFrame
 
 import mindsdb
 from mindsdb.utilities.fs import create_dirs_recursive
-from mindsdb.utilities.config import Config
+from legacy_config import Config
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.ps import wait_port, is_port_in_use, net_connections

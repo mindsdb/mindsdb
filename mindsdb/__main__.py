@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     args = args_parse()
 
-    config = Config(os.environ['MINDSDB_CONFIG_PATH'])
+    config = Config()
 
     telemetry_disabled = False
     storage_dir = config['storage_dir']
@@ -136,7 +136,7 @@ if __name__ == '__main__':
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(config.config_path, args.verbose))
+            p = ctx.Process(target=start_functions[api_name], args=(args.verbose))
             p.start()
             api_data['process'] = p
         except Exception as e:
@@ -176,4 +176,3 @@ if __name__ == '__main__':
             api_data['process'].join()
     except KeyboardInterrupt:
         print('Closing app...')
-

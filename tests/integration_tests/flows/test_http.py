@@ -8,7 +8,7 @@ from uuid import uuid1
 
 import requests
 
-from mindsdb.utilities.config import Config
+from legacy_config import Config
 from mindsdb.utilities.ps import net_connections
 
 from common import (

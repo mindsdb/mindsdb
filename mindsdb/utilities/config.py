@@ -8,6 +8,20 @@ from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.state.db import session, Coonfiguration
 
 
+def _null_to_empty(config):
+    '''
+    changing user input to formalised view
+    '''
+    for integration in config.get('integrations', {}).values():
+        password = integration.get('password')
+        password = '' if password is None else str(password)
+        integration['password'] = str(password)
+
+    password = config['api']['mysql'].get('password')
+    password = '' if password is None else str(password)
+    config['api']['mysql']['password'] = str(password)
+    return config
+
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
         target_dict[key] = source_dict[key]
@@ -17,10 +31,11 @@ def _merge_key_recursive(target_dict, source_dict, key):
         for k in list(source_dict[key].keys()):
             _merge_key_recursive(target_dict[key], source_dict[key], k)
 
-def _merge_configs(config, other_config):
-    for key in list(other_config.keys()):
-        _merge_key_recursive(config, other_config, key)
-    return config
+def _merge_configs(original_config, override_config):
+    original_config = deepcopy(original_config)
+    for key in list(override_config.keys()):
+        _merge_key_recursive(original_config, override_config, key)
+    return original_config
 
 
 class Config():
@@ -41,6 +56,9 @@ class Config():
                 self._override_config = json.load(fp)
 
         self.company_id = os.envrion.get('MINDSDB_COMPANY_ID', None)
+        self._db_config = None
+        self.last_updated = datetime.datetime.now() - datetime.timedelta(seconds=3600)
+        self._read()
 
         # Now comes the stuff that gets stored in the db
         if self._db_config is None:
@@ -84,33 +102,49 @@ class Config():
             for path in self._db_config['paths']:
                 create_directory(path)
             self._save()
+            self._read()
 
     def _read(self):
-        if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
-            with open(self.config_path, 'r') as fp:
-                self._config = json.load(fp)
-                self._validate()
-                # @TODO: Overrid with user config
-                #self._merge_default_config()
-        else:
-            raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
+        # No need for instant sync unless we're on the same API
+        # Hacky, but doesn't break any constraints that we were imposing before
+        # There's no guarantee of syncing for the calls from the different APIs anyway, doing this doesn't change that
+        if (datetime.datetime.now() - self.last_updated).total_seconds() > 2:
+
+            config_record =  Configuration.query.filter(Configuration.company_id == company_id).filter(Configuration.modified_at > self.last_updated).first()
+
+            if config_record is not None:
+                self._db_config = json.loads(config_record.data)
+                self._config = _merge_configs(self._db_config, self._override_config)
+
+            self.last_updated = datetime.datetime.now()
+
 
     def _save(self):
-        with open(self.config_path, 'w') as fp:
-            json.dump(self._config, fp, indent=4, sort_keys=True)
+        self._db_config = _null_to_empty(self._db_config)
+        try:
+            config_record = Configuration.query.filter_by(company_id=self.company_id).first()
+            config_record.data = json.dumps(self._db_config)
+        except Exception as e:
+            config_record = Configuration(company_id=self.company_id, data=json.dumps(self._db_config))
+            session.add(config_record)
+
+        session.commit()
 
     def __getitem__(self, key):
+        self._read()
         return self._config[key]
 
     def get(self, key, default=None):
+        self._read()
         return self._config.get(key, default)
 
     def get_all(self):
+        self._read()
         return self._config
 
     def set(self, key_chain, value, delete=False):
         self._read()
-        c = self._config
+        c = self._db_config
         for i, k in enumerate(key_chain):
             if k in c and i + 1 < len(key_chain):
                 c = c[k]
@@ -123,6 +157,11 @@ class Config():
                 else:
                     c[k] = value
         self._save()
+
+    @property
+    def paths(self):
+        self._read()
+        return self._config['paths']
 
     # Higher level interface
     def add_db_integration(self, name, dict):

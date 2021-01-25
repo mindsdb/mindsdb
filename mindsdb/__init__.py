@@ -45,14 +45,30 @@ if args is not None and args.version:
 
 if args is not None and args.config is not None:
     config_path = args.config
+    with open(config_path, 'r') as fp:
+        user_config = json.load(fp)
 else:
-    config_dir, storage_dir = get_or_create_dir_struct()
-    config_path = os.path.join(config_dir, 'config.json')
-    if not os.path.isfile(config_path):
-        with open(config_path, 'w') as fp:
-            json.dump({'config_version': '1.4', 'storage_dir': storage_dir, 'api': {}}, fp)
+    user_config = {}
+    config_path = 'absent'
 
-mindsdb_config = Config(config_path)
+if 'storage_db' in user_config:
+    for k in user_config['storage_db']:
+        os.envrion['MINDSDB_' + key.uppercase()] = user_config['storage_db'][k]
+elif os.envrion.get('MINDSDB_DATABASE_TYPE', None) is not None:
+    os.envrion['MINDSDB_DATABASE_TYPE'] = 'sqlite'
+    if 'paths' in user_config:
+        if 'root' in user_config['paths']:
+            db_path user_config['paths']['root']
+    else:
+        _, db_path = get_or_create_dir_struct()
+    os.environ['MINDSDB_SQLITE_PATH'] = os.path.join(db_path,'mindsdb.sqlite3.db')
+
+if 'company_id' in user_config:
+    os.envrion['MINDSDB_COMPANY_ID'] = user_config['company_id']
+
+os.envrion['MINDSDB_STORAGE_DIR'] = db_path
+os.environ['MINDSDB_CONFIG_PATH'] = config_path
+mindsdb_config = Config()
 create_dirs_recursive(mindsdb_config.paths)
 
 os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')

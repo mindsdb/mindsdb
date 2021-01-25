@@ -3,8 +3,6 @@ import atexit
 import importlib.util
 import time
 import csv
-import shutil
-import json
 from subprocess import Popen
 
 import pandas as pd
@@ -12,7 +10,6 @@ import docker
 import requests
 import psutil
 
-from mindsdb_native import Predictor
 import schemas as schema
 from config import CONFIG
 
@@ -37,6 +34,69 @@ class Dataset:
 DATASETS_PATH = os.getenv("DATASETS_PATH")
 CONFIG_PATH = os.getenv("CONFIG_PATH")
 datasets = [Dataset(key, **CONFIG['datasets'][key]) for key  in CONFIG['datasets'].keys()]
+
+
+class Datasource:
+    def __init__(self, name):
+        self.name = name
+        self.base_url = "http://127.0.0.1:47334/api/datasources/"
+        self.url = self.base_url + name
+
+    def upload(self, force=False):
+        if force or not self.exists:
+            self.delete()
+            files = {}
+            file_name = f"{self.name}.csv"
+            with open(file_name, 'r') as fd:
+                files['file'] = (file_name, fd, 'text/csv')
+                files['source_type'] = (None, 'file')
+                files['source'] = (None, file_name)
+                print(f"calling {self.url} with files={files}")
+                res = requests.put(self.url, files=files)
+                res.raise_for_status()
+
+    @property
+    def list_datasources(self):
+        res = requests.get(self.base_url)
+        res.raise_for_status()
+        return [x["name"] for x in res.json()]
+
+    @property
+    def exists(self):
+        return self.name in self.list_datasources
+
+    def delete(self):
+        requests.delete(self.url)
+
+
+class Predictor():
+    def __init__(self, name):
+        self.name = name
+        self.base_url = "http://127.0.0.1:47334/api"
+        self.url = f'{self.base_url}/predictors/{self.name}'
+
+    def get_info(self):
+        return requests.get(self.url).json()
+
+    def is_ready(self):
+        return self.get_info()["status"] == 'complete'
+
+    @property
+    def exists(self):
+        return "status" in self.get_info()
+
+    def learn(self, to_predict, force=False):
+        if force or not self.exists:
+            self.delete()
+            datasource_name = f"{self.name}_train"
+            res = requests.put(self.url, json={
+                'data_source_name': datasource_name,
+                'to_predict': to_predict
+            })
+            res.raise_for_status()
+
+    def delete(self):
+        requests.delete(self.url)
 
 
 def monthly_sunspots_handler(df):
@@ -82,56 +142,18 @@ def split_datasets():
 
 def upload_datasets(force=False):
     """Upload train dataset to mindsdb via API."""
-    base_url = "http://127.0.0.1:47334/api/datasources/%s"
     for dataset in datasets:
-        files = {}
-        file_name = f"{dataset.name}_train.csv"
-        datasource_name = "".join(file_name.split('.')[:-1])
-        print(datasource_name)
-        url = base_url % datasource_name
-        with open(file_name, 'r') as fd:
-            files['file'] = (file_name, fd, 'text/csv')
-            files['source_type'] = (None, 'file')
-            files['source'] = (None, file_name)
-            print(f"calling {url} with files={files}")
-            res = requests.put(url, files=files)
-            res.raise_for_status()
+        datasource = Datasource(f"{dataset.name}_train")
+        print(datasource.name)
+        datasource.upload(force=force)
 
 
-class Predictor():
-    def __init__(self, name):
-        self.name = name
-        self.base_url = "http://127.0.0.1:47334/api"
-
-    def get_info(self):
-        return requests.get(f'{self.base_url}/predictors/{self.name}').json()
-
-    def is_ready(self):
-        return self.get_info()["status"] == 'complete'
-
-    def is_exists(self):
-        if "status" in self.get_info():
-            return True
-        return False
-
-    def learn(self, to_predict):
-        datasource_name = f"{self.name}_train"
-        res = requests.put(f'{self.base_url}/predictors/{self.name}', json={
-            'data_source_name': datasource_name,
-            'to_predict': to_predict
-        })
-        res.raise_for_status()
-
-
-def create_predictors():
+def create_predictors(force=False):
     predictors = []
     for dataset in datasets:
         predictor = Predictor(dataset.name)
-        if not predictor.is_exists():
-            print(f"creating {dataset.name} predictor")
-            predictor.learn(dataset.target)
+        predictor.learn(dataset.target, force=force)
         predictors.append(predictor)
-
 
     while predictors:
         for predictor in predictors[:]:
@@ -166,10 +188,6 @@ def run_clickhouse():
             'remove': True,
             'network_mode': 'host',
             }
-            # 'ports': {"9000/tcp": 9000,
-            #     "8123/tcp": 8123},
-            # 'environment': {"CLICKHOUSE_PASSWORD": "iyDNE5g9fw9kdrCLIKoS3bkOJkE",
-                # "CLICKHOUSE_USER": "root"}}
     container = docker_client.containers.run(image, detach=True, **container_params)
     atexit.register(container.stop)
     return container
@@ -247,9 +265,6 @@ def prepare_env(prepare_data=True,
     print("running mindsdb")
     run_mindsdb()
     print("uploading train datasets to mindsdb")
-    upload_datasets()
-    if train_models:
-        print("creating and training models")
-        create_predictors()
-
+    upload_datasets(force=prepare_data)
+    create_predictors(force=train_models)
     add_integration()

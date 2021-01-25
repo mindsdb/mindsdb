@@ -24,13 +24,16 @@
 Benchmark prints result DataFrame at the end and also save it into .csv file
 
 ## Launch params
-You may get this info by executing `python test.py --help`
+You may get this info by executing `python test.py --help`:
 
-`datasets_path` - path to `benchmark-private/benchmark/datasets` dir (required)
-`--predictors_dir` - path to mindsdb predictor dir. If not specified, related path from  test_dir will be used, assuming that it is a standard repository structure.
-`--config_path` - path to config file. If not specified, related path from  test_dir will be used, assuming that it is a standard repository structure.
-`--no_docker` - In this case local DB will be used. Assuming that it is already installed on the host system. If not specified, docker container is used.
-`--skip_datasource` - skip datasource preparation. May be provided if there are prepared test/train datasources from previous launch.
-`--skip_db` - do not upload test data to database. Make sence only if local DB, installed on host is used
-`--skip_train_models` - do not train model. Make sence if models already trained in previous launches.
+ - `datasets_path` - path to `benchmark-private/benchmark/datasets` dir (required)
 
+ - `--config_path` - path to config file. If not specified, related path from  test_dir will be used, assuming that it is a standard repository structure.
+
+ - `--no_docker` - In this case local DB will be used. Assuming that it is already installed on the host system. If not specified, docker container is used.
+
+ - `--skip_datasource` - skip datasource preparation. May be provided if there are prepared test/train datasources from previous launch.
+
+ - `--skip_db` - do not upload test data to database. Make sence only if local DB, installed on host is used
+
+ - `--skip_train_models` - do not train model. Make sence if models already trained in previous launches.

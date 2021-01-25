@@ -7,6 +7,7 @@ import asyncio
 import shutil
 import csv
 import re
+import sys
 from pathlib import Path
 
 import requests
@@ -14,7 +15,7 @@ from pandas import DataFrame
 
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.ps import wait_port, is_port_in_use, net_connections
 from mindsdb_native import CONFIG
@@ -158,14 +159,17 @@ def open_ssh_tunnel(port, direction='R'):
     if not path.is_dir():
         path.mkdir(mode=0o777, exist_ok=True, parents=True)
 
-    cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
+    if is_mssql_test() and port != 5005:
+        cmd = f'ssh -i ~/.ssh/db_machine_ms -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} Administrator@107.21.140.172'
+    else:
+        cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
     sp = subprocess.Popen(
         cmd.split(' '),
         stdout=OUTPUT,
         stderr=OUTPUT
     )
     try:
-        status = sp.wait(5)
+        status = sp.wait(20)
     except subprocess.TimeoutExpired:
         status = 1
         sp.kill()
@@ -173,6 +177,13 @@ def open_ssh_tunnel(port, direction='R'):
     if status == 0:
         atexit.register(close_ssh_tunnel, sp=sp, port=port)
     return status
+
+
+def is_mssql_test():
+    for x in sys.argv:
+        if 'test_mssql.py' in x:
+            return True
+    return False
 
 
 if USE_EXTERNAL_DB_SERVER:
@@ -236,7 +247,7 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
 
     api_str = ','.join(apis)
     sp = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path],
+        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path, '--verbose'],
         close_fds=True,
         stdout=OUTPUT,
         stderr=OUTPUT
@@ -269,7 +280,7 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
         raise Exception('Cant start mindsdb apis')
 
     CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
-    mdb = MindsdbNative(config)
+    mdb = NativeInterface(config)
     datastore = DataStore(config)
 
     return mdb, datastore

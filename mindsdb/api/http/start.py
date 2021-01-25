@@ -28,7 +28,7 @@ def start(config, verbose=False):
     init_static_thread = threading.Thread(target=initialize_static, args=(config,))
     init_static_thread.start()
 
-    app, api = initialize_flask(config)
+    app, api = initialize_flask(config, init_static_thread)
     initialize_interfaces(config, app)
 
     static_root = Path(config.paths['static'])

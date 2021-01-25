@@ -1,7 +1,0 @@
-[mariadb]
-plugin-load-add=ha_connect.so
-connect_jvm_path="/usr/lib/jvm/java-1.8.0-openjdk-amd64/jre/lib/amd64/server"
-connect_class_path="/usr/lib/mysql/plugin:/usr/lib/jvm/java-1.8.0-openjdk-amd64/jre/lib/ext/dremio-jdbc-driver.jar"
-wait_timeout=180
-connect_timeout=180
-interactive_timeout=180

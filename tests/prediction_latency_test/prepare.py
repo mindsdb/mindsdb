@@ -36,9 +36,6 @@ class Dataset:
 
 DATASETS_PATH = os.getenv("DATASETS_PATH")
 CONFIG_PATH = os.getenv("CONFIG_PATH")
-PREDICTORS_DIR = os.getenv("MINDSDB_STORAGE_PATH")
-if not os.path.exists(PREDICTORS_DIR):
-    os.makedirs(PREDICTORS_DIR, exist_ok=True)
 datasets = [Dataset(key, **CONFIG['datasets'][key]) for key  in CONFIG['datasets'].keys()]
 
 
@@ -48,50 +45,12 @@ def monthly_sunspots_handler(df):
         months[i] = val + "-01"
 
 
-def copy_version_info(dataset):
-    dst = os.path.join(PREDICTORS_DIR, dataset, "versions.json")
-    src = os.path.join(PREDICTORS_DIR, "..", "versions.json")
-    shutil.copyfile(src, dst)
-
 def get_handler(handler_path):
     spec = importlib.util.spec_from_file_location("common", os.path.abspath(handler_path))
     handler = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(handler)
     return handler.handler
 
-
-def create_models():
-    for dataset in datasets:
-        dataset_root_path = os.path.join(DATASETS_PATH, dataset.name)
-        print(f"dataset_root_path: {dataset_root_path}")
-        to_predict = dataset.target
-
-        data_path = f"{dataset.name}_train.csv"
-        print(f"data_path: {data_path}")
-        model = Predictor(name=dataset.name)
-        try:
-            # model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=False)
-            model.learn(to_predict=to_predict, from_data=data_path, rebuild_model=True)
-        except FileNotFoundError:
-            print(f"model {dataset.name} doesn't exist")
-            print("creating....")
-            model.learn(to_predict=to_predict, from_data=data_path)
-        copy_version_info(dataset.name)
-
-# def add_integration():
-#     db_info = CONFIG['database']
-#     with open(CONFIG_PATH, 'r') as f:
-#         config = json.load(f)
-#     integration_name = "prediction_clickhouse"
-#     config['integrations'][integration_name] = {}
-#     config['integrations'][integration_name]['publish'] = True
-#     config['integrations'][integration_name]['host'] = db_info["host"]
-#     config['integrations'][integration_name]['port'] = db_info["port"]
-#     config['integrations'][integration_name]['user'] = db_info["user"]
-#     config['integrations'][integration_name]['password'] = db_info["password"]
-#     config['integrations'][integration_name]['type'] = 'clickhouse'
-#     with open(CONFIG_PATH, 'w') as f:
-#         json.dump(config, f, indent=4, sort_keys=True)
 
 def add_integration():
     db_info = CONFIG['database']
@@ -121,7 +80,7 @@ def split_datasets():
         test_df.to_csv(f"{dataset.name}_test.csv", index=False)
 
 
-def upload_datasets():
+def upload_datasets(force=False):
     """Upload train dataset to mindsdb via API."""
     base_url = "http://127.0.0.1:47334/api/datasources/%s"
     for dataset in datasets:
@@ -292,6 +251,5 @@ def prepare_env(prepare_data=True,
     if train_models:
         print("creating and training models")
         create_predictors()
-        # create_models()
 
     add_integration()

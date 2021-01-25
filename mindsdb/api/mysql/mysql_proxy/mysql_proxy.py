@@ -11,6 +11,7 @@
 
 
 import os
+import sys
 import random
 import socketserver as SocketServer
 import ssl
@@ -20,6 +21,8 @@ import json
 import atexit
 import tempfile
 import datetime
+import socket
+import struct
 from collections import OrderedDict
 from functools import partial
 
@@ -1376,14 +1379,42 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ).send()
             raise
 
+    def is_cloud_connection(self):
+        if sys.platform != 'linux':
+            return {
+                'is_cloud': False
+            }
+        first_byte = self.request.recv(4, socket.MSG_PEEK)
+        if first_byte == b'\x00\x00\x00\x00':
+            self.request.recv(4)
+            client_capabilities = self.request.recv(8)
+            client_capabilities = struct.unpack('L', client_capabilities)[0]
+            return {
+                'is_cloud': True,
+                'client_capabilities': client_capabilities
+            }
+        return {
+            'is_cloud': False
+        }
+
     def handle(self):
         """
         Handle new incoming connections
         :return:
         """
         log.info('handle new incoming connection')
-        if self.handshake() is False:
-            return
+        cloud_connection = self.is_cloud_connection()
+        if cloud_connection['is_cloud'] is False:
+            if self.handshake() is False:
+                return
+        else:
+            if self.session is None:
+                self.initSession()
+            self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
+            self.session.username = 'cloud'
+            self.session.auth = True
+            self.session.integration = None
+            self.session.integration_type = None
 
         while True:
             log.debug('Got a new packet')

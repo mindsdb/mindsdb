@@ -15,11 +15,7 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.fs import (
-    update_versions_file,
-    archive_obsolete_predictors,
-    remove_corrupted_predictors
-)
+from mindsdb.utilities.fs import update_versions_file
 from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
@@ -113,8 +109,6 @@ if __name__ == '__main__':
         'mysql': start_mysql,
         'mongodb': start_mongo
     }
-
-    archive_obsolete_predictors(config, '2.11.0')
 
     mdb = NativeInterface(config)
     cst = CustomModels(config)

@@ -49,10 +49,11 @@ class Config():
     }
 
     def __init__(self):
-        if os.environ['MINDSDB_CONFIG_PATH'] == 'absent':
+        self.config_path = os.environ['MINDSDB_CONFIG_PATH']
+        if self.config_path == 'absent':
             self._override_config = {}
         else:
-            with open(os.environ['MINDSDB_CONFIG_PATH'], 'r') as fp:
+            with open(self.config_path, 'r') as fp:
                 self._override_config = json.load(fp)
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)

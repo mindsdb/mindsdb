@@ -57,7 +57,7 @@ class Config():
 
         self.company_id = os.envrion.get('MINDSDB_COMPANY_ID', None)
         self._db_config = None
-        self.last_updated = datetime.datetime.now() - datetime.timedelta(seconds=3600)
+        self.last_updated = datetime.datetime.now() - datetime.timedelta(days=3600)
         self._read()
 
         # Now comes the stuff that gets stored in the db
@@ -110,7 +110,7 @@ class Config():
         # There's no guarantee of syncing for the calls from the different APIs anyway, doing this doesn't change that
         if (datetime.datetime.now() - self.last_updated).total_seconds() > 2:
 
-            config_record =  Configuration.query.filter(Configuration.company_id == company_id).filter(Configuration.modified_at > self.last_updated).first()
+            config_record =  Configuration.query.filter(Configuration.company_id == self.company_id).filter(Configuration.modified_at > self.last_updated).first()
 
             if config_record is not None:
                 self._db_config = json.loads(config_record.data)

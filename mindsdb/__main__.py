@@ -176,3 +176,4 @@ if __name__ == '__main__':
             api_data['process'].join()
     except KeyboardInterrupt:
         print('Closing app...')
+

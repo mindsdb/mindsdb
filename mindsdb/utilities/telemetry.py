@@ -26,7 +26,7 @@ def is_telemetry_file_exists(storage_dir):
 def inject_telemetry_to_static(static_folder):
     TEXT = '<script>localStorage.isTestUser = true;</script>'
     index = Path(static_folder).joinpath('index.html')
-    disable_telemetry = os.getenv('CHECK_FOR_UPDATES').lower() in ['0', 'false']
+    disable_telemetry = os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']
     if index.is_file():
         with open(str(index), 'rt') as f:
             content = f.read()

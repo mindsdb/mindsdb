@@ -61,7 +61,7 @@ class HTTPTest(unittest.TestCase):
         for integration_name in integration_names['integrations']:
             assert integration_name in self.initial_integrations_names
 
-        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse'}
+        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse', 'port': 8123, 'user': 'default'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
         assert res.status_code == 200
 
@@ -71,16 +71,10 @@ class HTTPTest(unittest.TestCase):
         print(test_integration, len(test_integration))
         assert len(test_integration) == 6
 
-        res = requests.delete(f'{root}/config/integrations/test_integration')
-        assert res.status_code == 200
-
-        res = requests.get(f'{root}/config/integrations/test_integration')
-        assert res.status_code != 200
-
         for k in test_integration_data:
             assert test_integration[k] == test_integration_data[k]
 
-        for name in ['default_mariadb', 'default_clickhouse']:
+        for name in ['test_integration']:
             # Get the original
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
@@ -100,6 +94,7 @@ class HTTPTest(unittest.TestCase):
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
             modified_integration = res.json()
+            print(modified_integration)
             assert modified_integration['password'] is None
             assert modified_integration['user'] == 'dr.Who'
             for k in integration:
@@ -115,6 +110,13 @@ class HTTPTest(unittest.TestCase):
             for k in integration:
                 if k != 'date_last_update':
                     assert modified_integration[k] == integration[k]
+
+
+        res = requests.delete(f'{root}/config/integrations/test_integration')
+        assert res.status_code == 200
+
+        res = requests.get(f'{root}/config/integrations/test_integration')
+        assert res.status_code != 200
 
     def test_2_put_ds(self):
         # PUT datasource

@@ -110,12 +110,12 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
-    mdb = NativeInterface(config)
-    cst = CustomModels(config)
+    mdb = NativeInterface()
+    cst = CustomModels()
 
     model_data_arr = get_all_models_meta_data(mdb, cst)
 
-    dbw = DatabaseWrapper(config)
+    dbw = DatabaseWrapper()
     for db_alias in config['integrations']:
         dbw.setup_integration(db_alias)
     dbw.register_predictors(model_data_arr)

@@ -11,15 +11,15 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb_native.libs.helpers.general_helpers import NumpyJSONEncoder
-
+from mindsdb.utilities.config import Config
 
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
     def __init__(self, config):
-        self.config = config
-        self.mindsdb_native = NativeInterface(config)
-        self.custom_models = CustomModels(config)
+        self.config = Config()
+        self.mindsdb_native = NativeInterface()
+        self.custom_models = CustomModels()
 
     def getTables(self):
         models = self.mindsdb_native.get_models()

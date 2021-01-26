@@ -9,13 +9,17 @@ import pandas as pd
 
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
-
+from mindsdb.utilities.config import Config
 
 class DataStore():
-    def __init__(self, config):
-        self.config = config
-        self.dir = config.paths['datasources']
-        self.mindsdb_native = NativeInterface(config)
+    def __init__(self, config=None):
+        if config is None:
+            self.config = Config()
+        else:
+            self.config = config
+
+        self.dir = self.config.paths['datasources']
+        self.mindsdb_native = NativeInterface()
 
     def get_analysis(self, ds):
         return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))

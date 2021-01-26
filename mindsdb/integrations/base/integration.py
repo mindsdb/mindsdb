@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-
+from mindsdb.utilities.config import Config
 
 class Integration(ABC):
     def __init__(self, config, name):
-        self.config = config
+        self.config = Config()
         self.name = name
         self.mindsdb_database = config['api']['mysql']['database']
 

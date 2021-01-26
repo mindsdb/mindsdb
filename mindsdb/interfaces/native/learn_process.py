@@ -33,4 +33,4 @@ class LearnProcess(ctx.Process):
 
         model_data = mindsdb_native.F.get_model_data(name)
 
-        DatabaseWrapper(config).register_predictors([model_data])
+        DatabaseWrapper().register_predictors([model_data])

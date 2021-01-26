@@ -11,12 +11,15 @@ from mindsdb.utilities.fs import create_directory
 from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 from mindsdb.interfaces.native.learn_process import LearnProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
-
+from mindsdb.utilities.config import Config
 
 class NativeInterface():
-    def __init__(self, config):
-        self.config = config
-        self.dbw = DatabaseWrapper(self.config)
+    def __init__(self, config=None):
+        if config is None:
+            self.config = Config()
+        else:
+            self.config = config
+        self.dbw = DatabaseWrapper()
         self.predictor_cache = {}
 
     def _invalidate_cached_predictors(self):

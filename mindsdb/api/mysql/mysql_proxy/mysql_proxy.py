@@ -1474,9 +1474,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             config['api']['mysql']['ssl']
         )
 
-        default_store = DataStore(config)
-        mdb = NativeInterface(config)
-        custom_models = CustomModels(config)
+        default_store = DataStore()
+        mdb = NativeInterface()
+        custom_models = CustomModels()
         datahub = init_datahub(config)
 
         host = config['api']['mysql']['host']

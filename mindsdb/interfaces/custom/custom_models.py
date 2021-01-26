@@ -9,16 +9,20 @@ import pandas as pd
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.utilities.config import Config
 
 class CustomModels():
-    def __init__(self, config):
-        self.config = config
-        self.dbw = DatabaseWrapper(self.config)
-        self.storage_dir = os.path.join(config['storage_dir'], 'misc')
+    def __init__(self, config=None):
+        if config is None:
+            self.config = Config()
+        else:
+            self.config = config
+        self.dbw = DatabaseWrapper()
+        self.storage_dir = os.path.join(self.config['storage_dir'], 'misc')
         os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
-        self.mindsdb_native = NativeInterface(self.config)
-        self.dbw = DatabaseWrapper(self.config)
+        self.mindsdb_native = NativeInterface()
+        self.dbw = DatabaseWrapper()
 
     def _dir(self, name):
         return str(os.path.join(self.storage_dir, 'custom_model_' + name))

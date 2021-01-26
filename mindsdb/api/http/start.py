@@ -29,7 +29,7 @@ def start(verbose=False):
     init_static_thread.start()
 
     app, api = initialize_flask(config, init_static_thread)
-    initialize_interfaces(config, app)
+    initialize_interfaces(app)
 
     static_root = Path(config.paths['static'])
 

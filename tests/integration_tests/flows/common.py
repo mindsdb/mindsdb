@@ -281,8 +281,8 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
         raise Exception('Cant start mindsdb apis')
 
     CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
-    mdb = NativeInterface(config)
-    datastore = DataStore(config)
+    mdb = NativeInterface()
+    datastore = DataStore()
 
     return mdb, datastore
 

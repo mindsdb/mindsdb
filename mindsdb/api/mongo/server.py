@@ -237,7 +237,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         log.debug('connect')
         log.debug(str(self.server.socket))
 
-        self.session = Session(self.server.mindsdb_env['config'])
+        self.session = Session()
 
         first_byte = self.request.recv(1, socket.MSG_PEEK)
         if first_byte == b'\x16':
@@ -292,8 +292,8 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self.mindsdb_env = {
             'config': config,
-            'data_store': DataStore(config),
-            'mindsdb_native': NativeInterface(config)
+            'data_store': DataStore(),
+            'mindsdb_native': NativeInterface()
         }
 
         respondersCollection = RespondersCollection()

@@ -36,9 +36,6 @@ class NativeInterface():
 
         predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
         create_directory(predictor_dir)
-        versions_file_path = predictor_dir.joinpath('versions.json')
-        with open(str(versions_file_path), 'wt') as f:
-            json.dump(self.config.versions, f, indent=4, sort_keys=True)
 
     def create(self, name):
         self._setup_for_creation(name)

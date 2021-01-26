@@ -211,9 +211,6 @@ class DataStore():
                 }
                 json.dump(meta, fp, indent=4, sort_keys=True)
 
-            with open(os.path.join(ds_meta_dir, 'versions.json'), 'wt') as fp:
-                json.dump(self.config.versions, fp, indent=4, sort_keys=True)
-
         except Exception:
             if os.path.isdir(ds_meta_dir):
                 shutil.rmtree(ds_meta_dir)

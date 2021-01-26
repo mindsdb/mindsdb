@@ -127,25 +127,6 @@ def do_init_migration(paths):
                     )
                 shutil.rmtree(datasource_folder)
 
-
-def update_versions_file(config, versions):
-    versions_file_path = os.path.join(config.paths['root'], 'versions.json')
-    old_versions = {}
-    if Path(versions_file_path).is_file():
-        try:
-            with open(versions_file_path, 'rt') as f:
-                old_versions = json.loads(f.read())
-        except Exception:
-            pass
-
-    # do here anything for update
-    if len(old_versions) == 0:
-        do_init_migration(config.paths)
-
-    with open(versions_file_path, 'wt') as f:
-        json.dump(versions, f, indent=4, sort_keys=True)
-
-
 def create_dirs_recursive(path):
     if isinstance(path, dict):
         for p in path.values():

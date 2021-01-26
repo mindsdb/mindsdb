@@ -58,8 +58,6 @@ class HTTPTest(unittest.TestCase):
         res = requests.get(f'{root}/config/integrations')
         assert res.status_code == 200
         integration_names = res.json()
-        for integration_name in integration_names['integrations']:
-            assert integration_name in self.initial_integrations_names
 
         test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse', 'port': 8123, 'user': 'default'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
@@ -68,8 +66,7 @@ class HTTPTest(unittest.TestCase):
         res = requests.get(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
         test_integration = res.json()
-        print(test_integration, len(test_integration))
-        assert len(test_integration) == 6
+        assert len(test_integration) == 8
 
         for k in test_integration_data:
             assert test_integration[k] == test_integration_data[k]

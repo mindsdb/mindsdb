@@ -1,7 +1,7 @@
 import unittest
 import inspect
 
-import pymssql
+import pytds
 
 from mindsdb.utilities.config import Config
 
@@ -43,7 +43,7 @@ to_predict_column_names = list(TO_PREDICT.keys())
 
 def query(query, fetch=False, as_dict=True, db='mindsdb_test'):
     integration = config['integrations']['default_mssql']
-    conn = pymssql.connect(
+    conn = pytds.connect(
         server=integration['host'],
         host=integration['host'],
         user=integration['user'],

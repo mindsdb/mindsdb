@@ -1,11 +1,11 @@
-import pymssql
+import pytds
 from mindsdb.integrations.base import Integration
 
 
 class MSSQL(Integration):
     def _get_connnection(self):
         integration = self.config['integrations'][self.name]
-        return pymssql.connect(
+        return pytds.connect(
             server=integration['host'],
             host=integration['host'],
             user=integration['user'],

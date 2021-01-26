@@ -106,18 +106,22 @@ class Config():
             self._save()
             self._read()
 
+        # Just in case... probably not needed, won't harm anyone, the config initi sequence is weird
+        self._config = _merge_configs(self._db_config, self._override_config)
+
     def _read(self):
         # No need for instant sync unless we're on the same API
         # Hacky, but doesn't break any constraints that we were imposing before
         # There's no guarantee of syncing for the calls from the different APIs anyway, doing this doesn't change that
-        if (datetime.datetime.now() - self.last_updated).total_seconds() > 2:
+        # `True` to disable this until we add some sleepy time to our tests
+        if True or (datetime.datetime.now() - self.last_updated).total_seconds() > 2:
 
             config_record =  Configuration.query.filter(Configuration.company_id == self.company_id).filter(Configuration.modified_at > self.last_updated).first()
 
             if config_record is not None:
                 self._db_config = json.loads(config_record.data)
+                self._config = _merge_configs(self._db_config, self._override_config)
 
-            self._config = _merge_configs(self._db_config, self._override_config)
             self.last_updated = datetime.datetime.now()
 
 
@@ -133,7 +137,8 @@ class Config():
         session.add(config_record)
 
         session.commit()
-
+        self._config = _merge_configs(self._db_config, self._override_config)
+        
     def __getitem__(self, key):
         self._read()
         return self._config[key]

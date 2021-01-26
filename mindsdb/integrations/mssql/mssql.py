@@ -6,18 +6,17 @@ class MSSQL(Integration):
     def _get_connnection(self):
         integration = self.config['integrations'][self.name]
         return pytds.connect(
-            server=integration['host'],
-            host=integration['host'],
             user=integration['user'],
             password=integration['password'],
-            database=integration.get('database', 'master'),
+            dsn=integration['host'],
             port=integration['port'],
-            autocommit=True  # that need for CRUD operations
+            as_dict=True,
+            autocommit=True  # .commit() doesn't work
         )
 
     def _query(self, query, fetch=False):
         conn = self._get_connnection()
-        cur = conn.cursor(as_dict=True)
+        cur = conn.cursor()
         cur.execute(query)
         res = True
         if fetch:

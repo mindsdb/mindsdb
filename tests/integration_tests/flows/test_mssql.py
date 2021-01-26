@@ -44,16 +44,16 @@ to_predict_column_names = list(TO_PREDICT.keys())
 def query(query, fetch=False, as_dict=True, db='mindsdb_test'):
     integration = config['integrations']['default_mssql']
     conn = pytds.connect(
-        server=integration['host'],
-        host=integration['host'],
         user=integration['user'],
         password=integration['password'],
         database=integration.get('database', 'master'),
+        dsn=integration['host'],
         port=integration['port'],
-        autocommit=True  # that need for CRUD operations
+        as_dict=as_dict,
+        autocommit=True  # .commit() doesn't work
     )
 
-    cur = conn.cursor(as_dict=as_dict)
+    cur = conn.cursor()
     cur.execute(query)
     res = True
     if fetch:

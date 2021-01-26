@@ -7,7 +7,7 @@ from sqlalchemy.schema import ForeignKey
 import datetime
 
 if os.environ['MINDSDB_DATABASE_TYPE'] == 'sqlite':
-    engine = create_engine('sqlite:///' + os.environ['MINDSDB_SQLITE_PATH'], echo=False)
+    engine = create_engine('sqlite:///' + os.environ['MINDSDB_SQLITE_PATH'], echo=False) # + '?check_same_thread=False'
 elif os.environ['MINDSDB_DATABASE_TYPE'] == 'mariadb':
     raise Exception('Mariadb not supported !')
 

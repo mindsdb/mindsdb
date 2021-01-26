@@ -150,7 +150,7 @@ class HTTPTest(unittest.TestCase):
             'data_source_name': ds_name,
             'to_predict': 'rental_price',
             'kwargs': {
-                'stop_training_in_x_seconds': 5,
+                'stop_training_in_x_seconds': 20,
                 'join_learn_process': True
             }
         }
@@ -226,11 +226,6 @@ class HTTPTest(unittest.TestCase):
         """
         GUI downloaded and available
         """
-        start_time = time.time()
-        index = Path(self.config.paths['static']).joinpath('index.html')
-        while index.is_file() is False and (time.time() - start_time) > 30:
-            time.sleep(1)
-        assert index.is_file()
         response = requests.get('http://localhost:47334/')
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0

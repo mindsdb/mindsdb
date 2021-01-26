@@ -242,7 +242,8 @@ def initialize_interfaces(app):
     app.mindsdb_native = NativeInterface()
     app.custom_models = CustomModels()
     app.dbw = DatabaseWrapper()
-    app.config_obj = Config()
+    config = Config()
+    app.config_obj = config
 
 
 def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_folder):

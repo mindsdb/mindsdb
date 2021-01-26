@@ -237,7 +237,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         log.debug('connect')
         log.debug(str(self.server.socket))
 
-        self.session = Session()
+        self.session = Session(self.server.mindsdb_env['config'])
 
         first_byte = self.request.recv(1, socket.MSG_PEEK)
         if first_byte == b'\x16':

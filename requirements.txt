@@ -6,7 +6,7 @@ moz-sql-parser == 3.32.20026
 pyparsing == 2.3.1
 cryptography >= 2.9.2
 pg8000 >= 1.15.3
-pytds >= 2.1.4
+python-tds >= 1.10.0
 waitress >= 1.4.4
 pymongo >= 3.10.1
 setuptools

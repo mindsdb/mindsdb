@@ -48,13 +48,12 @@ CONDITION = {
 # ---
 
 TEST_DATA_TABLE = TEST_DATASET
-TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'
 TEST_DS_CSV = 'test_ds_csv'
-TEST_PREDICTOR = 'test_predictor'
+TEST_PREDICTOR = 'test_predictor_name_conflict_fix'
 TEST_PREDICTOR_CSV = 'test_predictor_csv'
 
 config = Config(TEST_CONFIG)
@@ -150,7 +149,7 @@ class UserFlowTest_2(unittest.TestCase):
             apis=['mysql'],
             override_integration_config={
                 'default_mariadb': {
-                    'publish': True
+                    'publish': False
                 }
             },
             mindsdb_database=MINDSDB_DATABASE,

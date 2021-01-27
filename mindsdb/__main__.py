@@ -116,7 +116,7 @@ if __name__ == '__main__':
 
     ctx = mp.get_context('spawn')
     # Switch to this once the native interface has it's own thread :/
-    ctx = mp.get_context(get_mp_context())
+    # ctx = mp.get_context(get_mp_context())
 
 
     for api_name, api_data in apis.items():

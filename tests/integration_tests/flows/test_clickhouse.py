@@ -74,7 +74,7 @@ def query(query):
 
     if res.status_code != 200:
         print(f'ERROR: code={res.status_code} msg={res.text}')
-        raise Exception()
+        raise Exception(res.text)
 
     if ' FORMAT JSON' in query:
         res = res.json()['data']

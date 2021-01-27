@@ -1,9 +1,9 @@
 import torch.multiprocessing as mp
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.utilities.os_specific import get_mp_context
 
 
-ctx = mp.get_context('spawn')
-
+ctx = mp.get_context(get_mp_context())
 
 class LearnProcess(ctx.Process):
     daemon = True

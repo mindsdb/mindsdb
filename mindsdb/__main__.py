@@ -6,10 +6,12 @@ import time
 import asyncio
 import logging
 import datetime
+import platform
 
 import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.os_specific import get_mp_context
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
@@ -112,7 +114,7 @@ if __name__ == '__main__':
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         log.error(f'Error failed to integrate with database aliased: {broken_name}')
 
-    ctx = mp.get_context('spawn')
+    ctx = mp.get_context(get_mp_context())
 
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')

@@ -39,15 +39,6 @@ def _merge_configs(original_config, override_config):
 
 
 class Config():
-    paths = {
-        'root': '',
-        'datasources': '',
-        'predictors': '',
-        'static': '',
-        'tmp': '',
-        'log': ''
-    }
-
     def __init__(self):
         self.config_path = os.environ['MINDSDB_CONFIG_PATH']
         if self.config_path == 'absent':
@@ -101,6 +92,9 @@ class Config():
             self._db_config['paths']['static'] = os.path.join(self._db_config['paths']['root'], 'static')
             self._db_config['paths']['tmp'] = os.path.join(self._db_config['paths']['root'], 'tmp')
             self._db_config['paths']['log'] = os.path.join(self._db_config['paths']['root'], 'log')
+            self._db_config['paths']['storage_dir'] = self._db_config['paths']['root']
+            self._db_config['storage_dir'] = self._db_config['paths']['root']
+            
             for path in self._db_config['paths']:
                 create_directory(path)
             self._save()

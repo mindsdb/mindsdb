@@ -96,7 +96,6 @@ class MistakesTest_1(unittest.TestCase):
             override_integration_config={
                 'default_mariadb': {
                     'publish': True,
-                    'password': 'broken'
                 }
             },
             mindsdb_database=MINDSDB_DATABASE

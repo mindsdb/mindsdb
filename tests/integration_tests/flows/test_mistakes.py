@@ -90,6 +90,18 @@ class MistakesTest_1(unittest.TestCase):
         '''
         stop mindsdb while analyse dataset
         '''
+        self.mdb, datastore = run_environment(
+            config,
+            apis=['mysql', 'http'],
+            override_integration_config={
+                'default_mariadb': {
+                    'publish': True,
+                    'password': 'broken'
+                }
+            },
+            mindsdb_database=MINDSDB_DATABASE
+        )
+
         data = {
             "integration_id": 'default_mariadb',
             "name": TEST_DS,

@@ -129,7 +129,7 @@ def prepare_config(config, mindsdb_database='mindsdb', override_integration_conf
     if storage_dir.is_dir() and clear_storage:
         shutil.rmtree(str(storage_dir))
     config._config['storage_dir'] = str(storage_dir)
-    
+
     create_dirs_recursive(config.paths)
 
     temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
@@ -281,8 +281,8 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
         raise Exception('Cant start mindsdb apis')
 
     CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
-    mdb = NativeInterface()
-    datastore = DataStore()
+    mdb = NativeInterface(config)
+    datastore = DataStore(config)
 
     return mdb, datastore
 

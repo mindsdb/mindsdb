@@ -48,13 +48,13 @@ class Config():
                 self._override_config = json.load(fp)
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-        self._db_config = None
+        self._db_config = {}
         self.last_updated = datetime.datetime.now() - datetime.timedelta(days=3600)
         self._read()
         self.last_updated = datetime.datetime.now() - datetime.timedelta(days=3600)
 
         # Now comes the stuff that gets stored in the db
-        if self._db_config is None:
+        if len(self._db_config) == 0:
             self._db_config = {
                 'paths': {},
                 "log": {
@@ -87,11 +87,7 @@ class Config():
                 }
             }
 
-            if 'storage_dir' in self._override_config:
-                self._db_config['paths']['root'] = self._override_config['storage_dir']
-            else:
-                self._db_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']
-
+            self._db_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']
             self._db_config['paths']['datasources'] = os.path.join(self._db_config['paths']['root'], 'datasources')
             self._db_config['paths']['predictors'] = os.path.join(self._db_config['paths']['root'], 'predictors')
             self._db_config['paths']['static'] = os.path.join(self._db_config['paths']['root'], 'static')

@@ -7,6 +7,7 @@ from mindsdb.utilities.fs import get_or_create_dir_struct, create_dirs_recursive
 from mindsdb.utilities.functions import args_parse, is_notebook
 from mindsdb.__about__ import __version__ as mindsdb_version
 
+
 try:
     if not is_notebook():
         args = args_parse()
@@ -52,15 +53,16 @@ else:
 os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
 if 'storage_dir' in user_config:
-    db_path = user_config['storage_dir']
+    root_storage_dir = user_config['storage_dir']
 else:
-    _, db_path = get_or_create_dir_struct()
-os.environ['MINDSDB_STORAGE_DIR'] = db_path
+    _, root_storage_dir = get_or_create_dir_struct()
+os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
 
+print('\n\n\n\n\n\n', 'INITIALIZED WITH USER CONFIG: ', user_config, '\n\n\n\n\n\n')
 if 'storage_db' in user_config:
     for k in user_config['storage_db']:
         os.environ['MINDSDB_' + key.uppercase()] = user_config['storage_db'][k]
-elif os.environ.get('MINDSDB_DATABASE_TYPE', None) is None:
+else:
     os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
     os.environ['MINDSDB_SQLITE_PATH'] = os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db')
 

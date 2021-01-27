@@ -83,7 +83,7 @@ jobs:
 
           # user flow 1
           echo -e "\n===============\ntest user flow 1\n===============\n"
-          python tests/ipntegration_tests/flows/test_user_flow_1.py
+          python tests/integration_tests/flows/test_user_flow_1.py
           rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
 
           # user flow 2

@@ -3,7 +3,8 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.os_specific import get_mp_context
 
 
-ctx = mp.get_context(get_mp_context())
+#ctx = mp.get_context(get_mp_context())
+ctx = mp.get_context('spawn')
 
 class LearnProcess(ctx.Process):
     daemon = True

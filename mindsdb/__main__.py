@@ -114,7 +114,10 @@ if __name__ == '__main__':
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         log.error(f'Error failed to integrate with database aliased: {broken_name}')
 
+    ctx = mp.get_context('spawn')
+    # Switch to this once the native interface has it's own thread :/
     ctx = mp.get_context(get_mp_context())
+
 
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')

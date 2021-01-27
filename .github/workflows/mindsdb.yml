@@ -44,57 +44,57 @@ jobs:
           # HTTP
           echo -e "\n===============\ntest HTTP\n===============\n"
           python tests/integration_tests/flows/test_http.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # MsSQL
           echo -e "\n===============\ntest MsSQL\n===============\n"
           python tests/integration_tests/flows/test_mssql.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # MongoDB
           echo -e "\n===============\ntest MongoDB\n===============\n"
           python tests/integration_tests/flows/test_mongo.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # PostgreSQL
           echo -e "\n===============\ntest PostgreSQL\n===============\n"
           python tests/integration_tests/flows/test_postgres.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # MySQL
           echo -e "\n===============\ntest MySQL\n===============\n"
           python tests/integration_tests/flows/test_mysql.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # MariaDB
           echo -e "\n===============\ntest MariaDB\n===============\n"
           python tests/integration_tests/flows/test_mariadb.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # ClickHouse
           echo -e "\n===============\ntest ClickHouse\n===============\n"
           python tests/integration_tests/flows/test_clickhouse.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # Cutsom model
           echo -e "\n===============\ntest Cutsom model\n===============\n"
           python tests/integration_tests/flows/test_custom_model.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # user flow 1
           echo -e "\n===============\ntest user flow 1\n===============\n"
           python tests/integration_tests/flows/test_user_flow_1.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # user flow 2
           echo -e "\n===============\ntest user flow 2\n===============\n"
           python tests/integration_tests/flows/test_user_flow_2.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
           # flow with mistakes
           echo -e "\n===============\nflow with mistakes\n===============\n"
           python tests/integration_tests/flows/test_mistakes.py
-          rm -rf mindsdb/var/mindsdb.sqlite3.db mindsdb/var/datasources mindsdb/var/predictors
+
 
         fi
       shell: bash

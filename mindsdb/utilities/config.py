@@ -86,7 +86,12 @@ class Config():
                     }
                 }
             }
-            self._db_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']
+
+            if 'storage_dir' in self._override_config:
+                self._db_config['paths']['root'] = self._override_config['storage_dir']
+            else:
+                self._db_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']
+
             self._db_config['paths']['datasources'] = os.path.join(self._db_config['paths']['root'], 'datasources')
             self._db_config['paths']['predictors'] = os.path.join(self._db_config['paths']['root'], 'predictors')
             self._db_config['paths']['static'] = os.path.join(self._db_config['paths']['root'], 'static')
@@ -94,7 +99,7 @@ class Config():
             self._db_config['paths']['log'] = os.path.join(self._db_config['paths']['root'], 'log')
             self._db_config['paths']['storage_dir'] = self._db_config['paths']['root']
             self._db_config['storage_dir'] = self._db_config['paths']['root']
-            
+
             for path in self._db_config['paths']:
                 create_directory(path)
             self._save()

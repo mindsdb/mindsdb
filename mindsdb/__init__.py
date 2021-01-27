@@ -51,9 +51,8 @@ else:
     config_path = 'absent'
 os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
-if 'paths' in user_config:
-    if 'root' in user_config['paths']:
-        db_path = user_config['paths']['root']
+if 'storage_dir' in user_config:
+    db_path = user_config['storage_dir']
 else:
     _, db_path = get_or_create_dir_struct()
 os.environ['MINDSDB_STORAGE_DIR'] = db_path
@@ -71,12 +70,12 @@ if 'company_id' in user_config:
 
 from mindsdb.utilities.config import Config
 mindsdb_config = Config()
-create_dirs_recursive(mindsdb_config.paths)
+create_dirs_recursive(mindsdb_config['paths'])
 
 os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')
 os.environ['LIGHTWOOD_LOG_LEVEL'] = os.environ.get('LIGHTWOOD_LOG_LEVEL', 'ERROR')
 os.environ['MINDSDB_CONFIG_PATH'] = config_path
-os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config.paths['predictors']
+os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config['paths']['predictors']
 
 from mindsdb_native import *
 # Figure out how to add this as a module

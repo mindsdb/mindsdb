@@ -32,7 +32,8 @@ class Responce(Responder):
             'predict',
             'select_data_query',
             'external_datasource',
-            'training_options'
+            'training_options',
+            'connection'
         ]
 
         models = mindsdb_env['mindsdb_native'].get_models()
@@ -68,9 +69,23 @@ class Responce(Responder):
             kwargs = doc.get('training_options', {})
 
             if is_select_data_query:
+                integrations = mindsdb_env['config']['integrations'].keys()
+                connection = doc.get('connection')
+                if connection is None:
+                    if 'default_mongodb' in integrations:
+                        connection = 'default_mongodb'
+                    else:
+                        for integration in integrations:
+                            if integration.startswith('mongodb_'):
+                                connection = integration
+                                break
+
+                if connection is None:
+                    raise Exception("Can't find connection for data source")
+
                 ds, ds_name = mindsdb_env['data_store'].save_datasource(
                     name=doc['name'],
-                    source_type='default_mongodb',
+                    source_type=connection,
                     source=doc['select_data_query']
                 )
             elif is_external_datasource:

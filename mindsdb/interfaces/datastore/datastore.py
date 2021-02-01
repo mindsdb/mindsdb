@@ -123,6 +123,8 @@ class DataStore():
                     'snowflake': SnowflakeDS
                 }
 
+
+
                 try:
                     dsClass = ds_class_map[integration['type']]
                 except KeyError:
@@ -182,6 +184,8 @@ class DataStore():
                     ds = dsClass(**picklable['kwargs'])
 
                 elif integration['type'] == 'mongodb':
+                    if isinstance(source['find'], str):
+                        source['find'] = json.loads(source['find'])
                     picklable = {
                         'class': dsClass.__name__,
                         'args': [],

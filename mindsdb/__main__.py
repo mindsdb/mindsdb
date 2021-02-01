@@ -48,7 +48,7 @@ if __name__ == '__main__':
     if is_telemetry_file_exists(storage_dir):
         os.environ['CHECK_FOR_UPDATES'] = '0'
         telemetry_disabled = True
-    elif os.getenv('CHECK_FOR_UPDATES').lower() in ['0', 'false']:
+    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
         disable_telemetry(storage_dir)
         telemetry_disabled = True
 

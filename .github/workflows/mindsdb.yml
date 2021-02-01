@@ -34,12 +34,20 @@ jobs:
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
+          echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
+          sudo chmod 600 ~/.ssh/db_machine_ms
           echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
           sudo chmod 644 ~/.mindsdb_credentials.json
 
-          pip install -r requirements_test.txt
-
           export USE_EXTERNAL_DB_SERVER="1"
+
+          # HTTP
+          echo -e "\n===============\ntest HTTP\n===============\n"
+          python tests/integration_tests/flows/test_http.py
+
+          # MsSQL
+          echo -e "\n===============\ntest MsSQL\n===============\n"
+          python tests/integration_tests/flows/test_mssql.py
 
           # MongoDB
           echo -e "\n===============\ntest MongoDB\n===============\n"
@@ -65,10 +73,6 @@ jobs:
           echo -e "\n===============\ntest Cutsom model\n===============\n"
           python tests/integration_tests/flows/test_custom_model.py
 
-          # HTTP
-          echo -e "\n===============\ntest HTTP\n===============\n"
-          python tests/integration_tests/api/test_http.py
-
           # user flow 1
           echo -e "\n===============\ntest user flow 1\n===============\n"
           python tests/integration_tests/flows/test_user_flow_1.py
@@ -85,6 +89,7 @@ jobs:
       env:
         CHECK_FOR_UPDATES: False
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
+        DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
 
   deploy_to_pypi:
@@ -115,7 +120,7 @@ jobs:
 
   deploy_version_file:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/new_osx_installers' && github.actor != 'mindsdbadmin'
+    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python

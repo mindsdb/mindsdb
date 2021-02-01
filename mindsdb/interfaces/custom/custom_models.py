@@ -8,7 +8,7 @@ import mindsdb_native
 import pandas as pd
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.native.native import NativeInterface
 
 class CustomModels():
     def __init__(self, config):
@@ -17,7 +17,7 @@ class CustomModels():
         self.storage_dir = os.path.join(config['storage_dir'], 'misc')
         os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
-        self.mindsdb_native = MindsdbNative(self.config)
+        self.mindsdb_native = NativeInterface(self.config)
         self.dbw = DatabaseWrapper(self.config)
 
     def _dir(self, name):
@@ -67,7 +67,7 @@ class CustomModels():
         data_analysis = self.mindsdb_native.analyse_dataset(data_source)['data_analysis_v2']
 
         model_data = self.get_model_data(name)
-        model_data['data_analysis'] = data_analysis
+        model_data['data_analysis_v2'] = data_analysis
         self.save_model_data(name, model_data)
 
         model.fit(data_frame, to_predict, data_analysis, kwargs)
@@ -80,7 +80,7 @@ class CustomModels():
         self.save_model_data(name, model_data)
 
         self.dbw.unregister_predictor(name)
-        self.dbw.register_predictors([self.get_model_data(name)], setup=False)
+        self.dbw.register_predictors([self.get_model_data(name)])
 
     def predict(self, name, when_data=None, from_data=None, kwargs=None):
         if kwargs is None:
@@ -122,7 +122,7 @@ class CustomModels():
         with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
             json.dump(data, fp)
 
-    def get_models(self, status='any'):
+    def get_models(self):
         models = []
         for model_dir in os.listdir(self.storage_dir):
             if 'custom_model_' in model_dir:
@@ -142,7 +142,7 @@ class CustomModels():
         self.dbw.unregister_predictor(name)
         shutil.move(self._dir(name), self._dir(new_name))
         shutil.move(os.path.join(self._dir(new_name) + f'{name}.py'), os.path.join(self._dir(new_name) ,f'{new_name}.py'))
-        self.dbw.register_predictors([self.get_model_data(new_name)], setup=False)
+        self.dbw.register_predictors([self.get_model_data(new_name)])
 
     def export_model(self, name):
         shutil.make_archive(base_name=name, format='zip', root_dir=self._dir(name))
@@ -155,7 +155,7 @@ class CustomModels():
         model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
         self.save_model_data(name,{
             'name': name
-            ,'data_analysis': model.column_type_map
+            ,'data_analysis_v2': model.column_type_map
             ,'predict': model.to_predict
             ,'status': trained_status
             ,'is_custom': True
@@ -165,4 +165,4 @@ class CustomModels():
             fp.write('')
 
         if trained_status == 'trained':
-            self.dbw.register_predictors([self.get_model_data(name)], setup=False)
+            self.dbw.register_predictors([self.get_model_data(name)])

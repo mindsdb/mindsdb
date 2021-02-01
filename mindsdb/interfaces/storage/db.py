@@ -20,7 +20,7 @@ class Semaphor(Base):
     __tablename__ = 'semaphor'
 
     id = Column(Integer, primary_key=True)
-    modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     entity_type = Column(String)
     entity_id = Column(String)
@@ -29,7 +29,7 @@ class Configuration(Base):
     __tablename__ = 'configuration'
 
     id = Column(Integer, primary_key=True)
-    modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     data = Column(String) # A JSON
     company_id = Column(Integer, unique=True)
@@ -38,7 +38,7 @@ class Datasource(Base):
     __tablename__ = 'datasource'
 
     id = Column(Integer, primary_key=True)
-    modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
     data = Column(String) # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
@@ -52,7 +52,7 @@ class Predictor(Base):
     __tablename__ = 'predictor'
 
     id = Column(Integer, primary_key=True)
-    modified_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
     data = Column(String) # A JSON

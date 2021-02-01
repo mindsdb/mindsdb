@@ -124,8 +124,8 @@ class Config():
             config_record.data = json.dumps(self._db_config)
         else:
             config_record = Configuration(company_id=self.company_id, data=json.dumps(self._db_config))
-
-        session.add(config_record)
+            session.add(config_record)
+            
         session.commit()
 
     def __getitem__(self, key):

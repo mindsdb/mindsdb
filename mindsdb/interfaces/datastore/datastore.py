@@ -10,6 +10,9 @@ import pandas as pd
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.storage.db import session, Datasource
+from mindsdb.interfaces.storage.fs import FsSotre
+
 
 class DataStore():
     def __init__(self, config=None):
@@ -18,21 +21,29 @@ class DataStore():
         else:
             self.config = config
 
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dir = self.config.paths['datasources']
         self.mindsdb_native = NativeInterface()
 
-    def get_analysis(self, ds):
-        return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
+    def get_analysis(self, name):
+        datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+        if datasource_record.analysis is None:
+            datasource_record.analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name))
+            session.commit()
+
+        analysis = json.loads(datasource_record.analysis)
+        return analysis
 
     def get_datasources(self):
         datasource_arr = []
-        for ds_name in os.listdir(self.dir):
+        datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
+        for datasource_record in datasource_record_arr:
             try:
                 with open(os.path.join(self.dir, ds_name, 'metadata.json'), 'r') as fp:
                     try:
                         datasource = json.load(fp)
-                        datasource['created_at'] = parse_dt(datasource['created_at'].split('.')[0])
-                        datasource['updated_at'] = parse_dt(datasource['updated_at'].split('.')[0])
+                        datasource['created_at'] = parse_dt(datasource_record.created_at.split('.')[0])
+                        datasource['updated_at'] = parse_dt(datasource_record.updated_at.split('.')[0])
                         datasource_arr.append(datasource)
                     except Exception as e:
                         print(e)

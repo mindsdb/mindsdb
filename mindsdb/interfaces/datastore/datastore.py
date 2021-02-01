@@ -39,14 +39,10 @@ class DataStore():
         datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
         for datasource_record in datasource_record_arr:
             try:
-                with open(os.path.join(self.dir, ds_name, 'metadata.json'), 'r') as fp:
-                    try:
-                        datasource = json.load(fp)
-                        datasource['created_at'] = parse_dt(datasource_record.created_at.split('.')[0])
-                        datasource['updated_at'] = parse_dt(datasource_record.updated_at.split('.')[0])
-                        datasource_arr.append(datasource)
-                    except Exception as e:
-                        print(e)
+                datasource = json.load(datasource_record.data)
+                datasource['created_at'] = parse_dt(datasource_record.created_at.split('.')[0])
+                datasource['updated_at'] = parse_dt(datasource_record.updated_at.split('.')[0])
+                datasource_arr.append(datasource)
             except Exception as e:
                 print(e)
         return datasource_arr

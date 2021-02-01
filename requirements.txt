@@ -1,4 +1,4 @@
-mindsdb_native == 2.31.0
+mindsdb_native == 2.32.0
 flask-restx >= 0.2.0
 flask >= 1.0
 python-multipart >= 0.0.5

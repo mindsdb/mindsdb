@@ -21,6 +21,7 @@ class DataStore():
         else:
             self.config = config
 
+        self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dir = self.config.paths['datasources']
         self.mindsdb_native = NativeInterface()
@@ -34,9 +35,12 @@ class DataStore():
         analysis = json.loads(datasource_record.analysis)
         return analysis
 
-    def get_datasources(self):
+    def get_datasources(self, name):
         datasource_arr = []
-        datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
+        if name is not None:
+            datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id, name=name)
+        else:
+            datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
         for datasource_record in datasource_record_arr:
             try:
                 datasource = json.load(datasource_record.data)
@@ -66,13 +70,17 @@ class DataStore():
         }
 
     def get_datasource(self, name):
-        for ds in self.get_datasources():
-            if ds['name'] == name:
-                return ds
+        datasource_arr = self.get_datasources(name)
+        if len(datasource_arr) == 1:
+            return datasource_arr[0]
+        # @TODO: Remove when db swithc is more stable, this should never happen, but good santiy check while this is kinda buggy
+        elif len(datasource_arr) > 1:
+            print('Two or more datasource with the same name, (', len(datasource_arr), ') | Full list: ', datasource_arr)
         return None
 
     def delete_datasource(self, name):
-        shutil.rmtree(os.path.join(self.dir, name))
+        session.query(Datasource).filter_by(company_id=self.company_id, name=name).delete()
+        self.fs_store.delete(f'datasource_{self.company_id}_{name}')
 
     def save_datasource(self, name, source_type, source, file_path=None):
         if source_type == 'file' and (file_path is None):

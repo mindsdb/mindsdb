@@ -56,6 +56,9 @@ class Config():
         # Now comes the stuff that gets stored in the db
         if len(self._db_config) == 0:
             self._db_config = {
+                'permanent_storage': {
+                    'location': 'local'
+                },
                 'paths': {},
                 "log": {
                     "level": {

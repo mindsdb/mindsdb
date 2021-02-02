@@ -85,7 +85,7 @@ class DataStore():
         shutil.rmtree(os.path.join(self.dir, name))
 
     def save_datasource(self, name, source_type, source, file_path=None):
-        datasource_record = Configuration(company_id=self.company_id, name=name)
+        datasource_record = Datasource(company_id=self.company_id, name=name)
 
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')

@@ -107,7 +107,7 @@ class Config():
         # There's no guarantee of syncing for the calls from the different APIs anyway, doing this doesn't change that
         # `True` to disable this until we add some sleepy time to our tests
         #if True or (datetime.datetime.now() - self.last_updated).total_seconds() > 2:
-        config_record =  session.query(Configuration).filter(Configuration.company_id == self.company_id).filter(Configuration.modified_at >= self.last_updated).first()
+        config_record =  session.query(Configuration).filter(Configuration.company_id == self.company_id).filter(Configuration.updated_at >= self.last_updated).first()
 
         if config_record is not None:
             self._db_config = json.loads(config_record.data)

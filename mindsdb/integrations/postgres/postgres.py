@@ -140,6 +140,10 @@ class PostgreSQL(Integration):
                     columns_sql += f',"{col}_max" float8'
                 columns_sql += f',"{col}_explain" text'
 
+            if model_meta.get('output_class_distribution', False):
+                for col in model_meta['predict']:
+                    columns_sql += f',"{col}_class_distribution" text'
+
             q = f"""
                 CREATE FOREIGN TABLE {self.mindsdb_database}.{self._escape_table_name(name)} (
                     {columns_sql}

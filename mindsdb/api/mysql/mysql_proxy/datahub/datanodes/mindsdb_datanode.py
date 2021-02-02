@@ -54,6 +54,10 @@ class MindsDBDataNode(DataNode):
             columns += [f"{col}_confidence"]
             columns += [f"{col}_explain"]
 
+        if model.get('output_class_distribution', False):
+            for col in model['predict']:
+                columns += [f"{col}_class_distribution"]
+
         # TODO this should be added just for clickhouse queries
         columns += ['when_data', 'select_data_query', 'external_datasource']
         return columns
@@ -209,6 +213,10 @@ class MindsDBDataNode(DataNode):
                 if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                     min_max_keys.append(col)
 
+            class_distribution_keys = []
+            if model.get('output_class_distribution', False):
+                class_distribution_keys = predicted_columns
+
             data = []
             explains = []
             for i, el in enumerate(res):
@@ -237,5 +245,15 @@ class MindsDBDataNode(DataNode):
                 for key in min_max_keys:
                     row[key + '_min'] = min(explanation[key]['confidence_interval'])
                     row[key + '_max'] = max(explanation[key]['confidence_interval'])
+                for key in class_distribution_keys:
+                    if f'{key}_class_map' in res._transaction.lmd['lightwood_data']:
+                        class_map = res._transaction.lmd['lightwood_data'][f'{key}_class_map']
+                        class_distribution = row[f'{key}_class_distribution']
+                        if isinstance(class_map, dict) and isinstance(class_distribution, list) \
+                                and len(class_map) == len(class_distribution):
+                            class_map_items = list(class_map.items())
+                            class_map_items.sort(key=lambda x: x[0])
+                            class_map_items = [x[1] for x in class_map_items]
+                            row[f'{key}_class_distribution'] = dict(zip(class_map_items, class_distribution))
 
             return data

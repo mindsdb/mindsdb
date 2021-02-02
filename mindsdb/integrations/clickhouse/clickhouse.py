@@ -109,6 +109,10 @@ class Clickhouse(Integration):
                     columns_sql += f',`{col}_max` Nullable(Float64)'
                 columns_sql += f',`{col}_explain` Nullable(String)'
 
+            if model_meta.get('output_class_distribution', False):
+                for col in model_meta['predict']:
+                    columns_sql += f',"{col}_class_distribution" Nullable(String)'
+
             msqyl_conn = self.config['api']['mysql']['host'] + ':' + str(self.config['api']['mysql']['port'])
             msqyl_pass = self.config['api']['mysql']['password']
             msqyl_user = self._get_mysql_user()

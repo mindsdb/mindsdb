@@ -25,13 +25,13 @@ class Responce(Responder):
             } for x in models]
         elif table in model_names:
             # prediction
-            model = mindsdb_env['mindsdb_native'].get_model_data(name=query['find'])
+            model_meta = mindsdb_env['mindsdb_native'].get_model_data(name=query['find'])
 
             columns = []
-            columns += model['data_analysis_v2']['columns']
-            columns += [f'{x}_original' for x in model['predict']]
-            for col in model['predict']:
-                if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+            columns += model_meta['data_analysis_v2']['columns']
+            columns += [f'{x}_original' for x in model_meta['predict']]
+            for col in model_meta['predict']:
+                if model_meta['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                     columns += [f"{col}_min", f"{col}_max"]
                 columns += [f"{col}_confidence"]
                 columns += [f"{col}_explain"]
@@ -44,14 +44,18 @@ class Responce(Responder):
 
             prediction = mindsdb_env['mindsdb_native'].predict(name=table, when_data=where_data)
 
-            predicted_columns = model['predict']
+            predicted_columns = model_meta['predict']
 
             data = []
             keys = [x for x in list(prediction._data.keys()) if x in columns]
             min_max_keys = []
             for col in predicted_columns:
-                if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                if model_meta['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                     min_max_keys.append(col)
+
+            class_distribution_keys = []
+            if model_meta.get('output_class_distribution', False):
+                class_distribution_keys = predicted_columns
 
             length = len(prediction._data[predicted_columns[0]])
             for i in range(length):
@@ -66,6 +70,17 @@ class Responce(Responder):
                 for key in min_max_keys:
                     row[key + '_min'] = min(explanation[key]['confidence_interval'])
                     row[key + '_max'] = max(explanation[key]['confidence_interval'])
+                for key in class_distribution_keys:
+                    if f'{key}_class_map' in prediction._transaction.lmd['lightwood_data']:
+                        class_map = prediction._transaction.lmd['lightwood_data'][f'{key}_class_map']
+                        class_distribution = prediction._data[f'{key}_class_distribution'][i]
+                        if isinstance(class_map, dict) and isinstance(class_distribution, list) \
+                                and len(class_map) == len(class_distribution):
+                            class_map_items = list(class_map.items())
+                            class_map_items.sort(key=lambda x: x[0])
+                            class_map_items = [x[1] for x in class_map_items]
+                            row[f'{key}_class_distribution'] = dict(zip(class_map_items, class_distribution))
+
                 data.append(row)
 
         else:

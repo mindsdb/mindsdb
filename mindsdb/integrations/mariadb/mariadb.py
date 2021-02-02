@@ -116,6 +116,10 @@ class Mariadb(Integration):
                     columns_sql += f',`{col}_max` double'
                 columns_sql += f',`{col}_explain` varchar(500)'
 
+            if model_meta.get('output_class_distribution', False):
+                for col in model_meta['predict']:
+                    columns_sql += f',"{col}_class_distribution" varchar(1000)'
+
             connect = self._get_connect_string(name)
 
             q = f"""

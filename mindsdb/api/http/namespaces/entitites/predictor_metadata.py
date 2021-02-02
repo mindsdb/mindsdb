@@ -16,9 +16,10 @@ predictor_metadata = ns_conf.model('PredictorMetadata', {
     'train_data_accuracy': fields.Float(description='The current accuracy of the model', required=False),
     'test_data_accuracy': fields.Float(description='The current accuracy of the model', required=False),
     'valid_data_accuracy': fields.Float(description='The current accuracy of the model', required=False),
-    'model_analysis': fields.List(fields.Nested(target_column_metadata), required=False, description='The model analysis stage, in which we extract statistical information from the input data for each target variable, thus, this is a list; one item per target column')
-    ,'data_analysis_v2': fields.Raw(default={})
-    ,'timeseries': fields.Raw()
+    'model_analysis': fields.List(fields.Nested(target_column_metadata), required=False, description='The model analysis stage, in which we extract statistical information from the input data for each target variable, thus, this is a list; one item per target column'),
+    'data_analysis_v2': fields.Raw(default={}),
+    'output_class_distribution': fields.Boolean(default=False),
+    'timeseries': fields.Raw()
     ,'is_custom': fields.Boolean(default=False)
     ,'data_source': fields.String(required=False, description='The data source it\'s learning from')
     ,'stack_trace_on_error': fields.String(required=False, description='Why it failed, if it did')

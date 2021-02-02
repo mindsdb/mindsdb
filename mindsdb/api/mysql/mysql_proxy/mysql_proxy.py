@@ -1409,7 +1409,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     self.session = None
                     break
                 elif p.type.value == COMMANDS.COM_INIT_DB:
-                    self.session.database = p.database.value.decode()
+                    new_database = p.database.value.decode()
+                    # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can
+                    # send packet with COM_INIT_DB=null. In this case keep old database name as default.
+                    if new_database != 'null':
+                        self.session.database = new_database
                     self.packet(OkPacket).send()
                 else:
                     log.info('Command has no specific handler, return OK msg')

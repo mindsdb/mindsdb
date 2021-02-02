@@ -1,31 +1,44 @@
 import unittest
-import csv
 import inspect
-from pathlib import Path
 
 import pytds
 
 from mindsdb.utilities.config import Config
 
 from common import (
-    USE_EXTERNAL_DB_SERVER,
     MINDSDB_DATABASE,
-    DATASETS_PATH,
+    TEST_CONFIG,
+    condition_dict_to_str,
     run_environment,
-    make_test_csv,
-    TEST_CONFIG
+    make_test_csv
 )
 
-TEST_CSV = {
-    'name': 'home_rentals.csv',
-    'url': 'https://s3.eu-west-2.amazonaws.com/mindsdb-example-data/home_rentals.csv'
-}
-TEST_DATA_TABLE = 'home_rentals'
-TEST_PREDICTOR_NAME = 'test_predictor'
+# +++ define test data
+TEST_DATASET = 'home_rentals'
 
-EXTERNAL_DS_NAME = 'test_external'
+DB_TYPES_MAP = {
+    int: 'Int32',
+    float: 'Float32',
+    str: 'String'
+}
+
+TO_PREDICT = {
+    'rental_price': float,
+    'location': str
+}
+CONDITION = {
+    'sqft': 1000,
+    'neighborhood': 'downtown'
+}
+# ---
+
+TEST_DATA_TABLE = TEST_DATASET
+TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
+EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 config = Config(TEST_CONFIG)
+
+to_predict_column_names = list(TO_PREDICT.keys())
 
 
 def query(query, fetch=False, as_dict=True, db='mindsdb_test'):
@@ -33,11 +46,11 @@ def query(query, fetch=False, as_dict=True, db='mindsdb_test'):
     conn = pytds.connect(
         user=integration['user'],
         password=integration['password'],
+        database=integration.get('database', 'master'),
         dsn=integration['host'],
         port=integration['port'],
         as_dict=as_dict,
-        database=db,
-        autocommit=True
+        autocommit=True  # .commit() doesn't work
     )
 
     cur = conn.cursor()
@@ -49,6 +62,10 @@ def query(query, fetch=False, as_dict=True, db='mindsdb_test'):
     conn.close()
 
     return res
+
+
+def fetch(q, as_dict=True):
+    return query(q, as_dict=as_dict, fetch=True)
 
 
 class MSSQLTest(unittest.TestCase):
@@ -71,73 +88,7 @@ class MSSQLTest(unittest.TestCase):
         if TEST_PREDICTOR_NAME in models:
             cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
-        test_csv_path = Path(DATASETS_PATH).joinpath('home_rentals').joinpath('data.csv')
-
-        res = query("SELECT name FROM master.dbo.sysdatabases where name = 'mindsdb_test'", fetch=True)
-        if len(res) == 0:
-            query("create database mindsdb_test")
-        res = query('''
-            select * from sys.schemas where name = 'mindsdb_schema';
-        ''', fetch=True)
-        if len(res) == 0:
-            query('''
-                create schema [mindsdb_schema];
-            ''')
-
-        if not USE_EXTERNAL_DB_SERVER:
-            # show tables from test
-            test_tables = query(f'''
-                select 1 from sysobjects where name='{TEST_DATA_TABLE}' and xtype='U';
-            ''', fetch=True)
-            if len(test_tables) == 0:
-                print('creating test data table...')
-                query(f'''
-                    CREATE TABLE mindsdb_schema.{TEST_DATA_TABLE} (
-                        number_of_rooms int,
-                        number_of_bathrooms int,
-                        sqft int,
-                        location varchar(100),
-                        days_on_market int,
-                        initial_price int,
-                        neighborhood varchar(100),
-                        rental_price int
-                    )
-                ''')
-
-                with open(test_csv_path) as f:
-                    csvf = csv.reader(f)
-                    i = 0
-                    for row in csvf:
-                        if i > 0:
-                            number_of_rooms = int(row[0])
-                            number_of_bathrooms = int(row[1])
-                            sqft = int(float(row[2].replace(',', '.')))
-                            location = str(row[3])
-                            days_on_market = int(row[4])
-                            initial_price = int(row[5])
-                            neighborhood = str(row[6])
-                            rental_price = int(float(row[7]))
-                            query(f'''
-                                INSERT INTO mindsdb_schema.{TEST_DATA_TABLE} VALUES (
-                                {number_of_rooms},
-                                {number_of_bathrooms},
-                                {sqft},
-                                '{location}',
-                                {days_on_market},
-                                {initial_price},
-                                '{neighborhood}',
-                                {rental_price}
-                            )''')
-                        i += 1
-                        if i % 100 == 0:
-                            print(i)
-                print('done')
-
-        ds = datastore.get_datasource(EXTERNAL_DS_NAME)
-        if ds is not None:
-            datastore.delete_datasource(EXTERNAL_DS_NAME)
-
-        data = query(f'select * from test_data.{TEST_DATA_TABLE} limit 50', fetch=True, as_dict=True)
+        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} order by rental_price offset 0 rows fetch next 50 rows only')
         external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
         datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
 
@@ -149,12 +100,6 @@ class MSSQLTest(unittest.TestCase):
         models = [x['name'] for x in self.mdb.get_models()]
         self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
-        print('Test datasource exists')
-        test_tables = query(f'''
-            select 1 from sysobjects where name='{TEST_DATA_TABLE}' and xtype='U';
-        ''', fetch=True)
-        self.assertTrue(len(test_tables) == 1)
-
     def test_2_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
@@ -162,15 +107,15 @@ class MSSQLTest(unittest.TestCase):
                 insert into predictors (name, predict, select_data_query, training_options)
                 values (
                     ''{TEST_PREDICTOR_NAME}'',
-                    ''rental_price'',
-                    ''select * from mindsdb_test.mindsdb_schema.{TEST_DATA_TABLE} order by sqft offset 0 rows fetch next 100 rows only'',
+                    ''{','.join(to_predict_column_names)}'',
+                    ''select * from test_data.{TEST_DATA_TABLE} order by sqft offset 0 rows fetch next 100 rows only'',
                     ''{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}''
-                )') AT mindsdb;
+                )') AT {MINDSDB_DATABASE};
         """)
 
         print('predictor record in mindsdb.predictors')
         res = query(f"""
-            exec ('SELECT status FROM predictors where name = ''{TEST_PREDICTOR_NAME}''') AT mindsdb;
+            exec ('SELECT status FROM predictors where name = ''{TEST_PREDICTOR_NAME}''') AT {MINDSDB_DATABASE};
         """, as_dict=True, fetch=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
@@ -190,12 +135,12 @@ class MSSQLTest(unittest.TestCase):
                     ''rental_price'',
                     ''{EXTERNAL_DS_NAME}'',
                     ''{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}''
-                )') AT mindsdb;
+                )') AT {MINDSDB_DATABASE};
         """)
 
         print('predictor record in mindsdb.predictors')
         res = query(f"""
-            exec ('SELECT status FROM predictors where name = ''{name}''') AT mindsdb;
+            exec ('SELECT status FROM predictors where name = ''{name}''') AT {MINDSDB_DATABASE};
         """, as_dict=True, fetch=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
@@ -203,11 +148,12 @@ class MSSQLTest(unittest.TestCase):
         res = query(f"""
             exec ('
                 select
-                    rental_price, location, sqft, number_of_rooms,
-                    rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
+                    *
                 from
-                    mindsdb.{name} where external_datasource=''{EXTERNAL_DS_NAME}''
-            ') AT mindsdb;
+                    mindsdb.{name}
+                where
+                    external_datasource=''{EXTERNAL_DS_NAME}''
+            ') AT {MINDSDB_DATABASE};
         """, as_dict=True, fetch=True)
 
         print('check result')
@@ -220,11 +166,12 @@ class MSSQLTest(unittest.TestCase):
         res = query(f"""
             exec ('
                 select
-                    rental_price, location, sqft, number_of_rooms,
-                    rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
+                    *
                 from
-                    mindsdb.{TEST_PREDICTOR_NAME} where sqft=1000 and location=''good'';
-            ') at mindsdb;
+                    {TEST_PREDICTOR_NAME}
+                where
+                    {condition_dict_to_str(CONDITION).replace("'", "''")};
+            ') at {MINDSDB_DATABASE};
         """, as_dict=True, fetch=True)
 
         print('check result')
@@ -247,11 +194,12 @@ class MSSQLTest(unittest.TestCase):
         results = query(f"""
             exec ('
                 select
-                    rental_price, location, sqft, number_of_rooms,
-                    rental_price_confidence, rental_price_min, rental_price_max, rental_price_explain
+                    *
                 from
-                    mindsdb.{TEST_PREDICTOR_NAME} where select_data_query=''select * from mindsdb_test.mindsdb_schema.{TEST_DATA_TABLE} order by sqft offset 0 rows fetch next 3 rows only '';
-            ') at mindsdb;
+                    {TEST_PREDICTOR_NAME}
+                where
+                    select_data_query=''select * from test_data.{TEST_DATA_TABLE} order by sqft offset 0 rows fetch next 3 rows only '';
+            ') at {MINDSDB_DATABASE};
         """, as_dict=True, fetch=True)
 
         print('check result')
@@ -268,7 +216,7 @@ class MSSQLTest(unittest.TestCase):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
-            exec ('insert into mindsdb.commands (command) values (''delete predictor {TEST_PREDICTOR_NAME}'')') at mindsdb;
+            exec ('insert into mindsdb.commands (command) values (''delete predictor {TEST_PREDICTOR_NAME}'')') at {MINDSDB_DATABASE};
         """)
 
         print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
@@ -282,7 +230,7 @@ class MSSQLTest(unittest.TestCase):
     def test_8_delete_predictor_by_delete_statement(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
-            exec ('delete from mindsdb.predictors where name=''{TEST_PREDICTOR_NAME}'' ') at mindsdb;
+            exec ('delete from predictors where name=''{TEST_PREDICTOR_NAME}'' ') at {MINDSDB_DATABASE};
         """)
 
         print(f'Predictor {TEST_PREDICTOR_NAME} not exists')

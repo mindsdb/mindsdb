@@ -78,32 +78,55 @@ class NativeInterface():
     def analyse_dataset(self, ds):
         return F.analyse_dataset(ds)
 
-    def get_model_data(self, name, native_view=False):
+    def get_model_data(self, name, db_fix=True):
         model = F.get_model_data(name)
-        if native_view:
-            return model
 
-        data_analysis = model['data_analysis_v2']
-        for column in data_analysis['columns']:
-            analysis = data_analysis.get(column)
-            if isinstance(analysis, dict) and (len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False)):
-                data_analysis[column]['typing'] = {
-                    'data_subtype': DATA_SUBTYPES.INT
-                }
+        # Make some corrections for databases not to break when dealing with empty columns
+        if db_fix:
+            data_analysis = model['data_analysis_v2']
+            for column in data_analysis['columns']:
+                analysis = data_analysis.get(column)
+                if isinstance(analysis, dict) and (len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False)):
+                    data_analysis[column]['typing'] = {
+                        'data_subtype': DATA_SUBTYPES.INT
+                    }
 
         return model
 
     def get_models(self):
-        models = F.get_models()
-        models = [x for x in models if x['status'] != 'training' or parse_datetime(x['created_at']) > parse_datetime(self.config['mindsdb_last_started_at'])]
+        models = []
+        predictors = [
+            x for x in Path(self.config.paths['predictors']).iterdir() if
+                x.is_dir()
+                and x.joinpath('light_model_metadata.pickle').is_file()
+                and x.joinpath('heavy_model_metadata.pickle').is_file()
+        ]
+        for p in predictors:
+            model_name = p.name
+            try:
+                model_data = self.get_model_data(model_name, db_fix=False)
+                if model_data['status'] == 'training' and parse_datetime(model_data['created_at']) < parse_datetime(self.config['mindsdb_last_started_at']):
+                    continue
 
-        for i in range(len(models)):
-            for k in ['train_end_at', 'updated_at', 'created_at']:
-                if k in models[i] and models[i][k] is not None:
-                    try:
-                        models[i][k] = parse_datetime(str(models[i][k]).split('.')[0])
-                    except Exception:
-                        models[i][k] = parse_datetime(str(models[i][k]))
+                reduced_model_data = {}
+
+                for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source']:
+                    reduced_model_data[k] = model_data.get(k, None)
+
+                for k in ['train_end_at', 'updated_at', 'created_at']:
+                    reduced_model_data[k] = model_data.get(k, None)
+                    if reduced_model_data[k] is not None:
+                        try:
+                            reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]).split('.')[0])
+                        except Exception as e:
+                            # @TODO Does this ever happen
+                            print(f'Date parsing exception while parsing: {k} in get_models: ', e)
+                            reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]))
+
+                models.append(reduced_model_data)
+            except Exception as e:
+                print(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
+
         return models
 
     def delete_model(self, name):

@@ -231,8 +231,8 @@ class ClickhouseTest(unittest.TestCase):
         # NOTE in current Clickhouse all int fields returns as strings
         self.assertTrue(res['sqft'] == '1000')
         self.assertIsInstance(res['rental_price_confidence'], float)
-        self.assertIsInstance(res['rental_price_min'], int)
-        self.assertIsInstance(res['rental_price_max'], int)
+        self.assertTrue(isinstance(res['rental_price_min'], (int, float)))
+        self.assertTrue(isinstance(res['rental_price_max'], (int, float)))
         self.assertIsInstance(res['rental_price_explain'], str)
         self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
 
@@ -254,8 +254,8 @@ class ClickhouseTest(unittest.TestCase):
             self.assertTrue(res['rental_price'] is not None and res['rental_price'] != 'None')
             self.assertTrue(res['location'] is not None and res['location'] != 'None')
             self.assertIsInstance(res['rental_price_confidence'], float)
-            self.assertIsInstance(res['rental_price_min'], int)
-            self.assertIsInstance(res['rental_price_max'], int)
+            self.assertTrue(isinstance(res['rental_price_min'], (int, float)))
+            self.assertTrue(isinstance(res['rental_price_max'], (int, float)))
             self.assertIsInstance(res['rental_price_explain'], str)
 
     def test_6_delete_predictor_by_command(self):

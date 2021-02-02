@@ -38,7 +38,6 @@ class DataStore():
 
     def get_data(self, name, where=None, limit=None, offset=None):
         offset = 0 if offset is None else offset
-
         ds = self.get_datasource_obj(name)
 
         if limit is not None:
@@ -47,6 +46,7 @@ class DataStore():
         else:
             filtered_ds = ds.filter(where=where)
 
+        filtered_ds = filtered_ds.where(pd.notnull(filtered_ds), None)
         data = filtered_ds.to_dict(orient='records')
         return {
             'data': data,
@@ -102,6 +102,8 @@ class DataStore():
                     'mongodb': MongoDS,
                     'snowflake': SnowflakeDS
                 }
+
+
 
                 try:
                     dsClass = ds_class_map[integration['type']]
@@ -162,6 +164,8 @@ class DataStore():
                     ds = dsClass(**picklable['kwargs'])
 
                 elif integration['type'] == 'mongodb':
+                    if isinstance(source['find'], str):
+                        source['find'] = json.loads(source['find'])
                     picklable = {
                         'class': dsClass.__name__,
                         'args': [],
@@ -191,9 +195,6 @@ class DataStore():
             if '' in df.columns or len(df.columns) != len(set(df.columns)):
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique name')
-
-            # Not sure if needed
-            #summary_analysis = self.get_analysis(ds.filter(limit=200))['data_analysis_v2']
 
             with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
                 pickle.dump(picklable, fp)

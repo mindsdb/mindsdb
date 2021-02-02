@@ -35,7 +35,7 @@ class DataStore():
         analysis = json.loads(datasource_record.analysis)
         return analysis
 
-    def get_datasources(self, name):
+    def get_datasources(self, name=None):
         datasource_arr = []
         if name is not None:
             datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id, name=name)

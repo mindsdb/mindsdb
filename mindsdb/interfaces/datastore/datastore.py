@@ -82,7 +82,7 @@ class DataStore():
         session.query(Datasource).filter_by(company_id=self.company_id, name=name).delete()
         self.fs_store.delete(f'datasource_{self.company_id}_{name}')
         shutil.rmtree(os.path.join(self.dir, name))
-        
+
     def save_datasource(self, name, source_type, source, file_path=None):
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
@@ -122,8 +122,6 @@ class DataStore():
                     'mongodb': MongoDS,
                     'snowflake': SnowflakeDS
                 }
-
-
 
                 try:
                     dsClass = ds_class_map[integration['type']]

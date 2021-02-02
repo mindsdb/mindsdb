@@ -38,7 +38,6 @@ class DataStore():
 
     def get_data(self, name, where=None, limit=None, offset=None):
         offset = 0 if offset is None else offset
-
         ds = self.get_datasource_obj(name)
 
         if limit is not None:

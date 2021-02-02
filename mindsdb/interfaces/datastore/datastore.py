@@ -47,6 +47,7 @@ class DataStore():
         else:
             filtered_ds = ds.filter(where=where)
 
+        filtered_ds = filtered_ds.where(pd.notnull(filtered_ds), None)
         data = filtered_ds.to_dict(orient='records')
         return {
             'data': data,

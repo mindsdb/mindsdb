@@ -29,7 +29,7 @@ class DataStore():
     def get_analysis(self, name):
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
         if datasource_record.analysis is None:
-            datasource_record.analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name))
+            datasource_record.analysis = json.dumps(self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name)))
             session.commit()
 
         analysis = json.loads(datasource_record.analysis)
@@ -209,13 +209,13 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique non-empty name')
 
-            datasource_record.creation_info = creation_info
-            datasource_record.metadata = {
+            datasource_record.creation_info = json.dumps(creation_info)
+            datasource_record.metadata = json.dumps({
                 'source_type': source_type,
                 'source': source,
                 'row_count': len(df),
                 'columns': [dict(name=x) for x in list(df.keys())]
-            }
+            })
 
             self.fs_store.put(name, f'datasource_{self.company_id}_{name}', self.dir)
 
@@ -232,7 +232,7 @@ class DataStore():
         try:
             datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
             self.fs_store.get(f'datasource_{self.company_id}_{name}', self.dir)
-            creation_info = datasource_record.creation_info
+            creation_info = json.loads(datasource_record.creation_info)
             if raw:
                 return creation_info
             else:

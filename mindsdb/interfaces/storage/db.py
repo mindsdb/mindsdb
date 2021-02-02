@@ -41,7 +41,7 @@ class Datasource(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
-    metadata = Column(String) # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
+    data = Column(String) # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
     creation_info = Column(String)
     analysis = Column(String)  # A JSON
     company_id = Column(Integer)

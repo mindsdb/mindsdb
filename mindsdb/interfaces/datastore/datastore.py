@@ -43,7 +43,7 @@ class DataStore():
             datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
         for datasource_record in datasource_record_arr:
             try:
-                datasource = json.load(datasource_record.metadata)
+                datasource = json.load(datasource_record.data)
                 datasource['created_at'] = parse_dt(datasource_record.created_at.split('.')[0])
                 datasource['updated_at'] = parse_dt(datasource_record.updated_at.split('.')[0])
                 datasource['name'] = name
@@ -210,7 +210,7 @@ class DataStore():
                 raise Exception('Each column in datasource must have unique non-empty name')
 
             datasource_record.creation_info = json.dumps(creation_info)
-            datasource_record.metadata = json.dumps({
+            datasource_record.data = json.dumps({
                 'source_type': source_type,
                 'source': source,
                 'row_count': len(df),

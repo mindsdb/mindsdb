@@ -195,7 +195,7 @@ class MindsDBDataNode(DataNode):
 
                 data.append(row)
 
-            field_types = {f: model['data_analysis_v2'][f]['typing']['data_subtype'] for f in fields}
+            field_types = {f: model['data_analysis_v2'][f]['typing']['data_subtype'] for f in fields if 'typing' in model['data_analysis_v2'][f]}
             for row in data:
                 cast_row_types(row, field_types)
 
@@ -217,7 +217,7 @@ class MindsDBDataNode(DataNode):
 
             field_types = {
                 f: model['data_analysis_v2'][f]['typing']['data_subtype']
-                for f in model['data_analysis_v2']['columns']
+                for f in model['data_analysis_v2']['columns'] if 'typing' in model['data_analysis_v2'][f]
             }
 
             for row in data:

@@ -42,7 +42,6 @@ class DataStore():
 
     def get_data(self, name, where=None, limit=None, offset=None):
         offset = 0 if offset is None else offset
-
         ds = self.get_datasource_obj(name)
 
         if limit is not None:
@@ -51,6 +50,7 @@ class DataStore():
         else:
             filtered_ds = ds.filter(where=where)
 
+        filtered_ds = filtered_ds.where(pd.notnull(filtered_ds), None)
         data = filtered_ds.to_dict(orient='records')
         return {
             'data': data,
@@ -106,6 +106,8 @@ class DataStore():
                     'mongodb': MongoDS,
                     'snowflake': SnowflakeDS
                 }
+
+
 
                 try:
                     dsClass = ds_class_map[integration['type']]
@@ -166,6 +168,8 @@ class DataStore():
                     ds = dsClass(**picklable['kwargs'])
 
                 elif integration['type'] == 'mongodb':
+                    if isinstance(source['find'], str):
+                        source['find'] = json.loads(source['find'])
                     picklable = {
                         'class': dsClass.__name__,
                         'args': [],

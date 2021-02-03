@@ -231,7 +231,7 @@ class DataStore():
     def get_datasource_obj(self, name, raw=False):
         try:
             datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
-            self.fs_store.get(f'datasource_{self.company_id}_{name}', self.dir)
+            self.fs_store.get(name, f'datasource_{self.company_id}_{name}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)
             if raw:
                 return creation_info

@@ -1,5 +1,5 @@
 from .scram import Scram
-
+from mindsdb.utilities.config import Config
 
 class Session():
     def __init__(self, config):

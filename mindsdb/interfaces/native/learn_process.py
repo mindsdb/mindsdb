@@ -1,9 +1,10 @@
 import torch.multiprocessing as mp
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.utilities.os_specific import get_mp_context
 
 
+#ctx = mp.get_context(get_mp_context())
 ctx = mp.get_context('spawn')
-
 
 class LearnProcess(ctx.Process):
     daemon = True
@@ -33,4 +34,4 @@ class LearnProcess(ctx.Process):
 
         model_data = mindsdb_native.F.get_model_data(name)
 
-        DatabaseWrapper(config).register_predictors([model_data])
+        DatabaseWrapper().register_predictors([model_data])

@@ -292,8 +292,8 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self.mindsdb_env = {
             'config': config,
-            'data_store': DataStore(config),
-            'mindsdb_native': NativeInterface(config)
+            'data_store': DataStore(),
+            'mindsdb_native': NativeInterface()
         }
 
         respondersCollection = RespondersCollection()

@@ -4,9 +4,9 @@ import json
 
 from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
 from mindsdb.utilities.fs import get_or_create_dir_struct, create_dirs_recursive
-from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import args_parse, is_notebook
 from mindsdb.__about__ import __version__ as mindsdb_version
+
 
 try:
     if not is_notebook():
@@ -45,20 +45,41 @@ if args is not None and args.version:
 
 if args is not None and args.config is not None:
     config_path = args.config
+    with open(config_path, 'r') as fp:
+        user_config = json.load(fp)
 else:
-    config_dir, storage_dir = get_or_create_dir_struct()
-    config_path = os.path.join(config_dir, 'config.json')
-    if not os.path.isfile(config_path):
-        with open(config_path, 'w') as fp:
-            json.dump({'config_version': '1.4', 'storage_dir': storage_dir, 'api': {}}, fp)
+    user_config = {}
+    config_path = 'absent'
+os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
-mindsdb_config = Config(config_path)
-create_dirs_recursive(mindsdb_config.paths)
+if 'storage_dir' in user_config:
+    root_storage_dir = user_config['storage_dir']
+else:
+    _, root_storage_dir = get_or_create_dir_struct()
+os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+
+if os.path.isdir(root_storage_dir) is False:
+    os.makedirs(root_storage_dir)
+
+if 'storage_db' in user_config:
+    for k in user_config['storage_db']:
+        os.environ['MINDSDB_' + k.uppercase()] = user_config['storage_db'][k]
+else:
+    os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
+    os.environ['MINDSDB_SQLITE_PATH'] = os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db')
+
+if 'company_id' in user_config:
+    os.environ['MINDSDB_COMPANY_ID'] = user_config['company_id']
+
+
+from mindsdb.utilities.config import Config
+mindsdb_config = Config()
+create_dirs_recursive(mindsdb_config['paths'])
 
 os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')
 os.environ['LIGHTWOOD_LOG_LEVEL'] = os.environ.get('LIGHTWOOD_LOG_LEVEL', 'ERROR')
 os.environ['MINDSDB_CONFIG_PATH'] = config_path
-os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config.paths['predictors']
+os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config['paths']['predictors']
 
 from mindsdb_native import *
 # Figure out how to add this as a module

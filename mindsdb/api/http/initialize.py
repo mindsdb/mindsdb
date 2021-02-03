@@ -20,7 +20,7 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
-
+from mindsdb.utilities.config import Config
 
 class Swagger_Api(Api):
     """
@@ -237,11 +237,12 @@ def initialize_flask(config, init_static_thread):
     return app, api
 
 
-def initialize_interfaces(config, app):
-    app.default_store = DataStore(config)
-    app.mindsdb_native = NativeInterface(config)
-    app.custom_models = CustomModels(config)
-    app.dbw = DatabaseWrapper(config)
+def initialize_interfaces(app):
+    app.default_store = DataStore()
+    app.mindsdb_native = NativeInterface()
+    app.custom_models = CustomModels()
+    app.dbw = DatabaseWrapper()
+    config = Config()
     app.config_obj = config
 
 

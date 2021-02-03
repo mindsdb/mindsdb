@@ -3,7 +3,7 @@ import requests
 import asyncio
 import time
 
-from mindsdb.utilities.config import Config
+from legacy_config import Config
 
 from common import (
     MINDSDB_DATABASE,
@@ -43,14 +43,15 @@ TEST_PREDICTOR = 'test_predictor'
 config = Config(TEST_CONFIG)
 
 
-class UserFlowTest_1(unittest.TestCase):
+class MistakesTest_1(unittest.TestCase):
     def test_1_wrong_integration(self):
         '''
         start mindsdb with publish integration with wrong password
         try create ds
         change password to correct
         '''
-        original_db_password = config['integrations']['default_mariadb']['password']
+
+        '''
         self.mdb, datastore = run_environment(
             config,
             apis=['mysql', 'http'],
@@ -62,7 +63,7 @@ class UserFlowTest_1(unittest.TestCase):
             },
             mindsdb_database=MINDSDB_DATABASE
         )
-
+        original_db_password = config['integrations']['default_mariadb']['password']
         check_ds_not_exists(TEST_DS)
 
         # check create DS with wrong integration password
@@ -83,11 +84,23 @@ class UserFlowTest_1(unittest.TestCase):
         )
         assert res.status_code == 200
         config['integrations']['default_mariadb']['password'] = original_db_password
+        '''
 
     def test_2_broke_analisys(self):
         '''
         stop mindsdb while analyse dataset
         '''
+        self.mdb, datastore = run_environment(
+            config,
+            apis=['mysql', 'http'],
+            override_integration_config={
+                'default_mariadb': {
+                    'publish': True,
+                }
+            },
+            mindsdb_database=MINDSDB_DATABASE
+        )
+
         data = {
             "integration_id": 'default_mariadb',
             "name": TEST_DS,

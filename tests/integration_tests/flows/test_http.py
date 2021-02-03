@@ -8,7 +8,7 @@ from uuid import uuid1
 
 import requests
 
-from mindsdb.utilities.config import Config
+from legacy_config import Config
 from mindsdb.utilities.ps import net_connections
 
 from common import (
@@ -58,29 +58,20 @@ class HTTPTest(unittest.TestCase):
         res = requests.get(f'{root}/config/integrations')
         assert res.status_code == 200
         integration_names = res.json()
-        for integration_name in integration_names['integrations']:
-            assert integration_name in self.initial_integrations_names
 
-        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse'}
+        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse', 'port': 8123, 'user': 'default'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
         assert res.status_code == 200
 
         res = requests.get(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
         test_integration = res.json()
-        print(test_integration, len(test_integration))
-        assert len(test_integration) == 6
-
-        res = requests.delete(f'{root}/config/integrations/test_integration')
-        assert res.status_code == 200
-
-        res = requests.get(f'{root}/config/integrations/test_integration')
-        assert res.status_code != 200
+        assert len(test_integration) == 8
 
         for k in test_integration_data:
             assert test_integration[k] == test_integration_data[k]
 
-        for name in ['default_mariadb', 'default_clickhouse']:
+        for name in ['test_integration']:
             # Get the original
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
@@ -100,6 +91,7 @@ class HTTPTest(unittest.TestCase):
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
             modified_integration = res.json()
+            print(modified_integration)
             assert modified_integration['password'] is None
             assert modified_integration['user'] == 'dr.Who'
             for k in integration:
@@ -115,6 +107,13 @@ class HTTPTest(unittest.TestCase):
             for k in integration:
                 if k != 'date_last_update':
                     assert modified_integration[k] == integration[k]
+
+
+        res = requests.delete(f'{root}/config/integrations/test_integration')
+        assert res.status_code == 200
+
+        res = requests.get(f'{root}/config/integrations/test_integration')
+        assert res.status_code != 200
 
     def test_2_put_ds(self):
         # PUT datasource
@@ -151,7 +150,7 @@ class HTTPTest(unittest.TestCase):
             'data_source_name': ds_name,
             'to_predict': 'rental_price',
             'kwargs': {
-                'stop_training_in_x_seconds': 5,
+                'stop_training_in_x_seconds': 20,
                 'join_learn_process': True
             }
         }
@@ -227,11 +226,6 @@ class HTTPTest(unittest.TestCase):
         """
         GUI downloaded and available
         """
-        start_time = time.time()
-        index = Path(self.config.paths['static']).joinpath('index.html')
-        while index.is_file() is False and (time.time() - start_time) > 30:
-            time.sleep(1)
-        assert index.is_file()
         response = requests.get('http://localhost:47334/')
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0

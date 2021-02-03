@@ -6,12 +6,14 @@ from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.integrations.mongodb.mongodb import MongoDB
 
 from mindsdb.utilities.log import log as logger
-
+from mindsdb.utilities.config import Config
 
 class DatabaseWrapper():
-
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, config=None):
+        if config is None:
+            self.config = Config()
+        else:
+            self.config = config
 
     def setup_integration(self, db_alias):
         try:

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import mysql.connector
 
-from mindsdb.utilities.config import Config
+from legacy_config import Config
 
 from common import (
     USE_EXTERNAL_DB_SERVER,

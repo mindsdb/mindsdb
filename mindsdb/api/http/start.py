@@ -17,8 +17,8 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import initialize_log
 
 
-def start(config, verbose=False):
-    config = Config(config)
+def start(verbose=False):
+    config = Config()
     if verbose:
         config['log']['level']['console'] = 'DEBUG'
 
@@ -28,8 +28,8 @@ def start(config, verbose=False):
     init_static_thread = threading.Thread(target=initialize_static, args=(config,))
     init_static_thread.start()
 
-    app, api = initialize_flask(config)
-    initialize_interfaces(config, app)
+    app, api = initialize_flask(config, init_static_thread)
+    initialize_interfaces(app)
 
     static_root = Path(config.paths['static'])
 
@@ -64,7 +64,7 @@ def start(config, verbose=False):
     # waiting static initialization
     init_static_thread.join()
     if server.lower() == 'waitress':
-        serve(app, port=port, host=host)
+        serve(app, port=port, host=host, threads=1)
     elif server.lower() == 'flask':
         # that will 'disable access' log in console
         log = logging.getLogger('werkzeug')

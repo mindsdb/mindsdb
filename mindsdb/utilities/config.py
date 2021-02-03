@@ -2,289 +2,147 @@ import os
 import json
 import hashlib
 import datetime
+from copy import deepcopy
+
+from mindsdb.utilities.fs import create_directory
+from mindsdb.interfaces.storage.db import session, Configuration
 
 
-default_config = {
-    "log": {
-        "level": {
-            "console": "ERROR",
-            "file": "WARNING"
-        }
-
-    },
-    "debug": False,
-    "integrations": {},
-    "api": {
-        "http": {
-            "host": "127.0.0.1",
-            "port": "47334"
-        },
-        "mysql": {
-            "host": "127.0.0.1",
-            "password": "",
-            "port": "47335",
-            "user": "mindsdb",
-            "database": "mindsdb",
-            "ssl": True
-        },
-        "mongodb": {
-            "host": "127.0.0.1",
-            "port": "47336",
-            "database": "mindsdb"
-        }
-    }
-}
-
-
-class Config(object):
-    current_version = '1.4'
-    _config = {}
-    paths = {
-        'root': '',
-        'datasources': '',
-        'predictors': '',
-        'static': '',
-        'tmp': '',
-        'log': '',
-        'obsolete': {
-            'predictors': '',
-            'datasources': ''
-        }
-    }
-    versions = {}
-
-    def __init__(self, config_path):
-        self._config_path = None
-        self._config_hash = None
-        self._config = None
-        if isinstance(config_path, str):
-            self.config_path = os.path.abspath(config_path)
-            self._read()
-            self._config_hash = self._gen_hash()
-
-            storage_dir = self._config['storage_dir']
-            if os.path.isabs(storage_dir) is False:
-                storage_dir = os.path.normpath(
-                    os.path.join(
-                        os.path.dirname(self.config_path),
-                        storage_dir
-                    )
-                )
-            self.paths['root'] = storage_dir
-            self.paths['datasources'] = os.path.join(storage_dir, 'datasources')
-            self.paths['predictors'] = os.path.join(storage_dir, 'predictors')
-            self.paths['static'] = os.path.join(storage_dir, 'static')
-            self.paths['tmp'] = os.path.join(storage_dir, 'tmp')
-            self.paths['log'] = os.path.join(storage_dir, 'log')
-            self.paths['obsolete']['predictors'] = os.path.join(storage_dir, 'obsolete', 'predictors')
-            self.paths['obsolete']['datasources'] = os.path.join(storage_dir, 'obsolete', 'datasources')
-
-            self._read_versions_file(os.path.join(self.paths['root'], 'versions.json'))
-        else:
-            raise TypeError('Argument must be string representing a file path <Later on to be switched to file path and/or database connection info>')
-
-    def _read_versions_file(self, path):
-        if os.path.isfile(path):
-            with open(path, 'rt') as f:
-                self.versions = json.loads(f.read())
-
-    def _migrate(self):
-        def m1_0(config):
-            if 'default_clickhouse' in config['integrations'] and 'type' not in config['integrations']['default_clickhouse']:
-                config['integrations']['default_clickhouse']['type'] = 'clickhouse'
-            if 'default_mariadb' in config['integrations'] and 'type' not in config['integrations']['default_mariadb']:
-                config['integrations']['default_mariadb']['type'] = 'mariadb'
-            if 'datasources' in config['api']['mysql']:
-                del config['api']['mysql']['datasources']
-            config['config_version'] = '1.1'
-            return config
-
-        def m1_1(config):
-            import tempfile
-            import shutil
-            from pathlib import Path
-
-            ds_storage_path = Path(config['interface']['datastore']['storage_dir'])
-            mdb_storage_path = Path(config['interface']['mindsdb_native']['storage_dir'])
-
-            temp_dir_path = tempfile.mkdtemp()
-
-            if ds_storage_path.is_dir():
-                shutil.move(
-                    str(ds_storage_path),
-                    temp_dir_path
-                )
-
-            ds_storage_path.mkdir(mode=0o777, exist_ok=True, parents=True)
-
-            if Path(temp_dir_path).joinpath('datastore').is_dir():
-                shutil.move(
-                    str(Path(temp_dir_path).joinpath('datastore')),
-                    str(ds_storage_path.joinpath('datasources'))
-                )
-            else:
-                ds_storage_path.joinpath('datasources').mkdir(mode=0o777, exist_ok=True)
-
-            if ds_storage_path == mdb_storage_path:
-                shutil.move(
-                    str(Path(temp_dir_path)),
-                    str(ds_storage_path.joinpath('predictors'))
-                )
-            elif mdb_storage_path.is_dir():
-                shutil.move(
-                    str(mdb_storage_path),
-                    str(ds_storage_path.joinpath('predictors'))
-                )
-            else:
-                mdb_storage_path.joinpath('predictors').mkdir(mode=0o777, exist_ok=True)
-
-            ds_storage_path.joinpath('tmp').mkdir(mode=0o777, exist_ok=True)
-            ds_storage_path.joinpath('static').mkdir(mode=0o777, exist_ok=True)
-
-            if Path(temp_dir_path).is_dir():
-                shutil.rmtree(temp_dir_path)
-
-            config['storage_dir'] = str(ds_storage_path)
-            del config['interface']['datastore']['storage_dir']
-            del config['interface']['mindsdb_native']['storage_dir']
-            config['config_version'] = '1.2'
-            return config
-
-        def m1_2(config):
-            ''' remove no longer needed fields
-            '''
-            try:
-                del config['api']['mysql']['log']
-            except Exception:
-                pass
-
-            try:
-                del config['interface']
-            except Exception:
-                pass
-
-            if 'pip_path' in config and config['pip_path'] is None:
-                del config['pip_path']
-
-            if 'python_interpreter' in config and config['python_interpreter'] is None:
-                del config['python_interpreter']
-
-            config['config_version'] = '1.3'
-            return config
-
-        def m1_3(config):
-            ''' rename integration['enabled'] to integration['publish']
-            '''
-            for integration in config.get('integrations', []).values():
-                if 'enabled' in integration:
-                    enabled = integration['enabled']
-                    del integration['enabled']
-                    integration['publish'] = enabled
-
-            config['config_version'] = '1.4'
-            return config
-
-        migrations = {
-            '1.0': m1_0,
-            '1.1': m1_1,
-            '1.2': m1_2,
-            '1.3': m1_3
-        }
-
-        current_version = self._parse_version(self._config['config_version'])
-        target_version = self._parse_version(self.current_version)
-        while current_version < target_version:
-            str_version = '.'.join([str(x) for x in current_version])
-            self._config = migrations[str_version](self._config)
-            current_version = self._parse_version(self._config['config_version'])
-
-    def _validate(self):
-        integrations = self._config.get('integrations', {})
-        for key, value in integrations.items():
-            if not isinstance(value, dict):
-                raise TypeError(f"Config error: integration '{key}' must be a json")
-            if 'type' not in integrations[key]:
-                raise KeyError(f"Config error: for integration '{key}' key 'type' must be specified")
-
-        storage_dir = self._config.get('storage_dir')
-        if storage_dir is None:
-            raise KeyError("'storage_dir' mandatory key in config")
-
-    def _parse_version(self, version):
-        if isinstance(version, str):
-            version = [int(x) for x in version.split('.')]
-        elif isinstance(version, int):
-            version = [version]
-        if len(version) == 1:
-            version.append(0)
-        return version
-
-    def _format(self):
-        ''' changing user input to formalised view
-        '''
-        for integration in self._config.get('integrations', {}).values():
-            password = integration.get('password')
-            password = '' if password is None else str(password)
-            integration['password'] = str(password)
-
-        password = self._config['api']['mysql'].get('password')
+def _null_to_empty(config):
+    '''
+    changing user input to formalised view
+    '''
+    for integration in config.get('integrations', {}).values():
+        password = integration.get('password')
         password = '' if password is None else str(password)
-        self._config['api']['mysql']['password'] = str(password)
+        integration['password'] = str(password)
 
-    def _merge_default_config(self):
-        def merge_key_recursive(target_dict, source_dict, key):
-            if key not in target_dict:
-                target_dict[key] = source_dict[key]
-            elif isinstance(target_dict[key], dict) and isinstance(source_dict[key], dict):
-                for k in source_dict[key]:
-                    merge_key_recursive(target_dict[key], source_dict[key], k)
+    password = config['api']['mysql'].get('password')
+    password = '' if password is None else str(password)
+    config['api']['mysql']['password'] = str(password)
+    return config
 
-        for key in default_config:
-            merge_key_recursive(self._config, default_config, key)
+def _merge_key_recursive(target_dict, source_dict, key):
+    if key not in target_dict:
+        target_dict[key] = source_dict[key]
+    elif not isinstance(target_dict[key], dict) or not isinstance(source_dict[key], dict):
+        target_dict[key] = source_dict[key]
+    else:
+        for k in list(source_dict[key].keys()):
+            _merge_key_recursive(target_dict[key], source_dict[key], k)
+
+def _merge_configs(original_config, override_config):
+    original_config = deepcopy(original_config)
+    for key in list(override_config.keys()):
+        _merge_key_recursive(original_config, override_config, key)
+    return original_config
+
+
+class Config():
+    def __init__(self):
+        self.config_path = os.environ['MINDSDB_CONFIG_PATH']
+        if self.config_path == 'absent':
+            self._override_config = {}
+        else:
+            with open(self.config_path, 'r') as fp:
+                self._override_config = json.load(fp)
+
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        self._db_config = {}
+        self.last_updated = datetime.datetime.now() - datetime.timedelta(days=3600)
+        self._read()
+        self.last_updated = datetime.datetime.now() - datetime.timedelta(days=3600)
+
+        # Now comes the stuff that gets stored in the db
+        if len(self._db_config) == 0:
+            self._db_config = {
+                'paths': {},
+                "log": {
+                    "level": {
+                        "console": "ERROR",
+                        "file": "WARNING"
+                    }
+
+                },
+                "debug": False,
+                "integrations": {},
+                "api": {
+                    "http": {
+                        "host": "127.0.0.1",
+                        "port": "47334"
+                    },
+                    "mysql": {
+                        "host": "127.0.0.1",
+                        "password": "",
+                        "port": "47335",
+                        "user": "mindsdb",
+                        "database": "mindsdb",
+                        "ssl": True
+                    },
+                    "mongodb": {
+                        "host": "127.0.0.1",
+                        "port": "47336",
+                        "database": "mindsdb"
+                    }
+                }
+            }
+
+            self._db_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']
+            self._db_config['paths']['datasources'] = os.path.join(self._db_config['paths']['root'], 'datasources')
+            self._db_config['paths']['predictors'] = os.path.join(self._db_config['paths']['root'], 'predictors')
+            self._db_config['paths']['static'] = os.path.join(self._db_config['paths']['root'], 'static')
+            self._db_config['paths']['tmp'] = os.path.join(self._db_config['paths']['root'], 'tmp')
+            self._db_config['paths']['log'] = os.path.join(self._db_config['paths']['root'], 'log')
+            self._db_config['paths']['storage_dir'] = self._db_config['paths']['root']
+            self._db_config['storage_dir'] = self._db_config['paths']['root']
+
+            for path in self._db_config['paths']:
+                create_directory(path)
+            self._save()
+        self._read()
 
     def _read(self):
-        if isinstance(self.config_path, str) and os.path.isfile(self.config_path):
-            with open(self.config_path, 'r') as fp:
-                self._config = json.load(fp)
-                if self._parse_version(self._config['config_version']) < self._parse_version(self.current_version):
-                    self._migrate()
-                    self._save()
-                self._validate()
-                self._merge_default_config()
-                self._format()
-        else:
-            raise TypeError('`self.config_path` must be a string representing a local file path to a json config')
+        # No need for instant sync unless we're on the same API
+        # Hacky, but doesn't break any constraints that we were imposing before
+        # There's no guarantee of syncing for the calls from the different APIs anyway, doing this doesn't change that
+        # `True` to disable this until we add some sleepy time to our tests
+        #if True or (datetime.datetime.now() - self.last_updated).total_seconds() > 2:
+        config_record =  session.query(Configuration).filter(Configuration.company_id == self.company_id).filter(Configuration.updated_at >= self.last_updated).first()
+
+        if config_record is not None:
+            self._db_config = json.loads(config_record.data)
+
+        self._config = _merge_configs(self._db_config, self._override_config)
+        self.last_updated = datetime.datetime.now()
+
 
     def _save(self):
-        with open(self.config_path, 'w') as fp:
-            json.dump(self._config, fp, indent=4, sort_keys=True)
+        self._db_config = _null_to_empty(self._db_config)
+        config_record = session.query(Configuration).filter_by(company_id=self.company_id).first()
 
-    def _gen_hash(self):
-        with open(self.config_path, 'rb') as fp:
-            return hashlib.md5(fp.read()).hexdigest()
+        if config_record is not None:
+            config_record.data = json.dumps(self._db_config)
+        else:
+            config_record = Configuration(company_id=self.company_id, data=json.dumps(self._db_config))
 
-    def _set_updated(self, key):
-        # Only check this for dynamically generated keys, won't be needed once we switch to using a database here
-        if key in ['integrations']:
-            file_hash = self._gen_hash()
-            if file_hash != self._config_hash:
-                self._read()
-                self._config_hash = self._gen_hash()
+        session.add(config_record)
+        session.commit()
 
     def __getitem__(self, key):
-        self._set_updated(key)
+        self._read()
         return self._config[key]
 
     def get(self, key, default=None):
-        self._set_updated(key)
+        self._read()
         return self._config.get(key, default)
 
     def get_all(self):
+        self._read()
         return self._config
 
     def set(self, key_chain, value, delete=False):
         self._read()
-        c = self._config
+        c = self._db_config
         for i, k in enumerate(key_chain):
             if k in c and i + 1 < len(key_chain):
                 c = c[k]
@@ -297,6 +155,12 @@ class Config(object):
                 else:
                     c[k] = value
         self._save()
+        self._read()
+
+    @property
+    def paths(self):
+        self._read()
+        return self._config['paths']
 
     # Higher level interface
     def add_db_integration(self, name, dict):
@@ -309,6 +173,7 @@ class Config(object):
         self.set(['integrations', name], dict)
 
     def modify_db_integration(self, name, dict):
+        self._read()
         old_dict = self._config['integrations'][name]
         for k in old_dict:
             if k not in dict:

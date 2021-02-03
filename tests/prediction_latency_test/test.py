@@ -1,6 +1,7 @@
 import os
 import time
 import argparse
+import json
 
 import pandas as pd
 
@@ -78,10 +79,15 @@ class AITableWhere(BasePredictor):
         print(f"{self}: {_query}")
         return query(_query)
 
+def get_predictors_dir(config_path):
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    var_dir = config["storage_dir"]
+    return f"{var_dir}/predictors"
+
 
 parser = argparse.ArgumentParser(description='Prediction latency test.')
 parser.add_argument("datasets_path", type=str, help="path to private-benchmarks/benchmarks/datasets dir")
-parser.add_argument("--predictors_dir", type=str, default=os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../var/predictors')), help="path to mindsdb predictors dir. if not specified related path from this file will be used.")
 parser.add_argument("--config_path", type=str, default=os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../etc/config.json')), help="full path to config.json. if not specified related path from this file will be used.")
 parser.add_argument("--no_docker", action='store_true',help="will use local DB assuming that it is installed. launch db in docker if not provided.")
 parser.add_argument("--skip_datasource", action='store_true', help="skip preparing train/test sets from initial benchmark datasets.")
@@ -92,15 +98,14 @@ parser.add_argument("--skip_train_models", action='store_true', help="skip train
 if __name__ == '__main__':
     args = parser.parse_args()
     print(f"DATASETS_PATH: {args.datasets_path}")
-    print(f"MINDSDB_STORAGE_PATH: {args.predictors_dir}")
     print(f"CONFIG_PATH: {args.config_path}")
     print(f"skip_train_models: {args.skip_train_models}")
     print(f"skip_db: {args.skip_db}")
     print(f"skip_datasource: {args.skip_datasource}")
     print(f"no_docker: {args.no_docker}")
 
-    os.environ["MINDSDB_STORAGE_PATH"] = args.predictors_dir
     os.environ["CONFIG_PATH"] = args.config_path
+    os.environ["MINDSDB_STORAGE_PATH"] = get_predictors_dir(args.config_path)
     os.environ["DATASETS_PATH"] = args.datasets_path
 
     from mindsdb_native import Predictor, ClickhouseDS

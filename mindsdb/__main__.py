@@ -6,24 +6,23 @@ import time
 import asyncio
 import logging
 import datetime
+import platform
 
 import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.os_specific import get_mp_context
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.fs import (
-    update_versions_file,
-    archive_obsolete_predictors,
-    remove_corrupted_predictors
-)
 from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
 from mindsdb.utilities.log import initialize_log
+from mindsdb.utilities.telemetry import is_telemetry_file_exists, disable_telemetry
+
 
 def close_api_gracefully(apis):
     try:
@@ -42,7 +41,19 @@ if __name__ == '__main__':
 
     args = args_parse()
 
-    config = Config(os.environ['MINDSDB_CONFIG_PATH'])
+    config = Config()
+
+    telemetry_disabled = False
+    storage_dir = config['storage_dir']
+    if is_telemetry_file_exists(storage_dir):
+        os.environ['CHECK_FOR_UPDATES'] = '0'
+        telemetry_disabled = True
+    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
+        disable_telemetry(storage_dir)
+        telemetry_disabled = True
+
+    if telemetry_disabled:
+        print('\n ✓ telemetry disabled \n')
 
     if args.verbose is True:
         config['log']['level']['console'] = 'DEBUG'
@@ -64,16 +75,6 @@ if __name__ == '__main__':
 
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config.paths['root']}")
-
-    update_versions_file(
-        config,
-        {
-            'lightwood': lightwood_version,
-            'mindsdb_native': mindsdb_native_version,
-            'mindsdb': mindsdb_version,
-            'python': sys.version.replace('\n', '')
-        }
-    )
 
     if args.api is None:
         api_arr = ['http', 'mysql']
@@ -100,16 +101,12 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
-    archive_obsolete_predictors(config, '2.11.0')
-
-    mdb = NativeInterface(config)
-    cst = CustomModels(config)
-
-    remove_corrupted_predictors(config, mdb)
+    mdb = NativeInterface()
+    cst = CustomModels()
 
     model_data_arr = get_all_models_meta_data(mdb, cst)
 
-    dbw = DatabaseWrapper(config)
+    dbw = DatabaseWrapper()
     for db_alias in config['integrations']:
         dbw.setup_integration(db_alias)
     dbw.register_predictors(model_data_arr)
@@ -118,11 +115,14 @@ if __name__ == '__main__':
         log.error(f'Error failed to integrate with database aliased: {broken_name}')
 
     ctx = mp.get_context('spawn')
+    # Switch to this once the native interface has it's own thread :/
+    # ctx = mp.get_context(get_mp_context())
+
 
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(config.config_path, args.verbose))
+            p = ctx.Process(target=start_functions[api_name], args=(args.verbose,))
             p.start()
             api_data['process'] = p
         except Exception as e:

@@ -9,13 +9,17 @@ import pandas as pd
 
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
-
+from mindsdb.utilities.config import Config
 
 class DataStore():
-    def __init__(self, config):
-        self.config = config
-        self.dir = config.paths['datasources']
-        self.mindsdb_native = NativeInterface(config)
+    def __init__(self, config=None):
+        if config is None:
+            self.config = Config()
+        else:
+            self.config = config
+
+        self.dir = self.config.paths['datasources']
+        self.mindsdb_native = NativeInterface()
 
     def get_analysis(self, ds):
         return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
@@ -38,7 +42,6 @@ class DataStore():
 
     def get_data(self, name, where=None, limit=None, offset=None):
         offset = 0 if offset is None else offset
-
         ds = self.get_datasource_obj(name)
 
         if limit is not None:
@@ -47,6 +50,7 @@ class DataStore():
         else:
             filtered_ds = ds.filter(where=where)
 
+        filtered_ds = filtered_ds.where(pd.notnull(filtered_ds), None)
         data = filtered_ds.to_dict(orient='records')
         return {
             'data': data,
@@ -102,6 +106,8 @@ class DataStore():
                     'mongodb': MongoDS,
                     'snowflake': SnowflakeDS
                 }
+
+
 
                 try:
                     dsClass = ds_class_map[integration['type']]
@@ -162,6 +168,8 @@ class DataStore():
                     ds = dsClass(**picklable['kwargs'])
 
                 elif integration['type'] == 'mongodb':
+                    if isinstance(source['find'], str):
+                        source['find'] = json.loads(source['find'])
                     picklable = {
                         'class': dsClass.__name__,
                         'args': [],
@@ -206,9 +214,6 @@ class DataStore():
                     'columns': [dict(name=x) for x in list(df.keys())]
                 }
                 json.dump(meta, fp, indent=4, sort_keys=True)
-
-            with open(os.path.join(ds_meta_dir, 'versions.json'), 'wt') as fp:
-                json.dump(self.config.versions, fp, indent=4, sort_keys=True)
 
         except Exception:
             if os.path.isdir(ds_meta_dir):

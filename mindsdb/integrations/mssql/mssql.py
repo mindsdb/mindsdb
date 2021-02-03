@@ -11,7 +11,7 @@ class MSSQL(Integration):
             dsn=integration['host'],
             port=integration['port'],
             as_dict=True,
-            autocommit=True     # connection.commit() not work
+            autocommit=True  # .commit() doesn't work
         )
 
     def _query(self, query, fetch=False):

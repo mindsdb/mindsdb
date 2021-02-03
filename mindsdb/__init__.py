@@ -58,6 +58,9 @@ else:
     _, root_storage_dir = get_or_create_dir_struct()
 os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
 
+if os.path.isdir(root_storage_dir) is False:
+    os.makedirs(root_storage_dir)
+
 if 'storage_db' in user_config:
     for k in user_config['storage_db']:
         os.environ['MINDSDB_' + key.uppercase()] = user_config['storage_db'][k]

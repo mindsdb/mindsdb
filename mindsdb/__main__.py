@@ -56,12 +56,10 @@ if __name__ == '__main__':
         print('\n ✓ telemetry disabled \n')
 
     if args.verbose is True:
-        config.set('log', 'level', 'console'], 'DEBUG')
-    print('\n\n\n\n')
-    print(config['log']['level']['console'])
+        config.set(['log', 'level', 'console'], 'DEBUG')
+
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
-    print(os.environ['DEFAULT_LOG_LEVEL'], os.environ['LIGHTWOOD_LOG_LEVEL'])
     config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
 
     initialize_log(config)

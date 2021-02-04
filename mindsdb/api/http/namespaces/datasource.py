@@ -241,7 +241,6 @@ class DatasourceData(Resource):
                 where.append(param)
 
         data_dict = ca.default_store.get_data(name, where, params['page[size]'], params['page[offset]'])
-
         return data_dict, 200
 
 

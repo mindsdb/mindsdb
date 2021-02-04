@@ -202,9 +202,9 @@ def initialize_flask(config, init_static_thread):
         static_url_path='/static',
         static_folder=os.path.join(config.paths['static'], 'static/')
     )
-    
-    app.config.set(['SEND_FILE_MAX_AGE_DEFAULT'], 60)
-    app.config.set(['SWAGGER_HOST'], 'http://localhost:8000/mindsdb')
+
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
+    app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     authorizations = {
         'apikey': {
             'type': 'apiKey',

@@ -20,7 +20,7 @@ from mindsdb.utilities.log import initialize_log
 def start(verbose=False):
     config = Config()
     if verbose:
-        config.set('log', 'level', 'console'], 'DEBUG')
+        config.set(['log', 'level', 'console'], 'DEBUG')
 
     initialize_log(config, 'http', wrap_print=True)
 

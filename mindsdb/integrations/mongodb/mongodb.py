@@ -49,7 +49,6 @@ class MongoDB(Integration):
                 host,
                 port=integration.get('port', 27017),
                 serverSelectionTimeoutMS=5000,
-                tlsCAFile=certifi.where(),
                 **kwargs
             )
             server.server_info()

@@ -40,7 +40,9 @@ class Responce(Responder):
 
             for key in where_data:
                 if key not in columns:
-                    raise Exception(f"Unknown column '{key}'. Only columns from this list can be used in query: {', '.join(columns)}")
+                    sub_key = key[:key.find('.')] if '.' in key else key
+                    if sub_key not in columns:
+                        raise Exception(f"Unknown column '{key}'. Only columns from this list can be used in query: {', '.join(columns)}")
 
             prediction = mindsdb_env['mindsdb_native'].predict(name=table, when_data=where_data)
 

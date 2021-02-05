@@ -42,6 +42,37 @@ class Responce(Responder):
                 if key not in columns:
                     columns.append(key)
 
+            if 'select_data_query' in where_data:
+                integrations = mindsdb_env['config']['integrations'].keys()
+                connection = where_data.get('connection')
+                if connection is None:
+                    if 'default_mongodb' in integrations:
+                        connection = 'default_mongodb'
+                    else:
+                        for integration in integrations:
+                            if integration.startswith('mongodb_'):
+                                connection = integration
+                                break
+
+                if connection is None:
+                    raise Exception("Can't find connection from which fetch data")
+
+                ds_name = 'temp'
+
+                ds, ds_name = mindsdb_env['data_store'].save_datasource(
+                    name=ds_name,
+                    source_type=connection,
+                    source=where_data['select_data_query']
+                )
+                where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
+                mindsdb_env['data_store'].delete_datasource(ds_name)
+
+            if 'external_datasource' in where_data:
+                ds_name = where_data['external_datasource']
+                if mindsdb_env['data_store'].get_datasource(ds_name) is None:
+                    raise Exception(f"Datasource {ds_name} not exists")
+                where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
+
             prediction = mindsdb_env['mindsdb_native'].predict(name=table, when_data=where_data)
 
             predicted_columns = model['predict']

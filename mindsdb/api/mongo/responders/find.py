@@ -38,9 +38,12 @@ class Responce(Responder):
 
             columns += ['when_data', 'select_data_query', 'external_datasource']
 
-            for key in where_data:
-                if key not in columns:
-                    columns.append(key)
+            where_data_list = where_data if isinstance(where_data, list) else [where_data]
+            for statement in where_data_list:
+                if isinstance(statement, dict):
+                    for key in statement:
+                        if key not in columns:
+                            columns.append(key)
 
             if 'select_data_query' in where_data:
                 integrations = mindsdb_env['config']['integrations'].keys()

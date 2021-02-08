@@ -1,6 +1,5 @@
 import json
 import datetime
-from dateutil.parser import parse as parse_dt
 import shutil
 import os
 import pickle
@@ -44,8 +43,8 @@ class DataStore():
         for datasource_record in datasource_record_arr:
             try:
                 datasource = json.loads(datasource_record.data)
-                datasource['created_at'] = parse_dt(datasource_record.created_at.split('.')[0])
-                datasource['updated_at'] = parse_dt(datasource_record.updated_at.split('.')[0])
+                datasource['created_at'] = str(datasource_record.created_at).split('.')[0]
+                datasource['updated_at'] = str(datasource_record.updated_at).split('.')[0]
                 datasource['name'] = name
                 datasource_arr.append(datasource)
             except Exception as e:

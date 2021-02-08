@@ -43,8 +43,8 @@ class DataStore():
         for datasource_record in datasource_record_arr:
             try:
                 datasource = json.loads(datasource_record.data)
-                datasource['created_at'] = str(datasource_record.created_at).split('.')[0]
-                datasource['updated_at'] = str(datasource_record.updated_at).split('.')[0]
+                datasource['created_at'] = datasource_record.created_at
+                datasource['updated_at'] = datasource_record.updated_at
                 datasource['name'] = name
                 datasource_arr.append(datasource)
             except Exception as e:

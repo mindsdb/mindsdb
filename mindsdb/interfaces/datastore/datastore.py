@@ -77,6 +77,7 @@ class DataStore():
         # @TODO: Remove when db swithc is more stable, this should never happen, but good santiy check while this is kinda buggy
         elif len(datasource_arr) > 1:
             print('Two or more datasource with the same name, (', len(datasource_arr), ') | Full list: ', datasource_arr)
+            raise Exception('Two or more datasource with the same name')
         return None
 
     def delete_datasource(self, name):

@@ -43,7 +43,7 @@ class DataStore():
             datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
         for datasource_record in datasource_record_arr:
             try:
-                datasource = json.load(datasource_record.data)
+                datasource = json.loads(datasource_record.data)
                 datasource['created_at'] = parse_dt(datasource_record.created_at.split('.')[0])
                 datasource['updated_at'] = parse_dt(datasource_record.updated_at.split('.')[0])
                 datasource['name'] = name
@@ -225,8 +225,6 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
             raise
 
-        print(datasource_record)
-        print(datasource_record.data)
         session.add(datasource_record)
         session.commit()
         return self.get_datasource_obj(name, raw=True), name

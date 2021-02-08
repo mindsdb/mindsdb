@@ -225,6 +225,8 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
             raise
 
+        print(datasource_record)
+        print(datasource_record.data)
         session.add(datasource_record)
         session.commit()
         return self.get_datasource_obj(name, raw=True), name

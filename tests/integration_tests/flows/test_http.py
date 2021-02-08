@@ -91,7 +91,7 @@ class HTTPTest(unittest.TestCase):
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
             modified_integration = res.json()
-            print(modified_integration)
+
             assert modified_integration['password'] is None
             assert modified_integration['user'] == 'dr.Who'
             for k in integration:
@@ -137,6 +137,7 @@ class HTTPTest(unittest.TestCase):
         res = requests.put(url, json=params)
         assert res.status_code == 200
         ds_data = res.json()
+        
         assert ds_data['source_type'] == 'default_clickhouse'
         assert ds_data['row_count'] == 3 * 8
 

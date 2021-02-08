@@ -20,7 +20,7 @@ from mindsdb.utilities.log import initialize_log
 def start(verbose=False):
     config = Config()
     if verbose:
-        config['log']['level']['console'] = 'DEBUG'
+        config.set(['log', 'level', 'console'], 'DEBUG')
 
     initialize_log(config, 'http', wrap_print=True)
 
@@ -64,7 +64,10 @@ def start(verbose=False):
     # waiting static initialization
     init_static_thread.join()
     if server.lower() == 'waitress':
-        serve(app, port=port, host=host, threads=1)
+        if host in ('', '0.0.0.0'):
+            serve(app, port=port, host='*')
+        else:
+            serve(app, port=port, host=host)
     elif server.lower() == 'flask':
         # that will 'disable access' log in console
         log = logging.getLogger('werkzeug')

@@ -11,6 +11,8 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 try:
     if not is_notebook():
         args = args_parse()
+    else:
+        args = None
 except:
     # This fials in some notebooks ... check above for is_notebook is still needed because even if the exception is caught trying to read the arg still leads to failure in other notebooks... notebooks a
     args = None

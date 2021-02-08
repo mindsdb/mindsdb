@@ -227,7 +227,10 @@ def initialize_flask(config, init_static_thread):
 
     # NOTE rewrite it, that hotfix to see GUI link
     log = logging.getLogger('mindsdb.http')
-    url = f'http://{host}:{port}/'
+    if host in ('', '0.0.0.0'):
+        url = f'http://127.0.0.1:{port}/'
+    else:
+        url = f'http://{host}:{port}/'
     log.error(f' - GUI available at {url}')
 
     pid = os.getpid()

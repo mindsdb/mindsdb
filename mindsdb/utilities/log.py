@@ -75,17 +75,17 @@ def fmt_log_record(log_record):
   }
 
 def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit):
-    logs = Log.filter(company_id==self.company_id, created_at>min_timestamp)
+    logs = session.query(Log).filter(Log.company_id==os.environ.get('MINDSDB_COMPANY_ID', None), Log.created_at>min_timestamp)
 
     if max_timestamp is not None:
-        logs = logs.filter(created_at<max_timestamp)
+        logs = logs.filter(Log.created_at<max_timestamp)
 
     if context is not None:
         # e.g. datasource/predictor and assoicated id
         pass
 
     if level is not None:
-        logs = logs.filter(log_type==level)
+        logs = logs.filter(Log.log_type==level)
 
     if log_from is not None:
         # mindsdb/native/lightwood/all
@@ -96,7 +96,6 @@ def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit):
 
     logs = [fmt_log_record(x) for x in logs]
     return logs
-
 
 def initialize_log(config, logger_name='main', wrap_print=False):
     ''' Create new logger

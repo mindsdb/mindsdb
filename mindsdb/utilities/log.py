@@ -3,8 +3,7 @@ import sys
 import logging
 import traceback
 
-from mindsdb.interfaces.storage.db import session, Datasource
-from mindsdb.utilities.config import Config
+from mindsdb.interfaces.storage.db import session, Log
 
 
 class LoggerWrapper(object):
@@ -27,8 +26,7 @@ class LoggerWrapper(object):
 class DbHandler(logging.Handler):
     def __init__(self):
         logging.Handler.__init__(self)
-        self.config = Config()
-        self.company_id = self.config.company_id
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
 
     def emit(self, record):
         log_type = record.levelname

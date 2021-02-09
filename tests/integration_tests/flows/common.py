@@ -203,7 +203,7 @@ if USE_EXTERNAL_DB_SERVER:
         }
 
     config_json['permanent_storage'] = {
-        'bucket': 's3://mindsdb-cloud-storage-v1'
+        'bucket': 'mindsdb-cloud-storage-v1'
     }
 
 def make_test_csv(name, data):

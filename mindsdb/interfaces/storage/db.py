@@ -61,7 +61,7 @@ class Predictor(Base):
     to_predict = Column(String)
     status = Column(String)
     company_id = Column(Integer)
-    version = Column(Integer, default=entitiy_version)
+    version = Column(Integer, default=entitiy_version) # Mindsdb version, can be used in the future for BC
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
     is_custom = Column(Boolean)
 

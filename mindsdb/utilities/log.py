@@ -67,10 +67,7 @@ def initialize_log(config, logger_name='main', wrap_print=False):
     log_path = os.path.join(config.paths['log'], logger_name)
     if not os.path.isdir(log_path):
         os.mkdir(log_path)
-
-    fh.setLevel(config['log']['level']['file'])
-    fh.setFormatter(formatter)
-
+        
     if wrap_print:
         sys.stdout = LoggerWrapper(log.info)
 

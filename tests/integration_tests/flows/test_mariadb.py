@@ -85,6 +85,9 @@ class MariaDBTest(unittest.TestCase):
                         'publish': True
                     }
                 }
+                ,'permanent_storage': {
+                    'location': 's3'
+                }
             }
         )
 

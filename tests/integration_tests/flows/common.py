@@ -184,6 +184,8 @@ if USE_EXTERNAL_DB_SERVER:
     config_json['api']['mysql']['database'] = MINDSDB_DATABASE
     config_json['api']['mongodb']['database'] = MINDSDB_DATABASE
 
+    config_json['company_id'] = mindsdb_port
+
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())
     override = {}
@@ -196,9 +198,11 @@ if USE_EXTERNAL_DB_SERVER:
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', None)
     if AWS_SECRET_ACCESS_KEY is not None and AWS_ACCESS_KEY_ID is not None
         config_json['permanent_storage']['s3_credentials'] = {
-            'AWS_ACCESS_KEY_ID': AWS_ACCESS_KEY_ID,
-            'AWS_SECRET_ACCESS_KEY': AWS_SECRET_ACCESS_KEY
+            'aws_access_key_id': AWS_ACCESS_KEY_ID,
+            'aws_secret_access_key': AWS_SECRET_ACCESS_KEY
         }
+
+    config_json['permanent_storage']['bucket'] = 's3://mindsdb-cloud-storage-v1'
 
 def make_test_csv(name, data):
     test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()

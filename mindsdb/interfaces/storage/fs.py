@@ -17,8 +17,8 @@ class FsSotre():
         if self.location == 'local':
             pass
         elif self.location == 's3':
-            if 'credentials' in self.config['permanent_storage']:
-                self.s3 = boto3.client('s3', **self.config['permanent_storage']['credentials'])
+            if 's3_credentials' in self.config['permanent_storage']:
+                self.s3 = boto3.client('s3', **self.config['permanent_storage']['s3_credentials'])
             else:
                 self.s3 = boto3.client('s3')
             self.bucket = self.config['permanent_storage']['bucket']

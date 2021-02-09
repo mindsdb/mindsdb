@@ -60,6 +60,9 @@ class MongoTest(unittest.TestCase):
                         'password': ''
                     }
                 }
+                ,'permanent_storage': {
+                    'location': 's3'
+                }
             }
         )
 

@@ -3,6 +3,7 @@ import sys
 import logging
 import traceback
 import requests
+import datetime
 
 from mindsdb.interfaces.storage.db import session, Log
 
@@ -41,7 +42,7 @@ class DbHandler(logging.Handler):
             session.commit()
 
             try:
-                requests.get("https://public.api.mindsdb.com/error",timeout=1, params={
+                requests.get("https://public.api.mindsdb.com/error",timeout=0.4, params={
                     'log_type': 'traceback'
                     ,'source': source
                     ,'payload': trace
@@ -51,7 +52,7 @@ class DbHandler(logging.Handler):
                 pass
 
             try:
-                requests.get("https://public.api.mindsdb.com/error",timeout=1, params={
+                requests.get("https://public.api.mindsdb.com/error",timeout=0.4, params={
                     'log_type': log_type
                     ,'source': source
                     ,'payload': payload
@@ -63,6 +64,39 @@ class DbHandler(logging.Handler):
         log = Log(log_type=str(log_type), source=source, payload=str(payload), company_id=self.company_id)
         session.add(log)
         session.commit()
+
+def fmt_log_record(log_record):
+  return {
+    'log_from': 'mindsdb',
+    'level': log_record.log_type,
+    'context': 'unkown',
+    'text': log_record.payload,
+    'created_at': str(log_record.created_at).split('.')[0]
+  }
+
+def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit):
+    logs = Log.filter(company_id==self.company_id, created_at>min_timestamp)
+
+    if max_timestamp is not None:
+        logs = logs.filter(created_at<max_timestamp)
+
+    if context is not None:
+        # e.g. datasource/predictor and assoicated id
+        pass
+
+    if level is not None:
+        logs = logs.filter(log_type==level)
+
+    if log_from is not None:
+        # mindsdb/native/lightwood/all
+        pass
+
+    if limit is not None:
+        logs = logs.limit(limit)
+
+    logs = [fmt_log_record(x) for x in logs]
+    return logs
+
 
 def initialize_log(config, logger_name='main', wrap_print=False):
     ''' Create new logger

@@ -190,9 +190,9 @@ if USE_EXTERNAL_DB_SERVER:
     for key, value in credentials.items():
         value['publish'] = False
         value['type'] = key
-        override[f'default_{key}'] = value
-    config_json['integrations'].update(override)
+        config_json['integrations'][f'default_{key}'] = value
 
+    print(config_json)
 
 def make_test_csv(name, data):
     test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()

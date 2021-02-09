@@ -140,10 +140,10 @@ class ToggleTelemetry(Resource):
             return 'Disabled telemetry', 200
 
 @ns_conf.route('/install/<dependency>')
-@ns_conf.param('flag', 'Install dependencies')
+@ns_conf.param('dependency', 'Install dependencies')
 class InstallDependencies(Resource):
     @ns_conf.doc('check')
-    def get(self, flag):
+    def get(self, dependency):
         if dependency == 'snowflake':
             dependency = ['snowflake-connector-python[pandas]', 'asn1crypto==1.3.0']
         elif dependency == 'athena':
@@ -157,9 +157,11 @@ class InstallDependencies(Resource):
 
         try:
             sp = subprocess.Popen(['pip3', 'install', *dependency])
+            sp.wait()
         except:
             try:
                 sp = subprocess.Popen(['pip', 'install', *dependency])
+                sp.wait()
             except:
                 return 'Failed to install', 400
 

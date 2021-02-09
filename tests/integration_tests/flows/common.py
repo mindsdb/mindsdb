@@ -202,7 +202,9 @@ if USE_EXTERNAL_DB_SERVER:
             'aws_secret_access_key': AWS_SECRET_ACCESS_KEY
         }
 
-    config_json['permanent_storage']['bucket'] = 's3://mindsdb-cloud-storage-v1'
+    config_json['permanent_storage'] = {
+        'bucket': 's3://mindsdb-cloud-storage-v1'
+    }
 
 def make_test_csv(name, data):
     test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()

@@ -22,7 +22,7 @@ class DatabaseWrapper():
             if integration != True:
                 integration.setup()
         except Exception as e:
-            logger.warning('Failed to integrate with database ' + integration.name + f', error: {e}')
+            logger.warning('Failed to integrate with database ' + db_alias + f', error: {e}')
 
     def _get_integration(self, db_alias):
         if self.config['integrations'][db_alias]['publish']:

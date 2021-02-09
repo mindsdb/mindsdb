@@ -192,7 +192,13 @@ if USE_EXTERNAL_DB_SERVER:
         value['type'] = key
         config_json['integrations'][f'default_{key}'] = value
 
-    
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', None)
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', None)
+    if AWS_SECRET_ACCESS_KEY is not None and AWS_ACCESS_KEY_ID is not None
+        config_json['permanent_storage']['s3_credentials'] = {
+            'AWS_ACCESS_KEY_ID': AWS_ACCESS_KEY_ID,
+            'AWS_SECRET_ACCESS_KEY': AWS_SECRET_ACCESS_KEY
+        }
 
 def make_test_csv(name, data):
     test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()

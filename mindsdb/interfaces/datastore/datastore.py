@@ -80,9 +80,13 @@ class DataStore():
         return None
 
     def delete_datasource(self, name):
-        session.query(Datasource).filter_by(company_id=self.company_id, name=name).delete()
+        Datasource.query.filter_by(company_id=self.company_id, name=name).delete()
+        session.commit()
         self.fs_store.delete(f'datasource_{self.company_id}_{name}')
-        shutil.rmtree(os.path.join(self.dir, name))
+        try:
+            shutil.rmtree(os.path.join(self.dir, name))
+        except Exception:
+            pass
 
     def save_datasource(self, name, source_type, source, file_path=None):
         datasource_record = Datasource(company_id=self.company_id, name=name)

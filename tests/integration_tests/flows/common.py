@@ -192,7 +192,7 @@ if USE_EXTERNAL_DB_SERVER:
         value['type'] = key
         config_json['integrations'][f'default_{key}'] = value
 
-    print(config_json)
+    
 
 def make_test_csv(name, data):
     test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()

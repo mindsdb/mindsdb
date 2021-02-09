@@ -1,6 +1,7 @@
 import copy
 import traceback
 import datetime
+from dateutil.parser import parse as parse_datetime
 
 from flask import request
 from flask_restx import Resource, abort
@@ -20,7 +21,7 @@ def get_integration(name):
 class GetLogs(Resource):
     @ns_conf.doc('get_integrations')
     def get(self):
-        min_timestamp = request.args.get('min_timestamp', datetime.datetime.now() - datetime.timedelta(hours=3))
+        min_timestamp = parse_datetime(request.args['min_timestamp'])
         max_timestamp = request.args.get('max_timestamp', None)
         context = request.args.get('context', None)
         level = request.args.get('level', None)

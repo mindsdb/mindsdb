@@ -32,14 +32,15 @@ class DbHandler(logging.Handler):
         log_type = record.levelname
         source = f'file: {record.pathname} - line: {record.lineno}'
         payload = record.msg
-        log = Log(log_type=str(log_type), source=source, payload=str(payload), company_id=self.company_id)
-        session.add(log)
 
         if log_type in ['ERROR', 'WARNING']:
-            trace = traceback.print_stack(limit=30)
-            log = Log(log_type='traceback', source=source, payload=str(trace), company_id=self.company_id)
-            session.add(log)
+            trace = traceback.print_stack(limit=15)
+            trac_log = Log(log_type='traceback', source=source, payload=str(trace), company_id=self.company_id)
+            session.add(trac_log)
+            session.commit()
 
+        log = Log(log_type=str(log_type), source=source, payload=str(payload), company_id=self.company_id)
+        session.add(log)
         session.commit()
 
 def initialize_log(config, logger_name='main', wrap_print=False):
@@ -67,19 +68,11 @@ def initialize_log(config, logger_name='main', wrap_print=False):
     if not os.path.isdir(log_path):
         os.mkdir(log_path)
 
-    fh = logging.handlers.RotatingFileHandler(
-        os.path.join(log_path, 'log.txt'),
-        mode='a',
-        encoding='utf-8',
-        maxBytes=100 * 1024,
-        backupCount=3
-    )
     fh.setLevel(config['log']['level']['file'])
     fh.setFormatter(formatter)
-    log.addHandler(fh)
 
     if wrap_print:
-        sys.stdout = LoggerWrapper(log.error)
+        sys.stdout = LoggerWrapper(log.info)
 
 
 log = logging.getLogger('mindsdb')

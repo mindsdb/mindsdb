@@ -30,8 +30,6 @@ class GetLogs(Resource):
         logs = get_logs(min_timestamp, max_timestamp, context, level, log_from, limit)
         return {'data': logs}
 
-def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit)
-
 @ns_conf.route('/integrations')
 @ns_conf.param('name', 'List all database integration')
 class ListIntegration(Resource):

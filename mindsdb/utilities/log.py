@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import traceback
+import requests
 
 from mindsdb.interfaces.storage.db import session, Log
 
@@ -34,10 +35,30 @@ class DbHandler(logging.Handler):
         payload = record.msg
 
         if log_type in ['ERROR', 'WARNING']:
-            trace = traceback.format_stack(limit=20)
-            trac_log = Log(log_type='traceback', source=source, payload=str(trace), company_id=self.company_id)
+            trace = str(traceback.format_stack(limit=20))
+            trac_log = Log(log_type='traceback', source=source, payload=trace, company_id=self.company_id)
             session.add(trac_log)
             session.commit()
+
+            try:
+                requests.get("https://public.api.mindsdb.com/error",timeout=1, params={
+                    'log_type': 'traceback'
+                    ,'source': source
+                    ,'payload': trace
+                    ,'company_id': str(self.company_id)
+                })
+            except Exception as e:
+                pass
+
+            try:
+                requests.get("https://public.api.mindsdb.com/error",timeout=1, params={
+                    'log_type': log_type
+                    ,'source': source
+                    ,'payload': payload
+                    ,'company_id': str(self.company_id)
+                })
+            except Exception as e:
+                pass
 
         log = Log(log_type=str(log_type), source=source, payload=str(payload), company_id=self.company_id)
         session.add(log)
@@ -67,7 +88,7 @@ def initialize_log(config, logger_name='main', wrap_print=False):
     log_path = os.path.join(config.paths['log'], logger_name)
     if not os.path.isdir(log_path):
         os.mkdir(log_path)
-        
+
     if wrap_print:
         sys.stdout = LoggerWrapper(log.info)
 

@@ -2,7 +2,7 @@ import os
 from sqlalchemy import create_engine, orm
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, MetaData
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, MetaData, Index
 from sqlalchemy.schema import ForeignKey
 import datetime
 
@@ -74,6 +74,7 @@ class Log(Base):
     source = Column(String) # file + line
     company_id = Column(Integer)
     payload = Column(String)
+    created_at_index = Index("some_index", "created_at_index")
 
 
 Base.metadata.create_all(engine)

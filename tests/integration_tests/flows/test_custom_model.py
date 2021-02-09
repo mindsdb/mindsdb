@@ -89,7 +89,7 @@ class CustomModelTest(unittest.TestCase):
             )
         )
 
-    def test_2_put_external_ds(self):
+    def test_0_put_external_ds(self):
         params = {
             'name': EXTERNAL_DS_NAME,
             'query': f'select * from test_data.{TEST_DATA_TABLE} limit 50',

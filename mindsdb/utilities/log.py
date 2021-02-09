@@ -34,7 +34,7 @@ class DbHandler(logging.Handler):
         payload = record.msg
 
         if log_type in ['ERROR', 'WARNING']:
-            trace = traceback.print_stack(limit=15)
+            trace = traceback.format_stack(limit=20)
             trac_log = Log(log_type='traceback', source=source, payload=str(trace), company_id=self.company_id)
             session.add(trac_log)
             session.commit()

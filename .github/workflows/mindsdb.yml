@@ -28,6 +28,7 @@ jobs:
       run: |
           pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+          pip install boto3
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then

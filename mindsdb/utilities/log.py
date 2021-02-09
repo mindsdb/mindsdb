@@ -1,6 +1,9 @@
 import os
 import sys
 import logging
+import traceback
+
+from mindsdb.interfaces.storage.db import session, Datasource
 
 
 class LoggerWrapper(object):
@@ -20,6 +23,26 @@ class LoggerWrapper(object):
             self._writer(self._msg)
             self._msg = ''
 
+class DbHandler(logging.Handler):
+    def __init__(self):
+        logging.Handler.__init__(self)
+        self.config = Config()
+        self.company_id = self.config.company_id
+
+    def emit(self, record):
+        log_type = record.levelname
+        source = f'file: {record.pathname} - line: {record.lineno}'
+        payload = record.msg
+        self.state.record_log()
+        log = Log(log_type=str(log_type), source=source, payload=str(payload), company_id=self.company_id)
+        session.add(log)
+
+        if log_type in ['ERROR', 'WARNING']:
+            trace = traceback.print_stack(limit=30)
+            log = Log(log_type='traceback', source=source, payload=str(trace), company_id=self.company_id)
+            session.add(log)
+
+        session.commit()
 
 def initialize_log(config, logger_name='main', wrap_print=False):
     ''' Create new logger
@@ -39,6 +62,8 @@ def initialize_log(config, logger_name='main', wrap_print=False):
     ch = logging.StreamHandler()
     ch.setLevel(config['log']['level']['console'])       # that level will be in console
     log.addHandler(ch)
+    db_handler = DbHandler()
+    log.addHandler(db_handler)
 
     log_path = os.path.join(config.paths['log'], logger_name)
     if not os.path.isdir(log_path):

@@ -4,6 +4,7 @@ import logging
 import traceback
 
 from mindsdb.interfaces.storage.db import session, Datasource
+from mindsdb.utilities.config import Config
 
 
 class LoggerWrapper(object):
@@ -33,7 +34,6 @@ class DbHandler(logging.Handler):
         log_type = record.levelname
         source = f'file: {record.pathname} - line: {record.lineno}'
         payload = record.msg
-        self.state.record_log()
         log = Log(log_type=str(log_type), source=source, payload=str(payload), company_id=self.company_id)
         session.add(log)
 

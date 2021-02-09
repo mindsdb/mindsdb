@@ -56,12 +56,12 @@ class Predictor(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
-    data = Column(String) # A JSON
+    data = Column(String) # A JSON -- should be everything returned by `get_model_data`, I think
     native_version = Column(String)
     to_predict = Column(String)
     status = Column(String)
     company_id = Column(Integer)
-    version = Column(Integer, default=entitiy_version) # Mindsdb version, can be used in the future for BC
+    version = Column(Integer, default=entitiy_version) # mindsdb_native version, can be used in the future for BC
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
     is_custom = Column(Boolean)
 

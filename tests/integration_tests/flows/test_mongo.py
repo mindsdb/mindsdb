@@ -1,18 +1,19 @@
 import unittest
 import csv
 from pathlib import Path
+import json
 
 from pymongo import MongoClient
 
-from legacy_config import Config
 from common import (
     USE_EXTERNAL_DB_SERVER,
     DATASETS_COLUMN_TYPES,
     check_prediction_values,
-    TEST_CONFIG,
     run_environment,
     open_ssh_tunnel,
-    DATASETS_PATH
+    DATASETS_PATH,
+    CONFIG_PATH,
+    MINDSDB_DATABASE
 )
 
 from mindsdb.utilities.ps import wait_port
@@ -40,30 +41,33 @@ TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
-config = Config(TEST_CONFIG)
-
-MINDSDB_DATABASE = f"mindsdb_{config['api']['mongodb']['port']}" if USE_EXTERNAL_DB_SERVER else 'mindsdb'
+config = {}
 
 
 class MongoTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment(
-            config,
+        run_environment(
             apis=['mongodb'],
-            override_integration_config={
-                'default_mongodb': {
-                    'publish': True,
-                    'port': 27002,
-                    'host': '127.0.0.1',
-                    'type': 'mongodb',
-                    'user': '',
-                    'password': ''
+            override_config={
+                'integrations': {
+                    'default_mongodb': {
+                        'publish': True,
+                        'port': 27002,
+                        'host': '127.0.0.1',
+                        'type': 'mongodb',
+                        'user': '',
+                        'password': ''
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE
+            }
         )
-        cls.mdb = mdb
+
+        config.update(
+            json.loads(
+                Path(CONFIG_PATH).read_text()
+            )
+        )
 
         if USE_EXTERNAL_DB_SERVER:
             open_ssh_tunnel(27002, direction='L')   # 27002 - mongos port
@@ -76,11 +80,6 @@ class MongoTest(unittest.TestCase):
         except Exception:
             # its ok if shard not exiss
             pass
-
-        models = cls.mdb.get_models()
-        models = [x['name'] for x in models]
-        if TEST_PREDICTOR_NAME in models:
-            cls.mdb.delete_model(TEST_PREDICTOR_NAME)
 
         if not USE_EXTERNAL_DB_SERVER:
             test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')

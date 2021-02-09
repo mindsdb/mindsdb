@@ -56,9 +56,12 @@ os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
 if 'storage_dir' in user_config:
     root_storage_dir = user_config['storage_dir']
+    os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+elif os.environ.get('MINDSDB_STORAGE_DIR') is not None:
+    root_storage_dir = os.environ['MINDSDB_STORAGE_DIR']
 else:
     _, root_storage_dir = get_or_create_dir_struct()
-os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+    os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
 
 if os.path.isdir(root_storage_dir) is False:
     os.makedirs(root_storage_dir)
@@ -80,7 +83,6 @@ create_dirs_recursive(mindsdb_config['paths'])
 
 os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')
 os.environ['LIGHTWOOD_LOG_LEVEL'] = os.environ.get('LIGHTWOOD_LOG_LEVEL', 'ERROR')
-os.environ['MINDSDB_CONFIG_PATH'] = config_path
 os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config['paths']['predictors']
 
 from mindsdb_native import *

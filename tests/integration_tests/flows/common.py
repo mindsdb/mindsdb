@@ -4,7 +4,6 @@ import json
 import subprocess
 import atexit
 import asyncio
-import shutil
 import csv
 import re
 import sys
@@ -13,13 +12,7 @@ from pathlib import Path
 import requests
 from pandas import DataFrame
 
-import mindsdb
-from mindsdb.utilities.fs import create_dirs_recursive
-from legacy_config import Config
-from mindsdb.interfaces.native.native import NativeInterface
-from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.utilities.ps import wait_port, is_port_in_use, net_connections
-from mindsdb_native import CONFIG
+from ps import wait_port, is_port_in_use, net_connections
 
 
 HTTP_API_ROOT = 'http://localhost:47334/api'
@@ -101,42 +94,21 @@ DATASETS_COLUMN_TYPES = {
     ]
 }
 
+CONFIG_PATH = TEMP_DIR.joinpath('config.json')
 
-def prepare_config(config, mindsdb_database='mindsdb', override_integration_config={}, override_api_config={}, clear_storage=True):
-    for key in config._config['integrations']:
-        config._config['integrations'][key]['publish'] = False
+with open(TEST_CONFIG, 'rt') as f:
+    config_json = json.loads(f.read())
+    config_json['storage_dir'] = str(TEMP_DIR)
 
-    if USE_EXTERNAL_DB_SERVER:
-        with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
-            cred = json.loads(f.read())
-            for key in cred:
-                if f'default_{key}' in config._config['integrations']:
-                    config._config['integrations'][f'default_{key}'].update(cred[key])
 
-    for integration in override_integration_config:
-        if integration in config._config['integrations']:
-            config._config['integrations'][integration].update(override_integration_config[integration])
-        else:
-            config._config['integrations'][integration] = override_integration_config[integration]
+def prepare_mindsdb():
+    os.environ['CHECK_FOR_UPDATES'] = '0'
+    os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
+    os.environ['MINDSDB_STORAGE_DIR'] = str(TEMP_DIR)
+    import mindsdb
 
-    for api in override_api_config:
-        config._config['api'][api].update(override_api_config[api])
 
-    config['api']['mysql']['database'] = mindsdb_database
-    config['api']['mongodb']['database'] = mindsdb_database
-
-    storage_dir = TEMP_DIR.joinpath('storage')
-    if storage_dir.is_dir() and clear_storage:
-        shutil.rmtree(str(storage_dir))
-    config._config['storage_dir'] = str(storage_dir)
-
-    create_dirs_recursive(config.paths)
-
-    temp_config_path = str(TEMP_DIR.joinpath('config.json').resolve())
-    with open(temp_config_path, 'wt') as f:
-        json.dump(config._config, f, indent=4, sort_keys=True)
-
-    return temp_config_path
+prepare_mindsdb()
 
 
 def close_all_ssh_tunnels():
@@ -188,7 +160,6 @@ def is_mssql_test():
 
 
 if USE_EXTERNAL_DB_SERVER:
-    config = Config(TEST_CONFIG)
     open_ssh_tunnel(5005, 'L')
     wait_port(5005, timeout=10)
 
@@ -206,17 +177,21 @@ if USE_EXTERNAL_DB_SERVER:
         raise Exception('Cant get empty port to run mindsdb')
 
     print(f'use mindsdb port={mindsdb_port}')
-    config._config['api']['mysql']['port'] = mindsdb_port
-    config._config['api']['mongodb']['port'] = mindsdb_port
+    config_json['api']['mysql']['port'] = mindsdb_port
+    config_json['api']['mongodb']['port'] = mindsdb_port
 
     MINDSDB_DATABASE = f'mindsdb_{mindsdb_port}'
+    config_json['api']['mysql']['database'] = MINDSDB_DATABASE
+    config_json['api']['mongodb']['database'] = MINDSDB_DATABASE
 
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())
     override = {}
     for key, value in credentials.items():
+        value['publish'] = False
+        value['type'] = key
         override[f'default_{key}'] = value
-    TEST_CONFIG = prepare_config(config, override_integration_config=override)
+    config_json['integrations'].update(override)
 
 
 def make_test_csv(name, data):
@@ -242,13 +217,26 @@ def stop_mindsdb(sp=None):
             pass
 
 
-def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb', clear_storage=True):
-    temp_config_path = prepare_config(config, mindsdb_database, override_integration_config, override_api_config, clear_storage)
-    config = Config(temp_config_path)
+def override_recursive(a, b):
+    for key in b:
+        if isinstance(b[key], dict) is False:
+            a[key] = b[key]
+        elif key not in a or isinstance(a[key], dict) is False:
+            a[key] = b[key]
+        else:
+            override_recursive(a[key], b[key])
 
+
+def run_environment(apis, override_config={}):
     api_str = ','.join(apis)
+
+    override_recursive(config_json, override_config)
+
+    with open(CONFIG_PATH, 'wt') as f:
+        f.write(json.dumps(config_json))
+
     sp = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path, '--verbose'],
+        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', CONFIG_PATH, '--verbose'],
         close_fds=True,
         stdout=OUTPUT,
         stderr=OUTPUT
@@ -270,7 +258,7 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
             success = success and await future
         return success
 
-    ports_to_wait = [config['api'][api]['port'] for api in apis]
+    ports_to_wait = [config_json['api'][api]['port'] for api in apis]
 
     ioloop = asyncio.get_event_loop()
     if ioloop.is_closed():
@@ -279,12 +267,6 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
     ioloop.close()
     if not success:
         raise Exception('Cant start mindsdb apis')
-
-    CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
-    mdb = NativeInterface(config)
-    datastore = DataStore(config)
-
-    return mdb, datastore
 
 
 def upload_csv(query, columns_map, db_types_map, table_name, csv_path, escape='`', template=None):

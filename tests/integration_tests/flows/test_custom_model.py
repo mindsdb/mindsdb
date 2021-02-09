@@ -3,21 +3,16 @@ import shutil
 import requests
 from pathlib import Path
 import textwrap
+import json
 
 import mysql.connector
 
-from legacy_config import Config
-
 from common import (
-    USE_EXTERNAL_DB_SERVER,
-    DATASETS_COLUMN_TYPES,
     MINDSDB_DATABASE,
-    DATASETS_PATH,
-    TEST_CONFIG,
+    CONFIG_PATH,
     TEMP_DIR,
-    run_environment,
-    make_test_csv,
-    upload_csv
+    HTTP_API_ROOT,
+    run_environment
 )
 
 # +++ define test data
@@ -45,15 +40,17 @@ TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
-config = Config(TEST_CONFIG)
+INTEGRATION_NAME = 'default_mariadb'
+
+config = {}
 
 
 def query(q, as_dict=False, fetch=False):
     con = mysql.connector.connect(
-        host=config['integrations']['default_mariadb']['host'],
-        port=config['integrations']['default_mariadb']['port'],
-        user=config['integrations']['default_mariadb']['user'],
-        passwd=config['integrations']['default_mariadb']['password'],
+        host=config['integrations'][INTEGRATION_NAME]['host'],
+        port=config['integrations'][INTEGRATION_NAME]['port'],
+        user=config['integrations'][INTEGRATION_NAME]['user'],
+        passwd=config['integrations'][INTEGRATION_NAME]['password'],
         db=MINDSDB_DATABASE,
         connect_timeout=1000
     )
@@ -75,45 +72,43 @@ def fetch(q, as_dict=True):
 class CustomModelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment(
-            config,
-            apis=['http', 'mysql'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
+        run_environment(
+            apis=['mysql', 'http'],
+            override_config={
+                'integrations': {
+                    INTEGRATION_NAME: {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE
+            }
         )
-        cls.mdb = mdb
 
-        models = cls.mdb.get_models()
-        models = [x['name'] for x in models]
-        if TEST_PREDICTOR_NAME in models:
-            cls.mdb.delete_model(TEST_PREDICTOR_NAME)
+        config.update(
+            json.loads(
+                Path(CONFIG_PATH).read_text()
+            )
+        )
 
-        if not USE_EXTERNAL_DB_SERVER:
-            query('create database if not exists test_data')
-            test_tables = fetch('show tables from test_data', as_dict=False)
-            test_tables = [x[0] for x in test_tables]
+    def test_2_put_external_ds(self):
+        params = {
+            'name': EXTERNAL_DS_NAME,
+            'query': f'select * from test_data.{TEST_DATA_TABLE} limit 50',
+            'integration_id': INTEGRATION_NAME
+        }
 
-            if TEST_DATA_TABLE not in test_tables:
-                test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
-                upload_csv(
-                    query=query,
-                    columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
-                    db_types_map=DB_TYPES_MAP,
-                    table_name=TEST_DATA_TABLE,
-                    csv_path=test_csv_path
-                )
+        url = f'{HTTP_API_ROOT}/datasources/{EXTERNAL_DS_NAME}'
+        res = requests.put(url, json=params)
+        self.assertTrue(res.status_code == 200)
+        ds_data = res.json()
 
-        ds = datastore.get_datasource(EXTERNAL_DS_NAME)
-        if ds is not None:
-            datastore.delete_datasource(EXTERNAL_DS_NAME)
+        self.assertTrue(ds_data['source_type'] == INTEGRATION_NAME)
+        self.assertTrue(ds_data['row_count'] == 50)
 
-        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50')
-        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
+        url = f'{HTTP_API_ROOT}/datasources'
+        res = requests.get(url)
+        self.assertTrue(res.status_code == 200)
+        ds_data = res.json()
+        self.assertTrue(len(ds_data) == 1)
 
     def test_1_simple_model_upload(self):
         model_dir = TEMP_DIR.joinpath('test_custom_model/')

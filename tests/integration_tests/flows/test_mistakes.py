@@ -3,12 +3,8 @@ import requests
 import asyncio
 import time
 
-from legacy_config import Config
-
 from common import (
-    MINDSDB_DATABASE,
     HTTP_API_ROOT,
-    TEST_CONFIG,
     run_environment,
     stop_mindsdb
 )
@@ -16,7 +12,6 @@ from common import (
 from http_test_helpers import (
     wait_predictor_learn,
     check_predictor_not_exists,
-    check_ds_not_exists,
     check_ds_exists
 )
 
@@ -39,8 +34,6 @@ EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'
 TEST_PREDICTOR = 'test_predictor'
-
-config = Config(TEST_CONFIG)
 
 
 class MistakesTest_1(unittest.TestCase):
@@ -90,15 +83,15 @@ class MistakesTest_1(unittest.TestCase):
         '''
         stop mindsdb while analyse dataset
         '''
-        self.mdb, datastore = run_environment(
-            config,
+        run_environment(
             apis=['mysql', 'http'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True,
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE
+            }
         )
 
         data = {
@@ -114,16 +107,15 @@ class MistakesTest_1(unittest.TestCase):
 
         stop_mindsdb()
 
-        self.mdb, datastore = run_environment(
-            config,
+        run_environment(
             apis=['mysql', 'http'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE,
-            clear_storage=False
+            }
         )
 
         check_ds_exists(TEST_DS)
@@ -154,16 +146,15 @@ class MistakesTest_1(unittest.TestCase):
 
         stop_mindsdb()
 
-        self.mdb, datastore = run_environment(
-            config,
+        run_environment(
             apis=['mysql', 'http'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE,
-            clear_storage=False
+            }
         )
 
         # TODO add after this issue will be closed: https://github.com/mindsdb/mindsdb/issues/948
@@ -196,16 +187,15 @@ class MistakesTest_1(unittest.TestCase):
         stop_mindsdb()
         ioloop.close()
 
-        self.mdb, datastore = run_environment(
-            config,
+        run_environment(
             apis=['mysql', 'http'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE,
-            clear_storage=False
+            }
         )
 
         res = requests.post(

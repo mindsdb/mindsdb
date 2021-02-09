@@ -1,22 +1,18 @@
 import unittest
 import inspect
 from pathlib import Path
+import json
+import requests
 
 import pg8000
 
-from legacy_config import Config
-
 from common import (
-    USE_EXTERNAL_DB_SERVER,
-    DATASETS_COLUMN_TYPES,
     MINDSDB_DATABASE,
-    DATASETS_PATH,
     check_prediction_values,
     condition_dict_to_str,
     run_environment,
-    make_test_csv,
-    TEST_CONFIG,
-    upload_csv
+    CONFIG_PATH,
+    HTTP_API_ROOT
 )
 
 # +++ define test data
@@ -43,13 +39,15 @@ TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
-config = Config(TEST_CONFIG)
+INTEGRATION_NAME = 'default_postgres'
+
+config = {}
 
 to_predict_column_names = list(TO_PREDICT.keys())
 
 
 def query(query, fetch=False):
-    integration = config['integrations']['default_postgres']
+    integration = config['integrations'][INTEGRATION_NAME]
     con = pg8000.connect(
         database=integration.get('database', 'postgres'),
         user=integration['user'],
@@ -84,65 +82,60 @@ class PostgresTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment(
-            config,
-            apis=['mysql'],
-            override_integration_config={
-                'default_postgres': {
-                    'publish': True
+        run_environment(
+            apis=['mysql', 'http'],
+            override_config={
+                'integrations': {
+                    INTEGRATION_NAME: {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE
+            }
         )
-        cls.mdb = mdb
 
-        models = cls.mdb.get_models()
-        models = [x['name'] for x in models]
-        if TEST_PREDICTOR_NAME in models:
-            cls.mdb.delete_model(TEST_PREDICTOR_NAME)
-
-        query('create schema if not exists test_data')
-
-        if not USE_EXTERNAL_DB_SERVER:
-            test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
-
-            if TEST_DATA_TABLE not in cls.get_tables_in(cls, 'test_data'):
-                print('creating test data table...')
-                upload_csv(
-                    query=query,
-                    columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
-                    db_types_map=DB_TYPES_MAP,
-                    table_name=TEST_DATA_TABLE,
-                    csv_path=test_csv_path,
-                    escape='"'
-                )
-
-        ds = datastore.get_datasource(EXTERNAL_DS_NAME)
-        if ds is not None:
-            datastore.delete_datasource(EXTERNAL_DS_NAME)
-
-        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50')
-        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
+        config.update(
+            json.loads(
+                Path(CONFIG_PATH).read_text()
+            )
+        )
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-        print('Check all testing objects not exists')
 
-        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
-        models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(TEST_PREDICTOR_NAME not in models)
-
-        print('Test datasource exists')
         self.assertTrue(TEST_DATA_TABLE in self.get_tables_in('test_data'))
 
         mindsdb_tables = self.get_tables_in(MINDSDB_DATABASE)
 
-        self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
+        self.assertTrue(len(mindsdb_tables) == 2)
         self.assertTrue('predictors' in mindsdb_tables)
         self.assertTrue('commands' in mindsdb_tables)
 
-    def test_2_insert_predictor(self):
+        data = fetch(f'select * from {MINDSDB_DATABASE}.predictors;')
+        self.assertTrue(len(data) == 0)
+
+    def test_2_put_external_ds(self):
+        print(f'\nExecuting {inspect.stack()[0].function}')
+        params = {
+            'name': EXTERNAL_DS_NAME,
+            'query': f'select * from test_data.{TEST_DATA_TABLE} limit 50',
+            'integration_id': INTEGRATION_NAME
+        }
+
+        url = f'{HTTP_API_ROOT}/datasources/{EXTERNAL_DS_NAME}'
+        res = requests.put(url, json=params)
+        self.assertTrue(res.status_code == 200)
+        ds_data = res.json()
+
+        self.assertTrue(ds_data['source_type'] == INTEGRATION_NAME)
+        self.assertTrue(ds_data['row_count'] == 50)
+
+        url = f'{HTTP_API_ROOT}/datasources'
+        res = requests.get(url)
+        self.assertTrue(res.status_code == 200)
+        ds_data = res.json()
+        self.assertTrue(len(ds_data) == 1)
+
+    def test_3_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
             insert into {MINDSDB_DATABASE}.predictors (name, predict, select_data_query, training_options) values
@@ -162,12 +155,8 @@ class PostgresTest(unittest.TestCase):
         print('predictor table in mindsdb db')
         self.assertTrue(TEST_PREDICTOR_NAME in self.get_tables_in(MINDSDB_DATABASE))
 
-    def test_3_externael_ds(self):
+    def test_4_externael_ds(self):
         name = f'{TEST_PREDICTOR_NAME}_external'
-        models = self.mdb.get_models()
-        models = [x['name'] for x in models]
-        if name in models:
-            self.mdb.delete_model(name)
 
         query(f"""
             insert into {MINDSDB_DATABASE}.predictors (name, predict, external_datasource, training_options) values
@@ -201,7 +190,7 @@ class PostgresTest(unittest.TestCase):
         for r in res:
             self.assertTrue(check_prediction_values(r, TO_PREDICT))
 
-    def test_4_query_predictor(self):
+    def test_5_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         res = fetch(f"""
             select
@@ -216,7 +205,7 @@ class PostgresTest(unittest.TestCase):
         self.assertTrue(len(res) == 1)
         self.assertTrue(check_prediction_values(res[0], TO_PREDICT))
 
-    def test_5_range_query(self):
+    def test_6_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         res = fetch(f"""
@@ -232,18 +221,13 @@ class PostgresTest(unittest.TestCase):
         for r in res:
             self.assertTrue(check_prediction_values(r, TO_PREDICT))
 
-    def test_6_delete_predictor_by_command(self):
+    def test_7_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
             insert into {MINDSDB_DATABASE}.commands values ('delete predictor {TEST_PREDICTOR_NAME}');
         """)
 
-        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
-        models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(TEST_PREDICTOR_NAME not in models)
-
-        print('Test predictor table not exists')
         self.assertTrue(TEST_PREDICTOR_NAME not in self.get_tables_in(MINDSDB_DATABASE))
 
 

@@ -14,11 +14,8 @@ from mindsdb.interfaces.storage.fs import FsSotre
 
 
 class DataStore():
-    def __init__(self, config=None):
-        if config is None:
-            self.config = Config()
-        else:
-            self.config = config
+    def __init__(self):
+        self.config = Config()
 
         self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)

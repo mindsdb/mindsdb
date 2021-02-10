@@ -12,13 +12,12 @@ from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 from mindsdb.interfaces.native.learn_process import LearnProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.storage.db import session, Predictor
+
 
 class NativeInterface():
-    def __init__(self, config=None):
-        if config is None:
-            self.config = Config()
-        else:
-            self.config = config
+    def __init__(self):
+        self.config = Config()
         self.dbw = DatabaseWrapper()
         self.predictor_cache = {}
 

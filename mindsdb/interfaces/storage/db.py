@@ -1,4 +1,6 @@
 import os
+import json
+
 from sqlalchemy import create_engine, orm
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -15,6 +17,32 @@ Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine,autoflush=True))
 Base.query = session.query_property()
 entitiy_version = 1
+
+
+class Array(sqlalchemy.types.TypeDecorator):
+    ''' Float Type that replaces commas with  dots on input '''
+    impl = types.String
+    def process_bind_param(self, value, dialect):  # insert
+        return ',|,|,'.join(str(value)) if value is not None else None
+    def process_result_value(self, value, dialect):  # select
+        return value.split(',|,|,') if value is not None else None
+
+class Json(sqlalchemy.types.TypeDecorator):
+    ''' Float Type that replaces commas with  dots on input '''
+    impl = types.String
+    def process_bind_param(self, value, dialect):  # insert
+        return json.dumps(value) if value is not None else None
+    def process_result_value(self, value, dialect):  # select
+        return json.loads(value) if value is not None else None
+
+
+class Array(types.TypeDecorator):
+    ''' Float Type that replaces commas with  dots on input '''
+    impl = types.String
+    def process_bind_param(self, value, dialect):  # insert
+        return ',|,|,'.join(str(value))
+    def process_result_value(self, value, dialect):  # select
+        return value.split(',|,|,')
 
 class Semaphor(Base):
     __tablename__ = 'semaphor'

@@ -28,6 +28,19 @@ class LearnProcess(ctx.Process):
 
         predictor_record = .query.filter_by(company_id=company_id, name=name)
 
+        id = Column(Integer, primary_key=True)
+        updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+        created_at = Column(DateTime, default=datetime.datetime.now)
+        name = Column(String)
+        data = Column(String) # A JSON -- should be everything returned by `get_model_data`, I think
+        native_version = Column(String)
+        to_predict = Column(String)
+        status = Column(String)
+        company_id = Column(Integer)
+        version = Column(Integer, default=entitiy_version) # mindsdb_native version, can be used in the future for BC
+        datasource_id = Column(Integer, ForeignKey('datasource.id'))
+        is_custom = Column(Boolean)
+
         name, from_data, to_predict, kwargs, config = self._args
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 

@@ -38,6 +38,9 @@ class NativeInterface():
 
         predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
         create_directory(predictor_dir)
+        predictor_record = Predictor(company_id=self.company_id, name=name)
+        session.add(predictor_record)
+        session.commit()
 
     def create(self, name):
         self._setup_for_creation(name)

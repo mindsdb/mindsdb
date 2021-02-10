@@ -43,6 +43,7 @@ class DataStore():
                 datasource['created_at'] = datasource_record.created_at
                 datasource['updated_at'] = datasource_record.updated_at
                 datasource['name'] = datasource_record.name
+                datasource['id'] = datasource_record.id
                 datasource_arr.append(datasource)
             except Exception as e:
                 print(e)

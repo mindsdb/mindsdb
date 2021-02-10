@@ -2,6 +2,7 @@ import torch.multiprocessing as mp
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.os_specific import get_mp_context
+from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
 
 
@@ -24,6 +25,8 @@ class LearnProcess(ctx.Process):
 
         fs_store = FsSotre()
         company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+
+        predictor_record = .query.filter_by(company_id=company_id, name=name)
 
         name, from_data, to_predict, kwargs, config = self._args
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})

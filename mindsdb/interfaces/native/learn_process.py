@@ -33,7 +33,10 @@ class LearnProcess(ctx.Process):
         predictor_record = Predictor.query.filter_by(company_id=company_id, name=name)
         predictor_record.to_predict = to_predict
         predictor_record.version = mindsdb_native.__version__
-        predictor_record.data = mindsdb_native.F.get_model_data(name)
+        predictor_record.data = {
+            'name': name,
+            'status': 'training'
+        }
         #predictor_record.datasource_id = ... <-- can be done once `learn` is passed a datasource name
         session.commit()
 
@@ -44,9 +47,7 @@ class LearnProcess(ctx.Process):
             to_predict=to_predict,
             **kwargs
         )
-        print('\n\n\n', os.environ['MINDSDB_STORAGE_PATH'], '\n\n\n')
-        print('\n\n\n', config['paths']['predictors'], '\n\n\n')
-        self.fs_store.put(name, f'predictor_{company_id}_{name}', config['paths']['predictors'])
+        fs_store.put(name, f'predictor_{company_id}_{name}', config['paths']['predictors'])
 
         model_data = mindsdb_native.F.get_model_data(name)
 

@@ -175,6 +175,7 @@ class CustomModels():
             ,'predict': model.to_predict
             ,'status': trained_status
             ,'is_custom': True
+            ,'columns': list(model.column_type_map.keys())
         })
 
         with open(os.path.join(self._dir(name), '__init__.py') , 'w') as fp:

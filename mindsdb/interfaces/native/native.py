@@ -46,8 +46,8 @@ class NativeInterface():
     def create(self, name):
         self._setup_for_creation(name)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name)
-        predictor_record.data = mindsdb_native.F.get_model_data(name)
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        #predictor_record.data = mindsdb_native.F.get_model_data(name)
         session.commit()
         return predictor
 
@@ -71,7 +71,7 @@ class NativeInterface():
             if psutil.virtual_memory().available < 1.2 * pow(10,9):
                 self.predictor_cache = {}
 
-            predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name)
+            predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
             if predictor_record.data['status'] == 'complete':
                 self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
@@ -91,9 +91,18 @@ class NativeInterface():
         return F.analyse_dataset(ds)
 
     def get_model_data(self, name, db_fix=True):
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name)
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
         model = predictor_record.data
+        if model is None or model['status'] == 'training':
+            self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
+            model = mindsdb_native.F.get_model_data(name)
+            predictor_record.data = model
+            session.commit()
 
+        predictor_record.data = {
+            'name': name,
+            'status': 'training'
+        }
         # Make some corrections for databases not to break when dealing with empty columns
         if db_fix:
             data_analysis = model['data_analysis_v2']

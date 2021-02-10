@@ -1,6 +1,7 @@
 import os
 import json
 
+import numpy as np
 from sqlalchemy import create_engine, orm, types
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -18,6 +19,17 @@ session = scoped_session(sessionmaker(bind=engine,autoflush=True))
 Base.query = session.query_property()
 entitiy_version = 1
 
+# Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
+class NumpyEncoder(json.JSONEncoder):
+    """ Special json encoder for numpy types """
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 class Array(types.TypeDecorator):
     ''' Float Type that replaces commas with  dots on input '''
@@ -31,7 +43,7 @@ class Json(types.TypeDecorator):
     ''' Float Type that replaces commas with  dots on input '''
     impl = types.String
     def process_bind_param(self, value, dialect):  # insert
-        return json.dumps(value) if value is not None else None
+        return json.dumps(value, cls=NumpyEncoder) if value is not None else None
     def process_result_value(self, value, dialect):  # select
         return json.loads(value) if value is not None else None
 

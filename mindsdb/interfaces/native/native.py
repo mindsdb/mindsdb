@@ -38,13 +38,17 @@ class NativeInterface():
 
         predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
         create_directory(predictor_dir)
-        predictor_record = Predictor(company_id=self.company_id, name=name)
+        predictor_record = Predictor(company_id=self.company_id, name=name, is_custom=False)
+
         session.add(predictor_record)
         session.commit()
 
     def create(self, name):
         self._setup_for_creation(name)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name)
+        predictor_record.data = mindsdb_native.F.get_model_data(name)
+        session.commit()
         return predictor
 
     def learn(self, name, from_data, to_predict, kwargs={}):
@@ -67,7 +71,9 @@ class NativeInterface():
             if psutil.virtual_memory().available < 1.2 * pow(10,9):
                 self.predictor_cache = {}
 
-            if F.get_model_data(name)['status'] == 'complete':
+            predictor_record = Predictor.query.filter_by(company_id=company_id, name=name)
+            if predictor_record.data['status'] == 'complete':
+                self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
                     'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
                     'created': datetime.datetime.now()
@@ -84,7 +90,8 @@ class NativeInterface():
         return F.analyse_dataset(ds)
 
     def get_model_data(self, name, db_fix=True):
-        model = F.get_model_data(name)
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name)
+        model = predictor_record.data
 
         # Make some corrections for databases not to break when dealing with empty columns
         if db_fix:
@@ -101,10 +108,7 @@ class NativeInterface():
     def get_models(self):
         models = []
         predictors = [
-            x for x in Path(self.config.paths['predictors']).iterdir() if
-                x.is_dir()
-                and x.joinpath('light_model_metadata.pickle').is_file()
-                and x.joinpath('heavy_model_metadata.pickle').is_file()
+            x.name for x in Predictor.query.filter_by(company_id=company_id, is_custom=False)
         ]
         for p in predictors:
             model_name = p.name
@@ -135,17 +139,30 @@ class NativeInterface():
         return models
 
     def delete_model(self, name):
+        Predictor.query.filter_by(company_id=company_id, name=name).first().delete()
+        session.commit()
         F.delete_model(name)
+        self.fs_store.delete(f'predictor_{self.company_id}_{name}')
         self.dbw.unregister_predictor(name)
 
+    # @TODO: Remove this option, to complicate given that storage is indexes by name+comapny ... can be reintorduced when we switch to IDs
     def rename_model(self, name, new_name):
         self.dbw.unregister_predictor(self.get_model_data(name))
         F.rename_model(name, new_name)
         self.dbw.register_predictors(self.get_model_data(new_name))
 
     def load_model(self, fpath):
+        self._setup_for_creation()
         name = F.import_model(model_archive_path=fpath)
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name)
+        name, from_data, to_predict, kwargs, _ = self._args
+        predictor_record.to_predict = to_predict
+        predictor_record.version = mindsdb_native.__version__
+        predictor_record.data = mindsdb_native.F.get_model_data(name)
+        self.fs_store.put(name, f'predictor_{company_id}_{name}', config['paths']['predictors'])
+        session.commit()
         self.dbw.register_predictors(self.get_model_data(name), setup=False)
 
     def export_model(self, name):
+        self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
         F.export_predictor(model_name=name)

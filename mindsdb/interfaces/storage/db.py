@@ -35,15 +35,6 @@ class Json(sqlalchemy.types.TypeDecorator):
     def process_result_value(self, value, dialect):  # select
         return json.loads(value) if value is not None else None
 
-
-class Array(types.TypeDecorator):
-    ''' Float Type that replaces commas with  dots on input '''
-    impl = types.String
-    def process_bind_param(self, value, dialect):  # insert
-        return ',|,|,'.join(str(value))
-    def process_result_value(self, value, dialect):  # select
-        return value.split(',|,|,')
-
 class Semaphor(Base):
     __tablename__ = 'semaphor'
 
@@ -84,10 +75,8 @@ class Predictor(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
-    data = Column(String) # A JSON -- should be everything returned by `get_model_data`, I think
-    native_version = Column(String)
-    to_predict = Column(String)
-    status = Column(String)
+    data = Column(Json) # A JSON -- should be everything returned by `get_model_data`, I think
+    to_predict = Column(Array)
     company_id = Column(Integer)
     version = Column(Integer, default=entitiy_version) # mindsdb_native version, can be used in the future for BC
     datasource_id = Column(Integer, ForeignKey('datasource.id'))

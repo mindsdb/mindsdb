@@ -117,11 +117,10 @@ class NativeInterface():
 
     def get_models(self):
         models = []
-        predictors = [
+        predictor_names = [
             x.name for x in Predictor.query.filter_by(company_id=self.company_id, is_custom=False)
         ]
-        for p in predictors:
-            model_name = p.name
+        for model_name in predictor_names:
             try:
                 model_data = self.get_model_data(model_name, db_fix=False)
                 if model_data['status'] == 'training' and parse_datetime(model_data['created_at']) < parse_datetime(self.config['mindsdb_last_started_at']):

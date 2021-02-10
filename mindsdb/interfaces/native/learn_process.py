@@ -23,13 +23,13 @@ class LearnProcess(ctx.Process):
         '''
         import mindsdb_native
 
-        # fs_store = FsSotre()
-        # company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        fs_store = FsSotre()
+        company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        name, from_data, to_predict, kwargs, _ = self._args
 
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         predictor_record = Predictor.query.filter_by(company_id=company_id, name=name)
-        name, from_data, to_predict, kwargs, _ = self._args
         predictor_record.to_predict = to_predict
         predictor_record.version = mindsdb_native.__version__
         predictor_record.data = mindsdb_native.F.get_model_data(name)

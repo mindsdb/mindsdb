@@ -5,11 +5,11 @@ import inspect
 from pathlib import Path
 
 from common import (
-    HTTP_API_ROOT,
     MINDSDB_DATABASE,
+    HTTP_API_ROOT,
+    CONFIG_PATH,
     condition_dict_to_str,
-    run_environment,
-    CONFIG_PATH
+    run_environment
 )
 
 # +++ define test data

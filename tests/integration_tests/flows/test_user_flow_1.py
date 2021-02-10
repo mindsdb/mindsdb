@@ -5,19 +5,11 @@ import json
 
 import mysql.connector
 
-# from legacy_config import Config
-
 from common import (
-    USE_EXTERNAL_DB_SERVER,
-    DATASETS_COLUMN_TYPES,
-    # MINDSDB_DATABASE,
-    DATASETS_PATH,
     HTTP_API_ROOT,
-    # TEST_CONFIG,
-    run_environment,
-    make_test_csv,
     CONFIG_PATH,
-    upload_csv
+    run_environment,
+    make_test_csv
 )
 
 from http_test_helpers import (

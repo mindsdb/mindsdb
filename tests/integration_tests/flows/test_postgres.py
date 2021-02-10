@@ -8,11 +8,11 @@ import pg8000
 
 from common import (
     MINDSDB_DATABASE,
+    HTTP_API_ROOT,
+    CONFIG_PATH,
     check_prediction_values,
     condition_dict_to_str,
-    run_environment,
-    CONFIG_PATH,
-    HTTP_API_ROOT
+    run_environment
 )
 
 # +++ define test data

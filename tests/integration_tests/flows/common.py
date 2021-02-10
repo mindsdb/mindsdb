@@ -4,7 +4,6 @@ import json
 import subprocess
 import atexit
 import asyncio
-import csv
 import re
 import sys
 from pathlib import Path
@@ -25,9 +24,7 @@ EXTERNAL_DB_CREDENTIALS = str(Path.home().joinpath('.mindsdb_credentials.json'))
 
 MINDSDB_DATABASE = 'mindsdb'
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-TEST_CONFIG = dir_path + '/config/config.json'
+TEST_CONFIG = os.path.dirname(os.path.realpath(__file__)) + '/config/config.json'
 
 TESTS_ROOT = Path(__file__).parent.absolute().joinpath('../../').resolve()
 
@@ -99,16 +96,6 @@ CONFIG_PATH = TEMP_DIR.joinpath('config.json')
 with open(TEST_CONFIG, 'rt') as f:
     config_json = json.loads(f.read())
     config_json['storage_dir'] = str(TEMP_DIR)
-
-
-def prepare_mindsdb():
-    os.environ['CHECK_FOR_UPDATES'] = '0'
-    os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
-    os.environ['MINDSDB_STORAGE_DIR'] = str(TEMP_DIR)
-    import mindsdb
-
-
-prepare_mindsdb()
 
 
 def close_all_ssh_tunnels():
@@ -206,6 +193,7 @@ if USE_EXTERNAL_DB_SERVER:
         'bucket': 'mindsdb-cloud-storage-v1'
     }
 
+
 def make_test_csv(name, data):
     test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()
     df = DataFrame(data)
@@ -247,8 +235,11 @@ def run_environment(apis, override_config={}):
     with open(CONFIG_PATH, 'wt') as f:
         f.write(json.dumps(config_json))
 
+    os.environ['CHECK_FOR_UPDATES'] = '0'
+    os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
+    os.environ['MINDSDB_STORAGE_DIR'] = str(TEMP_DIR)
     sp = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', CONFIG_PATH, '--verbose'],
+        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', str(CONFIG_PATH), '--verbose'],
         close_fds=True,
         stdout=OUTPUT,
         stderr=OUTPUT
@@ -279,36 +270,6 @@ def run_environment(apis, override_config={}):
     ioloop.close()
     if not success:
         raise Exception('Cant start mindsdb apis')
-
-
-def upload_csv(query, columns_map, db_types_map, table_name, csv_path, escape='`', template=None):
-    template = template or 'create table test_data.%s (%s);'
-    query(template % (
-        table_name,
-        ','.join([f'{escape}{col_name}{escape} {db_types_map[col_type]}' for col_name, col_type in columns_map])
-    ))
-
-    with open(csv_path) as f:
-        csvf = csv.reader(f)
-        for i, row in enumerate(csvf):
-            if i == 0:
-                continue
-            if i % 100 == 0:
-                print(f'inserted {i} rows')
-            vals = []
-            for i, col in enumerate(columns_map):
-                col_type = col[1]
-                try:
-                    if col_type is int:
-                        vals.append(str(int(float(row[i]))))
-                    elif col_type is str:
-                        vals.append(f"'{row[i]}'")
-                    else:
-                        vals.append(str(col_type(row[i])))
-                except Exception:
-                    vals.append('null')
-
-            query(f'''INSERT INTO test_data.{table_name} VALUES ({','.join(vals)})''')
 
 
 def condition_dict_to_str(condition):

@@ -9,9 +9,9 @@ import mysql.connector
 
 from common import (
     MINDSDB_DATABASE,
+    HTTP_API_ROOT,
     CONFIG_PATH,
     TEMP_DIR,
-    HTTP_API_ROOT,
     run_environment
 )
 

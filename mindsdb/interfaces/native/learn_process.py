@@ -7,6 +7,7 @@ from mindsdb.interfaces.storage.fs import FsSotre
 
 ctx = mp.get_context('spawn')
 
+
 class LearnProcess(ctx.Process):
     daemon = True
 
@@ -22,8 +23,8 @@ class LearnProcess(ctx.Process):
         '''
         import mindsdb_native
 
-        fs_store = FsSotre()
-        company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        # fs_store = FsSotre()
+        # company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
 
         name, from_data, to_predict, kwargs, config = self._args
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})

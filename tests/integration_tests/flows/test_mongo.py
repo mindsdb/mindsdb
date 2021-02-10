@@ -8,12 +8,12 @@ from pymongo import MongoClient
 from common import (
     USE_EXTERNAL_DB_SERVER,
     DATASETS_COLUMN_TYPES,
-    check_prediction_values,
-    run_environment,
-    open_ssh_tunnel,
+    MINDSDB_DATABASE,
     DATASETS_PATH,
     CONFIG_PATH,
-    MINDSDB_DATABASE
+    check_prediction_values,
+    run_environment,
+    open_ssh_tunnel
 )
 
 from mindsdb.utilities.ps import wait_port

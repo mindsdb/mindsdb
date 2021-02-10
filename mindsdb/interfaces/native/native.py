@@ -155,22 +155,11 @@ class NativeInterface():
 
     # @TODO: Remove this option, to complicate given that storage is indexes by name+comapny ... can be reintorduced when we switch to IDs
     def rename_model(self, name, new_name):
+        self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
         self.dbw.unregister_predictor(self.get_model_data(name))
         F.rename_model(name, new_name)
-        self.dbw.register_predictors(self.get_model_data(new_name))
-
-    def load_model(self, fpath):
-        self._setup_for_creation()
-        name = F.import_model(model_archive_path=fpath)
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name)
-        name, from_data, to_predict, kwargs, _ = self._args
-        predictor_record.to_predict = to_predict
-        predictor_record.version = mindsdb_native.__version__
-        predictor_record.data = mindsdb_native.F.get_model_data(name)
-        self.fs_store.put(name, f'predictor_{self.company_id}_{name}', config['paths']['predictors'])
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        predictor_record.name = new_name
         session.commit()
-        self.dbw.register_predictors(self.get_model_data(name), setup=False)
-
-    def export_model(self, name):
-        self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
-        F.export_predictor(model_name=name)
+        self.dbw.register_predictors(self.get_model_data(new_name))
+        fs_store.put(name, f'predictor_{company_id}_{name}', config['paths']['predictors'])

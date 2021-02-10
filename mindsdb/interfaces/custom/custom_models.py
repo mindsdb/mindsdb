@@ -122,26 +122,30 @@ class CustomModels():
         return pred_arr
 
     def get_model_data(self, name):
-        with open(os.path.join(self._dir(name), 'metadata.json'), 'r') as fp:
-            return json.load(fp)
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        return predictor_record.data
 
     def save_model_data(self, name, data):
-        with open(os.path.join(self._dir(name), 'metadata.json'), 'w') as fp:
-            json.dump(data, fp)
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        if predictor_record is None
+            predictor_record = Predictor(company_id=self.company_id, name=name, is_custom=True, data=data)
+            session.add(predictor_record)
+        else:
+            predictor_record.data = data
+        session.commit()
 
     def get_models(self):
+        predictor_names = [
+            x.name for x in Predictor.query.filter_by(company_id=self.company_id, is_custom=True)
+        ]
         models = []
-        for model_dir in os.listdir(self.storage_dir):
-            if 'custom_model_' in model_dir:
-                name = model_dir.replace('custom_model_','')
-                try:
-                    models.append(self.get_model_data(name))
-                except:
-                    print(f'Model {name} not found !')
+        for name in predictor_names:
+            models.append(self.get_model_data(name))
 
         return models
 
     def delete_model(self, name):
+        Predictor.query.filter_by(company_id=self.company_id, name=name).delete()
         shutil.rmtree(self._dir(name))
         self.dbw.unregister_predictor(name)
 
@@ -160,6 +164,7 @@ class CustomModels():
         shutil.move( os.path.join(self._dir(name), 'model.py') ,  os.path.join(self._dir(name), f'{name}.py') )
         model = self._internal_load(name)
         model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
+        self.fs_store.put(name, f'predictor_{self.company_id}_{name}', config['paths']['predictors'])
         self.save_model_data(name,{
             'name': name
             ,'data_analysis_v2': model.column_type_map

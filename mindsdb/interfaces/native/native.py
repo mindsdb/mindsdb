@@ -13,11 +13,14 @@ from mindsdb.interfaces.native.learn_process import LearnProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Predictor
+from mindsdb.interfaces.storage.fs import FsSotre
 
 
 class NativeInterface():
     def __init__(self):
         self.config = Config()
+        self.fs_store = FsSotre()
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dbw = DatabaseWrapper()
         self.predictor_cache = {}
 

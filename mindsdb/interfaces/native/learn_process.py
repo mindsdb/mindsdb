@@ -1,9 +1,10 @@
 import torch.multiprocessing as mp
+
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.os_specific import get_mp_context
+from mindsdb.interfaces.storage.fs import FsSotre
 
 
-#ctx = mp.get_context(get_mp_context())
 ctx = mp.get_context('spawn')
 
 class LearnProcess(ctx.Process):
@@ -20,6 +21,9 @@ class LearnProcess(ctx.Process):
         this is work for celery worker here?
         '''
         import mindsdb_native
+
+        fs_store = FsSotre()
+        company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
 
         name, from_data, to_predict, kwargs, config = self._args
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})

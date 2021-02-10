@@ -10,13 +10,14 @@ import pandas as pd
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.storage.fs import FsSotre
+
 
 class CustomModels():
-    def __init__(self, config=None):
-        if config is None:
-            self.config = Config()
-        else:
-            self.config = config
+    def __init__(self):
+        elf.config = Config()
+        self.fs_store = FsSotre()
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dbw = DatabaseWrapper()
         self.storage_dir = os.path.join(self.config['storage_dir'], 'misc')
         os.makedirs(self.storage_dir, exist_ok=True)

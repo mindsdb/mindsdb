@@ -20,26 +20,16 @@ class CustomModels():
         self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dbw = DatabaseWrapper()
-        self.storage_dir = os.path.join(self.config['storage_dir'], 'misc')
+        self.storage_dir = self.config['paths']['custom_models']
         os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
         self.mindsdb_native = NativeInterface()
         self.dbw = DatabaseWrapper()
 
     def _dir(self, name):
-        return str(os.path.join(self.storage_dir, 'custom_model_' + name))
+        return str(os.path.join(self.storage_dir, name))
 
     def _internal_load(self, name):
-
-        # Caching (2 lines bellow), currently disabled due to multiprocessing cache invalidation issues
-        #if name in self.model_cache:
-        #    return self.model_cache[name]
-
-        # "Proper" model loading (3 lines bellow), currently disabled due to pickling issues
-        #spec = importlib.util.spec_from_file_location(name, self._dir(name) + '/model.py')
-        #module = importlib.util.module_from_spec(spec)
-        #spec.loader.exec_module(module)
-
         sys.path.insert(0, self._dir(name))
         module = __import__(name)
 
@@ -56,6 +46,7 @@ class CustomModels():
         return model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
+        self.fs_store.get(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)
         model_data = self.get_model_data(name)
         model_data['status'] = 'training'
         self.save_model_data(name, model_data)
@@ -85,11 +76,13 @@ class CustomModels():
         model_data = self.get_model_data(name)
         model_data['status'] = 'completed'
         self.save_model_data(name, model_data)
-
+        self.fs_store.put(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)
+        
         self.dbw.unregister_predictor(name)
         self.dbw.register_predictors([self.get_model_data(name)])
 
     def predict(self, name, when_data=None, from_data=None, kwargs=None):
+        self.fs_store.get(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)
         if kwargs is None:
             kwargs = {}
         if from_data is not None:
@@ -144,16 +137,28 @@ class CustomModels():
 
         return models
 
+
     def delete_model(self, name):
         Predictor.query.filter_by(company_id=self.company_id, name=name).delete()
         shutil.rmtree(self._dir(name))
         self.dbw.unregister_predictor(name)
+        elf.fs_store.delete(f'custom_model_{self.company_id}_{name}')
 
     def rename_model(self, name, new_name):
+        self.fs_store.get(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)
+
         self.dbw.unregister_predictor(name)
         shutil.move(self._dir(name), self._dir(new_name))
         shutil.move(os.path.join(self._dir(new_name) + f'{name}.py'), os.path.join(self._dir(new_name) ,f'{new_name}.py'))
+
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        predictor_record.name = new_name
+        session.commit()
+
         self.dbw.register_predictors([self.get_model_data(new_name)])
+
+        fs_store.put(name, f'custom_model_{self.company_id}_{new_name}', self.storage_dir)
+        self.fs_store.delete(f'custom_model_{self.company_id}_{name}')
 
     def export_model(self, name):
         shutil.make_archive(base_name=name, format='zip', root_dir=self._dir(name))
@@ -164,7 +169,6 @@ class CustomModels():
         shutil.move( os.path.join(self._dir(name), 'model.py') ,  os.path.join(self._dir(name), f'{name}.py') )
         model = self._internal_load(name)
         model.to_predict = model.to_predict if isinstance(model.to_predict,list) else [model.to_predict]
-        self.fs_store.put(name, f'predictor_{self.company_id}_{name}', config['paths']['predictors'])
         self.save_model_data(name,{
             'name': name
             ,'data_analysis_v2': model.column_type_map
@@ -175,6 +179,8 @@ class CustomModels():
 
         with open(os.path.join(self._dir(name), '__init__.py') , 'w') as fp:
             fp.write('')
+
+        self.fs_store.put(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)
 
         if trained_status == 'trained':
             self.dbw.register_predictors([self.get_model_data(name)])

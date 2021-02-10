@@ -156,10 +156,11 @@ class NativeInterface():
     # @TODO: Remove this option, to complicate given that storage is indexes by name+comapny ... can be reintorduced when we switch to IDs
     def rename_model(self, name, new_name):
         self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
-        self.dbw.unregister_predictor(self.get_model_data(name))
+        self.dbw.unregister_predictor(name)
         F.rename_model(name, new_name)
         predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
         predictor_record.name = new_name
         session.commit()
         self.dbw.register_predictors(self.get_model_data(new_name))
-        fs_store.put(name, f'predictor_{company_id}_{name}', config['paths']['predictors'])
+        fs_store.put(name, f'predictor_{company_id}_{new_name}', config['paths']['predictors'])
+        self.fs_store.delete(f'predictor_{self.company_id}_{name}')

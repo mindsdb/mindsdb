@@ -2,6 +2,7 @@ import copy
 import traceback
 import datetime
 from dateutil.parser import parse as parse_datetime
+import subprocess
 
 from flask import request
 from flask_restx import Resource, abort
@@ -154,3 +155,31 @@ class ToggleTelemetry(Resource):
             return 'Enabled telemetry', 200
         else:
             return 'Disabled telemetry', 200
+
+@ns_conf.route('/install/<dependency>')
+@ns_conf.param('dependency', 'Install dependencies')
+class InstallDependencies(Resource):
+    @ns_conf.doc('check')
+    def get(self, dependency):
+        if dependency == 'snowflake':
+            dependency = ['snowflake-connector-python[pandas]', 'asn1crypto==1.3.0']
+        elif dependency == 'athena':
+            dependency = ['PyAthena >= 2.0.0']
+        elif dependency == 'google':
+            dependency = ['google-cloud-storage', 'google-auth']
+        elif dependency == 's3':
+            dependency = ['boto3 >= 1.9.0']
+        else:
+            return f'Unkown dependency: {dependency}', 400
+
+        try:
+            sp = subprocess.Popen(['pip3', 'install', *dependency])
+            sp.wait()
+        except:
+            try:
+                sp = subprocess.Popen(['pip', 'install', *dependency])
+                sp.wait()
+            except:
+                return 'Failed to install', 400
+
+        return 'Installed', 200

@@ -1,3 +1,4 @@
+import os
 import torch.multiprocessing as mp
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -43,6 +44,8 @@ class LearnProcess(ctx.Process):
             to_predict=to_predict,
             **kwargs
         )
+        print('\n\n\n', os.environ['MINDSDB_STORAGE_PATH'], '\n\n\n')
+        print('\n\n\n', config['paths']['predictors'], '\n\n\n')
         self.fs_store.put(name, f'predictor_{company_id}_{name}', config['paths']['predictors'])
 
         model_data = mindsdb_native.F.get_model_data(name)

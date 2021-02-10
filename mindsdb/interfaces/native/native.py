@@ -94,10 +94,14 @@ class NativeInterface():
         predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
         model = predictor_record.data
         if model is None or model['status'] == 'training':
-            self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
+            try:
+                self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
+            except Excpetion:
+                pass
             model = mindsdb_native.F.get_model_data(name)
-            predictor_record.data = model
-            session.commit()
+            if predictor_record.data is None or len(model) > len(predictor_record.data):
+                predictor_record.data = model
+                session.commit()
 
         predictor_record.data = {
             'name': name,

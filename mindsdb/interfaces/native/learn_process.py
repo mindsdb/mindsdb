@@ -4,7 +4,6 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.os_specific import get_mp_context
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
-from mindsdb.interfaces.datastore.datastore import DataStore
 
 ctx = mp.get_context('spawn')
 
@@ -24,7 +23,6 @@ class LearnProcess(ctx.Process):
         import mindsdb_native
 
         fs_store = FsSotre()
-        datastore = DataStore()
         company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
 
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})

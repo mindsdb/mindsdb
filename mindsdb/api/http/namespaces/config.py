@@ -78,18 +78,26 @@ class Integration(Resource):
             del params['test']
 
         integration = get_integration(name)
-        if integration is not None:
+        if integration is not None and is_test:
+            add_name = name + '__TEST_INTEGRATION'
+            for k in integration:
+                if k not in params and k != 'test':
+                    params[k] = integration[k]
+        elif integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
+        else:
+            add_name = name
+
         try:
             if 'enabled' in params:
                 params['publish'] = params['enabled']
                 del params['enabled']
-            ca.config_obj.add_db_integration(name, params)
+            ca.config_obj.add_db_integration(add_name, params)
 
             mdb = ca.mindsdb_native
             cst = ca.custom_models
             model_data_arr = get_all_models_meta_data(mdb, cst)
-            ca.dbw.setup_integration(name)
+            ca.dbw.setup_integration(add_name)
             if is_test is False:
                 ca.dbw.register_predictors(model_data_arr)
         except Exception as e:
@@ -98,8 +106,8 @@ class Integration(Resource):
 
         if is_test:
             cons = ca.dbw.check_connections()
-            ca.config_obj.remove_db_integration(name)
-            return {'success': cons[name]}, 200
+            ca.config_obj.remove_db_integration(add_name)
+            return {'success': cons[add_name]}, 200
 
         return '', 200
 

@@ -30,6 +30,7 @@ class CustomModels():
         return str(os.path.join(self.storage_dir, name))
 
     def _internal_load(self, name):
+        self.fs_store.get(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)
         sys.path.insert(0, self._dir(name))
         module = __import__(name)
 
@@ -46,7 +47,6 @@ class CustomModels():
         return model
 
     def learn(self, name, from_data, to_predict, kwargs={}):
-        self.fs_store.get(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)
         model_data = self.get_model_data(name)
         model_data['status'] = 'training'
         self.save_model_data(name, model_data)
@@ -77,7 +77,7 @@ class CustomModels():
         model_data['status'] = 'completed'
         self.save_model_data(name, model_data)
         self.fs_store.put(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)
-        
+
         self.dbw.unregister_predictor(name)
         self.dbw.register_predictors([self.get_model_data(name)])
 

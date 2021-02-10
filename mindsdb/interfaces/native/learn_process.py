@@ -33,7 +33,7 @@ class LearnProcess(ctx.Process):
 
         mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name)
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
         predictor_record.to_predict = to_predict
         predictor_record.version = mindsdb_native.__version__
         predictor_record.data = {
@@ -53,7 +53,7 @@ class LearnProcess(ctx.Process):
             )
         except Exception as e:
             pass
-        
+
         fs_store.put(name, f'predictor_{company_id}_{name}', config['paths']['predictors'])
 
         model_data = mindsdb_native.F.get_model_data(name)

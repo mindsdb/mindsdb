@@ -47,7 +47,6 @@ class NativeInterface():
         self._setup_for_creation(name)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
-        #predictor_record.data = mindsdb_native.F.get_model_data(name)
         session.commit()
         return predictor
 
@@ -67,7 +66,7 @@ class NativeInterface():
 
     def predict(self, name, when_data=None, kwargs={}):
         if name not in self.predictor_cache:
-            # Clear the cache entirely if we have less than .12 GB left
+            # Clear the cache entirely if we have less than 1.2 GB left
             if psutil.virtual_memory().available < 1.2 * pow(10,9):
                 self.predictor_cache = {}
 
@@ -103,14 +102,10 @@ class NativeInterface():
                 predictor_record.data = model
                 session.commit()
 
-        predictor_record.data = {
-            'name': name,
-            'status': 'training'
-        }
         # Make some corrections for databases not to break when dealing with empty columns
         if db_fix:
             data_analysis = model['data_analysis_v2']
-            for column in data_analysis['columns']:
+            for column in model['columns']:
                 analysis = data_analysis.get(column)
                 if isinstance(analysis, dict) and (len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False)):
                     data_analysis[column]['typing'] = {

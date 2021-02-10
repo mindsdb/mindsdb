@@ -35,7 +35,12 @@ class Array(types.TypeDecorator):
     ''' Float Type that replaces commas with  dots on input '''
     impl = types.String
     def process_bind_param(self, value, dialect):  # insert
-        return ',|,|,'.join(str(value)) if value is not None else None
+        if isinstance(value, str):
+            return value
+        elif value is None:
+            return value
+        else:
+            return ',|,|,'.join(value)
     def process_result_value(self, value, dialect):  # select
         return value.split(',|,|,') if value is not None else None
 

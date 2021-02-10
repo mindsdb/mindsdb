@@ -5,7 +5,7 @@ from mindsdb.integrations.base import Integration
 
 
 class MySQL(Integration):
-    def _to_mysql_table(self, stats, predicted_cols):
+    def _to_mysql_table(self, stats, predicted_cols, columns):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
             DATA_SUBTYPES.FLOAT: 'double',
@@ -24,7 +24,7 @@ class MySQL(Integration):
         }
 
         column_declaration = []
-        for name in stats['columns']:
+        for name in columns:
             try:
                 col_subtype = stats[name]['typing']['data_subtype']
                 new_type = subtype_map[col_subtype]
@@ -105,8 +105,7 @@ class MySQL(Integration):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
-            stats = model_meta['data_analysis_v2']
-            columns_sql = ','.join(self._to_mysql_table(stats, model_meta['predict']))
+            columns_sql = ','.join(self._to_mysql_table(model_meta['data_analysis_v2'], model_meta['predict'], model_meta['columns']))
             columns_sql += ',`when_data` varchar(500)'
             columns_sql += ',`select_data_query` varchar(500)'
             columns_sql += ',`external_datasource` varchar(500)'

@@ -33,7 +33,7 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         try:
-            columns = self.custom_models.get_model_data(table)['data_analysis_v2']['columns']
+            columns = self.custom_models.get_model_data(table)['columns']
             columns += ['external_datasource', 'select_data_query', 'when_data']
             return columns
         except Exception:
@@ -46,7 +46,7 @@ class MindsDBDataNode(DataNode):
 
         model = self.mindsdb_native.get_model_data(name=table)
         columns = []
-        columns += model['data_analysis_v2']['columns']
+        columns += model['columns']
         columns += [f'{x}_original' for x in model['predict']]
         for col in model['predict']:
             if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
@@ -165,7 +165,7 @@ class MindsDBDataNode(DataNode):
             res = self.custom_models.predict(name=table, when_data=where_data)
 
             data = []
-            fields = model['data_analysis_v2']['columns']
+            fields = model['columns']
             for i, ele in enumerate(res):
                 row = {}
                 row['select_data_query'] = select_data_query
@@ -217,7 +217,7 @@ class MindsDBDataNode(DataNode):
 
             field_types = {
                 f: model['data_analysis_v2'][f]['typing']['data_subtype']
-                for f in model['data_analysis_v2']['columns'] if 'typing' in model['data_analysis_v2'][f]
+                for f in model['columns'] if 'typing' in model['data_analysis_v2'][f]
             }
 
             for row in data:

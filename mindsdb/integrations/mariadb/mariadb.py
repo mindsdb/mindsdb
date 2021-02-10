@@ -123,6 +123,7 @@ class Mariadb(Integration):
                     ({columns_sql}
                     ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
             """
+            print('\n\n\n\n', q, '\n\n\n\n')
             self._query(q)
 
     def unregister_predictor(self, name):

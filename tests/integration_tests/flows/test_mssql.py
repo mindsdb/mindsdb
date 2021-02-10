@@ -8,10 +8,10 @@ import pytds
 
 from common import (
     MINDSDB_DATABASE,
-    condition_dict_to_str,
-    run_environment,
+    HTTP_API_ROOT,
     CONFIG_PATH,
-    HTTP_API_ROOT
+    condition_dict_to_str,
+    run_environment
 )
 
 # +++ define test data

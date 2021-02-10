@@ -1,6 +1,6 @@
 # Mindsdb native interface
 from pathlib import Path
-import json
+import os
 import datetime
 from dateutil.parser import parse as parse_datetime
 import psutil

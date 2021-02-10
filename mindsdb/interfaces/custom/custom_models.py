@@ -16,7 +16,7 @@ from mindsdb.interfaces.storage.fs import FsSotre
 
 class CustomModels():
     def __init__(self):
-        elf.config = Config()
+        self.config = Config()
         self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dbw = DatabaseWrapper()

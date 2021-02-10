@@ -7,10 +7,10 @@ import requests
 import mysql.connector
 
 from common import (
-    HTTP_API_ROOT,
     MINDSDB_DATABASE,
-    run_environment,
+    HTTP_API_ROOT,
     CONFIG_PATH,
+    run_environment,
     get_all_pridict_fields,
     check_prediction_values
 )

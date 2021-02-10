@@ -7,14 +7,14 @@ import requests
 import mysql.connector
 
 from common import (
-    HTTP_API_ROOT,
+    USE_EXTERNAL_DB_SERVER,
     MINDSDB_DATABASE,
-    condition_dict_to_str,
-    run_environment,
+    HTTP_API_ROOT,
     CONFIG_PATH,
-    get_all_pridict_fields,
     check_prediction_values,
-    USE_EXTERNAL_DB_SERVER
+    get_all_pridict_fields,
+    condition_dict_to_str,
+    run_environment
 )
 
 # +++ define test data

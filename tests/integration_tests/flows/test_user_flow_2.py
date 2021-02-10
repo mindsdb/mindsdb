@@ -8,12 +8,12 @@ import mysql.connector
 from common import (
     MINDSDB_DATABASE,
     HTTP_API_ROOT,
+    CONFIG_PATH,
+    check_prediction_values,
+    condition_dict_to_str,
     run_environment,
     make_test_csv,
-    CONFIG_PATH,
     stop_mindsdb,
-    condition_dict_to_str,
-    check_prediction_values
 )
 
 from http_test_helpers import (

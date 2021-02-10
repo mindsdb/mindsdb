@@ -120,7 +120,7 @@ class CustomModels():
 
     def save_model_data(self, name, data):
         predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
-        if predictor_record is None
+        if predictor_record is None:
             predictor_record = Predictor(company_id=self.company_id, name=name, is_custom=True, data=data)
             session.add(predictor_record)
         else:

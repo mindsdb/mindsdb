@@ -6,8 +6,10 @@ import requests
 import datetime
 
 from mindsdb.interfaces.storage.db import session, Log
+from mindsdb.utilities.config import Config
 
 telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false', 'False']
+global_config = Config().get_all()
 
 if telemtry_enabled:
     import sentry_sdk
@@ -116,7 +118,7 @@ def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit):
     logs = [fmt_log_record(x) for x in logs]
     return logs
 
-def initialize_log(config, logger_name='main', wrap_print=False):
+def initialize_log(config=global_config, logger_name='main', wrap_print=False):
     ''' Create new logger
     :param config: object, app config
     :param logger_name: str, name of logger
@@ -137,12 +139,8 @@ def initialize_log(config, logger_name='main', wrap_print=False):
     db_handler = DbHandler()
     log.addHandler(db_handler)
 
-    log_path = os.path.join(config.paths['log'], logger_name)
-    if not os.path.isdir(log_path):
-        os.mkdir(log_path)
-
     if wrap_print:
         sys.stdout = LoggerWrapper(log.info)
 
 
-log = logging.getLogger('mindsdb')
+log = initialize_log()

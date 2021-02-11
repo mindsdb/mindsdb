@@ -11,6 +11,7 @@ from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, M
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource
 from mindsdb.interfaces.storage.fs import FsSotre
+from mindsdb.utilities.log import initialize_log
 
 
 class DataStore():
@@ -21,6 +22,7 @@ class DataStore():
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dir = self.config.paths['datasources']
         self.mindsdb_native = NativeInterface()
+        self.log = initialize_log()
 
     def get_analysis(self, name):
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
@@ -46,7 +48,7 @@ class DataStore():
                 datasource['id'] = datasource_record.id
                 datasource_arr.append(datasource)
             except Exception as e:
-                print(e)
+                self.log.error(e)
         return datasource_arr
 
     def get_data(self, name, where=None, limit=None, offset=None):
@@ -73,7 +75,7 @@ class DataStore():
             return datasource_arr[0]
         # @TODO: Remove when db swithc is more stable, this should never happen, but good santiy check while this is kinda buggy
         elif len(datasource_arr) > 1:
-            print('Two or more datasource with the same name, (', len(datasource_arr), ') | Full list: ', datasource_arr)
+            self.log.error('Two or more datasource with the same name, (', len(datasource_arr), ') | Full list: ', datasource_arr)
             raise Exception('Two or more datasource with the same name')
         return None
 
@@ -242,5 +244,5 @@ class DataStore():
             else:
                 return eval(creation_info['class'])(*creation_info['args'], **creation_info['kwargs'])
         except Exception as e:
-            print(f'\n{e}\n')
+            self.log.error(f'\n{e}\n')
             return None

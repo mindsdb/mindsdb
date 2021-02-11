@@ -164,6 +164,11 @@ class ToggleTelemetry(Resource):
         else:
             return 'Disabled telemetry', 200
 
+@ns_conf.route('/install_options')
+@ns_conf.param('dependency', 'Install dependencies')
+class InstallDependenciesList():
+    return {'dependencies':['snowflake','athena','google','s3','lightgbm_gpu']}
+
 @ns_conf.route('/install/<dependency>')
 @ns_conf.param('dependency', 'Install dependencies')
 class InstallDependencies(Resource):
@@ -177,6 +182,8 @@ class InstallDependencies(Resource):
             dependency = ['google-cloud-storage', 'google-auth']
         elif dependency == 's3':
             dependency = ['boto3 >= 1.9.0']
+        elif dependency == 'lightgbm_gpu':
+            dependency = ['lightgbm', '--install-option=--gpu', '--upgrade']
         else:
             return f'Unkown dependency: {dependency}', 400
 

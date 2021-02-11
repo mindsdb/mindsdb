@@ -141,6 +141,7 @@ class CustomModels():
 
     def delete_model(self, name):
         Predictor.query.filter_by(company_id=self.company_id, name=name).delete()
+        session.commit()
         shutil.rmtree(self._dir(name))
         self.dbw.unregister_predictor(name)
         self.fs_store.delete(f'custom_model_{self.company_id}_{name}')

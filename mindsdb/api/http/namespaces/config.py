@@ -167,12 +167,12 @@ class ToggleTelemetry(Resource):
 @ns_conf.route('/install_options')
 @ns_conf.param('dependency', 'Install dependencies')
 class InstallDependenciesList():
-    return {'dependencies':['snowflake','athena','google','s3','lightgbm_gpu']}
+    def get(self, dependency):
+        return {'dependencies':['snowflake','athena','google','s3','lightgbm_gpu']}
 
 @ns_conf.route('/install/<dependency>')
 @ns_conf.param('dependency', 'Install dependencies')
 class InstallDependencies(Resource):
-    @ns_conf.doc('check')
     def get(self, dependency):
         if dependency == 'snowflake':
             dependency = ['snowflake-connector-python[pandas]', 'asn1crypto==1.3.0']

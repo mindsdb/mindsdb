@@ -195,13 +195,18 @@ def initialize_static(config):
     return True
 
 
-def initialize_flask(config, init_static_thread):
+def initialize_flask(config, init_static_thread, no_studio):
     # Apparently there's a bug that causes the static path not to work if it's '/' -- https://github.com/pallets/flask/issues/3134, I think '' should achieve the same thing (???)
-    app = Flask(
-        __name__,
-        static_url_path='/static',
-        static_folder=os.path.join(config.paths['static'], 'static/')
-    )
+    if no_studio:
+        app = Flask(
+            __name__
+        )
+    else:
+        app = Flask(
+            __name__,
+            static_url_path='/static',
+            static_folder=os.path.join(config.paths['static'], 'static/')
+        )
 
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
@@ -226,16 +231,17 @@ def initialize_flask(config, init_static_thread):
     host = config['api']['http']['host']
 
     # NOTE rewrite it, that hotfix to see GUI link
-    log = logging.getLogger('mindsdb.http')
-    if host in ('', '0.0.0.0'):
-        url = f'http://127.0.0.1:{port}/'
-    else:
-        url = f'http://{host}:{port}/'
-    log.error(f' - GUI available at {url}')
+    if not no_studio:
+        log = logging.getLogger('mindsdb.http')
+        if host in ('', '0.0.0.0'):
+            url = f'http://127.0.0.1:{port}/'
+        else:
+            url = f'http://{host}:{port}/'
+        log.error(f' - GUI available at {url}')
 
-    pid = os.getpid()
-    x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config.paths['static']), daemon=True)
-    x.start()
+        pid = os.getpid()
+        x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config.paths['static']), daemon=True)
+        x.start()
 
     return app, api
 

@@ -98,6 +98,10 @@ class DataStore():
         ds_meta_dir = os.path.join(self.dir, name)
         os.mkdir(ds_meta_dir)
 
+        session.add(datasource_record)
+        session.commit()
+        datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+        
         try:
             if source_type == 'file':
                 source = os.path.join(ds_meta_dir, source)
@@ -222,6 +226,7 @@ class DataStore():
                 'columns': [dict(name=x) for x in list(df.keys())]
             })
 
+            log.error(1, name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
             self.fs_store.put(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
 
         except Exception:
@@ -229,7 +234,6 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
             raise
 
-        session.add(datasource_record)
         session.commit()
         return self.get_datasource_obj(name, raw=True), name
 

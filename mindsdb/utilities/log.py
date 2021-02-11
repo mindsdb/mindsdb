@@ -140,5 +140,6 @@ def initialize_log(config=global_config, logger_name='main', wrap_print=False):
     if wrap_print:
         sys.stdout = LoggerWrapper(log.info)
 
+    return log
 
 log = initialize_log()

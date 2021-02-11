@@ -75,10 +75,8 @@ class DbHandler(logging.Handler):
                     message=trace,
                     level='info',
                 )
-
                 if log_type in ['ERROR']:
                     capture_message(str(payload))
-
                 if log_type in ['WARNING']:
                     capture_message(str(payload))
 

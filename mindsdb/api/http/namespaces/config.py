@@ -166,7 +166,7 @@ class ToggleTelemetry(Resource):
 
 @ns_conf.route('/install_options')
 @ns_conf.param('dependency_list', 'Install dependencies')
-class InstallDependenciesList():
+class InstallDependenciesList(Resource):
     def get(self):
         return {'dependencies':['snowflake','athena','google','s3','lightgbm_gpu']}
 

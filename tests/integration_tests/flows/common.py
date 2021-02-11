@@ -184,6 +184,8 @@ if USE_EXTERNAL_DB_SERVER:
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', None)
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', None)
     if AWS_SECRET_ACCESS_KEY is not None and AWS_ACCESS_KEY_ID is not None:
+        if 'permanent_storage' not in config_json:
+            config_json['permanent_storage'] = {}
         config_json['permanent_storage']['s3_credentials'] = {
             'aws_access_key_id': AWS_ACCESS_KEY_ID,
             'aws_secret_access_key': AWS_SECRET_ACCESS_KEY

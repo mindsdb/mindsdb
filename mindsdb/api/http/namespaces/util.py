@@ -2,6 +2,7 @@ from flask import request
 from flask_restx import Resource
 from flask import current_app as ca
 
+from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.util import ns_conf
 from mindsdb.utilities.telemetry import (
     enable_telemetry,

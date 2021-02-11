@@ -81,7 +81,7 @@ class DataStore():
     def delete_datasource(self, name):
         datasource_record = Datasource.query.filter_by(company_id=self.company_id, name=name).first()
         id = datasource_record.id
-        Datasource.query.filter_by(company_id=self.company_id, name=name).delete()
+        session.delete(datasource_record)
         session.commit()
         self.fs_store.delete(f'datasource_{self.company_id}_{datasource_record.id}')
         try:
@@ -226,7 +226,6 @@ class DataStore():
                 'columns': [dict(name=x) for x in list(df.keys())]
             })
 
-            log.error(1, name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
             self.fs_store.put(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
 
         except Exception:

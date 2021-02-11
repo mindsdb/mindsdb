@@ -28,7 +28,7 @@ class Responce(Responder):
             model = mindsdb_env['mindsdb_native'].get_model_data(name=query['find'])
 
             columns = []
-            columns += model['data_analysis_v2']['columns']
+            columns += model['columns']
             columns += [f'{x}_original' for x in model['predict']]
             for col in model['predict']:
                 if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':

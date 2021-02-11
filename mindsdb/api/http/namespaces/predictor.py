@@ -261,55 +261,6 @@ class PredictorPredictFromDataSource(Resource):
         results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
         return preparse_results(results, format_flag)
 
-
-@ns_conf.route('/upload')
-class PredictorUpload(Resource):
-    @ns_conf.doc('predictor_query', params=upload_predictor_params)
-    def post(self):
-        '''Upload existing predictor'''
-        predictor_file = request.files['file']
-        # @TODO: Figure out how to remove
-        fpath = os.path.join(ca.config_obj.paths['tmp'], 'new.zip')
-        with open(fpath, 'wb') as f:
-            f.write(predictor_file.read())
-
-        ca.mindsdb_native.load_model(fpath)
-        try:
-            os.remove(fpath)
-        except Exception:
-            pass
-
-        return '', 200
-
-
-@ns_conf.route('/<name>/download')
-@ns_conf.param('name', 'The predictor identifier')
-class PredictorDownload(Resource):
-    @ns_conf.doc('get_predictor_download')
-    def get(self, name):
-        '''Export predictor to file'''
-        ca.mindsdb_native.export_model(name)
-        fname = name + '.zip'
-        original_file = os.path.join(fname)
-        # @TODO: Figure out how to remove
-        fpath = os.path.join(ca.config_obj.paths['tmp'], fname)
-        shutil.move(original_file, fpath)
-
-        with open(fpath, 'rb') as f:
-            data = BytesIO(f.read())
-
-        try:
-            os.remove(fpath)
-        except Exception as e:
-            pass
-
-        return send_file(
-            data,
-            mimetype='application/zip',
-            attachment_filename=fname,
-            as_attachment=True
-        )
-
 @ns_conf.route('/<name>/rename')
 @ns_conf.param('name', 'The predictor identifier')
 class PredictorDownload(Resource):

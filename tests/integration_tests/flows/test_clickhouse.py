@@ -1,20 +1,15 @@
+import json
 import unittest
 import requests
 import inspect
 from pathlib import Path
 
-from legacy_config import Config
-
 from common import (
-    USE_EXTERNAL_DB_SERVER,
-    DATASETS_COLUMN_TYPES,
     MINDSDB_DATABASE,
-    DATASETS_PATH,
-    TEST_CONFIG,
+    HTTP_API_ROOT,
+    CONFIG_PATH,
     condition_dict_to_str,
-    run_environment,
-    make_test_csv,
-    upload_csv
+    run_environment
 )
 
 # +++ define test data
@@ -40,7 +35,9 @@ TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
-config = Config(TEST_CONFIG)
+INTEGRATION_NAME = 'default_clickhouse'
+
+config = {}
 
 to_predict_column_names = list(TO_PREDICT.keys())
 
@@ -50,19 +47,19 @@ def query(query):
         query = query.strip('\n ;')
         query += ' FORMAT JSON'
 
-    host = config['integrations']['default_clickhouse']['host']
-    port = config['integrations']['default_clickhouse']['port']
+    host = config['integrations'][INTEGRATION_NAME]['host']
+    port = config['integrations'][INTEGRATION_NAME]['port']
 
     connect_string = f'http://{host}:{port}'
 
     params = {'user': 'default'}
     try:
-        params['user'] = config['integrations']['default_clickhouse']['user']
+        params['user'] = config['integrations'][INTEGRATION_NAME]['user']
     except Exception:
         pass
 
     try:
-        params['password'] = config['integrations']['default_clickhouse']['password']
+        params['password'] = config['integrations'][INTEGRATION_NAME]['password']
     except Exception:
         pass
 
@@ -93,69 +90,68 @@ class ClickhouseTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment(
-            config,
-            apis=['mysql'],
-            override_integration_config={
-                'default_clickhouse': {
-                    'publish': True
+        run_environment(
+            apis=['mysql', 'http'],
+            override_config={
+                'api': {
+                    'mysql': {
+                        'ssl': False
+                    }
+                },
+                'integrations': {
+                    INTEGRATION_NAME: {
+                        'publish': True
+                    }
                 }
-            },
-            override_api_config={
-                'mysql': {
-                    'ssl': False
+                ,'permanent_storage': {
+                    'location': 's3'
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE
+            }
         )
-        cls.mdb = mdb
 
-        models = cls.mdb.get_models()
-        models = [x['name'] for x in models]
-        if TEST_PREDICTOR_NAME in models:
-            cls.mdb.delete_model(TEST_PREDICTOR_NAME)
-
-        query('create database if not exists test_data')
-
-        if not USE_EXTERNAL_DB_SERVER:
-            test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
-
-            if TEST_DATA_TABLE not in cls.get_tables_in(cls, 'test_data'):
-                print('creating test data table...')
-                upload_csv(
-                    query=query,
-                    columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
-                    db_types_map=DB_TYPES_MAP,
-                    table_name=TEST_DATA_TABLE,
-                    csv_path=test_csv_path,
-                    template='create table test_data.%s (%s) ENGINE = MergeTree() ORDER BY days_on_market PARTITION BY location'
-                )
-
-        ds = datastore.get_datasource(EXTERNAL_DS_NAME)
-        if ds is not None:
-            datastore.delete_datasource(EXTERNAL_DS_NAME)
-
-        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50')
-        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
+        config.update(
+            json.loads(
+                Path(CONFIG_PATH).read_text()
+            )
+        )
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-        print('Check all testing objects not exists')
-
-        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
-        models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(TEST_PREDICTOR_NAME not in models)
 
         self.assertTrue(TEST_DATA_TABLE in self.get_tables_in('test_data'))
 
-        print('Test predictor table not exists')
         mindsdb_tables = self.get_tables_in(MINDSDB_DATABASE)
-        self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
+
+        self.assertTrue(len(mindsdb_tables) == 2)
         self.assertTrue('predictors' in mindsdb_tables)
         self.assertTrue('commands' in mindsdb_tables)
 
-    def test_2_insert_predictor(self):
+        data = fetch(f'select * from {MINDSDB_DATABASE}.predictors;')
+        self.assertTrue(len(data) == 0)
+
+    def test_2_put_external_ds(self):
+        print(f'\nExecuting {inspect.stack()[0].function}')
+        params = {
+            'name': EXTERNAL_DS_NAME,
+            'query': f'select * from test_data.{TEST_DATA_TABLE} limit 50',
+            'integration_id': INTEGRATION_NAME
+        }
+
+        url = f'{HTTP_API_ROOT}/datasources/{EXTERNAL_DS_NAME}'
+        res = requests.put(url, json=params)
+        self.assertTrue(res.status_code == 200)
+        ds_data = res.json()
+
+        self.assertTrue(ds_data['source_type'] == INTEGRATION_NAME)
+        self.assertTrue(ds_data['row_count'] == 50)
+
+        url = f'{HTTP_API_ROOT}/datasources'
+        res = requests.get(url)
+        self.assertTrue(res.status_code == 200)
+        ds_data = res.json()
+        self.assertTrue(len(ds_data) == 1)
+
+    def test_3_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
             insert into {MINDSDB_DATABASE}.predictors (name, predict, select_data_query, training_options) values
@@ -173,12 +169,8 @@ class ClickhouseTest(unittest.TestCase):
 
         self.assertTrue(TEST_PREDICTOR_NAME in self.get_tables_in(MINDSDB_DATABASE))
 
-    def test_3_externael_ds(self):
+    def test_4_external_ds(self):
         name = f'{TEST_PREDICTOR_NAME}_external'
-        models = self.mdb.get_models()
-        models = [x['name'] for x in models]
-        if name in models:
-            self.mdb.delete_model(name)
 
         query(f"""
             insert into {MINDSDB_DATABASE}.predictors (name, predict, external_datasource, training_options) values
@@ -210,7 +202,7 @@ class ClickhouseTest(unittest.TestCase):
         self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
         self.assertTrue(res[0]['location'] is not None and res[0]['location'] != 'None')
 
-    def test_4_query_predictor(self):
+    def test_5_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         res = fetch(f"""
             select
@@ -236,7 +228,7 @@ class ClickhouseTest(unittest.TestCase):
         self.assertIsInstance(res['rental_price_explain'], str)
         self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
 
-    def test_5_range_query(self):
+    def test_6_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         results = fetch(f"""
@@ -258,21 +250,15 @@ class ClickhouseTest(unittest.TestCase):
             self.assertTrue(isinstance(res['rental_price_max'], (int, float)))
             self.assertIsInstance(res['rental_price_explain'], str)
 
-    def test_6_delete_predictor_by_command(self):
+    def test_7_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
             insert into {MINDSDB_DATABASE}.commands values ('delete predictor {TEST_PREDICTOR_NAME}');
         """)
 
-        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
-        models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(TEST_PREDICTOR_NAME not in models)
-
         print('Test predictor table not exists')
-        mindsdb_tables = query(f'show tables from {MINDSDB_DATABASE}')
-        mindsdb_tables = [x['name'] for x in mindsdb_tables]
-        self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
+        self.assertTrue(TEST_PREDICTOR_NAME not in self.get_tables_in(MINDSDB_DATABASE))
 
 
 if __name__ == "__main__":

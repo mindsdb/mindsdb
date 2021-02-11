@@ -15,6 +15,7 @@ from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import initialize_log
+from mindsdb.interfaces.storage.db import session
 
 
 def start(verbose=False):
@@ -55,6 +56,10 @@ def start(verbose=False):
             return {'message': str(e)}, e.code, e.get_response().headers
         name = getattr(type(e), '__name__') or 'Unknown error'
         return {'message': f'{name}: {str(e)}'}, 500
+
+    @app.teardown_appcontext
+    def remove_session(*args, **kwargs):
+        session.remove()
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

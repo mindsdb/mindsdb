@@ -1,23 +1,20 @@
 import unittest
 import inspect
 from pathlib import Path
+import json
+import requests
 
 import mysql.connector
 
-from legacy_config import Config
-
 from common import (
     USE_EXTERNAL_DB_SERVER,
-    DATASETS_COLUMN_TYPES,
     MINDSDB_DATABASE,
-    DATASETS_PATH,
-    TEST_CONFIG,
+    HTTP_API_ROOT,
+    CONFIG_PATH,
     check_prediction_values,
     get_all_pridict_fields,
     condition_dict_to_str,
-    run_environment,
-    make_test_csv,
-    upload_csv
+    run_environment
 )
 
 # +++ define test data
@@ -43,17 +40,19 @@ TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
-config = Config(TEST_CONFIG)
+INTEGRATION_NAME = 'default_mariadb'
+
+config = {}
 
 to_predict_column_names = list(TO_PREDICT.keys())
 
 
 def query(q, as_dict=False, fetch=False):
     con = mysql.connector.connect(
-        host=config['integrations']['default_mariadb']['host'],
-        port=config['integrations']['default_mariadb']['port'],
-        user=config['integrations']['default_mariadb']['user'],
-        passwd=config['integrations']['default_mariadb']['password'],
+        host=config['integrations'][INTEGRATION_NAME]['host'],
+        port=config['integrations'][INTEGRATION_NAME]['port'],
+        user=config['integrations'][INTEGRATION_NAME]['user'],
+        passwd=config['integrations'][INTEGRATION_NAME]['password'],
         db=MINDSDB_DATABASE
     )
 
@@ -78,63 +77,63 @@ class MariaDBTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment(
-            config,
-            apis=['mysql'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
+        run_environment(
+            apis=['mysql', 'http'],
+            override_config={
+                'integrations': {
+                    INTEGRATION_NAME: {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE
+                ,'permanent_storage': {
+                    'location': 's3'
+                }
+            }
         )
-        cls.mdb = mdb
 
-        models = cls.mdb.get_models()
-        models = [x['name'] for x in models]
-        if TEST_PREDICTOR_NAME in models:
-            cls.mdb.delete_model(TEST_PREDICTOR_NAME)
-
-        query('create database if not exists test_data')
-
-        if not USE_EXTERNAL_DB_SERVER:
-            test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
-            if TEST_DATA_TABLE not in cls.get_tables_in(cls, 'test_data'):
-                print('creating test data table...')
-                upload_csv(
-                    query=query,
-                    columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
-                    db_types_map=DB_TYPES_MAP,
-                    table_name=TEST_DATA_TABLE,
-                    csv_path=test_csv_path
-                )
-
-        ds = datastore.get_datasource(EXTERNAL_DS_NAME)
-        if ds is not None:
-            datastore.delete_datasource(EXTERNAL_DS_NAME)
-
-        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50', as_dict=True)
-        external_datasource_csv = make_test_csv(EXTERNAL_DS_NAME, data)
-        datastore.save_datasource(EXTERNAL_DS_NAME, 'file', 'test.csv', external_datasource_csv)
+        config.update(
+            json.loads(
+                Path(CONFIG_PATH).read_text()
+            )
+        )
 
     def test_1_initial_state(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-        print('Check all testing objects not exists')
 
-        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
-        models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(TEST_PREDICTOR_NAME not in models)
-
-        print('Test mindsdb tables exists')
         self.assertTrue(TEST_DATA_TABLE in self.get_tables_in('test_data'))
 
         mindsdb_tables = self.get_tables_in(MINDSDB_DATABASE)
 
-        self.assertTrue(TEST_PREDICTOR_NAME not in mindsdb_tables)
+        self.assertTrue(len(mindsdb_tables) == 2)
         self.assertTrue('predictors' in mindsdb_tables)
         self.assertTrue('commands' in mindsdb_tables)
 
-    def test_2_insert_predictor(self):
+        data = fetch(f'select * from {MINDSDB_DATABASE}.predictors;')
+        self.assertTrue(len(data) == 0)
+
+    def test_2_put_external_ds(self):
+        print(f'\nExecuting {inspect.stack()[0].function}')
+        params = {
+            'name': EXTERNAL_DS_NAME,
+            'query': f'select * from test_data.{TEST_DATA_TABLE} limit 50',
+            'integration_id': INTEGRATION_NAME
+        }
+
+        url = f'{HTTP_API_ROOT}/datasources/{EXTERNAL_DS_NAME}'
+        res = requests.put(url, json=params)
+        self.assertTrue(res.status_code == 200)
+        ds_data = res.json()
+
+        self.assertTrue(ds_data['source_type'] == INTEGRATION_NAME)
+        self.assertTrue(ds_data['row_count'] == 50)
+
+        url = f'{HTTP_API_ROOT}/datasources'
+        res = requests.get(url)
+        self.assertTrue(res.status_code == 200)
+        ds_data = res.json()
+        self.assertTrue(len(ds_data) == 1)
+
+    def test_3_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
             insert into {MINDSDB_DATABASE}.predictors (name, predict, select_data_query, training_options) values
@@ -154,12 +153,8 @@ class MariaDBTest(unittest.TestCase):
         print('predictor table in mindsdb db')
         self.assertTrue(TEST_PREDICTOR_NAME in self.get_tables_in(MINDSDB_DATABASE))
 
-    def test_3_externael_ds(self):
+    def test_4_externael_ds(self):
         name = f'{TEST_PREDICTOR_NAME}_external'
-        models = self.mdb.get_models()
-        models = [x['name'] for x in models]
-        if name in models:
-            self.mdb.delete_model(name)
 
         query(f"""
             insert into {MINDSDB_DATABASE}.predictors (name, predict, external_datasource, training_options) values
@@ -194,7 +189,7 @@ class MariaDBTest(unittest.TestCase):
         for r in res:
             self.assertTrue(check_prediction_values(r, TO_PREDICT))
 
-    def test_4_query_predictor(self):
+    def test_5_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         fields = get_all_pridict_fields(TO_PREDICT)
@@ -210,7 +205,7 @@ class MariaDBTest(unittest.TestCase):
         self.assertTrue(len(res) == 1)
         self.assertTrue(check_prediction_values(res[0], TO_PREDICT))
 
-    def test_5_range_query(self):
+    def test_6_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         fields = get_all_pridict_fields(TO_PREDICT)
@@ -227,23 +222,15 @@ class MariaDBTest(unittest.TestCase):
         for r in res:
             self.assertTrue(check_prediction_values(r, TO_PREDICT))
 
-    def test_6_delete_predictor_by_command(self):
+    def test_7_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
             insert into {MINDSDB_DATABASE}.commands values ('delete predictor {TEST_PREDICTOR_NAME}');
         """)
 
-        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
-        models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(TEST_PREDICTOR_NAME not in models)
-
         print('Test predictor table not exists')
         self.assertTrue(TEST_PREDICTOR_NAME not in self.get_tables_in(MINDSDB_DATABASE))
-
-    def test_7_insert_predictor_again(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
-        self.test_2_insert_predictor()
 
     def test_8_delete_predictor_by_delete_statement(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
@@ -252,16 +239,14 @@ class MariaDBTest(unittest.TestCase):
         if USE_EXTERNAL_DB_SERVER:
             return
 
+        name = f'{TEST_PREDICTOR_NAME}_external'
+
         query(f"""
-            delete from mindsdb.predictors where name='{TEST_PREDICTOR_NAME}';
+            delete from mindsdb.predictors where name='{name}';
         """)
 
-        print(f'Predictor {TEST_PREDICTOR_NAME} not exists')
-        models = [x['name'] for x in self.mdb.get_models()]
-        self.assertTrue(TEST_PREDICTOR_NAME not in models)
-
         print('Test predictor table not exists')
-        self.assertTrue(TEST_PREDICTOR_NAME not in self.get_tables_in(MINDSDB_DATABASE))
+        self.assertTrue(name not in self.get_tables_in(MINDSDB_DATABASE))
 
 
 if __name__ == "__main__":

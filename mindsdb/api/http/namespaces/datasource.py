@@ -11,6 +11,7 @@ from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 from flask import current_app as ca
 
+from mindsdb.interfaces.storage.db import session
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
 from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
     datasource_metadata,
@@ -167,6 +168,7 @@ def analyzing_thread(name, default_store):
         'created_at': datetime.datetime.utcnow(),
         'data': analysis
     }
+    session.close()
 
 
 @ns_conf.route('/<name>/analyze')

@@ -1,5 +1,7 @@
 import copy
 import traceback
+import datetime
+from dateutil.parser import parse as parse_datetime
 import subprocess
 
 from flask import request
@@ -8,12 +10,27 @@ from flask import current_app as ca
 
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.functions import get_all_models_meta_data
-
+from mindsdb.utilities.log import get_logs
 
 def get_integration(name):
     integrations = ca.config_obj.get('integrations', {})
     return integrations.get(name)
 
+
+@ns_conf.route('/logs')
+@ns_conf.param('name', 'Get logs')
+class GetLogs(Resource):
+    @ns_conf.doc('get_integrations')
+    def get(self):
+        min_timestamp = parse_datetime(request.args['min_timestamp'])
+        max_timestamp = request.args.get('max_timestamp', None)
+        context = request.args.get('context', None)
+        level = request.args.get('level', None)
+        log_from = request.args.get('log_from', None)
+        limit = request.args.get('limit', None)
+
+        logs = get_logs(min_timestamp, max_timestamp, context, level, log_from, limit)
+        return {'data': logs}
 
 @ns_conf.route('/integrations')
 @ns_conf.param('name', 'List all database integration')

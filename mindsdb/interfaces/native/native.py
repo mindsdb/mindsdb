@@ -160,5 +160,5 @@ class NativeInterface():
         predictor_record.name = new_name
         session.commit()
         self.dbw.register_predictors(self.get_model_data(new_name))
-        fs_store.put(name, f'predictor_{company_id}_{new_name}', config['paths']['predictors'])
+        self.fs_store.put(name, f'predictor_{company_id}_{new_name}', config['paths']['predictors'])
         self.fs_store.delete(f'predictor_{self.company_id}_{name}')

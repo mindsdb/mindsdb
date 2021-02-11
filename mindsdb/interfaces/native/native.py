@@ -148,7 +148,7 @@ class NativeInterface():
     def delete_model(self, name):
         predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
         id = predictor_record.id
-        Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).delete()
+        session.delete(predictor_record)
         session.commit()
         F.delete_model(name)
         self.dbw.unregister_predictor(name)

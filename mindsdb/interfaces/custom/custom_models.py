@@ -159,7 +159,7 @@ class CustomModels():
 
         self.dbw.register_predictors([self.get_model_data(new_name)])
 
-        fs_store.put(name, f'custom_model_{self.company_id}_{new_name}', self.storage_dir)
+        self.fs_store.put(name, f'custom_model_{self.company_id}_{new_name}', self.storage_dir)
         self.fs_store.delete(f'custom_model_{self.company_id}_{name}')
 
     def export_model(self, name):

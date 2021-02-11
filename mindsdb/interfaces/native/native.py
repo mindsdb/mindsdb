@@ -93,7 +93,7 @@ class NativeInterface():
         if model is None or model['status'] == 'training':
             try:
                 self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
-            except Excpetion:
+            except Exception:
                 pass
             model = mindsdb_native.F.get_model_data(name)
             if predictor_record.data is None or len(model) > len(predictor_record.data):

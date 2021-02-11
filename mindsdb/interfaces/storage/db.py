@@ -15,9 +15,10 @@ elif os.environ['MINDSDB_DATABASE_TYPE'] == 'mariadb':
     raise Exception('Mariadb not supported !')
 
 Base = declarative_base()
-session = scoped_session(sessionmaker(bind=engine,autoflush=True))
+session = scoped_session(sessionmaker(bind=engine, autoflush=True))
 Base.query = session.query_property()
 entitiy_version = 1
+
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
 class NumpyEncoder(json.JSONEncoder):

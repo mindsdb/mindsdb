@@ -7,6 +7,15 @@ import datetime
 
 from mindsdb.interfaces.storage.db import session, Log
 
+telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false', 'False']
+
+if telemtry_enabled:
+    import sentry_sdk
+    from sentry_sdk import capture_exception, capture_message, add_breadcrumb
+    sentry_sdk.init(
+        "https://29e64dbdf325404ebf95473d5f4a54d3@o404567.ingest.sentry.io/5633566",
+        traces_sample_rate=0 #Set to `1` to experiment with performance metrics
+    )
 
 class LoggerWrapper(object):
     def __init__(self, writer):
@@ -35,31 +44,41 @@ class DbHandler(logging.Handler):
         source = f'file: {record.pathname} - line: {record.lineno}'
         payload = record.msg
 
+        if telemtry_enabled:
+            pass
+            # @TODO: Enable once we are sure no sensitive info is being outputed in the logs
+            # if log_type in ['INFO']:
+            #    add_breadcrumb(
+            #        category='auth',
+            #        message=str(payload),
+            #        level='info',
+            #    )
+            # Might be too much traffic if we send this for users with slow networks
+            #if log_type in ['DEBUG']:
+            #    add_breadcrumb(
+            #        category='auth',
+            #        message=str(payload),
+            #        level='debug',
+            #    )
+
         if log_type in ['ERROR', 'WARNING']:
             trace = str(traceback.format_stack(limit=20))
             trac_log = Log(log_type='traceback', source=source, payload=trace, company_id=self.company_id)
             session.add(trac_log)
             session.commit()
 
-            try:
-                requests.get("https://public.api.mindsdb.com/error",timeout=0.4, params={
-                    'log_type': 'traceback'
-                    ,'source': source
-                    ,'payload': trace
-                    ,'company_id': str(self.company_id)
-                })
-            except Exception as e:
-                pass
+            if telemtry_enabled:
+                add_breadcrumb(
+                    category='stack_trace',
+                    message=trace,
+                    level='info',
+                )
 
-            try:
-                requests.get("https://public.api.mindsdb.com/error",timeout=0.4, params={
-                    'log_type': log_type
-                    ,'source': source
-                    ,'payload': payload
-                    ,'company_id': str(self.company_id)
-                })
-            except Exception as e:
-                pass
+                if log_type in ['ERROR']:
+                    capture_message(str(payload))
+
+                if log_type in ['WARNING']:
+                    capture_message(str(payload))
 
         log = Log(log_type=str(log_type), source=source, payload=str(payload), company_id=self.company_id)
         session.add(log)

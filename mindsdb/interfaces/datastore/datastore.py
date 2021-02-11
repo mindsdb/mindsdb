@@ -78,9 +78,11 @@ class DataStore():
         return None
 
     def delete_datasource(self, name):
-        Datasource.query.filter_by(company_id=self.company_id, name=name).delete()
+        datasource_record = Datasource.query.filter_by(company_id=self.company_id, name=name)
+        id = datasource_record.id
+        datasource_record.delete()
         session.commit()
-        self.fs_store.delete(f'datasource_{self.company_id}_{name}')
+        self.fs_store.delete(f'datasource_{self.company_id}_{datasource_record.id}')
         try:
             shutil.rmtree(os.path.join(self.dir, name))
         except Exception:
@@ -219,7 +221,7 @@ class DataStore():
                 'columns': [dict(name=x) for x in list(df.keys())]
             })
 
-            self.fs_store.put(name, f'datasource_{self.company_id}_{name}', self.dir)
+            self.fs_store.put(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
 
         except Exception:
             if os.path.isdir(ds_meta_dir):
@@ -233,7 +235,7 @@ class DataStore():
     def get_datasource_obj(self, name, raw=False):
         try:
             datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
-            self.fs_store.get(name, f'datasource_{self.company_id}_{name}', self.dir)
+            self.fs_store.get(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)
             if raw:
                 return creation_info

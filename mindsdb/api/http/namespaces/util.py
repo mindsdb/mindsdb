@@ -6,7 +6,7 @@ from mindsdb.api.http.namespaces.configs.util import ns_conf
 from mindsdb.utilities.telemetry import (
     enable_telemetry,
     disable_telemetry,
-    is_telemetry_file_exists,
+    telemetry_file_exists,
     inject_telemetry_to_static
 )
 
@@ -33,17 +33,16 @@ class Telemetry(Resource):
     @ns_conf.doc('get_telemetry_status')
     def get(self):
         storage_dir = ca.config_obj['storage_dir']
-        status = "enabled" if is_telemetry_file_exists(storage_dir) else "disabled"
+        status = "enabled" if telemetry_file_exists(storage_dir) else "disabled"
         return {"status": status}
 
     @ns_conf.doc('set_telemetry')
     def post(self):
         data = request.json
         action = data['action']
-        storage_dir = ca.config_obj['storage_dir']
         if str(action).lower() in ["true", "enable", "on"]:
-            enable_telemetry(storage_dir)
+            enable_telemetry(ca.config_obj['storage_dir'])
         else:
-            disable_telemetry(storage_dir)
+            disable_telemetry(ca.config_obj['storage_dir'])
         inject_telemetry_to_static(ca.config_obj.paths['static'])
         return '', 200

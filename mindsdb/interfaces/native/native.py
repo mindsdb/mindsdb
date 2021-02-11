@@ -70,7 +70,7 @@ class NativeInterface():
 
             predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
             if predictor_record.data['status'] == 'complete':
-                self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
+                self.fs_store.get(name, f'predictor_{self.company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
                     'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
                     'created': datetime.datetime.now()
@@ -92,7 +92,7 @@ class NativeInterface():
         model = predictor_record.data
         if model is None or model['status'] == 'training':
             try:
-                self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
+                self.fs_store.get(name, f'predictor_{self.company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 new_model_data = mindsdb_native.F.get_model_data(name)
             except Exception:
                 pass
@@ -146,20 +146,10 @@ class NativeInterface():
         return models
 
     def delete_model(self, name):
-        Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).delete()
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False)
+        id = predictor_record.id
+        predictor_record.delete()
         session.commit()
         F.delete_model(name)
-        self.fs_store.delete(f'predictor_{self.company_id}_{name}')
+        self.fs_store.delete(f'predictor_{self.company_id}_{id}')
         self.dbw.unregister_predictor(name)
-
-    # @TODO: Remove this option, to complicate given that storage is indexes by name+comapny ... can be reintorduced when we switch to IDs
-    def rename_model(self, name, new_name):
-        self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
-        self.dbw.unregister_predictor(name)
-        F.rename_model(name, new_name)
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
-        predictor_record.name = new_name
-        session.commit()
-        self.dbw.register_predictors(self.get_model_data(new_name))
-        self.fs_store.put(name, f'predictor_{company_id}_{new_name}', config['paths']['predictors'])
-        self.fs_store.delete(f'predictor_{self.company_id}_{name}')

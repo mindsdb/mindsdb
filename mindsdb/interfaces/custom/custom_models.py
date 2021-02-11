@@ -75,6 +75,7 @@ class CustomModels():
 
         model_data = self.get_model_data(name)
         model_data['status'] = 'completed'
+        model_data['columns'] = list(data_analysis.keys())
         self.save_model_data(name, model_data)
         self.fs_store.put(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)
 

@@ -76,7 +76,7 @@ jobs:
 
           # Cutsom model
           # echo -e "\n===============\ntest Cutsom model\n===============\n"
-          # python tests/integration_tests/flows/test_custom_model.py
+          python tests/integration_tests/flows/test_custom_model.py
 
 
           # user flow 1
@@ -101,6 +101,8 @@ jobs:
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
         DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
 
   deploy_to_pypi:
     runs-on: ubuntu-latest

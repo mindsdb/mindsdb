@@ -8,6 +8,7 @@ from flask import request
 from flask_restx import Resource, abort
 from flask import current_app as ca
 
+from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
@@ -101,7 +102,7 @@ class Integration(Resource):
             if is_test is False:
                 ca.dbw.register_predictors(model_data_arr)
         except Exception as e:
-            print(traceback.format_exc())
+            log.error(str(e))
             abort(500, f'Error during config update: {str(e)}')
 
         if is_test:
@@ -119,7 +120,7 @@ class Integration(Resource):
         try:
             ca.config_obj.remove_db_integration(name)
         except Exception as e:
-            print(traceback.format_exc())
+            log.error(str(e))
             abort(500, f'Error during integration delete: {str(e)}')
         return '', 200
 
@@ -138,7 +139,7 @@ class Integration(Resource):
             ca.config_obj.modify_db_integration(name, params)
             ca.dbw.setup_integration(name)
         except Exception as e:
-            print(traceback.format_exc())
+            log.error(str(e))
             abort(500, f'Error during integration modifycation: {str(e)}')
         return '', 200
 

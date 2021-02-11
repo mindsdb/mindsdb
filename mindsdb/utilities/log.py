@@ -6,7 +6,18 @@ import requests
 import datetime
 
 from mindsdb.interfaces.storage.db import session, Log
+from mindsdb.utilities.config import Config
 
+telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false', 'False']
+global_config = Config().get_all()
+
+if telemtry_enabled:
+    import sentry_sdk
+    from sentry_sdk import capture_exception, capture_message, add_breadcrumb
+    sentry_sdk.init(
+        "https://29e64dbdf325404ebf95473d5f4a54d3@o404567.ingest.sentry.io/5633566",
+        traces_sample_rate=0 #Set to `1` to experiment with performance metrics
+    )
 
 class LoggerWrapper(object):
     def __init__(self, writer):
@@ -35,31 +46,39 @@ class DbHandler(logging.Handler):
         source = f'file: {record.pathname} - line: {record.lineno}'
         payload = record.msg
 
+        if telemtry_enabled:
+            pass
+            # @TODO: Enable once we are sure no sensitive info is being outputed in the logs
+            # if log_type in ['INFO']:
+            #    add_breadcrumb(
+            #        category='auth',
+            #        message=str(payload),
+            #        level='info',
+            #    )
+            # Might be too much traffic if we send this for users with slow networks
+            #if log_type in ['DEBUG']:
+            #    add_breadcrumb(
+            #        category='auth',
+            #        message=str(payload),
+            #        level='debug',
+            #    )
+
         if log_type in ['ERROR', 'WARNING']:
             trace = str(traceback.format_stack(limit=20))
             trac_log = Log(log_type='traceback', source=source, payload=trace, company_id=self.company_id)
             session.add(trac_log)
             session.commit()
 
-            try:
-                requests.get("https://public.api.mindsdb.com/error",timeout=0.4, params={
-                    'log_type': 'traceback'
-                    ,'source': source
-                    ,'payload': trace
-                    ,'company_id': str(self.company_id)
-                })
-            except Exception as e:
-                pass
-
-            try:
-                requests.get("https://public.api.mindsdb.com/error",timeout=0.4, params={
-                    'log_type': log_type
-                    ,'source': source
-                    ,'payload': payload
-                    ,'company_id': str(self.company_id)
-                })
-            except Exception as e:
-                pass
+            if telemtry_enabled:
+                add_breadcrumb(
+                    category='stack_trace',
+                    message=trace,
+                    level='info',
+                )
+                if log_type in ['ERROR']:
+                    capture_message(str(payload))
+                if log_type in ['WARNING']:
+                    capture_message(str(payload))
 
         log = Log(log_type=str(log_type), source=source, payload=str(payload), company_id=self.company_id)
         session.add(log)
@@ -97,7 +116,7 @@ def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit):
     logs = [fmt_log_record(x) for x in logs]
     return logs
 
-def initialize_log(config, logger_name='main', wrap_print=False):
+def initialize_log(config=global_config, logger_name='main', wrap_print=False):
     ''' Create new logger
     :param config: object, app config
     :param logger_name: str, name of logger
@@ -118,12 +137,9 @@ def initialize_log(config, logger_name='main', wrap_print=False):
     db_handler = DbHandler()
     log.addHandler(db_handler)
 
-    log_path = os.path.join(config.paths['log'], logger_name)
-    if not os.path.isdir(log_path):
-        os.mkdir(log_path)
-
     if wrap_print:
         sys.stdout = LoggerWrapper(log.info)
 
+    return log
 
-log = logging.getLogger('mindsdb')
+log = initialize_log()

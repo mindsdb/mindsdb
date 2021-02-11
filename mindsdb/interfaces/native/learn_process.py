@@ -54,7 +54,7 @@ class LearnProcess(ctx.Process):
         except Exception as e:
             pass
 
-        fs_store.put(name, f'predictor_{company_id}_{name}', config['paths']['predictors'])
+        fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
 
         model_data = mindsdb_native.F.get_model_data(name)
 

@@ -11,6 +11,7 @@ from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 from flask import current_app as ca
 
+from mindsdb.utilities.log import log
 from mindsdb.interfaces.storage.db import session
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
 from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
@@ -78,7 +79,7 @@ class Datasource(Resource):
         try:
             ca.default_store.delete_datasource(name)
         except Exception as e:
-            print(e)
+            log.error(e)
             abort(400, str(e))
         return '', 200
 
@@ -186,7 +187,7 @@ class Analyze(Resource):
 
         ds = ca.default_store.get_datasource(name)
         if ds is None:
-            print('No valid datasource given')
+            log.error('No valid datasource given')
             abort(400, 'No valid datasource given')
 
         x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))
@@ -207,7 +208,7 @@ class Analyze(Resource):
 
         ds = ca.default_store.get_datasource(name)
         if ds is None:
-            print('No valid datasource given')
+            log.error('No valid datasource given')
             abort(400, 'No valid datasource given')
 
         x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))

@@ -52,7 +52,7 @@ class CustomModels():
         self.save_model_data(name, model_data)
 
         to_predict = to_predict if isinstance(to_predict,list) else [to_predict]
-        print(from_data)
+
         data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
         data_frame = data_source.df
         model = self._internal_load(name)

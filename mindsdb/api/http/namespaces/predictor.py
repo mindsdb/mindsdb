@@ -9,6 +9,7 @@ from flask import request, send_file
 from flask_restx import Resource, abort
 from flask import current_app as ca
 
+from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     predictor_metadata,
@@ -17,23 +18,6 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     put_predictor_params
 )
 from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
-
-
-def debug_pkey_type(model, keys=None, reset_keyes=True, type_to_check=list, append_key=True):
-    if type(model) != dict:
-        return
-    for k in model:
-        if reset_keyes:
-            keys = []
-        if type(model[k]) == dict:
-            keys.append(k)
-            debug_pkey_type(model[k], copy.deepcopy(keys), reset_keyes=False)
-        if type(model[k]) == type_to_check:
-            print(f'They key {keys}->{k} has type list')
-        if type(model[k]) == list:
-            for item in model[k]:
-                debug_pkey_type(item, copy.deepcopy(keys), reset_keyes=False)
-
 
 def preparse_results(results, format_flag='explain'):
     response_arr = []

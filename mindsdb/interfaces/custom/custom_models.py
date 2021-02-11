@@ -116,11 +116,11 @@ class CustomModels():
         return pred_arr
 
     def get_model_data(self, name):
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=True).first()
         return predictor_record.data
 
     def save_model_data(self, name, data):
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=True).first()
         if predictor_record is None:
             predictor_record = Predictor(company_id=self.company_id, name=name, is_custom=True, data=data)
             session.add(predictor_record)
@@ -140,7 +140,7 @@ class CustomModels():
 
 
     def delete_model(self, name):
-        Predictor.query.filter_by(company_id=self.company_id, name=name).delete()
+        Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=True).delete()
         session.commit()
         shutil.rmtree(self._dir(name))
         self.dbw.unregister_predictor(name)
@@ -153,7 +153,7 @@ class CustomModels():
         shutil.move(self._dir(name), self._dir(new_name))
         shutil.move(os.path.join(self._dir(new_name) + f'{name}.py'), os.path.join(self._dir(new_name) ,f'{new_name}.py'))
 
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=True).first()
         predictor_record.name = new_name
         session.commit()
 

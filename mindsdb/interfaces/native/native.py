@@ -46,8 +46,6 @@ class NativeInterface():
     def create(self, name):
         self._setup_for_creation(name)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
-        session.commit()
         return predictor
 
     def learn(self, name, from_data, to_predict, kwargs={}):
@@ -70,7 +68,7 @@ class NativeInterface():
             if psutil.virtual_memory().available < 1.2 * pow(10,9):
                 self.predictor_cache = {}
 
-            predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+            predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
             if predictor_record.data['status'] == 'complete':
                 self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
@@ -90,7 +88,7 @@ class NativeInterface():
         return F.analyse_dataset(ds)
 
     def get_model_data(self, name, db_fix=True):
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
         model = predictor_record.data
         if model is None or model['status'] == 'training':
             try:
@@ -147,7 +145,7 @@ class NativeInterface():
         return models
 
     def delete_model(self, name):
-        Predictor.query.filter_by(company_id=self.company_id, name=name).delete()
+        Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).delete()
         session.commit()
         F.delete_model(name)
         self.fs_store.delete(f'predictor_{self.company_id}_{name}')
@@ -158,7 +156,7 @@ class NativeInterface():
         self.fs_store.get(name, f'predictor_{self.company_id}_{name}', self.config['paths']['predictors'])
         self.dbw.unregister_predictor(name)
         F.rename_model(name, new_name)
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name).first()
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
         predictor_record.name = new_name
         session.commit()
         self.dbw.register_predictors(self.get_model_data(new_name))

@@ -46,6 +46,9 @@ jobs:
           echo -e "\n===============\ntest HTTP\n===============\n"
           python tests/integration_tests/flows/test_http.py
 
+          # ClickHouse
+          echo -e "\n===============\ntest ClickHouse\n===============\n"
+          python tests/integration_tests/flows/test_clickhouse.py
 
           # MsSQL
           echo -e "\n===============\ntest MsSQL\n===============\n"
@@ -70,12 +73,6 @@ jobs:
           # MariaDB
           echo -e "\n===============\ntest MariaDB\n===============\n"
           python tests/integration_tests/flows/test_mariadb.py
-
-
-          # ClickHouse
-          echo -e "\n===============\ntest ClickHouse\n===============\n"
-          python tests/integration_tests/flows/test_clickhouse.py
-
 
           # Cutsom model
           # echo -e "\n===============\ntest Cutsom model\n===============\n"

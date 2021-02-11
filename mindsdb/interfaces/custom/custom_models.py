@@ -143,7 +143,7 @@ class CustomModels():
         Predictor.query.filter_by(company_id=self.company_id, name=name).delete()
         shutil.rmtree(self._dir(name))
         self.dbw.unregister_predictor(name)
-        elf.fs_store.delete(f'custom_model_{self.company_id}_{name}')
+        self.fs_store.delete(f'custom_model_{self.company_id}_{name}')
 
     def rename_model(self, name, new_name):
         self.fs_store.get(name, f'custom_model_{self.company_id}_{name}', self.storage_dir)

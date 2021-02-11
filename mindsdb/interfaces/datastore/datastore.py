@@ -79,9 +79,9 @@ class DataStore():
         return None
 
     def delete_datasource(self, name):
-        datasource_record = Datasource.query.filter_by(company_id=self.company_id, name=name)
+        datasource_record = Datasource.query.filter_by(company_id=self.company_id, name=name).first()
         id = datasource_record.id
-        datasource_record.delete()
+        Datasource.query.filter_by(company_id=self.company_id, name=name).delete()
         session.commit()
         self.fs_store.delete(f'datasource_{self.company_id}_{datasource_record.id}')
         try:
@@ -101,7 +101,7 @@ class DataStore():
         session.add(datasource_record)
         session.commit()
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
-        
+
         try:
             if source_type == 'file':
                 source = os.path.join(ds_meta_dir, source)

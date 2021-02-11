@@ -146,7 +146,7 @@ class NativeInterface():
         return models
 
     def delete_model(self, name):
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False)
+        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
         id = predictor_record.id
         predictor_record.delete()
         session.commit()

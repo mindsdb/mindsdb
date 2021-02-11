@@ -151,5 +151,5 @@ class NativeInterface():
         Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).delete()
         session.commit()
         F.delete_model(name)
-        self.fs_store.delete(f'predictor_{self.company_id}_{id}')
         self.dbw.unregister_predictor(name)
+        self.fs_store.delete(f'predictor_{self.company_id}_{id}')

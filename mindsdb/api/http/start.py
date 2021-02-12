@@ -18,7 +18,7 @@ from mindsdb.utilities.log import initialize_log
 from mindsdb.interfaces.storage.db import session
 
 
-def start(verbose=False):
+def start(verbose, no_studio):
     config = Config()
     if verbose:
         config.set(['log', 'level', 'console'], 'DEBUG')
@@ -26,10 +26,12 @@ def start(verbose=False):
     initialize_log(config, 'http', wrap_print=True)
 
     # start static initialization in a separate thread
-    init_static_thread = threading.Thread(target=initialize_static, args=(config,))
-    init_static_thread.start()
+    init_static_thread=None
+    if not no_studio:
+        init_static_thread = threading.Thread(target=initialize_static, args=(config,))
+        init_static_thread.start()
 
-    app, api = initialize_flask(config, init_static_thread)
+    app, api = initialize_flask(config, init_static_thread, no_studio)
     initialize_interfaces(app)
 
     static_root = Path(config.paths['static'])
@@ -67,7 +69,8 @@ def start(verbose=False):
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
 
     # waiting static initialization
-    init_static_thread.join()
+    if not no_studio:
+        init_static_thread.join()
     if server.lower() == 'waitress':
         if host in ('', '0.0.0.0'):
             serve(app, port=port, host='*')

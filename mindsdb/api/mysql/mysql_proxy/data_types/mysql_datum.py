@@ -8,11 +8,9 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-
-import logging
-
 import math
 import struct
+
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ONE_BYTE_ENC, TWO_BYTE_ENC, THREE_BYTE_ENC, NULL_VALUE, DEFAULT_CAPABILITIES
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 
@@ -31,7 +29,6 @@ class Datum():
         self.value = value
 
     def setFromBuff(self, buff):
-        val = ''
         start = 0
 
         if self.var_len == 'lenenc':
@@ -156,7 +153,6 @@ class Datum():
 def test():
     import pprint
 
-    logging.basicConfig(level=10)
     u = Datum('int<8>', DEFAULT_CAPABILITIES >> 16)
     pprint.pprint(u.toStringPacket())
 

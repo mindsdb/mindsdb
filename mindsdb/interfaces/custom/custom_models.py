@@ -46,7 +46,7 @@ class CustomModels():
 
         return model
 
-    def learn(self, name, from_data, to_predict, kwargs={}):
+    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
         model_data = self.get_model_data(name)
         model_data['status'] = 'training'
         self.save_model_data(name, model_data)

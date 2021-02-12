@@ -45,9 +45,8 @@ if __name__ == '__main__':
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
     config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
-
-    initialize_log(config)
-    log = get_log('main')
+    
+    log = initialize_log('main')
 
     from lightwood.__about__ import __version__ as lightwood_version
     from mindsdb_native.__about__ import __version__ as mindsdb_native_version

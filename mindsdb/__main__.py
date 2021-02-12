@@ -19,7 +19,7 @@ from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
-from mindsdb.utilities.log import initialize_log, get_log
+from mindsdb.utilities.log import log
 
 
 def close_api_gracefully(apis):
@@ -46,8 +46,6 @@ if __name__ == '__main__':
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
     config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
     
-    log = initialize_log('main')
-
     from lightwood.__about__ import __version__ as lightwood_version
     from mindsdb_native.__about__ import __version__ as mindsdb_native_version
     from mindsdb.__about__ import __version__ as mindsdb_version

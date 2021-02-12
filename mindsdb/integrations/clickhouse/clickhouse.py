@@ -14,6 +14,7 @@ class Clickhouse(Integration):
             DATA_SUBTYPES.TIMESTAMP: 'Nullable(Datetime)',
             DATA_SUBTYPES.SINGLE: 'Nullable(String)',
             DATA_SUBTYPES.MULTIPLE: 'Nullable(String)',
+            DATA_SUBTYPES.TAGS: 'Nullable(String)',
             DATA_SUBTYPES.IMAGE: 'Nullable(String)',
             DATA_SUBTYPES.VIDEO: 'Nullable(String)',
             DATA_SUBTYPES.AUDIO: 'Nullable(String)',
@@ -94,7 +95,7 @@ class Clickhouse(Integration):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = self._escape_table_name(model_meta['name'])
-            stats = model_meta['data_analysis']
+            stats = model_meta['data_analysis_v2']
 
             columns_sql = ','.join(self._to_clickhouse_table(stats, model_meta['predict']))
             columns_sql += ',`when_data` Nullable(String)'
@@ -102,8 +103,8 @@ class Clickhouse(Integration):
             columns_sql += ',`external_datasource` Nullable(String)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
-                
-                if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+
+                if model_meta['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                     columns_sql += f',`{col}_min` Nullable(Float64)'
                     columns_sql += f',`{col}_max` Nullable(Float64)'
                 columns_sql += f',`{col}_explain` Nullable(String)'

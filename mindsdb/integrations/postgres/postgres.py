@@ -14,6 +14,7 @@ class PostgreSQL(Integration):
             DATA_SUBTYPES.TIMESTAMP: 'timestamp',
             DATA_SUBTYPES.SINGLE: 'text',
             DATA_SUBTYPES.MULTIPLE: 'text',
+            DATA_SUBTYPES.TAGS: 'text',
             DATA_SUBTYPES.IMAGE: 'text',
             DATA_SUBTYPES.VIDEO: 'text',
             DATA_SUBTYPES.AUDIO: 'text',
@@ -128,13 +129,13 @@ class PostgreSQL(Integration):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
-            stats = model_meta['data_analysis']
+            stats = model_meta['data_analysis_v2']
             columns_sql = ','.join(self._to_postgres_table(stats, model_meta['predict']))
             columns_sql += ',"select_data_query" text'
             columns_sql += ',"external_datasource" text'
             for col in model_meta['predict']:
                 columns_sql += f',"{col}_confidence" float8'
-                if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+                if model_meta['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                     columns_sql += f',"{col}_min" float8'
                     columns_sql += f',"{col}_max" float8'
                 columns_sql += f',"{col}_explain" text'

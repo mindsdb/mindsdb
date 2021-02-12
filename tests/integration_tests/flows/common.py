@@ -1,21 +1,23 @@
 import time
-from pathlib import Path
+import os
 import json
-import requests
 import subprocess
 import atexit
-import os
 import asyncio
 import shutil
 import csv
+import re
+import sys
+from pathlib import Path
 
+import requests
 from pandas import DataFrame
 
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
+from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.utilities.ps import wait_port, is_port_in_use
+from mindsdb.utilities.ps import wait_port, is_port_in_use, net_connections
 from mindsdb_native import CONFIG
 
 
@@ -136,33 +138,72 @@ def prepare_config(config, mindsdb_database='mindsdb', override_integration_conf
     return temp_config_path
 
 
+def close_all_ssh_tunnels():
+    RE_PORT_CONTROL = re.compile(r'^\.mindsdb-ssh-ctrl-\d+$')
+    for p in Path('/tmp/mindsdb').iterdir():
+        if p.is_socket() and p.name != '.mindsdb-ssh-ctrl-5005' and RE_PORT_CONTROL.match(p.name):
+            sp = subprocess.Popen(f'ssh -S /tmp/mindsdb/{p.name} -O exit ubuntu@3.220.66.106', shell=True)
+            sp.wait()
+
+
 def close_ssh_tunnel(sp, port):
     sp.kill()
     # NOTE line below will close connection in ALL test instances.
     # sp = subprocess.Popen(f'for pid in $(lsof -i :{port} -t); do kill -9 $pid; done', shell=True)
-    sp = subprocess.Popen(f'ssh -S /tmp/.mindsdb-ssh-ctrl-{port} -O exit ubuntu@3.220.66.106', shell=True)
+    sp = subprocess.Popen(f'ssh -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -O exit ubuntu@3.220.66.106', shell=True)
     sp.wait()
 
 
 def open_ssh_tunnel(port, direction='R'):
-    cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
+    path = Path('/tmp/mindsdb')
+    if not path.is_dir():
+        path.mkdir(mode=0o777, exist_ok=True, parents=True)
+
+    if is_mssql_test() and port != 5005:
+        cmd = f'ssh -i ~/.ssh/db_machine_ms -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} Administrator@107.21.140.172'
+    else:
+        cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
     sp = subprocess.Popen(
         cmd.split(' '),
         stdout=OUTPUT,
         stderr=OUTPUT
     )
-    atexit.register(close_ssh_tunnel, sp=sp, port=port)
+    try:
+        status = sp.wait(20)
+    except subprocess.TimeoutExpired:
+        status = 1
+        sp.kill()
+
+    if status == 0:
+        atexit.register(close_ssh_tunnel, sp=sp, port=port)
+    return status
+
+
+def is_mssql_test():
+    for x in sys.argv:
+        if 'test_mssql.py' in x:
+            return True
+    return False
 
 
 if USE_EXTERNAL_DB_SERVER:
     config = Config(TEST_CONFIG)
     open_ssh_tunnel(5005, 'L')
     wait_port(5005, timeout=10)
-    r = requests.get('http://127.0.0.1:5005/port')
-    if r.status_code != 200:
-        raise Exception('Cant get port to run mindsdb')
-    mindsdb_port = r.content.decode()
-    open_ssh_tunnel(mindsdb_port, 'R')
+
+    close_all_ssh_tunnels()
+
+    for _ in range(10):
+        r = requests.get('http://127.0.0.1:5005/port')
+        if r.status_code != 200:
+            raise Exception('Cant get port to run mindsdb')
+        mindsdb_port = r.content.decode()
+        status = open_ssh_tunnel(mindsdb_port, 'R')
+        if status == 0:
+            break
+    else:
+        raise Exception('Cant get empty port to run mindsdb')
+
     print(f'use mindsdb port={mindsdb_port}')
     config._config['api']['mysql']['port'] = mindsdb_port
     config._config['api']['mongodb']['port'] = mindsdb_port
@@ -187,12 +228,17 @@ def make_test_csv(name, data):
 def stop_mindsdb(sp=None):
     if sp:
         sp.kill()
-    sp = subprocess.Popen('kill -9 $(lsof -t -i:47334)', shell=True)
-    sp.wait()
-    sp = subprocess.Popen('kill -9 $(lsof -t -i:47335)', shell=True)
-    sp.wait()
-    sp = subprocess.Popen('kill -9 $(lsof -t -i:47336)', shell=True)
-    sp.wait()
+    conns = net_connections()
+    pids = [x.pid for x in conns
+            if x.pid is not None and x.status in ['LISTEN', 'CLOSE_WAIT']
+            and x.laddr[1] in (47334, 47335, 47336)]
+
+    for pid in pids:
+        try:
+            os.kill(pid, 9)
+        # process may be killed by OS due to some reasons in that moment
+        except ProcessLookupError:
+            pass
 
 
 def run_environment(config, apis=['mysql'], override_integration_config={}, override_api_config={}, mindsdb_database='mindsdb', clear_storage=True):
@@ -201,7 +247,7 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
 
     api_str = ','.join(apis)
     sp = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path],
+        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', temp_config_path, '--verbose'],
         close_fds=True,
         stdout=OUTPUT,
         stderr=OUTPUT
@@ -234,7 +280,7 @@ def run_environment(config, apis=['mysql'], override_integration_config={}, over
         raise Exception('Cant start mindsdb apis')
 
     CONFIG.MINDSDB_STORAGE_PATH = config.paths['predictors']
-    mdb = MindsdbNative(config)
+    mdb = NativeInterface(config)
     datastore = DataStore(config)
 
     return mdb, datastore

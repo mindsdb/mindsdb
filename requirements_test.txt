@@ -1,2 +1,0 @@
-pymongo >= 3.10.1
-psutil >= 5.7.2

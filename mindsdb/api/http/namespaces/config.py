@@ -6,7 +6,6 @@ from flask_restx import Resource, abort
 from flask import current_app as ca
 
 from mindsdb.api.http.namespaces.configs.config import ns_conf
-from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import get_all_models_meta_data
 
 
@@ -72,14 +71,15 @@ class Integration(Resource):
             mdb = ca.mindsdb_native
             cst = ca.custom_models
             model_data_arr = get_all_models_meta_data(mdb, cst)
-            dbw = DatabaseWrapper(ca.config_obj)
-            dbw.register_predictors(model_data_arr)
+            ca.dbw.setup_integration(name)
+            if is_test is False:
+                ca.dbw.register_predictors(model_data_arr)
         except Exception as e:
             print(traceback.format_exc())
             abort(500, f'Error during config update: {str(e)}')
 
         if is_test:
-            cons = dbw.check_connections()
+            cons = ca.dbw.check_connections()
             ca.config_obj.remove_db_integration(name)
             return {'success': cons[name]}, 200
 
@@ -110,7 +110,7 @@ class Integration(Resource):
                 params['publish'] = params['enabled']
                 del params['enabled']
             ca.config_obj.modify_db_integration(name, params)
-            DatabaseWrapper(ca.config_obj)
+            ca.dbw.setup_integration(name)
         except Exception as e:
             print(traceback.format_exc())
             abort(500, f'Error during integration modifycation: {str(e)}')
@@ -124,6 +124,16 @@ class Check(Resource):
     def get(self, name):
         if get_integration(name) is None:
             abort(404, f'Can\'t find database integration: {name}')
-        dbw = DatabaseWrapper(ca.config_obj)
-        connections = dbw.check_connections()
+        connections = ca.dbw.check_connections()
         return connections.get(name, False), 200
+
+
+@ns_conf.route('/telemetry/<flag>')
+@ns_conf.param('flag', 'Turn telemtry on or off')
+class ToggleTelemetry(Resource):
+    @ns_conf.doc('check')
+    def get(self, flag):
+        if flag in ["True", "true", "t"]:
+            return 'Enabled telemetry', 200
+        else:
+            return 'Disabled telemetry', 200

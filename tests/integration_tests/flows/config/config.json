@@ -16,61 +16,63 @@
             "user": "mindsdb"
         }
     },
-    "config_version": "1.3",
+    "config_version": "1.4",
     "debug": true,
     "integrations": {
         "default_clickhouse": {
-            "publish": true,
             "host": "localhost",
             "password": "",
             "port": 8123,
+            "publish": true,
             "type": "clickhouse",
             "user": "default"
         },
         "default_mariadb": {
-            "publish": true,
             "host": "localhost",
             "password": "root",
             "port": 3306,
+            "publish": true,
             "type": "mariadb",
             "user": "root"
         },
         "default_mongodb": {
-            "publish": false,
             "host": "127.0.0.1",
             "password": "",
             "port": 27001,
+            "publish": false,
             "type": "mongodb",
             "user": ""
         },
         "default_mssql": {
-            "publish": true,
             "host": "127.0.0.1",
             "odbc_driver_name": "MySQL ODBC 8.0 Unicode Driver",
             "password": "password",
             "port": 1433,
+            "publish": true,
             "type": "mssql",
             "user": "sa"
         },
         "default_mysql": {
-            "publish": true,
             "host": "localhost",
             "password": "root",
             "port": 3307,
+            "publish": true,
             "type": "mysql",
             "user": "root"
         },
         "default_postgres": {
             "database": "postgres",
-            "publish": true,
             "host": "localhost",
             "password": "",
             "port": 5432,
+            "publish": true,
             "type": "postgres",
             "user": "postgres"
         },
+        "default_s3_storage": {
+            "type": "s3_storage"
+        },
         "default_snowflake": {
-            "publish": false,
             "type": "snowflake"
         },
         "default_athena": {

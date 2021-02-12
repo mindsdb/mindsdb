@@ -97,7 +97,7 @@ class Predictor(Resource):
             if is_custom(name):
                 model = ca.custom_models.get_model_data(name)
             else:
-                model = ca.mindsdb_native.get_model_data(name, native_view=True)
+                model = ca.mindsdb_native.get_model_data(name, db_fix=False)
         except Exception as e:
             abort(404, "")
 
@@ -199,34 +199,6 @@ class PredictorLearn(Resource):
 
         return '', 200
 
-@ns_conf.route('/<name>/columns')
-@ns_conf.param('name', 'The predictor identifier')
-class PredictorColumns(Resource):
-    @ns_conf.doc('get_predictor_columns')
-    def get(self, name):
-        '''List of predictors colums'''
-        try:
-            if is_custom(name):
-                model = ca.custom_models.get_model_data(name)
-            else:
-                model = ca.mindsdb_native.get_model_data(name, native_view=True)
-        except Exception:
-            abort(404, 'Invalid predictor name')
-
-        columns = []
-        for array, is_target_array in [(model['data_analysis']['target_columns_metadata'], True),
-                                       (model['data_analysis']['input_columns_metadata'], False)]:
-            for col_data in array:
-                column = {
-                    'name': col_data['column_name'],
-                    'data_type': col_data['data_type'].lower(),
-                    'is_target_column': is_target_array
-                }
-                if column['data_type'] == 'categorical':
-                    column['distribution'] = col_data["data_distribution"]["data_histogram"]["x"]
-                columns.append(column)
-
-        return columns, 200
 
 @ns_conf.route('/<name>/predict')
 @ns_conf.param('name', 'The predictor identifier')
@@ -266,28 +238,27 @@ class PredictorPredictFromDataSource(Resource):
     def post(self, name):
         data = request.json
 
-        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=True)
+        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'))
         if from_data is None:
             abort(400, 'No valid datasource given')
 
         try:
             format_flag = data.get('format_flag')
-        except:
+        except Exception:
             format_flag = 'explain'
 
         try:
             kwargs = data.get('kwargs')
-        except:
+        except Exception:
             kwargs = {}
 
-        if type(kwargs) != type({}):
+        if not isinstance(kwargs, dict):
             kwargs = {}
 
         if is_custom(name):
             return ca.custom_models.predict(name, from_data=from_data, **kwargs)
-        else:
-            results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
 
+        results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
         return preparse_results(results, format_flag)
 
 

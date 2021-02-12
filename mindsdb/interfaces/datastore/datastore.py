@@ -5,6 +5,8 @@ import shutil
 import os
 import pickle
 
+import pandas as pd
+
 from mindsdb.interfaces.native.mindsdb import MindsdbNative
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
 
@@ -13,13 +15,10 @@ class DataStore():
     def __init__(self, config):
         self.config = config
         self.dir = config.paths['datasources']
-        self.mindsdb_native = MindsdbNative(config)
+        self.mindsdb_native = NativeInterface(config)
 
     def get_analysis(self, ds):
-        if isinstance(ds, str):
-            return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
-        else:
-            return self.mindsdb_native.analyse_dataset(ds)
+        return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
 
     def get_datasources(self):
         datasource_arr = []
@@ -38,18 +37,15 @@ class DataStore():
         return datasource_arr
 
     def get_data(self, name, where=None, limit=None, offset=None):
-        if offset is None:
-            offset = 0
+        offset = 0 if offset is None else offset
 
         ds = self.get_datasource_obj(name)
 
-        # @TODO Remove and add `offset` to the `filter` method of the datasource
         if limit is not None:
-            filtered_ds = ds.filter(where=where, limit=limit+offset)
+            # @TODO Add `offset` to the `filter` method of the datasource and get rid of `offset`
+            filtered_ds = ds.filter(where=where, limit=limit + offset).iloc[offset:]
         else:
             filtered_ds = ds.filter(where=where)
-
-        filtered_ds = filtered_ds.iloc[offset:]
 
         data = filtered_ds.to_dict(orient='records')
         return {
@@ -107,6 +103,8 @@ class DataStore():
                     'snowflake': SnowflakeDS,
                     'athena': AthenaDS
                 }
+
+
 
                 try:
                     dsClass = ds_class_map[integration['type']]
@@ -167,6 +165,8 @@ class DataStore():
                     ds = dsClass(**picklable['kwargs'])
 
                 elif integration['type'] == 'mongodb':
+                    if isinstance(source['find'], str):
+                        source['find'] = json.loads(source['find'])
                     picklable = {
                         'class': dsClass.__name__,
                         'args': [],
@@ -212,9 +212,6 @@ class DataStore():
             if '' in df.columns or len(df.columns) != len(set(df.columns)):
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique name')
-
-            # Not sure if needed
-            #summary_analysis = self.get_analysis(ds.filter(limit=200))['data_analysis_v2']
 
             with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
                 pickle.dump(picklable, fp)

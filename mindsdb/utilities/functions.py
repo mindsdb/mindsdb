@@ -33,18 +33,11 @@ def cast_row_types(row, field_types):
 def get_all_models_meta_data(mindsdb_native, custom_models):
     ''' combine custom models and native models to one array
 
-        :param mindsdb_native: instance of MindsdbNative
+        :param mindsdb_native: instance of NativeInterface
         :param custom_models: instance of CustomModels
         :return: list of models meta data
     '''
-    model_data_arr = [
-        {
-            'name': x['name'],
-            'predict': x['predict'],
-            'data_analysis': mindsdb_native.get_model_data(x['name'])['data_analysis_v2']
-        } for x in mindsdb_native.get_models() if x['status'] == 'complete'
-    ]
-
+    model_data_arr = [mindsdb_native.get_model_data(x['name']) for x in mindsdb_native.get_models() if x['status'] == 'complete']
     model_data_arr.extend(custom_models.get_models())
 
     return model_data_arr

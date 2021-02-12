@@ -1,12 +1,8 @@
 import inspect
 import os
-import time
 from pathlib import Path
-import json
 import shutil
 import pickle
-from distutils.version import LooseVersion
-import logging
 
 
 def create_directory(path):
@@ -126,6 +122,7 @@ def do_init_migration(paths):
                         str(p.joinpath(f.name))
                     )
                 shutil.rmtree(datasource_folder)
+
 
 def create_dirs_recursive(path):
     if isinstance(path, dict):

@@ -6,7 +6,6 @@ import threading
 import webbrowser
 from zipfile import ZipFile
 from pathlib import Path
-import logging
 import traceback
 #import concurrent.futures
 
@@ -21,6 +20,8 @@ from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import get_log
+
 
 class Swagger_Api(Api):
     """
@@ -37,7 +38,7 @@ def initialize_static(config):
         Files will be downloaded and updated if new version of GUI > current.
         Current GUI version stored in static/version.txt.
     '''
-    log = logging.getLogger('mindsdb.http')
+    log = get_log('http')
     static_path = Path(config.paths['static'])
     static_path.mkdir(parents=True, exist_ok=True)
 
@@ -232,7 +233,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
     # NOTE rewrite it, that hotfix to see GUI link
     if not no_studio:
-        log = logging.getLogger('mindsdb.http')
+        log = get_log('http')
         if host in ('', '0.0.0.0'):
             url = f'http://127.0.0.1:{port}/'
         else:
@@ -262,7 +263,7 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     """
     init_static_thread.join()
     inject_telemetry_to_static(static_folder)
-    logger = logging.getLogger('mindsdb.http')
+    logger = get_log('http')
     try:
         is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,
                                            pid=pid, port=port)

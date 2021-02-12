@@ -2,8 +2,6 @@ import os
 import sys
 import logging
 import traceback
-import requests
-import datetime
 
 from mindsdb.interfaces.storage.db import session, Log
 from mindsdb.utilities.config import Config
@@ -141,5 +139,12 @@ def initialize_log(config=global_config, logger_name='main', wrap_print=False):
         sys.stdout = LoggerWrapper(log.info)
 
     return log
+
+
+def get_log(logger_name=None):
+    if logger_name is None:
+        return logging.getLogger('mindsdb')
+    return logging.getLogger(f'mindsdb.{logger_name}')
+
 
 log = initialize_log()

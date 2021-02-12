@@ -4,7 +4,6 @@ import sys
 import os
 import time
 import asyncio
-import logging
 import datetime
 import platform
 
@@ -20,7 +19,8 @@ from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
-from mindsdb.utilities.log import initialize_log
+from mindsdb.utilities.log import initialize_log, get_log
+
 
 def close_api_gracefully(apis):
     try:
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
 
     initialize_log(config)
-    log = logging.getLogger('mindsdb.main')
+    log = get_log('main')
 
     from lightwood.__about__ import __version__ as lightwood_version
     from mindsdb_native.__about__ import __version__ as mindsdb_native_version

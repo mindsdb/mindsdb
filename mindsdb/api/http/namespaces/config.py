@@ -169,7 +169,7 @@ class ToggleTelemetry(Resource):
 @ns_conf.param('dependency_list', 'Install dependencies')
 class InstallDependenciesList(Resource):
     def get(self):
-        return {'dependencies':['snowflake','athena','google','s3','lightgbm_gpu']}
+        return {'dependencies':['snowflake','athena','google','s3','lightgbm_gpu','mssql']}
 
 @ns_conf.route('/install/<dependency>')
 @ns_conf.param('dependency', 'Install dependencies')
@@ -185,6 +185,8 @@ class InstallDependencies(Resource):
             dependency = ['boto3 >= 1.9.0']
         elif dependency == 'lightgbm_gpu':
             dependency = ['lightgbm', '--install-option=--gpu', '--upgrade']
+        elif dependency == 'mssql':
+            dependency = ['pymssql >= 2.1.4']
         else:
             return f'Unkown dependency: {dependency}', 400
 

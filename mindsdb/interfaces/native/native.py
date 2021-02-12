@@ -48,14 +48,14 @@ class NativeInterface():
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
 
-    def learn(self, name, from_data, to_predict, kwargs={}):
+    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
 
         self._setup_for_creation(name)
 
-        p = LearnProcess(name, from_data, to_predict, kwargs, self.config.get_all())
+        p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id)
         p.start()
         if join_learn_process is True:
             p.join()

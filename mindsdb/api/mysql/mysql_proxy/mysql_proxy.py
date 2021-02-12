@@ -386,7 +386,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
-        ds_columns = [x['name'] for x in default_store.get_datasource(ds_name)['columns']]
+        ds_data = default_store.get_datasource(ds_name)
+        ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
             if col not in ds_columns:
                 if is_select_data_query:
@@ -394,9 +395,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise Exception(f"Column '{col}' not exists")
 
         if insert['name'] in [x['name'] for x in custom_models.get_models()]:
-            custom_models.learn(insert['name'], ds, insert['predict'], kwargs)
+            custom_models.learn(insert['name'], ds, insert['predict'], ds_data.id, kwargs)
         else:
-            mdb.learn(insert['name'], ds, insert['predict'], kwargs)
+            mdb.learn(insert['name'], ds, insert['predict'], ds_data.id, kwargs)
 
         self.packet(OkPacket).send()
 

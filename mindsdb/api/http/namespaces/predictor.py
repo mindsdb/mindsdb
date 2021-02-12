@@ -143,7 +143,7 @@ class Predictor(Resource):
             original_name = name
             name = name + '_retrained'
 
-        ca.mindsdb_native.learn(name, from_data, to_predict, default_store.get_datasource(ds_name).id, kwargs)
+        ca.mindsdb_native.learn(name, from_data, to_predict, ca.default_store.get_datasource(ds_name).id, kwargs)
         for i in range(20):
             try:
                 # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
@@ -179,7 +179,7 @@ class PredictorLearn(Resource):
         ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
         from_data = ca.default_store.get_datasource_obj(ds_name, raw=True)
 
-        ca.custom_models.learn(name, from_data, to_predict, default_store.get_datasource(ds_name).id, kwargs)
+        ca.custom_models.learn(name, from_data, to_predict, ca.default_store.get_datasource(ds_name).id, kwargs)
 
         return '', 200
 

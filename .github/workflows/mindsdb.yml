@@ -22,12 +22,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip==20.2.4
+        pip install 'pymssql >= 2.1.4'
         pip install --no-cache-dir .
     - name: Install mindsdb_native/staging if it's not mindsdb/stable
       if: github.ref != 'refs/heads/stable'
       run: |
           pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+          pip install boto3
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
@@ -45,45 +47,54 @@ jobs:
           echo -e "\n===============\ntest HTTP\n===============\n"
           python tests/integration_tests/flows/test_http.py
 
+          # ClickHouse
+          echo -e "\n===============\ntest ClickHouse\n===============\n"
+          python tests/integration_tests/flows/test_clickhouse.py
+
           # MsSQL
           echo -e "\n===============\ntest MsSQL\n===============\n"
           python tests/integration_tests/flows/test_mssql.py
 
+
           # MongoDB
-          echo -e "\n===============\ntest MongoDB\n===============\n"
-          python tests/integration_tests/flows/test_mongo.py
+          #echo -e "\n===============\ntest MongoDB\n===============\n"
+          #python tests/integration_tests/flows/test_mongo.py
+
 
           # PostgreSQL
           echo -e "\n===============\ntest PostgreSQL\n===============\n"
           python tests/integration_tests/flows/test_postgres.py
 
+
           # MySQL
           echo -e "\n===============\ntest MySQL\n===============\n"
           python tests/integration_tests/flows/test_mysql.py
+
 
           # MariaDB
           echo -e "\n===============\ntest MariaDB\n===============\n"
           python tests/integration_tests/flows/test_mariadb.py
 
-          # ClickHouse
-          echo -e "\n===============\ntest ClickHouse\n===============\n"
-          python tests/integration_tests/flows/test_clickhouse.py
-
           # Cutsom model
-          echo -e "\n===============\ntest Cutsom model\n===============\n"
+          # echo -e "\n===============\ntest Cutsom model\n===============\n"
           python tests/integration_tests/flows/test_custom_model.py
+
 
           # user flow 1
           echo -e "\n===============\ntest user flow 1\n===============\n"
           python tests/integration_tests/flows/test_user_flow_1.py
 
+
           # user flow 2
           echo -e "\n===============\ntest user flow 2\n===============\n"
           python tests/integration_tests/flows/test_user_flow_2.py
 
+
           # flow with mistakes
           echo -e "\n===============\nflow with mistakes\n===============\n"
           python tests/integration_tests/flows/test_mistakes.py
+
+
         fi
       shell: bash
       env:
@@ -91,6 +102,8 @@ jobs:
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
         DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
 
   deploy_to_pypi:
     runs-on: ubuntu-latest
@@ -129,7 +142,7 @@ jobs:
         python-version: '3.7'
     - name: Deploy version files
       run: |
-        python distributions/ver/deploy_version.py beta
+        python deploy_version.py beta
 
     - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master

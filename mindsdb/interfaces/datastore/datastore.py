@@ -1,6 +1,5 @@
 import json
 import datetime
-from dateutil.parser import parse as parse_dt
 import shutil
 import os
 import pickle
@@ -9,36 +8,50 @@ import pandas as pd
 
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
+from mindsdb.utilities.config import Config
+from mindsdb.interfaces.storage.db import session, Datasource
+from mindsdb.interfaces.storage.fs import FsSotre
+from mindsdb.utilities.log import log
 
 
 class DataStore():
-    def __init__(self, config):
-        self.config = config
-        self.dir = config.paths['datasources']
-        self.mindsdb_native = NativeInterface(config)
+    def __init__(self):
+        self.config = Config()
 
-    def get_analysis(self, ds):
-        return self.mindsdb_native.analyse_dataset(self.get_datasource_obj(ds))
+        self.fs_store = FsSotre()
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        self.dir = self.config.paths['datasources']
+        self.mindsdb_native = NativeInterface()
 
-    def get_datasources(self):
+    def get_analysis(self, name):
+        datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+        if datasource_record.analysis is None:
+            datasource_record.analysis = json.dumps(self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name)))
+            session.commit()
+
+        analysis = json.loads(datasource_record.analysis)
+        return analysis
+
+    def get_datasources(self, name=None):
         datasource_arr = []
-        for ds_name in os.listdir(self.dir):
+        if name is not None:
+            datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id, name=name)
+        else:
+            datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
+        for datasource_record in datasource_record_arr:
             try:
-                with open(os.path.join(self.dir, ds_name, 'metadata.json'), 'r') as fp:
-                    try:
-                        datasource = json.load(fp)
-                        datasource['created_at'] = parse_dt(datasource['created_at'].split('.')[0])
-                        datasource['updated_at'] = parse_dt(datasource['updated_at'].split('.')[0])
-                        datasource_arr.append(datasource)
-                    except Exception as e:
-                        print(e)
+                datasource = json.loads(datasource_record.data)
+                datasource['created_at'] = datasource_record.created_at
+                datasource['updated_at'] = datasource_record.updated_at
+                datasource['name'] = datasource_record.name
+                datasource['id'] = datasource_record.id
+                datasource_arr.append(datasource)
             except Exception as e:
-                print(e)
+                log.error(e)
         return datasource_arr
 
     def get_data(self, name, where=None, limit=None, offset=None):
         offset = 0 if offset is None else offset
-
         ds = self.get_datasource_obj(name)
 
         if limit is not None:
@@ -47,6 +60,7 @@ class DataStore():
         else:
             filtered_ds = ds.filter(where=where)
 
+        filtered_ds = filtered_ds.where(pd.notnull(filtered_ds), None)
         data = filtered_ds.to_dict(orient='records')
         return {
             'data': data,
@@ -55,28 +69,38 @@ class DataStore():
         }
 
     def get_datasource(self, name):
-        for ds in self.get_datasources():
-            if ds['name'] == name:
-                return ds
+        datasource_arr = self.get_datasources(name)
+        if len(datasource_arr) == 1:
+            return datasource_arr[0]
+        # @TODO: Remove when db swithc is more stable, this should never happen, but good santiy check while this is kinda buggy
+        elif len(datasource_arr) > 1:
+            log.error('Two or more datasource with the same name, (', len(datasource_arr), ') | Full list: ', datasource_arr)
+            raise Exception('Two or more datasource with the same name')
         return None
 
     def delete_datasource(self, name):
-        shutil.rmtree(os.path.join(self.dir, name))
+        datasource_record = Datasource.query.filter_by(company_id=self.company_id, name=name).first()
+        id = datasource_record.id
+        session.delete(datasource_record)
+        session.commit()
+        self.fs_store.delete(f'datasource_{self.company_id}_{datasource_record.id}')
+        try:
+            shutil.rmtree(os.path.join(self.dir, name))
+        except Exception:
+            pass
 
     def save_datasource(self, name, source_type, source, file_path=None):
+        datasource_record = Datasource(company_id=self.company_id, name=name)
+
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
 
-        for i in range(1, 1000):
-            if name in [x['name'] for x in self.get_datasources()]:
-                previous_index = i - 1
-                name = name.replace(f'__{previous_index}__', '')
-                name = f'{name}__{i}__'
-            else:
-                break
-
         ds_meta_dir = os.path.join(self.dir, name)
         os.mkdir(ds_meta_dir)
+
+        session.add(datasource_record)
+        session.commit()
+        datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
 
         try:
             if source_type == 'file':
@@ -84,7 +108,7 @@ class DataStore():
                 shutil.move(file_path, source)
                 ds = FileDS(source)
 
-                picklable = {
+                creation_info = {
                     'class': 'FileDS',
                     'args': [source],
                     'kwargs': {}
@@ -103,15 +127,13 @@ class DataStore():
                     'snowflake': SnowflakeDS
                 }
 
-
-
                 try:
                     dsClass = ds_class_map[integration['type']]
                 except KeyError:
                     raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
 
                 if integration['type'] in ['clickhouse']:
-                    picklable = {
+                    creation_info = {
                         'class': dsClass.__name__,
                         'args': [],
                         'kwargs': {
@@ -122,10 +144,10 @@ class DataStore():
                             'port': integration['port']
                         }
                     }
-                    ds = dsClass(**picklable['kwargs'])
+                    ds = dsClass(**creation_info['kwargs'])
 
                 elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql']:
-                    picklable = {
+                    creation_info = {
                         'class': dsClass.__name__,
                         'args': [],
                         'kwargs': {
@@ -138,15 +160,15 @@ class DataStore():
                     }
 
                     if 'database' in integration:
-                        picklable['kwargs']['database'] = integration['database']
+                        creation_info['kwargs']['database'] = integration['database']
 
                     if 'database' in source:
-                        picklable['kwargs']['database'] = source['database']
+                        creation_info['kwargs']['database'] = source['database']
 
-                    ds = dsClass(**picklable['kwargs'])
+                    ds = dsClass(**creation_info['kwargs'])
 
                 elif integration['type'] == 'snowflake':
-                    picklable = {
+                    creation_info = {
                         'class': dsClass.__name__,
                         'args': [],
                         'kwargs': {
@@ -161,12 +183,12 @@ class DataStore():
                         }
                     }
 
-                    ds = dsClass(**picklable['kwargs'])
+                    ds = dsClass(**creation_info['kwargs'])
 
                 elif integration['type'] == 'mongodb':
                     if isinstance(source['find'], str):
                         source['find'] = json.loads(source['find'])
-                    picklable = {
+                    creation_info = {
                         'class': dsClass.__name__,
                         'args': [],
                         'kwargs': {
@@ -180,11 +202,11 @@ class DataStore():
                         }
                     }
 
-                    ds = dsClass(**picklable['kwargs'])
+                    ds = dsClass(**creation_info['kwargs'])
             else:
                 # This probably only happens for urls
                 ds = FileDS(source)
-                picklable = {
+                creation_info = {
                     'class': 'FileDS',
                     'args': [source],
                     'kwargs': {}
@@ -194,46 +216,35 @@ class DataStore():
 
             if '' in df.columns or len(df.columns) != len(set(df.columns)):
                 shutil.rmtree(ds_meta_dir)
-                raise Exception('Each column in datasource must have unique name')
+                raise Exception('Each column in datasource must have unique non-empty name')
 
-            with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'wb') as fp:
-                pickle.dump(picklable, fp)
+            datasource_record.creation_info = json.dumps(creation_info)
+            datasource_record.data = json.dumps({
+                'source_type': source_type,
+                'source': source,
+                'row_count': len(df),
+                'columns': [dict(name=x) for x in list(df.keys())]
+            })
 
-            with open(os.path.join(ds_meta_dir, 'metadata.json'), 'w') as fp:
-                meta = {
-                    'name': name,
-                    'source_type': source_type,
-                    'source': source,
-                    'created_at': str(datetime.datetime.now()).split('.')[0],
-                    'updated_at': str(datetime.datetime.now()).split('.')[0],
-                    'row_count': len(df),
-                    'columns': [dict(name=x) for x in list(df.keys())]
-                }
-                json.dump(meta, fp, indent=4, sort_keys=True)
-
-            with open(os.path.join(ds_meta_dir, 'versions.json'), 'wt') as fp:
-                json.dump(self.config.versions, fp, indent=4, sort_keys=True)
+            self.fs_store.put(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
 
         except Exception:
             if os.path.isdir(ds_meta_dir):
                 shutil.rmtree(ds_meta_dir)
             raise
 
+        session.commit()
         return self.get_datasource_obj(name, raw=True), name
 
     def get_datasource_obj(self, name, raw=False):
-        ds_meta_dir = os.path.join(self.dir, name)
-        ds = None
         try:
-            with open(os.path.join(ds_meta_dir, 'ds.pickle'), 'rb') as fp:
-                picklable = pickle.load(fp)
-                if raw:
-                    return picklable
-                try:
-                    ds = eval(picklable['class'])(*picklable['args'], **picklable['kwargs'])
-                except Exception:
-                    ds = picklable
-            return ds
+            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+            self.fs_store.get(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
+            creation_info = json.loads(datasource_record.creation_info)
+            if raw:
+                return creation_info
+            else:
+                return eval(creation_info['class'])(*creation_info['args'], **creation_info['kwargs'])
         except Exception as e:
-            print(f'\n{e}\n')
+            log.error(f'\n{e}\n')
             return None

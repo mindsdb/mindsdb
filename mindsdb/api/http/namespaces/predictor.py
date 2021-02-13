@@ -9,6 +9,7 @@ from flask import request, send_file
 from flask_restx import Resource, abort
 from flask import current_app as ca
 
+from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     predictor_metadata,
@@ -17,23 +18,6 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     put_predictor_params
 )
 from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
-
-
-def debug_pkey_type(model, keys=None, reset_keyes=True, type_to_check=list, append_key=True):
-    if type(model) != dict:
-        return
-    for k in model:
-        if reset_keyes:
-            keys = []
-        if type(model[k]) == dict:
-            keys.append(k)
-            debug_pkey_type(model[k], copy.deepcopy(keys), reset_keyes=False)
-        if type(model[k]) == type_to_check:
-            print(f'They key {keys}->{k} has type list')
-        if type(model[k]) == list:
-            for item in model[k]:
-                debug_pkey_type(item, copy.deepcopy(keys), reset_keyes=False)
-
 
 def preparse_results(results, format_flag='explain'):
     response_arr = []
@@ -159,7 +143,7 @@ class Predictor(Resource):
             original_name = name
             name = name + '_retrained'
 
-        ca.mindsdb_native.learn(name, from_data, to_predict, kwargs)
+        ca.mindsdb_native.learn(name, from_data, to_predict, ca.default_store.get_datasource(ds_name)['id'], kwargs)
         for i in range(20):
             try:
                 # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
@@ -195,7 +179,7 @@ class PredictorLearn(Resource):
         ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
         from_data = ca.default_store.get_datasource_obj(ds_name, raw=True)
 
-        ca.custom_models.learn(name, from_data, to_predict, kwargs)
+        ca.custom_models.learn(name, from_data, to_predict, ca.default_store.get_datasource(ds_name)['id'], kwargs)
 
         return '', 200
 
@@ -260,55 +244,6 @@ class PredictorPredictFromDataSource(Resource):
 
         results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
         return preparse_results(results, format_flag)
-
-
-@ns_conf.route('/upload')
-class PredictorUpload(Resource):
-    @ns_conf.doc('predictor_query', params=upload_predictor_params)
-    def post(self):
-        '''Upload existing predictor'''
-        predictor_file = request.files['file']
-        # @TODO: Figure out how to remove
-        fpath = os.path.join(ca.config_obj.paths['tmp'], 'new.zip')
-        with open(fpath, 'wb') as f:
-            f.write(predictor_file.read())
-
-        ca.mindsdb_native.load_model(fpath)
-        try:
-            os.remove(fpath)
-        except Exception:
-            pass
-
-        return '', 200
-
-
-@ns_conf.route('/<name>/download')
-@ns_conf.param('name', 'The predictor identifier')
-class PredictorDownload(Resource):
-    @ns_conf.doc('get_predictor_download')
-    def get(self, name):
-        '''Export predictor to file'''
-        ca.mindsdb_native.export_model(name)
-        fname = name + '.zip'
-        original_file = os.path.join(fname)
-        # @TODO: Figure out how to remove
-        fpath = os.path.join(ca.config_obj.paths['tmp'], fname)
-        shutil.move(original_file, fpath)
-
-        with open(fpath, 'rb') as f:
-            data = BytesIO(f.read())
-
-        try:
-            os.remove(fpath)
-        except Exception as e:
-            pass
-
-        return send_file(
-            data,
-            mimetype='application/zip',
-            attachment_filename=fname,
-            as_attachment=True
-        )
 
 @ns_conf.route('/<name>/rename')
 @ns_conf.param('name', 'The predictor identifier')

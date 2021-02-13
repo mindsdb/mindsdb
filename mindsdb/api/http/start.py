@@ -15,21 +15,24 @@ from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import initialize_log
+from mindsdb.interfaces.storage.db import session
 
 
-def start(config, verbose=False):
-    config = Config(config)
+def start(verbose, no_studio):
+    config = Config()
     if verbose:
-        config['log']['level']['console'] = 'DEBUG'
+        config.set(['log', 'level', 'console'], 'DEBUG')
 
     initialize_log(config, 'http', wrap_print=True)
 
     # start static initialization in a separate thread
-    init_static_thread = threading.Thread(target=initialize_static, args=(config,))
-    init_static_thread.start()
+    init_static_thread=None
+    if not no_studio:
+        init_static_thread = threading.Thread(target=initialize_static, args=(config,))
+        init_static_thread.start()
 
-    app, api = initialize_flask(config, init_static_thread)
-    initialize_interfaces(config, app)
+    app, api = initialize_flask(config, init_static_thread, no_studio)
+    initialize_interfaces(app)
 
     static_root = Path(config.paths['static'])
 
@@ -56,15 +59,23 @@ def start(config, verbose=False):
         name = getattr(type(e), '__name__') or 'Unknown error'
         return {'message': f'{name}: {str(e)}'}, 500
 
+    @app.teardown_appcontext
+    def remove_session(*args, **kwargs):
+        session.remove()
+
     port = config['api']['http']['port']
     host = config['api']['http']['host']
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
 
     # waiting static initialization
-    init_static_thread.join()
+    if not no_studio:
+        init_static_thread.join()
     if server.lower() == 'waitress':
-        serve(app, port=port, host=host)
+        if host in ('', '0.0.0.0'):
+            serve(app, port=port, host='*')
+        else:
+            serve(app, port=port, host=host)
     elif server.lower() == 'flask':
         # that will 'disable access' log in console
         log = logging.getLogger('werkzeug')

@@ -9,8 +9,6 @@
  *******************************************************
 """
 
-import logging
-
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 
@@ -37,7 +35,6 @@ class ColumnCountPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        logging.basicConfig(level=10)
         pprint.pprint(
             str(ColumnCountPacket(count=1).getPacketString())
         )

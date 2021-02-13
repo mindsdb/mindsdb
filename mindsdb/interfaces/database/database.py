@@ -6,12 +6,11 @@ from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.integrations.mongodb.mongodb import MongoDB
 
 from mindsdb.utilities.log import log as logger
-
+from mindsdb.utilities.config import Config
 
 class DatabaseWrapper():
-
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
+        self.config = Config()
 
     def setup_integration(self, db_alias):
         try:
@@ -20,7 +19,7 @@ class DatabaseWrapper():
             if integration != True:
                 integration.setup()
         except Exception as e:
-            logger.warning('Failed to integrate with database ' + integration.name + f', error: {e}')
+            logger.warning('Failed to integrate with database ' + db_alias + f', error: {e}')
 
     def _get_integration(self, db_alias):
         if self.config['integrations'][db_alias]['publish']:

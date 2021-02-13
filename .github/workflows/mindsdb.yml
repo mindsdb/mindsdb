@@ -23,6 +23,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip==20.2.4
         pip install --no-cache-dir .
+        pip install pymssql >= 2.1.4
     - name: Install mindsdb_native/staging if it's not mindsdb/stable
       if: github.ref != 'refs/heads/stable'
       run: |

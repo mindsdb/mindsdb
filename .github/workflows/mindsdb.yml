@@ -23,13 +23,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip==20.2.4
         pip install 'pymssql >= 2.1.4'
+        pip install boto3
         pip install --no-cache-dir .
     - name: Install mindsdb_native/staging if it's not mindsdb/stable
       if: github.ref != 'refs/heads/stable'
       run: |
           pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
-          pip install boto3
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then

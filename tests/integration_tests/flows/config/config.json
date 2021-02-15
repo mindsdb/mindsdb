@@ -68,12 +68,6 @@
             "publish": true,
             "type": "postgres",
             "user": "postgres"
-        },
-        "default_s3_storage": {
-            "type": "s3_storage"
-        },
-        "default_snowflake": {
-            "type": "snowflake"
         }
     },
     "log": {

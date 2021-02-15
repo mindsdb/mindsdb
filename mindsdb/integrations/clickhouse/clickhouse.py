@@ -5,7 +5,7 @@ from mindsdb.integrations.base import Integration
 
 
 class Clickhouse(Integration):
-    def _to_clickhouse_table(self, stats, predicted_cols):
+    def _to_clickhouse_table(self, stats, predicted_cols, columns):
         subtype_map = {
             DATA_SUBTYPES.INT: 'Nullable(Int64)',
             DATA_SUBTYPES.FLOAT: 'Nullable(Float64)',
@@ -24,7 +24,7 @@ class Clickhouse(Integration):
         }
 
         column_declaration = []
-        for name in stats['columns']:
+        for name in columns:
             try:
                 col_subtype = stats[name]['typing']['data_subtype']
                 new_type = subtype_map[col_subtype]
@@ -95,9 +95,8 @@ class Clickhouse(Integration):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = self._escape_table_name(model_meta['name'])
-            stats = model_meta['data_analysis_v2']
 
-            columns_sql = ','.join(self._to_clickhouse_table(stats, model_meta['predict']))
+            columns_sql = ','.join(self._to_clickhouse_table(model_meta['data_analysis_v2'], model_meta['predict'], model_meta['columns']))
             columns_sql += ',`when_data` Nullable(String)'
             columns_sql += ',`select_data_query` Nullable(String)'
             columns_sql += ',`external_datasource` Nullable(String)'

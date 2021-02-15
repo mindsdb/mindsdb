@@ -9,8 +9,6 @@
  *******************************************************
 """
 
-import logging
-
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import NULL_VALUE
@@ -47,7 +45,6 @@ class ResultsetRowPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        logging.basicConfig(level=10)
         pprint.pprint(
             str(ResultsetRowPacket().getPacketString())
         )

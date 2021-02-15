@@ -4,7 +4,6 @@ import sys
 import os
 import time
 import asyncio
-import logging
 import datetime
 import platform
 
@@ -20,8 +19,7 @@ from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.ps import is_pid_listen_port
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
-from mindsdb.utilities.log import initialize_log
-from mindsdb.utilities.telemetry import is_telemetry_file_exists, disable_telemetry
+from mindsdb.utilities.log import log
 
 
 def close_api_gracefully(apis):
@@ -38,33 +36,16 @@ def close_api_gracefully(apis):
 
 if __name__ == '__main__':
     mp.freeze_support()
-
     args = args_parse()
-
     config = Config()
 
-    telemetry_disabled = False
-    storage_dir = config['storage_dir']
-    if is_telemetry_file_exists(storage_dir):
-        os.environ['CHECK_FOR_UPDATES'] = '0'
-        telemetry_disabled = True
-    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
-        disable_telemetry(storage_dir)
-        telemetry_disabled = True
-
-    if telemetry_disabled:
-        print('\n ✓ telemetry disabled \n')
-
     if args.verbose is True:
-        config['log']['level']['console'] = 'DEBUG'
+        config.set(['log', 'level', 'console'], 'DEBUG')
+
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
-
     config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
-
-    initialize_log(config)
-    log = logging.getLogger('mindsdb.main')
-
+    
     from lightwood.__about__ import __version__ as lightwood_version
     from mindsdb_native.__about__ import __version__ as mindsdb_native_version
     from mindsdb.__about__ import __version__ as mindsdb_version
@@ -122,7 +103,10 @@ if __name__ == '__main__':
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')
         try:
-            p = ctx.Process(target=start_functions[api_name], args=(args.verbose,))
+            if api_name == 'http':
+                p = ctx.Process(target=start_functions[api_name], args=(args.verbose,args.no_studio))
+            else:
+                p = ctx.Process(target=start_functions[api_name], args=(args.verbose,))
             p.start()
             api_data['process'] = p
         except Exception as e:

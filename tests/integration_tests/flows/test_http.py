@@ -1,20 +1,17 @@
 import os
-import time
 import unittest
-import importlib.util
 from random import randint
 from pathlib import Path
 from uuid import uuid1
+import json
 
 import requests
 
-from legacy_config import Config
 from mindsdb.utilities.ps import net_connections
 
 from common import (
-    run_environment,
-    TEST_CONFIG,
-    MINDSDB_DATABASE
+    CONFIG_PATH,
+    run_environment
 )
 
 rand = randint(0, pow(10, 12))
@@ -26,23 +23,25 @@ root = 'http://localhost:47334/api'
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config = Config(TEST_CONFIG)
-        cls.initial_integrations_names = list(cls.config['integrations'].keys())
-
-        mdb, datastore = run_environment(
-            cls.config,
+        run_environment(
             apis=['http'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
-                },
-                'default_clickhouse': {
-                    'publish': True
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    },
+                    'default_clickhouse': {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE
+            }
         )
-        cls.mdb = mdb
+
+        cls.config = json.loads(
+            Path(CONFIG_PATH).read_text()
+        )
+
+        cls.initial_integrations_names = list(cls.config['integrations'].keys())
 
     @classmethod
     def tearDownClass(cls):
@@ -57,7 +56,8 @@ class HTTPTest(unittest.TestCase):
     def test_1_config(self):
         res = requests.get(f'{root}/config/integrations')
         assert res.status_code == 200
-        integration_names = res.json()
+        res = res.json()
+        assert isinstance(res['integrations'], list)
 
         test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse', 'port': 8123, 'user': 'default'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
@@ -91,7 +91,7 @@ class HTTPTest(unittest.TestCase):
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
             modified_integration = res.json()
-            print(modified_integration)
+
             assert modified_integration['password'] is None
             assert modified_integration['user'] == 'dr.Who'
             for k in integration:
@@ -107,7 +107,6 @@ class HTTPTest(unittest.TestCase):
             for k in integration:
                 if k != 'date_last_update':
                     assert modified_integration[k] == integration[k]
-
 
         res = requests.delete(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
@@ -137,6 +136,7 @@ class HTTPTest(unittest.TestCase):
         res = requests.put(url, json=params)
         assert res.status_code == 200
         ds_data = res.json()
+
         assert ds_data['source_type'] == 'default_clickhouse'
         assert ds_data['row_count'] == 3 * 8
 
@@ -241,6 +241,7 @@ class HTTPTest(unittest.TestCase):
                 "query": "select * from test_data.any_data limit 100;"}
         response = requests.put(f'{root}/datasources/{ds_name}', json=data)
         assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
+
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

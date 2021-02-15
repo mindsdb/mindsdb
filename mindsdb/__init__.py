@@ -6,12 +6,14 @@ from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
 from mindsdb.utilities.fs import get_or_create_dir_struct, create_dirs_recursive
 from mindsdb.utilities.functions import args_parse, is_notebook
 from mindsdb.__about__ import __version__ as mindsdb_version
-
+from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 
 try:
     if not is_notebook():
         args = args_parse()
-except:
+    else:
+        args = None
+except Exception:
     # This fials in some notebooks ... check above for is_notebook is still needed because even if the exception is caught trying to read the arg still leads to failure in other notebooks... notebooks a
     args = None
 
@@ -54,9 +56,12 @@ os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
 if 'storage_dir' in user_config:
     root_storage_dir = user_config['storage_dir']
+    os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+elif os.environ.get('MINDSDB_STORAGE_DIR') is not None:
+    root_storage_dir = os.environ['MINDSDB_STORAGE_DIR']
 else:
     _, root_storage_dir = get_or_create_dir_struct()
-os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+    os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
 
 if os.path.isdir(root_storage_dir) is False:
     os.makedirs(root_storage_dir)
@@ -78,8 +83,17 @@ create_dirs_recursive(mindsdb_config['paths'])
 
 os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')
 os.environ['LIGHTWOOD_LOG_LEVEL'] = os.environ.get('LIGHTWOOD_LOG_LEVEL', 'ERROR')
-os.environ['MINDSDB_CONFIG_PATH'] = config_path
 os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config['paths']['predictors']
+
+
+if telemetry_file_exists(mindsdb_config['storage_dir']):
+    os.environ['CHECK_FOR_UPDATES'] = '0'
+    print('\n x telemetry disabled! \n')
+elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
+    disable_telemetry(mindsdb_config['storage_dir'])
+    print('\n x telemetry disabled \n')
+else:
+    print('\n ✓ telemetry enabled \n')
 
 from mindsdb_native import *
 # Figure out how to add this as a module

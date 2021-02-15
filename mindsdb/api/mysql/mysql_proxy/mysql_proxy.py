@@ -25,6 +25,7 @@ import socket
 import struct
 from collections import OrderedDict
 from functools import partial
+import select
 
 import moz_sql_parser as sql_parser
 
@@ -1380,10 +1381,26 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise
 
     def is_cloud_connection(self):
+        ''' Determine source of connection. Must be call before handshake.
+            Idea based on: real mysql connection does not send anything before server handshake, so
+            soket should be in 'out' state. In opposite, clout connection sends '0000' right after
+            connection. '0000' selected because in real mysql connection it should be lenght of package,
+            and it can not be 0.
+        '''
         if sys.platform != 'linux':
             return {
                 'is_cloud': False
             }
+
+        read_poller = select.poll()
+        read_poller.register(self.request, select.POLLIN)
+        events = read_poller.poll(0)
+
+        if len(events) == 0:
+            return {
+                'is_cloud': False
+            }
+
         first_byte = self.request.recv(4, socket.MSG_PEEK)
         if first_byte == b'\x00\x00\x00\x00':
             self.request.recv(4)
@@ -1393,6 +1410,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'is_cloud': True,
                 'client_capabilities': client_capabilities
             }
+
         return {
             'is_cloud': False
         }
@@ -1402,7 +1420,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         Handle new incoming connections
         :return:
         """
-        log.info('handle new incoming connection')
+        log.debug('handle new incoming connection')
         cloud_connection = self.is_cloud_connection()
         if cloud_connection['is_cloud'] is False:
             if self.handshake() is False:

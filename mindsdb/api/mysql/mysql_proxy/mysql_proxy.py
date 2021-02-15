@@ -11,6 +11,7 @@
 
 
 import os
+import sys
 import random
 import socketserver as SocketServer
 import ssl
@@ -20,7 +21,11 @@ import json
 import atexit
 import tempfile
 import datetime
+import socket
+import struct
 from collections import OrderedDict
+from functools import partial
+import select
 
 import moz_sql_parser as sql_parser
 
@@ -33,6 +38,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapab
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
 from mindsdb.api.mysql.mysql_proxy.utilities import log
+from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
@@ -80,14 +86,60 @@ connection_id = 0
 
 ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-HARDCODED_USER = None
-HARDCODED_PASSWORD = None
-CERT_PATH = None
 default_store = None
 mdb = None
 custom_models = None
 datahub = None
 config = None
+
+
+def check_auth(username, password, scramble_func, salt, config):
+    '''
+    '''
+    try:
+        hardcoded_user = config['api']['mysql']['user']
+        hardcoded_password = config['api']['mysql']['password']
+        hardcoded_password_hash = scramble_func(hardcoded_password, salt)
+        hardcoded_password = hardcoded_password.encode()
+        integrations_names = config['integrations'].keys()
+
+        if password is None:
+            password = ''
+        if isinstance(password, str):
+            password = password.encode()
+
+        integration = None
+        integration_type = None
+        extracted_username = username
+        for integration_name in integrations_names:
+            if username == f'{hardcoded_user}_{integration_name}':
+                extracted_username = hardcoded_user
+                integration = integration_name
+                integration_type = config['integrations'][integration]['type']
+
+        if extracted_username != hardcoded_user:
+            log.warning(f'Check auth, user={username}: user mismatch')
+            return {
+                'success': False
+            }
+
+        if password != hardcoded_password and password != hardcoded_password_hash:
+            log.warning(f'check auth, user={username}: password mismatch')
+            return {
+                'success': False
+            }
+
+        log.info(f'Check auth, user={username}: Ok')
+        return {
+            'success': True,
+            'username': extracted_username,
+            'integration': integration,
+            'integration_type': integration_type
+        }
+    except Exception as e:
+        log.error(f'Check auth, user={username}: ERROR')
+        log.error(e)
+        log.error(traceback.format_exc())
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):
@@ -126,33 +178,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         log.debug('session salt: {salt}'.format(salt=self.salt))
 
-    def isAuthOk(self, user, orig_user, password, orig_password):
-        try:
-            if user != orig_user:
-                log.info(f'Check auth, user={user}: user mismatch')
-                return False
-            if password != orig_password:
-                log.info(f'check auth, user={user}: password mismatch')
-                return False
-
-            self.session.username = user
-            self.session.auth = True
-            log.info(f'Check auth, user={user}: Ok')
-            return True
-        except Exception:
-            log.error(f'Check auth, user={user}: ERROR')
-            log.error(traceback.format_exc())
-
     def handshake(self):
-        global HARDCODED_PASSWORD, HARDCODED_USER, CERT_PATH, config
-
         def switch_auth(method='mysql_native_password'):
             self.packet(SwitchOutPacket, seed=self.salt, method=method).send()
             switch_out_answer = self.packet(SwitchOutResponse)
             switch_out_answer.get()
             password = switch_out_answer.password
             if method == 'mysql_native_password' and len(password) == 0:
-                password = handshake_resp.scramble_func('', self.salt)
+                password = scramble_func('', self.salt)
             return password
 
         def get_fast_auth_password():
@@ -167,6 +200,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='Is not password in connection query.').send()
                 return None
             return password
+
+        username = None
+        password = None
 
         if self.session is None:
             self.initSession()
@@ -183,12 +219,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         client_auth_plugin = handshake_resp.client_auth_plugin.value.decode()
 
-        orig_username = HARDCODED_USER
-        orig_password = HARDCODED_PASSWORD
-        orig_password_hash = handshake_resp.scramble_func(HARDCODED_PASSWORD, self.salt)
-        username = None
-        password = None
-
         self.session.is_ssl = False
 
         if handshake_resp.type == 'SSLRequest':
@@ -196,7 +226,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.is_ssl = True
 
             ssl_context = ssl.SSLContext()
-            ssl_context.load_cert_chain(CERT_PATH)
+            ssl_context.load_cert_chain(self.server.cert_path)
             ssl_socket = ssl_context.wrap_socket(
                 self.socket,
                 server_side=True,
@@ -209,21 +239,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             client_auth_plugin = handshake_resp.client_auth_plugin.value.decode()
 
         username = handshake_resp.username.value.decode()
-        # if connect come from 'integration', then username will be like username_dbname
-        integration = ''
-        prefix = orig_username + '_'
-        if username.startswith(prefix):
-            integration = username[len(prefix):]
-        if len(integration) > 0 and integration in config['integrations']:
-            self.session.integration = integration
-            self.session.integration_type = config['integrations'][integration]['type']
-            username = orig_username
 
         if client_auth_plugin != DEFAULT_AUTH_METHOD:
-            if client_auth_plugin == 'mysql_native_password' and \
-                    orig_password == '' and len(handshake_resp.enc_password.value) == 0:
-                switch_auth('mysql_native_password')
-                password = ''
+            if client_auth_plugin == 'mysql_native_password':
+                password = switch_auth('mysql_native_password')
             else:
                 new_method = 'caching_sha2_password' if client_auth_plugin == 'caching_sha2_password' else 'mysql_native_password'
 
@@ -238,28 +257,26 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 password = switch_auth(new_method)
 
                 if new_method == 'caching_sha2_password':
-                    password = get_fast_auth_password()
-                else:
-                    orig_password = orig_password_hash
-        elif orig_username == username and HARDCODED_PASSWORD == '':
-            log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                      'empty password')
-            password = ''
+                    if password == b'\x00':
+                        password = ''
+                    else:
+                        password = get_fast_auth_password()
         elif 'caching_sha2_password' in client_auth_plugin:
             log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                      'check auth using caching_sha2_password')
-            password = get_fast_auth_password()
-            orig_password = HARDCODED_PASSWORD
+                     'check auth using caching_sha2_password')
+            password = handshake_resp.enc_password.value
+            if password == b'\x00':
+                password = ''
+            else:
+                password = get_fast_auth_password()
         elif 'mysql_native_password' in client_auth_plugin:
             log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                       'check auth using mysql_native_password')
             password = handshake_resp.enc_password.value
-            orig_password = orig_password_hash
         else:
             log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                       'unknown method, possible ERROR. Try to switch to mysql_native_password')
             password = switch_auth('mysql_native_password')
-            orig_password = orig_password_hash
 
         try:
             self.session.database = handshake_resp.database.value.decode()
@@ -268,7 +285,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                   f'connecting to database {self.session.database}')
 
-        if self.isAuthOk(username, orig_username, password, orig_password):
+        auth_data = self.server.check_auth(username, password, scramble_func, self.salt)
+        if auth_data['success']:
+            self.session.username = auth_data['username']
+            self.session.auth = True
+            self.session.integration = auth_data['integration']
+            self.session.integration_type = auth_data['integration_type']
             self.packet(OkPacket).send()
             return True
         else:
@@ -1358,14 +1380,59 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ).send()
             raise
 
+    def is_cloud_connection(self):
+        ''' Determine source of connection. Must be call before handshake.
+            Idea based on: real mysql connection does not send anything before server handshake, so
+            soket should be in 'out' state. In opposite, clout connection sends '0000' right after
+            connection. '0000' selected because in real mysql connection it should be lenght of package,
+            and it can not be 0.
+        '''
+        if sys.platform != 'linux':
+            return {
+                'is_cloud': False
+            }
+
+        read_poller = select.poll()
+        read_poller.register(self.request, select.POLLIN)
+        events = read_poller.poll(0)
+
+        if len(events) == 0:
+            return {
+                'is_cloud': False
+            }
+
+        first_byte = self.request.recv(4, socket.MSG_PEEK)
+        if first_byte == b'\x00\x00\x00\x00':
+            self.request.recv(4)
+            client_capabilities = self.request.recv(8)
+            client_capabilities = struct.unpack('L', client_capabilities)[0]
+            return {
+                'is_cloud': True,
+                'client_capabilities': client_capabilities
+            }
+
+        return {
+            'is_cloud': False
+        }
+
     def handle(self):
         """
         Handle new incoming connections
         :return:
         """
-        log.info('handle new incoming connection')
-        if self.handshake() is False:
-            return
+        log.debug('handle new incoming connection')
+        cloud_connection = self.is_cloud_connection()
+        if cloud_connection['is_cloud'] is False:
+            if self.handshake() is False:
+                return
+        else:
+            if self.session is None:
+                self.initSession()
+            self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
+            self.session.username = 'cloud'
+            self.session.auth = True
+            self.session.integration = None
+            self.session.integration_type = None
 
         while True:
             log.debug('Got a new packet')
@@ -1447,9 +1514,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     @staticmethod
     def startProxy(_config):
-        global HARDCODED_USER
-        global HARDCODED_PASSWORD
-        global CERT_PATH
         global default_store
         global mdb
         global datahub
@@ -1460,13 +1524,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         """
         config = _config
 
-        HARDCODED_USER = config['api']['mysql']['user']
-        HARDCODED_PASSWORD = config['api']['mysql']['password']
-        CERT_PATH = config['api']['mysql'].get('certificate_path')
-        if CERT_PATH is None or CERT_PATH == '':
-            CERT_PATH = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
-            make_ssl_cert(CERT_PATH)
-            atexit.register(lambda: os.remove(CERT_PATH))
+        cert_path = config['api']['mysql'].get('certificate_path')
+        if cert_path is None or cert_path == '':
+            cert_path = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
+            make_ssl_cert(cert_path)
+            atexit.register(lambda: os.remove(cert_path))
 
         server_capabilities.set(
             CAPABILITIES.CLIENT_SSL,
@@ -1485,6 +1547,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         SocketServer.TCPServer.allow_reuse_address = True
         server = SocketServer.ThreadingTCPServer((host, port), MysqlProxy)
+        server.mindsdb_config = config
+        server.check_auth = partial(check_auth, config=config)
+        server.cert_path = cert_path
 
         atexit.register(MysqlProxy.server_close, srv=server)
 

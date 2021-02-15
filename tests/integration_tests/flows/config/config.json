@@ -11,7 +11,7 @@
         "mysql": {
             "certificate_path": "tests/integration_tests/flows/config/cert.pem",
             "host": "127.0.0.1",
-            "password": "",
+            "password": "password",
             "port": "47335",
             "user": "mindsdb"
         }

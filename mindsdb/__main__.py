@@ -5,7 +5,7 @@ import os
 import time
 import asyncio
 import datetime
-import platform
+import signal
 
 import torch.multiprocessing as mp
 
@@ -22,7 +22,15 @@ from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
 from mindsdb.utilities.log import log
 
 
-def close_api_gracefully(apis):
+def close_api_gracefully(apis, config):
+    learning_pids_dir = config['paths']['in_learing']
+    pids = [int(x) for x in os.listdir(learning_pids_dir) if x.isdigit()]
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+            os.remove(os.path.join(learning_pids_dir, pid))
+        except FileNotFoundError:
+            pass
     try:
         for api in apis.values():
             process = api['process']

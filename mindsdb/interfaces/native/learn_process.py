@@ -69,12 +69,14 @@ class LearnProcess(ctx.Process):
 
     @staticmethod
     def _store_your_pid(store_path):
-        with open(os.path.join(store_path, str(os.P_PID)), "w") as _:
+        """Store pid of lerning process on a filesystem as emtpy file."""
+        with open(os.path.join(store_path, str(os.getpid())), "w") as _:
             pass
 
     @staticmethod
     def _remove_your_pid(store_path):
+        """Remove pid file from filesystem."""
         try:
-            os.remove(os.path.join(store_path, str(os.P_PID)))
+            os.remove(os.path.join(store_path, str(os.getpid())))
         except FileNotFoundError:
             pass

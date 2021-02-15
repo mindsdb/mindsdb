@@ -23,12 +23,13 @@ from mindsdb.utilities.log import log
 
 
 def close_api_gracefully(apis, config):
-    learning_pids_dir = config['paths']['in_learing']
+    # gracefully stop learning process which are currently in progress.
+    learning_pids_dir = config['paths']['in_learning']
     pids = [int(x) for x in os.listdir(learning_pids_dir) if x.isdigit()]
     for pid in pids:
         try:
             os.kill(pid, signal.SIGTERM)
-            os.remove(os.path.join(learning_pids_dir, pid))
+            os.remove(os.path.join(learning_pids_dir, str(pid)))
         except FileNotFoundError:
             pass
     try:
@@ -119,10 +120,10 @@ if __name__ == '__main__':
             api_data['process'] = p
         except Exception as e:
             log.error(f'Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}')
-            close_api_gracefully(apis)
+            close_api_gracefully(apis, config)
             raise e
 
-    atexit.register(close_api_gracefully, apis=apis)
+    atexit.register(close_api_gracefully, apis=apis, config=config)
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60

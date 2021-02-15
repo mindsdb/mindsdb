@@ -23,6 +23,7 @@ predictor_metadata = ns_conf.model('PredictorMetadata', {
     ,'data_source': fields.String(required=False, description='The data source it\'s learning from')
     ,'stack_trace_on_error': fields.String(required=False, description='Why it failed, if it did')
     ,'error_explanation': fields.String(required=False, description='Why it failed, if it did, short version')
+    ,'useable_input_columns': fields.Raw()
 })
 
 predictor_query_params = OrderedDict([

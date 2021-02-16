@@ -98,7 +98,6 @@ class Config():
             self._db_config['paths']['tmp'] = os.path.join(self._db_config['paths']['root'], 'tmp')
             self._db_config['paths']['log'] = os.path.join(self._db_config['paths']['root'], 'log')
             self._db_config['paths']['storage_dir'] = self._db_config['paths']['root']
-            self._db_config['paths']['in_learning'] = os.path.join(self._db_config['paths']['root'], 'in_learning')
             self._db_config['storage_dir'] = self._db_config['paths']['root']
 
             for path in self._db_config['paths']:

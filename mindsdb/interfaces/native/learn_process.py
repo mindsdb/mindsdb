@@ -27,7 +27,6 @@ class LearnProcess(ctx.Process):
         import mindsdb_native
 
         config = Config()
-        self._store_your_pid(config['paths']['in_learning'])
         fs_store = FsSotre()
         company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         name, from_data, to_predict, kwargs, datasource_id = self._args
@@ -65,18 +64,3 @@ class LearnProcess(ctx.Process):
         session.commit()
 
         DatabaseWrapper().register_predictors([model_data])
-        self._remove_your_pid(config['paths']['in_learning'])
-
-    @staticmethod
-    def _store_your_pid(store_path):
-        """Store pid of lerning process on a filesystem as emtpy file."""
-        with open(os.path.join(store_path, str(os.getpid())), "w") as _:
-            pass
-
-    @staticmethod
-    def _remove_your_pid(store_path):
-        """Remove pid file from filesystem."""
-        try:
-            os.remove(os.path.join(store_path, str(os.getpid())))
-        except FileNotFoundError:
-            pass

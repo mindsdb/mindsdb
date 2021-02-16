@@ -16,25 +16,19 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.ps import is_pid_listen_port
+from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
 from mindsdb.utilities.log import log
 
 
-def close_api_gracefully(apis, config):
-    # gracefully stop learning process which are currently in progress.
-    learning_pids_dir = config['paths']['in_learning']
-    pids = [int(x) for x in os.listdir(learning_pids_dir) if x.isdigit()]
-    for pid in pids:
-        try:
-            os.kill(pid, signal.SIGTERM)
-            os.remove(os.path.join(learning_pids_dir, str(pid)))
-        except FileNotFoundError:
-            pass
+def close_api_gracefully(apis):
     try:
         for api in apis.values():
             process = api['process']
+            childs = get_child_pids(process.pid)
+            for p in childs:
+                os.kill(p, signal.SIGTERM)
             sys.stdout.flush()
             process.terminate()
             process.join()
@@ -120,10 +114,10 @@ if __name__ == '__main__':
             api_data['process'] = p
         except Exception as e:
             log.error(f'Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}')
-            close_api_gracefully(apis, config)
+            close_api_gracefully(apis)
             raise e
 
-    atexit.register(close_api_gracefully, apis=apis, config=config)
+    atexit.register(close_api_gracefully, apis=apis)
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60

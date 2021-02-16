@@ -61,3 +61,24 @@ class MSSQL(Integration):
         except Exception:
             connected = False
         return connected
+
+
+class MSSQLConnectionChecker:
+    def __init__(self, **kwargs):
+        self.host = kwargs.get('host')
+        self.port = kwargs.get('port')
+        self.user = kwargs.get('user')
+        self.password = kwargs.get('password')
+    
+    def check_connection(self):
+        try:
+            conn = pytds.connect(user=self.user, password=self.password,
+                                 dsn=self.host, port=self.port,
+                                 as_dict=True, autocommit=True)
+            conn.close()
+            connected = True
+        except Exception:
+            connected = False
+
+        return connected
+

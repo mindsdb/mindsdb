@@ -147,3 +147,25 @@ class MySQL(Integration):
         except Exception:
             connected = False
         return connected
+
+
+class MySQLConnectionChecker:
+    def __init__(self, **kwargs):
+        self.host = kwargs.get('host')
+        self.port = kwargs.get('port')
+        self.user = kwargs.get('user')
+        self.password = kwargs.get('password')
+
+    def check_connection(self):
+        try:
+            con = mysql.connector.connect(
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password
+            )
+            connected = con.is_connected()
+            con.close()
+        except Exception:
+            connected = False
+        return connected

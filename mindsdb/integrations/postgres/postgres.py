@@ -169,3 +169,28 @@ class PostgreSQL(Integration):
         except Exception:
             connected = False
         return connected
+
+
+class PostgreSQLConnectionChecker:
+    def __init__(self, **kwargs):
+        self.host = kwargs.get('host')
+        self.port = kwargs.get('port')
+        self.user = kwargs.get('user')
+        self.password = kwargs.get('password')
+        self.database = kwargs.get('database', 'postgres')
+
+    def check_connection(self):
+        try:
+            con = pg8000.connect(
+                database=self.database,
+                user=self.user,
+                password=self.password,
+                host=self.host,
+                port=self.port
+            )
+            con.run('select 1;')
+            con.close()
+            connected = True
+        except Exception:
+            connected = False
+        return connected

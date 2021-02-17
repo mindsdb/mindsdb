@@ -3,8 +3,33 @@ import requests
 from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 
+class ClickhouseConnectionChecker:
+    def __init__(self, **kwargs):
+        self.host = kwargs.get("host")
+        self.port= kwargs.get("port")
+        self.user = kwargs.get("user")
+        self.password = kwargs.get("password")
 
-class Clickhouse(Integration):
+    def check_connection(self):
+        try:
+            res = requests.post(f"http://{self.host}:{self.port}",
+                                data="select 1;",
+                                params={'user': self.user, 'password': self.password})
+            connected = res.status_code == 200
+        except Exception:
+            connected = False
+        return connected
+
+
+class Clickhouse(Integration, ClickhouseConnectionChecker):
+    def __init__(self, config, name):
+        super().__init__(config, name)
+        db_info = self.config['integrations'][self.name]
+        self.user = db_info.get('user', 'default')
+        self.password = db_info.get('password', None)
+        self.host = db_info.get('host')
+        self.port = db_info.get('port')
+        
     def _to_clickhouse_table(self, stats, predicted_cols, columns):
         subtype_map = {
             DATA_SUBTYPES.INT: 'Nullable(Int64)',
@@ -125,28 +150,12 @@ class Clickhouse(Integration):
         """
         self._query(q)
 
-    def check_connection(self):
-        try:
-            res = self._query('select 1;')
-            connected = res.status_code == 200
-        except Exception:
-            connected = False
-        return connected
-
-
-class ClickhouseConnectionChecker:
-    def __init__(self, **kwargs):
-        self.host = kwargs.get("host")
-        self.port= kwargs.get("port")
-        self.user = kwargs.get("user")
-        self.password = kwargs.get("password")
-
-    def check_connection(self):
-        try:
-            res = requests.post(f"http://{self.host}:{self.port}",
-                                data="select 1;",
-                                params={'user': self.user, 'password': self.password})
-            connected = res.status_code == 200
-        except Exception:
-            connected = False
-        return connected
+    # def check_connection(self):
+    #     try:
+    #         res = requests.post(f"http://{self.host}:{self.port}",
+    #                             data="select 1;",
+    #                             params={'user': self.user, 'password': self.password})
+    #         connected = res.status_code == 200
+    #     except Exception:
+    #         connected = False
+    #     return connected

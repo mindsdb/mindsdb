@@ -4,7 +4,7 @@ flask >= 1.0
 python-multipart >= 0.0.5
 moz-sql-parser == 3.32.20026
 pyparsing == 2.3.1
-cryptography >= 2.9.2
+cryptography >= 2.9.2, < 3.4
 pg8000 >= 1.15.3
 python-tds >= 1.10.0
 waitress >= 1.4.4

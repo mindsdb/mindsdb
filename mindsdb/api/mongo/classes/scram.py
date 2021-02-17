@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import os
 
-from pymongo.auth import _password_digest
+from pymongo.auth import _password_digest, _xor
 
 
 class Scram():
@@ -36,12 +36,21 @@ class Scram():
     def process_client_second_message(self, payload):
         self.messages.append(payload[:payload.rfind(',p=')])    # without 'p' part
 
-        # TODO add user password check here
-
         messages = ','.join(self.messages)
         salted_password = self._salt_password()
         server_key = self._sha1_hmac(salted_password, b'Server Key')
         server_signature = self._sha1_hmac(server_key, messages.encode('utf-8'))
+
+        client_key = self._sha1_hmac(salted_password, b'Client Key')
+        stored_key = hashlib.sha1(client_key).digest()
+        client_signature = self._sha1_hmac(stored_key, messages.encode('utf-8'))
+        expected_client_proof = base64.b64encode(_xor(client_key, client_signature)).decode()
+
+        income_client_proof = payload[payload.rfind(',p=') + 3:]
+
+        if expected_client_proof != income_client_proof:
+            raise Exception('wrong password')
+
         return f'v={base64.b64encode(server_signature).decode()}'
 
     def _sha1_hmac(self, key, msg):

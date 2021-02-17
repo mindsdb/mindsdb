@@ -73,3 +73,6 @@ class MSSQL(Integration, MSSQLConnectionChecker):
 
     def register_predictors(self, model_data_arr):
         pass
+
+    def unregister_predictor(self, name):
+        pass

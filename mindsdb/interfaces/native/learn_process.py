@@ -26,8 +26,8 @@ class LearnProcess(ctx.Process):
         '''
         import mindsdb_native
 
-        fs_store = FsSotre()
         config = Config()
+        fs_store = FsSotre()
         company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         name, from_data, to_predict, kwargs, datasource_id = self._args
 

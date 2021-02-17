@@ -5,7 +5,7 @@ import os
 import time
 import asyncio
 import datetime
-import platform
+import signal
 
 import torch.multiprocessing as mp
 
@@ -16,7 +16,7 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.ps import is_pid_listen_port
+from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
 from mindsdb.utilities.log import log
@@ -26,6 +26,9 @@ def close_api_gracefully(apis):
     try:
         for api in apis.values():
             process = api['process']
+            childs = get_child_pids(process.pid)
+            for p in childs:
+                os.kill(p, signal.SIGTERM)
             sys.stdout.flush()
             process.terminate()
             process.join()

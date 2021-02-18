@@ -100,8 +100,8 @@ class Config():
             self._db_config['paths']['storage_dir'] = self._db_config['paths']['root']
             self._db_config['storage_dir'] = self._db_config['paths']['root']
 
-            for path in self._db_config['paths']:
-                create_directory(path)
+            for path_name in self._db_config['paths']:
+                create_directory(self._db_config['paths'][path_name])
             self._save()
         self._read()
 

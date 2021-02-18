@@ -238,7 +238,7 @@ def initialize_flask(config, init_static_thread, no_studio):
             url = f'http://127.0.0.1:{port}/'
         else:
             url = f'http://{host}:{port}/'
-        log.error(f' - GUI available at {url}')
+        log.info(f' - GUI available at {url}')
 
         pid = os.getpid()
         x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config.paths['static']), daemon=True)

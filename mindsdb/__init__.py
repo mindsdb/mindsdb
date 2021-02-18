@@ -66,12 +66,11 @@ else:
 if os.path.isdir(root_storage_dir) is False:
     os.makedirs(root_storage_dir)
 
+
 if 'storage_db' in user_config:
-    for k in user_config['storage_db']:
-        os.environ['MINDSDB_' + k.uppercase()] = user_config['storage_db'][k]
+    os.environ['MINDSDB_DB_CON'] = user_config['storage_db']
 else:
-    os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
-    os.environ['MINDSDB_SQLITE_PATH'] = os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db')
+    os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db')
 
 if 'company_id' in user_config:
     os.environ['MINDSDB_COMPANY_ID'] = user_config['company_id']

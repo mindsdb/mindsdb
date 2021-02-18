@@ -17,7 +17,8 @@ class Responce(Responder):
                 'payload': responce.encode(),
                 'ok': 1
             }
-        except Exception:
+        except Exception as e:
+            print(e)
             res = {
                 'ok': 0
             }

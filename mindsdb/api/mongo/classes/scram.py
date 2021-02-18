@@ -1,5 +1,6 @@
 # https://stackoverflow.com/questions/29298346/xmpp-sasl-scram-sha1-authentication
 # https://tools.ietf.org/html/rfc5802
+# https://tools.ietf.org/html/rfc7677
 
 import base64
 import hashlib
@@ -14,18 +15,31 @@ class Scram():
         TODO add SCRAM-SHA-256 auth
     '''
 
-    def __init__(self, user, password):
-        self.user = user
-        self.password = password
+    def __init__(self, method='sha1', get_salted_password=None):
+        self.get_salted_password = get_salted_password
         self.snonce = base64.b64encode(os.urandom(24)).decode()
         self.salt = base64.b64encode(os.urandom(16))
         self.iterations = 4096
         self.messages = []
 
+        if method == 'sha1':
+            self.method_str = 'sha1'
+            self.method_func = hashlib.sha1
+        elif method == 'sha256':
+            self.method_str = 'sha256'
+            self.method_func = hashlib.sha256
+
     def process_client_first_message(self, payload):
         payload = payload[3:]
         payload_parts = self._split_payload(payload)
         self.client_user = payload_parts['n']
+
+        if self.get_salted_password is not None:
+            salt_bytes, self.salted_password = self.get_salted_password(self.client_user, self.method_str)
+            self.salt = base64.b64encode(salt_bytes)
+        else:
+            self.salted_password = self.salt_password()
+
         self.unonce = payload_parts['r']
         self.messages.append(payload)
 
@@ -37,13 +51,12 @@ class Scram():
         self.messages.append(payload[:payload.rfind(',p=')])    # without 'p' part
 
         messages = ','.join(self.messages)
-        salted_password = self._salt_password()
-        server_key = self._sha1_hmac(salted_password, b'Server Key')
-        server_signature = self._sha1_hmac(server_key, messages.encode('utf-8'))
+        server_key = self._hmac(self.salted_password, b'Server Key')
+        server_signature = self._hmac(server_key, messages.encode('utf-8'))
 
-        client_key = self._sha1_hmac(salted_password, b'Client Key')
-        stored_key = hashlib.sha1(client_key).digest()
-        client_signature = self._sha1_hmac(stored_key, messages.encode('utf-8'))
+        client_key = self._hmac(self.salted_password, b'Client Key')
+        stored_key = self.method_func(client_key).digest()
+        client_signature = self._hmac(stored_key, messages.encode('utf-8'))
         expected_client_proof = base64.b64encode(_xor(client_key, client_signature)).decode()
 
         income_client_proof = payload[payload.rfind(',p=') + 3:]
@@ -53,13 +66,13 @@ class Scram():
 
         return f'v={base64.b64encode(server_signature).decode()}'
 
-    def _sha1_hmac(self, key, msg):
-        return hmac.new(key, msg, digestmod=hashlib.sha1).digest()
+    def _hmac(self, key, msg):
+        return hmac.new(key, msg, digestmod=self.method_func).digest()
 
-    def _salt_password(self):
-        password = _password_digest(self.user, self.password).encode("utf-8")
+    def salt_password(self, user, password):
+        password = _password_digest(user, password).encode("utf-8")
         return hashlib.pbkdf2_hmac(
-            'sha1', password, base64.b64decode(self.salt), self.iterations
+            self.method_str, password, base64.b64decode(self.salt), self.iterations
         )
 
     def _split_payload(self, payload):

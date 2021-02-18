@@ -66,6 +66,7 @@ else:
 if os.path.isdir(root_storage_dir) is False:
     os.makedirs(root_storage_dir)
 
+
 if 'storage_db' in user_config:
     os.environ['MINDSDB_DB_CON'] = user_config['storage_db']
 else:

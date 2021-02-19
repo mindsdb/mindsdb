@@ -7,27 +7,27 @@ import hashlib
 import hmac
 import os
 
-from pymongo.auth import _password_digest, _xor
+from pymongo.auth import _password_digest, _xor, saslprep
 
 
 class Scram():
-    ''' implementation of server-side SCRAM-SHA-1 auth of mongodb
-        TODO add SCRAM-SHA-256 auth
+    ''' implementation of server-side SCRAM-SHA-1 and SCRAM-SHA-256 auth for mongodb
     '''
 
     def __init__(self, method='sha1', get_salted_password=None):
         self.get_salted_password = get_salted_password
         self.snonce = base64.b64encode(os.urandom(24)).decode()
-        self.salt = base64.b64encode(os.urandom(16))
         self.iterations = 4096
         self.messages = []
 
         if method == 'sha1':
             self.method_str = 'sha1'
             self.method_func = hashlib.sha1
+            self.salt = base64.b64encode(os.urandom(16))
         elif method == 'sha256':
             self.method_str = 'sha256'
             self.method_func = hashlib.sha256
+            self.salt = base64.b64encode(os.urandom(28))
 
     def process_client_first_message(self, payload):
         payload = payload[3:]
@@ -70,7 +70,11 @@ class Scram():
         return hmac.new(key, msg, digestmod=self.method_func).digest()
 
     def salt_password(self, user, password):
-        password = _password_digest(user, password).encode("utf-8")
+        if self.method_str == 'sha1':
+            password = _password_digest(user, password).encode("utf-8")
+        elif self.method_str == 'sha256':
+            password = saslprep(password).encode("utf-8")
+
         return hashlib.pbkdf2_hmac(
             self.method_str, password, base64.b64decode(self.salt), self.iterations
         )

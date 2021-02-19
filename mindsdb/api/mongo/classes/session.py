@@ -8,8 +8,8 @@ class Session():
     def __init__(self, config):
         self.config = config
 
-    def init_scram(self):
-        self.scram = Scram(method='sha1', get_salted_password=self.get_salted_password)
+    def init_scram(self, method):
+        self.scram = Scram(method=method, get_salted_password=self.get_salted_password)
 
     def get_salted_password(self, username, method=None):
         real_user = self.config['api']['mongodb'].get('user', '')

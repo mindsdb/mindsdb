@@ -12,7 +12,6 @@
 
 import os
 import sys
-import random
 import socketserver as SocketServer
 import ssl
 import re
@@ -26,6 +25,7 @@ import struct
 from collections import OrderedDict
 from functools import partial
 import select
+import base64
 
 import moz_sql_parser as sql_parser
 
@@ -168,7 +168,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_id += 1
 
         self.session = SessionController()
-        self.salt = ''.join([random.choice(ALPHABET) for i in range(20)])
+
+        if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
+            self.salt = self.server.salt
+        else:
+            self.salt = base64.b64encode(os.urandom(15)).decode()
+
         self.socket = self.request
         self.count = 0  # next packet number
         self.connection_id = connection_id
@@ -420,6 +425,34 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             custom_models.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
         else:
             mdb.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
+
+        self.packet(OkPacket).send()
+
+    def answer_create_model(self, struct):
+        global mdb, default_store, config
+
+        if struct['integration_name'] not in config['integrations'].keys():
+            raise Exception(f"is no integration with name {struct['integration_name']}")
+
+        ds_name = struct.get('datasource_name', 'sql_ds')
+
+        ds, ds_name = default_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
+        ds_data = default_store.get_datasource(ds_name)
+
+        # TODO add alias here
+        predict = [x['name'] for x in struct['predict']]
+
+        timeseries_settings = {}
+        for w in ['order_by', 'group_by', 'window']:
+            if w in struct:
+                timeseries_settings[w] = struct.get(w)
+
+        kwargs = {'timeseries_settings': timeseries_settings}
+
+        if 'stop_after' in struct['using']:
+            kwargs['stop_training_in_x_seconds'] = int(struct['using']['stop_after'])
+
+        mdb.learn(struct['model_name'], ds, predict, ds_data['id'], kwargs)
 
         self.packet(OkPacket).send()
 
@@ -842,6 +875,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'use':
             self.session.database = sql_lower.split()[1].strip(' ;')
             self.packet(OkPacket).send()
+        elif keyword == 'create':
+            self.answer_create_model(struct)
         elif 'show warnings' in sql_lower:
             self.answerShowWarnings()
         elif 'show engines' in sql_lower:

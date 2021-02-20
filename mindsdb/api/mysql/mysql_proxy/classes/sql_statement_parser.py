@@ -5,6 +5,7 @@ from pyparsing import (
     StringEnd,
     Word,
     alphas,
+    alphanums,
     printables,
     Literal,
     QuotedString,
@@ -16,7 +17,8 @@ from pyparsing import (
     Suppress,
     CaselessKeyword,
     ParseException,
-    SkipTo
+    SkipTo,
+    Group
 )
 import re
 
@@ -65,6 +67,8 @@ class SqlStatementParser():
                 self._struct = self.parse_as_insert()
             elif self._keyword == 'delete':
                 self._struct = self.parse_as_delete()
+            elif self._keyword == 'create':
+                self._struct = self.parse_as_create_model()
 
     @property
     def keyword(self):
@@ -108,6 +112,8 @@ class SqlStatementParser():
             rollback
             commit
             explain
+
+            create
         '''
         key_word = Word(alphas)
         other_words = Word(printables)
@@ -175,6 +181,51 @@ class SqlStatementParser():
 
         self._sql = r.asDict()['original'].strip()
         return True
+
+    def parse_as_create_model(self) -> dict:
+        CREATE, MODEL, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, USING = map(
+            CaselessKeyword, "CREATE MODEL FROM WHERE PREDICT AS ORDER GROUP BY WINDOW USING".split()
+        )
+        ORDER_BY = ORDER + BY
+        GROUP_BY = GROUP + BY
+
+        word = Word(alphanums + "_")
+
+        predict_item = Group(word + Optional(AS.suppress() + word))
+
+        using_item = Group(word + Word('=').suppress() + (word | QuotedString("'")))
+
+        expr = (
+            CREATE + MODEL + word('model_name') + FROM + word('integration_name')
+            + originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name'))
+            + PREDICT
+            + delimitedList(predict_item, delim=',')('predict')
+            + Optional(ORDER_BY + delimitedList(word, delim=',')('order_by'))
+            + Optional(GROUP_BY + delimitedList(word, delim=',')('group_by'))
+            + Optional(WINDOW + word('window'))
+            + Optional(USING + delimitedList(using_item, delim=',')('using'))
+        )
+
+        r = expr.parseString(self._sql)
+
+        # postprocessing
+        r = r.asDict()
+        if r['select'].startswith('(') and r['select'].endswith(')'):
+            r['select'] = r['select'][1:-1]
+        r['select'] = r['select'].strip(' \n')
+
+        predict = []
+        for el in r['predict']:
+            p = {'name': el[0]}
+            if len(el) == 2:
+                p['alias'] = el[1]
+            predict.append(p)
+
+        r['predict'] = predict
+
+        r['using'] = {el[0]: el[1] for el in r.get('using', [])}
+
+        return r
 
     def parse_as_delete(self) -> dict:
         ''' Parse delete. Example: 'delete from database.table where column_a= 1 and column_b = 2;'
@@ -348,6 +399,31 @@ class SqlStatementParser():
         return result
 
     @staticmethod
+    def test_create():
+        tests = [
+            '''
+            CREATE MODEL debt_model
+            FROM integration_name (select whatever) as ds_name
+            PREDICT f1 as f1_a, f2, f3 as f3_a
+            order by qwe1, asd
+            group by zzz
+            window 100
+            using xxx=1, yyy=2, zzz='a,b'
+            ''',
+            '''
+            CREATE MODEL debt_model
+            FROM (
+                SELECT income, debt
+                FROM database.income_table 
+            )
+            PREDICT debt AS pred_debt
+            '''
+        ]
+        sql = tests[0]
+        statement = SqlStatementParser(sql)
+        # statement.parse_as_create_model()
+
+    @staticmethod
     def test():
         tests = [
             [
@@ -454,4 +530,5 @@ class SqlStatementParser():
 
 
 if __name__ == "__main__":
+    SqlStatementParser.test_create()
     SqlStatementParser.test()

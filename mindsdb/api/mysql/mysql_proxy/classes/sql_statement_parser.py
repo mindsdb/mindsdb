@@ -400,28 +400,44 @@ class SqlStatementParser():
 
     @staticmethod
     def test_create():
-        tests = [
+        def check_recursive(a, b):
+            assert type(a) == type(b)
+            if isinstance(a, dict):
+                for key in a:
+                    check_recursive(a[key], b[key])
+            elif isinstance(a, list):
+                for i in range(len(a)):
+                    check_recursive(a[i], b[i])
+            else:
+                assert a == b
+
+        tests = [[
             '''
             CREATE MODEL debt_model
             FROM integration_name (select whatever) as ds_name
-            PREDICT f1 as f1_a, f2, f3 as f3_a
-            order by qwe1, asd
-            group by zzz
+            PREDICT f1 as f1_alias, f2, f3 as f3_alias
+            order by f_order_1, f_order_2
+            group by f_group_1
             window 100
-            using xxx=1, yyy=2, zzz='a,b'
+            using param1=1, param2='a', param3='a,b'
             ''',
-            '''
-            CREATE MODEL debt_model
-            FROM (
-                SELECT income, debt
-                FROM database.income_table 
-            )
-            PREDICT debt AS pred_debt
-            '''
-        ]
-        sql = tests[0]
-        statement = SqlStatementParser(sql)
-        # statement.parse_as_create_model()
+            {
+                'model_name': 'debt_model',
+                'integration_name': 'integration_name',
+                'select': 'select whatever',
+                'datasource_name': 'ds_name',
+                'predict': [{'name': 'f1', 'alias': 'f1_alias'}, {'name': 'f2'}, {'name': 'f3', 'alias': 'f3_alias'}],
+                'order_by': ['f_order_1', 'f_order_2'],
+                'group_by': ['f_group_1'],
+                'window': '100',
+                'using': {'param1': '1', 'param2': 'a', 'param3': 'a,b'}
+            }
+        ]]
+        for sql, result in tests:
+            statement = SqlStatementParser(sql)
+            struct = statement.struct
+            check_recursive(struct, result)
+            check_recursive(result, struct)
 
     @staticmethod
     def test():

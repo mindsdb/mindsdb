@@ -22,7 +22,3 @@ class Integration(ABC):
     @abstractmethod
     def unregister_predictor(self, name):
         pass
-
-    @abstractmethod
-    def check_connection(self):
-        pass

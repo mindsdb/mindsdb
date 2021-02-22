@@ -12,7 +12,6 @@
 
 import os
 import sys
-import random
 import socketserver as SocketServer
 import ssl
 import re
@@ -26,6 +25,7 @@ import struct
 from collections import OrderedDict
 from functools import partial
 import select
+import base64
 
 import moz_sql_parser as sql_parser
 
@@ -168,7 +168,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_id += 1
 
         self.session = SessionController()
-        self.salt = ''.join([random.choice(ALPHABET) for i in range(20)])
+
+        if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
+            self.salt = self.server.salt
+        else:
+            self.salt = base64.b64encode(os.urandom(15)).decode()
+
         self.socket = self.request
         self.count = 0  # next packet number
         self.connection_id = connection_id

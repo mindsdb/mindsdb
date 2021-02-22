@@ -11,7 +11,7 @@
         "mysql": {
             "certificate_path": "tests/integration_tests/flows/config/cert.pem",
             "host": "127.0.0.1",
-            "password": "",
+            "password": "password",
             "port": "47335",
             "user": "mindsdb"
         }
@@ -68,16 +68,6 @@
             "publish": true,
             "type": "postgres",
             "user": "postgres"
-        },
-        "default_s3_storage": {
-            "type": "s3_storage"
-        },
-        "default_snowflake": {
-            "type": "snowflake"
-        },
-        "default_athena": {
-            "publish": false,
-            "type": "athena"
         }
     },
     "log": {

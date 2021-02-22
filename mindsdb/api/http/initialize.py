@@ -6,7 +6,6 @@ import threading
 import webbrowser
 from zipfile import ZipFile
 from pathlib import Path
-import logging
 import traceback
 #import concurrent.futures
 
@@ -20,6 +19,8 @@ from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import get_log
 
 
 class Swagger_Api(Api):
@@ -37,7 +38,7 @@ def initialize_static(config):
         Files will be downloaded and updated if new version of GUI > current.
         Current GUI version stored in static/version.txt.
     '''
-    log = logging.getLogger('mindsdb.http')
+    log = get_log('http')
     static_path = Path(config.paths['static'])
     static_path.mkdir(parents=True, exist_ok=True)
 
@@ -195,13 +196,18 @@ def initialize_static(config):
     return True
 
 
-def initialize_flask(config, init_static_thread):
+def initialize_flask(config, init_static_thread, no_studio):
     # Apparently there's a bug that causes the static path not to work if it's '/' -- https://github.com/pallets/flask/issues/3134, I think '' should achieve the same thing (???)
-    app = Flask(
-        __name__,
-        static_url_path='/static',
-        static_folder=os.path.join(config.paths['static'], 'static/')
-    )
+    if no_studio:
+        app = Flask(
+            __name__
+        )
+    else:
+        app = Flask(
+            __name__,
+            static_url_path='/static',
+            static_folder=os.path.join(config.paths['static'], 'static/')
+        )
 
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
@@ -226,22 +232,27 @@ def initialize_flask(config, init_static_thread):
     host = config['api']['http']['host']
 
     # NOTE rewrite it, that hotfix to see GUI link
-    log = logging.getLogger('mindsdb.http')
-    url = f'http://{host}:{port}/'
-    log.error(f' - GUI available at {url}')
+    if not no_studio:
+        log = get_log('http')
+        if host in ('', '0.0.0.0'):
+            url = f'http://127.0.0.1:{port}/'
+        else:
+            url = f'http://{host}:{port}/'
+        log.info(f' - GUI available at {url}')
 
-    pid = os.getpid()
-    x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config.paths['static']), daemon=True)
-    x.start()
+        pid = os.getpid()
+        x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config.paths['static']), daemon=True)
+        x.start()
 
     return app, api
 
 
-def initialize_interfaces(config, app):
-    app.default_store = DataStore(config)
-    app.mindsdb_native = NativeInterface(config)
-    app.custom_models = CustomModels(config)
-    app.dbw = DatabaseWrapper(config)
+def initialize_interfaces(app):
+    app.default_store = DataStore()
+    app.mindsdb_native = NativeInterface()
+    app.custom_models = CustomModels()
+    app.dbw = DatabaseWrapper()
+    config = Config()
     app.config_obj = config
 
 
@@ -252,7 +263,7 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     """
     init_static_thread.join()
     inject_telemetry_to_static(static_folder)
-    logger = logging.getLogger('mindsdb.http')
+    logger = get_log('http')
     try:
         is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,
                                            pid=pid, port=port)

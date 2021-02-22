@@ -3,12 +3,8 @@ import requests
 import asyncio
 import time
 
-from mindsdb.utilities.config import Config
-
 from common import (
-    MINDSDB_DATABASE,
     HTTP_API_ROOT,
-    TEST_CONFIG,
     run_environment,
     stop_mindsdb
 )
@@ -16,7 +12,6 @@ from common import (
 from http_test_helpers import (
     wait_predictor_learn,
     check_predictor_not_exists,
-    check_ds_not_exists,
     check_ds_exists
 )
 
@@ -40,17 +35,16 @@ TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'
 TEST_PREDICTOR = 'test_predictor'
 
-config = Config(TEST_CONFIG)
 
-
-class UserFlowTest_1(unittest.TestCase):
+class MistakesTest_1(unittest.TestCase):
     def test_1_wrong_integration(self):
         '''
         start mindsdb with publish integration with wrong password
         try create ds
         change password to correct
         '''
-        original_db_password = config['integrations']['default_mariadb']['password']
+
+        '''
         self.mdb, datastore = run_environment(
             config,
             apis=['mysql', 'http'],
@@ -62,7 +56,7 @@ class UserFlowTest_1(unittest.TestCase):
             },
             mindsdb_database=MINDSDB_DATABASE
         )
-
+        original_db_password = config['integrations']['default_mariadb']['password']
         check_ds_not_exists(TEST_DS)
 
         # check create DS with wrong integration password
@@ -83,11 +77,23 @@ class UserFlowTest_1(unittest.TestCase):
         )
         assert res.status_code == 200
         config['integrations']['default_mariadb']['password'] = original_db_password
+        '''
 
     def test_2_broke_analisys(self):
         '''
         stop mindsdb while analyse dataset
         '''
+        run_environment(
+            apis=['mysql', 'http'],
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    }
+                }
+            }
+        )
+
         data = {
             "integration_id": 'default_mariadb',
             "name": TEST_DS,
@@ -101,16 +107,15 @@ class UserFlowTest_1(unittest.TestCase):
 
         stop_mindsdb()
 
-        self.mdb, datastore = run_environment(
-            config,
+        run_environment(
             apis=['mysql', 'http'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE,
-            clear_storage=False
+            }
         )
 
         check_ds_exists(TEST_DS)
@@ -141,16 +146,15 @@ class UserFlowTest_1(unittest.TestCase):
 
         stop_mindsdb()
 
-        self.mdb, datastore = run_environment(
-            config,
+        run_environment(
             apis=['mysql', 'http'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE,
-            clear_storage=False
+            }
         )
 
         # TODO add after this issue will be closed: https://github.com/mindsdb/mindsdb/issues/948
@@ -183,16 +187,15 @@ class UserFlowTest_1(unittest.TestCase):
         stop_mindsdb()
         ioloop.close()
 
-        self.mdb, datastore = run_environment(
-            config,
+        run_environment(
             apis=['mysql', 'http'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE,
-            clear_storage=False
+            }
         )
 
         res = requests.post(

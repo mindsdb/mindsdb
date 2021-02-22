@@ -1,3 +1,3 @@
-import logging
+from mindsdb.utilities.log import get_log
 
-log = logging.getLogger('mindsdb.mysql')
+log = get_log('mysql')

@@ -13,7 +13,6 @@
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
-from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CAPABILITIES
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
@@ -36,8 +35,6 @@ class HandshakeResponsePacket(Packet):
         self._length = length
         self._seq = count_header
         self._body = body
-
-        self.scramble_func = scramble
 
         self.capabilities = Datum('int<4>')
         self.max_packet_size = Datum('int<4>')

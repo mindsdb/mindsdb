@@ -4,11 +4,6 @@ from collections import namedtuple
 import psutil
 
 
-def get_child_pids(pid):
-    p = psutil.Process(pid=pid)
-    return p.children(recursive=True)
-
-
 def net_connections():
     """Cross-platform psutil.net_connections like interface"""
     if sys.platform.lower().startswith('linux'):

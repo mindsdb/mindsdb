@@ -4,16 +4,16 @@ import json
 
 from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
 from mindsdb.utilities.fs import get_or_create_dir_struct, create_dirs_recursive
-from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import args_parse, is_notebook
 from mindsdb.__about__ import __version__ as mindsdb_version
+from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 
 try:
     if not is_notebook():
         args = args_parse()
     else:
         args = None
-except:
+except Exception:
     # This fials in some notebooks ... check above for is_notebook is still needed because even if the exception is caught trying to read the arg still leads to failure in other notebooks... notebooks a
     args = None
 
@@ -47,20 +47,52 @@ if args is not None and args.version:
 
 if args is not None and args.config is not None:
     config_path = args.config
+    with open(config_path, 'r') as fp:
+        user_config = json.load(fp)
 else:
-    config_dir, storage_dir = get_or_create_dir_struct()
-    config_path = os.path.join(config_dir, 'config.json')
-    if not os.path.isfile(config_path):
-        with open(config_path, 'w') as fp:
-            json.dump({'config_version': '1.4', 'storage_dir': storage_dir, 'api': {}}, fp)
+    user_config = {}
+    config_path = 'absent'
+os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
-mindsdb_config = Config(config_path)
-create_dirs_recursive(mindsdb_config.paths)
+if 'storage_dir' in user_config:
+    root_storage_dir = user_config['storage_dir']
+    os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+elif os.environ.get('MINDSDB_STORAGE_DIR') is not None:
+    root_storage_dir = os.environ['MINDSDB_STORAGE_DIR']
+else:
+    _, root_storage_dir = get_or_create_dir_struct()
+    os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+
+if os.path.isdir(root_storage_dir) is False:
+    os.makedirs(root_storage_dir)
+
+
+if 'storage_db' in user_config:
+    os.environ['MINDSDB_DB_CON'] = user_config['storage_db']
+else:
+    os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db')
+
+if 'company_id' in user_config:
+    os.environ['MINDSDB_COMPANY_ID'] = user_config['company_id']
+
+
+from mindsdb.utilities.config import Config
+mindsdb_config = Config()
+create_dirs_recursive(mindsdb_config['paths'])
 
 os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')
 os.environ['LIGHTWOOD_LOG_LEVEL'] = os.environ.get('LIGHTWOOD_LOG_LEVEL', 'ERROR')
-os.environ['MINDSDB_CONFIG_PATH'] = config_path
-os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config.paths['predictors']
+os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config['paths']['predictors']
+
+
+if telemetry_file_exists(mindsdb_config['storage_dir']):
+    os.environ['CHECK_FOR_UPDATES'] = '0'
+    print('\n x telemetry disabled! \n')
+elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
+    disable_telemetry(mindsdb_config['storage_dir'])
+    print('\n x telemetry disabled \n')
+else:
+    print('\n ✓ telemetry enabled \n')
 
 from mindsdb_native import *
 # Figure out how to add this as a module

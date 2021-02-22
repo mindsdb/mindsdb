@@ -1,24 +1,19 @@
 import unittest
 import requests
+import json
 from pathlib import Path
 
 import mysql.connector
 
-from mindsdb.utilities.config import Config
-
 from common import (
-    USE_EXTERNAL_DB_SERVER,
-    DATASETS_COLUMN_TYPES,
     MINDSDB_DATABASE,
-    DATASETS_PATH,
     HTTP_API_ROOT,
-    TEST_CONFIG,
+    CONFIG_PATH,
+    check_prediction_values,
+    condition_dict_to_str,
     run_environment,
     make_test_csv,
-    upload_csv,
     stop_mindsdb,
-    condition_dict_to_str,
-    check_prediction_values
 )
 
 from http_test_helpers import (
@@ -48,16 +43,15 @@ CONDITION = {
 # ---
 
 TEST_DATA_TABLE = TEST_DATASET
-TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'
 TEST_DS_CSV = 'test_ds_csv'
-TEST_PREDICTOR = 'test_predictor'
+TEST_PREDICTOR = 'test_predictor_name_conflict_fix'
 TEST_PREDICTOR_CSV = 'test_predictor_csv'
 
-config = Config(TEST_CONFIG)
+config = {}
 
 to_predict_column_names = list(TO_PREDICT.keys())
 
@@ -91,26 +85,15 @@ class UserFlowTest_2(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        mdb, datastore = run_environment(
-            config,
-            apis=['http'],
-            mindsdb_database=MINDSDB_DATABASE
+        run_environment(
+            apis=['http']
         )
-        cls.mdb = mdb
 
-        query('create database if not exists test_data')
-
-        if not USE_EXTERNAL_DB_SERVER:
-            test_csv_path = Path(DATASETS_PATH).joinpath(TEST_DATASET).joinpath('data.csv')
-            if TEST_DATA_TABLE not in cls.get_tables_in(cls, 'test_data'):
-                print('creating test data table...')
-                upload_csv(
-                    query=query,
-                    columns_map=DATASETS_COLUMN_TYPES[TEST_DATASET],
-                    db_types_map=DB_TYPES_MAP,
-                    table_name=TEST_DATA_TABLE,
-                    csv_path=test_csv_path
-                )
+        config.update(
+            json.loads(
+                Path(CONFIG_PATH).read_text()
+            )
+        )
 
         data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50', as_dict=True)
         cls.external_datasource_csv_path = make_test_csv(EXTERNAL_DS_NAME, data)
@@ -145,18 +128,22 @@ class UserFlowTest_2(unittest.TestCase):
     def test_3_restart_and_connect(self):
         stop_mindsdb()
 
-        mdb, datastore = run_environment(
-            config,
+        run_environment(
             apis=['mysql'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': False
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE,
-            clear_storage=False
+            }
         )
-        self.mdb = mdb
+
+        config.update(
+            json.loads(
+                Path(CONFIG_PATH).read_text()
+            )
+        )
 
     def test_4_learn_predictor(self):
         query(f"""

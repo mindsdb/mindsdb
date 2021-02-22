@@ -3,10 +3,10 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import initialize_log
 
 
-def start(config, verbose=False):
-    config = Config(config)
+def start(verbose=False):
+    config = Config()
     if verbose:
-        config['log']['level']['console'] = 'DEBUG'
+        config.set(['log', 'level', 'console'], 'DEBUG')
 
     initialize_log(config, 'mysql', wrap_print=True)
 

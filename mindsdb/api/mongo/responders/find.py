@@ -28,7 +28,7 @@ class Responce(Responder):
             model = mindsdb_env['mindsdb_native'].get_model_data(name=query['find'])
 
             columns = []
-            columns += model['data_analysis_v2']['columns']
+            columns += model['columns']
             columns += [f'{x}_original' for x in model['predict']]
             for col in model['predict']:
                 if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
@@ -38,9 +38,43 @@ class Responce(Responder):
 
             columns += ['when_data', 'select_data_query', 'external_datasource']
 
-            for key in where_data:
-                if key not in columns:
-                    raise Exception(f"Unknown column '{key}'. Only columns from this list can be used in query: {', '.join(columns)}")
+            where_data_list = where_data if isinstance(where_data, list) else [where_data]
+            for statement in where_data_list:
+                if isinstance(statement, dict):
+                    for key in statement:
+                        if key not in columns:
+                            columns.append(key)
+
+            if 'select_data_query' in where_data:
+                integrations = mindsdb_env['config']['integrations'].keys()
+                connection = where_data.get('connection')
+                if connection is None:
+                    if 'default_mongodb' in integrations:
+                        connection = 'default_mongodb'
+                    else:
+                        for integration in integrations:
+                            if integration.startswith('mongodb_'):
+                                connection = integration
+                                break
+
+                if connection is None:
+                    raise Exception("Can't find connection from which fetch data")
+
+                ds_name = 'temp'
+
+                ds, ds_name = mindsdb_env['data_store'].save_datasource(
+                    name=ds_name,
+                    source_type=connection,
+                    source=where_data['select_data_query']
+                )
+                where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
+                mindsdb_env['data_store'].delete_datasource(ds_name)
+
+            if 'external_datasource' in where_data:
+                ds_name = where_data['external_datasource']
+                if mindsdb_env['data_store'].get_datasource(ds_name) is None:
+                    raise Exception(f"Datasource {ds_name} not exists")
+                where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
 
             prediction = mindsdb_env['mindsdb_native'].predict(name=table, when_data=where_data)
 

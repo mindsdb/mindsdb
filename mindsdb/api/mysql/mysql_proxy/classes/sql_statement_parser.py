@@ -70,8 +70,10 @@ class SqlStatementParser():
                 self._struct = self.parse_as_insert()
             elif self._keyword == 'delete':
                 self._struct = self.parse_as_delete()
-            elif self._keyword == 'create':
-                self._struct = self.parse_as_create_model()
+            elif self._keyword == 'create_predictor':
+                self._struct = self.parse_as_create_predictor()
+            elif self._keyword == 'create_ai_table':
+                self._struct = self.parse_as_create_ai_table()
 
     @property
     def keyword(self):
@@ -116,20 +118,31 @@ class SqlStatementParser():
             commit
             explain
 
-            create
+            create_predictor
+            create_ai_table
         '''
-        key_word = Word(alphas)
-        other_words = Word(printables)
-        expr = key_word + Optional(other_words).suppress()
+        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR = map(
+            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR".split()
+        )
+        CREATE_PREDICTOR = CREATE + PREDICTOR
+        CREATE_AI_TABLE = CREATE + AI + TABLE
+
+        expr = (
+            START | SET | USE
+            | SHOW | DELETE | INSERT
+            | UPDATE | ALTER | SELECT
+            | ROLLBACK | COMMIT | EXPLAIN
+            | CREATE_PREDICTOR | CREATE_AI_TABLE
+        )('keyword')
 
         r = expr.parseString(sql)
 
-        if len(r) != 1:
+        keyword = '_'.join(r.get('keyword', [])).lower()
+
+        if keyword == 0:
             raise Exception('Cant get keyword from statement')
 
-        word = r[0].lower()
-
-        return word
+        return keyword
 
     @staticmethod
     def is_quoted_str(text):
@@ -185,7 +198,10 @@ class SqlStatementParser():
         self._sql = r.asDict()['original'].strip()
         return True
 
-    def parse_as_create_model(self) -> dict:
+    def parse_as_create_ai_table(self) -> dict:
+        return {}
+
+    def parse_as_create_predictor(self) -> dict:
         CREATE, PREDICTOR, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, USING, ASK, DESC = map(
             CaselessKeyword, "CREATE PREDICTOR FROM WHERE PREDICT AS ORDER GROUP BY WINDOW USING ASK DESC".split()
         )
@@ -424,7 +440,7 @@ class SqlStatementParser():
 
         tests = [[
             '''
-            CREATE PREDICTOR debt_model_1
+            CREATE PREDICTor debt_model_1
             FROM integration_name (select whatever) as ds_name
             PREDICT f1 as f1_alias, f2, f3 as f3_alias
             order by f_order_1 ASK, f_order_2, f_order_3 DESC

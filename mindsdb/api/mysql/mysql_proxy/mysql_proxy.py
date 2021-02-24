@@ -428,7 +428,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.packet(OkPacket).send()
 
-    def answer_create_model(self, struct):
+    def answer_create_predictor(self, struct):
         global mdb, default_store, config
 
         if struct['integration_name'] not in config['integrations'].keys():
@@ -878,8 +878,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'use':
             self.session.database = sql_lower.split()[1].strip(' ;')
             self.packet(OkPacket).send()
-        elif keyword == 'create':
-            self.answer_create_model(struct)
+        elif keyword == 'create_predictor':
+            self.answer_create_predictor(struct)
         elif 'show warnings' in sql_lower:
             self.answerShowWarnings()
         elif 'show engines' in sql_lower:

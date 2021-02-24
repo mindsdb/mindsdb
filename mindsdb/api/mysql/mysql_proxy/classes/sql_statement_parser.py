@@ -199,7 +199,27 @@ class SqlStatementParser():
         return True
 
     def parse_as_create_ai_table(self) -> dict:
-        return {}
+        CREATE, AI, TABLE, FROM, USING = map(
+            CaselessKeyword, "CREATE AI TABLE FROM USING".split()
+        )
+
+        word = Word(alphanums + "_")
+
+        expr = (
+            CREATE + AI + TABLE + word('ai_table_name') + FROM
+            + Optional(word)('integration_name')
+            + originalTextFor(nestedExpr('(', ')'))('select')
+            + USING + word('predictor_name')
+        )
+
+        r = expr.parseString(self._sql)
+        r = r.asDict()
+
+        if r['select'].startswith('(') and r['select'].endswith(')'):
+            r['select'] = r['select'][1:-1]
+        r['select'] = r['select'].strip(' \n')
+
+        return r
 
     def parse_as_create_predictor(self) -> dict:
         CREATE, PREDICTOR, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, USING, ASK, DESC = map(
@@ -457,6 +477,17 @@ class SqlStatementParser():
                 'group_by': ['f_group_1', 'f_group_2'],
                 'window': 100,
                 'using': {'x': 1, 'y': 'a'}
+            }
+        ], [
+            '''
+            CREATE AI table ai_table_name
+            FROM integration (select * from table)
+            USING model_name
+            ''', {
+                'ai_table_name': 'ai_table_name',
+                'integration_name': 'integration',
+                'select': 'select * from table',
+                'predictor_name': 'model_name'
             }
         ]]
         for sql, result in tests:

@@ -6,6 +6,7 @@ from pyparsing import (
     Word,
     alphas,
     alphanums,
+    nums,
     printables,
     Literal,
     QuotedString,
@@ -21,6 +22,7 @@ from pyparsing import (
     Group
 )
 import re
+import json
 
 
 RE_INT = re.compile(r'^[-+]?([1-9]\d*|0)$')
@@ -183,27 +185,34 @@ class SqlStatementParser():
         return True
 
     def parse_as_create_model(self) -> dict:
-        CREATE, MODEL, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, USING = map(
-            CaselessKeyword, "CREATE MODEL FROM WHERE PREDICT AS ORDER GROUP BY WINDOW USING".split()
+        CREATE, PREDICTOR, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, USING, ASK, DESC = map(
+            CaselessKeyword, "CREATE PREDICTOR FROM WHERE PREDICT AS ORDER GROUP BY WINDOW USING ASK DESC".split()
         )
         ORDER_BY = ORDER + BY
         GROUP_BY = GROUP + BY
 
         word = Word(alphanums + "_")
 
-        predict_item = Group(word + Optional(AS.suppress() + word))
+        s_int = Word(nums).setParseAction(lambda tokens: int(tokens[0]))
 
-        using_item = Group(word + Word('=').suppress() + (word | QuotedString("'")))
+        predict_item = Group(word('name') + Optional(AS.suppress() + word('alias')))
+
+        order_item = Group(word('name') + Optional(ASK | DESC)('sort'))
+
+        using_item = Group(word('name') + Word('=').suppress() + (word | QuotedString("'"))('value'))
 
         expr = (
-            CREATE + MODEL + word('model_name') + FROM + word('integration_name')
+            CREATE + PREDICTOR + word('predictor_name') + FROM + Optional(word)('integration_name')
             + originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name'))
             + PREDICT
             + delimitedList(predict_item, delim=',')('predict')
-            + Optional(ORDER_BY + delimitedList(word, delim=',')('order_by'))
+            + Optional(ORDER_BY + delimitedList(order_item, delim=',')('order_by'))
             + Optional(GROUP_BY + delimitedList(word, delim=',')('group_by'))
-            + Optional(WINDOW + word('window'))
-            + Optional(USING + delimitedList(using_item, delim=',')('using'))
+            + Optional(WINDOW + s_int('window'))
+            + Optional(
+                (USING + delimitedList(using_item, delim=',')('using'))
+                | (USING + originalTextFor(nestedExpr('{', '}'))('using'))
+            )
         )
 
         r = expr.parseString(self._sql)
@@ -214,16 +223,17 @@ class SqlStatementParser():
             r['select'] = r['select'][1:-1]
         r['select'] = r['select'].strip(' \n')
 
-        predict = []
-        for el in r['predict']:
-            p = {'name': el[0]}
-            if len(el) == 2:
-                p['alias'] = el[1]
-            predict.append(p)
-
-        r['predict'] = predict
-
-        r['using'] = {el[0]: el[1] for el in r.get('using', [])}
+        using = r.get('using')
+        if isinstance(using, str):
+            r['using'] = json.loads(using)
+        elif isinstance(using, list):
+            new_using = {}
+            for el in using:
+                if el['name'] == 'stop_after':
+                    new_using['stop_training_in_x_seconds'] = el['value']
+                else:
+                    new_using[el['name']] = el['value']
+            r['using'] = new_using
 
         return r
 
@@ -413,24 +423,23 @@ class SqlStatementParser():
 
         tests = [[
             '''
-            CREATE MODEL debt_model
+            CREATE PREDICTOR debt_model_1
             FROM integration_name (select whatever) as ds_name
             PREDICT f1 as f1_alias, f2, f3 as f3_alias
-            order by f_order_1, f_order_2
-            group by f_group_1
+            order by f_order_1 ASK, f_order_2, f_order_3 DESC
+            group by f_group_1, f_group_2
             window 100
-            using param1=1, param2='a', param3='a,b'
-            ''',
-            {
-                'model_name': 'debt_model',
+            using {"x": 1, "y": "a"}
+            ''', {
+                'predictor_name': 'debt_model_1',
                 'integration_name': 'integration_name',
                 'select': 'select whatever',
                 'datasource_name': 'ds_name',
                 'predict': [{'name': 'f1', 'alias': 'f1_alias'}, {'name': 'f2'}, {'name': 'f3', 'alias': 'f3_alias'}],
-                'order_by': ['f_order_1', 'f_order_2'],
-                'group_by': ['f_group_1'],
-                'window': '100',
-                'using': {'param1': '1', 'param2': 'a', 'param3': 'a,b'}
+                'order_by': [{'name': 'f_order_1', 'sort': 'ASK'}, {'name': 'f_order_2'}, {'name': 'f_order_3', 'sort': 'DESC'}],
+                'group_by': ['f_group_1', 'f_group_2'],
+                'window': 100,
+                'using': {'x': 1, 'y': 'a'}
             }
         ]]
         for sql, result in tests:

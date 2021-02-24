@@ -432,9 +432,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         global mdb, default_store, config
 
         if struct['integration_name'] not in config['integrations'].keys():
-            raise Exception(f"is no integration with name {struct['integration_name']}")
+            # use first integration by default
+            struct['integration_name'] = list(config['integrations'].keys())[0]
 
-        ds_name = struct.get('datasource_name', 'sql_ds')
+        ds_name = struct.get('datasource_name', f"{struct['integration_name']}_ds")
 
         ds, ds_name = default_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
         ds_data = default_store.get_datasource(ds_name)
@@ -447,10 +448,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if w in struct:
                 timeseries_settings[w] = struct.get(w)
 
-        kwargs = {'timeseries_settings': timeseries_settings}
-
-        if 'stop_after' in struct['using']:
-            kwargs['stop_training_in_x_seconds'] = int(struct['using']['stop_after'])
+        kwargs = struct.get('using', {})
+        if len(timeseries_settings) > 0:
+            if 'timeseries_settings' not in kwargs:
+                kwargs['timeseries_settings'] = timeseries_settings
+            else:
+                kwargs['timeseries_settings'].update(timeseries_settings)
 
         mdb.learn(struct['model_name'], ds, predict, ds_data['id'], kwargs)
 

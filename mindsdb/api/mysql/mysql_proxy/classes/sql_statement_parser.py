@@ -1,25 +1,26 @@
 from pyparsing import (
-    ParserElement,
-    nestedExpr,
-    ZeroOrMore,
-    StringEnd,
-    Word,
-    alphas,
-    alphanums,
-    nums,
-    printables,
-    Literal,
-    QuotedString,
-    quotedString,
-    originalTextFor,
-    OneOrMore,
-    delimitedList,
-    Optional,
-    Suppress,
     CaselessKeyword,
     ParseException,
+    ParserElement,
+    QuotedString,
+    ZeroOrMore,
+    StringEnd,
+    OneOrMore,
+    Suppress,
+    Optional,
+    Literal,
     SkipTo,
-    Group
+    Group,
+    Word,
+    originalTextFor,
+    delimitedList,
+    quotedString,
+    printables,
+    nestedExpr,
+    alphanums,
+    tokenMap,
+    alphas,
+    nums
 )
 import re
 import json
@@ -193,7 +194,7 @@ class SqlStatementParser():
 
         word = Word(alphanums + "_")
 
-        s_int = Word(nums).setParseAction(lambda tokens: int(tokens[0]))
+        s_int = Word(nums).setParseAction(tokenMap(int))
 
         predict_item = Group(word('name') + Optional(AS.suppress() + word('alias')))
 

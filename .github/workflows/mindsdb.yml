@@ -28,8 +28,11 @@ jobs:
     - name: Install dependencies Windows
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
-          pip install torch===1.7.0+cpu torchvision===0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html;
+          pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html;
         fi
+      shell: bash
+      env:
+        CHECK_FOR_UPDATES: False
     - name: Install mindsdb_native/staging if it's not mindsdb/stable
       if: github.ref != 'refs/heads/stable'
       run: |

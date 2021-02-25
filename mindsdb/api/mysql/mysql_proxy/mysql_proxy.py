@@ -80,6 +80,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
+from mindsdb.interfaces.ai_table.ai_table import AITable_store
 
 
 connection_id = 0
@@ -91,6 +92,7 @@ mdb = None
 custom_models = None
 datahub = None
 config = None
+ai_table = None
 
 
 def check_auth(username, password, scramble_func, salt, config):
@@ -427,6 +429,34 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             mdb.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
 
         self.packet(OkPacket).send()
+
+    def answer_create_ai_table(self, struct):
+        global mdb, default_store, config, ai_table
+
+        table = ai_table.get_ai_table(struct['ai_table_name'])
+        if table is not None:
+            raise Exception(f"AT Table with name {struct['ai_table_name']} already exists")
+
+        # check predictor exists
+        models = mdb.get_models()
+        models_names = [x['name'] for x in models]
+        if struct['predictor_name'] not in models_names:
+            raise Exception(f"Predictor with name {struct['predictor_name']} not exists")
+
+        # check integration exists
+
+        ai_table.add(
+            name=struct['ai_table_name'],
+            integration_name=struct['integration_name'],
+            integration_query=struct['integration_sql'],
+            predictor_name=struct['predictor_name'],
+            predictor_fields=struct['predictor_fields']
+        )
+        # check integration exists
+
+        # lt = ai_table.get_ai_tables()
+        
+        pass
 
     def answer_create_predictor(self, struct):
         global mdb, default_store, config
@@ -878,6 +908,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'use':
             self.session.database = sql_lower.split()[1].strip(' ;')
             self.packet(OkPacket).send()
+        elif keyword == 'create_ai_table':
+            self.answer_create_ai_table(struct)
         elif keyword == 'create_predictor':
             self.answer_create_predictor(struct)
         elif 'show warnings' in sql_lower:
@@ -1557,6 +1589,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         global datahub
         global config
         global custom_models
+        global ai_table
         """
         Create a server and wait for incoming connections until Ctrl-C
         """
@@ -1573,6 +1606,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             config['api']['mysql']['ssl']
         )
 
+        ai_table = AITable_store()
         default_store = DataStore()
         mdb = NativeInterface()
         custom_models = CustomModels()

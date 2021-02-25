@@ -25,6 +25,8 @@ from pyparsing import (
 import re
 import json
 
+import moz_sql_parser as moz_sql
+
 
 RE_INT = re.compile(r'^[-+]?([1-9]\d*|0)$')
 RE_FLOAT = re.compile(r'^[-+]?([1-9]\d*\.\d*|0\.|0\.\d*)$')
@@ -199,17 +201,17 @@ class SqlStatementParser():
         return True
 
     def parse_as_create_ai_table(self) -> dict:
-        CREATE, AI, TABLE, FROM, USING = map(
-            CaselessKeyword, "CREATE AI TABLE FROM USING".split()
+        CREATE, AI, TABLE, VIEW, FROM, USING, AS = map(
+            CaselessKeyword, "CREATE AI TABLE VIEW FROM USING AS".split()
         )
+
+        AI_TABLE = AI + TABLE
 
         word = Word(alphanums + "_")
 
         expr = (
-            CREATE + AI + TABLE + word('ai_table_name') + FROM
-            + Optional(word)('integration_name')
+            CREATE + (AI_TABLE | VIEW) + word('ai_table_name') + AS
             + originalTextFor(nestedExpr('(', ')'))('select')
-            + USING + word('predictor_name')
         )
 
         r = expr.parseString(self._sql)
@@ -219,7 +221,57 @@ class SqlStatementParser():
             r['select'] = r['select'][1:-1]
         r['select'] = r['select'].strip(' \n')
 
-        return r
+        select = moz_sql.parse(r['select'])
+
+        if 'from' not in select \
+           or len(select['from']) != 2 \
+           or 'join' not in select['from'][1]:
+            raise Exception("'from' must be like: 'from integration.table join predictor'")
+
+        # add 'name' to each statement
+        for s in [*select['select'], select['from'][0], select['from'][1]['join']]:
+            if 'name' not in s:
+                if '.' in s['value']:
+                    s['name'] = s['value'][s['value'].find('.') + 1:]
+                else:
+                    s['name'] = s['value']
+
+        f = {
+            'integration': select['from'][0],
+            'predictor': select['from'][1]['join']
+        }
+
+        # remove predictor join
+        select['from'].pop()
+
+        new_select = []
+        predictor_fields = []
+        integration_prefix = f"{f['integration']['name']}."
+        for s in select['select']:
+            if s['value'].startswith(integration_prefix):
+                new_select.append(s)
+            else:
+                predictor_fields.append(s)
+
+        predictor_prefix = f"{f['predictor']['name']}."
+        for pf in predictor_fields:
+            if pf['value'].startswith(predictor_prefix):
+                pf['value'] = pf['value'][len(predictor_prefix):]
+
+        integration_name = f['integration']['value'][:f['integration']['value'].find('.')]
+        f['integration']['value'] = f['integration']['value'][len(integration_name) + 1:]
+        select['select'] = new_select
+        integration_sql = moz_sql.format(select)
+
+        res = {
+            'ai_table_name': r['ai_table_name'],
+            'integration_name': integration_name,
+            'integration_sql': integration_sql,
+            'predictor_name': f['predictor']['value'],
+            'predictor_fields': predictor_fields
+        }
+
+        return res
 
     def parse_as_create_predictor(self) -> dict:
         CREATE, PREDICTOR, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, USING, ASK, DESC = map(
@@ -479,11 +531,23 @@ class SqlStatementParser():
                 'using': {'x': 1, 'y': 'a'}
             }
         ], [
+            # '''
+            # CREATE AI table ai_table_name
+            # FROM integration (select * from table)
+            # USING model_name
+            # ''',
             '''
-            CREATE AI table ai_table_name
-            FROM integration (select * from table)
-            USING model_name
-            ''', {
+            CREATE AI table ai_table_name as (
+                SELECT
+                    a.col1,
+                    a.col2,
+                    a.col3,
+                    p.col3 as pred_col3
+                FROM integration_name.table_name as a
+                JOIN predictor_name as p
+            )
+            ''',
+            {
                 'ai_table_name': 'ai_table_name',
                 'integration_name': 'integration',
                 'select': 'select * from table',

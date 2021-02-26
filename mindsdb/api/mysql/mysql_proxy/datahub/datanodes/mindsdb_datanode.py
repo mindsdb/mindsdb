@@ -109,10 +109,12 @@ class MindsDBDataNode(DataNode):
         res = self.mindsdb_native.predict(name=predictor_name, when_data=dso)
         self.default_store.delete_datasource(ds_name)
 
-        keys = [x['value'] for x in aitable_record.query_fields] + [x['value'] for x in aitable_record.predictor_columns]
         keys_map = {}
-        for f in (aitable_record.query_fields + aitable_record.predictor_columns):
+        for f in aitable_record.predictor_columns:
             keys_map[f['value']] = f['name']
+        for f in aitable_record.query_fields:
+            keys_map[f['name']] = f['name']
+        keys = list(keys_map.keys())
 
         data = []
         for i, el in enumerate(res):

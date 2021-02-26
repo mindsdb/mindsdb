@@ -18,6 +18,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, b
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
+from mindsdb.interfaces.ai_table.ai_table import AITable_store
 
 
 class TableWithoutDatasourceException(Exception):
@@ -52,6 +53,8 @@ class SQLQuery():
         # parse
         self.integration = integration
         self.database = database
+
+        self.ai_table = AITable_store()
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
@@ -519,8 +522,10 @@ class SQLQuery():
 
                 tables = list(self.where_conditions[0]['tables'])
                 db = (self.database or '').lower()
-                if len(tables) == 1 and (
-                        tables[0].lower() in ['mindsdb.predictors', 'mindsdb.commands'] or db == 'mindsdb' and tables[0].lower() in ['predictors', 'commands']) is False:
+                if False and len(tables) == 1 and (
+                        tables[0].lower() in ['mindsdb.predictors', 'mindsdb.commands'] \
+                        or db == 'mindsdb' and tables[0].lower() in ['predictors', 'commands']
+                    ) is False and self.ai_table.is_ai_table(tables[0]) is False:
                     success = True
                 else:
                     for cond in self.where_conditions:

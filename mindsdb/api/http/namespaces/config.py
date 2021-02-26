@@ -171,7 +171,7 @@ class Vars(Resource):
         if ca.config_obj.get('disable_mongo', False):
             mongo = False
 
-        return {'mongo': mongo, 'telemtry', telemtry}
+        return {'mongo': mongo, 'telemtry': telemtry}
 
 @ns_conf.param('flag', 'Turn telemtry on or off')
 class ToggleTelemetry(Resource):

@@ -32,14 +32,15 @@ class AITable_store():
     def get_ai_tables(self):
         ''' get list of ai tables
         '''
-        aitable_records = list(session.query(AITable).filter_by(company_id=self.company_id))
+        aitable_records = [x.__dict__ for x in session.query(AITable).filter_by(company_id=self.company_id)]
         return aitable_records
 
-    def add(name, integration_name, integration_query, predictor_name, predictor_fields):
+    def add(self, name, integration_name, integration_query, query_fields, predictor_name, predictor_fields):
         ai_table_record = AITable(
             name=name,
             integration_name=integration_name,
             integration_query=integration_query,
+            query_fields=query_fields,
             predictor_name=predictor_name,
             predictor_columns=predictor_fields
         )

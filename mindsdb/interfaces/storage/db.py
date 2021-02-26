@@ -106,6 +106,7 @@ class AITable(Base):
     name = Column(String)
     integration_name = Column(String)
     integration_query = Column(String)
+    query_fields = Column(Json)
     predictor_name = Column(String)
     predictor_columns = Column(Json)
     company_id = Column(Integer)

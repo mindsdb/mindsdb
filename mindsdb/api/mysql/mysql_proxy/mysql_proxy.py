@@ -85,8 +85,6 @@ from mindsdb.interfaces.ai_table.ai_table import AITable_store
 
 connection_id = 0
 
-ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
 default_store = None
 mdb = None
 custom_models = None
@@ -162,7 +160,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         srv.server_close()
 
     def initSession(self):
-        global connection_id, ALPHABET
+        global connection_id
         log.debug('New connection [{ip}:{port}]'.format(
             ip=self.client_address[0], port=self.client_address[1]))
         log.debug(self.__dict__)
@@ -444,19 +442,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise Exception(f"Predictor with name {struct['predictor_name']} not exists")
 
         # check integration exists
+        if struct['integration_name'] not in config['integrations']:
+            raise Exception(f"Integration with name {struct['integration_name']} not exists")
 
         ai_table.add(
             name=struct['ai_table_name'],
             integration_name=struct['integration_name'],
-            integration_query=struct['integration_sql'],
+            integration_query=struct['integration_query'],
+            query_fields=struct['query_fields'],
             predictor_name=struct['predictor_name'],
             predictor_fields=struct['predictor_fields']
         )
-        # check integration exists
 
-        # lt = ai_table.get_ai_tables()
-        
-        pass
+        self.packet(OkPacket).send()
 
     def answer_create_predictor(self, struct):
         global mdb, default_store, config
@@ -485,7 +483,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-        mdb.learn(struct['model_name'], ds, predict, ds_data['id'], kwargs)
+        mdb.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs)
 
         self.packet(OkPacket).send()
 

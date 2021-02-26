@@ -249,6 +249,7 @@ class SqlStatementParser():
         integration_prefix = f"{f['integration']['name']}."
         for s in select['select']:
             if s['value'].startswith(integration_prefix):
+                s['value'] = s['value'][len(integration_prefix):]
                 new_select.append(s)
             else:
                 predictor_fields.append(s)
@@ -266,7 +267,8 @@ class SqlStatementParser():
         res = {
             'ai_table_name': r['ai_table_name'],
             'integration_name': integration_name,
-            'integration_sql': integration_sql,
+            'integration_query': integration_sql,
+            'query_fields': select['select'],
             'predictor_name': f['predictor']['value'],
             'predictor_fields': predictor_fields
         }

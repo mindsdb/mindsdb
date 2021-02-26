@@ -12,6 +12,9 @@ from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb_native.libs.helpers.general_helpers import NumpyJSONEncoder
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.ai_table.ai_table import AITable_store
+from mindsdb.interfaces.datastore.datastore import DataStore
+
 
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
@@ -20,16 +23,40 @@ class MindsDBDataNode(DataNode):
         self.config = Config()
         self.mindsdb_native = NativeInterface()
         self.custom_models = CustomModels()
+        self.ai_table = AITable_store()
+        self.default_store = DataStore()
 
     def getTables(self):
         models = self.mindsdb_native.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
         models += ['predictors', 'commands']
         models += [x['name'] for x in self.custom_models.get_models()]
+
+        ai_tables = self.ai_table.get_ai_tables()
+        models += [x['name'] for x in ai_tables]
         return models
 
     def hasTable(self, table):
         return table in self.getTables()
+
+    def _get_ai_table_columns(self, table_name):
+        aitable_record = self.ai_table.get_ai_table(table_name)
+        columns = (
+            [x['name'] for x in aitable_record.query_fields] + [x['name'] for x in aitable_record.predictor_columns]
+        )
+        return columns
+
+    def _get_model_columns(self, table_name):
+        model = self.mindsdb_native.get_model_data(name=table_name)
+        columns = []
+        columns += model['columns']
+        columns += [f'{x}_original' for x in model['predict']]
+        for col in model['predict']:
+            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                columns += [f"{col}_min", f"{col}_max"]
+            columns += [f"{col}_confidence"]
+            columns += [f"{col}_explain"]
+        return columns
 
     def getTableColumns(self, table):
         try:
@@ -44,18 +71,15 @@ class MindsDBDataNode(DataNode):
         if table == 'commands':
             return ['command']
 
-        model = self.mindsdb_native.get_model_data(name=table)
         columns = []
-        columns += model['columns']
-        columns += [f'{x}_original' for x in model['predict']]
-        for col in model['predict']:
-            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
-                columns += [f"{col}_min", f"{col}_max"]
-            columns += [f"{col}_confidence"]
-            columns += [f"{col}_explain"]
 
-        # TODO this should be added just for clickhouse queries
-        columns += ['when_data', 'select_data_query', 'external_datasource']
+        ai_tables = self.ai_table.get_ai_table(table)
+        if ai_tables is not None:
+            columns = self._get_ai_table_columns(table)
+        elif table in [x['name'] for x in self.mindsdb_native.get_models()]:
+            columns = self._get_model_columns(table)
+            columns += ['when_data', 'select_data_query', 'external_datasource']
+
         return columns
 
     def _select_predictors(self):
@@ -74,6 +98,28 @@ class MindsDBDataNode(DataNode):
     def delete_predictor(self, name):
         self.mindsdb_native.delete_model(name)
 
+    def _select_from_ai_table(self, table, columns, where):
+        aitable_record = self.ai_table.get_ai_table(table)
+        integration = aitable_record.integration_name
+        query = aitable_record.integration_query
+        predictor_name = aitable_record.predictor_name
+
+        ds, ds_name = self.default_store.save_datasource('temp_ds', integration, {'query': query})
+        dso = self.default_store.get_datasource_obj(ds_name)
+        res = self.mindsdb_native.predict(name=predictor_name, when_data=dso)
+        self.default_store.delete_datasource(ds_name)
+
+        keys = [x['value'] for x in aitable_record.query_fields] + [x['value'] for x in aitable_record.predictor_columns]
+        keys_map = {}
+        for f in (aitable_record.query_fields + aitable_record.predictor_columns):
+            keys_map[f['value']] = f['name']
+
+        data = []
+        for i, el in enumerate(res):
+            data.append({keys_map[key]: el[key] for key in keys})
+
+        return data
+
     def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
@@ -81,6 +127,8 @@ class MindsDBDataNode(DataNode):
             return self._select_predictors()
         if table == 'commands':
             return []
+        if self.ai_table.get_ai_table(table):
+            return self._select_from_ai_table(table, columns, where)
 
         original_when_data = None
         if 'when_data' in where:

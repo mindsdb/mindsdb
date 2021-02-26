@@ -160,7 +160,7 @@ class ToggleTelemetry(Resource):
         else:
             return 'Disabled telemetry', 200
 
-@ns_conf.route('/vars'):
+@ns_conf.route('/vars')
 class Vars(Resource):
     def get(self):
         telemtry = True

@@ -14,8 +14,6 @@ engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False) # + '?check_sam
 Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine, autoflush=True))
 Base.query = session.query_property()
-entitiy_version = 1
-
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
 class NumpyEncoder(json.JSONEncoder):
@@ -79,7 +77,7 @@ class Datasource(Base):
     creation_info = Column(String)
     analysis = Column(String)  # A JSON
     company_id = Column(Integer)
-    version = Column(Integer, default=entitiy_version)
+    version = Column(String)
     integration_id = Column(Integer)
 
 
@@ -93,7 +91,7 @@ class Predictor(Base):
     data = Column(Json) # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
     company_id = Column(Integer)
-    version = Column(Integer, default=entitiy_version) # mindsdb_native version, can be used in the future for BC
+    version = Column(String)
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
     is_custom = Column(Boolean)
 

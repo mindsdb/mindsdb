@@ -32,14 +32,13 @@ class DataStore():
                 pass
 
             analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name))
+            datasource_record.analysis = json.dumps(analysis)
+            session.commit()
 
             try:
                 setproctitle.setproctitle(original_process_title)
             except Exception:
                 pass
-
-            datasource_record.analysis = json.dumps(analysis)
-            session.commit()
 
         analysis = json.loads(datasource_record.analysis)
         return analysis

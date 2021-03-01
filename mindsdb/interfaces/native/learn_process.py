@@ -27,6 +27,11 @@ class LearnProcess(ctx.Process):
         import mindsdb_native
         import setproctitle
 
+        try:
+            setproctitle.setproctitle('mindsdb_native_process')
+        except Exception:
+            pass
+
         config = Config()
         fs_store = FsSotre()
         company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
@@ -49,22 +54,11 @@ class LearnProcess(ctx.Process):
         data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
 
         try:
-            original_proc_title = setproctitle.getproctitle()
-            setproctitle.setproctitle('mindsdb_native_process')
-        except Exception:
-            pass
-
-        try:
             mdb.learn(
                 from_data=data_source,
                 to_predict=to_predict,
                 **kwargs
             )
-        except Exception:
-            pass
-
-        try:
-            setproctitle.setproctitle(original_proc_title)
         except Exception:
             pass
 

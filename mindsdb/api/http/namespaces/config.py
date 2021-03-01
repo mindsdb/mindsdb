@@ -160,6 +160,29 @@ class ToggleTelemetry(Resource):
         else:
             return 'Disabled telemetry', 200
 
+@ns_conf.route('/vars')
+class Vars(Resource):
+    def get(self):
+        telemtry = True
+        if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
+            telemtry = False
+
+        mongo = True
+        if ca.config_obj.get('disable_mongo', False):
+            mongo = False
+
+        return {'mongo': mongo, 'telemtry': telemtry}
+
+@ns_conf.param('flag', 'Turn telemtry on or off')
+class ToggleTelemetry(Resource):
+    @ns_conf.doc('check')
+    def get(self, flag):
+        if flag in ["True", "true", "t"]:
+            return 'Enabled telemetry', 200
+        else:
+            return 'Disabled telemetry', 200
+
+
 @ns_conf.route('/install_options')
 @ns_conf.param('dependency_list', 'Install dependencies')
 class InstallDependenciesList(Resource):

@@ -7,7 +7,7 @@ import pickle
 import pandas as pd
 
 from mindsdb.interfaces.native.native import NativeInterface
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
+from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource
 from mindsdb.interfaces.storage.fs import FsSotre
@@ -124,7 +124,8 @@ class DataStore():
                     'postgres': PostgresDS,
                     'mssql': MSSQLDS,
                     'mongodb': MongoDS,
-                    'snowflake': SnowflakeDS
+                    'snowflake': SnowflakeDS,
+                    'athena': AthenaDS
                 }
 
                 try:
@@ -199,6 +200,19 @@ class DataStore():
                             'password': integration['password'],
                             'host': integration['host'],
                             'port': integration['port']
+                        }
+                    }
+                elif integration['type'] == 'athena':
+                    creation_info = {
+                        'class': dsClass.__name__,
+                        'args': [],
+                        'kwargs': {
+                            'query': source['query'],
+                            'staging_dir': source['staging_dir'],
+                            'database': source['database'],
+                            'access_key': source['access_key'],
+                            'secret_key': source['secret_key'],
+                            'region_name': source['region_name']
                         }
                     }
 

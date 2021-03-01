@@ -5,6 +5,7 @@
 </h1>
 <div align="center">
 	<a href="https://github.com/mindsdb/mindsdb/actions"><img src="https://github.com/mindsdb/mindsdb/workflows/MindsDB%20workflow/badge.svg" alt="MindsDB workflow"></a>
+
   <a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.6%20|%203.7|%203.8-brightgreen.svg" alt="Python supported"></a>
    <a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>
   <a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://img.shields.io/pypi/dm/mindsdb" alt="PyPi Downloads"></a>
@@ -29,6 +30,7 @@
    Predictive AI layer for existing databases
    <br/>
   <img width="1200" src="https://github.com/ZoranPandovski/mindsdb/blob/master/assets/mdb-integration.png" alt="MindsDB">	
+
 </h2>
 
 

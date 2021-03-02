@@ -16,6 +16,8 @@ class DatabaseWrapper():
         try:
             # If this is the name of an integration
             integration = self._get_integration(db_alias)
+            if integration == False:
+                raise Exception(f'Unkonw database integration type for: {db_alias}')
             if integration != True:
                 integration.setup()
         except Exception as e:
@@ -38,7 +40,7 @@ class DatabaseWrapper():
                 return MongoDB(self.config, db_alias)
             else:
                 logger.warning(f'Uknown integration type: {db_type} for database called: {db_alias}')
-            return False
+                return False
         return True
 
     def _get_integrations(self):

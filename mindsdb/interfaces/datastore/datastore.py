@@ -133,6 +133,9 @@ class DataStore():
                 except KeyError:
                     raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
 
+                if dsClass is None:
+                    raise Exception(f'Unsupported datasource: {source_type}, please install required dependencies!')
+
                 if integration['type'] in ['clickhouse']:
                     creation_info = {
                         'class': dsClass.__name__,

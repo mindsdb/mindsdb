@@ -40,6 +40,9 @@ class DataStore():
             datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
         for datasource_record in datasource_record_arr:
             try:
+                if datasource_record.data is None:
+                    continue
+
                 datasource = json.loads(datasource_record.data)
                 datasource['created_at'] = datasource_record.created_at
                 datasource['updated_at'] = datasource_record.updated_at
@@ -242,10 +245,11 @@ class DataStore():
 
             self.fs_store.put(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
 
-        except Exception:
+        except Exception as e:
             if os.path.isdir(ds_meta_dir):
                 shutil.rmtree(ds_meta_dir)
-            raise
+            session.delete(datasource_record)
+            raise e
 
         session.commit()
         return self.get_datasource_obj(name, raw=True), name

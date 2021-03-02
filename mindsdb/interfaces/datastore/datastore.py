@@ -1,9 +1,8 @@
 import json
-import datetime
 import shutil
 import os
-import pickle
 
+import setproctitle
 import pandas as pd
 
 from mindsdb.interfaces.native.native import NativeInterface
@@ -26,8 +25,20 @@ class DataStore():
     def get_analysis(self, name):
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
         if datasource_record.analysis is None:
-            datasource_record.analysis = json.dumps(self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name)))
+            try:
+                original_process_title = setproctitle.getproctitle()
+                setproctitle.setproctitle('mindsdb_native_process')
+            except Exception:
+                pass
+
+            analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name))
+            datasource_record.analysis = json.dumps(analysis)
             session.commit()
+
+            try:
+                setproctitle.setproctitle(original_process_title)
+            except Exception:
+                pass
 
         analysis = json.loads(datasource_record.analysis)
         return analysis

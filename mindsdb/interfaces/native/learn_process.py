@@ -25,6 +25,12 @@ class LearnProcess(ctx.Process):
         this is work for celery worker here?
         '''
         import mindsdb_native
+        import setproctitle
+
+        try:
+            setproctitle.setproctitle('mindsdb_native_process')
+        except Exception:
+            pass
 
         config = Config()
         fs_store = FsSotre()
@@ -46,13 +52,14 @@ class LearnProcess(ctx.Process):
 
         to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
         data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+
         try:
             mdb.learn(
                 from_data=data_source,
                 to_predict=to_predict,
                 **kwargs
             )
-        except Exception as e:
+        except Exception:
             pass
 
         fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])

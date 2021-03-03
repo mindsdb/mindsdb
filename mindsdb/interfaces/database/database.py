@@ -54,7 +54,7 @@ class DatabaseWrapper():
                 try:
                     integration.register_predictors(model_data_arr)
                 except Exception as e:
-                logger.warning(f"Error {e} when trying to register predictor to {integration.name}. Predictor wouldn't be registred.")
+                    logger.warning(f"Error {e} when trying to register predictor to {integration.name}. Predictor wouldn't be registred.")
             else:
                 logger.warning(f"There is no connection to {integration.name}. Predictor wouldn't be registred.")
 

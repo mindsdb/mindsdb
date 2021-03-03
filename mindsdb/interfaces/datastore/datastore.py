@@ -219,6 +219,9 @@ class DataStore():
                             'port': integration['port']
                         }
                     }
+
+                    ds = dsClass(**creation_info['kwargs'])
+
                 elif integration['type'] == 'athena':
                     creation_info = {
                         'class': dsClass.__name__,

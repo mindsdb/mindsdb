@@ -13,6 +13,7 @@ from mindsdb.utilities.functions import cast_row_types
 from mindsdb_native.libs.helpers.general_helpers import NumpyJSONEncoder
 from mindsdb.utilities.config import Config
 
+
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
@@ -233,7 +234,7 @@ class MindsDBDataNode(DataNode):
                 explanation = explains[i]
                 for key in predicted_columns:
                     row[key + '_confidence'] = explanation[key]['confidence']
-                    row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder)
+                    row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
                 for key in min_max_keys:
                     row[key + '_min'] = min(explanation[key]['confidence_interval'])
                     row[key + '_max'] = max(explanation[key]['confidence_interval'])

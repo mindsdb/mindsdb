@@ -18,21 +18,33 @@ if telemtry_enabled:
     )
 
 class LoggerWrapper(object):
-    def __init__(self, writer):
-        self._writer = writer
+    def __init__(self, writer_arr, default_writer_pos):
+        self._writer_arr = writer_arr
+        self.default_writer_pos = default_writer_pos
         self._msg = ''
 
     def write(self, message):
         self._msg = self._msg + message
-        while '\n' in self._msg:
-            pos = self._msg.find('\n')
-            self._writer(self._msg[:pos])
-            self._msg = self._msg[pos + 1:]
+        self.flush()
 
     def flush(self):
-        if self._msg != '':
-            self._writer(self._msg)
-            self._msg = ''
+        while '\n' in self._msg:
+            pos = self._msg.find('\n')
+            scream = self._msg[:pos]
+
+            if 'DEBUG:' in scream:
+                self._writer_arr[0](scream)
+            elif 'INFO:' in scream:
+                self._writer_arr[1](scream)
+            elif 'WARNING:' in scream:
+                self._writer_arr[2](scream)
+            elif 'ERROR:' in scream:
+                self._writer_arr[3](scream)
+            else:
+                self._writer_arr[self.default_writer_pos](scream)
+
+
+            self._msg = self._msg[pos + 1:]
 
 class DbHandler(logging.Handler):
     def __init__(self):
@@ -136,7 +148,8 @@ def initialize_log(config=global_config, logger_name='main', wrap_print=False):
     log.addHandler(db_handler)
 
     if wrap_print:
-        sys.stdout = LoggerWrapper(log.info)
+        sys.stdout = LoggerWrapper([log.debug,log.info, log.warning, log.error], 1)
+        sys.stderr = LoggerWrapper([log.debug,log.info, log.warning, log.error], 3)
 
     return log
 

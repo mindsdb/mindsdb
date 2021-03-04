@@ -12,7 +12,7 @@ import datetime
 
 engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False) # + '?check_same_thread=False'
 Base = declarative_base()
-session = scoped_session(sessionmaker(bind=engine, autoflush=True))
+session = scoped_session(sessionmaker(bind=create_engine(os.environ['MINDSDB_DB_CON'], echo=False), autoflush=True))
 Base.query = session.query_property()
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable

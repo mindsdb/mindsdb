@@ -107,8 +107,9 @@ class NativeInterface():
                 self.fs_store.get(name, f'predictor_{self.company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 new_model_data = mindsdb_native.F.get_model_data(name)
             except Exception:
-                pass
-            if predictor_record.data is None or len(new_model_data) > len(predictor_record.data):
+                new_model_data = None
+
+            if predictor_record.data is None or (new_model_data is not None and len(new_model_data) > len(predictor_record.data)):
                 predictor_record.data = new_model_data
                 model = new_model_data
                 session.commit()

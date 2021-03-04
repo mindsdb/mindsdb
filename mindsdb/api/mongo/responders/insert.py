@@ -1,4 +1,6 @@
+import os
 from mindsdb.api.mongo.classes import Responder
+from mindsdb.interfaces.storage.db import session, Datasource
 import mindsdb.api.mongo.functions as helpers
 
 
@@ -6,6 +8,7 @@ class Responce(Responder):
     when = {'insert': helpers.is_true}
 
     def result(self, query, request_env, mindsdb_env, session):
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         try:
             res = self._result(query, request_env, mindsdb_env)
         except Exception as e:
@@ -103,7 +106,8 @@ class Responce(Responder):
                         mindsdb_env['data_store'].delete_datasource(ds_name)
                     raise Exception(f"Column '{col}' not exists")
 
-            mindsdb_env['mindsdb_native'].learn(doc['name'], ds, predict, kwargs)
+            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=ds_name).first()
+            mindsdb_env['mindsdb_native'].learn(doc['name'], ds, predict, datasource_record.id, kwargs)
 
         result = {
             "n": len(query['documents']),

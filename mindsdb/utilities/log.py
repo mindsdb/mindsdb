@@ -43,7 +43,6 @@ class LoggerWrapper(object):
             else:
                 self._writer_arr[self.default_writer_pos](scream)
 
-
             self._msg = self._msg[pos + 1:]
 
 class DbHandler(logging.Handler):
@@ -142,7 +141,7 @@ def initialize_log(config=global_config, logger_name='main', wrap_print=False):
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
     ch = logging.StreamHandler()
-    ch.setLevel(config['log']['level']['console'])       # that level will be in console
+    ch.setLevel(config['log']['level']['console']) # that level will be in console
     log.addHandler(ch)
     db_handler = DbHandler()
     log.addHandler(db_handler)

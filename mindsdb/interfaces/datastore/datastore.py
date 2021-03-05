@@ -51,9 +51,6 @@ class DataStore():
             datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
         for datasource_record in datasource_record_arr:
             try:
-                if datasource_record.data is None:
-                    continue
-
                 datasource = json.loads(datasource_record.data)
                 datasource['created_at'] = datasource_record.created_at
                 datasource['updated_at'] = datasource_record.updated_at
@@ -62,6 +59,7 @@ class DataStore():
                 datasource_arr.append(datasource)
             except Exception as e:
                 log.error(e)
+                self.delete_datasource(datasource_record.name)
         return datasource_arr
 
     def get_data(self, name, where=None, limit=None, offset=None):
@@ -104,17 +102,11 @@ class DataStore():
             pass
 
     def save_datasource(self, name, source_type, source, file_path=None):
-        datasource_record = Datasource(company_id=self.company_id, name=name)
-
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
 
         ds_meta_dir = os.path.join(self.dir, name)
         os.mkdir(ds_meta_dir)
-
-        session.add(datasource_record)
-        session.commit()
-        datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
 
         try:
             if source_type == 'file':
@@ -252,23 +244,30 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique non-empty name')
 
-            datasource_record.creation_info = json.dumps(creation_info)
-            datasource_record.data = json.dumps({
-                'source_type': source_type,
-                'source': source,
-                'row_count': len(df),
-                'columns': [dict(name=x) for x in list(df.keys())]
-            })
+            datasource_record = Datasource(
+                company_id=self.company_id,
+                name=name,
+                creation_info=json.dumps(creation_info),
+                data=json.dumps({
+                    'source_type': source_type,
+                    'source': source,
+                    'row_count': len(df),
+                    'columns': [dict(name=x) for x in list(df.keys())]
+                })
+            )
+            session.add(datasource_record)
+            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
 
             self.fs_store.put(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
+            session.commit()
 
         except Exception as e:
+            log.error(f'{e}')
             if os.path.isdir(ds_meta_dir):
                 shutil.rmtree(ds_meta_dir)
-            session.delete(datasource_record)
-            raise e
+            session.rollback()
+            raise
 
-        session.commit()
         return self.get_datasource_obj(name, raw=True), name
 
     def get_datasource_obj(self, name, raw=False):

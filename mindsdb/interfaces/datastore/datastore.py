@@ -51,6 +51,8 @@ class DataStore():
             datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
         for datasource_record in datasource_record_arr:
             try:
+                if datasource_record.data is None:
+                    continue
                 datasource = json.loads(datasource_record.data)
                 datasource['created_at'] = datasource_record.created_at
                 datasource['updated_at'] = datasource_record.updated_at
@@ -59,7 +61,6 @@ class DataStore():
                 datasource_arr.append(datasource)
             except Exception as e:
                 log.error(e)
-                self.delete_datasource(datasource_record.name)
         return datasource_arr
 
     def get_data(self, name, where=None, limit=None, offset=None):
@@ -105,10 +106,26 @@ class DataStore():
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
 
-        ds_meta_dir = os.path.join(self.dir, name)
-        os.mkdir(ds_meta_dir)
+        datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+        original_name = name
+        i = 1
+        while datasource_record is not None:
+            name = f'{original_name}_{i}'
+            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+            i += 1
 
         try:
+            datasource_record = Datasource(
+                company_id=self.company_id,
+                name=name
+            )
+            session.add(datasource_record)
+            session.commit()
+            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+
+            ds_meta_dir = os.path.join(self.dir, name)
+            os.mkdir(ds_meta_dir)
+
             if source_type == 'file':
                 source = os.path.join(ds_meta_dir, source)
                 shutil.move(file_path, source)
@@ -244,28 +261,21 @@ class DataStore():
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique non-empty name')
 
-            datasource_record = Datasource(
-                company_id=self.company_id,
-                name=name,
-                creation_info=json.dumps(creation_info),
-                data=json.dumps({
-                    'source_type': source_type,
-                    'source': source,
-                    'row_count': len(df),
-                    'columns': [dict(name=x) for x in list(df.keys())]
-                })
-            )
-            session.add(datasource_record)
-            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+            datasource_record.creation_info = json.dumps(creation_info)
+            datasource_record.data = json.dumps({
+                'source_type': source_type,
+                'source': source,
+                'row_count': len(df),
+                'columns': [dict(name=x) for x in list(df.keys())]
+            })
 
             self.fs_store.put(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
             session.commit()
 
         except Exception as e:
             log.error(f'{e}')
-            if os.path.isdir(ds_meta_dir):
-                shutil.rmtree(ds_meta_dir)
-            session.rollback()
+            if datasource_record.id is not None:
+                self.delete_datasource(name)
             raise
 
         return self.get_datasource_obj(name, raw=True), name

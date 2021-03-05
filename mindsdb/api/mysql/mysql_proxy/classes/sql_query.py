@@ -13,6 +13,7 @@ import re
 import traceback
 
 from moz_sql_parser import parse
+from pyparsing import Word, Optional, Suppress, alphanums
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, binary_ops, unary_ops, operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
@@ -44,7 +45,401 @@ class SqlError(Exception):
     pass
 
 
+SQL_ASTERISK = '*'
+
+
+class SQLConstant():
+    def __init__(self, value, name):
+        self.value = value
+        self.name = name
+
+    def __str__(self):
+        return f'CONST {self.value} as {self.name}'
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class SQLField():
+    def __init__(self, alias, name, table, database=None):
+        self.alias = alias
+        self.name = name
+        self.table = table
+        self.database = database    # it need to form packages
+
+    def __str__(self):
+        return f'FIELD {self.name} as {self.alias} from {self.database}.{self.table}'
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class SQLTable():
+    def __init__(self, alias, name, schema_name, db_name):
+        self.alias = alias
+        self.name = name
+        self.schema_name = schema_name
+        self.db_name = db_name
+
+    def __str__(self):
+        return f'TABLE {self.db_name}.{self.schema_name}.{self.name} as {self.alias}'
+
+    def __repr__(self):
+        return self.__str__()
+
+
 class SQLQuery():
+    def __init__(self, sql, integration=None, database=None):
+        '''
+        sql: str raw sql query string
+        integration: str name of integration query came from
+        database: current default database
+        '''
+        # parse
+        self.integration = integration
+        self.database = database
+        self.raw = sql
+
+        # self.ai_table = AITable_store()
+
+        self.struct = {}
+
+        # 'offset x, y' - specific just for mysql, parser dont understand it
+        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
+
+        self._parseQuery(sql)
+        x= 1
+
+    def _format_from_statement(self, s):
+        """ parser can return FROM statement in different views:
+            `... from xxx.zzz` -> 'xxx.zzz'
+            `... from xxx.zzz a` -> {'value': 'xxx.zzz', 'name': 'a'}
+            `... from zzz as a` -> {'value': 'zzz', 'name': 'a'}
+            This function replace any view to SQLTable instance
+        """
+        default_database = self.database
+
+        if isinstance(s, str):
+            value = s
+            name = None
+        else:
+            value = s['value']
+            name = s.get('name')
+
+        word = Word(alphanums + "_")
+        dot = Word('.')
+        db_name = Optional(word('db_name') + dot.suppress())
+        schema_name = Optional(word('schema_name') + dot.suppress())
+
+        expr = (db_name + schema_name + word('table_name'))
+        r = expr.parseString(value).asDict()
+
+        if name is None:
+            name = r['table_name']
+
+        if default_database is None and r.get('schema_name') is None:
+            raise SqlError(f"Can't determine database/schema for table {name}")
+
+        return SQLTable(name, r.get('table_name'), r.get('schema_name'), r.get('db_name'))
+
+    def _format_field(self, f, default_table=None):
+        ''' parser return field as:
+            `select *` -> '*'
+            `select 1` -> {'value': 1}
+            `select 'x'` -> {'value': {'literal': 'x'}}
+            `select 'x' as z` -> {'value': {'literal': 'x'}, 'name': 'z'}
+            `select x` -> {'value': 'x'}
+            `select x.y` -> {'value': 'x.y'}
+            `select x.y as z` -> {'value': 'x.y', 'name': 'z'}
+            This function replace it to:
+             '*' or {'constant': 'value'} or {'name': 'z', 'value': 'x.z', table: 'y'}
+        '''
+        if isinstance(f, str):
+            if f == '*':
+                f = SQL_ASTERISK
+            else:
+                raise SqlError(f'cant parse field {f}')
+        elif isinstance(f, dict):
+            if isinstance(f['value'], dict):
+                f = SQLConstant(f['value']['literal'], f.get('name'))
+            elif isinstance(f['value'], str) is False:
+                f = SQLConstant(f['value'], f.get('name'))
+            elif f['value'].startswith('@@'):
+                # is mysql constant
+                # TODO add class for constants
+                f = SQLConstant(f['value'], f.get('name'))
+            else:
+                value = f['value']
+                alias = f.get('name')
+
+                word = Word(alphanums + "_")
+                dot = Word('.')
+                table_name = Optional(word('table_name') + dot.suppress())
+
+                expr = (table_name + word('column_name'))
+                r = expr.parseString(value).asDict()
+
+                column_name = r.get('column_name')
+                table_name = r.get('table_name', default_table)
+                if table_name is None:
+                    raise SqlError(f'cant determine table for field {value}')
+
+                if alias is None:
+                    alias = column_name
+
+                f = SQLField(alias=alias, name=column_name, table=table_name)
+        else:
+            raise SqlError(f'cant parse field {f}')
+
+        return f
+
+    def _parseQuery(self, sql):
+        struct = parse(sql)
+
+        if 'limit' in struct:
+            limit = struct.get('limit')
+            if isinstance(limit, int) is False:
+                raise SqlError('LIMIT must be integer')
+            if limit < 0:
+                raise SqlError('LIMIT must not be negative')
+
+        fromStatements = struct.get('from')
+        if isinstance(fromStatements, list) is False:
+            fromStatements = [fromStatements]
+
+        struct['from'] = [self._format_from_statement(x) for x in fromStatements]
+
+        default_table = None
+        if len(struct['from']) == 1:
+            default_table = struct['from'][0].alias
+        else:
+            raise SqlError('Multiple sources in FROM is not supported')
+
+        struct['from'] = struct['from'][0]
+
+        selectStatement = struct.get('select')
+        if isinstance(selectStatement, dict):
+            struct['select'] = [selectStatement]
+        struct['select'] = [self._format_field(x, default_table) for x in struct['select']]
+
+        orderby = struct.get('orderby')
+        if isinstance(orderby, dict):
+            struct['orderby'] = [orderby]
+
+        self.struct = struct
+
+    def fetch(self, datahub, view='list'):
+        self.datahub = datahub
+        self._fetchData()
+
+        # return {
+        #         'success': False,
+        #         'error_code': ERR.ER_SYNTAX_ERROR,
+        #         'msg': str(e)
+        #     }
+
+        return {
+            'success': True,
+            'result': self.result
+        }
+
+    def _fetchData(self):
+        struct = self.struct
+        db_name = struct['from'].db_name or struct['from'].schema_name  # mindsdb | datasource | information_schema
+        dn = self.datahub.get(db_name)
+
+        # TODO datanode mindsdb_max and others
+        if dn is None:
+            raise SqlError(f'Unknown datasource {db_name}')
+
+        table_name = struct['from'].name
+
+        table_columns = dn.getTableColumns(table_name)
+
+        # prepare 'and' filter
+        condition = struct.get('where', {})
+        and_conditions = {}
+        if len(condition.keys()) > 1 or (len(condition.keys()) == 1 and 'and' not in condition):
+            raise SqlError("Only 'and' supported in WHEN")
+
+        for c in condition.get('and', []):
+            if 'eq' not in c:
+                raise SqlError("Only '=' supported in WHEN")
+            value = c['eq'][1]
+            if isinstance(value, dict):
+                value = value['literal']
+            and_conditions[c['eq'][0]] = value
+
+        # columns:
+        # table_columns
+        columns = []
+        for f in struct['select']:
+            if f == SQL_ASTERISK:
+                columns += table_columns
+            elif isinstance(f, SQLField):
+                columns.append(f.name)
+
+        self.select_columns = []
+        for c in columns:
+            self.select_columns.append(SQLField(
+                alias=c.alias,
+                name=c.name,
+                table=c.table,
+                database=db_name
+            ))
+
+        # where переписать с монги на словарь
+        data = dn.select(
+            table=table_name,
+            columns=columns,
+            where=and_conditions,
+            # where_data=result['result'],
+            came_from=self.integration
+        )
+
+        # добавить в результат константы
+
+        # filter
+        # sort
+        # limit
+
+        self.result = data
+        return data
+
+    def _fetchData2(self):
+        self.table_data = {}
+
+        prev_table_name = None
+
+        # TODO calculate statements for join
+        for tablenum, table in enumerate(self.tables_select):
+
+            full_table_name = table['name']
+
+            parts = full_table_name.split('.')
+            dn_name = parts[0]
+            table_name = '.'.join(parts[1:])
+
+            dn = self.datahub.get(dn_name)
+
+            if dn is None:
+                raise SqlError('unknown datasource %s ' % dn_name)
+
+            if not dn.hasTable(table_name):
+                raise SqlError('table not found in datasource %s ' % full_table_name)
+
+            table_columns = dn.getTableColumns(table_name)
+
+            table_info = self.tables_index[full_table_name]
+            fields = table_info['fields']
+
+            for f in fields:
+                if f.lower() not in [x.lower() for x in table_columns] and f != '*':
+                    raise SqlError('column %s not found in table %s ' % (f, full_table_name))
+
+            # wildcard ? replace it
+            if '*' in fields:
+                fields = table_columns
+                self.tables_index[full_table_name]['fields'] = fields
+            new_select_columns = []
+            for column in self.select_columns:
+                if column['field'] == '*' and table['name'] == column['table']:
+                    new_select_columns += [{
+                        'caption': x,
+                        'field': x,
+                        'table': column['table']
+                    } for x in table_columns]
+                else:
+                    new_select_columns.append(column)
+            self.select_columns = new_select_columns
+
+            condition = self._mongo_query_and(table_info['mongo_query'])
+
+            # TODO if left join and missing in condition and table_num > 0 - no apply condition
+            if tablenum > 0 \
+               and isinstance(table['join'], dict) \
+               and table['join']['type'] == 'left join':
+                condition = {}
+
+            if 'external_datasource' in condition \
+                    and isinstance(condition['external_datasource']['$eq'], str) \
+                    and condition['external_datasource']['$eq'] != '':
+                external_datasource = condition['external_datasource']['$eq']
+                result = []
+                if 'select ' not in external_datasource.lower():
+                    external_datasource = f'select * from {external_datasource}'
+                query = SQLQuery(external_datasource, database='datasource', integration=self.integration)
+                result = query.fetch(self.datahub, view='dict')
+                if result['success'] is False:
+                    raise Exception(result['msg'])
+                data = dn.select(
+                    table=table_name,
+                    columns=fields,
+                    where=condition,
+                    where_data=result['result'],
+                    came_from=table.get('source')
+                )
+            elif tablenum > 0 \
+                    and isinstance(table['join'], dict) \
+                    and table['join']['type'] == 'left join' \
+                    and dn.type == 'mindsdb':
+                data = dn.select(
+                    table=table_name,
+                    columns=fields,
+                    where=condition,
+                    where_data=self.table_data[prev_table_name],
+                    came_from=self.integration
+                )
+            else:
+                data = dn.select(
+                    table=table_name,
+                    columns=fields,
+                    where=condition,
+                    came_from=self.integration
+                )
+
+            self.table_data[full_table_name] = data
+
+            prev_table_name = full_table_name
+
+    @property
+    def columns(self):
+        result = []
+        for column in self.select_columns:
+            # parts = column['table'].split('.')
+            # if len(parts) == 2:
+            #     dn_name, table_name = parts
+            # else:
+            #     raise UndefinedColumnTableException('Unable find table: %s' % column['table'])
+            result.append({
+                'database': dn_name,
+                'table_name': table_name,
+                'name': column['field'],
+                'alias': column['caption'],
+                # NOTE all work with text-type, but if/when wanted change types to real,
+                # it will need to check all types casts in BinaryResultsetRowPacket
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            })
+        return result
+
+    @staticmethod
+    def test(datahub=None):
+        sql = '''
+            select * as z, @@var, 1 as z, x, 'x' as z, yy.y, yy.y as z from xx.mindsdb.predictors as yy order by a limit 10;
+        '''
+        sql = '''
+            select * from mindsdb_max.ddd_p where b='яяя';
+        '''
+        sql = '''
+            select * from mindsdb.ddd_p where b = 'яяя' and c = 1;
+        '''
+        statement = SQLQuery2(sql, database='mindsdb')
+        statement.fetch(datahub)
+        x = 1
+
+
+
+class SQLQuery3():
     raw = ''
     struct = {}
     result = None
@@ -844,3 +1239,7 @@ class SQLQuery():
                 'type': TYPES.MYSQL_TYPE_VAR_STRING
             })
         return result
+
+
+if __name__ == "__main__":
+    SQLQuery2.test()

@@ -107,12 +107,8 @@ class DataStore():
             raise Exception('`file_path` argument required when source_type == "file"')
 
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
-        original_name = name
-        i = 1
         while datasource_record is not None:
-            name = f'{original_name}_{i}'
-            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
-            i += 1
+            raise Exception(f'Datasource with name {name} already exists')
 
         try:
             datasource_record = Datasource(

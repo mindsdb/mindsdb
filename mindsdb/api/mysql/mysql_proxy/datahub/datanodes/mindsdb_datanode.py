@@ -137,10 +137,8 @@ class MindsDBDataNode(DataNode):
             if len(where) > 1:
                 raise ValueError("Should not be used any other keys in 'where', if 'when_data' used")
             try:
-                # original_when_data = where['when_data']['$eq']
-                original_when_data = where['when_data']
-                # where_data = json.loads(where['when_data']['$eq'])
-                where_data = json.loads(where['when_data'])
+                original_when_data = where['when_data']['$eq']
+                where_data = json.loads(where['when_data']['$eq'])
                 if isinstance(where_data, list) is False:
                     where_data = [where_data]
             except Exception:
@@ -148,14 +146,12 @@ class MindsDBDataNode(DataNode):
 
         external_datasource = None
         if 'external_datasource' in where:
-            # external_datasource = where['external_datasource']['$eq']
-            external_datasource = where['external_datasource']
+            external_datasource = where['external_datasource']['$eq']
             del where['external_datasource']
 
         select_data_query = None
         if came_from is not None and 'select_data_query' in where:
-            # select_data_query = where['select_data_query']['$eq']
-            select_data_query = where['select_data_query']
+            select_data_query = where['select_data_query']['$eq']
             del where['select_data_query']
 
             dbtype = self.config['integrations'][came_from]['type']
@@ -187,12 +183,11 @@ class MindsDBDataNode(DataNode):
         if where_data is not None:
             where_data = pandas.DataFrame(where_data)
         else:
-            # for key, value in where.items():
-            #     if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
-            #         # TODO value should be just string or number
-            #         raise Exception()
-            #     new_where[key] = value['$eq']
-            new_where = where
+            for key, value in where.items():
+                if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
+                    # TODO value should be just string or number
+                    raise Exception()
+                new_where[key] = value['$eq']
 
             if len(new_where) == 0:
                 return []

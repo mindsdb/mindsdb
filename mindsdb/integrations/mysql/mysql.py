@@ -115,7 +115,7 @@ class MySQL(Integration, MySQLConnectionChecker):
                 external_datasource VARCHAR(500),
                 training_options VARCHAR(500),
                 key name_key (name)
-            ) ENGINE=FEDERATED CONNECTION='{connect}';
+            ) ENGINE=FEDERATED CHARSET=utf8 CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -125,7 +125,7 @@ class MySQL(Integration, MySQLConnectionChecker):
             CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.commands (
                 command VARCHAR(500),
                 key command_key (command)
-            ) ENGINE=FEDERATED CONNECTION='{connect}';
+            ) ENGINE=FEDERATED CHARSET=utf8 CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -151,7 +151,7 @@ class MySQL(Integration, MySQLConnectionChecker):
                     index when_data_index (when_data),
                     index select_data_query_index (select_data_query),
                     index external_datasource_index (external_datasource)
-                ) ENGINE=FEDERATED CONNECTION='{connect}';
+                ) ENGINE=FEDERATED CHARSET=utf8 CONNECTION='{connect}';
             """
             self._query(q)
 

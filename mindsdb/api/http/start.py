@@ -14,7 +14,7 @@ from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import initialize_log
+from mindsdb.utilities.log import initialize_log, get_log
 from mindsdb.interfaces.storage.db import session
 
 
@@ -26,7 +26,7 @@ def start(verbose, no_studio):
     initialize_log(config, 'http', wrap_print=True)
 
     # start static initialization in a separate thread
-    init_static_thread=None
+    init_static_thread = None
     if not no_studio:
         init_static_thread = threading.Thread(target=initialize_static, args=(config,))
         init_static_thread.start()
@@ -53,6 +53,7 @@ def start(verbose, no_studio):
 
     @api.errorhandler(Exception)
     def handle_exception(e):
+        get_log('http').error(f'http exception: {e}')
         # pass through HTTP errors
         if isinstance(e, HTTPException):
             return {'message': str(e)}, e.code, e.get_response().headers

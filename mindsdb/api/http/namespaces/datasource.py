@@ -138,9 +138,9 @@ class Datasource(Resource):
             if ca.default_store.config['integrations'][source_type]['type'] == 'mongodb':
                 data['find'] = data['query']
 
-            ca.default_store.save_datasource(name, source_type, data)
+            ds_obj, ds_name = ca.default_store.save_datasource(name, source_type, data)
             os.rmdir(temp_dir_path)
-            return ca.default_store.get_datasource(name)
+            return ca.default_store.get_datasource(ds_name)
 
         ds_name = data['name'] if 'name' in data else name
         source = data['source'] if 'source' in data else name
@@ -151,7 +151,7 @@ class Datasource(Resource):
         else:
             file_path = None
 
-        ca.default_store.save_datasource(ds_name, source_type, source, file_path)
+        ds_obj, ds_name = ca.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 
         return ca.default_store.get_datasource(ds_name)

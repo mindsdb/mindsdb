@@ -74,7 +74,7 @@ class SqlStatementParser():
                 self._struct = self.parse_as_delete()
             elif self._keyword == 'create_predictor':
                 self._struct = self.parse_as_create_predictor()
-            elif self._keyword in ['create_ai_table', 'create_view']:
+            elif self._keyword in 'create_ai_table':
                 self._struct = self.parse_as_create_ai_table()
 
     @property
@@ -145,6 +145,9 @@ class SqlStatementParser():
 
         if keyword == 0:
             raise Exception('Cant get keyword from statement')
+
+        if keyword == 'create_view':
+            keyword = 'create_ai_table'
 
         return keyword
 

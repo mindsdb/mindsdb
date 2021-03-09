@@ -217,6 +217,7 @@ class SQLQuery():
                 name=table['name'],     # true name of table in database
                 fields=[],              # list of used field
                 mongo_query=[],         # conditions that dedicated to table
+                conditions=[]
             )
             # self.tables_sequence.append(table['name'])
 
@@ -312,6 +313,7 @@ class SQLQuery():
                     mongo_condition = self._analyse_condition(self._condition_make_mongo_query, condition)
                     if 'query' in mongo_condition:
                         self.tables_index[table_name]['mongo_query'].append(mongo_condition['query'])
+                        self.tables_index[table_name]['conditions'].append(condition)
 
                 # add field to tables fields
                 for table_name, field_name in ret['fields']:
@@ -363,6 +365,9 @@ class SQLQuery():
             full_table_name = table['name']
 
             parts = full_table_name.split('.')
+            if len(parts) == 3:
+                full_table_name = '.'.join([parts[1], parts[2]])
+                self.tables_index[full_table_name] = self.tables_index['.'.join(parts)]
             dn_name = parts[0]
             table_name = '.'.join(parts[1:])
 
@@ -379,9 +384,10 @@ class SQLQuery():
             table_info = self.tables_index[full_table_name]
             fields = table_info['fields']
 
-            for f in fields:
-                if f.lower() not in [x.lower() for x in table_columns] and f != '*':
-                    raise SqlError('column %s not found in table %s ' % (f, full_table_name))
+            # FIXME removed for 'integration JOIN predictor'
+            # for f in fields:
+            #     if f.lower() not in [x.lower() for x in table_columns] and f != '*':
+            #         raise SqlError('column %s not found in table %s ' % (f, full_table_name))
 
             # wildcard ? replace it
             if '*' in fields:
@@ -427,7 +433,7 @@ class SQLQuery():
                 )
             elif tablenum > 0 \
                     and isinstance(table['join'], dict) \
-                    and table['join']['type'] == 'left join' \
+                    and table['join']['type'] in ['left join', 'join'] \
                     and dn.type == 'mindsdb':
                 data = dn.select(
                     table=table_name,
@@ -440,7 +446,7 @@ class SQLQuery():
                 data = dn.select(
                     table=table_name,
                     columns=fields,
-                    where=condition,
+                    where=condition if dn.getType() != 'integration' else table_info['conditions'],
                     came_from=self.integration
                 )
 
@@ -459,6 +465,11 @@ class SQLQuery():
     def _resolveTableData(self, table_name):
         # if isinstance(self.table_data[table_name], ObjectID):
         #     self.table_data[table_name] = list(ray.get(self.table_data[table_name]))
+        
+        # FIXME that for 'integration JOIN predictoir'
+        if len(table_name.split('.')) == 3:
+            table_name = table_name[table_name.find('.') + 1: ]
+
         self.table_data[table_name] = list(self.table_data[table_name])
         return self.table_data[table_name]
 
@@ -467,9 +478,15 @@ class SQLQuery():
         data = []
         table1_name = self.tables_select[0]['name']
 
-        self._resolveTableData(table1_name)
-        for row in self.table_data[table1_name]:
-            data.append({table1_name: row})
+        # FIXME that for 'integration JOIN predictoir'
+        if len(table1_name.split('.')) == 3:
+            self._resolveTableData(table1_name[table1_name.find('.') + 1: ])
+            for row in self.table_data[table1_name[table1_name.find('.') + 1: ]]:
+                data.append({table1_name: row})
+        else:
+            self._resolveTableData(table1_name)
+            for row in self.table_data[table1_name]:
+                data.append({table1_name: row})
 
         for i in range(1, len(self.tables_select)):
             table2 = self.tables_select[i]
@@ -563,7 +580,13 @@ class SQLQuery():
         for record in data:
             row = {}
             for col in self.columns:
-                table_record = record[f"{col['database']}.{col['table_name']}"]
+                col_name = f"{col['database']}.{col['table_name']}"
+
+                # FIXME that only for 'integration JOIN predictor'
+                if col_name not in record:
+                    col_name = [x for x in record.keys() if col_name in x][0]
+
+                table_record = record[col_name]
                 row[col['name']] = table_record[col['name']]
             result.append(row)
 
@@ -575,7 +598,13 @@ class SQLQuery():
         for record in data:
             row = []
             for col in self.columns:
-                table_record = record[f"{col['database']}.{col['table_name']}"]
+                col_name = f"{col['database']}.{col['table_name']}"
+
+                # FIXME that only for 'integration JOIN predictor'
+                if col_name not in record:
+                    col_name = [x for x in record.keys() if col_name in x][0]
+
+                table_record = record[col_name]
                 val = table_record[col['name']]
                 row.append(val)
             result.append(row)
@@ -833,6 +862,8 @@ class SQLQuery():
             parts = column['table'].split('.')
             if len(parts) == 2:
                 dn_name, table_name = parts
+            elif len(parts) == 3:
+                integration_name, dn_name, table_name = parts
             else:
                 raise UndefinedColumnTableException('Unable find table: %s' % column['table'])
             result.append({

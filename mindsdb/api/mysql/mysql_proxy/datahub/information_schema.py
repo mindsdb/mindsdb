@@ -8,7 +8,7 @@ class InformationSchema(DataNode):
     information_schema = {
         'SCHEMATA': ['schema_name', 'default_character_set_name', 'default_collation_name'],
         'TABLES': ['table_schema', 'table_name', 'table_type'],
-        'COLUMNS': ['table_schema', 'table_name', 'ordinal_position'],
+        'COLUMNS': ['table_schema', 'table_name', 'ordinal_position', 'column_name', 'data_type'],
         'EVENTS': ['event_schema', 'event_name'],
         'ROUTINES': ['routine_schema', 'specific_name', 'routine_type'],
         'TRIGGERS': ['trigger_schema', 'trigger_name']

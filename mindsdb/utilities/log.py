@@ -21,29 +21,21 @@ class LoggerWrapper(object):
     def __init__(self, writer_arr, default_writer_pos):
         self._writer_arr = writer_arr
         self.default_writer_pos = default_writer_pos
-        self._msg = ''
 
     def write(self, message):
-        self._msg = self._msg + message
-        self.flush()
+        if 'DEBUG:' in message:
+            self._writer_arr[0](message)
+        elif 'INFO:' in message:
+            self._writer_arr[1](message)
+        elif 'WARNING:' in message:
+            self._writer_arr[2](message)
+        elif 'ERROR:' in message:
+            self._writer_arr[3](message)
+        else:
+            self._writer_arr[self.default_writer_pos](message)
 
     def flush(self):
-        while '\n' in self._msg:
-            pos = self._msg.find('\n')
-            scream = self._msg[:pos]
-
-            if 'DEBUG:' in scream:
-                self._writer_arr[0](scream)
-            elif 'INFO:' in scream:
-                self._writer_arr[1](scream)
-            elif 'WARNING:' in scream:
-                self._writer_arr[2](scream)
-            elif 'ERROR:' in scream:
-                self._writer_arr[3](scream)
-            else:
-                self._writer_arr[self.default_writer_pos](scream)
-
-            self._msg = self._msg[pos + 1:]
+        pass
 
 class DbHandler(logging.Handler):
     def __init__(self):
@@ -147,8 +139,8 @@ def initialize_log(config=global_config, logger_name='main', wrap_print=False):
     log.addHandler(db_handler)
 
     if wrap_print:
-        sys.stdout = LoggerWrapper([log.debug,log.info, log.warning, log.error], 1)
-        sys.stderr = LoggerWrapper([log.debug,log.info, log.warning, log.error], 3)
+        sys.stdout = LoggerWrapper([log.debug, log.info, log.warning, log.error], 1)
+        sys.stderr = LoggerWrapper([log.debug, log.info, log.warning, log.error], 3)
 
     return log
 

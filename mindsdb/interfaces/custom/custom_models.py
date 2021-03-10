@@ -8,7 +8,7 @@ import mindsdb_native
 import pandas as pd
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.model.model_inteface import ModelInterface as NativeInterface
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre

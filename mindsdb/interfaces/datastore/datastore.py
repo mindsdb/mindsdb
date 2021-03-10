@@ -5,7 +5,7 @@ import os
 import setproctitle
 import pandas as pd
 
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.model.model_inteface import ModelInterface as NativeInterface
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource

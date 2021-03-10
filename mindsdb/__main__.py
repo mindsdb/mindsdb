@@ -11,7 +11,7 @@ import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.os_specific import get_mp_context
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.model.model_inteface import ModelInterface as NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
     config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
-    
+
     from lightwood.__about__ import __version__ as lightwood_version
     from mindsdb_native.__about__ import __version__ as mindsdb_native_version
     from mindsdb.__about__ import __version__ as mindsdb_version

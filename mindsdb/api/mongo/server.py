@@ -13,7 +13,7 @@ import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.utilities import log
 
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.model.model_inteface import ModelInterface as NativeInterface
 
 OP_REPLY = 1
 OP_UPDATE = 2001

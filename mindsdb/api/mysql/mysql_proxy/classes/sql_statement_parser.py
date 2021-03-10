@@ -16,7 +16,8 @@ from pyparsing import (
     Suppress,
     CaselessKeyword,
     ParseException,
-    SkipTo
+    SkipTo,
+    restOfLine
 )
 import re
 
@@ -80,17 +81,33 @@ class SqlStatementParser():
 
     @staticmethod
     def clear_sql(sql: str) -> str:
+        ''' remove comments from sql
+            TODO current implementation is not remove /**/ from mid of string:
+            select a, /*comment*/ from b
+        '''
+        # remove /*comment*/
         ParserElement.defaultWhitespaceChars = (" \t")
         comment = nestedExpr('/*', '*/').suppress()
         starting = ZeroOrMore(comment.suppress())
         ending = ZeroOrMore(comment | ';').suppress() + StringEnd()
         expr = starting + SkipTo(ending) + ending
-        r = expr.parseString(sql)
+        sql = expr.transformString(sql)
 
-        if len(r) != 1:
-            raise Exception('Error while parsing expr')
+        # remove -- and # comments
+        oracleSqlComment = Literal("--") + restOfLine
+        mySqlComment = Literal("#") + restOfLine
 
-        return r[0]
+        expr = (
+            originalTextFor(QuotedString("'"))
+            | originalTextFor(QuotedString('"'))
+            | originalTextFor(QuotedString('`'))
+            | (oracleSqlComment | mySqlComment).suppress()
+        )
+
+        sql = expr.transformString(sql)
+        sql = sql.strip(' \n\t')
+
+        return sql
 
     @staticmethod
     def get_keyword(sql):
@@ -190,25 +207,24 @@ class SqlStatementParser():
         and_ = Literal("and")
 
         from_value = (
-                QuotedString('`')
-                | originalTextFor(
-                    Word(printables, excludeChars='.`')
-                )
+            QuotedString('`')
+            | originalTextFor(
+                Word(printables, excludeChars='.`')
+            )
         )
 
         expr = (
-                suppressed_word + suppressed_word
-                + (delimitedList(from_value, delim='.'))('db_table')
-                + Optional(
-                    Word("where").suppress()
-                    + OneOrMore(
-                        Word(printables).setResultsName('columns', listAllMatches=True)
-                        + Word('=').suppress()
-                        + Word(printables).setResultsName('values', listAllMatches=True)
-                        + Optional(and_).suppress()
-                    )
+            suppressed_word + suppressed_word
+            + (delimitedList(from_value, delim='.'))('db_table')
+            + Optional(
+                Word("where").suppress()
+                + OneOrMore(
+                    Word(printables).setResultsName('columns', listAllMatches=True)
+                    + Word('=').suppress()
+                    + Word(printables).setResultsName('values', listAllMatches=True)
+                    + Optional(and_).suppress()
                 )
-
+            )
         )
 
         r = expr.parseString(self._sql).asDict()

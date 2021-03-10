@@ -1,20 +1,19 @@
 # @TODO, replace with arrow later: https://mirai-solutions.ch/news/2020/06/11/apache-arrow-flight-tutorial/
 from xmlrpc.server import SimpleXMLRPCServer
 
-import mindsdb_native
-from mindsdb_native import F
-from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-
-from mindsdb.utilities.fs import create_directory
-from mindsdb.interfaces.native.learn_process import LearnProcess
-from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.db import session, Predictor
-from mindsdb.interfaces.storage.fs import FsSotre
-
-
 class ModelController():
     def __init__(self):
+        import mindsdb_native
+        from mindsdb_native import F
+        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
+
+        from mindsdb.utilities.fs import create_directory
+        from mindsdb.interfaces.native.learn_process import LearnProcess
+        from mindsdb.interfaces.database.database import DatabaseWrapper
+        from mindsdb.utilities.config import Config
+        from mindsdb.interfaces.storage.db import session, Predictor
+        from mindsdb.interfaces.storage.fs import FsSotre
+
         self.config = Config()
         self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)

@@ -11,8 +11,8 @@ import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.os_specific import get_mp_context
-from mindsdb.interfaces.model.model_inteface import start as start_model_controller
-from mindsdb.interfaces.model.model_inteface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_controller import start as start_model_controller
+from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
@@ -50,7 +50,10 @@ if __name__ == '__main__':
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
     config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
 
-    p = ctx.Process(targetstart_model_controller,)
+    # Switch to this once the native interface has it's own thread :/
+    # ctx = mp.get_context(get_mp_context())
+    ctx = mp.get_context('spawn')
+    p = ctx.Process(target=start_model_controller,)
     p.start()
     close_api_gracefully([{'process': p}])
 
@@ -105,10 +108,6 @@ if __name__ == '__main__':
 
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         log.error(f'Error failed to integrate with database aliased: {broken_name}')
-
-    ctx = mp.get_context('spawn')
-    # Switch to this once the native interface has it's own thread :/
-    # ctx = mp.get_context(get_mp_context())
 
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')

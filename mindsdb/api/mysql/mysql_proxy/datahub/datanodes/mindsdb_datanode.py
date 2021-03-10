@@ -16,6 +16,7 @@ from mindsdb.interfaces.ai_table.ai_table import AITable_store
 from mindsdb.interfaces.datastore.datastore import DataStore
 
 
+
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
@@ -270,7 +271,7 @@ class MindsDBDataNode(DataNode):
                 for f in model['columns'] if 'typing' in model['data_analysis_v2'][f]
             }
 
-            for row in data:
+            for i, row in enumerate(data):
                 cast_row_types(row, field_types)
 
                 row['select_data_query'] = select_data_query
@@ -283,7 +284,7 @@ class MindsDBDataNode(DataNode):
                 explanation = explains[i]
                 for key in predicted_columns:
                     row[key + '_confidence'] = explanation[key]['confidence']
-                    row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder)
+                    row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
                 for key in min_max_keys:
                     row[key + '_min'] = min(explanation[key]['confidence_interval'])
                     row[key + '_max'] = max(explanation[key]['confidence_interval'])

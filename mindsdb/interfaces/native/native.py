@@ -5,6 +5,8 @@ import datetime
 from dateutil.parser import parse as parse_datetime
 import psutil
 
+import setproctitle
+
 import mindsdb_native
 from mindsdb_native import F
 from mindsdb.utilities.fs import create_directory
@@ -63,6 +65,12 @@ class NativeInterface():
                 raise Exception('Learning process failed !')
 
     def predict(self, name, when_data=None, kwargs={}):
+        try:
+            original_process_title = setproctitle.getproctitle()
+            setproctitle.setproctitle('mindsdb_native_process')
+        except Exception:
+            pass
+
         if name not in self.predictor_cache:
             # Clear the cache entirely if we have less than 1.2 GB left
             if psutil.virtual_memory().available < 1.2 * pow(10,9):
@@ -81,6 +89,10 @@ class NativeInterface():
             **kwargs
         )
 
+        try:
+            setproctitle.setproctitle(original_process_title)
+        except Exception:
+            pass
         return predictions
 
     # @TODO Move somewhere else to avoid circular import issues in the future
@@ -95,8 +107,9 @@ class NativeInterface():
                 self.fs_store.get(name, f'predictor_{self.company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 new_model_data = mindsdb_native.F.get_model_data(name)
             except Exception:
-                pass
-            if predictor_record.data is None or len(new_model_data) > len(predictor_record.data):
+                new_model_data = None
+
+            if predictor_record.data is None or (new_model_data is not None and len(new_model_data) > len(predictor_record.data)):
                 predictor_record.data = new_model_data
                 model = new_model_data
                 session.commit()

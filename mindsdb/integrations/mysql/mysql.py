@@ -1,10 +1,43 @@
+from contextlib import closing
 import mysql.connector
 
 from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 
 
-class MySQL(Integration):
+class MySQLConnectionChecker:
+    def __init__(self, **kwargs):
+        self.host = kwargs.get('host')
+        self.port = kwargs.get('port')
+        self.user = kwargs.get('user')
+        self.password = kwargs.get('password')
+
+    def _get_connnection(self):
+        return mysql.connector.connect(
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password)
+
+    def check_connection(self):
+        try:
+            con = self._get_connnection()
+            with closing(con) as con:
+                connected = con.is_connected()
+        except Exception:
+            connected = False
+        return connected
+
+
+class MySQL(Integration, MySQLConnectionChecker):
+    def __init__(self, config, name):
+        super().__init__(config, name)
+        db_info = self.config['integrations'][self.name]
+        self.user = db_info.get('user')
+        self.password = db_info.get('password')
+        self.host = db_info.get('host')
+        self.port = db_info.get('port')
+
     def _to_mysql_table(self, stats, predicted_cols, columns):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
@@ -40,22 +73,16 @@ class MySQL(Integration):
         return '`' + name.replace('`', '``') + '`'
 
     def _query(self, query):
-        con = mysql.connector.connect(
-            host=self.config['integrations'][self.name]['host'],
-            port=self.config['integrations'][self.name]['port'],
-            user=self.config['integrations'][self.name]['user'],
-            password=self.config['integrations'][self.name]['password']
-        )
-
-        cur = con.cursor(dictionary=True, buffered=True)
-        cur.execute(query)
-        res = True
-        try:
-            res = cur.fetchall()
-        except Exception:
-            pass
-        con.commit()
-        con.close()
+        con = self._get_connnection()
+        with closing(con) as con:
+            cur = con.cursor(dictionary=True, buffered=True)
+            cur.execute(query)
+            res = True
+            try:
+                res = cur.fetchall()
+            except Exception:
+                pass
+            con.commit()
 
         return res
 
@@ -88,7 +115,7 @@ class MySQL(Integration):
                 external_datasource VARCHAR(500),
                 training_options VARCHAR(500),
                 key name_key (name)
-            ) ENGINE=FEDERATED CONNECTION='{connect}';
+            ) ENGINE=FEDERATED CHARSET=utf8 CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -98,7 +125,7 @@ class MySQL(Integration):
             CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.commands (
                 command VARCHAR(500),
                 key command_key (command)
-            ) ENGINE=FEDERATED CONNECTION='{connect}';
+            ) ENGINE=FEDERATED CHARSET=utf8 CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -124,7 +151,7 @@ class MySQL(Integration):
                     index when_data_index (when_data),
                     index select_data_query_index (select_data_query),
                     index external_datasource_index (external_datasource)
-                ) ENGINE=FEDERATED CONNECTION='{connect}';
+                ) ENGINE=FEDERATED CHARSET=utf8 CONNECTION='{connect}';
             """
             self._query(q)
 
@@ -133,17 +160,3 @@ class MySQL(Integration):
             drop table if exists {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
-
-    def check_connection(self):
-        try:
-            con = mysql.connector.connect(
-                host=self.config['integrations'][self.name]['host'],
-                port=self.config['integrations'][self.name]['port'],
-                user=self.config['integrations'][self.name]['user'],
-                password=self.config['integrations'][self.name]['password']
-            )
-            connected = con.is_connected()
-            con.close()
-        except Exception:
-            connected = False
-        return connected

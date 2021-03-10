@@ -16,6 +16,8 @@ class DatabaseWrapper():
         try:
             # If this is the name of an integration
             integration = self._get_integration(db_alias)
+            if integration == False:
+                raise Exception(f'Unkonw database integration type for: {db_alias}')
             if integration != True:
                 integration.setup()
         except Exception as e:
@@ -38,7 +40,7 @@ class DatabaseWrapper():
                 return MongoDB(self.config, db_alias)
             else:
                 logger.warning(f'Uknown integration type: {db_type} for database called: {db_alias}')
-            return False
+                return False
         return True
 
     def _get_integrations(self):
@@ -49,9 +51,12 @@ class DatabaseWrapper():
     def register_predictors(self, model_data_arr):
         for integration in self._get_integrations():
             if integration.check_connection():
-                integration.register_predictors(model_data_arr)
+                try:
+                    integration.register_predictors(model_data_arr)
+                except Exception as e:
+                    logger.warning(f"Error {e} when trying to register predictor to {integration.name}. Predictor wouldn't be registred.")
             else:
-                logger.warning(f"There is no connection to {integration.name}. predictor wouldn't be registred.")
+                logger.warning(f"There is no connection to {integration.name}. Predictor wouldn't be registred.")
 
     def unregister_predictor(self, name):
         for integration in self._get_integrations():

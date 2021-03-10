@@ -38,7 +38,14 @@ def get_all_models_meta_data(mindsdb_native, custom_models):
         :param custom_models: instance of CustomModels
         :return: list of models meta data
     '''
-    model_data_arr = [mindsdb_native.get_model_data(x['name']) for x in mindsdb_native.get_models() if x['status'] == 'complete']
+    model_data_arr = []
+    for model in mindsdb_native.get_models():
+        if model['status'] == 'complete':
+            try:
+                model_data_arr.append(mindsdb_native.get_model_data(model['name']))
+            except:
+                pass
+
     model_data_arr.extend(custom_models.get_models())
 
     return model_data_arr

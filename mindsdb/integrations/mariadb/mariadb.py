@@ -4,7 +4,37 @@ from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 
 
-class Mariadb(Integration):
+class MariadbConnectionChecker:
+    def __init__(self, **kwargs):
+        self.host = kwargs.get('host')
+        self.port = kwargs.get('port')
+        self.user = kwargs.get('user')
+        self.password = kwargs.get('password')
+
+    def check_connection(self):
+        try:
+            con = mysql.connector.connect(
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password
+            )
+            connected = con.is_connected()
+            con.close()
+        except Exception:
+            connected = False
+        return connected
+
+
+class Mariadb(Integration, MariadbConnectionChecker):
+    def __init__(self, config, name):
+        super().__init__(config, name)
+        db_info = self.config['integrations'][self.name]
+        self.user = db_info.get('user', 'default')
+        self.password = db_info.get('password', None)
+        self.host = db_info.get('host')
+        self.port = db_info.get('port')
+
     def _to_mariadb_table(self, stats, predicted_cols, columns):
         subtype_map = {
             DATA_SUBTYPES.INT: 'int',
@@ -88,7 +118,7 @@ class Mariadb(Integration):
                 select_data_query VARCHAR(500),
                 external_datasource VARCHAR(500),
                 training_options VARCHAR(500)
-            ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+            ) ENGINE=CONNECT CHARSET=utf8 TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -97,7 +127,7 @@ class Mariadb(Integration):
         q = f"""
             CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.commands (
                 command VARCHAR(500)
-            ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+            ) ENGINE=CONNECT CHARSET=utf8 TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -120,7 +150,7 @@ class Mariadb(Integration):
             q = f"""
                     CREATE TABLE {self.mindsdb_database}.{self._escape_table_name(name)}
                     ({columns_sql}
-                    ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+                    ) ENGINE=CONNECT CHARSET=utf8 TABLE_TYPE=MYSQL CONNECTION='{connect}';
             """
             self._query(q)
 
@@ -129,17 +159,3 @@ class Mariadb(Integration):
             drop table if exists {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
-
-    def check_connection(self):
-        try:
-            con = mysql.connector.connect(
-                host=self.config['integrations'][self.name]['host'],
-                port=self.config['integrations'][self.name]['port'],
-                user=self.config['integrations'][self.name]['user'],
-                password=self.config['integrations'][self.name]['password']
-            )
-            connected = con.is_connected()
-            con.close()
-        except Exception:
-            connected = False
-        return connected

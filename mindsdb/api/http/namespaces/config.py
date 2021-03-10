@@ -3,6 +3,7 @@ import traceback
 import datetime
 from dateutil.parser import parse as parse_datetime
 import subprocess
+import os
 
 from flask import request
 from flask_restx import Resource, abort
@@ -12,6 +13,7 @@ from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
+from mindsdb.integrations import CHECKERS
 
 def get_integration(name):
     integrations = ca.config_obj.get('integrations', {})
@@ -77,38 +79,32 @@ class Integration(Resource):
         is_test = params.get('test', False)
         if is_test:
             del params['test']
+            db_type = params.get('type')
+            checker_class = CHECKERS.get(db_type, None)
+            if checker_class is None:
+                abort(400, f"Unknown integration type: {db_type}")
+            checker = checker_class(**params)
+            return {'success': checker.check_connection()}, 200
 
         integration = get_integration(name)
-        if integration is not None and is_test:
-            add_name = name + '__TEST_INTEGRATION'
-            for k in integration:
-                if k not in params and k != 'test':
-                    params[k] = integration[k]
-        elif integration is not None:
+        if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
-        else:
-            add_name = name
 
         try:
             if 'enabled' in params:
                 params['publish'] = params['enabled']
                 del params['enabled']
-            ca.config_obj.add_db_integration(add_name, params)
+            ca.config_obj.add_db_integration(name, params)
 
             mdb = ca.mindsdb_native
             cst = ca.custom_models
             model_data_arr = get_all_models_meta_data(mdb, cst)
-            ca.dbw.setup_integration(add_name)
+            ca.dbw.setup_integration(name)
             if is_test is False:
                 ca.dbw.register_predictors(model_data_arr)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during config update: {str(e)}')
-
-        if is_test:
-            cons = ca.dbw.check_connections()
-            ca.config_obj.remove_db_integration(add_name)
-            return {'success': cons[add_name]}, 200
 
         return '', 200
 
@@ -164,6 +160,29 @@ class ToggleTelemetry(Resource):
             return 'Enabled telemetry', 200
         else:
             return 'Disabled telemetry', 200
+
+@ns_conf.route('/vars')
+class Vars(Resource):
+    def get(self):
+        telemtry = True
+        if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
+            telemtry = False
+
+        mongo = True
+        if ca.config_obj.get('disable_mongo', False):
+            mongo = False
+
+        return {'mongo': mongo, 'telemtry': telemtry}
+
+@ns_conf.param('flag', 'Turn telemtry on or off')
+class ToggleTelemetry(Resource):
+    @ns_conf.doc('check')
+    def get(self, flag):
+        if flag in ["True", "true", "t"]:
+            return 'Enabled telemetry', 200
+        else:
+            return 'Disabled telemetry', 200
+
 
 @ns_conf.route('/install_options')
 @ns_conf.param('dependency_list', 'Install dependencies')

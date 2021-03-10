@@ -859,7 +859,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def queryAnswer(self, sql):
         statement = SqlStatementParser(sql)
 
-        sql_lower = statement.sql.lower()
+        sql = statement.sql
+        sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')
 
         keyword = statement.keyword
@@ -951,6 +952,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             self.packet(OkPacket).send()
         elif keyword == 'select':
+            if 'connection_id()' in sql_lower:
+                self.answer_connection_id(sql)
+                return
             if '@@' in sql_lower:
                 self.answerVariables(sql)
                 return
@@ -1336,6 +1340,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'charset': CHARSET_NUMBERS['binary']
             }],
             data=[[1]]
+        )
+        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        self.sendPackageGroup(packages)
+
+    def answer_connection_id(self, sql):
+        packages = self.getTabelPackets(
+            columns=[{
+                'database': '',
+                'table_name': '',
+                'name': 'conn_id',
+                'alias': 'conn_id',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }],
+            data=[[96]]     # can be any UNIQUE number
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
         self.sendPackageGroup(packages)

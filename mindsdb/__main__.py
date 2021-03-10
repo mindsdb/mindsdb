@@ -55,7 +55,7 @@ if __name__ == '__main__':
     ctx = mp.get_context('spawn')
     p = ctx.Process(target=start_model_controller,)
     p.start()
-    close_api_gracefully([{'process': p}])
+    close_api_gracefully({'rpc': {'process': p}})
 
     from lightwood.__about__ import __version__ as lightwood_version
     from mindsdb_native.__about__ import __version__ as mindsdb_native_version

@@ -15,14 +15,14 @@ class ModelInterface():
     def predict(self, name, when_data=None, kwargs={}):
         return self.proxy.predict(name, when_data, kwargs)
 
-    def analyse_dataset(self, ds)
+    def analyse_dataset(self, ds):
         return self.proxy.analyse_dataset(ds)
 
-    def get_model_data(self, name, db_fix=True)
+    def get_model_data(self, name, db_fix=True):
         return self.proxy.analyse_dataset(name, db_fix)
 
-    def get_models(self)
+    def get_models(self):
         return self.proxy.get_models()
 
-    def delete_model(self, name)
+    def delete_model(self, name):
         return self.proxy.delete_model(name)

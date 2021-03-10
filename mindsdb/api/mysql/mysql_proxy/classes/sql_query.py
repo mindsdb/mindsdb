@@ -455,12 +455,14 @@ class SQLQuery():
             prev_table_name = full_table_name
 
     def _is_wildcard_join(self, commands):
-        if len(commands) == 3 \
-           and commands[2].get('op') == 'eq' \
-           and commands[1].get('field') == '*' \
-           and commands[0].get('field') == '*':
-            return True
-        return False
+        # FIXME that for 'table JOIN predictor'
+        return True
+        # if len(commands) == 3 \
+        #    and commands[2].get('op') == 'eq' \
+        #    and commands[1].get('field') == '*' \
+        #    and commands[0].get('field') == '*':
+        #     return True
+        # return False
 
     def _resolveTableData(self, table_name):
         # if isinstance(self.table_data[table_name], ObjectID):

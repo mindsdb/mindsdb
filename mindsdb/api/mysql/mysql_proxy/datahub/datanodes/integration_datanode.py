@@ -1,4 +1,5 @@
 from moz_sql_parser import format
+import time
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -38,7 +39,7 @@ class IntegrationDataNode(DataNode):
 
         query = format({"from": table, 'select': columns, "where": where})
 
-        ds, ds_name = self.default_store.save_datasource('temp_ds', self.integration_name, {'query': query})
+        ds, ds_name = self.default_store.save_datasource(f'temp_ds_{int(time.time()*100)}', self.integration_name, {'query': query})
         dso = self.default_store.get_datasource_obj(ds_name)
         data = dso.df.T.to_dict().values()
         self.default_store.delete_datasource(ds_name)

@@ -21,6 +21,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
+from mindsdb.interfaces.storage.db import session
 
 
 class Swagger_Api(Api):
@@ -166,6 +167,7 @@ def initialize_static(config):
 
     except Exception as e:
         log.error(f'Error during downloading files from s3: {e}')
+        session.close()
         return False
 
     static_folder = static_path.joinpath('static')
@@ -193,6 +195,7 @@ def initialize_static(config):
         f.write(gui_version_lv.vstring)
 
     log.info(f'GUI version updated to {gui_version_lv.vstring}')
+    session.close()
     return True
 
 
@@ -272,3 +275,4 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     except Exception as e:
         logger.error(f'Failed to open {url} in webbrowser with exception {e}')
         logger.error(traceback.format_exc())
+    session.close()

@@ -11,6 +11,7 @@ import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.os_specific import get_mp_context
+from mindsdb.interfaces.model.model_inteface import start as start_model_controller
 from mindsdb.interfaces.model.model_inteface import ModelInterface as NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
@@ -49,6 +50,10 @@ if __name__ == '__main__':
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
     config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
 
+    p = ctx.Process(targetstart_model_controller,)
+    p.start()
+    close_api_gracefully([{'process': p}])
+
     from lightwood.__about__ import __version__ as lightwood_version
     from mindsdb_native.__about__ import __version__ as mindsdb_native_version
     from mindsdb.__about__ import __version__ as mindsdb_version
@@ -73,6 +78,7 @@ if __name__ == '__main__':
         } for api in api_arr
     }
 
+
     for api_name in apis.keys():
         if api_name not in config['api']:
             print(f"Trying run '{api_name}' API, but is no config for this api.")
@@ -85,7 +91,9 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
+    print("CREATING INTERFACE")
     mdb = NativeInterface()
+    print("CREATED INTERFACE")
     cst = CustomModels()
 
     model_data_arr = get_all_models_meta_data(mdb, cst)
@@ -101,7 +109,6 @@ if __name__ == '__main__':
     ctx = mp.get_context('spawn')
     # Switch to this once the native interface has it's own thread :/
     # ctx = mp.get_context(get_mp_context())
-
 
     for api_name, api_data in apis.items():
         print(f'{api_name} API: starting...')

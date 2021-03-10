@@ -162,16 +162,16 @@ class ModelController():
         self.dbw.unregister_predictor(name)
         self.fs_store.delete(f'predictor_{self.company_id}_{id}')
 
+def start():
+    controller = ModelController()
+    server = SimpleXMLRPCServer(("localhost", 17329))
 
-controller = ModelController()
-server = SimpleXMLRPCServer(("localhost", 17329))
+    server.register_function(controller.create, "create")
+    server.register_function(controller.learn, "learn")
+    server.register_function(controller.predict, "predict")
+    server.register_function(controller.analyse_dataset, "analyse_dataset")
+    server.register_function(controller.get_model_data, "get_model_data")
+    server.register_function(controller.get_models, "get_models")
+    server.register_function(controller.delete_model, "delete_model")
 
-server.register_function(controller.create, "create")
-server.register_function(controller.learn, "learn")
-server.register_function(controller.predict, "predict")
-server.register_function(controller.analyse_dataset, "analyse_dataset")
-server.register_function(controller.get_model_data, "get_model_data")
-server.register_function(controller.get_models, "get_models")
-server.register_function(controller.delete_model, "delete_model")
-
-server.serve_forever()
+    server.serve_forever()

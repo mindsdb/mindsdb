@@ -62,7 +62,7 @@ def start(verbose, no_studio):
 
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):
-        session.remove()
+        session.close()
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

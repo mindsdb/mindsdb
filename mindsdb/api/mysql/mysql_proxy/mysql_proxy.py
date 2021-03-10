@@ -800,7 +800,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def queryAnswer(self, sql):
         statement = SqlStatementParser(sql)
 
-        sql_lower = statement.sql.lower()
+        sql = statement.sql
+        sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')
 
         keyword = statement.keyword

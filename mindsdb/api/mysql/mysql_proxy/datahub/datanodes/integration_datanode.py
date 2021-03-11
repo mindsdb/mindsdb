@@ -17,7 +17,7 @@ class IntegrationDataNode(DataNode):
         return self.type
 
     def getTables(self):
-        pass
+        return []
 
     def hasTable(self, tableName):
         return True

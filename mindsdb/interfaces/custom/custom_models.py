@@ -4,7 +4,7 @@ import importlib
 import json
 import sys
 
-import mindsdb_native
+import mindsdb_datasources
 import pandas as pd
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -53,7 +53,7 @@ class CustomModels():
 
         to_predict = to_predict if isinstance(to_predict,list) else [to_predict]
 
-        data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+        data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'], **from_data['kwargs'])
         data_frame = data_source.df
         model = self._internal_load(name)
         model.to_predict = to_predict
@@ -88,7 +88,7 @@ class CustomModels():
             kwargs = {}
         if from_data is not None:
             if isinstance(from_data, dict):
-                data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'],
+                data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'],
                                                                           **from_data['kwargs'])
             # assume that particular instance of any DataSource class is provided
             else:

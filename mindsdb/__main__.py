@@ -55,15 +55,10 @@ if __name__ == '__main__':
     ctx = mp.get_context('spawn')
     p = ctx.Process(target=start_model_controller,)
     p.start()
-    close_api_gracefully({'rpc': {'process': p}})
+    atexit.register(close_api_gracefully, {'rpc': {'process': p}})
 
-    from lightwood.__about__ import __version__ as lightwood_version
-    from mindsdb_native.__about__ import __version__ as mindsdb_native_version
     from mindsdb.__about__ import __version__ as mindsdb_version
-    print('Versions:')
-    print(f' - lightwood {lightwood_version}')
-    print(f' - MindsDB_native {mindsdb_native_version}')
-    print(f' - MindsDB {mindsdb_version}')
+    print(f'Version {mindsdb_version}')
 
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config.paths['root']}")
@@ -94,9 +89,9 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
-    print("CREATING INTERFACE")
+    log.info("Starting native RPC server!")
     mdb = NativeInterface()
-    print("CREATED INTERFACE")
+    log.info("Started native RPC server!")
     cst = CustomModels()
 
     model_data_arr = get_all_models_meta_data(mdb, cst)

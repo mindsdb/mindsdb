@@ -1,13 +1,24 @@
 # @TODO, replace with arrow later: https://mirai-solutions.ch/news/2020/06/11/apache-arrow-flight-tutorial/
 import xmlrpc.client
+import time
 
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import log
 
 
 class ModelInterface():
     def __init__(self):
         self.config = Config()
-        self.proxy = xmlrpc.client.ServerProxy("http://localhost:17329/")
+        for _ in range(30):
+            try:
+                time.sleep(3)
+                self.proxy = xmlrpc.client.ServerProxy("http://localhost:17329/")
+                assert self.proxy.ping()
+                return
+            except:
+                log.info('Wating for native RPC server to start')
+        raise Exception('Unable to connect to RPC server')
+
 
     def create(self, name):
         return self.proxy.create(name)

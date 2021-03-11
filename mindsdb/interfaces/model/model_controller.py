@@ -1,5 +1,6 @@
 # @TODO, replace with arrow later: https://mirai-solutions.ch/news/2020/06/11/apache-arrow-flight-tutorial/
 from xmlrpc.server import SimpleXMLRPCServer
+from dateutil.parser import parse as parse_datetime
 import os
 
 from mindsdb.utilities.config import Config
@@ -9,6 +10,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
+from mindsdb.utilities.log import log
 
 
 class ModelController():
@@ -164,6 +166,9 @@ class ModelController():
         self.dbw.unregister_predictor(name)
         self.fs_store.delete(f'predictor_{self.company_id}_{id}')
 
+def ping():
+    return True
+
 def start():
     controller = ModelController()
     server = SimpleXMLRPCServer(("localhost", 17329))
@@ -175,5 +180,6 @@ def start():
     server.register_function(controller.get_model_data, "get_model_data")
     server.register_function(controller.get_models, "get_models")
     server.register_function(controller.delete_model, "delete_model")
+    server.register_function(ping, "ping")
 
     server.serve_forever()

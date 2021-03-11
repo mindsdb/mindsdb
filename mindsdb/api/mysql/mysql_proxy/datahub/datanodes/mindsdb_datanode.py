@@ -10,9 +10,25 @@ from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
-from mindsdb_native.libs.helpers.general_helpers import NumpyJSONEncoder
 from mindsdb.utilities.config import Config
 
+
+class NumpyJSONEncoder(json.JSONEncoder):
+    """
+    Use this encoder to avoid
+    "TypeError: Object of type float32 is not JSON serializable"
+
+    Example:
+    x = np.float32(5)
+    json.dumps(x, cls=NumpyJSONEncoder)
+    """
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (np.float, np.float32, np.float64)):
+            return float(obj)
+        else:
+            return super().default(obj)
 
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'

@@ -18,21 +18,24 @@ if telemtry_enabled:
     )
 
 class LoggerWrapper(object):
-    def __init__(self, writer):
-        self._writer = writer
-        self._msg = ''
+    def __init__(self, writer_arr, default_writer_pos):
+        self._writer_arr = writer_arr
+        self.default_writer_pos = default_writer_pos
 
     def write(self, message):
-        self._msg = self._msg + message
-        while '\n' in self._msg:
-            pos = self._msg.find('\n')
-            self._writer(self._msg[:pos])
-            self._msg = self._msg[pos + 1:]
+        if 'DEBUG:' in message:
+            self._writer_arr[0](message)
+        elif 'INFO:' in message:
+            self._writer_arr[1](message)
+        elif 'WARNING:' in message:
+            self._writer_arr[2](message)
+        elif 'ERROR:' in message:
+            self._writer_arr[3](message)
+        else:
+            self._writer_arr[self.default_writer_pos](message)
 
     def flush(self):
-        if self._msg != '':
-            self._writer(self._msg)
-            self._msg = ''
+        pass
 
 class DbHandler(logging.Handler):
     def __init__(self):
@@ -130,13 +133,14 @@ def initialize_log(config=global_config, logger_name='main', wrap_print=False):
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
     ch = logging.StreamHandler()
-    ch.setLevel(config['log']['level']['console'])       # that level will be in console
+    ch.setLevel(config['log']['level']['console']) # that level will be in console
     log.addHandler(ch)
     db_handler = DbHandler()
     log.addHandler(db_handler)
 
     if wrap_print:
-        sys.stdout = LoggerWrapper(log.info)
+        sys.stdout = LoggerWrapper([log.debug, log.info, log.warning, log.error], 1)
+        sys.stderr = LoggerWrapper([log.debug, log.info, log.warning, log.error], 3)
 
     return log
 

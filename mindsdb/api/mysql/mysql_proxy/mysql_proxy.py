@@ -80,17 +80,17 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.native.native import NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
+from mindsdb.interfaces.ai_table.ai_table import AITable_store
 
 
 connection_id = 0
-
-ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 default_store = None
 mdb = None
 custom_models = None
 datahub = None
 config = None
+ai_table = None
 
 
 def check_auth(username, password, scramble_func, salt, config):
@@ -160,7 +160,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         srv.server_close()
 
     def initSession(self):
-        global connection_id, ALPHABET
+        global connection_id
         log.debug('New connection [{ip}:{port}]'.format(
             ip=self.client_address[0], port=self.client_address[1]))
         log.debug(self.__dict__)
@@ -425,6 +425,65 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             custom_models.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
         else:
             mdb.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
+
+        self.packet(OkPacket).send()
+
+    def answer_create_ai_table(self, struct):
+        global mdb, default_store, config, ai_table
+
+        table = ai_table.get_ai_table(struct['ai_table_name'])
+        if table is not None:
+            raise Exception(f"AT Table with name {struct['ai_table_name']} already exists")
+
+        # check predictor exists
+        models = mdb.get_models()
+        models_names = [x['name'] for x in models]
+        if struct['predictor_name'] not in models_names:
+            raise Exception(f"Predictor with name {struct['predictor_name']} not exists")
+
+        # check integration exists
+        if struct['integration_name'] not in config['integrations']:
+            raise Exception(f"Integration with name {struct['integration_name']} not exists")
+
+        ai_table.add(
+            name=struct['ai_table_name'],
+            integration_name=struct['integration_name'],
+            integration_query=struct['integration_query'],
+            query_fields=struct['query_fields'],
+            predictor_name=struct['predictor_name'],
+            predictor_fields=struct['predictor_fields']
+        )
+
+        self.packet(OkPacket).send()
+
+    def answer_create_predictor(self, struct):
+        global mdb, default_store, config
+
+        if struct['integration_name'] not in config['integrations'].keys():
+            # use first integration by default
+            struct['integration_name'] = list(config['integrations'].keys())[0]
+
+        ds_name = struct.get('datasource_name', f"{struct['integration_name']}_ds")
+
+        ds, ds_name = default_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
+        ds_data = default_store.get_datasource(ds_name)
+
+        # TODO add alias here
+        predict = [x['name'] for x in struct['predict']]
+
+        timeseries_settings = {}
+        for w in ['order_by', 'group_by', 'window']:
+            if w in struct:
+                timeseries_settings[w] = struct.get(w)
+
+        kwargs = struct.get('using', {})
+        if len(timeseries_settings) > 0:
+            if 'timeseries_settings' not in kwargs:
+                kwargs['timeseries_settings'] = timeseries_settings
+            else:
+                kwargs['timeseries_settings'].update(timeseries_settings)
+
+        mdb.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs)
 
         self.packet(OkPacket).send()
 
@@ -800,7 +859,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def queryAnswer(self, sql):
         statement = SqlStatementParser(sql)
 
-        sql_lower = statement.sql.lower()
+        sql = statement.sql
+        sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')
 
         keyword = statement.keyword
@@ -847,6 +907,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'use':
             self.session.database = sql_lower.split()[1].strip(' ;')
             self.packet(OkPacket).send()
+        elif keyword == 'create_ai_table':
+            self.answer_create_ai_table(struct)
+        elif keyword == 'create_predictor':
+            self.answer_create_predictor(struct)
         elif 'show warnings' in sql_lower:
             self.answerShowWarnings()
         elif 'show engines' in sql_lower:
@@ -888,6 +952,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             self.packet(OkPacket).send()
         elif keyword == 'select':
+            if 'connection_id()' in sql_lower:
+                self.answer_connection_id(sql)
+                return
             if '@@' in sql_lower:
                 self.answerVariables(sql)
                 return
@@ -1277,6 +1344,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
         self.sendPackageGroup(packages)
 
+    def answer_connection_id(self, sql):
+        packages = self.getTabelPackets(
+            columns=[{
+                'database': '',
+                'table_name': '',
+                'name': 'conn_id',
+                'alias': 'conn_id',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }],
+            data=[[96]]     # can be any UNIQUE number
+        )
+        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        self.sendPackageGroup(packages)
+
     def answerVariables(self, sql):
         if '@@version_comment' in sql.lower():
             self.answerVersionComment()
@@ -1524,6 +1606,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         global datahub
         global config
         global custom_models
+        global ai_table
         """
         Create a server and wait for incoming connections until Ctrl-C
         """
@@ -1540,6 +1623,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             config['api']['mysql']['ssl']
         )
 
+        ai_table = AITable_store()
         default_store = DataStore()
         mdb = NativeInterface()
         custom_models = CustomModels()

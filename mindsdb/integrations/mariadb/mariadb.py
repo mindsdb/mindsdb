@@ -118,7 +118,7 @@ class Mariadb(Integration, MariadbConnectionChecker):
                 select_data_query VARCHAR(500),
                 external_datasource VARCHAR(500),
                 training_options VARCHAR(500)
-            ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+            ) ENGINE=CONNECT CHARSET=utf8 TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -127,7 +127,7 @@ class Mariadb(Integration, MariadbConnectionChecker):
         q = f"""
             CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.commands (
                 command VARCHAR(500)
-            ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+            ) ENGINE=CONNECT CHARSET=utf8 TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
         self._query(q)
 
@@ -150,7 +150,7 @@ class Mariadb(Integration, MariadbConnectionChecker):
             q = f"""
                     CREATE TABLE {self.mindsdb_database}.{self._escape_table_name(name)}
                     ({columns_sql}
-                    ) ENGINE=CONNECT TABLE_TYPE=MYSQL CONNECTION='{connect}';
+                    ) ENGINE=CONNECT CHARSET=utf8 TABLE_TYPE=MYSQL CONNECTION='{connect}';
             """
             self._query(q)
 

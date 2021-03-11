@@ -1,9 +1,8 @@
 import json
-import datetime
 import shutil
 import os
-import pickle
 
+import setproctitle
 import pandas as pd
 
 from mindsdb.interfaces.native.native import NativeInterface
@@ -26,8 +25,20 @@ class DataStore():
     def get_analysis(self, name):
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
         if datasource_record.analysis is None:
-            datasource_record.analysis = json.dumps(self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name)))
+            try:
+                original_process_title = setproctitle.getproctitle()
+                setproctitle.setproctitle('mindsdb_native_process')
+            except Exception:
+                pass
+
+            analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name))
+            datasource_record.analysis = json.dumps(analysis)
             session.commit()
+
+            try:
+                setproctitle.setproctitle(original_process_title)
+            except Exception:
+                pass
 
         analysis = json.loads(datasource_record.analysis)
         return analysis
@@ -40,6 +51,8 @@ class DataStore():
             datasource_record_arr = session.query(Datasource).filter_by(company_id=self.company_id)
         for datasource_record in datasource_record_arr:
             try:
+                if datasource_record.data is None:
+                    continue
                 datasource = json.loads(datasource_record.data)
                 datasource['created_at'] = datasource_record.created_at
                 datasource['updated_at'] = datasource_record.updated_at
@@ -90,19 +103,25 @@ class DataStore():
             pass
 
     def save_datasource(self, name, source_type, source, file_path=None):
-        datasource_record = Datasource(company_id=self.company_id, name=name)
-
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
 
-        ds_meta_dir = os.path.join(self.dir, name)
-        os.mkdir(ds_meta_dir)
-
-        session.add(datasource_record)
-        session.commit()
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+        while datasource_record is not None:
+            raise Exception(f'Datasource with name {name} already exists')
 
         try:
+            datasource_record = Datasource(
+                company_id=self.company_id,
+                name=name
+            )
+            session.add(datasource_record)
+            session.commit()
+            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+
+            ds_meta_dir = os.path.join(self.dir, name)
+            os.mkdir(ds_meta_dir)
+
             if source_type == 'file':
                 source = os.path.join(ds_meta_dir, source)
                 shutil.move(file_path, source)
@@ -132,6 +151,9 @@ class DataStore():
                     dsClass = ds_class_map[integration['type']]
                 except KeyError:
                     raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
+
+                if dsClass is None:
+                    raise Exception(f'Unsupported datasource: {source_type}, please install required dependencies!')
 
                 if integration['type'] in ['clickhouse']:
                     creation_info = {
@@ -202,6 +224,9 @@ class DataStore():
                             'port': integration['port']
                         }
                     }
+
+                    ds = dsClass(**creation_info['kwargs'])
+
                 elif integration['type'] == 'athena':
                     creation_info = {
                         'class': dsClass.__name__,
@@ -241,13 +266,14 @@ class DataStore():
             })
 
             self.fs_store.put(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
+            session.commit()
 
-        except Exception:
-            if os.path.isdir(ds_meta_dir):
-                shutil.rmtree(ds_meta_dir)
+        except Exception as e:
+            log.error(f'{e}')
+            if datasource_record.id is not None:
+                self.delete_datasource(name)
             raise
 
-        session.commit()
         return self.get_datasource_obj(name, raw=True), name
 
     def get_datasource_obj(self, name, raw=False):

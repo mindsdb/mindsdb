@@ -157,18 +157,8 @@ class Datasource(Resource):
         return ca.default_store.get_datasource(ds_name)
 
 
-ds_analysis = {}
-
-
 def analyzing_thread(name, default_store):
-    global ds_analysis
-    ds_analysis[name] = None
-    ds = default_store.get_datasource(name)
-    analysis = default_store.get_analysis(ds['name'])
-    ds_analysis[name] = {
-        'created_at': datetime.datetime.utcnow(),
-        'data': analysis
-    }
+    analysis = default_store.start_analysis(name)
     session.close()
 
 
@@ -177,13 +167,9 @@ def analyzing_thread(name, default_store):
 class Analyze(Resource):
     @ns_conf.doc('analyse_dataset')
     def get(self, name):
-        global ds_analysis
-        if name in ds_analysis:
-            if ds_analysis[name] is None:
-                return {'status': 'analyzing'}, 200
-            else:
-                analysis = ds_analysis[name]['data']
-                return analysis, 200
+        analysis = ca.default_store.get_analysis()
+        if analysis is not None:
+            return analysis['data'], 200
 
         ds = ca.default_store.get_datasource(name)
         if ds is None:
@@ -199,12 +185,9 @@ class Analyze(Resource):
 class Analyze(Resource):
     @ns_conf.doc('analyze_refresh_dataset')
     def get(self, name):
-        global ds_analysis
-        if name in ds_analysis:
-            if ds_analysis[name] is None:
-                return {'status': 'analyzing'}, 200
-            else:
-                del ds_analysis[name]
+        analysis = ca.default_store.get_analysis()
+        if analysis is not None:
+            return analysis['data'], 200
 
         ds = ca.default_store.get_datasource(name)
         if ds is None:

@@ -21,27 +21,42 @@ class DataStore():
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dir = self.config.paths['datasources']
         self.mindsdb_native = NativeInterface()
+        self.running_analysis = {}
 
     def get_analysis(self, name):
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
         if datasource_record.analysis is None:
-            try:
-                original_process_title = setproctitle.getproctitle()
-                setproctitle.setproctitle('mindsdb_native_process')
-            except Exception:
-                pass
-
-            analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name))
-            datasource_record.analysis = json.dumps(analysis)
-            session.commit()
-
-            try:
-                setproctitle.setproctitle(original_process_title)
-            except Exception:
-                pass
-
+            return None
         analysis = json.loads(datasource_record.analysis)
         return analysis
+
+    def start_analysis(self, name):
+        if name in self.running_analysis:
+            return None
+        else:
+            self.running_analysis[name] = 'running'
+
+        try:
+            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+            if datasource_record.analysis is None:
+                try:
+                    original_process_title = setproctitle.getproctitle()
+                    setproctitle.setproctitle('mindsdb_native_process')
+                except Exception:
+                    pass
+
+                analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name))
+                datasource_record.analysis = json.dumps(analysis)
+                session.commit()
+
+                try:
+                    setproctitle.setproctitle(original_process_title)
+                except Exception:
+                    pass
+        except Exception as e:
+            log.error(e)
+        finally:
+            del self.running_analysis[name]
 
     def get_datasources(self, name=None):
         datasource_arr = []

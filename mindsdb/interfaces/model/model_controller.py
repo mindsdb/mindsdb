@@ -5,7 +5,7 @@ import os
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.fs import create_directory
-from mindsdb.interfaces.native.learn_process import LearnProcess
+from mindsdb.interfaces.model.learn_process import LearnProcess
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Predictor

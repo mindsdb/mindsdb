@@ -94,9 +94,5 @@ elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
 else:
     print('\n ✓ telemetry enabled \n')
 
-from mindsdb_native import *
-# Figure out how to add this as a module
-import lightwood
-#import dataskillet
-import mindsdb.utilities.wizards as wizards
+
 from mindsdb.interfaces.custom.model_interface import ModelInterface

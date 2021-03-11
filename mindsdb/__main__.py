@@ -53,9 +53,8 @@ if __name__ == '__main__':
     # Switch to this once the native interface has it's own thread :/
     # ctx = mp.get_context(get_mp_context())
     ctx = mp.get_context('spawn')
-    p = ctx.Process(target=start_model_controller,)
-    p.start()
-    atexit.register(close_api_gracefully, {'rpc': {'process': p}})
+    rpc_proc = ctx.Process(target=start_model_controller,)
+    rpc_proc.start()
 
     from mindsdb.__about__ import __version__ as mindsdb_version
     print(f'Version {mindsdb_version}')
@@ -118,6 +117,7 @@ if __name__ == '__main__':
             close_api_gracefully(apis)
             raise e
 
+    apis['rcp'] = {'process': rpc_proc}
     atexit.register(close_api_gracefully, apis=apis)
 
     async def wait_api_start(api_name, pid, port):
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     async def wait_apis_start():
         futures = [
             wait_api_start(api_name, api_data['process'].pid, api_data['port'])
-            for api_name, api_data in apis.items()
+            for api_name, api_data in apis.items() if 'port' in api_data
         ]
         for i, future in enumerate(asyncio.as_completed(futures)):
             api_name, port, started = await future

@@ -67,9 +67,10 @@ if os.path.isdir(root_storage_dir) is False:
     os.makedirs(root_storage_dir)
 
 
+
 if 'storage_db' in user_config:
     os.environ['MINDSDB_DB_CON'] = user_config['storage_db']
-else:
+elif os.environ.get('MINDSDB_DB_CON','') == '':
     os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db')
 
 if 'company_id' in user_config:

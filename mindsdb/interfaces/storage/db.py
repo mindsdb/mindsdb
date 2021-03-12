@@ -9,7 +9,10 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from sqlalchemy.schema import ForeignKey
 import datetime
 
-engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=20, max_overflow=20, echo=False)  # + '?check_same_thread=False'
+if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
+    engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
+else:
+    engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=20, max_overflow=20, echo=False)
 Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine, autoflush=True))
 Base.query = session.query_property()

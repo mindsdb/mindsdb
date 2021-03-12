@@ -3,17 +3,20 @@ import json
 
 import numpy as np
 from sqlalchemy import create_engine, orm, types
-from sqlalchemy.orm import scoped_session, sessionmaker, relationship
+from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, MetaData, Index
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from sqlalchemy.schema import ForeignKey
 import datetime
 
-
-engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False) # + '?check_same_thread=False'
+if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
+    engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
+else:
+    engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=20, max_overflow=20, echo=False)
 Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine, autoflush=True))
 Base.query = session.query_property()
+
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
 class NumpyEncoder(json.JSONEncoder):
@@ -27,9 +30,11 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
+
 class Array(types.TypeDecorator):
     ''' Float Type that replaces commas with  dots on input '''
     impl = types.String
+
     def process_bind_param(self, value, dialect):  # insert
         if isinstance(value, str):
             return value
@@ -37,16 +42,21 @@ class Array(types.TypeDecorator):
             return value
         else:
             return ',|,|,'.join(value)
+
     def process_result_value(self, value, dialect):  # select
         return value.split(',|,|,') if value is not None else None
+
 
 class Json(types.TypeDecorator):
     ''' Float Type that replaces commas with  dots on input '''
     impl = types.String
+
     def process_bind_param(self, value, dialect):  # insert
         return json.dumps(value, cls=NumpyEncoder) if value is not None else None
+
     def process_result_value(self, value, dialect):  # select
         return json.loads(value) if value is not None else None
+
 
 class Semaphor(Base):
     __tablename__ = 'semaphor'
@@ -57,14 +67,16 @@ class Semaphor(Base):
     entity_type = Column(String)
     entity_id = Column(String)
 
+
 class Configuration(Base):
     __tablename__ = 'configuration'
 
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    data = Column(String) # A JSON
+    data = Column(String)  # A JSON
     company_id = Column(Integer, unique=True)
+
 
 class Datasource(Base):
     __tablename__ = 'datasource'
@@ -73,7 +85,7 @@ class Datasource(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
-    data = Column(String) # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
+    data = Column(String)  # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
     creation_info = Column(String)
     analysis = Column(String)  # A JSON
     company_id = Column(Integer)
@@ -88,20 +100,35 @@ class Predictor(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
-    data = Column(Json) # A JSON -- should be everything returned by `get_model_data`, I think
+    data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
     company_id = Column(Integer)
     version = Column(String)
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
     is_custom = Column(Boolean)
 
+
+class AITable(Base):
+    __tablename__ = 'ai_table'
+    id = Column(Integer, primary_key=True)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    name = Column(String)
+    integration_name = Column(String)
+    integration_query = Column(String)
+    query_fields = Column(Json)
+    predictor_name = Column(String)
+    predictor_columns = Column(Json)
+    company_id = Column(Integer)
+
+
 class Log(Base):
     __tablename__ = 'log'
 
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    log_type = Column(String) # log, info, warning, traceback etc
-    source = Column(String) # file + line
+    log_type = Column(String)  # log, info, warning, traceback etc
+    source = Column(String)  # file + line
     company_id = Column(Integer)
     payload = Column(String)
     created_at_index = Index("some_index", "created_at_index")

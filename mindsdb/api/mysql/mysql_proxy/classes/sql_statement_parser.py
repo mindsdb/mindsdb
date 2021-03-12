@@ -1,24 +1,32 @@
 from pyparsing import (
-    ParserElement,
-    nestedExpr,
-    ZeroOrMore,
-    StringEnd,
-    Word,
-    alphas,
-    printables,
-    Literal,
-    QuotedString,
-    quotedString,
-    originalTextFor,
-    OneOrMore,
-    delimitedList,
-    Optional,
-    Suppress,
     CaselessKeyword,
     ParseException,
-    SkipTo
+    ParserElement,
+    QuotedString,
+    ZeroOrMore,
+    StringEnd,
+    OneOrMore,
+    Suppress,
+    Optional,
+    Literal,
+    SkipTo,
+    Group,
+    Word,
+    originalTextFor,
+    delimitedList,
+    quotedString,
+    printables,
+    nestedExpr,
+    restOfLine,
+    alphanums,
+    tokenMap,
+    alphas,
+    nums
 )
 import re
+import json
+
+import moz_sql_parser as moz_sql
 
 
 RE_INT = re.compile(r'^[-+]?([1-9]\d*|0)$')
@@ -65,6 +73,10 @@ class SqlStatementParser():
                 self._struct = self.parse_as_insert()
             elif self._keyword == 'delete':
                 self._struct = self.parse_as_delete()
+            elif self._keyword == 'create_predictor':
+                self._struct = self.parse_as_create_predictor()
+            elif self._keyword in 'create_ai_table':
+                self._struct = self.parse_as_create_ai_table()
 
     @property
     def keyword(self):
@@ -80,17 +92,33 @@ class SqlStatementParser():
 
     @staticmethod
     def clear_sql(sql: str) -> str:
+        ''' remove comments from sql
+            TODO current implementation is not remove /**/ from mid of string:
+            select a, /*comment*/ from b
+        '''
+        # remove /*comment*/
         ParserElement.defaultWhitespaceChars = (" \t")
         comment = nestedExpr('/*', '*/').suppress()
         starting = ZeroOrMore(comment.suppress())
         ending = ZeroOrMore(comment | ';').suppress() + StringEnd()
         expr = starting + SkipTo(ending) + ending
-        r = expr.parseString(sql)
+        sql = expr.transformString(sql)
 
-        if len(r) != 1:
-            raise Exception('Error while parsing expr')
+        # remove -- and # comments
+        oracleSqlComment = Literal("--") + restOfLine
+        mySqlComment = Literal("#") + restOfLine
 
-        return r[0]
+        expr = (
+            originalTextFor(QuotedString("'"))
+            | originalTextFor(QuotedString('"'))
+            | originalTextFor(QuotedString('`'))
+            | (oracleSqlComment | mySqlComment).suppress()
+        )
+
+        sql = expr.transformString(sql)
+        sql = sql.strip(' \n\t')
+
+        return sql
 
     @staticmethod
     def get_keyword(sql):
@@ -108,19 +136,37 @@ class SqlStatementParser():
             rollback
             commit
             explain
+
+            create_predictor
+            create_ai_table
         '''
-        key_word = Word(alphas)
-        other_words = Word(printables)
-        expr = key_word + Optional(other_words).suppress()
+        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW = map(
+            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW".split()
+        )
+        CREATE_PREDICTOR = CREATE + PREDICTOR
+        CREATE_AI_TABLE = CREATE + AI + TABLE
+        CREATE_VIEW = CREATE + VIEW
+
+        expr = (
+            START | SET | USE
+            | SHOW | DELETE | INSERT
+            | UPDATE | ALTER | SELECT
+            | ROLLBACK | COMMIT | EXPLAIN
+            | CREATE_PREDICTOR | CREATE_AI_TABLE
+            | CREATE_VIEW
+        )('keyword')
 
         r = expr.parseString(sql)
 
-        if len(r) != 1:
+        keyword = '_'.join(r.get('keyword', [])).lower()
+
+        if keyword == 0:
             raise Exception('Cant get keyword from statement')
 
-        word = r[0].lower()
+        if keyword == 'create_view':
+            keyword = 'create_ai_table'
 
-        return word
+        return keyword
 
     @staticmethod
     def is_quoted_str(text):
@@ -176,6 +222,134 @@ class SqlStatementParser():
         self._sql = r.asDict()['original'].strip()
         return True
 
+    def parse_as_create_ai_table(self) -> dict:
+        CREATE, AI, TABLE, VIEW, FROM, USING, AS = map(
+            CaselessKeyword, "CREATE AI TABLE VIEW FROM USING AS".split()
+        )
+
+        AI_TABLE = AI + TABLE
+
+        word = Word(alphanums + "_")
+
+        expr = (
+            CREATE + (AI_TABLE | VIEW) + word('ai_table_name') + AS
+            + originalTextFor(nestedExpr('(', ')'))('select')
+        )
+
+        r = expr.parseString(self._sql)
+        r = r.asDict()
+
+        if r['select'].startswith('(') and r['select'].endswith(')'):
+            r['select'] = r['select'][1:-1]
+        r['select'] = r['select'].strip(' \n')
+
+        select = moz_sql.parse(r['select'])
+
+        if 'from' not in select \
+           or len(select['from']) != 2 \
+           or 'join' not in select['from'][1]:
+            raise Exception("'from' must be like: 'from integration.table join predictor'")
+
+        # add 'name' to each statement
+        for s in [*select['select'], select['from'][0], select['from'][1]['join']]:
+            if 'name' not in s:
+                if '.' in s['value']:
+                    s['name'] = s['value'][s['value'].find('.') + 1:]
+                else:
+                    s['name'] = s['value']
+
+        f = {
+            'integration': select['from'][0],
+            'predictor': select['from'][1]['join']
+        }
+
+        # remove predictor join
+        select['from'].pop()
+
+        new_select = []
+        predictor_fields = []
+        integration_prefix = f"{f['integration']['name']}."
+        for s in select['select']:
+            if s['value'].startswith(integration_prefix):
+                s['value'] = s['value'][len(integration_prefix):]
+                new_select.append(s)
+            else:
+                predictor_fields.append(s)
+
+        predictor_prefix = f"{f['predictor']['name']}."
+        for pf in predictor_fields:
+            if pf['value'].startswith(predictor_prefix):
+                pf['value'] = pf['value'][len(predictor_prefix):]
+
+        integration_name = f['integration']['value'][:f['integration']['value'].find('.')]
+        f['integration']['value'] = f['integration']['value'][len(integration_name) + 1:]
+        select['select'] = new_select
+        integration_sql = moz_sql.format(select)
+
+        res = {
+            'ai_table_name': r['ai_table_name'],
+            'integration_name': integration_name,
+            'integration_query': integration_sql,
+            'query_fields': select['select'],
+            'predictor_name': f['predictor']['value'],
+            'predictor_fields': predictor_fields
+        }
+
+        return res
+
+    def parse_as_create_predictor(self) -> dict:
+        CREATE, PREDICTOR, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, USING, ASK, DESC = map(
+            CaselessKeyword, "CREATE PREDICTOR FROM WHERE PREDICT AS ORDER GROUP BY WINDOW USING ASK DESC".split()
+        )
+        ORDER_BY = ORDER + BY
+        GROUP_BY = GROUP + BY
+
+        word = Word(alphanums + "_")
+
+        s_int = Word(nums).setParseAction(tokenMap(int))
+
+        predict_item = Group(word('name') + Optional(AS.suppress() + word('alias')))
+
+        order_item = Group(word('name') + Optional(ASK | DESC)('sort'))
+
+        using_item = Group(word('name') + Word('=').suppress() + (word | QuotedString("'"))('value'))
+
+        expr = (
+            CREATE + PREDICTOR + word('predictor_name') + FROM + Optional(word)('integration_name')
+            + originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name'))
+            + PREDICT
+            + delimitedList(predict_item, delim=',')('predict')
+            + Optional(ORDER_BY + delimitedList(order_item, delim=',')('order_by'))
+            + Optional(GROUP_BY + delimitedList(word, delim=',')('group_by'))
+            + Optional(WINDOW + s_int('window'))
+            + Optional(
+                (USING + delimitedList(using_item, delim=',')('using'))
+                | (USING + originalTextFor(nestedExpr('{', '}'))('using'))
+            )
+        )
+
+        r = expr.parseString(self._sql)
+
+        # postprocessing
+        r = r.asDict()
+        if r['select'].startswith('(') and r['select'].endswith(')'):
+            r['select'] = r['select'][1:-1]
+        r['select'] = r['select'].strip(' \n')
+
+        using = r.get('using')
+        if isinstance(using, str):
+            r['using'] = json.loads(using)
+        elif isinstance(using, list):
+            new_using = {}
+            for el in using:
+                if el['name'] == 'stop_after':
+                    new_using['stop_training_in_x_seconds'] = el['value']
+                else:
+                    new_using[el['name']] = el['value']
+            r['using'] = new_using
+
+        return r
+
     def parse_as_delete(self) -> dict:
         ''' Parse delete. Example: 'delete from database.table where column_a= 1 and column_b = 2;'
         '''
@@ -190,25 +364,24 @@ class SqlStatementParser():
         and_ = Literal("and")
 
         from_value = (
-                QuotedString('`')
-                | originalTextFor(
-                    Word(printables, excludeChars='.`')
-                )
+            QuotedString('`')
+            | originalTextFor(
+                Word(printables, excludeChars='.`')
+            )
         )
 
         expr = (
-                suppressed_word + suppressed_word
-                + (delimitedList(from_value, delim='.'))('db_table')
-                + Optional(
-                    Word("where").suppress()
-                    + OneOrMore(
-                        Word(printables).setResultsName('columns', listAllMatches=True)
-                        + Word('=').suppress()
-                        + Word(printables).setResultsName('values', listAllMatches=True)
-                        + Optional(and_).suppress()
-                    )
+            suppressed_word + suppressed_word
+            + (delimitedList(from_value, delim='.'))('db_table')
+            + Optional(
+                Word("where").suppress()
+                + OneOrMore(
+                    Word(printables).setResultsName('columns', listAllMatches=True)
+                    + Word('=').suppress()
+                    + Word(printables).setResultsName('values', listAllMatches=True)
+                    + Optional(and_).suppress()
                 )
-
+            )
         )
 
         r = expr.parseString(self._sql).asDict()
@@ -348,6 +521,69 @@ class SqlStatementParser():
         return result
 
     @staticmethod
+    def test_create():
+        def check_recursive(a, b):
+            assert type(a) == type(b)
+            if isinstance(a, dict):
+                for key in a:
+                    check_recursive(a[key], b[key])
+            elif isinstance(a, list):
+                for i in range(len(a)):
+                    check_recursive(a[i], b[i])
+            else:
+                assert a == b
+
+        tests = [[
+            '''
+            CREATE PREDICTor debt_model_1
+            FROM integration_name (select whatever) as ds_name
+            PREDICT f1 as f1_alias, f2, f3 as f3_alias
+            order by f_order_1 ASK, f_order_2, f_order_3 DESC
+            group by f_group_1, f_group_2
+            window 100
+            using {"x": 1, "y": "a"}
+            ''', {
+                'predictor_name': 'debt_model_1',
+                'integration_name': 'integration_name',
+                'select': 'select whatever',
+                'datasource_name': 'ds_name',
+                'predict': [{'name': 'f1', 'alias': 'f1_alias'}, {'name': 'f2'}, {'name': 'f3', 'alias': 'f3_alias'}],
+                'order_by': [{'name': 'f_order_1', 'sort': 'ASK'}, {'name': 'f_order_2'}, {'name': 'f_order_3', 'sort': 'DESC'}],
+                'group_by': ['f_group_1', 'f_group_2'],
+                'window': 100,
+                'using': {'x': 1, 'y': 'a'}
+            }
+        ], [
+            # '''
+            # CREATE AI table ai_table_name
+            # FROM integration (select * from table)
+            # USING model_name
+            # ''',
+            '''
+            CREATE AI table ai_table_name as (
+                SELECT
+                    a.col1,
+                    a.col2,
+                    a.col3,
+                    p.col3 as pred_col3
+                FROM integration_name.table_name as a
+                JOIN predictor_name as p
+            )
+            ''',
+            {
+                'ai_table_name': 'ai_table_name',
+                'integration_name': 'integration',
+                'select': 'select * from table',
+                'predictor_name': 'model_name'
+            }
+        ]]
+        for sql, result in tests:
+            statement = SqlStatementParser(sql)
+            struct = statement.struct
+            check_recursive(struct, result)
+            check_recursive(result, struct)
+
+    @staticmethod
     def test():
         tests = [
             [
@@ -454,4 +690,5 @@ class SqlStatementParser():
 
 
 if __name__ == "__main__":
+    SqlStatementParser.test_create()
     SqlStatementParser.test()

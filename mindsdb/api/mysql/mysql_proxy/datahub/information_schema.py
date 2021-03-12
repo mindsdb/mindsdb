@@ -1,5 +1,6 @@
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 
+
 class InformationSchema(DataNode):
     type = 'INFORMATION_SCHEMA'
 
@@ -7,7 +8,7 @@ class InformationSchema(DataNode):
 
     information_schema = {
         'SCHEMATA': ['schema_name', 'default_character_set_name', 'default_collation_name'],
-        'TABLES': ['table_schema', 'table_name', 'table_type'],
+        'TABLES': ['table_schema', 'table_name', 'table_type', 'table_rows'],
         'COLUMNS': ['table_schema', 'table_name', 'ordinal_position', 'column_name', 'data_type'],
         'EVENTS': ['event_schema', 'event_name'],
         'ROUTINES': ['routine_schema', 'specific_name', 'routine_type'],
@@ -67,17 +68,18 @@ class InformationSchema(DataNode):
             # query examples:
             # SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'information_schema' AND table_type in ('BASE TABLE', 'SYSTEM VIEW');
             # SELECT table_name as name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'information_schema' AND table_type = 'VIEW';
+            # TODO add real table rows
             tables = [
                 # at least this tables should be returned for GUI clients
-                {'table_name': 'SCHEMATA', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
-                {'table_name': 'TABLES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
-                {'table_name': 'EVENTS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
-                {'table_name': 'ROUTINES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
-                {'table_name': 'TRIGGERS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
+                {'table_name': 'SCHEMATA', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
+                {'table_name': 'TABLES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
+                {'table_name': 'EVENTS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
+                {'table_name': 'ROUTINES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
+                {'table_name': 'TRIGGERS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
             ]
             for dsName, ds in self.index.items():
                 t = ds.getTables()
-                tables += [{'table_name': x, 'table_schema': dsName, 'table_type': 'BASE TABLE'} for x in t]
+                tables += [{'table_name': x, 'table_schema': dsName, 'table_type': 'BASE TABLE', 'table_rows': []} for x in t]
 
             filtered_tables = tables
             if isinstance(where, dict) and 'table_schema' in where:

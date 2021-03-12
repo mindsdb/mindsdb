@@ -257,7 +257,7 @@ def run_environment(apis, override_config={}):
         return started
 
     async def wait_apis_start(ports):
-        futures = [wait_port_async(port, 60) for port in ports]
+        futures = [wait_port_async(port, 80) for port in ports]
         success = True
         for i, future in enumerate(asyncio.as_completed(futures)):
             success = success and await future

@@ -4,6 +4,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 from dateutil.parser import parse as parse_datetime
 import os
 import pickle
+from pathlib import Path
 
 from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -153,7 +154,8 @@ class ModelController():
         ]
         for model_name in predictor_names:
             try:
-                model_data = self.get_model_data(model_name, db_fix=False)
+                bin = self.get_model_data(model_name, db_fix=False)
+                model_data = pickle.loads(bin.data)
                 if model_data['status'] == 'training' and parse_datetime(model_data['created_at']) < parse_datetime(self.config['mindsdb_last_started_at']):
                     continue
 

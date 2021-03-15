@@ -254,6 +254,7 @@ def run_environment(apis, override_config={}):
         while (time.time() - start_time) < timeout and started is False:
             await asyncio.sleep(1)
             started = is_port_in_use(port)
+        await asyncio.sleep(5)
         return started
 
     async def wait_apis_start(ports):

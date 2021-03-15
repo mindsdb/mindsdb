@@ -12,7 +12,7 @@ ray_based = False
 class ModelInterface():
     def __init__(self):
         self.config = Config()
-        for _ in range(4):
+        for _ in range(10):
             try:
                 time.sleep(3)
                 self.proxy = xmlrpc.client.ServerProxy("http://localhost:17329/", allow_none=True)

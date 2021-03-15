@@ -2,7 +2,7 @@ import os
 import json
 
 import numpy as np
-from sqlalchemy import create_engine, orm, types
+from sqlalchemy import create_engine, orm, types, UniqueConstraint
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
@@ -64,8 +64,11 @@ class Semaphor(Base):
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    entity_type = Column(String)
-    entity_id = Column(String)
+    entity_type = Column('entity_type', String)
+    entity_id = Column('entity_id', String)
+    action = Column(String)
+    company_id = Column(Integer)
+    uniq_const = UniqueConstraint('entity_type', 'entity_id')
 
 
 class Configuration(Base):

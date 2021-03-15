@@ -167,9 +167,10 @@ def analyzing_thread(name, default_store):
 class Analyze(Resource):
     @ns_conf.doc('analyse_dataset')
     def get(self, name):
-        analysis = ca.default_store.get_analysis()
+        analysis = ca.default_store.get_analysis(name)
         if analysis is not None:
             return analysis['data'], 200
+
 
         ds = ca.default_store.get_datasource(name)
         if ds is None:
@@ -185,7 +186,7 @@ class Analyze(Resource):
 class Analyze(Resource):
     @ns_conf.doc('analyze_refresh_dataset')
     def get(self, name):
-        analysis = ca.default_store.get_analysis()
+        analysis = ca.default_store.get_analysis(name)
         if analysis is not None:
             return analysis['data'], 200
 

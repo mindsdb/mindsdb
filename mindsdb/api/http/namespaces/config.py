@@ -172,8 +172,8 @@ class Vars(Resource):
         if ca.config_obj.get('disable_mongo', False):
             mongo = False
 
-        if ca.config_obj.get('cloud', False):
-            cloud = False
+
+        cloud = ca.config_obj.get('cloud', False)
 
         return {'mongo': mongo, 'telemtry': telemtry, 'cloud': cloud}
 

@@ -11,7 +11,6 @@ import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.os_specific import get_mp_context
-from mindsdb.interfaces.model.model_controller import ray_based
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
@@ -53,13 +52,16 @@ if __name__ == '__main__':
     # Switch to this once the native interface has it's own thread :/
     # ctx = mp.get_context(get_mp_context())
     ctx = mp.get_context('spawn')
-    if not ray_based:
+    ray_based = True
+    if ray_based:
+        import ray
+        ray.init()
+        print('\n\n\n INITIALIZED RAY \n\n\n')
+    else:
         from mindsdb.interfaces.model.model_controller import start as start_model_controller
         rpc_proc = ctx.Process(target=start_model_controller,)
         rpc_proc.start()
-    else:
-        import ray
-        ray.init()
+
 
     from mindsdb.__about__ import __version__ as mindsdb_version
     print(f'Version {mindsdb_version}')
@@ -93,9 +95,7 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
-    log.info("Starting native RPC server!")
     mdb = NativeInterface()
-    log.info("Started native RPC server!")
     cst = CustomModels()
 
     model_data_arr = get_all_models_meta_data(mdb, cst)

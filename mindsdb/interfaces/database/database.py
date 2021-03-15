@@ -53,7 +53,8 @@ class DatabaseWrapper():
         if integration_name is None:
             integrations = self._get_integrations()
         else:
-            integrations = [self._get_integration(integration_name)]
+            integration = self._get_integration(integration_name)
+            integrations = [] if isinstance(integration, bool) else [integration]
 
         for integration in integrations:
             if integration.check_connection():

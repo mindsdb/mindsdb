@@ -38,6 +38,8 @@ class DataStore():
             semaphor_record = Semaphor(company_id=self.company_id, entity_id=datasource_record.id, entity_type='datasource', action='write')
             session.add(semaphor_record)
             session.commit()
+        else:
+            return
         try:
             try:
                 original_process_title = setproctitle.getproctitle()

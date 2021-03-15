@@ -169,7 +169,7 @@ class Analyze(Resource):
     def get(self, name):
         analysis = ca.default_store.get_analysis(name)
         if analysis is not None:
-            return analysis['data'], 200
+            return analysis, 200
 
 
         ds = ca.default_store.get_datasource(name)
@@ -188,7 +188,7 @@ class Analyze(Resource):
     def get(self, name):
         analysis = ca.default_store.get_analysis(name)
         if analysis is not None:
-            return analysis['data'], 200
+            return analysis, 200
 
         ds = ca.default_store.get_datasource(name)
         if ds is None:

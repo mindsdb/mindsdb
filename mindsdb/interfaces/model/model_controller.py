@@ -65,52 +65,20 @@ class ModelController():
         return predictor
 
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
-        from mindsdb.utilities.os_specific import get_mp_context
-        from mindsdb.interfaces.storage.db import session, Predictor
-        from mindsdb.interfaces.storage.fs import FsSotre
-        from mindsdb.utilities.config import Config
+        from mindsdb.interfaces.model.learn_process import LearnProcess
 
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-        from mindsdb.interfaces.storage.db import session, Predictor
+        join_learn_process = kwargs.get('join_learn_process', False)
+        if 'join_learn_process' in kwargs:
+            del kwargs['join_learn_process']
 
+        self._setup_for_creation(name)
 
-        mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
-
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
-        predictor_record.datasource_id = datasource_id
-        predictor_record.to_predict = to_predict
-        predictor_record.version = mindsdb_native.__version__
-        predictor_record.data = {
-            'name': name,
-            'status': 'training'
-        }
-        #predictor_record.datasource_id = ... <-- can be done once `learn` is passed a datasource name
-        session.commit()
-
-        to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
-        data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-
-        try:
-            mdb.learn(
-                from_data=data_source,
-                to_predict=to_predict,
-                **kwargs
-            )
-        except Exception:
-            pass
-
-        self.fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
-
-        model_data = mindsdb_native.F.get_model_data(name)
-
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
-        predictor_record.data = model_data
-        session.commit()
-
-        self.dbw.register_predictors([model_data])
+        p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id)
+        p.start()
+        if join_learn_process is True:
+            p.join()
+            if p.exitcode != 0:
+                raise Exception('Learning process failed !')
 
     def predict(self, name, when_data=None, kwargs={}):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS

@@ -169,12 +169,15 @@ class Vars(Resource):
         if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
             telemtry = False
 
-        mongo = True
         if ca.config_obj.get('disable_mongo', False):
             mongo = False
+        else:
+            mongo = True
 
         if ca.config_obj.get('cloud', False):
             cloud = False
+        else:
+            cloud = True
 
         return {'mongo': mongo, 'telemtry': telemtry, 'cloud': cloud}
 

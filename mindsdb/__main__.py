@@ -52,11 +52,10 @@ if __name__ == '__main__':
     # Switch to this once the native interface has it's own thread :/
     # ctx = mp.get_context(get_mp_context())
     ctx = mp.get_context('spawn')
-    ray_based = True
+    ray_based = False
     if ray_based:
         import ray
         ray.init()
-        print('\n\n\n INITIALIZED RAY \n\n\n')
     else:
         from mindsdb.interfaces.model.model_controller import start as start_model_controller
         rpc_proc = ctx.Process(target=start_model_controller,)

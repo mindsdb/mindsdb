@@ -6,7 +6,7 @@ import pickle
 
 import pandas as pd
 
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource, AITable

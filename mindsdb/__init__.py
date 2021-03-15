@@ -9,6 +9,7 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 
 try:
+    print(get_ipython())
     if not is_notebook():
         args = args_parse()
     else:

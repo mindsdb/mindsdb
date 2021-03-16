@@ -238,8 +238,6 @@ def run_environment(apis, override_config={}):
         f.write(json.dumps(config_json))
 
     os.environ['CHECK_FOR_UPDATES'] = '0'
-    os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
-    os.environ['MINDSDB_STORAGE_DIR'] = str(TEMP_DIR)
     sp = subprocess.Popen(
         ['python3', '-m', 'mindsdb', '--api', api_str, '--config', str(CONFIG_PATH), '--verbose'],
         close_fds=True,

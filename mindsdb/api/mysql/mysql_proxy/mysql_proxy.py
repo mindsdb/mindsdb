@@ -26,6 +26,7 @@ from collections import OrderedDict
 from functools import partial
 import select
 import base64
+import time
 
 import moz_sql_parser as sql_parser
 

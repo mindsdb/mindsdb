@@ -1,5 +1,6 @@
 import json
 import pandas
+import time
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
@@ -160,7 +161,6 @@ class MindsDBDataNode(DataNode):
                     where_data = [where_data]
             except Exception:
                 raise ValueError(f'''Error while parse 'when_data'="{where_data}"''')
-
         external_datasource = None
         if 'external_datasource' in where:
             external_datasource = where['external_datasource']['$eq']
@@ -197,10 +197,7 @@ class MindsDBDataNode(DataNode):
                 where_data += data
 
         new_where = {}
-        if where_data is not None:
-            pass
-            #where_data = pandas.DataFrame(where_data)
-        else:
+        if where_data is None:
             for key, value in where.items():
                 if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
                     # TODO value should be just string or number

@@ -8,6 +8,7 @@ from pathlib import Path
 import psutil
 import datetime
 from copy import deepcopy
+import time
 
 from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -108,7 +109,11 @@ class ModelController():
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
             data_source = getattr(mindsdb_datasources, when_data['class'])(*when_data['args'], **when_data['kwargs'])
         else:
-            data_source = pd.DataFrame(when_data)
+            # @TODO: Replace with Datasource
+            try:
+                data_source = pd.DataFrame(when_data)
+            except Exception as e:
+                data_source = when_data
 
         predictions = self.predictor_cache[name]['predictor'].predict(
             when_data=when_data,

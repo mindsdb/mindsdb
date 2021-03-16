@@ -83,13 +83,8 @@ if __name__ == '__main__':
             'started': False
         } for api in api_arr
     }
-
-
-    for api_name in apis.keys():
-        if api_name not in config['api']:
-            print(f"Trying run '{api_name}' API, but is no config for this api.")
-            print(f"Please, fill config['api']['{api_name}']")
-            sys.exit(0)
+    if not ray_based:
+        apis['rcp'] = {'process': rpc_proc, 'started': True}
 
     start_functions = {
         'http': start_http,
@@ -111,6 +106,8 @@ if __name__ == '__main__':
         log.error(f'Error failed to integrate with database aliased: {broken_name}')
 
     for api_name, api_data in apis.items():
+        if api_data['started']:
+            continue
         print(f'{api_name} API: starting...')
         try:
             if api_name == 'http':
@@ -123,9 +120,6 @@ if __name__ == '__main__':
             log.error(f'Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}')
             close_api_gracefully(apis)
             raise e
-
-    if not ray_based:
-        apis['rcp'] = {'process': rpc_proc}
 
     atexit.register(close_api_gracefully, apis=apis)
 

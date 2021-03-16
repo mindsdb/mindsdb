@@ -18,7 +18,22 @@ from mindsdb.utilities.log import log
 import pandas as pd
 import mindsdb_datasources
 
+try:
+    import ray
+    ray.init(ignore_reinit_error=True)
+    ray_based = True
+except Exception as e:
+    ray_based = False
 
+
+def if_ray_decorator(ray_based):
+    def decorator(func):
+        if not ray_based:
+            return func
+        return ray.remote(func)
+    return ray.remote
+
+@if_ray_decorator(ray_based)
 class ModelController():
     def __init__(self):
         self.config = Config()

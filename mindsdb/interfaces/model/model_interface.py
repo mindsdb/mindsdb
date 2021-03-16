@@ -10,7 +10,7 @@ from mindsdb.utilities.log import log
 try:
     import ray
     ray_based = True
-else:
+except:
     ray_based = False
 
 class ModelInterface():

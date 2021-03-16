@@ -89,7 +89,7 @@ class Responce(Responder):
                 _, ds_name = mindsdb_env['data_store'].save_datasource(
                     name=doc['name'],
                     source_type=connection,
-                    source=doc['select_data_query']
+                    source=dict(doc['select_data_query'])
                 )
             elif is_external_datasource:
                 ds_name = doc['external_datasource']
@@ -106,7 +106,7 @@ class Responce(Responder):
                     raise Exception(f"Column '{col}' not exists")
 
             datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=ds_name).first()
-            mindsdb_env['mindsdb_native'].learn(doc['name'], mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True), predict, datasource_record.id, kwargs)
+            mindsdb_env['mindsdb_native'].learn(doc['name'], mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True), predict, datasource_record.id, dict(kwargs))
 
         result = {
             "n": len(query['documents']),

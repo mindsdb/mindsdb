@@ -1,4 +1,5 @@
 from bson.int64 import Int64
+from collections import OrderedDict
 
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
@@ -75,6 +76,9 @@ class Responce(Responder):
                 if mindsdb_env['data_store'].get_datasource(ds_name) is None:
                     raise Exception(f"Datasource {ds_name} not exists")
                 datasource = mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True)
+
+            if isinstance(datasource, OrderedDict):
+                datasource = dict(datasource)
 
             prediction = mindsdb_env['mindsdb_native'].predict(table, 'dict&explain', when_data=datasource)
             if 'select_data_query' in where_data:

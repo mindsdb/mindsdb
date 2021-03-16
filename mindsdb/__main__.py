@@ -31,7 +31,7 @@ def close_api_gracefully(apis):
                 try:
                     os.kill(p, signal.SIGTERM)
                 except:
-                    os.kill(p.pid, signal.SIGTERM)
+                    p.kill()
             sys.stdout.flush()
             process.terminate()
             process.join()

@@ -23,13 +23,14 @@ class ModelInterface():
         raise Exception('Unable to connect to RPC server')
 
     def create(self, name):
-        return self.proxy.create(name)
+        self.proxy.create(name)
 
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
-        return self.proxy.learn(name, from_data, to_predict, datasource_id, kwargs)
+        self.proxy.learn(name, from_data, to_predict, datasource_id, kwargs)
 
     def predict(self, name, when_data=None, kwargs={}):
-        return self.proxy.predict(name, when_data, kwargs)
+        bin = self.proxy.predict(name, when_data, kwargs)
+        return pickle.loads(bin.data)
 
     def analyse_dataset(self, ds):
         bin = self.proxy.analyse_dataset(ds)
@@ -44,4 +45,4 @@ class ModelInterface():
         return pickle.loads(bin.data)
 
     def delete_model(self, name):
-        return self.proxy.delete_model(name)
+        self.proxy.delete_model(name)

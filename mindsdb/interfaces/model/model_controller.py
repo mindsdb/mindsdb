@@ -80,6 +80,7 @@ class ModelController():
             p.join()
             if p.exitcode != 0:
                 raise Exception('Learning process failed !')
+        return 0
 
     def predict(self, name, when_data=None, kwargs={}):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
@@ -105,6 +106,7 @@ class ModelController():
             when_data=when_data,
             **kwargs
         )
+        return xmlrpc.client.Binary(pickle.dumps(predictions))
 
     def analyse_dataset(self, ds):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
@@ -192,6 +194,7 @@ class ModelController():
         F.delete_model(name)
         self.dbw.unregister_predictor(name)
         self.fs_store.delete(f'predictor_{self.company_id}_{id}')
+        return 0
 
 def ping(): return True
 

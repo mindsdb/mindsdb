@@ -45,6 +45,7 @@ class Responce(Responder):
                         if key not in columns:
                             columns.append(key)
 
+            datasource = where_data
             if 'select_data_query' in where_data:
                 integrations = mindsdb_env['config']['integrations'].keys()
                 connection = where_data.get('connection')
@@ -67,16 +68,19 @@ class Responce(Responder):
                     source_type=connection,
                     source=where_data['select_data_query']
                 )
-                where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
-                mindsdb_env['data_store'].delete_datasource(ds_name)
+                datasource = mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True)
+
 
             if 'external_datasource' in where_data:
                 ds_name = where_data['external_datasource']
                 if mindsdb_env['data_store'].get_datasource(ds_name) is None:
                     raise Exception(f"Datasource {ds_name} not exists")
-                where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
+                datasource = mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True)
 
-            prediction = mindsdb_env['mindsdb_native'].predict(table, 'dict&explain', when_data=where_data)
+            prediction = mindsdb_env['mindsdb_native'].predict(table, 'dict&explain', when_data=datasource)
+            if 'select_data_query' in where_data:
+                mindsdb_env['data_store'].delete_datasource(ds_name)
+
             pred_dict_arr, explanations = prediction
 
             predicted_columns = model['predict']

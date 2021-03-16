@@ -6,7 +6,7 @@ from mindsdb.utilities.os_specific import get_mp_context
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.config import Config
-
+import mindsdb_datasources
 
 ctx = mp.get_context('spawn')
 
@@ -51,7 +51,7 @@ class LearnProcess(ctx.Process):
         session.commit()
 
         to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
-        data_source = getattr(mindsdb_native, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+        data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'], **from_data['kwargs'])
 
         try:
             mdb.learn(

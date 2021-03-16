@@ -199,10 +199,10 @@ class PredictorPredictFromDataSource(Resource):
         if is_custom(name):
             use_raw = True
 
-        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), use_raw=use_raw)
+        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=use_raw)
         if from_data is None:
             abort(400, 'No valid datasource given')
-            
+
         if is_custom(name):
             return ca.custom_models.predict(name, from_data=from_data, **kwargs)
 

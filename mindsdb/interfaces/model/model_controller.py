@@ -14,6 +14,9 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import log
+import pandas as pd
+import mindsdb_datasources
+
 
 class ModelController():
     def __init__(self):
@@ -89,7 +92,6 @@ class ModelController():
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
         from mindsdb.interfaces.storage.db import session, Predictor
-
         if name not in self.predictor_cache:
             # Clear the cache entirely if we have less than 1.2 GB left
             if psutil.virtual_memory().available < 1.2 * pow(10,9):
@@ -103,8 +105,10 @@ class ModelController():
                     'created': datetime.datetime.now()
                 }
 
-        if isinstance(when_data, dict) and 'kwargs' in when_data:
-            when_data = eval(when_data['class'])(*when_data['args'], **when_data['kwargs'])
+        if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
+            data_source = getattr(mindsdb_datasources, when_data['class'])(*when_data['args'], **when_data['kwargs'])
+        else:
+            data_source = pd.DataFrame(when_data)
 
         predictions = self.predictor_cache[name]['predictor'].predict(
             when_data=when_data,
@@ -115,14 +119,9 @@ class ModelController():
         elif pred_format == 'dict':
             predictions = [p.as_dict() for p in predictions]
         elif pred_format == 'dict&explain':
-            predictions = [[deepcopy(p.as_dict()) for p in predictions], [deepcopy(p.explain()) for p in predictions]]
+            predictions = [[p.as_dict() for p in predictions], [p.explain() for p in predictions]]
         else:
             raise Exception(f'Unkown predictions format: {pred_format}')
-
-        #print('\n\n\n')
-        #log.error(predictions)
-        #print(predictions)
-        #print('\n\n\n')
 
         return xmlrpc.client.Binary(pickle.dumps(predictions))
 

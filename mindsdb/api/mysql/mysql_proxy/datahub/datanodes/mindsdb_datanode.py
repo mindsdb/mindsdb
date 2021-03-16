@@ -122,7 +122,7 @@ class MindsDBDataNode(DataNode):
         predictor_name = aitable_record.predictor_name
 
         ds, ds_name = self.default_store.save_datasource('temp_ds', integration, {'query': query})
-        dso = self.default_store.get_datasource_obj(ds_name)
+        dso = self.default_store.get_datasource_obj(ds_name, raw=True)
         res = self.mindsdb_native.predict(predictor_name, 'dict', when_data=dso)
         self.default_store.delete_datasource(ds_name)
 
@@ -197,8 +197,10 @@ class MindsDBDataNode(DataNode):
                 where_data += data
 
         new_where = {}
+        print(where_data)
         if where_data is not None:
-            where_data = pandas.DataFrame(where_data)
+            pass
+            #where_data = pandas.DataFrame(where_data)
         else:
             for key, value in where.items():
                 if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
@@ -210,6 +212,9 @@ class MindsDBDataNode(DataNode):
                 return []
 
             where_data = [new_where]
+
+        print(where_data)
+        print(type(where_data))
 
         try:
             model = self.custom_models.get_model_data(name=table)

@@ -15,7 +15,7 @@ class ModelInterface():
         for _ in range(10):
             try:
                 time.sleep(3)
-                self.proxy = xmlrpc.client.ServerProxy("http://localhost:17329/", allow_none=True)
+                self.proxy = xmlrpc.client.ServerProxy("http://localhost:19329/", allow_none=True)
                 assert self.proxy.ping()
                 return
             except:

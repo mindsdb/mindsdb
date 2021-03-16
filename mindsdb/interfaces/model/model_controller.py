@@ -197,7 +197,7 @@ def ping(): return True
 
 def start():
     controller = ModelController()
-    server = SimpleXMLRPCServer(("localhost", 17329))
+    server = SimpleXMLRPCServer(("localhost", 19329))
 
     server.register_function(controller.create, "create")
     server.register_function(controller.learn, "learn")

@@ -197,7 +197,6 @@ class MindsDBDataNode(DataNode):
                 where_data += data
 
         new_where = {}
-        print(where_data)
         if where_data is not None:
             pass
             #where_data = pandas.DataFrame(where_data)
@@ -212,9 +211,6 @@ class MindsDBDataNode(DataNode):
                 return []
 
             where_data = [new_where]
-
-        print(where_data)
-        print(type(where_data))
 
         try:
             model = self.custom_models.get_model_data(name=table)

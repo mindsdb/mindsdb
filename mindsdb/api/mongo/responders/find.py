@@ -12,7 +12,6 @@ class Responce(Responder):
         model_names = [x['name'] for x in models]
         table = query['find']
         where_data = query.get('filter', {})
-        print(f'\n\n\nOperating on models: {models}\n\n\n')
         if table == 'predictors':
             data = [{
                 'name': x['name'],

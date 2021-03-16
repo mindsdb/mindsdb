@@ -191,12 +191,12 @@ class ModelController():
                             reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]).split('.')[0])
                         except Exception as e:
                             # @TODO Does this ever happen
-                            print(f'Date parsing exception while parsing: {k} in get_models: ', e)
+                            log.error(f'Date parsing exception while parsing: {k} in get_models: ', e)
                             reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]))
 
                 models.append(reduced_model_data)
             except Exception as e:
-                print(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
+                log.error(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
 
         return xmlrpc.client.Binary(pickle.dumps(models))
 

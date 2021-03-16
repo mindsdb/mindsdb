@@ -109,14 +109,14 @@ class ModelController():
             when_data=when_data,
             **kwargs
         )
-        if pred_format == 'explain':
-            predictions = [p.expalin() for p in predictions]
+        if pred_format == 'explain' or pred_format == 'new_explain':
+            predictions = [p.explain() for p in predictions]
         elif pred_format == 'dict':
             predictions = [p.as_dict() for p in predictions]
         elif pred_format == 'dict&explain':
-            predictions = ([p.as_dict() for p in predictions], [p.expalin() for p in predictions])
+            predictions = ([p.as_dict() for p in predictions], [p.explain() for p in predictions])
         else:
-            raise Exception('Unkown predictions format')
+            raise Exception(f'Unkown predictions format: {pred_format}')
 
         return xmlrpc.client.Binary(pickle.dumps(predictions))
 
@@ -140,6 +140,8 @@ class ModelController():
             try:
                 self.fs_store.get(name, f'predictor_{self.company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 new_model_data = mindsdb_native.F.get_model_data(name)
+                new_model_data['created_at'] = predictor_record.created_at
+                new_model_data['updated_at'] = predictor_record.updated_at
             except Exception:
                 new_model_data = None
 
@@ -163,8 +165,9 @@ class ModelController():
         from mindsdb.interfaces.storage.db import session, Predictor
 
         models = []
+        predictor_records = Predictor.query.filter_by(company_id=self.company_id, is_custom=False)
         predictor_names = [
-            x.name for x in Predictor.query.filter_by(company_id=self.company_id, is_custom=False)
+            x.name for x in predictor_records
         ]
         for model_name in predictor_names:
             try:

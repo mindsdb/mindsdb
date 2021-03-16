@@ -37,7 +37,7 @@ class ModelInterface():
         return pickle.loads(bin.data)
 
     def get_model_data(self, name, db_fix=True):
-        bin = self.proxy.analyse_dataset(name, db_fix)
+        bin = self.proxy.get_model_data(name, db_fix)
         return pickle.loads(bin.data)
 
     def get_models(self):

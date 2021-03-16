@@ -123,7 +123,7 @@ class MindsDBDataNode(DataNode):
 
         ds, ds_name = self.default_store.save_datasource('temp_ds', integration, {'query': query})
         dso = self.default_store.get_datasource_obj(ds_name)
-        res = self.mindsdb_native.predict(predictor_name, 'dict' when_data=dso)
+        res = self.mindsdb_native.predict(predictor_name, 'dict', when_data=dso)
         self.default_store.delete_datasource(ds_name)
 
         keys_map = {}
@@ -268,7 +268,7 @@ class MindsDBDataNode(DataNode):
 
             return data
         else:
-            pred_dicts, explanations = self.mindsdb_native.predict(name=table, 'dict&explain',when_data=where_data)
+            pred_dicts, explanations = self.mindsdb_native.predict(table, 'dict&explain',when_data=where_data)
 
             keys = [x for x in pred_dicts[0] if x in columns]
             min_max_keys = []

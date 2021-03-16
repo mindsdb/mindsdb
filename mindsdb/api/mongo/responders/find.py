@@ -76,7 +76,7 @@ class Responce(Responder):
                     raise Exception(f"Datasource {ds_name} not exists")
                 where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
 
-            prediction = mindsdb_env['mindsdb_native'].predict(name=table, 'dict&explain' when_data=where_data)
+            prediction = mindsdb_env['mindsdb_native'].predict(table, 'dict&explain', when_data=where_data)
             pred_dict_arr, explanations = prediction
 
             predicted_columns = model['predict']

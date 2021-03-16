@@ -159,7 +159,7 @@ class ModelController():
         ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
         analysis =  F.analyse_dataset(ds)
         if ray_based:
-            return ds
+            return analysis
         return xmlrpc.client.Binary(pickle.dumps(analysis))
 
     def get_model_data(self, name, db_fix=True):
@@ -208,7 +208,7 @@ class ModelController():
         ]
         for model_name in predictor_names:
             try:
-                if ray_based
+                if ray_based:
                     model_data = self.get_model_data(model_name, db_fix=False)
                 else:
                     bin = self.get_model_data(model_name, db_fix=False)

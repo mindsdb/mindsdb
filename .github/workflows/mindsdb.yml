@@ -85,7 +85,7 @@ jobs:
 
           # Cutsom model
           # echo -e "\n===============\ntest Cutsom model\n===============\n"
-          python tests/integration_tests/flows/test_custom_model.py
+          # python tests/integration_tests/flows/test_custom_model.py
 
 
           # user flow 1

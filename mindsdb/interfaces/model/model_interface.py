@@ -7,7 +7,11 @@ import pickle
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import log
 
-ray_based = False
+try:
+    import ray
+    ray_based = True
+else:
+    ray_based = False
 
 class ModelInterface():
     def __init__(self):

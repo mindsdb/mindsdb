@@ -12,6 +12,7 @@ import torch.multiprocessing as mp
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.os_specific import get_mp_context
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ray_based
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
@@ -55,7 +56,6 @@ if __name__ == '__main__':
     # Switch to this once the native interface has it's own thread :/
     # ctx = mp.get_context(get_mp_context())
     ctx = mp.get_context('spawn')
-    ray_based = False
     if ray_based:
         import ray
         ray.init()

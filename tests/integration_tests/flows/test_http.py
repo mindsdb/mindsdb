@@ -175,24 +175,10 @@ class HTTPTest(unittest.TestCase):
         """
         Call utilities ping endpoint
         THEN check the response is success
-
-        Call utilities report_uuid endpoint
-        THEN check the response is success
-        THEN check if the report_uuid is present in the report json and well fromated
-        THEN Call the endpoint again and check that the two report_uuids returned match
         """
 
         response = requests.get(f'{root}/util/ping')
         assert response.status_code == 200
-
-        response = requests.get(f'{root}/util/report_uuid')
-        assert response.status_code == 200
-        report_uuid = response.json()['report_uuid']
-        assert report_uuid == 'no_report'
-
-        # Make sure the uuid doesn't change on subsequent requests
-        response = requests.get(f'{root}/util/report_uuid')
-        assert report_uuid == response.json()['report_uuid']
 
     def test_7_predictors(self):
         """

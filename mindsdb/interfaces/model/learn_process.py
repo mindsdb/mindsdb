@@ -11,6 +11,50 @@ import mindsdb_datasources
 ctx = mp.get_context('spawn')
 
 
+def run_learn(name, from_data, to_predict, kwargs, datasource_id):
+    import mindsdb_native
+    
+    config = Config()
+    fs_store = FsSotre()
+
+    company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+    name, from_data, to_predict, kwargs, datasource_id = self._args
+
+    mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
+
+    predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
+    predictor_record.datasource_id = datasource_id
+    predictor_record.to_predict = to_predict
+    predictor_record.version = mindsdb_native.__version__
+    predictor_record.data = {
+        'name': name,
+        'status': 'training'
+    }
+    #predictor_record.datasource_id = ... <-- can be done once `learn` is passed a datasource name
+    session.commit()
+
+    to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
+    data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+
+    try:
+        mdb.learn(
+            from_data=data_source,
+            to_predict=to_predict,
+            **kwargs
+        )
+    except Exception:
+        pass
+
+    fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
+
+    model_data = mindsdb_native.F.get_model_data(name)
+
+    predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
+    predictor_record.data = model_data
+    session.commit()
+
+    DatabaseWrapper().register_predictors([model_data])
+
 class LearnProcess(ctx.Process):
     daemon = True
 
@@ -24,7 +68,6 @@ class LearnProcess(ctx.Process):
 
         this is work for celery worker here?
         '''
-        import mindsdb_native
         import setproctitle
 
         try:
@@ -32,42 +75,5 @@ class LearnProcess(ctx.Process):
         except Exception:
             pass
 
-        config = Config()
-        fs_store = FsSotre()
-        company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         name, from_data, to_predict, kwargs, datasource_id = self._args
-
-        mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
-
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
-        predictor_record.datasource_id = datasource_id
-        predictor_record.to_predict = to_predict
-        predictor_record.version = mindsdb_native.__version__
-        predictor_record.data = {
-            'name': name,
-            'status': 'training'
-        }
-        #predictor_record.datasource_id = ... <-- can be done once `learn` is passed a datasource name
-        session.commit()
-
-        to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
-        data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-
-        try:
-            mdb.learn(
-                from_data=data_source,
-                to_predict=to_predict,
-                **kwargs
-            )
-        except Exception:
-            pass
-
-        fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
-
-        model_data = mindsdb_native.F.get_model_data(name)
-
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
-        predictor_record.data = model_data
-        session.commit()
-
-        DatabaseWrapper().register_predictors([model_data])
+        run_learn(name, from_data, to_predict, kwargs, datasource_id)

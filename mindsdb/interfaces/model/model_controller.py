@@ -88,7 +88,7 @@ class ModelController():
         return predictor
 
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
-        from mindsdb.interfaces.model.learn_process import LearnProcess
+        from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
 
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
@@ -96,12 +96,15 @@ class ModelController():
 
         self._setup_for_creation(name)
 
-        p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id)
-        p.start()
-        if join_learn_process is True:
-            p.join()
-            if p.exitcode != 0:
-                raise Exception('Learning process failed !')
+        if ray_based:
+            run_learn(name, from_data, to_predict, kwargs, datasource_id)
+        else:
+            p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id)
+            p.start()
+            if join_learn_process is True:
+                p.join()
+                if p.exitcode != 0:
+                    raise Exception('Learning process failed !')
         return 0
 
     def predict(self, name, pred_format, when_data=None, kwargs={}):
@@ -143,6 +146,8 @@ class ModelController():
         else:
             raise Exception(f'Unkown predictions format: {pred_format}')
 
+        if ray_based:
+            return predictions
         return xmlrpc.client.Binary(pickle.dumps(predictions))
 
     def analyse_dataset(self, ds):
@@ -151,6 +156,8 @@ class ModelController():
 
         ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
         analysis =  F.analyse_dataset(ds)
+        if ray_based:
+            return ds
         return xmlrpc.client.Binary(pickle.dumps(analysis))
 
     def get_model_data(self, name, db_fix=True):
@@ -185,6 +192,8 @@ class ModelController():
 
         model['created_at'] = predictor_record.created_at
         model['updated_at'] = predictor_record.updated_at
+        if ray_based:
+            return model
         return xmlrpc.client.Binary(pickle.dumps(model))
 
     def get_models(self):
@@ -218,6 +227,8 @@ class ModelController():
             except Exception as e:
                 log.error(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
 
+        if ray_based:
+            return models
         return xmlrpc.client.Binary(pickle.dumps(models))
 
     def delete_model(self, name):

@@ -2,7 +2,6 @@ import time
 import json
 from threading import Thread
 import walrus
-# from flask import current_app as ca
 from mindsdb.utilities.log import log
 from mindsdb_native import Predictor
 
@@ -20,31 +19,29 @@ class RedisStream(Thread):
 
     def _get_client(self):
         return walrus.Database(host=self.host, port=self.port, db=self.db)
-    
+
     def make_prediction(self):
         predictor = Predictor(self.predictor_name)
         while True:
             time.sleep(10)
             predict_info = self.stream_in.read()
-            log.error("got predict request(s): %s" % predict_info)
+            # log.error("got predict request(s): %s" % predict_info)
             for record in predict_info:
-                # log.error("handling predict request: %s" % record)
+                record_id = record[0]
                 raw_when_data = record[1]
-                log.error("raw when_data: %s" % raw_when_data)
+                # log.error("raw when_data: %s" % raw_when_data)
                 when_data = self.decode(raw_when_data)
-                log.error("when_data: %s" % when_data)
+                # log.error("when_data: %s" % when_data)
 
                 # result = ca.mindsdb_native.predict(self.predictor_name, when_data=when_data)
                 result = predictor.predict(when_data=when_data)
-                log.error("when_data: %s\tprediction: %s" % (when_data, result))
-                # encoded_res = self.encode(result)
-                # log.error("encoded_res: %s" % encoded_res)
+                # log.error("when_data: %s\tprediction: %s" % (when_data, result))
                 for res in result:
-                    log.error("explainded: %s" % res.explain())
+                    # log.error("explainded: %s" % res.explain())
                     in_json = json.dumps(res.explain())
-                    log.error("json converted: %s" % in_json)
+                    # log.error("json converted: %s" % in_json)
                     self.stream_out.add({"prediction": in_json})
-                # self.stream_out.add(encoded_res)
+                self.stream_in.delete(record_id)
 
     def decode(self, redis_data):
         decoded = {}

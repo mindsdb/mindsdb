@@ -96,7 +96,7 @@ class Integration(Resource):
                 del params['enabled']
             ca.config_obj.add_db_integration(name, params)
 
-            mdb = ca.mindsdb_native
+            mdb = ca.naitve_interface
             cst = ca.custom_models
             model_data_arr = get_all_models_meta_data(mdb, cst)
             ca.dbw.setup_integration(name)

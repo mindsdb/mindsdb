@@ -7,6 +7,7 @@ import pickle
 from pathlib import Path
 import psutil
 import datetime
+from copy import deepcopy
 
 from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -114,11 +115,14 @@ class ModelController():
         elif pred_format == 'dict':
             predictions = [p.as_dict() for p in predictions]
         elif pred_format == 'dict&explain':
-            print([p.as_dict() for p in predictions])
-            print([p.explain() for p in predictions])
-            predictions = [[p.as_dict() for p in predictions], [p.explain() for p in predictions]]
+            predictions = [[deepcopy(p.as_dict()) for p in predictions], [deepcopy(p.explain()) for p in predictions]]
         else:
             raise Exception(f'Unkown predictions format: {pred_format}')
+
+        print('\n\n\n')
+        log.error(predictions)
+        print(predictions)
+        print('\n\n\n')
 
         return xmlrpc.client.Binary(pickle.dumps(predictions))
 

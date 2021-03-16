@@ -252,7 +252,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 def initialize_interfaces(app):
     app.default_store = DataStore()
-    app.mindsdb_native = NativeInterface()
+    app.naitve_interface = NativeInterface()
     app.custom_models = CustomModels()
     app.dbw = DatabaseWrapper()
     config = Config()

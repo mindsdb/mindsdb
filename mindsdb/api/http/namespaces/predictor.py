@@ -19,23 +19,6 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
 )
 from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
 
-def preparse_results(results, format_flag='explain'):
-    response_arr = []
-    for res in results:
-        if format_flag == 'explain':
-            response_arr.append(res.explain())
-        elif format_flag == 'epitomize':
-            response_arr.append(res.epitomize())
-        elif format_flag == 'new_explain':
-            response_arr.append(res.explanation)
-        else:
-            response_arr.append(res.explain())
-
-    if len(response_arr) > 0:
-        return response_arr
-    else:
-        abort(400, "")
-
 def is_custom(name):
     if name in [x['name'] for x in ca.custom_models.get_models()]:
         return True
@@ -190,29 +173,17 @@ class PredictorPredict(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
         '''Queries predictor'''
-
         data = request.json
-
-        when = data.get('when') or {}
-        try:
-            format_flag = data.get('format_flag')
-        except:
-            format_flag = 'explain'
-
-        try:
-            kwargs = data.get('kwargs')
-        except:
-            kwargs = {}
-
-        if type(kwargs) != type({}):
-            kwargs = {}
+        when = data.get('when', {})
+        format_flag = data.get('format_flag', 'explain')
+        kwargs = data.get('kwargs', {})
 
         if is_custom(name):
             return ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
-            results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
+            results = ca.mindsdb_native.predict(name, format_flag, when_data=when, **kwargs)
 
-        return preparse_results(results, format_flag)
+        return results
 
 
 @ns_conf.route('/<name>/predict_datasource')
@@ -221,6 +192,8 @@ class PredictorPredictFromDataSource(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
         data = request.json
+        format_flag = data.get('format_flag', 'explain')
+        kwargs = data.get('kwargs', {})
 
         use_raw = False
         if is_custom(name):
@@ -229,25 +202,12 @@ class PredictorPredictFromDataSource(Resource):
         from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), use_raw=use_raw)
         if from_data is None:
             abort(400, 'No valid datasource given')
-
-        try:
-            format_flag = data.get('format_flag')
-        except Exception:
-            format_flag = 'explain'
-
-        try:
-            kwargs = data.get('kwargs')
-        except Exception:
-            kwargs = {}
-
-        if not isinstance(kwargs, dict):
-            kwargs = {}
-
+            
         if is_custom(name):
             return ca.custom_models.predict(name, from_data=from_data, **kwargs)
 
-        results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
-        return preparse_results(results, format_flag)
+        results = ca.mindsdb_native.predict(name, format_flag, when_data=from_data, **kwargs)
+        return results
 
 @ns_conf.route('/<name>/rename')
 @ns_conf.param('name', 'The predictor identifier')

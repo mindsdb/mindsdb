@@ -76,23 +76,23 @@ class Responce(Responder):
                     raise Exception(f"Datasource {ds_name} not exists")
                 where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
 
-            prediction = mindsdb_env['mindsdb_native'].predict(name=table, when_data=where_data)
+            prediction = mindsdb_env['mindsdb_native'].predict(name=table, 'dict&explain' when_data=where_data)
+            pred_dict_arr, explanations = prediction
 
             predicted_columns = model['predict']
 
             data = []
-            keys = [x for x in list(prediction._data.keys()) if x in columns]
+            keys = [k for k in pred_dict_arr[0] if k in columns]
             min_max_keys = []
             for col in predicted_columns:
                 if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                     min_max_keys.append(col)
 
-            length = len(prediction._data[predicted_columns[0]])
-            for i in range(length):
+            for i in range(len(pred_dict_arr)):
                 row = {}
-                explanation = prediction[i].explain()
+                explanation = explanations[i]
                 for key in keys:
-                    row[key] = prediction._data[key][i]
+                    row[key] = pred_dict_arr[i][key]
 
                 for key in predicted_columns:
                     row[key + '_confidence'] = explanation[key]['confidence']

@@ -28,8 +28,8 @@ class ModelInterface():
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
         self.proxy.learn(name, from_data, to_predict, datasource_id, kwargs)
 
-    def predict(self, name, when_data=None, kwargs={}):
-        bin = self.proxy.predict(name, when_data, kwargs)
+    def predict(self, name, pred_format, when_data=None, kwargs={}):
+        bin = self.proxy.predict(name, pred_format, when_data, kwargs)
         return pickle.loads(bin.data)
 
     def analyse_dataset(self, ds):

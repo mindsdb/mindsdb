@@ -5,6 +5,8 @@ from dateutil.parser import parse as parse_datetime
 import os
 import pickle
 from pathlib import Path
+import psutil
+import datetime
 
 from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -82,9 +84,10 @@ class ModelController():
                 raise Exception('Learning process failed !')
         return 0
 
-    def predict(self, name, when_data=None, kwargs={}):
+    def predict(self, name, pred_format, when_data=None, kwargs={}):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
+        from mindsdb.interfaces.storage.db import session, Predictor
 
         if name not in self.predictor_cache:
             # Clear the cache entirely if we have less than 1.2 GB left
@@ -106,6 +109,15 @@ class ModelController():
             when_data=when_data,
             **kwargs
         )
+        if pred_format == 'explain':
+            predictions = [p.expalin() for p in predictions]
+        elif pred_format == 'dict':
+            predictions = [p.as_dict() for p in predictions]
+        elif pred_format == 'dict&explain':
+            predictions = ([p.as_dict() for p in predictions], [p.expalin() for p in predictions])
+        else:
+            raise Exception('Unkown predictions format')
+
         return xmlrpc.client.Binary(pickle.dumps(predictions))
 
     def analyse_dataset(self, ds):

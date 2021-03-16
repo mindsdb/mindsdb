@@ -33,6 +33,16 @@ class PingNative(Resource):
                 return {'native_process': True}
         return {'native_process': False}
 
+
+@ns_conf.route('/report_uuid')
+class ReportUUID(Resource):
+    @ns_conf.doc('get_report_uuid')
+    def get(self):
+        return {
+            'report_uuid': 'deprecated'
+        }
+
+
 @ns_conf.route('/telemetry')
 class Telemetry(Resource):
     @ns_conf.doc('get_telemetry_status')

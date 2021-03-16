@@ -114,7 +114,9 @@ class ModelController():
         elif pred_format == 'dict':
             predictions = [p.as_dict() for p in predictions]
         elif pred_format == 'dict&explain':
-            predictions = ([p.as_dict() for p in predictions], [p.explain() for p in predictions])
+            print([p.as_dict() for p in predictions])
+            print([p.explain() for p in predictions])
+            predictions = [[p.as_dict() for p in predictions], [p.explain() for p in predictions]]
         else:
             raise Exception(f'Unkown predictions format: {pred_format}')
 
@@ -160,7 +162,6 @@ class ModelController():
 
         model['created_at'] = predictor_record.created_at
         model['updated_at'] = predictor_record.updated_at
-        print('\n\n\n', model['created_at'], model['updated_at'], '\n\n\n')
         return xmlrpc.client.Binary(pickle.dumps(model))
 
     def get_models(self):

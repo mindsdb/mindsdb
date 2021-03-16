@@ -22,7 +22,7 @@ class ModelInterface():
             try:
                 self.controller = ray.get_actor("ModeControllerActor")
             except:
-                self.controller = ModelController.option(name='ModeControllerActor').remote()
+                self.controller = ModelController.options(name='ModeControllerActor').remote()
 
         else:
             for _ in range(10):
@@ -37,7 +37,7 @@ class ModelInterface():
 
     def create(self, name):
         if ray_based:
-            self.controller.create(name)
+            self.controller.create.remote(name)
         else:
             self.proxy.create(name)
 
@@ -52,7 +52,7 @@ class ModelInterface():
 
     def predict(self, name, pred_format, when_data=None, kwargs={}):
         if ray_based:
-            fut = self.controller.predict(name, pred_format, when_data, kwargs)
+            fut = self.controller.predict.remote(name, pred_format, when_data, kwargs)
             return ray.get(fut)
         else:
             bin = self.proxy.predict(name, pred_format, when_data, kwargs)
@@ -60,7 +60,7 @@ class ModelInterface():
 
     def analyse_dataset(self, ds):
         if ray_based:
-            fut = self.controller.analyse_dataset(ds)
+            fut = self.controller.analyse_dataset.remote(ds)
             return ray.get(fut)
         else:
             bin = self.proxy.analyse_dataset(ds)
@@ -68,7 +68,7 @@ class ModelInterface():
 
     def get_model_data(self, name, db_fix=True):
         if ray_based:
-            fut = self.controller.get_model_data(name, db_fix)
+            fut = self.controller.get_model_data.remote(name, db_fix)
             return ray.get(fut)
         else:
             bin = self.proxy.get_model_data(name, db_fix)
@@ -76,7 +76,7 @@ class ModelInterface():
 
     def get_models(self):
         if ray_based:
-            fut = self.controller.get_models()
+            fut = self.controller.get_models.remote()
             return ray.get(fut)
         else:
             bin = self.proxy.get_models()
@@ -84,7 +84,7 @@ class ModelInterface():
 
     def delete_model(self, name):
         if ray_based:
-            fut = self.controller.delete_model(name)
+            fut = self.controller.delete_model.remote(name)
             ray.get(fut)
         else:
             self.proxy.delete_model(name)

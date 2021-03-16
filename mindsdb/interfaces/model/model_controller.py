@@ -25,15 +25,17 @@ try:
 except Exception as e:
     ray_based = False
 
-
-def if_ray_decorator(ray_based):
-    def decorator(func):
-        if not ray_based:
+if ray_based:
+    def if_ray_decorator():
+        def decorator(func):
+            return ray.remote(func)
+        return ray.remote
+else:
+    def if_ray_decorator():
+        def decorator(func):
             return func
-        return ray.remote(func)
-    return ray.remote
 
-@if_ray_decorator(ray_based)
+@if_ray_decorator()
 class ModelController():
     def __init__(self):
         self.config = Config()

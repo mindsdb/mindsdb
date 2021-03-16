@@ -238,7 +238,7 @@ def run_environment(apis, override_config={}):
         f.write(json.dumps(config_json))
 
     os.environ['CHECK_FOR_UPDATES'] = '0'
-    print('STARTING mindsdb proc')
+    print('Starting mindsdb process!')
     sp = subprocess.Popen(
         ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={CONFIG_PATH}', '--verbose'],
         close_fds=True,

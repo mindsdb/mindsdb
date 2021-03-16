@@ -208,8 +208,11 @@ class ModelController():
         ]
         for model_name in predictor_names:
             try:
-                bin = self.get_model_data(model_name, db_fix=False)
-                model_data = pickle.loads(bin.data)
+                if ray_based
+                    model_data = self.get_model_data(model_name, db_fix=False)
+                else:
+                    bin = self.get_model_data(model_name, db_fix=False)
+                    model_data = pickle.loads(bin.data)
                 reduced_model_data = {}
 
                 for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source']:

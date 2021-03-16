@@ -238,14 +238,16 @@ def run_environment(apis, override_config={}):
         f.write(json.dumps(config_json))
 
     os.environ['CHECK_FOR_UPDATES'] = '0'
+    print('STARTING mindsdb proc')
     sp = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', str(CONFIG_PATH), '--verbose'],
+        ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={CONFIG_PATH}', '--verbose'],
         close_fds=True,
         stdout=OUTPUT,
         stderr=OUTPUT
     )
     atexit.register(stop_mindsdb, sp=sp)
 
+    print('Waiting on ports!')
     async def wait_port_async(port, timeout):
         start_time = time.time()
         started = is_port_in_use(port)
@@ -259,7 +261,7 @@ def run_environment(apis, override_config={}):
         success = True
         for i, future in enumerate(asyncio.as_completed(futures)):
             success = success and await future
-        await asyncio.sleep(40)
+        await asyncio.sleep(4)
         return success
 
     ports_to_wait = [config_json['api'][api]['port'] for api in apis]
@@ -271,6 +273,7 @@ def run_environment(apis, override_config={}):
     ioloop.close()
     if not success:
         raise Exception('Cant start mindsdb apis')
+    print('Done waiting, mindsdb has started!')
 
 
 def condition_dict_to_str(condition):

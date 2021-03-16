@@ -8,8 +8,9 @@ from mindsdb.utilities.functions import args_parse, is_notebook
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 
+print('\n\n\n', sys.argv, '\n\n\n')
+
 try:
-    print(get_ipython())
     if not is_notebook():
         args = args_parse()
     else:
@@ -46,6 +47,7 @@ if args is not None and args.version:
 
 # --- MODULE OR LIBRARY IMPORT MODE ----
 
+print('\n\n\n',args,'\n\n\n')
 if args is not None and args.config is not None:
     config_path = args.config
     with open(config_path, 'r') as fp:

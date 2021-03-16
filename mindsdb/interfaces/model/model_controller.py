@@ -119,10 +119,10 @@ class ModelController():
         else:
             raise Exception(f'Unkown predictions format: {pred_format}')
 
-        print('\n\n\n')
-        log.error(predictions)
-        print(predictions)
-        print('\n\n\n')
+        #print('\n\n\n')
+        #log.error(predictions)
+        #print(predictions)
+        #print('\n\n\n')
 
         return xmlrpc.client.Binary(pickle.dumps(predictions))
 

@@ -140,8 +140,6 @@ class ModelController():
             try:
                 self.fs_store.get(name, f'predictor_{self.company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 new_model_data = mindsdb_native.F.get_model_data(name)
-                new_model_data['created_at'] = predictor_record.created_at
-                new_model_data['updated_at'] = predictor_record.updated_at
             except Exception:
                 new_model_data = None
 
@@ -159,6 +157,10 @@ class ModelController():
                     data_analysis[column]['typing'] = {
                         'data_subtype': DATA_SUBTYPES.INT
                     }
+
+        model['created_at'] = predictor_record.created_at
+        model['updated_at'] = predictor_record.updated_at
+        print('\n\n\n', model['created_at'], model['updated_at'], '\n\n\n')
         return xmlrpc.client.Binary(pickle.dumps(model))
 
     def get_models(self):
@@ -173,9 +175,6 @@ class ModelController():
             try:
                 bin = self.get_model_data(model_name, db_fix=False)
                 model_data = pickle.loads(bin.data)
-                if model_data['status'] == 'training' and parse_datetime(model_data['created_at']) < parse_datetime(self.config['mindsdb_last_started_at']):
-                    continue
-
                 reduced_model_data = {}
 
                 for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source']:

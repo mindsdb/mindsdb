@@ -25,17 +25,6 @@ try:
 except Exception as e:
     ray_based = False
 
-if ray_based:
-    def if_ray_decorator():
-        def decorator(func):
-            return ray.remote(func)
-        return ray.remote
-else:
-    def if_ray_decorator():
-        def decorator(func):
-            return func
-
-@if_ray_decorator()
 class ModelController():
     def __init__(self):
         self.config = Config()
@@ -249,6 +238,11 @@ class ModelController():
         self.dbw.unregister_predictor(name)
         self.fs_store.delete(f'predictor_{self.company_id}_{id}')
         return 0
+
+
+if ray_based:
+    ModelController = ray.remote(ModelController)
+    
 
 def ping(): return True
 

@@ -293,9 +293,11 @@ class DataStore():
 
         except Exception as e:
             log.error(f'{e}')
-            if datasource_record.id is not None:
+            try:
                 self.delete_datasource(name)
-            raise
+            except:
+                pass
+            raise e
 
         return self.get_datasource_obj(name, raw=True), name
 

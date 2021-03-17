@@ -1,18 +1,21 @@
 import os
 import torch.multiprocessing as mp
 
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.os_specific import get_mp_context
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.config import Config
-import mindsdb_datasources
+
 
 ctx = mp.get_context('spawn')
 
 
 def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     import mindsdb_native
+    import mindsdb_datasources
+    import mindsdb
 
     config = Config()
     fs_store = FsSotre()
@@ -24,7 +27,8 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
     predictor_record.datasource_id = datasource_id
     predictor_record.to_predict = to_predict
-    predictor_record.version = mindsdb_native.__version__
+    predictor_record.native_version = mindsdb_native.__version__
+    predictor_record.mindsdb_version = mindsdb_version
     predictor_record.data = {
         'name': name,
         'status': 'training'

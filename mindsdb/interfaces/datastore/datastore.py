@@ -5,6 +5,8 @@ import os
 import setproctitle
 import pandas as pd
 
+import mindsdb_datasources
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
 from mindsdb.utilities.config import Config
@@ -132,7 +134,9 @@ class DataStore():
         try:
             datasource_record = Datasource(
                 company_id=self.company_id,
-                name=name
+                name=name,
+                datasources_version = mindsdb_datasources.__version__,
+                mindsdb_version = mindsdb_version
             )
             session.add(datasource_record)
             session.commit()

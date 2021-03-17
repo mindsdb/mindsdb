@@ -92,7 +92,8 @@ class Datasource(Base):
     creation_info = Column(String)
     analysis = Column(String)  # A JSON
     company_id = Column(Integer)
-    version = Column(String)
+    mindsdb_version = Column(String)
+    datasources_version = Column(String)
     integration_id = Column(Integer)
 
 
@@ -106,7 +107,8 @@ class Predictor(Base):
     data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
     company_id = Column(Integer)
-    version = Column(String)
+    mindsdb_version = Column(String)
+    native_version = Column(String)
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
     is_custom = Column(Boolean)
 

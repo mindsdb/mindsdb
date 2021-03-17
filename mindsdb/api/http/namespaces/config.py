@@ -170,16 +170,9 @@ class Vars(Resource):
             mongo = False
         else:
             mongo = True
-
-<<<<<<< HEAD
-
+            
         cloud = ca.config_obj.get('cloud', False)
-=======
-        if ca.config_obj.get('cloud', False):
-            cloud = False
-        else:
-            cloud = True
->>>>>>> staging
+
 
         return {'mongo': mongo, 'telemtry': telemtry, 'cloud': cloud}
 

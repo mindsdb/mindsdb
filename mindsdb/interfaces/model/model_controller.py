@@ -28,7 +28,7 @@ class ModelController():
         self.predictor_cache = {}
         self.ray_based = ray_based
 
-    def _pack(self):
+    def _pack(self, obj):
             if self.ray_based:
                 return obj
             return xmlrpc.client.Binary(pickle.dumps(obj))

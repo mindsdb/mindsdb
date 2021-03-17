@@ -25,6 +25,11 @@ try:
 except Exception as e:
     ray_based = False
 
+def _pack(obj):
+        if ray_based:
+            return obj
+        return xmlrpc.client.Binary(pickle.dumps(obj))
+
 class ModelController():
     def __init__(self):
         self.config = Config()
@@ -137,9 +142,7 @@ class ModelController():
         else:
             raise Exception(f'Unkown predictions format: {pred_format}')
 
-        if ray_based:
-            return predictions
-        return xmlrpc.client.Binary(pickle.dumps(predictions))
+        return _pack(predictions)
 
     def analyse_dataset(self, ds):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
@@ -147,9 +150,7 @@ class ModelController():
 
         ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
         analysis =  F.analyse_dataset(ds)
-        if ray_based:
-            return analysis
-        return xmlrpc.client.Binary(pickle.dumps(analysis))
+        return _pack(analysis)
 
     def get_model_data(self, name, db_fix=True):
         from mindsdb_native import F
@@ -183,9 +184,7 @@ class ModelController():
 
         model['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
         model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
-        if ray_based:
-            return model
-        return xmlrpc.client.Binary(pickle.dumps(model))
+        return _pack(model)
 
     def get_models(self):
         from mindsdb.interfaces.storage.db import session, Predictor
@@ -220,10 +219,7 @@ class ModelController():
                 models.append(reduced_model_data)
             except Exception as e:
                 log.error(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
-
-        if ray_based:
-            return models
-        return xmlrpc.client.Binary(pickle.dumps(models))
+        return _pack(models)
 
     def delete_model(self, name):
         from mindsdb_native import F
@@ -242,7 +238,7 @@ class ModelController():
 
 if ray_based:
     ModelController = ray.remote(ModelController)
-    
+
 
 def ping(): return True
 

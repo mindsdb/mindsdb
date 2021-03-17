@@ -47,6 +47,7 @@ class ModelInterface():
             fut = self.controller.learn.remote(name, from_data, to_predict, datasource_id, kwargs)
             if join_learn_process:
                 ray.get(fut)
+            ray.get(fut)
         else:
             self.proxy.learn(name, from_data, to_predict, datasource_id, kwargs)
 

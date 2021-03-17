@@ -13,12 +13,11 @@ ctx = mp.get_context('spawn')
 
 def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     import mindsdb_native
-    
+
     config = Config()
     fs_store = FsSotre()
 
     company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-    name, from_data, to_predict, kwargs, datasource_id = self._args
 
     mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 

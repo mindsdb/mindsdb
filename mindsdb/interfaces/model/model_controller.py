@@ -192,8 +192,8 @@ class ModelController():
                         'data_subtype': DATA_SUBTYPES.INT
                     }
 
-        model['created_at'] = predictor_record.created_at
-        model['updated_at'] = predictor_record.updated_at
+        model['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
+        model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
         if ray_based:
             return model
         return xmlrpc.client.Binary(pickle.dumps(model))

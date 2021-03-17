@@ -21,7 +21,7 @@ jobs:
           - os: macos-latest
             python-version: 3.7
             token: not_install_ray
-          - os: ubuntu-latest
+          - os: macos-latest
             python-version: 3.8
             token: install_ray
 

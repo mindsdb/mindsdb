@@ -13,6 +13,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: [3.6, 3.7, 3.8]
+        token: [install_ray, not_install_ray]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -25,6 +26,12 @@ jobs:
         pip install 'pymssql >= 2.1.4'
         pip install boto3
         pip install --no-cache-dir .
+        if [ "$INSTALL_RAY" == "install_ray" ]; then
+          pip install ray
+        fi
+      shell: bash
+      env:
+        INSTALL_RAY: ${{ matrix.token }}
     - name: Install dependencies Windows
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then

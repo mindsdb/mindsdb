@@ -18,25 +18,20 @@ from mindsdb.utilities.log import log
 import pandas as pd
 import mindsdb_datasources
 
-try:
-    import ray
-    ray.init(ignore_reinit_error=True)
-    ray_based = True
-except Exception as e:
-    ray_based = False
-
-def _pack(obj):
-        if ray_based:
-            return obj
-        return xmlrpc.client.Binary(pickle.dumps(obj))
 
 class ModelController():
-    def __init__(self):
+    def __init__(self, ray_based):
         self.config = Config()
         self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dbw = DatabaseWrapper()
         self.predictor_cache = {}
+        self.ray_based = ray_based
+
+    def _pack(self):
+            if self.ray_based:
+                return obj
+            return xmlrpc.client.Binary(pickle.dumps(obj))
 
     def _invalidate_cached_predictors(self):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
@@ -92,7 +87,7 @@ class ModelController():
 
         self._setup_for_creation(name)
 
-        if ray_based:
+        if self.ray_based:
             run_learn(name, from_data, to_predict, kwargs, datasource_id)
         else:
             p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id)
@@ -142,7 +137,7 @@ class ModelController():
         else:
             raise Exception(f'Unkown predictions format: {pred_format}')
 
-        return _pack(predictions)
+        return self._pack(predictions)
 
     def analyse_dataset(self, ds):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
@@ -150,7 +145,7 @@ class ModelController():
 
         ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
         analysis =  F.analyse_dataset(ds)
-        return _pack(analysis)
+        return self._pack(analysis)
 
     def get_model_data(self, name, db_fix=True):
         from mindsdb_native import F
@@ -184,7 +179,7 @@ class ModelController():
 
         model['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
         model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
-        return _pack(model)
+        return self._pack(model)
 
     def get_models(self):
         from mindsdb.interfaces.storage.db import session, Predictor
@@ -196,7 +191,7 @@ class ModelController():
         ]
         for model_name in predictor_names:
             try:
-                if ray_based:
+                if self.ray_based:
                     model_data = self.get_model_data(model_name, db_fix=False)
                 else:
                     bin = self.get_model_data(model_name, db_fix=False)
@@ -219,7 +214,7 @@ class ModelController():
                 models.append(reduced_model_data)
             except Exception as e:
                 log.error(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
-        return _pack(models)
+        return self._pack(models)
 
     def delete_model(self, name):
         from mindsdb_native import F
@@ -235,15 +230,17 @@ class ModelController():
         self.fs_store.delete(f'predictor_{self.company_id}_{id}')
         return 0
 
-
-if ray_based:
-    ModelController = ray.remote(ModelController)
+try:
+    from mindsdb_worker.cluster.ray_controller import ray_ify
+    ModelController = ray_ify(ModelController)
+except Exception as e:
+    pass
 
 
 def ping(): return True
 
 def start():
-    controller = ModelController()
+    controller = ModelController(False)
     server = SimpleXMLRPCServer(("localhost", 19329))
 
     server.register_function(controller.create, "create")

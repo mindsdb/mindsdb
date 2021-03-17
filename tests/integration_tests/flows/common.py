@@ -209,7 +209,7 @@ def stop_mindsdb(sp=None):
     conns = net_connections()
     pids = [x.pid for x in conns
             if x.pid is not None and x.status in ['LISTEN', 'CLOSE_WAIT']
-            and x.laddr[1] in (47334, 47335, 47336, 19329)]
+            and x.laddr[1] in (47334, 47335, 47336, 19329, 8273, 8274, 8275)]
 
     for pid in pids:
         try:
@@ -217,7 +217,7 @@ def stop_mindsdb(sp=None):
         # process may be killed by OS due to some reasons in that moment
         except ProcessLookupError:
             pass
-
+    time.sleep(6)
 
 def override_recursive(a, b):
     for key in b:

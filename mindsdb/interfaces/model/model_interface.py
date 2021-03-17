@@ -87,7 +87,7 @@ class ModelInterfaceRay():
         fut = self.controller.delete_model.remote(name)
         ray.get(fut)
 
-if ray_based
+if ray_based:
     ModelInterface = ModelInterfaceRay
 else:
     ModelInterface = ModelInterfaceRPC

@@ -37,6 +37,7 @@ def close_api_gracefully(apis):
             process.terminate()
             process.join()
             sys.stdout.flush()
+        os.system('ray stop --force')
     except KeyboardInterrupt:
         sys.exit(0)
 

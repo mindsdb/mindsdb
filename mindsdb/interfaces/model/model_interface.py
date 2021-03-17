@@ -50,6 +50,8 @@ class ModelInterfaceRPC():
 
 try:
     from mindsdb_worker.cluster.ray_interface import ModelInterfaceRay
+    import ray
+    ray.init(ignore_reinit_error=True)
     ModelInterface = ModelInterfaceRay
     ray_based = True
 except Exception as e:

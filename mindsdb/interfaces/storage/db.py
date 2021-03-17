@@ -111,7 +111,7 @@ class Predictor(Base):
     native_version = Column(String)
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
     is_custom = Column(Boolean)
-    learn_args = Column(String)
+    learn_args = Column(Json)
 
 
 class AITable(Base):

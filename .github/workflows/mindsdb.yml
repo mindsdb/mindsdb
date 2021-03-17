@@ -11,9 +11,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
         python-version: [3.6, 3.7, 3.8]
-        token: [install_ray, not_install_ray]
+        token: [not_install_ray]
+        include:
+          - os: windows-latest
+            python-version: 3.7
+            token: not_install_ray
+          - os: macos-latest
+            python-version: 3.7
+            token: not_install_ray
+          - os: macos-latest
+            python-version: 3.8
+            token: install_ray
+
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}

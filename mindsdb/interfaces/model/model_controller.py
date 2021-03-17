@@ -230,6 +230,16 @@ class ModelController():
         self.fs_store.delete(f'predictor_{self.company_id}_{id}')
         return 0
 
+    def update_model(self, name):
+        from mindsdb_worker.update.update_model import update_model
+        # @TODO: Store training args
+        try:
+            predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
+            return update_model(name, self.delete_model, self.learn, lock_method, unlock_method, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, self.how_the_hell_toget_datasotre_wo_ciruclar_import_issue)
+        except Exception as e:
+            log.error(e)
+            return str(e)
+
 try:
     from mindsdb_worker.cluster.ray_controller import ray_ify
     ModelController = ray_ify(ModelController)

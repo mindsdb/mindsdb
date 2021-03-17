@@ -44,6 +44,9 @@ class ModelInterfaceRPC():
     def delete_model(self, name):
         self.proxy.delete_model(name)
 
+    def update_model(self, name):
+        return 'Model updating is no available in this version of mindsdb'
+
 
 try:
     from mindsdb_worker.cluster.ray_interface import ModelInterfaceRay

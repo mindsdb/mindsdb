@@ -29,11 +29,14 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     predictor_record.to_predict = to_predict
     predictor_record.native_version = mindsdb_native.__version__
     predictor_record.mindsdb_version = mindsdb_version
+    predictor_record.learn_args = {
+        'to_predict': to_predict,
+        'kwargs': kwargs
+    }
     predictor_record.data = {
         'name': name,
         'status': 'training'
     }
-    #predictor_record.datasource_id = ... <-- can be done once `learn` is passed a datasource name
     session.commit()
 
     to_predict = to_predict if isinstance(to_predict, list) else [to_predict]

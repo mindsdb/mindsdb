@@ -96,12 +96,10 @@ class Integration(Resource):
                 del params['enabled']
             ca.config_obj.add_db_integration(name, params)
 
-            mdb = ca.naitve_interface
-            cst = ca.custom_models
-            model_data_arr = get_all_models_meta_data(mdb, cst)
+            model_data_arr = get_all_models_meta_data(ca.mindsdb_native, ca.custom_models)
             ca.dbw.setup_integration(name)
             if is_test is False:
-                ca.dbw.register_predictors(model_data_arr)
+                ca.dbw.register_predictors(model_data_arr, name)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during config update: {str(e)}')
@@ -168,12 +166,20 @@ class Vars(Resource):
         if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
             telemtry = False
 
-        mongo = True
         if ca.config_obj.get('disable_mongo', False):
             mongo = False
+        else:
+            mongo = True
 
+<<<<<<< HEAD
 
         cloud = ca.config_obj.get('cloud', False)
+=======
+        if ca.config_obj.get('cloud', False):
+            cloud = False
+        else:
+            cloud = True
+>>>>>>> staging
 
         return {'mongo': mongo, 'telemtry': telemtry, 'cloud': cloud}
 

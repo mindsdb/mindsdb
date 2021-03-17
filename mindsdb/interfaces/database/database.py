@@ -8,6 +8,7 @@ from mindsdb.integrations.mongodb.mongodb import MongoDB
 from mindsdb.utilities.log import log as logger
 from mindsdb.utilities.config import Config
 
+
 class DatabaseWrapper():
     def __init__(self):
         self.config = Config()
@@ -48,8 +49,14 @@ class DatabaseWrapper():
         integrations = [x for x in integrations if x != True and x != False]
         return integrations
 
-    def register_predictors(self, model_data_arr):
-        for integration in self._get_integrations():
+    def register_predictors(self, model_data_arr, integration_name=None):
+        if integration_name is None:
+            integrations = self._get_integrations()
+        else:
+            integration = self._get_integration(integration_name)
+            integrations = [] if isinstance(integration, bool) else [integration]
+
+        for integration in integrations:
             if integration.check_connection():
                 try:
                     integration.register_predictors(model_data_arr)

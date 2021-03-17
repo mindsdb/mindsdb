@@ -40,7 +40,7 @@ jobs:
         if [ "$INSTALL_RAY" == "install_ray" ]; then
           echo "$mindsdb_github_masterkey" > ~/github_masterkey
           chmod -R 600 ~/github_masterkey
-          export GIT_SSH_COMMAND='ssh -v -i github_masterkey'
+          export GIT_SSH_COMMAND='ssh -v -i ~/github_masterkey'
           pip install git+ssh://github.com/mindsdb/mindsdb_python_sdk.git
         fi
       shell: bash

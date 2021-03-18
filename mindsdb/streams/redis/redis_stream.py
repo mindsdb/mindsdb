@@ -7,21 +7,22 @@ from mindsdb_native import Predictor
 
 
 class RedisStream(Thread):
-    def __init__(self, host, port, database, input_stream, predictor):
+    def __init__(self, host, port, database, stream_in, stream_out, predictor, _type):
         self.host = host
         self.port = port
         self.db = database
-        self.predictor_name = predictor
+        self.predictor = predictor
         self.client = self._get_client()
-        self.stream_in = self.client.Stream(input_stream)
-        self.stream_out = self.client.Stream(predictor)
+        self.stream_in = self.client.Stream(stream_in)
+        self.stream_out = self.client.Stream(stream_out)
+        self._type = _type
         super().__init__(target=RedisStream.make_prediction, args=(self,))
 
     def _get_client(self):
         return walrus.Database(host=self.host, port=self.port, db=self.db)
 
     def make_prediction(self):
-        predictor = Predictor(self.predictor_name)
+        predictor = Predictor(self.predictor)
         while True:
             time.sleep(10)
             predict_info = self.stream_in.read()

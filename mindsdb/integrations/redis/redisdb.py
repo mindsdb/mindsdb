@@ -1,9 +1,11 @@
+import os
 import time
 from threading import Thread
 import walrus
 from mindsdb.utilities.log import log
 from mindsdb.integrations.base import Integration
 from mindsdb.streams.redis.redis_stream import RedisStream
+from mindsdb.interfaces.storage.db import session, Stream
 
 
 class RedisConnectionChecker:
@@ -41,11 +43,26 @@ class Redis(Integration, Thread, RedisConnectionChecker):
         self.client = self._get_connection()
         self.control_stream_name = self.integration_info.get('control_stream')
         self.control_stream = self.client.Stream(self.control_stream_name)
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        self.streams = {}
         Thread.__init__(self, target=Redis.work, args=(self, ))
 
     def setup(self):
         # read streams info from db
-        # create and launch them if they exists
+        existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
+        for stream in existed_streams:
+            kwargs = {"host": stream.host,
+                      "port": stream.port,
+                      "db": stream.db,
+                      "type": stream._type,
+                      "predictor": stream.predictor,
+                      "stream_in": stream.stream_in,
+                      "stream_out": stream.stream_out}
+            to_launch = self.get_stream(**kwargs)
+            to_launch.start()
+            self.streams[stream.name] = to_launch
+
+
         self.start()
 
     def work(self):
@@ -57,11 +74,20 @@ class Redis(Integration, Thread, RedisConnectionChecker):
                 binary_r = r[1]
                 stream_params = self._decode(binary_r)
                 stream = self.get_stream(**stream_params)
-                self.store_stream(stream)
                 stream.start()
+                self.store_stream(stream)
+
 
     def store_stream(self, stream):
-        pass
+        stream_name = f"{self.name}_{stream.predictor}"
+        stream_rec = Stream(name=stream_name, host=stream.host,
+                            port=stream.port, db=stream.db,
+                            _type=stream._type, predictor=stream.predictor,
+                            integration=self.name, company_id=self.company_id,
+                            stream_in=stream.stream_in, stream_out=stream.stream_out)
+        session.add(stream_rec)
+        session.commit()
+        self.streams[stream_name] = stream
 
     def get_stream(self, **kwargs):
         stream_in = kwargs.get('input_stream')

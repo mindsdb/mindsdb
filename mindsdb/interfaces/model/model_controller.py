@@ -9,6 +9,7 @@ import psutil
 import datetime
 from copy import deepcopy
 import time
+from contextlib import contextmanager
 
 from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -46,7 +47,7 @@ class ModelController():
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
                 del self.predictor_cache[predictor_name]
 
-    def lock_predictor(self, id, mode='write'):
+    def _lock_predictor(self, id, mode='write'):
         from mindsdb.interfaces.storage.db import session, Semaphor
 
         while True:
@@ -64,12 +65,20 @@ class ModelController():
             time.sleep(1)
 
 
-    def unlock_predictor(self, id):
+    def _unlock_predictor(self, id):
         from mindsdb.interfaces.storage.db import session, Semaphor
         semaphor_record = session.query(Semaphor).filter_by(company_id=self.company_id, entity_id=id, entity_type='predictor').first()
         if semaphor_record is not None:
             session.delete(semaphor_record)
             session.commit()
+
+    @contextmanager
+    def _lock_context(self, id, mode='write'):
+        try:
+            self.l_ock_predictor(mode)
+            yield True
+        finally:
+            self._unlock_predictor(id)
 
     def _setup_for_creation(self, name):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
@@ -90,6 +99,34 @@ class ModelController():
 
         session.add(predictor_record)
         session.commit()
+
+    def _try_outdate_db_status(self, predictor_record):
+        from mindsdb_native import __version__ as native_version
+        from mindsdb import __version__ as mindsdb_version
+        from mindsdb.interfaces.storage.db import session
+
+        if predictor_record.update_status == 'update_failed':
+            return predictor_record
+
+        if predictor_record.native_version != native_version:
+            predictor_record.update_status = 'available'
+        if predictor_record.mindsdb_version != mindsdb_version:
+            predictor_record.update_status = 'available'
+
+        session.commit()
+        return predictor_record
+
+    def _update_db_status(self, predictor_record):
+        from mindsdb_native import __version__ as native_version
+        from mindsdb import __version__ as mindsdb_version
+        from mindsdb.interfaces.storage.db import session
+
+        predictor_record.native_version = native_version
+        predictor_record.mindsdb_version = mindsdb_version
+        predictor_record.update_status = 'up_to_date'
+
+        session.commit()
+        return predictor_record
 
     def create(self, name):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
@@ -258,10 +295,18 @@ class ModelController():
     def update_model(self, name):
         from mindsdb_worker.update.update_model import update_model
         # @TODO: Store training args
+
         try:
             predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
-            return update_model(name, self.delete_model, self.learn, self.lock_predictor, self.unlock_predictor, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, self.how_the_hell_toget_datasotre_wo_ciruclar_import_issue)
+            predictor_record.update_status = 'updating'
+            session.commit()
+
+            update_model(name, self.delete_model, self.learn, self._lock_context, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, self.how_the_hell_toget_datasotre_wo_ciruclar_import_issue)
+
+            self._update_db_status(predictor_record)
         except Exception as e:
+            predictor_record.update_status = 'update_failed'
+            session.commit()
             log.error(e)
             return str(e)
 

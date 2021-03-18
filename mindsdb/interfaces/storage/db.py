@@ -112,7 +112,7 @@ class Predictor(Base):
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
     is_custom = Column(Boolean)
     learn_args = Column(Json)
-
+    update_status = Column(String, default='uptodate')
 
 class AITable(Base):
     __tablename__ = 'ai_table'

@@ -75,7 +75,7 @@ class ModelController():
     @contextmanager
     def _lock_context(self, id, mode='write'):
         try:
-            self.l_ock_predictor(mode)
+            self._lock_predictor(mode)
             yield True
         finally:
             self._unlock_predictor(id)
@@ -216,7 +216,7 @@ class ModelController():
 
 
         predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
-        self._try_outdate_db_status(predictor_record)
+        predictor_record = self._try_outdate_db_status(predictor_record)
         model = predictor_record.data
         if model is None or model['status'] == 'training':
             try:
@@ -242,6 +242,7 @@ class ModelController():
 
         model['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
         model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
+        model['update'] = predictor_record.update_status
         return self._pack(model)
 
     def get_models(self):
@@ -261,7 +262,7 @@ class ModelController():
                     model_data = pickle.loads(bin.data)
                 reduced_model_data = {}
 
-                for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source']:
+                for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update']:
                     reduced_model_data[k] = model_data.get(k, None)
 
                 for k in ['train_end_at', 'updated_at', 'created_at']:
@@ -294,21 +295,22 @@ class ModelController():
         return 0
 
     def update_model(self, name):
-        from mindsdb_worker.update.update_model import update_model
-        # @TODO: Store training args
+        from mindsdb_native import F
+        from mindsdb_worker.updater.update_model import update_model
+        from mindsdb.interfaces.storage.db import session, Predictor
+        from mindsdb.interfaces.datastore.datastore import DataStore
 
         try:
             predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
             predictor_record.update_status = 'updating'
             session.commit()
+            update_model(name, delete_model, F.delete_model, self.learn, self._lock_context, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStore())
 
-            update_model(name, self.delete_model, self.learn, self._lock_context, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, self.how_the_hell_toget_datasotre_wo_ciruclar_import_issue)
-
-            self._update_db_status(predictor_record)
+            predictor_record = self._update_db_status(predictor_record)
         except Exception as e:
+            log.error(e)
             predictor_record.update_status = 'update_failed'
             session.commit()
-            log.error(e)
             return str(e)
 
 try:

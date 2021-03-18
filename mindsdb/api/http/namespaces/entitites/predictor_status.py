@@ -19,7 +19,8 @@ predictor_status = ns_conf.model('PredictorStatus', {
     'created_at': fields.DateTime(required=False, description='The time the predictor was created at'),
     'is_custom': fields.Boolean(default=False),
     'stack_trace_on_error': fields.String(required=False, description='Why it failed, if it did'),
-    'error_explanation': fields.String(required=False, description='Why it failed, if it did, short version')
+    'error_explanation': fields.String(required=False, description='Why it failed, if it did, short version'),
+    'update': fields.String(required=False)
 })
 
 

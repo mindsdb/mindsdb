@@ -172,7 +172,10 @@ class PredictorLearn(Resource):
 class PredictorPredict(Resource):
     @ns_conf.doc('Update predictor')
     def get(self, name):
-        return ca.naitve_interface.update(name)
+        msg = ca.naitve_interface.update_model(name)
+        return {
+            'message': msg
+        }
 
 @ns_conf.route('/<name>/predict')
 @ns_conf.param('name', 'The predictor identifier')

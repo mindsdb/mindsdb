@@ -14,3 +14,4 @@ psutil
 sqlalchemy >= 1.3.0
 sentry-sdk
 setproctitle
+mindsdb_datasources

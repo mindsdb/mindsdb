@@ -216,6 +216,7 @@ class ModelController():
 
 
         predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
+        self._try_outdate_db_status(predictor_record)
         model = predictor_record.data
         if model is None or model['status'] == 'training':
             try:

@@ -1,5 +1,4 @@
 import os
-import time
 from threading import Thread
 import walrus
 from mindsdb.utilities.log import log
@@ -12,13 +11,13 @@ class RedisConnectionChecker:
     def __init__(self, **kwargs):
         self.host = kwargs.get('host')
         self.port = kwargs.get('port', 6379)
-        self.database = kwargs.get('database', 0)
+        self.db = kwargs.get('db', 0)
         self.user = kwargs.get('user', None)
         self.password = kwargs.get('password', None)
 
     def _get_connection(self):
         return walrus.Database(host=self.host, port=self.port,
-                               db=self.database,
+                               db=self.db,
                                socket_connect_timeout=10)
 
     def check_connection(self):
@@ -30,26 +29,27 @@ class RedisConnectionChecker:
             return False
 
 
-class Redis(Integration, Thread, RedisConnectionChecker):
+class Redis(Integration, RedisConnectionChecker):
     def __init__(self, config, name):
         Integration.__init__(self, config, name)
         intergration_info = self.config['integrations'][self.name]
         self.host = intergration_info.get('host')
         self.port = intergration_info.get('port', 6379)
-        self.db = intergration_info.get('database', 0)
-        self.input_stream = intergration_info.get('stream')
+        self.db = intergration_info.get('db', 0)
+        self.control_stream_name = intergration_info.get('stream')
         self.user = intergration_info.get('user', None)
         self.password = intergration_info.get('password', None)
         self.client = self._get_connection()
-        self.control_stream_name = self.integration_info.get('control_stream')
+        # self.control_stream_name = self.integration_info.get('control_stream')
         self.control_stream = self.client.Stream(self.control_stream_name)
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.streams = {}
-        Thread.__init__(self, target=Redis.work, args=(self, ))
 
     def setup(self):
+
         # read streams info from db
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
+
         for stream in existed_streams:
             kwargs = {"host": stream.host,
                       "port": stream.port,
@@ -63,19 +63,27 @@ class Redis(Integration, Thread, RedisConnectionChecker):
             self.streams[stream.name] = to_launch
 
 
+        # launch worker which reads control steam and spawn
+        # streams
         self.start()
 
+    def start(self):
+        Thread(target=Redis.work, args=(self, )).start()
+
     def work(self):
+        log.error(f"FACTORY THREAD: start listening {self.control_stream_name} redis stream")
         while True:
-            time.sleep(5)
             #block==0 is a blocking mode
             recs = self.control_stream.read(block=0)
             for r in recs:
+                r_id = r[0]
                 binary_r = r[1]
                 stream_params = self._decode(binary_r)
                 stream = self.get_stream(**stream_params)
                 stream.start()
                 self.store_stream(stream)
+                # need to delete record which steam is already created
+                self.control_stream.delete(r_id)
 
 
     def store_stream(self, stream):
@@ -84,12 +92,13 @@ class Redis(Integration, Thread, RedisConnectionChecker):
                             port=stream.port, db=stream.db,
                             _type=stream._type, predictor=stream.predictor,
                             integration=self.name, company_id=self.company_id,
-                            stream_in=stream.stream_in, stream_out=stream.stream_out)
+                            stream_in=stream.stream_in_name, stream_out=stream.stream_out_name)
         session.add(stream_rec)
         session.commit()
         self.streams[stream_name] = stream
 
     def get_stream(self, **kwargs):
+        log.error(f"FACTORY THREAD: creating stream: {kwargs}")
         stream_in = kwargs.get('input_stream')
         stream_out = kwargs.get('output_stream')
         predictor_name = kwargs.get('predictor')

@@ -1,4 +1,3 @@
-import time
 import json
 from threading import Thread
 import walrus
@@ -13,6 +12,8 @@ class RedisStream(Thread):
         self.db = database
         self.predictor = predictor
         self.client = self._get_client()
+        self.stream_in_name = stream_in
+        self.stream_out_name = stream_out
         self.stream_in = self.client.Stream(stream_in)
         self.stream_out = self.client.Stream(stream_out)
         self._type = _type
@@ -24,23 +25,23 @@ class RedisStream(Thread):
     def make_prediction(self):
         predictor = Predictor(self.predictor)
         while True:
-            time.sleep(10)
-            predict_info = self.stream_in.read()
+            # block==0 is a blocking mode
+            predict_info = self.stream_in.read(block=0)
             # log.error("got predict request(s): %s" % predict_info)
             for record in predict_info:
                 record_id = record[0]
                 raw_when_data = record[1]
-                # log.error("raw when_data: %s" % raw_when_data)
+                log.error("STREAM THREAD - raw when_data: %s" % raw_when_data)
                 when_data = self.decode(raw_when_data)
-                # log.error("when_data: %s" % when_data)
+                log.error("STREAM THREAD - when_data: %s" % when_data)
 
                 # result = ca.mindsdb_native.predict(self.predictor_name, when_data=when_data)
                 result = predictor.predict(when_data=when_data)
-                # log.error("when_data: %s\tprediction: %s" % (when_data, result))
+                log.error("STREAM THREAD - when_data: %s\tprediction: %s" % (when_data, result))
                 for res in result:
                     # log.error("explainded: %s" % res.explain())
                     in_json = json.dumps(res.explain())
-                    # log.error("json converted: %s" % in_json)
+                    log.error("STREAM THREAD - json converted: %s" % in_json)
                     self.stream_out.add({"prediction": in_json})
                 self.stream_in.delete(record_id)
 

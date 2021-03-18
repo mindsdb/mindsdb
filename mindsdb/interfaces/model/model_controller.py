@@ -9,6 +9,7 @@ import psutil
 import datetime
 from copy import deepcopy
 import time
+from contextlib import contextmanager
 
 from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -46,6 +47,39 @@ class ModelController():
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
                 del self.predictor_cache[predictor_name]
 
+    def _lock_predictor(self, id, mode='write'):
+        from mindsdb.interfaces.storage.db import session, Semaphor
+
+        while True:
+            semaphor_record = session.query(Semaphor).filter_by(company_id=self.company_id, entity_id=id, entity_type='predictor').first()
+            if semaphor_record is not None:
+                if mode == 'read' and semaphor_record.action == 'read':
+                    return True
+            try:
+                semaphor_record = Semaphor(company_id=self.company_id, entity_id=id, entity_type='predictor', action=mode)
+                session.add(semaphor_record)
+                session.commit()
+                return True
+            except Excpetion as e:
+                pass
+            time.sleep(1)
+
+
+    def _unlock_predictor(self, id):
+        from mindsdb.interfaces.storage.db import session, Semaphor
+        semaphor_record = session.query(Semaphor).filter_by(company_id=self.company_id, entity_id=id, entity_type='predictor').first()
+        if semaphor_record is not None:
+            session.delete(semaphor_record)
+            session.commit()
+
+    @contextmanager
+    def _lock_context(self, id, mode='write'):
+        try:
+            self._lock_predictor(mode)
+            yield True
+        finally:
+            self._unlock_predictor(id)
+
     def _setup_for_creation(self, name):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
@@ -65,6 +99,34 @@ class ModelController():
 
         session.add(predictor_record)
         session.commit()
+
+    def _try_outdate_db_status(self, predictor_record):
+        from mindsdb_native import __version__ as native_version
+        from mindsdb import __version__ as mindsdb_version
+        from mindsdb.interfaces.storage.db import session
+
+        if predictor_record.update_status == 'update_failed':
+            return predictor_record
+
+        if predictor_record.native_version != native_version:
+            predictor_record.update_status = 'available'
+        if predictor_record.mindsdb_version != mindsdb_version:
+            predictor_record.update_status = 'available'
+
+        session.commit()
+        return predictor_record
+
+    def _update_db_status(self, predictor_record):
+        from mindsdb_native import __version__ as native_version
+        from mindsdb import __version__ as mindsdb_version
+        from mindsdb.interfaces.storage.db import session
+
+        predictor_record.native_version = native_version
+        predictor_record.mindsdb_version = mindsdb_version
+        predictor_record.update_status = 'up_to_date'
+
+        session.commit()
+        return predictor_record
 
     def create(self, name):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
@@ -154,6 +216,7 @@ class ModelController():
 
 
         predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
+        predictor_record = self._try_outdate_db_status(predictor_record)
         model = predictor_record.data
         if model is None or model['status'] == 'training':
             try:
@@ -179,6 +242,7 @@ class ModelController():
 
         model['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
         model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
+        model['update'] = predictor_record.update_status
         return self._pack(model)
 
     def get_models(self):
@@ -198,7 +262,7 @@ class ModelController():
                     model_data = pickle.loads(bin.data)
                 reduced_model_data = {}
 
-                for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source']:
+                for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update']:
                     reduced_model_data[k] = model_data.get(k, None)
 
                 for k in ['train_end_at', 'updated_at', 'created_at']:
@@ -231,13 +295,22 @@ class ModelController():
         return 0
 
     def update_model(self, name):
-        from mindsdb_worker.update.update_model import update_model
-        # @TODO: Store training args
+        from mindsdb_native import F
+        from mindsdb_worker.updater.update_model import update_model
+        from mindsdb.interfaces.storage.db import session, Predictor
+        from mindsdb.interfaces.datastore.datastore import DataStore
+
         try:
             predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
-            return update_model(name, self.delete_model, self.learn, lock_method, unlock_method, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, self.how_the_hell_toget_datasotre_wo_ciruclar_import_issue)
+            predictor_record.update_status = 'updating'
+            session.commit()
+            update_model(name, delete_model, F.delete_model, self.learn, self._lock_context, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStore())
+
+            predictor_record = self._update_db_status(predictor_record)
         except Exception as e:
             log.error(e)
+            predictor_record.update_status = 'update_failed'
+            session.commit()
             return str(e)
 
 try:

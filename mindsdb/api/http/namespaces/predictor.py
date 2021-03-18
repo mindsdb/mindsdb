@@ -167,6 +167,16 @@ class PredictorLearn(Resource):
         return '', 200
 
 
+@ns_conf.route('/<name>/update')
+@ns_conf.param('name', 'Update predictor')
+class PredictorPredict(Resource):
+    @ns_conf.doc('Update predictor')
+    def get(self, name):
+        msg = ca.naitve_interface.update_model(name)
+        return {
+            'message': msg
+        }
+
 @ns_conf.route('/<name>/predict')
 @ns_conf.param('name', 'The predictor identifier')
 class PredictorPredict(Resource):

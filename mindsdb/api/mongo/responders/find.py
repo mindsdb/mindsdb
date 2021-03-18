@@ -1,4 +1,5 @@
 from bson.int64 import Int64
+from collections import OrderedDict
 
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
@@ -12,7 +13,6 @@ class Responce(Responder):
         model_names = [x['name'] for x in models]
         table = query['find']
         where_data = query.get('filter', {})
-        print(f'\n\n\nOperating on models: {models}\n\n\n')
         if table == 'predictors':
             data = [{
                 'name': x['name'],
@@ -45,6 +45,7 @@ class Responce(Responder):
                         if key not in columns:
                             columns.append(key)
 
+            datasource = where_data
             if 'select_data_query' in where_data:
                 integrations = mindsdb_env['config']['integrations'].keys()
                 connection = where_data.get('connection')
@@ -67,32 +68,38 @@ class Responce(Responder):
                     source_type=connection,
                     source=where_data['select_data_query']
                 )
-                where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
-                mindsdb_env['data_store'].delete_datasource(ds_name)
+                datasource = mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True)
+
 
             if 'external_datasource' in where_data:
                 ds_name = where_data['external_datasource']
                 if mindsdb_env['data_store'].get_datasource(ds_name) is None:
                     raise Exception(f"Datasource {ds_name} not exists")
-                where_data = mindsdb_env['data_store'].get_data(ds_name)['data']
+                datasource = mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True)
 
-            prediction = mindsdb_env['mindsdb_native'].predict(name=table, when_data=where_data)
+            if isinstance(datasource, OrderedDict):
+                datasource = dict(datasource)
+
+            prediction = mindsdb_env['mindsdb_native'].predict(table, 'dict&explain', when_data=datasource)
+            if 'select_data_query' in where_data:
+                mindsdb_env['data_store'].delete_datasource(ds_name)
+
+            pred_dict_arr, explanations = prediction
 
             predicted_columns = model['predict']
 
             data = []
-            keys = [x for x in list(prediction._data.keys()) if x in columns]
+            keys = [k for k in pred_dict_arr[0] if k in columns]
             min_max_keys = []
             for col in predicted_columns:
                 if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
                     min_max_keys.append(col)
 
-            length = len(prediction._data[predicted_columns[0]])
-            for i in range(length):
+            for i in range(len(pred_dict_arr)):
                 row = {}
-                explanation = prediction[i].explain()
+                explanation = explanations[i]
                 for key in keys:
-                    row[key] = prediction._data[key][i]
+                    row[key] = pred_dict_arr[i][key]
 
                 for key in predicted_columns:
                     row[key + '_confidence'] = explanation[key]['confidence']

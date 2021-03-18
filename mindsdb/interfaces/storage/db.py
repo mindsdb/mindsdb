@@ -2,7 +2,7 @@ import os
 import json
 
 import numpy as np
-from sqlalchemy import create_engine, orm, types
+from sqlalchemy import create_engine, orm, types, UniqueConstraint
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
@@ -64,8 +64,11 @@ class Semaphor(Base):
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    entity_type = Column(String)
-    entity_id = Column(String)
+    entity_type = Column('entity_type', String)
+    entity_id = Column('entity_id', String)
+    action = Column(String)
+    company_id = Column(Integer)
+    uniq_const = UniqueConstraint('entity_type', 'entity_id')
 
 
 class Configuration(Base):
@@ -89,7 +92,8 @@ class Datasource(Base):
     creation_info = Column(String)
     analysis = Column(String)  # A JSON
     company_id = Column(Integer)
-    version = Column(String)
+    mindsdb_version = Column(String)
+    datasources_version = Column(String)
     integration_id = Column(Integer)
 
 
@@ -103,9 +107,11 @@ class Predictor(Base):
     data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
     company_id = Column(Integer)
-    version = Column(String)
+    mindsdb_version = Column(String)
+    native_version = Column(String)
     datasource_id = Column(Integer, ForeignKey('datasource.id'))
     is_custom = Column(Boolean)
+    learn_args = Column(Json)
 
 
 class AITable(Base):

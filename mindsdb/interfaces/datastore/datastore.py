@@ -5,10 +5,12 @@ import os
 import setproctitle
 import pandas as pd
 
-from mindsdb.interfaces.native.native import NativeInterface
-from mindsdb_native import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
+import mindsdb_datasources
+from mindsdb.__about__ import __version__ as mindsdb_version
+from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.db import session, Datasource
+from mindsdb.interfaces.storage.db import session, Datasource, Semaphor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import log
 
@@ -25,13 +27,29 @@ class DataStore():
     def get_analysis(self, name):
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
         if datasource_record.analysis is None:
+            return None
+        analysis = json.loads(datasource_record.analysis)
+        return analysis
+
+    def start_analysis(self, name):
+        datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
+        if datasource_record.analysis is not None:
+            return None
+        semaphor_record = session.query(Semaphor).filter_by(company_id=self.company_id, entity_id=datasource_record.id, entity_type='datasource').first()
+        if semaphor_record is None:
+            semaphor_record = Semaphor(company_id=self.company_id, entity_id=datasource_record.id, entity_type='datasource', action='write')
+            session.add(semaphor_record)
+            session.commit()
+        else:
+            return
+        try:
             try:
                 original_process_title = setproctitle.getproctitle()
                 setproctitle.setproctitle('mindsdb_native_process')
             except Exception:
                 pass
-
-            analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name))
+            analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name, raw=True))
+            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
             datasource_record.analysis = json.dumps(analysis)
             session.commit()
 
@@ -39,9 +57,12 @@ class DataStore():
                 setproctitle.setproctitle(original_process_title)
             except Exception:
                 pass
-
-        analysis = json.loads(datasource_record.analysis)
-        return analysis
+        except Exception as e:
+            log.error(e)
+        finally:
+            semaphor_record = session.query(Semaphor).filter_by(company_id=self.company_id, entity_id=datasource_record.id, entity_type='datasource').first()
+            session.delete(semaphor_record)
+            session.commit()
 
     def get_datasources(self, name=None):
         datasource_arr = []
@@ -113,7 +134,9 @@ class DataStore():
         try:
             datasource_record = Datasource(
                 company_id=self.company_id,
-                name=name
+                name=name,
+                datasources_version = mindsdb_datasources.__version__,
+                mindsdb_version = mindsdb_version
             )
             session.add(datasource_record)
             session.commit()
@@ -270,9 +293,11 @@ class DataStore():
 
         except Exception as e:
             log.error(f'{e}')
-            if datasource_record.id is not None:
+            try:
                 self.delete_datasource(name)
-            raise
+            except:
+                pass
+            raise e
 
         return self.get_datasource_obj(name, raw=True), name
 

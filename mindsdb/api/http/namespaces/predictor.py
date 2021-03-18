@@ -19,23 +19,6 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
 )
 from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
 
-def preparse_results(results, format_flag='explain'):
-    response_arr = []
-    for res in results:
-        if format_flag == 'explain':
-            response_arr.append(res.explain())
-        elif format_flag == 'epitomize':
-            response_arr.append(res.epitomize())
-        elif format_flag == 'new_explain':
-            response_arr.append(res.explanation)
-        else:
-            response_arr.append(res.explain())
-
-    if len(response_arr) > 0:
-        return response_arr
-    else:
-        abort(400, "")
-
 def is_custom(name):
     if name in [x['name'] for x in ca.custom_models.get_models()]:
         return True
@@ -48,7 +31,7 @@ class PredictorList(Resource):
     def get(self):
         '''List all predictors'''
 
-        return [*ca.mindsdb_native.get_models(),*ca.custom_models.get_models()]
+        return [*ca.naitve_interface.get_models(),*ca.custom_models.get_models()]
 
 @ns_conf.route('/custom/<name>')
 @ns_conf.param('name', 'The predictor identifier')
@@ -81,7 +64,7 @@ class Predictor(Resource):
             if is_custom(name):
                 model = ca.custom_models.get_model_data(name)
             else:
-                model = ca.mindsdb_native.get_model_data(name, db_fix=False)
+                model = ca.naitve_interface.get_model_data(name, db_fix=False)
         except Exception as e:
             abort(404, "")
 
@@ -97,7 +80,7 @@ class Predictor(Resource):
         if is_custom(name):
             ca.custom_models.delete_model(name)
         else:
-            ca.mindsdb_native.delete_model(name)
+            ca.naitve_interface.delete_model(name)
 
         return '', 200
 
@@ -143,19 +126,19 @@ class Predictor(Resource):
             original_name = name
             name = name + '_retrained'
 
-        ca.mindsdb_native.learn(name, from_data, to_predict, ca.default_store.get_datasource(ds_name)['id'], kwargs)
+        ca.naitve_interface.learn(name, from_data, to_predict, ca.default_store.get_datasource(ds_name)['id'], kwargs)
         for i in range(20):
             try:
                 # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
-                ca.mindsdb_native.get_model_data(name)
+                ca.naitve_interface.get_model_data(name)
                 break
             except Exception:
                 time.sleep(1)
 
         if retrain is True:
             try:
-                ca.mindsdb_native.delete_model(original_name)
-                ca.mindsdb_native.rename_model(name, original_name)
+                ca.naitve_interface.delete_model(original_name)
+                ca.naitve_interface.rename_model(name, original_name)
             except:
                 pass
 
@@ -190,29 +173,17 @@ class PredictorPredict(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
         '''Queries predictor'''
-
         data = request.json
-
-        when = data.get('when') or {}
-        try:
-            format_flag = data.get('format_flag')
-        except:
-            format_flag = 'explain'
-
-        try:
-            kwargs = data.get('kwargs')
-        except:
-            kwargs = {}
-
-        if type(kwargs) != type({}):
-            kwargs = {}
+        when = data.get('when', {})
+        format_flag = data.get('format_flag', 'explain')
+        kwargs = data.get('kwargs', {})
 
         if is_custom(name):
             return ca.custom_models.predict(name, when_data=when, **kwargs)
         else:
-            results = ca.mindsdb_native.predict(name, when_data=when, **kwargs)
+            results = ca.naitve_interface.predict(name, format_flag, when_data=when, **kwargs)
 
-        return preparse_results(results, format_flag)
+        return results
 
 
 @ns_conf.route('/<name>/predict_datasource')
@@ -221,29 +192,22 @@ class PredictorPredictFromDataSource(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
         data = request.json
+        format_flag = data.get('format_flag', 'explain')
+        kwargs = data.get('kwargs', {})
 
-        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'))
+        use_raw = False
+        if is_custom(name):
+            use_raw = True
+
+        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=use_raw)
         if from_data is None:
             abort(400, 'No valid datasource given')
-
-        try:
-            format_flag = data.get('format_flag')
-        except Exception:
-            format_flag = 'explain'
-
-        try:
-            kwargs = data.get('kwargs')
-        except Exception:
-            kwargs = {}
-
-        if not isinstance(kwargs, dict):
-            kwargs = {}
 
         if is_custom(name):
             return ca.custom_models.predict(name, from_data=from_data, **kwargs)
 
-        results = ca.mindsdb_native.predict(name, when_data=from_data, **kwargs)
-        return preparse_results(results, format_flag)
+        results = ca.naitve_interface.predict(name, format_flag, when_data=from_data, **kwargs)
+        return results
 
 @ns_conf.route('/<name>/rename')
 @ns_conf.param('name', 'The predictor identifier')
@@ -256,7 +220,7 @@ class PredictorDownload(Resource):
             if is_custom(name):
                 ca.custom_models.rename_model(name, new_name)
             else:
-                ca.mindsdb_native.rename_model(name, new_name)
+                ca.naitve_interface.rename_model(name, new_name)
         except Exception as e:
             return str(e), 400
 

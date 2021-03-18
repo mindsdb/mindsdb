@@ -46,6 +46,31 @@ class ModelController():
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
                 del self.predictor_cache[predictor_name]
 
+    def lock_predictor(self, id, mode='write'):
+        from mindsdb.interfaces.storage.db import session, Semaphor
+
+        while True:
+            semaphor_record = session.query(Semaphor).filter_by(company_id=self.company_id, entity_id=id, entity_type='predictor').first()
+            if semaphor_record is not None:
+                if mode == 'read' and semaphor_record.action == 'read':
+                    return True
+            try:
+                semaphor_record = Semaphor(company_id=self.company_id, entity_id=id, entity_type='predictor', action=mode)
+                session.add(semaphor_record)
+                session.commit()
+                return True
+            except Excpetion as e:
+                pass
+            time.sleep(1)
+
+
+    def unlock_predictor(self, id):
+        from mindsdb.interfaces.storage.db import session, Semaphor
+        semaphor_record = session.query(Semaphor).filter_by(company_id=self.company_id, entity_id=id, entity_type='predictor').first()
+        if semaphor_record is not None:
+            session.delete(semaphor_record)
+            session.commit()
+
     def _setup_for_creation(self, name):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
@@ -235,7 +260,7 @@ class ModelController():
         # @TODO: Store training args
         try:
             predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
-            return update_model(name, self.delete_model, self.learn, lock_method, unlock_method, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, self.how_the_hell_toget_datasotre_wo_ciruclar_import_issue)
+            return update_model(name, self.delete_model, self.learn, self.lock_predictor, self.unlock_predictor, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, self.how_the_hell_toget_datasotre_wo_ciruclar_import_issue)
         except Exception as e:
             log.error(e)
             return str(e)

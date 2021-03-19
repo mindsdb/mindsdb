@@ -53,24 +53,22 @@ class Redis(Integration, RedisConnectionChecker):
         Launches a worker in separate thread which waits
         data from control stream and creates a particular Streams."""
 
-        # read streams info from db
-        existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
-
-        for stream in existed_streams:
-            kwargs = {"type": stream._type,
-                      "predictor": stream.predictor,
-                      "input_stream": stream.stream_in,
-                      "output_stream": stream.stream_out}
-            to_launch = self.get_stream(**kwargs)
-            to_launch.start()
-            self.streams[stream.name] = to_launch.stop_event
-
-
+        self.start_stored_streams()
         # launch worker which reads control steam and spawn streams
         self.start()
 
     def start(self):
         Thread(target=Redis.work, args=(self, )).start()
+
+    def start_stored_streams(self):
+        existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
+
+        for stream in existed_streams:
+            to_launch = self.get_stream_from_db(stream)
+            if stream.name not in self.streams:
+                to_launch.start()
+                self.streams[stream.name] = to_launch.stop_event
+
 
     def delete_stream(self, predictor):
         """Deletes stream from database and stops it work by
@@ -86,7 +84,10 @@ class Redis(Integration, RedisConnectionChecker):
         """Creates a Streams by receiving initial information from control stream."""
         log.error(f"FACTORY THREAD: start listening {self.control_stream_name} redis stream")
         while True:
-            #block==0 is a blocking mode
+            # First, lets check that there are no new records in db, created via HTTP API for e.g.
+            self.start_stored_streams()
+            # Checking new incoming records(requests) for new stream.
+            # block==0 is a blocking mode
             recs = self.control_stream.read(block=0)
             for r in recs:
                 r_id = r[0]
@@ -97,7 +98,7 @@ class Redis(Integration, RedisConnectionChecker):
                     self.control_stream.delete(r_id)
                     continue
 
-                stream = self.get_stream(**stream_params)
+                stream = self.get_stream_from_kwargs(**stream_params)
                 stream.start()
                 # store created stream in database
                 self.store_stream(stream)
@@ -116,7 +117,14 @@ class Redis(Integration, RedisConnectionChecker):
         session.commit()
         self.streams[stream_name] = stream.stop_event
 
-    def get_stream(self, **kwargs):
+    def get_stream_from_db(self, db_record):
+        kwargs = {"type": db_record._type,
+                  "predictor": db_record.predictor,
+                  "input_stream": db_record.stream_in,
+                  "output_stream": db_record.stream_out}
+        return self.get_stream_from_kwargs(**kwargs)
+
+    def get_stream_from_kwargs(self, **kwargs):
         log.error(f"FACTORY THREAD: creating stream: {kwargs}")
         stream_in = kwargs.get('input_stream')
         stream_out = kwargs.get('output_stream')

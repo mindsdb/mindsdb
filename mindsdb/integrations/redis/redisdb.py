@@ -58,7 +58,7 @@ class Redis(Integration, RedisConnectionChecker):
                       "output_stream": stream.stream_out}
             to_launch = self.get_stream(**kwargs)
             to_launch.start()
-            self.streams[stream.name] = to_launch
+            self.streams[stream.name] = to_launch.stop_event
 
 
         # launch worker which reads control steam and spawn streams
@@ -66,6 +66,14 @@ class Redis(Integration, RedisConnectionChecker):
 
     def start(self):
         Thread(target=Redis.work, args=(self, )).start()
+
+    def delete_stream(self, predictor):
+        stream_name = f"{self.name}_{predictor}"
+        log.error(f"deleting {stream_name}")
+        session.query(Stream).filter_by(company_id=self.company_id, integration=self.name, name=stream_name).delete()
+        session.commit()
+        if stream_name in self.streams:
+            self.streams[stream_name].set()
 
     def work(self):
         log.error(f"FACTORY THREAD: start listening {self.control_stream_name} redis stream")
@@ -76,12 +84,17 @@ class Redis(Integration, RedisConnectionChecker):
                 r_id = r[0]
                 binary_r = r[1]
                 stream_params = self._decode(binary_r)
+                if "input_stream" not in stream_params or "output_stream" not in stream_params:
+                    self.delete_stream(stream_params['predictor'])
+                    self.control_stream.delete(r_id)
+                    continue
+
                 stream = self.get_stream(**stream_params)
                 stream.start()
+                # store created stream in database
                 self.store_stream(stream)
                 # need to delete record which steam is already created
                 self.control_stream.delete(r_id)
-
 
     def store_stream(self, stream):
         stream_name = f"{self.name}_{stream.predictor}"
@@ -92,7 +105,7 @@ class Redis(Integration, RedisConnectionChecker):
                             stream_in=stream.stream_in_name, stream_out=stream.stream_out_name)
         session.add(stream_rec)
         session.commit()
-        self.streams[stream_name] = stream
+        self.streams[stream_name] = stream.stop_event
 
     def get_stream(self, **kwargs):
         log.error(f"FACTORY THREAD: creating stream: {kwargs}")

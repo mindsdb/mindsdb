@@ -139,6 +139,7 @@ class Log(Base):
     payload = Column(String)
     created_at_index = Index("some_index", "created_at_index")
 
+
 class Stream(Base):
     __tablename__ = 'stream'
     id = Column(Integer, primary_key=True)

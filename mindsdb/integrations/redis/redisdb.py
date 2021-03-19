@@ -117,9 +117,6 @@ class Redis(Integration, RedisConnectionChecker):
                            stream_in, stream_out, predictor_name,
                            stream_type)
 
-
-
-
     def _decode(self, b_dict):
         """convert binary key/value into strings"""
         decoded = {}

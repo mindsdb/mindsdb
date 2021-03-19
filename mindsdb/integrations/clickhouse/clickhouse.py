@@ -1,6 +1,6 @@
 import requests
 
-from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
+from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 
 class ClickhouseConnectionChecker:
@@ -29,7 +29,7 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         self.password = db_info.get('password', None)
         self.host = db_info.get('host')
         self.port = db_info.get('port')
-        
+
     def _to_clickhouse_table(self, stats, predicted_cols, columns):
         subtype_map = {
             DATA_SUBTYPES.INT: 'Nullable(Int64)',

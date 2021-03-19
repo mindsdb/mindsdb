@@ -1,8 +1,9 @@
 import json
 import pandas
+import time
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
@@ -10,12 +11,28 @@ from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
-from mindsdb_native.libs.helpers.general_helpers import NumpyJSONEncoder
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.ai_table.ai_table import AITable_store
 from mindsdb.interfaces.datastore.datastore import DataStore
 
 
+
+class NumpyJSONEncoder(json.JSONEncoder):
+    """
+    Use this encoder to avoid
+    "TypeError: Object of type float32 is not JSON serializable"
+
+    Example:
+    x = np.float32(5)
+    json.dumps(x, cls=NumpyJSONEncoder)
+    """
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (np.float, np.float32, np.float64)):
+            return float(obj)
+        else:
+            return super().default(obj)
 
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
@@ -106,8 +123,8 @@ class MindsDBDataNode(DataNode):
         predictor_name = aitable_record.predictor_name
 
         ds, ds_name = self.default_store.save_datasource('temp_ds', integration, {'query': query})
-        dso = self.default_store.get_datasource_obj(ds_name)
-        res = self.mindsdb_native.predict(name=predictor_name, when_data=dso)
+        dso = self.default_store.get_datasource_obj(ds_name, raw=True)
+        res = self.mindsdb_native.predict(predictor_name, 'dict', when_data=dso)
         self.default_store.delete_datasource(ds_name)
 
         keys_map = {}
@@ -144,7 +161,6 @@ class MindsDBDataNode(DataNode):
                     where_data = [where_data]
             except Exception:
                 raise ValueError(f'''Error while parse 'when_data'="{where_data}"''')
-
         external_datasource = None
         if 'external_datasource' in where:
             external_datasource = where['external_datasource']['$eq']
@@ -181,9 +197,7 @@ class MindsDBDataNode(DataNode):
                 where_data += data
 
         new_where = {}
-        if where_data is not None:
-            where_data = pandas.DataFrame(where_data)
-        else:
+        if where_data is None:
             for key, value in where.items():
                 if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
                     # TODO value should be just string or number
@@ -252,9 +266,9 @@ class MindsDBDataNode(DataNode):
 
             return data
         else:
-            res = self.mindsdb_native.predict(name=table, when_data=where_data)
+            pred_dicts, explanations = self.mindsdb_native.predict(table, 'dict&explain',when_data=where_data)
 
-            keys = [x for x in list(res._data.keys()) if x in columns]
+            keys = [x for x in pred_dicts[0] if x in columns]
             min_max_keys = []
             for col in predicted_columns:
                 if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
@@ -262,9 +276,9 @@ class MindsDBDataNode(DataNode):
 
             data = []
             explains = []
-            for i, el in enumerate(res):
+            for i, el in enumerate(pred_dicts):
                 data.append({key: el[key] for key in keys})
-                explains.append(el.explain())
+                explains.append(explanations[i])
 
             field_types = {
                 f: model['data_analysis_v2'][f]['typing']['data_subtype']

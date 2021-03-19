@@ -33,18 +33,6 @@ class PingNative(Resource):
                 return {'native_process': True}
         return {'native_process': False}
 
-
-@ns_conf.route('/report_uuid')
-class ReportUUID(Resource):
-    @ns_conf.doc('get_report_uuid')
-    def get(self):
-        metamodel_name = '___monitroing_metamodel___'
-        predictor = ca.mindsdb_native.create(metamodel_name)
-        return {
-            'report_uuid': predictor.report_uuid
-        }
-
-
 @ns_conf.route('/telemetry')
 class Telemetry(Resource):
     @ns_conf.doc('get_telemetry_status')

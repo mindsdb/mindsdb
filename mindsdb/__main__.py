@@ -11,7 +11,8 @@ import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.os_specific import get_mp_context
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ray_based
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
@@ -28,11 +29,16 @@ def close_api_gracefully(apis):
             process = api['process']
             childs = get_child_pids(process.pid)
             for p in childs:
-                os.kill(p, signal.SIGTERM)
+                try:
+                    
+                    os.kill(p, signal.SIGTERM)
+                except:
+                    p.kill()
             sys.stdout.flush()
             process.terminate()
             process.join()
             sys.stdout.flush()
+        os.system('ray stop --force')
     except KeyboardInterrupt:
         sys.exit(0)
 
@@ -48,14 +54,18 @@ if __name__ == '__main__':
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
     config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
-    
-    from lightwood.__about__ import __version__ as lightwood_version
-    from mindsdb_native.__about__ import __version__ as mindsdb_native_version
+
+    # Switch to this once the native interface has it's own thread :/
+    # ctx = mp.get_context(get_mp_context())
+    ctx = mp.get_context('spawn')
+    if not ray_based:
+        from mindsdb.interfaces.model.model_controller import start as start_model_controller
+        rpc_proc = ctx.Process(target=start_model_controller,)
+        rpc_proc.start()
+
+
     from mindsdb.__about__ import __version__ as mindsdb_version
-    print('Versions:')
-    print(f' - lightwood {lightwood_version}')
-    print(f' - MindsDB_native {mindsdb_native_version}')
-    print(f' - MindsDB {mindsdb_version}')
+    print(f'Version {mindsdb_version}')
 
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config.paths['root']}")
@@ -72,12 +82,8 @@ if __name__ == '__main__':
             'started': False
         } for api in api_arr
     }
-
-    for api_name in apis.keys():
-        if api_name not in config['api']:
-            print(f"Trying run '{api_name}' API, but is no config for this api.")
-            print(f"Please, fill config['api']['{api_name}']")
-            sys.exit(0)
+    if not ray_based:
+        apis['rcp'] = {'process': rpc_proc, 'started': True}
 
     start_functions = {
         'http': start_http,
@@ -98,12 +104,9 @@ if __name__ == '__main__':
     for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
         log.error(f'Error failed to integrate with database aliased: {broken_name}')
 
-    ctx = mp.get_context('spawn')
-    # Switch to this once the native interface has it's own thread :/
-    # ctx = mp.get_context(get_mp_context())
-
-
     for api_name, api_data in apis.items():
+        if api_data['started']:
+            continue
         print(f'{api_name} API: starting...')
         try:
             if api_name == 'http':
@@ -131,7 +134,7 @@ if __name__ == '__main__':
     async def wait_apis_start():
         futures = [
             wait_api_start(api_name, api_data['process'].pid, api_data['port'])
-            for api_name, api_data in apis.items()
+            for api_name, api_data in apis.items() if 'port' in api_data
         ]
         for i, future in enumerate(asyncio.as_completed(futures)):
             api_name, port, started = await future

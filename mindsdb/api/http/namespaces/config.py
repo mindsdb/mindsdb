@@ -96,10 +96,7 @@ class Integration(Resource):
                 del params['enabled']
             ca.config_obj.add_db_integration(name, params)
 
-            model_data_arr = get_all_models_meta_data(
-                ca.mindsdb_native,
-                ca.custom_models
-            )
+            model_data_arr = get_all_models_meta_data(ca.naitve_interface, ca.custom_models)
             ca.dbw.setup_integration(name)
             if is_test is False:
                 ca.dbw.register_predictors(model_data_arr, name)
@@ -174,10 +171,8 @@ class Vars(Resource):
         else:
             mongo = True
 
-        if ca.config_obj.get('cloud', False):
-            cloud = False
-        else:
-            cloud = True
+        cloud = ca.config_obj.get('cloud', False)
+
 
         return {'mongo': mongo, 'telemtry': telemtry, 'cloud': cloud}
 

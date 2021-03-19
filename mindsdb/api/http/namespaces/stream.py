@@ -5,6 +5,8 @@ from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.streams import ns_conf
 from mindsdb.streams.redis.redis_stream import RedisStream
 
+from mindsdb.interfaces.storage.db import session
+from mindsdb.interfaces.storage.db import Stream as StreamDB
 
 def get_integration(name):
     integrations = ca.config_obj.get('integrations', {})
@@ -16,11 +18,28 @@ def get_predictors():
             if x["status"] == "complete" and x["current_phase"] == 'Trained']
 
 
+def get_streams():
+    streams = session.query(StreamDB).all()
+    return [to_dict(stream) for stream in streams]
+
+
+def to_dict(stream):
+    return {"host": stream.host,
+            "port": stream.port,
+            "db": stream.db,
+            "type": stream._type,
+            "predictor": stream.predictor,
+            "stream_in": stream.stream_in,
+            "stream_out": stream.stream_out,
+            "integration": stream.integration,
+            "name": stream.name}
+
+
 @ns_conf.route('/')
 class StreamList(Resource):
     @ns_conf.doc("get_streams")
     def get(self):
-        return {'streams': ["foo", "bar"]}
+        return {'streams': get_streams()}
 
 
 @ns_conf.route('/<name>')
@@ -28,10 +47,11 @@ class StreamList(Resource):
 class Stream(Resource):
     @ns_conf.doc("get_stream")
     def get(self, name):
-        log.error("in get")
-        if name == "fake":
-            abort(404, f"Can\'t find steam: {name}")
-        return {"name": name, "status": "fake"}
+        streams = get_streams()
+        for stream in streams:
+            if stream["name"] == name:
+                return stream
+        abort(404, f"Can\'t find steam: {name}")
 
     @ns_conf.doc("put_stream")
     def put(self, name):

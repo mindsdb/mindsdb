@@ -16,7 +16,8 @@ class RedisConnectionChecker:
         self.password = kwargs.get('password', None)
 
     def _get_connection(self):
-        return walrus.Database(host=self.host, port=self.port,
+        return walrus.Database(host=self.host,
+                               port=self.port,
                                db=self.db,
                                socket_connect_timeout=10)
 
@@ -51,20 +52,16 @@ class Redis(Integration, RedisConnectionChecker):
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
 
         for stream in existed_streams:
-            kwargs = {"host": stream.host,
-                      "port": stream.port,
-                      "db": stream.db,
-                      "type": stream._type,
+            kwargs = {"type": stream._type,
                       "predictor": stream.predictor,
-                      "stream_in": stream.stream_in,
-                      "stream_out": stream.stream_out}
+                      "input_stream": stream.stream_in,
+                      "output_stream": stream.stream_out}
             to_launch = self.get_stream(**kwargs)
             to_launch.start()
             self.streams[stream.name] = to_launch
 
 
-        # launch worker which reads control steam and spawn
-        # streams
+        # launch worker which reads control steam and spawn streams
         self.start()
 
     def start(self):

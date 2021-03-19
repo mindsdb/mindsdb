@@ -31,6 +31,8 @@ class RedisConnectionChecker:
 
 
 class Redis(Integration, RedisConnectionChecker):
+    """Redis Integration which is more a Streams factory
+    than classical Integration."""
     def __init__(self, config, name):
         Integration.__init__(self, config, name)
         intergration_info = self.config['integrations'][self.name]
@@ -47,6 +49,9 @@ class Redis(Integration, RedisConnectionChecker):
         self.streams = {}
 
     def setup(self):
+        """Launches streams stored in db and
+        Launches a worker in separate thread which waits
+        data from control stream and creates a particular Streams."""
 
         # read streams info from db
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
@@ -68,6 +73,8 @@ class Redis(Integration, RedisConnectionChecker):
         Thread(target=Redis.work, args=(self, )).start()
 
     def delete_stream(self, predictor):
+        """Deletes stream from database and stops it work by
+        setting up a special threading.Event flag."""
         stream_name = f"{self.name}_{predictor}"
         log.error(f"deleting {stream_name}")
         session.query(Stream).filter_by(company_id=self.company_id, integration=self.name, name=stream_name).delete()
@@ -76,6 +83,7 @@ class Redis(Integration, RedisConnectionChecker):
             self.streams[stream_name].set()
 
     def work(self):
+        """Creates a Streams by receiving initial information from control stream."""
         log.error(f"FACTORY THREAD: start listening {self.control_stream_name} redis stream")
         while True:
             #block==0 is a blocking mode
@@ -97,6 +105,7 @@ class Redis(Integration, RedisConnectionChecker):
                 self.control_stream.delete(r_id)
 
     def store_stream(self, stream):
+        """Stories a created stream."""
         stream_name = f"{self.name}_{stream.predictor}"
         stream_rec = Stream(name=stream_name, host=stream.host,
                             port=stream.port, db=stream.db,

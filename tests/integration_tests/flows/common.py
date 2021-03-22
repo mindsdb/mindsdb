@@ -203,9 +203,20 @@ def make_test_csv(name, data):
     return str(test_csv_path)
 
 
-def stop_mindsdb(sp=None):
+def stop_mindsdb(sp=None, mindsdb_port):
     if sp:
         sp.kill()
+    try:
+        os.system('ray stop --force')
+    except Exception as e:
+        print(e)
+        pass
+    try:
+        os.system('sudo ray stop --force')
+    except Exception as e:
+        print(e)
+        pass
+
     conns = net_connections()
     pids = [x.pid for x in conns
             if x.pid is not None and x.status in ['LISTEN', 'CLOSE_WAIT']

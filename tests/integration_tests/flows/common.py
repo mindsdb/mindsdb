@@ -203,7 +203,7 @@ def make_test_csv(name, data):
     return str(test_csv_path)
 
 
-def stop_mindsdb(sp=None, mindsdb_port):
+def stop_mindsdb(sp=None):
     if sp:
         sp.kill()
     try:

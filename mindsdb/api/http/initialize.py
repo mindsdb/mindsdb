@@ -14,7 +14,7 @@ from flask_restx import Api
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -252,7 +252,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 def initialize_interfaces(app):
     app.default_store = DataStore()
-    app.mindsdb_native = NativeInterface()
+    app.naitve_interface = NativeInterface()
     app.custom_models = CustomModels()
     app.dbw = DatabaseWrapper()
     config = Config()

@@ -209,7 +209,7 @@ def stop_mindsdb(sp=None):
     conns = net_connections()
     pids = [x.pid for x in conns
             if x.pid is not None and x.status in ['LISTEN', 'CLOSE_WAIT']
-            and x.laddr[1] in (47334, 47335, 47336)]
+            and x.laddr[1] in (47334, 47335, 47336, 19329, 8273, 8274, 8275)]
 
     for pid in pids:
         try:
@@ -217,7 +217,7 @@ def stop_mindsdb(sp=None):
         # process may be killed by OS due to some reasons in that moment
         except ProcessLookupError:
             pass
-
+    time.sleep(6)
 
 def override_recursive(a, b):
     for key in b:
@@ -238,16 +238,24 @@ def run_environment(apis, override_config={}):
         f.write(json.dumps(config_json))
 
     os.environ['CHECK_FOR_UPDATES'] = '0'
-    os.environ['MINDSDB_DATABASE_TYPE'] = 'sqlite'
-    os.environ['MINDSDB_STORAGE_DIR'] = str(TEMP_DIR)
+    print('Starting mindsdb process!')
+    try:
+        os.system('ray stop --force')
+    except:
+        pass
+    try:
+        os.system('sudo ray stop --force')
+    except:
+        pass
     sp = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', '--api', api_str, '--config', str(CONFIG_PATH), '--verbose'],
+        ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={CONFIG_PATH}', '--verbose'],
         close_fds=True,
         stdout=OUTPUT,
         stderr=OUTPUT
     )
     atexit.register(stop_mindsdb, sp=sp)
 
+    print('Waiting on ports!')
     async def wait_port_async(port, timeout):
         start_time = time.time()
         started = is_port_in_use(port)
@@ -257,7 +265,7 @@ def run_environment(apis, override_config={}):
         return started
 
     async def wait_apis_start(ports):
-        futures = [wait_port_async(port, 60) for port in ports]
+        futures = [wait_port_async(port, 200) for port in ports]
         success = True
         for i, future in enumerate(asyncio.as_completed(futures)):
             success = success and await future
@@ -272,6 +280,7 @@ def run_environment(apis, override_config={}):
     ioloop.close()
     if not success:
         raise Exception('Cant start mindsdb apis')
+    print('Done waiting, mindsdb has started!')
 
 
 def condition_dict_to_str(condition):

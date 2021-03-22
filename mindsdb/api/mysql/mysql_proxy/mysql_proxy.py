@@ -26,6 +26,7 @@ from collections import OrderedDict
 from functools import partial
 import select
 import base64
+import time
 
 import moz_sql_parser as sql_parser
 
@@ -78,7 +79,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 )
 
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.interfaces.ai_table.ai_table import AITable_store
 

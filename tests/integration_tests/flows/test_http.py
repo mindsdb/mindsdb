@@ -7,8 +7,6 @@ import json
 
 import requests
 
-from mindsdb.utilities.ps import net_connections
-
 from common import (
     CONFIG_PATH,
     run_environment
@@ -42,16 +40,6 @@ class HTTPTest(unittest.TestCase):
         )
 
         cls.initial_integrations_names = list(cls.config['integrations'].keys())
-
-    @classmethod
-    def tearDownClass(cls):
-        try:
-            conns = net_connections()
-            pid = [x.pid for x in conns if x.status == 'LISTEN' and x.laddr[1] == 47334 and x.pid is not None]
-            if len(pid) > 0:
-                os.kill(pid[0], 9)
-        except Exception:
-            pass
 
     def test_1_config(self):
         res = requests.get(f'{root}/config/integrations')
@@ -187,24 +175,10 @@ class HTTPTest(unittest.TestCase):
         """
         Call utilities ping endpoint
         THEN check the response is success
-
-        Call utilities report_uuid endpoint
-        THEN check the response is success
-        THEN check if the report_uuid is present in the report json and well fromated
-        THEN Call the endpoint again and check that the two report_uuids returned match
         """
 
         response = requests.get(f'{root}/util/ping')
         assert response.status_code == 200
-
-        response = requests.get(f'{root}/util/report_uuid')
-        assert response.status_code == 200
-        report_uuid = response.json()['report_uuid']
-        assert report_uuid == 'no_report'
-
-        # Make sure the uuid doesn't change on subsequent requests
-        response = requests.get(f'{root}/util/report_uuid')
-        assert report_uuid == response.json()['report_uuid']
 
     def test_7_predictors(self):
         """

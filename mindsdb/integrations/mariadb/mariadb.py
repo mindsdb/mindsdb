@@ -1,6 +1,6 @@
 import mysql.connector
 
-from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
+from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 
 

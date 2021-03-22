@@ -1,7 +1,7 @@
 from contextlib import closing
 import pg8000
 
-from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
+from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 
 

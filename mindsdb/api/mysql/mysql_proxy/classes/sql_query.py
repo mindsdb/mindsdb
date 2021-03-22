@@ -55,7 +55,7 @@ class SQLQuery():
         self.integration = integration
         self.database = database
 
-        self.ai_table = AITable_store()
+        self.ai_table = None
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
@@ -467,7 +467,7 @@ class SQLQuery():
     def _resolveTableData(self, table_name):
         # if isinstance(self.table_data[table_name], ObjectID):
         #     self.table_data[table_name] = list(ray.get(self.table_data[table_name]))
-        
+
         # FIXME that for 'integration JOIN predictoir'
         if len(table_name.split('.')) == 3:
             table_name = table_name[table_name.find('.') + 1: ]
@@ -542,6 +542,12 @@ class SQLQuery():
 
                 tables = list(self.where_conditions[0]['tables'])
                 db = (self.database or '').lower()
+
+                # @TODO: Figure out why initalization is so low, for now only initialize it when needed
+                # We should probably just pass this to the SQLQuery the same way we do integrations, databases, etc
+                if self.ai_table is None:
+                    self.ai_table = AITable_store()
+
                 if False and len(tables) == 1 and (
                         tables[0].lower() in ['mindsdb.predictors', 'mindsdb.commands'] \
                         or db == 'mindsdb' and tables[0].lower() in ['predictors', 'commands']

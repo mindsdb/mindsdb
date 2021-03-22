@@ -43,7 +43,6 @@ class Redis(Integration, RedisConnectionChecker):
         self.user = intergration_info.get('user', None)
         self.password = intergration_info.get('password', None)
         self.client = self._get_connection()
-        # self.control_stream_name = self.integration_info.get('control_stream')
         self.control_stream = self.client.Stream(self.control_stream_name)
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.streams = {}
@@ -66,15 +65,21 @@ class Redis(Integration, RedisConnectionChecker):
         for stream in existed_streams:
             to_launch = self.get_stream_from_db(stream)
             if stream.name not in self.streams:
+                params = {"integration": stream.integration,
+                          "predictor": stream.predictor,
+                          "stream_in": stream.stream_in,
+                          "stream_out": stream.stream_out,
+                          "type": stream._type}
+
+                log.debug(f"Integration {self.name} - launching from db : {params}")
                 to_launch.start()
                 self.streams[stream.name] = to_launch.stop_event
-
 
     def delete_stream(self, predictor):
         """Deletes stream from database and stops it work by
         setting up a special threading.Event flag."""
         stream_name = f"{self.name}_{predictor}"
-        log.error(f"deleting {stream_name}")
+        log.debug(f"Integration {self.name}: deleting {stream_name}")
         session.query(Stream).filter_by(company_id=self.company_id, integration=self.name, name=stream_name).delete()
         session.commit()
         if stream_name in self.streams:
@@ -82,28 +87,33 @@ class Redis(Integration, RedisConnectionChecker):
 
     def work(self):
         """Creates a Streams by receiving initial information from control stream."""
-        log.error(f"FACTORY THREAD: start listening {self.control_stream_name} redis stream")
+        log.debug(f"Integration {self.name}: start listening {self.control_stream_name} redis stream")
         while True:
-            # First, lets check that there are no new records in db, created via HTTP API for e.g.
-            self.start_stored_streams()
-            # Checking new incoming records(requests) for new stream.
-            # block==0 is a blocking mode
-            recs = self.control_stream.read(block=0)
-            for r in recs:
-                r_id = r[0]
-                binary_r = r[1]
-                stream_params = self._decode(binary_r)
-                if "input_stream" not in stream_params or "output_stream" not in stream_params:
-                    self.delete_stream(stream_params['predictor'])
-                    self.control_stream.delete(r_id)
-                    continue
+            try:
+                # First, lets check that there are no new records in db, created via HTTP API for e.g.
+                self.start_stored_streams()
+                # Checking new incoming records(requests) for new stream.
+                # Could't use blocking reading here, because this loop must
+                # also check new records in db (created via HTTP api for e.g)
+                recs = self.control_stream.read()
+                for r in recs:
+                    r_id = r[0]
+                    binary_r = r[1]
+                    stream_params = self._decode(binary_r)
+                    if "input_stream" not in stream_params or "output_stream" not in stream_params:
+                        self.delete_stream(stream_params['predictor'])
+                        self.control_stream.delete(r_id)
+                        continue
 
-                stream = self.get_stream_from_kwargs(**stream_params)
-                stream.start()
-                # store created stream in database
-                self.store_stream(stream)
-                # need to delete record which steam is already created
-                self.control_stream.delete(r_id)
+                    stream = self.get_stream_from_kwargs(**stream_params)
+                    log.debug(f"Integration {self.name}: creating stream: {stream_params}")
+                    stream.start()
+                    # store created stream in database
+                    self.store_stream(stream)
+                    # need to delete record which steam is already created
+                    self.control_stream.delete(r_id)
+            except Exception as e:
+                log.error(f"Integration {self.name}: {e}")
 
     def store_stream(self, stream):
         """Stories a created stream."""
@@ -125,7 +135,6 @@ class Redis(Integration, RedisConnectionChecker):
         return self.get_stream_from_kwargs(**kwargs)
 
     def get_stream_from_kwargs(self, **kwargs):
-        log.error(f"FACTORY THREAD: creating stream: {kwargs}")
         stream_in = kwargs.get('input_stream')
         stream_out = kwargs.get('output_stream')
         predictor_name = kwargs.get('predictor')
@@ -138,7 +147,7 @@ class Redis(Integration, RedisConnectionChecker):
         """convert binary key/value into strings"""
         decoded = {}
         if not isinstance(b_dict, dict):
-            log.error(f"got unexpected data format from redis stream {self.name}: {b_dict}")
+            log.error(f"Integration {self.name}: got unexpected data format from redis control stream {self.control_stream_name}: {b_dict}")
             return {}
         for k in b_dict:
             decoded[k.decode('utf8')] = b_dict[k].decode('utf8')

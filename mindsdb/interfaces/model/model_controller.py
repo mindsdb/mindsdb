@@ -242,7 +242,7 @@ class ModelController():
 
         model['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
         model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
-        model['predict'] = str(predictor_record.to_predict)
+        model['predict'] = predictor_record.to_predict
         model['update'] = predictor_record.update_status
         return self._pack(model)
 

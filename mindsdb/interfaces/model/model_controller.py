@@ -244,6 +244,8 @@ class ModelController():
         model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
         model['predict'] = predictor_record.to_predict
         model['update'] = predictor_record.update_status
+        if model.get('predict') is None:
+            model['predict'] = predictor_record.to_predict
         return self._pack(model)
 
     def get_models(self):

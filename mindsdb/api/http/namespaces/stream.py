@@ -67,6 +67,8 @@ class Stream(Resource):
         integration_info = get_integration(integration_name)
         if not integration_info:
             abort(400, f"integration '{integration_name}' doesn't exist.")
+        if integration_info.type != 'redis':
+            abort(400, f"only integration of redis type might be used to crate redis streams. got: '{integration_info.type}' type")
         host = integration_info['host']
         port = integration_info['port']
         db = integration_info.get('db', 0)

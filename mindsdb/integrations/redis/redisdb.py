@@ -1,11 +1,12 @@
 import os
+import json
 from threading import Thread
 import walrus
 from mindsdb.utilities.config import STOP_THREADS_EVENT
 from mindsdb.utilities.log import log
 from mindsdb.integrations.base import Integration
 from mindsdb.streams.redis.redis_stream import RedisStream
-from mindsdb.interfaces.storage.db import session, Stream
+from mindsdb.interfaces.storage.db import session, Stream, Configuration
 
 
 class RedisConnectionChecker:
@@ -48,6 +49,15 @@ class Redis(Integration, RedisConnectionChecker):
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.streams = {}
         self.stop_event = STOP_THREADS_EVENT
+
+    def should_i_exist(self):
+        config_record = session.query(Configuration).filter_by(company_id=self.company_id).first()
+        if config_record is None:
+            return False
+        integrations = json.loads(config_record.data)["integrations"]
+        if self.name not in integrations:
+            return False
+        return True
 
     def setup(self):
         """Launches streams stored in db and
@@ -92,6 +102,9 @@ class Redis(Integration, RedisConnectionChecker):
         log.debug(f"Integration {self.name}: start listening {self.control_stream_name} redis stream")
         while not self.stop_event.wait(0.5):
             try:
+                # break if no record about this integration has found in db
+                if not self.should_i_exist():
+                    break
                 # First, lets check that there are no new records in db, created via HTTP API for e.g.
                 self.start_stored_streams()
                 # Checking new incoming records(requests) for new stream.
@@ -118,6 +131,7 @@ class Redis(Integration, RedisConnectionChecker):
                 log.error(f"Integration {self.name}: {e}")
 
         # received exit event
+        log.debug(f"Integration {self.name}: exiting...")
         self.stop_streams()
         session.close()
 

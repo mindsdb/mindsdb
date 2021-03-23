@@ -51,6 +51,8 @@ class RedisStream(Thread):
                     self.stream_out.add({"prediction": in_json})
                 self.stream_in.delete(record_id)
 
+        session.close()
+
     def decode(self, redis_data):
         decoded = {}
         for k in redis_data:

@@ -1,6 +1,7 @@
 import os
 from threading import Thread
 import walrus
+from mindsdb.utilities.config import STOP_THREADS_EVENT
 from mindsdb.utilities.log import log
 from mindsdb.integrations.base import Integration
 from mindsdb.streams.redis.redis_stream import RedisStream
@@ -46,6 +47,7 @@ class Redis(Integration, RedisConnectionChecker):
         self.control_stream = self.client.Stream(self.control_stream_name)
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.streams = {}
+        self.stop_event = STOP_THREADS_EVENT
 
     def setup(self):
         """Launches streams stored in db and
@@ -88,7 +90,7 @@ class Redis(Integration, RedisConnectionChecker):
     def work(self):
         """Creates a Streams by receiving initial information from control stream."""
         log.debug(f"Integration {self.name}: start listening {self.control_stream_name} redis stream")
-        while True:
+        while not self.stop_event.wait(0.5):
             try:
                 # First, lets check that there are no new records in db, created via HTTP API for e.g.
                 self.start_stored_streams()
@@ -114,6 +116,14 @@ class Redis(Integration, RedisConnectionChecker):
                     self.control_stream.delete(r_id)
             except Exception as e:
                 log.error(f"Integration {self.name}: {e}")
+
+        # received exit event
+        self.stop_streams()
+        session.close()
+
+    def stop_streams(self):
+        for stream in self.streams:
+            self.streams[stream].set()
 
     def store_stream(self, stream):
         """Stories a created stream."""

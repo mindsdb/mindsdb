@@ -1,9 +1,10 @@
 import os
+import logging
+
 import torch.multiprocessing as mp
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.utilities.os_specific import get_mp_context
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.config import Config
@@ -48,8 +49,15 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
             to_predict=to_predict,
             **kwargs
         )
-    except Exception:
-        pass
+    except Exception as e:
+        log = logging.getLogger('mindsdb.main')
+        log.error(f'Predictor learn error: {e}')
+        predictor_record.data = {
+            'name': name,
+            'status': 'error'
+        }
+        session.commit()
+        return
 
     fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
 
@@ -60,6 +68,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     session.commit()
 
     DatabaseWrapper().register_predictors([model_data])
+
 
 class LearnProcess(ctx.Process):
     daemon = True

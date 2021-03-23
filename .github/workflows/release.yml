@@ -1,0 +1,31 @@
+name: MindsDB workflow
+
+on:
+  release:
+    types: [published]
+
+jobs:
+
+  deploy_version_file:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+    - name: Deploy version files
+      run: |
+        python deploy_version.py release
+
+    - name: Sync linux sh installer to s3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks
+      env:
+        AWS_S3_BUCKET: 'mindsdb-installer'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-2'
+        SOURCE_DIR: 'distributions/ver/dist'
+        DEST_DIR: 'mindsdb-installer/ver'

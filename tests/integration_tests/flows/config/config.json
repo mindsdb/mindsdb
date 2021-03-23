@@ -1,0 +1,80 @@
+{
+    "api": {
+        "http": {
+            "host": "0.0.0.0",
+            "port": "47334"
+        },
+        "mongodb": {
+            "host": "127.0.0.1",
+            "port": "47336"
+        },
+        "mysql": {
+            "certificate_path": "tests/integration_tests/flows/config/cert.pem",
+            "host": "127.0.0.1",
+            "password": "password",
+            "port": "47335",
+            "user": "mindsdb"
+        }
+    },
+    "config_version": "1.4",
+    "debug": true,
+    "integrations": {
+        "default_clickhouse": {
+            "host": "localhost",
+            "password": "",
+            "port": 8123,
+            "publish": true,
+            "type": "clickhouse",
+            "user": "default"
+        },
+        "default_mariadb": {
+            "host": "localhost",
+            "password": "root",
+            "port": 3306,
+            "publish": true,
+            "type": "mariadb",
+            "user": "root"
+        },
+        "default_mongodb": {
+            "host": "127.0.0.1",
+            "password": "",
+            "port": 27001,
+            "publish": false,
+            "type": "mongodb",
+            "user": ""
+        },
+        "default_mssql": {
+            "host": "127.0.0.1",
+            "odbc_driver_name": "MySQL ODBC 8.0 Unicode Driver",
+            "password": "password",
+            "port": 1433,
+            "publish": true,
+            "type": "mssql",
+            "user": "sa"
+        },
+        "default_mysql": {
+            "host": "localhost",
+            "password": "root",
+            "port": 3307,
+            "publish": true,
+            "type": "mysql",
+            "user": "root"
+        },
+        "default_postgres": {
+            "database": "postgres",
+            "host": "localhost",
+            "password": "",
+            "port": 5432,
+            "publish": true,
+            "type": "postgres",
+            "user": "postgres"
+        }
+    },
+    "log": {
+        "level": {
+            "console": "DEBUG",
+            "file": "DEBUG"
+        }
+    },
+    "storage_dir": "/tmp/mindsdb_storage"
+}

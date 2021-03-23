@@ -1,0 +1,49 @@
+class DATA_SUBTYPES:
+    # Numeric
+    INT = 'Int'
+    FLOAT = 'Float'
+    BINARY = 'Binary' # Should we have this ?
+
+    # DATETIME
+    DATE = 'Date' # YYYY-MM-DD
+    TIMESTAMP = 'Timestamp' # YYYY-MM-DD hh:mm:ss or 1852362464
+
+    # CATEGORICAL
+    SINGLE = 'Binary Category'
+    MULTIPLE = 'Category'
+    TAGS = 'Tags'
+
+    # FILE_PATH
+    IMAGE = 'Image'
+    VIDEO = 'Video'
+    AUDIO = 'Audio'
+
+    # SEQUENTIAL
+    ARRAY = 'Array'
+
+    # TEXT
+    SHORT = 'Short Text'
+    RICH = 'Rich Text'
+
+
+class DATA_TYPES:
+    NUMERIC = 'Numeric'
+    DATE = 'Date'
+    CATEGORICAL = 'Categorical'
+    FILE_PATH = 'File Path'
+    SEQUENTIAL = 'Sequential'
+    TEXT = 'Text'
+
+
+class DATA_TYPE_ALIASES:
+    NUMERICAL_LOW_GRANULARITY = 'Numerical (Low Granularity)'
+
+
+DATA_TYPES_SUBTYPES = {
+    DATA_TYPES.NUMERIC: [DATA_SUBTYPES.INT, DATA_SUBTYPES.FLOAT, DATA_SUBTYPES.BINARY],
+    DATA_TYPES.DATE: [DATA_SUBTYPES.DATE, DATA_SUBTYPES.TIMESTAMP],
+    DATA_TYPES.CATEGORICAL: [DATA_SUBTYPES.SINGLE, DATA_SUBTYPES.MULTIPLE, DATA_SUBTYPES.TAGS],
+    DATA_TYPES.FILE_PATH: [DATA_SUBTYPES.IMAGE, DATA_SUBTYPES.VIDEO, DATA_SUBTYPES.AUDIO],
+    DATA_TYPES.SEQUENTIAL: [DATA_SUBTYPES.ARRAY],
+    DATA_TYPES.TEXT: [DATA_SUBTYPES.SHORT, DATA_SUBTYPES.RICH],
+}

@@ -3,9 +3,9 @@ import json
 from threading import Thread, Event
 import walrus
 from mindsdb.utilities.log import log
-from mindsdb_native import Predictor
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Predictor as DBPredictor
+from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 
 
 class RedisStream(Thread):
@@ -20,6 +20,8 @@ class RedisStream(Thread):
         self.stream_in = self.client.Stream(stream_in)
         self.stream_out = self.client.Stream(stream_out)
         self._type = _type
+        self.native_interface = NativeInterface()
+        self.format_flag = 'explain'
 
         self.stop_event = Event()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
@@ -34,7 +36,6 @@ class RedisStream(Thread):
             log.error(f"Error creating stream: requested predictor {self.predictor} is not exist")
             return
 
-        predictor = Predictor(self.predictor)
         while not self.stop_event.wait(0.5):
             # block==0 is a blocking mode
             predict_info = self.stream_in.read(block=0)
@@ -43,9 +44,10 @@ class RedisStream(Thread):
                 raw_when_data = record[1]
                 when_data = self.decode(raw_when_data)
 
-                result = predictor.predict(when_data=when_data)
+                result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
+                log.error(f"STREAM: got {result}")
                 for res in result:
-                    in_json = json.dumps(res.explain())
+                    in_json = json.dumps(res)
                     self.stream_out.add({"prediction": in_json})
                 self.stream_in.delete(record_id)
 

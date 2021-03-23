@@ -65,7 +65,7 @@ class Semaphor(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     entity_type = Column('entity_type', String)
-    entity_id = Column('entity_id', String)
+    entity_id = Column('entity_id', Integer)
     action = Column(String)
     company_id = Column(Integer)
     uniq_const = UniqueConstraint('entity_type', 'entity_id')

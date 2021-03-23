@@ -12,7 +12,6 @@ from flask_restx import Resource, abort     # 'abort' using to return errors as 
 from flask import current_app as ca
 
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.storage.db import session
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
 from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
     datasource_metadata,
@@ -158,9 +157,12 @@ class Datasource(Resource):
 
 
 def analyzing_thread(name, default_store):
-    analysis = default_store.start_analysis(name)
-    session.close()
-
+    try:
+        from mindsdb.interfaces.storage.db import session
+        analysis = default_store.start_analysis(name)
+        session.close()
+    except Exception as e:
+        log.error(e)
 
 @ns_conf.route('/<name>/analyze')
 @ns_conf.param('name', 'Datasource name')

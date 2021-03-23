@@ -206,6 +206,17 @@ def make_test_csv(name, data):
 def stop_mindsdb(sp=None):
     if sp:
         sp.kill()
+    try:
+        os.system('ray stop --force')
+    except Exception as e:
+        print(e)
+        pass
+    try:
+        os.system('sudo ray stop --force')
+    except Exception as e:
+        print(e)
+        pass
+
     conns = net_connections()
     pids = [x.pid for x in conns
             if x.pid is not None and x.status in ['LISTEN', 'CLOSE_WAIT']
@@ -239,6 +250,14 @@ def run_environment(apis, override_config={}):
 
     os.environ['CHECK_FOR_UPDATES'] = '0'
     print('Starting mindsdb process!')
+    try:
+        os.system('ray stop --force')
+    except:
+        pass
+    try:
+        os.system('sudo ray stop --force')
+    except:
+        pass
     sp = subprocess.Popen(
         ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={CONFIG_PATH}', '--verbose'],
         close_fds=True,

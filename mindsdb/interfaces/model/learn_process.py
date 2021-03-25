@@ -1,5 +1,7 @@
 import os
 import logging
+import tempfile
+from pathlib import Path
 
 import torch.multiprocessing as mp
 
@@ -13,10 +15,30 @@ from mindsdb.utilities.config import Config
 ctx = mp.get_context('spawn')
 
 
+def create_learn_mark():
+    if os.name == 'posix':
+        p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/')
+        p.mkdir(parents=True, exist_ok=True)
+        p.joinpath(f'{os.getpid()}').touch()
+
+
+def delete_learn_mark():
+    if os.name == 'posix':
+        p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/')
+        p.joinpath(f'{os.getpid()}').unlink(missing_ok=True)
+
+
 def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     import mindsdb_native
     import mindsdb_datasources
     import mindsdb
+
+    create_learn_mark()
+
+    if os.name == 'posix':
+        p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/')
+        p.mkdir(parents=True, exist_ok=True)
+        p.joinpath(f'{os.getpid()}').touch()
 
     config = Config()
     fs_store = FsSotre()
@@ -57,6 +79,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
             'status': 'error'
         }
         session.commit()
+        delete_learn_mark()
         return
 
     fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
@@ -68,6 +91,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     session.commit()
 
     DatabaseWrapper().register_predictors([model_data])
+    delete_learn_mark()
 
 
 class LearnProcess(ctx.Process):
@@ -83,12 +107,5 @@ class LearnProcess(ctx.Process):
 
         this is work for celery worker here?
         '''
-        import setproctitle
-
-        try:
-            setproctitle.setproctitle('mindsdb_native_process')
-        except Exception:
-            pass
-
         name, from_data, to_predict, kwargs, datasource_id = self._args
         run_learn(name, from_data, to_predict, kwargs, datasource_id)

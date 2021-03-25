@@ -140,5 +140,21 @@ class Log(Base):
     created_at_index = Index("some_index", "created_at_index")
 
 
+class Stream(Base):
+    __tablename__ = 'stream'
+    id = Column(Integer, primary_key=True)
+    # integration_id = Column(Integer, ForeignKey('integration.id'))
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    _type = Column(String)
+    host = Column(String)
+    port = Column(Integer)
+    db = Column(Integer)
+    predictor = Column(String)
+    stream_in = Column(String)
+    stream_out = Column(String)
+    integration = Column(String)
+    company_id = Column(Integer)
+    name = Column(String)
+
 Base.metadata.create_all(engine)
 orm.configure_mappers()

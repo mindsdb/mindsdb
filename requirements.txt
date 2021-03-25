@@ -13,4 +13,5 @@ setuptools
 psutil
 sqlalchemy >= 1.3.0
 sentry-sdk
+walrus==0.8.2
 mindsdb_datasources

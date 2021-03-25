@@ -4,12 +4,20 @@ from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.integrations.mongodb.mongodb import MongoDB
+from mindsdb.integrations.redis.redisdb import Redis
 
 from mindsdb.utilities.log import log as logger
 from mindsdb.utilities.config import Config
 
 
 class DatabaseWrapper():
+    known_dbs = {'clickhouse': Clickhouse,
+                 'mariadb': Mariadb,
+                 'mysql': MySQL,
+                 'postgres': PostgreSQL,
+                 'mssql': MSSQL,
+                 'mongodb': MongoDB,
+                 'redis': Redis}
     def __init__(self):
         self.config = Config()
 
@@ -27,21 +35,10 @@ class DatabaseWrapper():
     def _get_integration(self, db_alias):
         if self.config['integrations'][db_alias]['publish']:
             db_type = self.config['integrations'][db_alias]['type']
-            if db_type == 'clickhouse':
-                return Clickhouse(self.config, db_alias)
-            elif db_type == 'mariadb':
-                return Mariadb(self.config, db_alias)
-            elif db_type == 'mysql':
-                return MySQL(self.config, db_alias)
-            elif db_type == 'postgres':
-                return PostgreSQL(self.config, db_alias)
-            elif db_type == 'mssql':
-                return MSSQL(self.config, db_alias)
-            elif db_type == 'mongodb':
-                return MongoDB(self.config, db_alias)
-            else:
-                logger.warning(f'Uknown integration type: {db_type} for database called: {db_alias}')
-                return False
+            if db_type in self.known_dbs:
+                return self.known_dbs[db_type](self.config, db_alias)
+            logger.warning(f'Uknown integration type: {db_type} for database called: {db_alias}')
+            return False
         return True
 
     def _get_integrations(self):

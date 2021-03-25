@@ -9,7 +9,7 @@ import signal
 
 import torch.multiprocessing as mp
 
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
 from mindsdb.utilities.os_specific import get_mp_context
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb.interfaces.model.model_interface import ray_based
@@ -151,4 +151,6 @@ if __name__ == '__main__':
         for api_data in apis.values():
             api_data['process'].join()
     except KeyboardInterrupt:
+        print('Stopping stream integrations...')
+        STOP_THREADS_EVENT.set()
         print('Closing app...')

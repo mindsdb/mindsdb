@@ -3,9 +3,12 @@ import json
 import hashlib
 import datetime
 from copy import deepcopy
+from threading import Event
 
 from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.storage.db import session, Configuration
+
+STOP_THREADS_EVENT = Event()
 
 
 def _null_to_empty(config):

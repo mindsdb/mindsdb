@@ -24,8 +24,9 @@ def create_learn_mark():
 
 def delete_learn_mark():
     if os.name == 'posix':
-        p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/')
-        p.joinpath(f'{os.getpid()}').unlink(missing_ok=True)
+        p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/').joinpath(f'{os.getpid()}')
+        if p.exists():
+            p.unlink()
 
 
 def run_learn(name, from_data, to_predict, kwargs, datasource_id):
@@ -34,11 +35,6 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     import mindsdb
 
     create_learn_mark()
-
-    if os.name == 'posix':
-        p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/')
-        p.mkdir(parents=True, exist_ok=True)
-        p.joinpath(f'{os.getpid()}').touch()
 
     config = Config()
     fs_store = FsSotre()

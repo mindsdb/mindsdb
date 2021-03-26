@@ -17,6 +17,7 @@ from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces,
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import initialize_log, get_log
 from mindsdb.interfaces.storage.db import session
+from flask_compress import Compress
 
 
 def start(verbose, no_studio):
@@ -33,6 +34,7 @@ def start(verbose, no_studio):
         init_static_thread.start()
 
     app, api = initialize_flask(config, init_static_thread, no_studio)
+    Compress(app)
     initialize_interfaces(app)
 
     static_root = Path(config.paths['static'])

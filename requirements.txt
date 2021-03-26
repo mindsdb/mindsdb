@@ -16,3 +16,4 @@ sentry-sdk
 setproctitle
 walrus==0.8.2
 mindsdb_datasources
+flask-compress

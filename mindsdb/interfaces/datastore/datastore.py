@@ -284,7 +284,7 @@ class DataStore():
             log.error(f'{e}')
             try:
                 self.delete_datasource(name)
-            except:
+            except Exception:
                 pass
             raise e
 

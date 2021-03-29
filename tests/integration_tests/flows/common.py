@@ -252,11 +252,11 @@ def run_environment(apis, override_config={}):
     print('Starting mindsdb process!')
     try:
         os.system('ray stop --force')
-    except:
+    except Exception:
         pass
     try:
         os.system('sudo ray stop --force')
-    except:
+    except Exception:
         pass
     sp = subprocess.Popen(
         ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={CONFIG_PATH}', '--verbose'],

@@ -43,7 +43,7 @@ def get_all_models_meta_data(mindsdb_native, custom_models):
         if model['status'] == 'complete':
             try:
                 model_data_arr.append(mindsdb_native.get_model_data(model['name']))
-            except:
+            except Exception:
                 pass
 
     model_data_arr.extend(custom_models.get_models())

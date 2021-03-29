@@ -1,5 +1,7 @@
 import os
 import logging
+import tempfile
+from pathlib import Path
 
 import torch.multiprocessing as mp
 
@@ -8,15 +10,32 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 
 
 ctx = mp.get_context('spawn')
+
+
+def create_learn_mark():
+    if os.name == 'posix':
+        p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/')
+        p.mkdir(parents=True, exist_ok=True)
+        p.joinpath(f'{os.getpid()}').touch()
+
+
+def delete_learn_mark():
+    if os.name == 'posix':
+        p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/').joinpath(f'{os.getpid()}')
+        if p.exists():
+            p.unlink()
 
 
 def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     import mindsdb_native
     import mindsdb_datasources
     import mindsdb
+
+    create_process_mark('learn')
 
     config = Config()
     fs_store = FsSotre()
@@ -57,6 +76,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
             'status': 'error'
         }
         session.commit()
+        delete_process_mark('learn')
         return
 
     fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
@@ -68,6 +88,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     session.commit()
 
     DatabaseWrapper().register_predictors([model_data])
+    delete_process_mark('learn')
 
 
 class LearnProcess(ctx.Process):
@@ -83,12 +104,5 @@ class LearnProcess(ctx.Process):
 
         this is work for celery worker here?
         '''
-        import setproctitle
-
-        try:
-            setproctitle.setproctitle('mindsdb_native_process')
-        except Exception:
-            pass
-
         name, from_data, to_predict, kwargs, datasource_id = self._args
         run_learn(name, from_data, to_predict, kwargs, datasource_id)

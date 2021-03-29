@@ -11,13 +11,14 @@ from copy import deepcopy
 import time
 from contextlib import contextmanager
 
-from mindsdb.utilities.fs import create_directory
+import pandas as pd
+import mindsdb_datasources
+
+from mindsdb.utilities.fs import create_directory, create_process_mark, delete_process_mark
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import log
-import pandas as pd
-import mindsdb_datasources
 
 
 class ModelController():
@@ -143,6 +144,8 @@ class ModelController():
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
         from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
 
+        create_process_mark('learn')
+
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
@@ -157,16 +160,22 @@ class ModelController():
             if join_learn_process is True:
                 p.join()
                 if p.exitcode != 0:
+                    delete_process_mark('learn')
                     raise Exception('Learning process failed !')
+
+        delete_process_mark('learn')
         return 0
 
     def predict(self, name, pred_format, when_data=None, kwargs={}):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
         from mindsdb.interfaces.storage.db import session, Predictor
+
+        create_process_mark('predict')
+
         if name not in self.predictor_cache:
             # Clear the cache entirely if we have less than 1.2 GB left
-            if psutil.virtual_memory().available < 1.2 * pow(10,9):
+            if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
             predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
@@ -183,7 +192,7 @@ class ModelController():
             # @TODO: Replace with Datasource
             try:
                 data_source = pd.DataFrame(when_data)
-            except Exception as e:
+            except Exception:
                 data_source = when_data
 
         predictions = self.predictor_cache[name]['predictor'].predict(
@@ -197,16 +206,22 @@ class ModelController():
         elif pred_format == 'dict&explain':
             predictions = [[p.as_dict() for p in predictions], [p.explain() for p in predictions]]
         else:
+            delete_process_mark('predict')
             raise Exception(f'Unkown predictions format: {pred_format}')
 
+        delete_process_mark('predict')
         return self._pack(predictions)
 
     def analyse_dataset(self, ds):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         from mindsdb_native import F
 
+        create_process_mark('analyse')
+
         ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
-        analysis =  F.analyse_dataset(ds)
+        analysis = F.analyse_dataset(ds)
+
+        delete_process_mark('analyse')
         return self._pack(analysis)
 
     def get_model_data(self, name, db_fix=True):

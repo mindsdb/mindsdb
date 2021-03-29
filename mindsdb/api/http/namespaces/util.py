@@ -1,7 +1,11 @@
+import os
+import psutil
+import tempfile
+from pathlib import Path
+
 from flask import request
 from flask_restx import Resource
 from flask import current_app as ca
-import psutil
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.util import ns_conf
@@ -28,10 +32,30 @@ class PingNative(Resource):
         ''' Checks server use native for learn or analyse.
             Will return right result only on Linux.
         '''
-        for p in psutil.process_iter(['name']):
-            if p.info['name'] == 'mindsdb_native_process':
-                return {'native_process': True}
-        return {'native_process': False}
+        if os.name != 'posix':
+            return {'native_process': False}
+
+        response = {
+            'learn': False,
+            'predict': False,
+            'analyse': False
+        }
+
+        for process_type in response:
+            p = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{process_type}/')
+            if not p.is_dir():
+                continue
+            pids = [int(x.name) for x in p.iterdir()]
+            for pid in pids:
+                try:
+                    psutil.Process(pid)
+                except Exception:
+                    p.joinpath(str(pid)).unlink()
+                else:
+                    response[process_type] = True
+
+        return response
+
 
 @ns_conf.route('/telemetry')
 class Telemetry(Resource):

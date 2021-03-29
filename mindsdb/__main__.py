@@ -30,9 +30,8 @@ def close_api_gracefully(apis):
             childs = get_child_pids(process.pid)
             for p in childs:
                 try:
-                    
                     os.kill(p, signal.SIGTERM)
-                except:
+                except Exception:
                     p.kill()
             sys.stdout.flush()
             process.terminate()

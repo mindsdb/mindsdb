@@ -41,7 +41,7 @@ class CustomPredictor(Resource):
     def put(self, name):
         try:
             trained_status = request.json['trained_status']
-        except:
+        except Exception:
             trained_status = 'untrained'
 
         predictor_file = request.files['file']
@@ -92,7 +92,7 @@ class Predictor(Resource):
 
         try:
             kwargs = data.get('kwargs')
-        except:
+        except Exception:
             kwargs = None
 
         if type(kwargs) != type({}):
@@ -139,7 +139,7 @@ class Predictor(Resource):
             try:
                 ca.naitve_interface.delete_model(original_name)
                 ca.naitve_interface.rename_model(name, original_name)
-            except:
+            except Exception:
                 pass
 
         return '', 200

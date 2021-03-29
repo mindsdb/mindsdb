@@ -15,7 +15,7 @@ class ModelInterfaceRPC():
                 self.proxy = xmlrpc.client.ServerProxy("http://localhost:19329/", allow_none=True)
                 assert self.proxy.ping()
                 return
-            except:
+            except Exception:
                 log.info('Wating for native RPC server to start')
         raise Exception('Unable to connect to RPC server')
 

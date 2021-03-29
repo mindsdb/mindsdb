@@ -12,7 +12,7 @@ import datetime
 if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
     engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
 else:
-    engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=20, max_overflow=20, echo=False)
+    engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
 Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine, autoflush=True))
 Base.query = session.query_property()

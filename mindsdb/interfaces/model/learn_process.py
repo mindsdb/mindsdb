@@ -10,6 +10,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 
 
 ctx = mp.get_context('spawn')
@@ -34,7 +35,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     import mindsdb_datasources
     import mindsdb
 
-    create_learn_mark()
+    create_process_mark('learn')
 
     config = Config()
     fs_store = FsSotre()
@@ -75,7 +76,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
             'status': 'error'
         }
         session.commit()
-        delete_learn_mark()
+        delete_process_mark('learn')
         return
 
     fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
@@ -87,7 +88,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     session.commit()
 
     DatabaseWrapper().register_predictors([model_data])
-    delete_learn_mark()
+    delete_process_mark('learn')
 
 
 class LearnProcess(ctx.Process):

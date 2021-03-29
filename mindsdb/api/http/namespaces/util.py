@@ -35,16 +35,27 @@ class PingNative(Resource):
         if os.name != 'posix':
             return {'native_process': False}
 
-        p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/')
-        pids = [int(x.name) for x in p.iterdir()]
-        for pid in pids:
-            try:
-                psutil.Process(pid)
-            except Exception:
-                p.joinpath(str(pid)).unlink()
-            else:
-                return {'native_process': True}
-        return {'native_process': False}
+        response = {
+            'learn': False,
+            'predict': False,
+            'analyse': False
+        }
+
+        for process_type in response:
+            p = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{process_type}/')
+            if not p.is_dir():
+                continue
+            pids = [int(x.name) for x in p.iterdir()]
+            for pid in pids:
+                try:
+                    psutil.Process(pid)
+                except Exception:
+                    p.joinpath(str(pid)).unlink()
+                else:
+                    response[process_type] = True
+
+        return response
+
 
 @ns_conf.route('/telemetry')
 class Telemetry(Resource):

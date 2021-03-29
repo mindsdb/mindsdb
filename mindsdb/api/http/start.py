@@ -12,10 +12,12 @@ from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
+from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import initialize_log, get_log
 from mindsdb.interfaces.storage.db import session
+from flask_compress import Compress
 
 
 def start(verbose, no_studio):
@@ -32,6 +34,7 @@ def start(verbose, no_studio):
         init_static_thread.start()
 
     app, api = initialize_flask(config, init_static_thread, no_studio)
+    Compress(app)
     initialize_interfaces(app)
 
     static_root = Path(config.paths['static'])
@@ -50,6 +53,7 @@ def start(verbose, no_studio):
     api.add_namespace(datasource_ns)
     api.add_namespace(utils_ns)
     api.add_namespace(conf_ns)
+    api.add_namespace(stream_ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):

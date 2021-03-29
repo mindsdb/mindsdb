@@ -12,7 +12,7 @@ import datetime
 if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
     engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
 else:
-    engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=20, max_overflow=20, echo=False)
+    engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
 Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine, autoflush=True))
 Base.query = session.query_property()
@@ -139,6 +139,22 @@ class Log(Base):
     payload = Column(String)
     created_at_index = Index("some_index", "created_at_index")
 
+
+class Stream(Base):
+    __tablename__ = 'stream'
+    id = Column(Integer, primary_key=True)
+    # integration_id = Column(Integer, ForeignKey('integration.id'))
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    _type = Column(String)
+    host = Column(String)
+    port = Column(Integer)
+    db = Column(Integer)
+    predictor = Column(String)
+    stream_in = Column(String)
+    stream_out = Column(String)
+    integration = Column(String)
+    company_id = Column(Integer)
+    name = Column(String)
 
 Base.metadata.create_all(engine)
 orm.configure_mappers()

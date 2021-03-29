@@ -75,7 +75,7 @@ if not is_ray_worker:
     if 'storage_db' in user_config:
         os.environ['MINDSDB_DB_CON'] = user_config['storage_db']
     elif os.environ.get('MINDSDB_DB_CON','') == '':
-        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db')
+        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db') + '?check_same_thread=False'
 
     if 'company_id' in user_config:
         os.environ['MINDSDB_COMPANY_ID'] = user_config['company_id']

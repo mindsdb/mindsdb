@@ -1,8 +1,7 @@
 import inspect
 import os
 from pathlib import Path
-import shutil
-import pickle
+import tempfile
 
 
 def create_directory(path):
@@ -73,57 +72,6 @@ def get_or_create_dir_struct():
     raise Exception('MindsDB storage directory does not exist and could not be created')
 
 
-def do_init_migration(paths):
-    ''' That initial migration for storage structure. Should be called once after user updates to 2.8.0.
-        When we decide all active users has update (after a month?), this function can be removed.
-    '''
-    # move predictors files by their directories
-    endings = [
-        '_heavy_model_metadata.pickle',
-        '_light_model_metadata.pickle',
-        '_lightwood_data'
-    ]
-    for ending in endings:
-        for p in Path(paths['predictors']).iterdir():
-            if p.is_file() and p.name.endswith(ending):
-                predictor_name = p.name[:-len(ending)]
-                predictor_path = Path(paths['predictors']).joinpath(predictor_name)
-                create_directory(predictor_path)
-                new_file_name = ending[1:]
-                shutil.move(
-                    str(p),
-                    str(predictor_path.joinpath(new_file_name))
-                )
-                if new_file_name == 'light_model_metadata.pickle':
-                    with open(str(predictor_path.joinpath(new_file_name)), 'rb') as fp:
-                        lmd = pickle.load(fp)
-
-                    if 'ludwig_data' in lmd and 'ludwig_save_path' in lmd['ludwig_data']:
-                        lmd['ludwig_data']['ludwig_save_path'] = os.path.join(paths['predictors'], lmd['name'], 'ludwig_data')
-
-                    if 'lightwood_data' in lmd and 'save_path' in lmd['lightwood_data']:
-                        lmd['lightwood_data']['save_path'] = os.path.join(paths['predictors'], lmd['name'], 'lightwood_data')
-
-                    with open(os.path.join(paths['predictors'], lmd['name'], 'light_model_metadata.pickle'), 'wb') as fp:
-                        pickle.dump(lmd, fp, protocol=pickle.HIGHEST_PROTOCOL)
-
-    for p in Path(paths['predictors']).iterdir():
-        if p.is_file() and p.name != 'start.mdb_base':
-            p.unlink()
-
-    # mopve each datasource files from ds_name/datasource/{file} to ds_name/{file}
-    for p in Path(paths['datasources']).iterdir():
-        if p.is_dir():
-            datasource_folder = p.joinpath('datasource')
-            if datasource_folder.is_dir():
-                for f in datasource_folder.iterdir():
-                    shutil.move(
-                        str(f),
-                        str(p.joinpath(f.name))
-                    )
-                shutil.rmtree(datasource_folder)
-
-
 def create_dirs_recursive(path):
     if isinstance(path, dict):
         for p in path.values():
@@ -132,3 +80,17 @@ def create_dirs_recursive(path):
         create_directory(path)
     else:
         raise ValueError(f'Wrong path: {path}')
+
+
+def create_process_mark(folder='learn'):
+    if os.name == 'posix':
+        p = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{folder}/')
+        p.mkdir(parents=True, exist_ok=True)
+        p.joinpath(f'{os.getpid()}').touch()
+
+
+def delete_process_mark(folder='learn'):
+    if os.name == 'posix':
+        p = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{folder}/').joinpath(f'{os.getpid()}')
+        if p.exists():
+            p.unlink()

@@ -4,6 +4,7 @@ from .mongodb.mongodb import MongoConnectionChecker
 from .mssql.mssql import MSSQLConnectionChecker
 from .mysql.mysql import MySQLConnectionChecker
 from .postgres.postgres import PostgreSQLConnectionChecker
+from .redis.redisdb import RedisConnectionChecker
 
 CHECKERS = {
         "clickhouse": ClickhouseConnectionChecker,
@@ -11,5 +12,6 @@ CHECKERS = {
         "mongodb": MongoConnectionChecker,
         "mssql": MSSQLConnectionChecker,
         "mysql": MySQLConnectionChecker,
-        "postgres": PostgreSQLConnectionChecker
+        "postgres": PostgreSQLConnectionChecker,
+        "redis": RedisConnectionChecker,
         }

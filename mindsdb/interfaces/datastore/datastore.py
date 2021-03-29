@@ -2,7 +2,6 @@ import json
 import shutil
 import os
 
-import setproctitle
 import pandas as pd
 
 import mindsdb_datasources
@@ -43,20 +42,10 @@ class DataStore():
         else:
             return
         try:
-            try:
-                original_process_title = setproctitle.getproctitle()
-                setproctitle.setproctitle('mindsdb_native_process')
-            except Exception:
-                pass
             analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name, raw=True))
             datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
             datasource_record.analysis = json.dumps(analysis)
             session.commit()
-
-            try:
-                setproctitle.setproctitle(original_process_title)
-            except Exception:
-                pass
         except Exception as e:
             log.error(e)
         finally:
@@ -135,8 +124,8 @@ class DataStore():
             datasource_record = Datasource(
                 company_id=self.company_id,
                 name=name,
-                datasources_version = mindsdb_datasources.__version__,
-                mindsdb_version = mindsdb_version
+                datasources_version=mindsdb_datasources.__version__,
+                mindsdb_version=mindsdb_version
             )
             session.add(datasource_record)
             session.commit()
@@ -295,7 +284,7 @@ class DataStore():
             log.error(f'{e}')
             try:
                 self.delete_datasource(name)
-            except:
+            except Exception:
                 pass
             raise e
 

@@ -214,11 +214,11 @@ class InstallDependencies(Resource):
         try:
             sp = subprocess.Popen(['pip3', 'install', *dependency])
             sp.wait()
-        except:
+        except Exception:
             try:
                 sp = subprocess.Popen(['pip', 'install', *dependency])
                 sp.wait()
-            except:
+            except Exception:
                 return 'Failed to install', 400
 
         return 'Installed', 200

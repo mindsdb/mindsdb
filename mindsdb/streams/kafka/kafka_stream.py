@@ -22,7 +22,7 @@ class KafkaStream(Thread):
         self.producer = kafka.KafkaProducer(bootstrap_servers=f"{self.host}:{self.port}")
         self.admin = kafka.KafkaAdminClient(bootstrap_servers=f"{self.host}:{self.port}")
         try:
-            self.topic = NewTopic(topic_out, num_partitions=1, replication_factor=1)
+            self.topic = NewTopic(self.stream_out_name, num_partitions=1, replication_factor=1)
             self.admin.create_topics([self.topic])
         except kafka.errors.TopicAlreadyExistsError:
             pass
@@ -47,3 +47,10 @@ class KafkaStream(Thread):
                 log.error(f"STREAM: got {result}")
                 for res in result:
                     in_json = json.dumps(res)
+                    to_send = str({"prediction": in_json}).encode('utf-8')
+                    log.error(f"sending {to_send}")
+                    self.producer.send(to_send)
+            except StopIteration:
+                pass
+        self.producer.close()
+        self.consumer.close()

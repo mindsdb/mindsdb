@@ -35,6 +35,7 @@ class Kafka(Integration, KafkaConnectionChecker):
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.streams = {}
         self.stop_event = STOP_THREADS_EVENT
+        log.error(f"Integration: name={self.name}, host={self.host}, port={self.port}, control_topic={self.control_topic_name}")
 
     def setup(self):
         self.start()
@@ -43,18 +44,23 @@ class Kafka(Integration, KafkaConnectionChecker):
         Thread(target=Kafka.work, args=(self, )).start()
 
     def work(self):
-        self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}", consumer_timeout_ms=1000)
+        # self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}", consumer_timeout_ms=1000)
+        # self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}")
+        self.consumer = kafka.KafkaConsumer(bootstrap_servers="127.0.0.1:9092")
         self.consumer.subscribe([self.control_topic_name])
-        log.debug(f"Integration {self.name}: subscribed  to {self.control_stream_name} kafka topic")
-        while not self.stop_event.wait(0.5):
+        log.error(f"Integration {self.name}: subscribed  to {self.control_topic_name} kafka topic")
+        # while not self.stop_event.wait(0.5):
+        while True:
             try:
+                log.error("waiting new messages from control topic")
                 msg_str = next(self.consumer)
-                stream_params = json.loads(msg_str)
+                log.error(f"got next raw_msg: {msg_str.value}")
+                stream_params = json.loads(msg_str.value)
                 log.error(f"got next msg: {stream_params}")
                 stream = self.get_stream_from_kwargs(**stream_params)
                 stream.start()
-            except StopIteration:
-                pass
+            except StopIteration as e:
+                log.error(f"error: {e}")
         self.consumer.close()
 
     def get_stream_from_kwargs(self, **kwargs):
@@ -67,3 +73,11 @@ class Kafka(Integration, KafkaConnectionChecker):
                            predictor_name, stream_type)
 
 
+    def _query(self):
+        pass
+
+    def register_predictors(self, model_data_arr):
+        pass
+
+    def unregister_predictor(self, name):
+        pass

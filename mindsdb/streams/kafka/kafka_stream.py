@@ -42,14 +42,14 @@ class KafkaStream(Thread):
         while not self.stop_event.wait(0.5):
             try:
                 msg_str = next(self.consumer)
-                when_data = json.loads(msg_str)
+                when_data = json.loads(msg_str.value)
                 result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
                 log.error(f"STREAM: got {result}")
                 for res in result:
-                    in_json = json.dumps(res)
-                    to_send = str({"prediction": in_json}).encode('utf-8')
+                    in_json = json.dumps({"prediction": res})
+                    to_send = in_json.encode('utf-8')
                     log.error(f"sending {to_send}")
-                    self.producer.send(to_send)
+                    self.producer.send(self.stream_out_name, to_send)
             except StopIteration:
                 pass
         self.producer.close()

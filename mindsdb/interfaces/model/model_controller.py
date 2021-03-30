@@ -229,14 +229,13 @@ class ModelController():
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
-
         predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
         predictor_record = self._try_outdate_db_status(predictor_record)
         model = predictor_record.data
         if model is None or model['status'] == 'training':
             try:
                 self.fs_store.get(name, f'predictor_{self.company_id}_{predictor_record.id}', self.config['paths']['predictors'])
-                new_model_data = mindsdb_native.F.get_model_data(name)
+                new_model_data = F.get_model_data(name)
             except Exception:
                 new_model_data = None
 

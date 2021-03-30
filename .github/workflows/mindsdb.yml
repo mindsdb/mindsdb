@@ -159,6 +159,27 @@ jobs:
         sleep 20
         pip install mindsdb
 
+  build_amis_packer:
+   #NOTE: in the future migrate to https://github.com/hashicorp/packer-github-actions, when we can send config as an url
+      runs-on: ubuntu-latest
+      if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
+      steps:
+      - uses: actions/checkout@v2
+      - name: Deploy AMI's
+        env:
+          ACCESS_KEY:  ${{ secrets.ACCESS_KEY }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          MINDSDB_VERSION: 2.25.0
+        # Add bellow code to sh script, setup MINDSDB_VERSION var from distributions/ver/dist/stable_version.txt file
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get install packer
+          git clone https://${ACCESS_KEY}@github.com/mindsdb/mindsdb_gateway
+          cd mindsdb_gateway/deployments
+          sudo packer build config.json
+
   deploy_version_file:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'

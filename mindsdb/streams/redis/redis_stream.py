@@ -45,7 +45,7 @@ class RedisStream(Thread):
                 when_data = self.decode(raw_when_data)
 
                 result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
-                log.error(f"STREAM: got {result}")
+                log.debug(f"STREAM: got {result}")
                 for res in result:
                     in_json = json.dumps(res)
                     self.stream_out.add({"prediction": in_json})

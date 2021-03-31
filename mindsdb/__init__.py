@@ -70,16 +70,13 @@ if not is_ray_worker:
     if os.path.isdir(root_storage_dir) is False:
         os.makedirs(root_storage_dir)
 
-
-
     if 'storage_db' in user_config:
         os.environ['MINDSDB_DB_CON'] = user_config['storage_db']
-    elif os.environ.get('MINDSDB_DB_CON','') == '':
-        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'],'mindsdb.sqlite3.db') + '?check_same_thread=False'
+    elif os.environ.get('MINDSDB_DB_CON', '') == '':
+        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
     if 'company_id' in user_config:
         os.environ['MINDSDB_COMPANY_ID'] = user_config['company_id']
-
 
     from mindsdb.utilities.config import Config
     mindsdb_config = Config()
@@ -88,7 +85,6 @@ if not is_ray_worker:
     os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')
     os.environ['LIGHTWOOD_LOG_LEVEL'] = os.environ.get('LIGHTWOOD_LOG_LEVEL', 'ERROR')
     os.environ['MINDSDB_STORAGE_PATH'] = mindsdb_config['paths']['predictors']
-
 
     if telemetry_file_exists(mindsdb_config['storage_dir']):
         os.environ['CHECK_FOR_UPDATES'] = '0'

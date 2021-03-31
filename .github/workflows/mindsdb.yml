@@ -38,9 +38,7 @@ jobs:
         pip install boto3
         pip install --no-cache-dir .
         if [ "$INSTALL_RAY" == "install_ray" ]; then
-          echo "$mindsdb_github_masterkey" > ~/github_masterkey;
-          chmod -R 600 ~/github_masterkey;
-          ssh-agent bash -c 'ssh-add ~/github_masterkey; git clone git@github.com:mindsdb/worker.git';
+          git clone git@github.com:mindsdb/worker.git';
           cd worker;
           pip install --no-cache-dir .;
           cd ..;
@@ -48,6 +46,7 @@ jobs:
       shell: bash
       env:
         INSTALL_RAY: ${{ matrix.token }}
+        ACCESS_KEY:  ${{ secrets.ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Install dependencies Windows
       run: |

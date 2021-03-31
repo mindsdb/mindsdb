@@ -46,7 +46,7 @@ jobs:
       shell: bash
       env:
         INSTALL_RAY: ${{ matrix.token }}
-        ACCESS_KEY:  ${{ secrets.ACCESS_KEY }}
+        ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Install dependencies Windows
       run: |

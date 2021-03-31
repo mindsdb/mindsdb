@@ -182,7 +182,7 @@ jobs:
           export MINDSDB_VERSION="$mdb_version"
           git clone https://${ACCESS_KEY}@github.com/mindsdb/mindsdb_gateway
           cd mindsdb_gateway/deployments
-          echo "$MINDSDB_VERSION"
+          echo "Building AMIs for $MINDSDB_VERSION"
           sudo packer build -var "mindsdb_version=$MINDSDB_VERSION" -var "aws_acces_key=$AWS_ACCESS_KEY" -var "aws_secret_key=$AWS_SECRET_KEY" config.json
 
   deploy_version_file:

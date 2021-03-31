@@ -38,7 +38,7 @@ jobs:
         pip install boto3
         pip install --no-cache-dir .
         if [ "$INSTALL_RAY" == "install_ray" ]; then
-          git clone https://${ACCESS_KEY}@github.com/mindsdb/worker.git';
+          git clone https://${ACCESS_KEY}@github.com/mindsdb/worker.git;
           cd worker;
           pip install --no-cache-dir .;
           cd ..;

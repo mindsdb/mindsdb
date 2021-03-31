@@ -167,9 +167,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Deploy AMI's
         env:
-          ACCESS_KEY:  ${{ secrets.ACCESS_KEY }}
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         # Add bellow code to sh script, setup MINDSDB_VERSION var from distributions/ver/dist/stable_version.txt file
         # Send variables to packer build command, because if using env in conf they are not vissible to build
         run: |

@@ -180,6 +180,10 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/util/ping')
         assert response.status_code == 200
 
+
+        response = requests.get(f'{root}/api/config/vars')
+        assert response.status_code == 200
+
     def test_7_predictors(self):
         """
         Call list predictors endpoint

@@ -181,7 +181,7 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 200
 
 
-        response = requests.get(f'{root}/api/config/vars')
+        response = requests.get(f'{root}/config/vars')
         assert response.status_code == 200
 
     def test_7_predictors(self):

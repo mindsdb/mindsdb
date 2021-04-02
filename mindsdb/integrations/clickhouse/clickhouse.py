@@ -10,6 +10,7 @@ class ClickhouseConnectionChecker:
         self.user = kwargs.get("user")
         self.password = kwargs.get("password")
 
+
     def check_connection(self):
         try:
             res = requests.post(f"http://{self.host}:{self.port}",

@@ -38,9 +38,7 @@ jobs:
         pip install boto3
         pip install --no-cache-dir .
         if [ "$INSTALL_RAY" == "install_ray" ]; then
-          echo "$mindsdb_github_masterkey" > ~/github_masterkey;
-          chmod -R 600 ~/github_masterkey;
-          ssh-agent bash -c 'ssh-add ~/github_masterkey; git clone git@github.com:mindsdb/worker.git';
+          git clone https://${ACCESS_KEY}@github.com/mindsdb/worker.git;
           cd worker;
           pip install --no-cache-dir .;
           cd ..;
@@ -48,6 +46,7 @@ jobs:
       shell: bash
       env:
         INSTALL_RAY: ${{ matrix.token }}
+        ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Install dependencies Windows
       run: |
@@ -159,8 +158,34 @@ jobs:
         sleep 20
         pip install mindsdb
 
+  build_amis_packer:
+   #TODO: in the future migrate to https://github.com/hashicorp/packer-github-actions, when we can send config as an url
+      runs-on: ubuntu-latest
+      needs: deploy_to_pypi
+      if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
+      steps:
+      - uses: actions/checkout@v2
+      - name: Deploy AMI's
+        env:
+          ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        #NOTE: Send variables to packer build command or var file, because if using env in conf they are not vissible to build
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get install packer
+          python deploy_version.py release
+          mdb_version=`cat distributions/ver/dist/stable_version.txt`
+          export MINDSDB_VERSION="$mdb_version"
+          git clone https://${ACCESS_KEY}@github.com/mindsdb/mindsdb_gateway
+          cd mindsdb_gateway/deployments
+          echo "Building AMIs for $MINDSDB_VERSION"
+          sudo packer build -var "mindsdb_version=$MINDSDB_VERSION" -var "acces_key=$ACCESS_KEY" -var "aws_acces_key=$AWS_ACCESS_KEY" -var "aws_secret_key=$AWS_SECRET_KEY" config.json
+
   deploy_version_file:
     runs-on: ubuntu-latest
+    needs: build_amis_packer
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2

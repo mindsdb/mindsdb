@@ -17,12 +17,15 @@ if telemtry_enabled:
         traces_sample_rate=0 #Set to `1` to experiment with performance metrics
     )
 
+
 class LoggerWrapper(object):
     def __init__(self, writer_arr, default_writer_pos):
         self._writer_arr = writer_arr
         self.default_writer_pos = default_writer_pos
 
     def write(self, message):
+        if len(message.strip(' \n')) == 0:
+            return
         if 'DEBUG:' in message:
             self._writer_arr[0](message)
         elif 'INFO:' in message:
@@ -37,12 +40,17 @@ class LoggerWrapper(object):
     def flush(self):
         pass
 
+
 class DbHandler(logging.Handler):
     def __init__(self):
         logging.Handler.__init__(self)
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
 
     def emit(self, record):
+        if len(record.message.strip(' \n')) == 0 \
+            or (record.threadName == 'ray_print_logs' and 'mindsdb-logger' not in record.message):
+            return
+
         log_type = record.levelname
         source = f'file: {record.pathname} - line: {record.lineno}'
         payload = record.msg
@@ -85,14 +93,16 @@ class DbHandler(logging.Handler):
         session.add(log)
         session.commit()
 
+
 def fmt_log_record(log_record):
-  return {
-    'log_from': 'mindsdb',
-    'level': log_record.log_type,
-    'context': 'unkown',
-    'text': log_record.payload,
-    'created_at': str(log_record.created_at).split('.')[0]
-  }
+    return {
+        'log_from': 'mindsdb',
+        'level': log_record.log_type,
+        'context': 'unkown',
+        'text': log_record.payload,
+        'created_at': str(log_record.created_at).split('.')[0]
+    }
+
 
 def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit):
     logs = session.query(Log).filter(Log.company_id==os.environ.get('MINDSDB_COMPANY_ID', None), Log.created_at>min_timestamp)

@@ -47,6 +47,7 @@ class RedisStream(Thread):
             raw_when_data = record[1]
             when_data = self.decode(raw_when_data)
             if timeseries_mode:
+                when_data['make_predictions'] = False
                 when_list.append(when_data)
             else:
                 result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
@@ -87,11 +88,10 @@ class RedisStream(Thread):
                 raw_when_data = record[1]
                 when_data = self.decode(raw_when_data)
                 if self.target in when_data:
-                    when_data["make_predictions"] = False
                     self.cache.add(when_data)
                 else:
                     cache = [self.decode(record[1]) for record in self.cache.read()]
-                    when_data["make_predictions"] = False
+                    when_data["make_predictions"] = True
                     cache.append(when_data)
                     result = self.native_interface.predict(self.predictor, self.format_flag, when_data=cache)
                     log.error(f"STREAM: got {result}")

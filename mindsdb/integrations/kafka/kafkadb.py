@@ -7,6 +7,7 @@ from mindsdb.utilities.config import STOP_THREADS_EVENT
 from mindsdb.utilities.log import log
 from mindsdb.integrations.base import Integration
 from mindsdb.streams.kafka.kafka_stream import KafkaStream
+from mindsdb.interfaces.storage.db import session, Stream, Configuration
 
 class KafkaConnectionChecker:
     def __init__(self, **kwargs):
@@ -37,20 +38,56 @@ class Kafka(Integration, KafkaConnectionChecker):
         self.stop_event = STOP_THREADS_EVENT
         log.error(f"Integration: name={self.name}, host={self.host}, port={self.port}, control_topic={self.control_topic_name}")
 
+    def should_i_exist(self):
+        config_record = session.query(Configuration).filter_by(company_id=self.company_id).first()
+        if config_record is None:
+            return False
+        integrations = json.loads(config_record.data)["integrations"]
+        if self.name not in integrations:
+            return False
+        return True
+
     def setup(self):
         self.start()
 
     def start(self):
         Thread(target=Kafka.work, args=(self, )).start()
 
+    def start_stored_streams(self):
+        existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
+
+        for stream in existed_streams:
+            to_launch = self.get_stream_from_db(stream)
+            if stream.name not in self.streams:
+                params = {"integration": stream.integration,
+                          "predictor": stream.predictor,
+                          "stream_in": stream.stream_in,
+                          "stream_out": stream.stream_out,
+                          "type": stream._type}
+
+                log.debug(f"Integration {self.name} - launching from db : {params}")
+                to_launch.start()
+                self.streams[stream.name] = to_launch.stop_event
+
+
+    def delete_stream(self, predictor):
+        """Deletes stream from database and stops it work by
+        setting up a special threading.Event flag."""
+        stream_name = f"{self.name}_{predictor}"
+        log.debug(f"Integration {self.name}: deleting {stream_name}")
+        session.query(Stream).filter_by(company_id=self.company_id, integration=self.name, name=stream_name).delete()
+        session.commit()
+        if stream_name in self.streams:
+            self.streams[stream_name].set()
+
     def work(self):
-        # self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}", consumer_timeout_ms=1000)
+        self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}", consumer_timeout_ms=1000)
         # self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}")
-        self.consumer = kafka.KafkaConsumer(bootstrap_servers="127.0.0.1:9092")
+        # self.consumer = kafka.KafkaConsumer(bootstrap_servers="127.0.0.1:9092")
         self.consumer.subscribe([self.control_topic_name])
         log.error(f"Integration {self.name}: subscribed  to {self.control_topic_name} kafka topic")
-        # while not self.stop_event.wait(0.5):
-        while True:
+        while not self.stop_event.wait(0.5):
+        # while True:
             try:
                 log.error("waiting new messages from control topic")
                 msg_str = next(self.consumer)
@@ -62,6 +99,13 @@ class Kafka(Integration, KafkaConnectionChecker):
             except StopIteration as e:
                 log.error(f"error: {e}")
         self.consumer.close()
+
+    def get_stream_from_db(self, db_record):
+        kwargs = {"type": db_record._type,
+                  "predictor": db_record.predictor,
+                  "input_stream": db_record.stream_in,
+                  "output_stream": db_record.stream_out}
+        return self.get_stream_from_kwargs(**kwargs)
 
     def get_stream_from_kwargs(self, **kwargs):
         topic_in = kwargs.get('input_stream')

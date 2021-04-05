@@ -20,7 +20,6 @@ class ClickhouseConnectionChecker:
             connected = False
         return connected
 
-
 class Clickhouse(Integration, ClickhouseConnectionChecker):
     def __init__(self, config, name):
         super().__init__(config, name)

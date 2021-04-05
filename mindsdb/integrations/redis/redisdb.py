@@ -120,6 +120,7 @@ class Redis(Integration, RedisConnectionChecker):
                         self.control_stream.delete(r_id)
                         continue
 
+                    stream_params['name'] = f"{self.name}_{stream.predictor}"
                     stream = self.get_stream_from_kwargs(**stream_params)
                     log.debug(f"Integration {self.name}: creating stream: {stream_params}")
                     stream.start()
@@ -141,29 +142,30 @@ class Redis(Integration, RedisConnectionChecker):
 
     def store_stream(self, stream):
         """Stories a created stream."""
-        stream_name = f"{self.name}_{stream.predictor}"
-        stream_rec = Stream(name=stream_name, host=stream.host,
+        stream_rec = Stream(name=stream.name, host=stream.host,
                             port=stream.port, db=stream.db,
                             _type=stream._type, predictor=stream.predictor,
                             integration=self.name, company_id=self.company_id,
                             stream_in=stream.stream_in_name, stream_out=stream.stream_out_name)
         session.add(stream_rec)
         session.commit()
-        self.streams[stream_name] = stream.stop_event
+        self.streams[stream.name] = stream.stop_event
 
     def get_stream_from_db(self, db_record):
         kwargs = {"type": db_record._type,
+                  "name": db_record.name,
                   "predictor": db_record.predictor,
                   "input_stream": db_record.stream_in,
                   "output_stream": db_record.stream_out}
         return self.get_stream_from_kwargs(**kwargs)
 
     def get_stream_from_kwargs(self, **kwargs):
+        name = kwargs.get('name')
         stream_in = kwargs.get('input_stream')
         stream_out = kwargs.get('output_stream')
         predictor_name = kwargs.get('predictor')
         stream_type = kwargs.get('type', 'forecast')
-        return RedisStream(self.host, self.port, self.db,
+        return RedisStream(name, self.host, self.port, self.db,
                            stream_in, stream_out, predictor_name,
                            stream_type)
 

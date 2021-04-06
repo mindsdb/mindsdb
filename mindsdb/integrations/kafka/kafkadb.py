@@ -97,21 +97,31 @@ class Kafka(Integration, KafkaConnectionChecker):
             del self.streams[stream_name]
 
     def work(self):
-        self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}", consumer_timeout_ms=1000)
+        self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}",
+                                            consumer_timeout_ms=1000)
+
         self.consumer.subscribe([self.control_topic_name])
         log.error(f"Integration {self.name}: subscribed  to {self.control_topic_name} kafka topic")
         while not self.stop_event.wait(0.5):
-            self.start_stored_streams()
-            self.stop_deleted_streams()
             try:
-                msg_str = next(self.consumer)
-                stream_params = json.loads(msg_str.value)
-                stream = self.get_stream_from_kwargs(**stream_params)
-                stream.start()
-                # store created stream in database
-                self.store_stream(stream)
-            except StopIteration:
-                pass
+                # break if no record about this integration has found in db
+                if not self.should_i_exist():
+                    break
+                self.start_stored_streams()
+                self.stop_deleted_streams()
+                try:
+                    msg_str = next(self.consumer)
+                except StopIteration:
+                    continue
+
+                    stream_params = json.loads(msg_str.value)
+                    stream = self.get_stream_from_kwargs(**stream_params)
+                    stream.start()
+                    # store created stream in database
+                    self.store_stream(stream)
+            except Exception as e:
+                log.error(f"Integration {self.name}: {e}")
+
         # received exit event
         self.consumer.close()
         self.stop_streams()

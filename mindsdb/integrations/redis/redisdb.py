@@ -83,7 +83,7 @@ class Redis(Integration, RedisConnectionChecker):
                           "stream_out": stream.stream_out,
                           "type": stream._type}
 
-                log.debug(f"Integration {self.name} - launching from db : {params}")
+                log.error(f"Integration {self.name} - launching from db : {params}")
                 to_launch.start()
                 self.streams[stream.name] = to_launch.stop_event
 
@@ -91,7 +91,7 @@ class Redis(Integration, RedisConnectionChecker):
         """Deletes stream from database and stops it work by
         setting up a special threading.Event flag."""
         stream_name = f"{self.name}_{predictor}"
-        log.debug(f"Integration {self.name}: deleting {stream_name}")
+        log.error(f"Integration {self.name}: deleting {stream_name}")
         session.query(Stream).filter_by(company_id=self.company_id, integration=self.name, name=stream_name).delete()
         session.commit()
         if stream_name in self.streams:
@@ -100,7 +100,7 @@ class Redis(Integration, RedisConnectionChecker):
 
     def work(self):
         """Creates a Streams by receiving initial information from control stream."""
-        log.debug(f"Integration {self.name}: start listening {self.control_stream_name} redis stream")
+        log.error(f"Integration {self.name}: start listening {self.control_stream_name} redis stream")
         while not self.stop_event.wait(0.5):
             try:
                 # break if no record about this integration has found in db
@@ -122,7 +122,7 @@ class Redis(Integration, RedisConnectionChecker):
                         continue
 
                     stream = self.get_stream_from_kwargs(**stream_params)
-                    log.debug(f"Integration {self.name}: creating stream: {stream_params}")
+                    log.error(f"Integration {self.name}: creating stream: {stream_params}")
                     stream.start()
                     # store created stream in database
                     self.store_stream(stream)
@@ -132,7 +132,7 @@ class Redis(Integration, RedisConnectionChecker):
                 log.error(f"Integration {self.name}: {e}")
 
         # received exit event
-        log.debug(f"Integration {self.name}: exiting...")
+        log.error(f"Integration {self.name}: exiting...")
         self.client.close()
         self.stop_streams()
         session.close()

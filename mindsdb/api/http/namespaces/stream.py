@@ -85,3 +85,12 @@ class Stream(Resource):
         session.add(stream)
         session.commit()
         return {"status": "success", "stream_name": name}, 200
+
+    @ns_conf.doc("delete_stream")
+    def delete(self, name):
+        try:
+            session.query(StreamDB).filter_by(company_id=COMPANY_ID, name=name).delete()
+        except Exception as e:
+            log.error(e)
+            abort(400, str(e))
+        return '', 200

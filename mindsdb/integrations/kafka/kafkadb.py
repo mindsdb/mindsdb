@@ -62,11 +62,13 @@ class Kafka(Integration, KafkaConnectionChecker):
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
         actual_streams = [x.name for x in existed_streams]
 
-        for stream in self.streams:
+
+        for stream in self.streams.copy():
             if stream not in actual_streams:
                 # this stream is still running but it has been deleted from database.
                 # need to stop it.
                 self.streams[stream].set()
+                del self.streams[stream]
 
     def start_stored_streams(self):
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
@@ -111,14 +113,14 @@ class Kafka(Integration, KafkaConnectionChecker):
                 self.stop_deleted_streams()
                 try:
                     msg_str = next(self.consumer)
-                except StopIteration:
-                    continue
 
                     stream_params = json.loads(msg_str.value)
                     stream = self.get_stream_from_kwargs(**stream_params)
                     stream.start()
                     # store created stream in database
                     self.store_stream(stream)
+                except StopIteration:
+                    pass
             except Exception as e:
                 log.error(f"Integration {self.name}: {e}")
 

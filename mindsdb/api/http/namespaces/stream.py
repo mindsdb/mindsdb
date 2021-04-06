@@ -90,6 +90,7 @@ class Stream(Resource):
     def delete(self, name):
         try:
             session.query(StreamDB).filter_by(company_id=COMPANY_ID, name=name).delete()
+            session.commit()
         except Exception as e:
             log.error(e)
             abort(400, str(e))

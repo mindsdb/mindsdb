@@ -96,6 +96,7 @@ class Redis(Integration, RedisConnectionChecker):
         session.commit()
         if stream_name in self.streams:
             self.streams[stream_name].set()
+            del self.streams[stream_name]
 
     def work(self):
         """Creates a Streams by receiving initial information from control stream."""
@@ -132,6 +133,7 @@ class Redis(Integration, RedisConnectionChecker):
 
         # received exit event
         log.debug(f"Integration {self.name}: exiting...")
+        self.client.close()
         self.stop_streams()
         session.close()
 

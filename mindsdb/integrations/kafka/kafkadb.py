@@ -36,7 +36,6 @@ class Kafka(Integration, KafkaConnectionChecker):
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.streams = {}
         self.stop_event = STOP_THREADS_EVENT
-        log.error(f"Integration: name={self.name}, host={self.host}, port={self.port}, control_topic={self.control_topic_name}")
 
     def should_i_exist(self):
         config_record = session.query(Configuration).filter_by(company_id=self.company_id).first()
@@ -48,10 +47,26 @@ class Kafka(Integration, KafkaConnectionChecker):
         return True
 
     def setup(self):
+        """Launches streams stored in db and
+        Launches a worker in separate thread which waits
+        data from control stream and creates a particular Streams."""
+
+        self.start_stored_streams()
+        # launch worker which reads control steam and spawn streams
         self.start()
 
     def start(self):
         Thread(target=Kafka.work, args=(self, )).start()
+
+    def stop_deleted_streams(self):
+        existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
+        actual_streams = [x.name for x in existed_streams]
+
+        for stream in self.streams:
+            if stream not in actual_streams:
+                # this stream is still running but it has been deleted from database.
+                # need to stop it.
+                self.streams[stream].set()
 
     def start_stored_streams(self):
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
@@ -65,7 +80,7 @@ class Kafka(Integration, KafkaConnectionChecker):
                           "stream_out": stream.stream_out,
                           "type": stream._type}
 
-                log.debug(f"Integration {self.name} - launching from db : {params}")
+                log.error(f"Integration {self.name} - launching from db : {params}")
                 to_launch.start()
                 self.streams[stream.name] = to_launch.stop_event
 
@@ -79,26 +94,44 @@ class Kafka(Integration, KafkaConnectionChecker):
         session.commit()
         if stream_name in self.streams:
             self.streams[stream_name].set()
+            del self.streams[stream_name]
 
     def work(self):
         self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}", consumer_timeout_ms=1000)
-        # self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}")
-        # self.consumer = kafka.KafkaConsumer(bootstrap_servers="127.0.0.1:9092")
         self.consumer.subscribe([self.control_topic_name])
         log.error(f"Integration {self.name}: subscribed  to {self.control_topic_name} kafka topic")
         while not self.stop_event.wait(0.5):
-        # while True:
+            self.start_stored_streams()
+            self.stop_deleted_streams()
             try:
-                log.error("waiting new messages from control topic")
                 msg_str = next(self.consumer)
-                log.error(f"got next raw_msg: {msg_str.value}")
                 stream_params = json.loads(msg_str.value)
-                log.error(f"got next msg: {stream_params}")
                 stream = self.get_stream_from_kwargs(**stream_params)
                 stream.start()
-            except StopIteration as e:
-                log.error(f"error: {e}")
+                # store created stream in database
+                self.store_stream(stream)
+            except StopIteration:
+                pass
+        # received exit event
         self.consumer.close()
+        self.stop_streams()
+        session.close()
+        log.error(f"Integration {self.name}: exiting...")
+
+    def store_stream(self, stream):
+        """Stories a created stream."""
+        stream_name = f"{self.name}_{stream.predictor}"
+        stream_rec = Stream(name=stream_name, host=stream.host, port=stream.port,
+                            _type=stream._type, predictor=stream.predictor,
+                            integration=self.name, company_id=self.company_id,
+                            stream_in=stream.stream_in_name, stream_out=stream.stream_out_name)
+        session.add(stream_rec)
+        session.commit()
+        self.streams[stream_name] = stream.stop_event
+
+    def stop_streams(self):
+        for stream in self.streams:
+            self.streams[stream].set()
 
     def get_stream_from_db(self, db_record):
         kwargs = {"type": db_record._type,

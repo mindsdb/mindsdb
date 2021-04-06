@@ -52,5 +52,6 @@ class KafkaStream(Thread):
                     self.producer.send(self.stream_out_name, to_send)
             except StopIteration:
                 pass
+        log.error("Stopping stream..")
         self.producer.close()
         self.consumer.close()

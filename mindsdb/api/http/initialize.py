@@ -227,10 +227,13 @@ def initialize_flask(config, init_static_thread, no_studio):
             __name__
         )
     else:
+        static_path = os.path.join(config.paths['static'], 'static/')
+        if os.path.isabs(static_path) is False:
+            static_path = os.path.join(os.getcwd(), static_path)
         app = Flask(
             __name__,
             static_url_path='/static',
-            static_folder=os.path.join(config.paths['static'], 'static/')
+            static_folder=static_path
         )
 
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60

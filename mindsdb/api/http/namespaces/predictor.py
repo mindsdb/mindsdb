@@ -188,6 +188,9 @@ class PredictorPredict(Resource):
         format_flag = data.get('format_flag', 'explain')
         kwargs = data.get('kwargs', {})
 
+        if when is None:
+            return 'No data provided for the predictions', 500
+
         if is_custom(name):
             return ca.custom_models.predict(name, when_data=when, **kwargs)
         else:

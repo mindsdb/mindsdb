@@ -31,7 +31,7 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         intergration_info = self.config['integrations'][self.name]
         self.host = intergration_info.get('host')
         self.port = intergration_info.get('port', 9092)
-        self.control_topic_name = intergration_info.get('topic')
+        self.control_topic_name = intergration_info.get('topic', None)
         self.client = self._get_connection()
 
     def start(self):
@@ -54,11 +54,16 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
                 self.streams[stream.name] = to_launch.stop_event
 
     def work(self):
-        self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}",
-                                            consumer_timeout_ms=1000)
+        if self.control_topic_name is not None:
+            self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}",
+                                                consumer_timeout_ms=1000)
 
-        self.consumer.subscribe([self.control_topic_name])
-        self.log.error(f"Integration {self.name}: subscribed  to {self.control_topic_name} kafka topic")
+            self.consumer.subscribe([self.control_topic_name])
+            self.log.error(f"Integration {self.name}: subscribed  to {self.control_topic_name} kafka topic")
+        else:
+            self.consumer = None
+            self.log.error(f"Integration {self.name}: worked mode - DB only.")
+
         while not self.stop_event.wait(0.5):
             try:
                 # break if no record about this integration has found in db
@@ -66,16 +71,17 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
                     break
                 self.start_stored_streams()
                 self.stop_deleted_streams()
-                try:
-                    msg_str = next(self.consumer)
+                if self.consumer is not None:
+                    try:
+                        msg_str = next(self.consumer)
 
-                    stream_params = json.loads(msg_str.value)
-                    stream = self.get_stream_from_kwargs(**stream_params)
-                    stream.start()
-                    # store created stream in database
-                    self.store_stream(stream)
-                except StopIteration:
-                    pass
+                        stream_params = json.loads(msg_str.value)
+                        stream = self.get_stream_from_kwargs(**stream_params)
+                        stream.start()
+                        # store created stream in database
+                        self.store_stream(stream)
+                    except StopIteration:
+                        pass
             except Exception as e:
                 self.log.error(f"Integration {self.name}: {e}")
 

@@ -18,6 +18,7 @@ class MSSQLConnectionChecker:
             as_dict=True,
             autocommit=True  # .commit() doesn't work
         )
+
     def check_connection(self):
         try:
             conn = self._get_connnection()

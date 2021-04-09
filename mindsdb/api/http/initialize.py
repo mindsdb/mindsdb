@@ -7,10 +7,13 @@ import webbrowser
 from zipfile import ZipFile
 from pathlib import Path
 import traceback
+from datetime import datetime, date, timedelta
 #import concurrent.futures
 
-from flask import Flask, url_for
+from flask import Flask, url_for, make_response
+from flask.json import dumps
 from flask_restx import Api
+from flask.json import JSONEncoder
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -32,6 +35,24 @@ class Swagger_Api(Api):
     @property
     def specs_url(self):
         return url_for(self.endpoint("specs"), _external=False)
+
+
+class CustomJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, date):
+            return obj.strftime("%Y-%m-%d")
+        if isinstance(obj, datetime):
+            return obj.strftime("%Y-%m-%dT%H:%M:%S.%f")
+        if isinstance(obj, timedelta):
+            return str(obj)
+
+        return JSONEncoder.default(self, obj)
+
+
+def custom_output_json(data, code, headers=None):
+    resp = make_response(dumps(data), code)
+    resp.headers.extend(headers or {})
+    return resp
 
 
 def initialize_static(config):
@@ -206,19 +227,24 @@ def initialize_flask(config, init_static_thread, no_studio):
             __name__
         )
     else:
+        static_path = os.path.join(config.paths['static'], 'static/')
+        if os.path.isabs(static_path) is False:
+            static_path = os.path.join(os.getcwd(), static_path)
         app = Flask(
             __name__,
             static_url_path='/static',
-            static_folder=os.path.join(config.paths['static'], 'static/')
+            static_folder=static_path
         )
 
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
+    app.json_encoder = CustomJSONEncoder
+
     authorizations = {
         'apikey': {
-            'type': 'apiKey',
+            'type': 'session',
             'in': 'query',
-            'name': 'apikey'
+            'name': 'session'
         }
     }
 
@@ -230,6 +256,8 @@ def initialize_flask(config, init_static_thread, no_studio):
         prefix='/api',
         doc='/doc/'
     )
+
+    api.representations['application/json'] = custom_output_json
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

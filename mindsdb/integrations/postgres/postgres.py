@@ -3,6 +3,7 @@ import pg8000
 
 from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
+from mindsdb.utilities.log import log
 
 
 class PostgreSQLConnectionChecker:
@@ -14,12 +15,13 @@ class PostgreSQLConnectionChecker:
         self.database = kwargs.get('database', 'postgres')
 
     def _get_connection(self):
-            return pg8000.connect(
-                database=self.database,
-                user=self.user,
-                password=self.password,
-                host=self.host,
-                port=self.port)
+        return pg8000.connect(
+            database=self.database,
+            user=self.user,
+            password=self.password,
+            host=self.host,
+            port=self.port
+        )
 
     def check_connection(self):
         try:
@@ -68,8 +70,8 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
                 column_declaration.append(f' "{name}" {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' "{name}_original" {new_type} ')
-            except Exception:
-                print(f'Error: cant convert type {col_subtype} of column {name} to Postgres type')
+            except Exception as e:
+                log.error(f'Error: can not determine postgres data type for column {name}: {e}')
 
         return column_declaration
 
@@ -160,13 +162,13 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
-            stats = model_meta['data_analysis_v2']
-            columns_sql = ','.join(self._to_postgres_table(model_meta['data_analysis_v2'], model_meta['predict'], model_meta['columns']))
+            data_analysis_v2 = model_meta['data_analysis_v2']
+            columns_sql = ','.join(self._to_postgres_table(data_analysis_v2, model_meta['predict'], model_meta['columns']))
             columns_sql += ',"select_data_query" text'
             columns_sql += ',"external_datasource" text'
             for col in model_meta['predict']:
                 columns_sql += f',"{col}_confidence" float8'
-                if model_meta['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                if data_analysis_v2[col]['typing']['data_type'] == 'Numeric':
                     columns_sql += f',"{col}_min" float8'
                     columns_sql += f',"{col}_max" float8'
                 columns_sql += f',"{col}_explain" text'

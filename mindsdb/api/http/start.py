@@ -37,7 +37,10 @@ def start(verbose, no_studio):
     Compress(app)
     initialize_interfaces(app)
 
-    static_root = Path(config.paths['static'])
+    static_root = config.paths['static']
+    if os.path.isabs(static_root) is False:
+        static_root = os.path.join(os.getcwd(), static_root)
+    static_root = Path(static_root)
 
     @app.route('/', defaults={'path': ''}, methods=['GET'])
     @app.route('/<path:path>', methods=['GET'])
@@ -45,9 +48,9 @@ def start(verbose, no_studio):
         if path.startswith('api/'):
             return {'message': 'wrong query'}, 400
         if static_root.joinpath(path).is_file():
-            return send_from_directory(config.paths['static'], path)
+            return send_from_directory(static_root, path)
         else:
-            return send_from_directory(config.paths['static'], 'index.html')
+            return send_from_directory(static_root, 'index.html')
 
     api.add_namespace(predictor_ns)
     api.add_namespace(datasource_ns)

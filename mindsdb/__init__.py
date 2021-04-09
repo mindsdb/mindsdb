@@ -89,7 +89,7 @@ if not is_ray_worker:
     if telemetry_file_exists(mindsdb_config['storage_dir']):
         os.environ['CHECK_FOR_UPDATES'] = '0'
         print('\n x telemetry disabled! \n')
-    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
+    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or mindsdb_config.get('cloud', False):
         disable_telemetry(mindsdb_config['storage_dir'])
         print('\n x telemetry disabled \n')
     else:

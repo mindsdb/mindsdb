@@ -14,6 +14,8 @@ from .db_stats import responder as responder_db_stats
 from .coll_stats import responder as responder_coll_stats
 from .count import responder as responder_count
 from .aggregate import responder as responder_aggregate
+from .get_free_monitoring_status import responder as responder_get_free_monitoring_status
+from .end_sessions import responder as responder_end_sessions
 
 from .list_indexes import responder as responder_list_indexes
 from .list_collections import responder as responder_list_collections
@@ -44,6 +46,8 @@ responders = [
     responder_coll_stats,
     responder_count,
     responder_aggregate,
+    responder_get_free_monitoring_status,
+    responder_end_sessions,
     # user queries
     responder_list_indexes,
     responder_list_collections,

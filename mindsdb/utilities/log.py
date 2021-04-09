@@ -6,8 +6,8 @@ import traceback
 from mindsdb.interfaces.storage.db import session, Log
 from mindsdb.utilities.config import Config
 
-telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false', 'False']
 global_config = Config().get_all()
+telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false', 'False']
 
 if telemtry_enabled:
     import sentry_sdk
@@ -47,6 +47,7 @@ class DbHandler(logging.Handler):
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
 
     def emit(self, record):
+        self.format(record)
         if len(record.message.strip(' \n')) == 0 \
             or (record.threadName == 'ray_print_logs' and 'mindsdb-logger' not in record.message):
             return

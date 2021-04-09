@@ -5,6 +5,7 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.integrations.mongodb.mongodb import MongoDB
 from mindsdb.integrations.redis.redisdb import Redis
+from mindsdb.integrations.kafka.kafkadb import Kafka
 
 from mindsdb.utilities.log import log as logger
 from mindsdb.utilities.config import Config
@@ -17,7 +18,8 @@ class DatabaseWrapper():
                  'postgres': PostgreSQL,
                  'mssql': MSSQL,
                  'mongodb': MongoDB,
-                 'redis': Redis}
+                 'redis': Redis,
+                 'kafka': Kafka}
     def __init__(self):
         self.config = Config()
 

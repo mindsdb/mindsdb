@@ -73,6 +73,9 @@ class Integration(Resource):
     @ns_conf.doc('put_integration')
     def put(self, name):
         params = request.json.get('params')
+
+        print(f'\n\n\nTRYING TO PUT: {name} WITH: {params}\n\n')
+
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
 

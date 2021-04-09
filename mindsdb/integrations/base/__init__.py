@@ -1,3 +1,3 @@
-from .integration import Integration
+from .integration import Integration, StreamIntegration
 
-__all__ = ['Integration', ]
+__all__ = ['Integration', 'StreamIntegration']

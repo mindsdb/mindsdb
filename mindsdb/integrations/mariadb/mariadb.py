@@ -2,6 +2,7 @@ import mysql.connector
 
 from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
+from mindsdb.utilities.log import log
 
 
 class MariadbConnectionChecker:
@@ -61,8 +62,8 @@ class Mariadb(Integration, MariadbConnectionChecker):
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
-            except Exception:
-                print(f'Error: cant convert type {col_subtype} of column {name} to mariadb type')
+            except Exception as e:
+                log.error(f'Error: can not determine mariadb data type for column {name}: {e}')
 
         return column_declaration
 

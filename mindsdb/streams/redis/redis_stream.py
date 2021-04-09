@@ -10,7 +10,7 @@ from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInt
 
 class RedisStream(Thread):
     def __init__(self, name, host, port, database, stream_in, stream_out, predictor, _type):
-        self.name = name
+        self.stream_name = name
         self.host = host
         self.port = port
         self.db = database
@@ -23,7 +23,6 @@ class RedisStream(Thread):
         self._type = _type
         self.native_interface = NativeInterface()
         self.format_flag = 'explain'
-
         self.stop_event = Event()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         if self._type == 'timeseries':
@@ -35,16 +34,20 @@ class RedisStream(Thread):
         return walrus.Database(host=self.host, port=self.port, db=self.db)
 
     def _get_target(self):
-        pass
+        return "pnew_case"
+        # pass
 
     def _get_window_size(self):
-        pass
+        return 10
+        # pass
 
     def _get_gb(self):
-        pass
+        return "state"
+        # pass
 
     def _get_dt(self):
-        pass
+        return "time"
+        # pass
 
     def predict(self, stream_in, stream_out, timeseries_mode=False):
         predict_info = stream_in.read(block=0)
@@ -77,15 +80,17 @@ class RedisStream(Thread):
 
 
     def make_prediction_from_cache(self, cache):
+        log.error("STREAM: in make_prediction_from_cache")
         if len(cache) >= self.window:
+            log.error(f"STREAM: make_prediction_from_cache - len(cache) = {len(cache)}")
             self.predict(cache, self.stream_out, timeseries_mode=True)
 
     def make_timeseries_predictions(self):
+        log.error("STREAM: running 'make_timeseries_predictions'")
         predict_record = session.query(DBPredictor).filter_by(company_id=self.company_id, name=self.predictor).first()
         if predict_record is None:
             log.error(f"Error creating stream: requested predictor {self.predictor} is not exist")
             return
-        self.cache = self.client.Stream(f"{self._name}_cache")
         self.target = self._get_target()
         self.window = self._get_window_size()
         self.gb = self._get_gb()
@@ -98,25 +103,33 @@ class RedisStream(Thread):
                 record_id = record[0]
                 raw_when_data = record[1]
                 when_data = self.decode(raw_when_data)
+                log.error(f"STREAM: next record have read from {self.stream_in.key}: {when_data}")
                 self.to_cache(when_data)
                 self.stream_in.delete(record_id)
         session.close()
 
     def to_cache(self, record):
         gb_val = record[self.gb]
-        cache = self.client.Stream(f"{self.name}.cache.{gb_val}")
+        cache = self.client.Stream(f"{self.stream_name}.cache.{gb_val}")
+        log.error(f"STREAM: cache {cache.key} has been created")
         self.make_prediction_from_cache(cache)
         self.handle_record(cache, record)
         self.make_prediction_from_cache(cache)
+        log.error("STREAM in cache: current iteration has done.")
 
     def handle_record(self, cache, record):
-        records = cache.read(block=0)
-        records = [self.decode(x) for x in records]
+        log.error(f"STREAM: handling cache {cache.key} and {record} record.")
+        records = cache.read()
+        # log.error(f"STREAM: current {cache.key} state: {records}")
+        records = [self.decode(x[1]) for x in records]
+        log.error(f"STREAM: read {records} from cache.")
         records.append(record)
         records = self.sort_cache(records)
-        cache.trim(0, approximate=True)
+        log.error(f"STREAM: after updating and sorting - {records}.")
+        cache.trim(0, approximate=False)
         for rec in records:
             cache.add(rec)
+        log.error(f"STREAM: finish updating {cache.key}")
 
     def sort_cache(self, cache):
         return sorted(cache, key=lambda x: x[self.dt])

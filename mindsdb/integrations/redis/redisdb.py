@@ -97,6 +97,7 @@ class Redis(StreamIntegration, RedisConnectionChecker):
                     self.control_stream.delete(r_id)
             except Exception as e:
                 self.log.error(f"Integration {self.name}: {e}")
+                raise e
 
         # received exit event
         self.log.error(f"Integration {self.name}: exiting...")

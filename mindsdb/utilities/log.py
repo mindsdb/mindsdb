@@ -47,6 +47,7 @@ class DbHandler(logging.Handler):
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
 
     def emit(self, record):
+        self.format(record)
         if len(record.message.strip(' \n')) == 0 \
             or (record.threadName == 'ray_print_logs' and 'mindsdb-logger' not in record.message):
             return

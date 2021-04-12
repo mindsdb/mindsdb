@@ -2,6 +2,7 @@ import os
 import json
 from threading import Thread, Event
 import walrus
+
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Predictor as DBPredictor
@@ -57,10 +58,10 @@ class RedisStream(Thread):
             raw_when_data = record[1]
             when_data = self.decode(raw_when_data)
             if timeseries_mode:
-                if self.target not in when_data:
-                    when_data['make_predictions'] = False
-                else:
-                    when_data['make_predictions'] = True
+                # if self.target not in when_data:
+                #     when_data['make_predictions'] = False
+                # else:
+                #     when_data['make_predictions'] = True
                 when_list.append(when_data)
             else:
                 result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)

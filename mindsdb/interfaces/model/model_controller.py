@@ -196,7 +196,7 @@ class ModelController():
                 data_source = when_data
 
         predictions = self.predictor_cache[name]['predictor'].predict(
-            when_data=when_data,
+            when_data=data_source,
             **kwargs
         )
         if pred_format == 'explain' or pred_format == 'new_explain':
@@ -328,6 +328,7 @@ class ModelController():
             session.commit()
             return str(e)
 
+
 try:
     from mindsdb_worker.cluster.ray_controller import ray_ify
     import ray
@@ -339,6 +340,7 @@ except Exception as e:
 
 
 def ping(): return True
+
 
 def start():
     controller = ModelController(False)

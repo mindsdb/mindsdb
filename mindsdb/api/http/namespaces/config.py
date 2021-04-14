@@ -231,7 +231,7 @@ class InstallDependencies(Resource):
         except Exception as e:
             return http_error(500, 'Failed to install dependency', str(e))
 
-        if code == 1:
+        if code != 0:
             output = ''
             if isinstance(outs, bytes) and len(outs) > 0:
                 output = output + 'Output: ' + outs.decode()

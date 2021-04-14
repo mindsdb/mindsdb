@@ -4,24 +4,21 @@ from threading import Thread
 import walrus
 from mindsdb.utilities.config import STOP_THREADS_EVENT
 from mindsdb.utilities.log import log
-from mindsdb.integrations.base import Integration
+from mindsdb.integrations.base import StreamIntegration
 from mindsdb.streams.redis.redis_stream import RedisStream
 from mindsdb.interfaces.storage.db import session, Stream, Configuration
 
 
 class RedisConnectionChecker:
     def __init__(self, **kwargs):
-        self.host = kwargs.get('host')
-        self.port = kwargs.get('port', 6379)
-        self.db = kwargs.get('db', 0)
-        self.user = kwargs.get('user', None)
-        self.password = kwargs.get('password', None)
+        self.connection_info = kwargs.get("connection", {})
+        self.advanced_info = kwargs.get("advanced", {})
+        self.connection_params = {}
+        self.connection_params.update(self.connection_info)
+        self.connection_params.update(self.advanced_info)
 
     def _get_connection(self):
-        return walrus.Database(host=self.host,
-                               port=self.port,
-                               db=self.db,
-                               socket_connect_timeout=10)
+        return walrus.Database(**self.connection_params)
 
     def check_connection(self):
         client = self._get_connection()
@@ -32,23 +29,26 @@ class RedisConnectionChecker:
             return False
 
 
-class Redis(Integration, RedisConnectionChecker):
+class Redis(StreamIntegration, RedisConnectionChecker):
     """Redis Integration which is more a Streams factory
     than classical Integration."""
     def __init__(self, config, name):
-        Integration.__init__(self, config, name)
-        intergration_info = self.config['integrations'][self.name]
-        self.host = intergration_info.get('host')
-        self.port = intergration_info.get('port', 6379)
-        self.db = intergration_info.get('db', 0)
-        self.control_stream_name = intergration_info.get('stream')
-        self.user = intergration_info.get('user', None)
-        self.password = intergration_info.get('password', None)
+        StreamIntegration.__init__(self, config, name)
+        integration_info = self.config['integrations'][self.name]
+        # self.host = integration_info.get('host')
+        # self.port = integration_info.get('port', 6379)
+        # self.db = integration_info.get('db', 0)
+
+        self.connection_info = integration_info.get("connection", {})
+        self.advanced_info = integration_info.get("advanced", {})
+        self.connection_params = {}
+        self.connection_params.update(self.connection_info)
+        self.connection_params.update(self.advanced_info)
         self.client = self._get_connection()
+
+
+        self.control_stream_name = integration_info.get('stream')
         self.control_stream = self.client.Stream(self.control_stream_name)
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-        self.streams = {}
-        self.stop_event = STOP_THREADS_EVENT
 
     def should_i_exist(self):
         config_record = session.query(Configuration).filter_by(company_id=self.company_id).first()
@@ -87,6 +87,13 @@ class Redis(Integration, RedisConnectionChecker):
                 to_launch.start()
                 self.streams[stream.name] = to_launch.stop_event
 
+    def delete_all_streams(self):
+        for stream in self.stream:
+            self.streams[stream].set()
+            del self.streams[stream]
+        session.query(Stream).filter_by(company_id=self.company_id, integration=self.name).delete()
+        session.commit()
+
     def delete_stream(self, predictor):
         """Deletes stream from database and stops it work by
         setting up a special threading.Event flag."""
@@ -100,14 +107,17 @@ class Redis(Integration, RedisConnectionChecker):
 
     def work(self):
         """Creates a Streams by receiving initial information from control stream."""
+        log.error(f"INTEGRATION HAS BEEN CREATED: {self.connection_params}")
         log.error(f"Integration {self.name}: start listening {self.control_stream_name} redis stream")
         while not self.stop_event.wait(0.5):
             try:
                 # break if no record about this integration has found in db
                 if not self.should_i_exist():
+                    self.delete_all_streams()
                     break
                 # First, lets check that there are no new records in db, created via HTTP API for e.g.
                 self.start_stored_streams()
+                self.stop_deleted_streams()
                 # Checking new incoming records(requests) for new stream.
                 # Could't use blocking reading here, because this loop must
                 # also check new records in db (created via HTTP api for e.g)
@@ -144,8 +154,7 @@ class Redis(Integration, RedisConnectionChecker):
     def store_stream(self, stream):
         """Stories a created stream."""
         stream_name = f"{self.name}_{stream.predictor}"
-        stream_rec = Stream(name=stream_name, host=stream.host,
-                            port=stream.port, db=stream.db,
+        stream_rec = Stream(name=stream_name, connection_params=self.connection_info, advanced_params=self.advanced_info,
                             _type=stream._type, predictor=stream.predictor,
                             integration=self.name, company_id=self.company_id,
                             stream_in=stream.stream_in_name, stream_out=stream.stream_out_name)
@@ -165,7 +174,7 @@ class Redis(Integration, RedisConnectionChecker):
         stream_out = kwargs.get('output_stream')
         predictor_name = kwargs.get('predictor')
         stream_type = kwargs.get('type', 'forecast')
-        return RedisStream(self.host, self.port, self.db,
+        return RedisStream(self.connection_info, self.advanced_info,
                            stream_in, stream_out, predictor_name,
                            stream_type)
 
@@ -178,12 +187,3 @@ class Redis(Integration, RedisConnectionChecker):
         for k in b_dict:
             decoded[k.decode('utf8')] = b_dict[k].decode('utf8')
         return decoded
-
-    def _query(self):
-        pass
-
-    def register_predictors(self, model_data_arr):
-        pass
-
-    def unregister_predictor(self, name):
-        pass

@@ -9,10 +9,9 @@ from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInt
 
 
 class RedisStream(Thread):
-    def __init__(self, host, port, database, stream_in, stream_out, predictor, _type):
-        self.host = host
-        self.port = port
-        self.db = database
+    def __init__(self, connection_info, advanced_info, stream_in, stream_out, predictor, _type):
+        self.connection_info = connection_info
+        self.connection_info.update(advanced_info)
         self.predictor = predictor
         self.client = self._get_client()
         self.stream_in_name = stream_in
@@ -28,7 +27,7 @@ class RedisStream(Thread):
         super().__init__(target=RedisStream.make_prediction, args=(self,))
 
     def _get_client(self):
-        return walrus.Database(host=self.host, port=self.port, db=self.db)
+        return walrus.Database(**self.connection_info)
 
     def make_prediction(self):
         predict_record = session.query(DBPredictor).filter_by(company_id=self.company_id, name=self.predictor).first()

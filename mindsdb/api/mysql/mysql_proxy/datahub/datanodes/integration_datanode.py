@@ -26,6 +26,8 @@ class IntegrationDataNode(DataNode):
         return []
 
     def select(self, table=None, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
+        has_where = isinstance(where, (dict, list)) and len(where) > 0
+
         if isinstance(where, dict):
             where = [where]
 
@@ -37,7 +39,14 @@ class IntegrationDataNode(DataNode):
                             el[key][0] = el[key][0][el[key][0].find('.') + 1:]
             where = {'and': where}
 
-        query = format({"from": table, 'select': columns, "where": where})
+        format_data = {
+            'from': table,
+            'select': columns
+        }
+        if has_where:
+            format_data['where'] = where
+
+        query = format(format_data)
 
         ds, ds_name = self.default_store.save_datasource(f'temp_ds_{int(time.time()*100)}', self.integration_name, {'query': query})
         dso = self.default_store.get_datasource_obj(ds_name)

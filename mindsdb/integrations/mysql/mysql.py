@@ -3,6 +3,7 @@ import mysql.connector
 
 from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
+from mindsdb.utilities.log import log
 
 
 class MySQLConnectionChecker:
@@ -14,10 +15,11 @@ class MySQLConnectionChecker:
 
     def _get_connnection(self):
         return mysql.connector.connect(
-                host=self.host,
-                port=self.port,
-                user=self.user,
-                password=self.password)
+            host=self.host,
+            port=self.port,
+            user=self.user,
+            password=self.password
+        )
 
     def check_connection(self):
         try:
@@ -64,8 +66,8 @@ class MySQL(Integration, MySQLConnectionChecker):
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
-            except Exception:
-                print(f'Error: cant convert type {col_subtype} of column {name} to mysql type')
+            except Exception as e:
+                log.error(f'Error: can not determine mysql data type for column {name}: {e}')
 
         return column_declaration
 

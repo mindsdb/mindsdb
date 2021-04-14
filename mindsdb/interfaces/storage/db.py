@@ -1,13 +1,12 @@
 import os
 import json
+import datetime
 
 import numpy as np
 from sqlalchemy import create_engine, orm, types, UniqueConstraint
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
-from sqlalchemy.schema import ForeignKey
-import datetime
 
 if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
     engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
@@ -109,10 +108,11 @@ class Predictor(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     native_version = Column(String)
-    datasource_id = Column(Integer, ForeignKey('datasource.id'))
+    datasource_id = Column(Integer)
     is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
+
 
 class AITable(Base):
     __tablename__ = 'ai_table'
@@ -155,6 +155,7 @@ class Stream(Base):
     integration = Column(String)
     company_id = Column(Integer)
     name = Column(String)
+
 
 Base.metadata.create_all(engine)
 orm.configure_mappers()

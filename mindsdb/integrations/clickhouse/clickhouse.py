@@ -2,11 +2,13 @@ import requests
 
 from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
+from mindsdb.utilities.log import log
+
 
 class ClickhouseConnectionChecker:
     def __init__(self, **kwargs):
         self.host = kwargs.get("host")
-        self.port= kwargs.get("port")
+        self.port = kwargs.get("port")
         self.user = kwargs.get("user")
         self.password = kwargs.get("password")
 
@@ -19,6 +21,7 @@ class ClickhouseConnectionChecker:
         except Exception:
             connected = False
         return connected
+
 
 class Clickhouse(Integration, ClickhouseConnectionChecker):
     def __init__(self, config, name):
@@ -56,8 +59,7 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception as e:
-                print(e)
-                print(f'Error: cant convert type {col_subtype} of column {name} to clickhouse type')
+                log.error(f'Error: can not determine clickhouse data type for column {name}: {e}')
 
         return column_declaration
 

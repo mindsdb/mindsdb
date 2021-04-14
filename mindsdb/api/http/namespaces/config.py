@@ -1,9 +1,8 @@
 import copy
-import traceback
-import datetime
 from dateutil.parser import parse as parse_datetime
 import subprocess
 import os
+import sys
 
 from flask import request
 from flask_restx import Resource, abort
@@ -14,6 +13,8 @@ from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
+from mindsdb.api.http.utils import http_error
+
 
 def get_integration(name):
     integrations = ca.config_obj.get('integrations', {})
@@ -34,6 +35,7 @@ class GetLogs(Resource):
 
         logs = get_logs(min_timestamp, max_timestamp, context, level, log_from, limit)
         return {'data': logs}
+
 
 @ns_conf.route('/integrations')
 @ns_conf.param('name', 'List all database integration')
@@ -162,6 +164,7 @@ class ToggleTelemetry(Resource):
         else:
             return 'Disabled telemetry', 200
 
+
 @ns_conf.route('/vars')
 class Vars(Resource):
     def get(self):
@@ -176,11 +179,11 @@ class Vars(Resource):
 
         cloud = ca.config_obj.get('cloud', False)
 
-
         return {'mongo': mongo, 'telemtry': telemtry, 'cloud': cloud}
 
+
 @ns_conf.param('flag', 'Turn telemtry on or off')
-class ToggleTelemetry(Resource):
+class ToggleTelemetry2(Resource):
     @ns_conf.doc('check')
     def get(self, flag):
         if flag in ["True", "true", "t"]:
@@ -193,7 +196,8 @@ class ToggleTelemetry(Resource):
 @ns_conf.param('dependency_list', 'Install dependencies')
 class InstallDependenciesList(Resource):
     def get(self):
-        return {'dependencies':['snowflake','athena','google','s3','lightgbm_gpu','mssql']}
+        return {'dependencies': ['snowflake', 'athena', 'google', 's3', 'lightgbm_gpu', 'mssql']}
+
 
 @ns_conf.route('/install/<dependency>')
 @ns_conf.param('dependency', 'Install dependencies')
@@ -214,14 +218,27 @@ class InstallDependencies(Resource):
         else:
             return f'Unkown dependency: {dependency}', 400
 
+        outs = b''
+        errs = b''
         try:
-            sp = subprocess.Popen(['pip3', 'install', *dependency])
-            sp.wait()
-        except Exception:
-            try:
-                sp = subprocess.Popen(['pip', 'install', *dependency])
-                sp.wait()
-            except Exception:
-                return 'Failed to install', 400
+            sp = subprocess.Popen(
+                [sys.executable, '-m', 'pip', 'install', *dependency],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            code = sp.wait()
+            outs, errs = sp.communicate(timeout=1)
+        except Exception as e:
+            return http_error(500, 'Failed to install dependency', str(e))
+
+        if code == 1:
+            output = ''
+            if isinstance(outs, bytes) and len(outs) > 0:
+                output = output + 'Output: ' + outs.decode()
+            if isinstance(errs, bytes) and len(errs) > 0:
+                if len(output) > 0:
+                    output = output + '\n'
+                output = output + 'Errors: ' + errs.decode()
+            return http_error(500, 'Failed to install dependency', output)
 
         return 'Installed', 200

@@ -89,7 +89,7 @@ class Redis(StreamIntegration, RedisConnectionChecker):
                         self.control_stream.delete(r_id)
                         continue
 
-                    stream_params['name'] = f"{self.name}_{stream.predictor}"
+                    stream_params['name'] = f"{self.name}_{stream_params['predictor']}"
                     stream = self.get_stream_from_kwargs(**stream_params)
                     self.log.error(f"Integration {self.name}: creating stream: {stream_params}")
                     stream.start()
@@ -109,13 +109,13 @@ class Redis(StreamIntegration, RedisConnectionChecker):
 
     def store_stream(self, stream):
         """Stories a created stream."""
-        stream_rec = Stream(name=stream.name, connection_params=self.connection_info, advanced_params=self.advanced_info,
+        stream_rec = Stream(name=stream.stream_name, connection_params=self.connection_info, advanced_params=self.advanced_info,
                             _type=stream._type, predictor=stream.predictor,
                             integration=self.name, company_id=self.company_id,
                             stream_in=stream.stream_in_name, stream_out=stream.stream_out_name)
         session.add(stream_rec)
         session.commit()
-        self.streams[stream.name] = stream.stop_event
+        self.streams[stream.stream_name] = stream.stop_event
 
     def get_stream_from_db(self, db_record):
         kwargs = {"type": db_record._type,

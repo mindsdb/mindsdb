@@ -141,8 +141,7 @@ class RedisStream(Thread):
             return
 
         while not self.stop_event.wait(0.5):
-            # block==0 is a blocking mode
-            predict_info = self.stream_in.read(block=0)
+            predict_info = self.stream_in.read()
             for record in predict_info:
                 record_id = record[0]
                 raw_when_data = record[1]
@@ -156,6 +155,7 @@ class RedisStream(Thread):
                 self.stream_in.delete(record_id)
 
         session.close()
+        log.error("STREAM: stopping...")
 
     def decode(self, redis_data):
         decoded = {}

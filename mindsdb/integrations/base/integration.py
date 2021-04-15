@@ -54,6 +54,13 @@ class StreamIntegration(Integration):
             self.streams[stream_name].set()
             del self.streams[stream_name]
 
+    def delete_all_streams(self):
+        for stream in self.stream:
+            self.streams[stream].set()
+            del self.streams[stream]
+        session.query(Stream).filter_by(company_id=self.company_id, integration=self.name).delete()
+        session.commit()
+
     def stop_deleted_streams(self):
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
         actual_streams = [x.name for x in existed_streams]

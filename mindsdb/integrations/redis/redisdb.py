@@ -62,13 +62,6 @@ class Redis(StreamIntegration, RedisConnectionChecker):
                 to_launch.start()
                 self.streams[stream.name] = to_launch.stop_event
 
-    def delete_all_streams(self):
-        for stream in self.stream:
-            self.streams[stream].set()
-            del self.streams[stream]
-        session.query(Stream).filter_by(company_id=self.company_id, integration=self.name).delete()
-        session.commit()
-
     def work(self):
         """Creates a Streams by receiving initial information from control stream."""
         self.log.error(f"INTEGRATION HAS BEEN CREATED: {self.connection_params}")

@@ -10,11 +10,10 @@ from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInt
 
 
 class RedisStream(Thread):
-    def __init__(self, name, host, port, database, stream_in, stream_out, predictor, _type):
+    def __init__(self, name, connection_info, advanced_info, stream_in, stream_out, predictor, _type):
         self.stream_name = name
-        self.host = host
-        self.port = port
-        self.db = database
+        self.connection_info = connection_info
+        self.connection_info.update(advanced_info)
         self.predictor = predictor
         self.client = self._get_client()
         self.stream_in_name = stream_in
@@ -32,7 +31,7 @@ class RedisStream(Thread):
             super().__init__(target=RedisStream.make_predictions, args=(self,))
 
     def _get_client(self):
-        return walrus.Database(host=self.host, port=self.port, db=self.db)
+        return walrus.Database(**self.connection_info)
 
     def _get_target(self):
         return "pnew_case"
@@ -142,8 +141,7 @@ class RedisStream(Thread):
             return
 
         while not self.stop_event.wait(0.5):
-            # block==0 is a blocking mode
-            predict_info = self.stream_in.read(block=0)
+            predict_info = self.stream_in.read()
             for record in predict_info:
                 record_id = record[0]
                 raw_when_data = record[1]
@@ -157,6 +155,7 @@ class RedisStream(Thread):
                 self.stream_in.delete(record_id)
 
         session.close()
+        log.error("STREAM: stopping...")
 
     def decode(self, redis_data):
         decoded = {}

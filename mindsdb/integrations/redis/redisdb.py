@@ -7,17 +7,14 @@ from mindsdb.interfaces.storage.db import session, Stream
 
 class RedisConnectionChecker:
     def __init__(self, **kwargs):
-        self.host = kwargs.get('host')
-        self.port = kwargs.get('port', 6379)
-        self.db = kwargs.get('db', 0)
-        self.user = kwargs.get('user', None)
-        self.password = kwargs.get('password', None)
+        self.connection_info = kwargs.get("connection", {})
+        self.advanced_info = kwargs.get("advanced", {})
+        self.connection_params = {}
+        self.connection_params.update(self.connection_info)
+        self.connection_params.update(self.advanced_info)
 
     def _get_connection(self):
-        return walrus.Database(host=self.host,
-                               port=self.port,
-                               db=self.db,
-                               socket_connect_timeout=10)
+        return walrus.Database(**self.connection_params)
 
     def check_connection(self):
         client = self._get_connection()
@@ -33,14 +30,17 @@ class Redis(StreamIntegration, RedisConnectionChecker):
     than classical Integration."""
     def __init__(self, config, name):
         StreamIntegration.__init__(self, config, name)
-        intergration_info = self.config['integrations'][self.name]
-        self.host = intergration_info.get('host')
-        self.port = intergration_info.get('port', 6379)
-        self.db = intergration_info.get('db', 0)
-        self.control_stream_name = intergration_info.get('stream')
-        self.user = intergration_info.get('user', None)
-        self.password = intergration_info.get('password', None)
+        integration_info = self.config['integrations'][self.name]
+
+        self.connection_info = integration_info.get("connection", {})
+        self.advanced_info = integration_info.get("advanced", {})
+        self.connection_params = {}
+        self.connection_params.update(self.connection_info)
+        self.connection_params.update(self.advanced_info)
         self.client = self._get_connection()
+
+
+        self.control_stream_name = integration_info.get('stream')
         self.control_stream = self.client.Stream(self.control_stream_name)
 
     def start(self):
@@ -64,11 +64,13 @@ class Redis(StreamIntegration, RedisConnectionChecker):
 
     def work(self):
         """Creates a Streams by receiving initial information from control stream."""
+        self.log.error(f"INTEGRATION HAS BEEN CREATED: {self.connection_params}")
         self.log.error(f"Integration {self.name}: start listening {self.control_stream_name} redis stream")
         while not self.stop_event.wait(0.5):
             try:
                 # break if no record about this integration has found in db
                 if not self.exist_in_db():
+                    self.delete_all_streams()
                     break
                 # First, lets check that there are no new records in db, created via HTTP API for e.g.
                 self.start_stored_streams()
@@ -87,7 +89,7 @@ class Redis(StreamIntegration, RedisConnectionChecker):
                         self.control_stream.delete(r_id)
                         continue
 
-                    stream_params['name'] = f"{self.name}_{stream.predictor}"
+                    stream_params['name'] = f"{self.name}_{stream_params['predictor']}"
                     stream = self.get_stream_from_kwargs(**stream_params)
                     self.log.error(f"Integration {self.name}: creating stream: {stream_params}")
                     stream.start()
@@ -107,14 +109,13 @@ class Redis(StreamIntegration, RedisConnectionChecker):
 
     def store_stream(self, stream):
         """Stories a created stream."""
-        stream_rec = Stream(name=stream.name, host=stream.host,
-                            port=stream.port, db=stream.db,
+        stream_rec = Stream(name=stream.stream_name, connection_params=self.connection_info, advanced_params=self.advanced_info,
                             _type=stream._type, predictor=stream.predictor,
                             integration=self.name, company_id=self.company_id,
                             stream_in=stream.stream_in_name, stream_out=stream.stream_out_name)
         session.add(stream_rec)
         session.commit()
-        self.streams[stream.name] = stream.stop_event
+        self.streams[stream.stream_name] = stream.stop_event
 
     def get_stream_from_db(self, db_record):
         kwargs = {"type": db_record._type,
@@ -130,7 +131,7 @@ class Redis(StreamIntegration, RedisConnectionChecker):
         stream_out = kwargs.get('output_stream')
         predictor_name = kwargs.get('predictor')
         stream_type = kwargs.get('type', 'forecast')
-        return RedisStream(name, self.host, self.port, self.db,
+        return RedisStream(name, self.connection_info, self.advanced_info,
                            stream_in, stream_out, predictor_name,
                            stream_type)
 

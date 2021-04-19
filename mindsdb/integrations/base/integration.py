@@ -54,6 +54,13 @@ class StreamIntegration(Integration):
             self.streams[stream_name].set()
             del self.streams[stream_name]
 
+    def delete_all_streams(self):
+        for stream in self.streams.copy():
+            self.streams[stream].set()
+            del self.streams[stream]
+        session.query(Stream).filter_by(company_id=self.company_id, integration=self.name).delete()
+        session.commit()
+
     def stop_deleted_streams(self):
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
         actual_streams = [x.name for x in existed_streams]
@@ -63,6 +70,7 @@ class StreamIntegration(Integration):
             if stream not in actual_streams:
                 # this stream is still running but it has been deleted from database.
                 # need to stop it.
+                self.log.error(f"INTEGRATION {self.name}: deleting {stream} stream.")
                 self.streams[stream].set()
                 del self.streams[stream]
 

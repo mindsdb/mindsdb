@@ -11,16 +11,16 @@ from mindsdb.interfaces.storage.db import Predictor as DBPredictor
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 
 class KafkaStream(Thread):
-    def __init__(self, host, port, topic_in, topic_out, predictor, _type):
-        self.host = host
-        self.port = port
+    def __init__(self, connection_info, advanced_info, topic_in, topic_out, predictor, _type):
+        self.connection_info = connection_info
+        self.advanced_info = advanced_info
         self.predictor = predictor
         self.stream_in_name = topic_in
         self.stream_out_name = topic_out
-        self.consumer = kafka.KafkaConsumer(bootstrap_servers=f"{self.host}:{self.port}", consumer_timeout_ms=1000)
+        self.consumer = kafka.KafkaConsumer(**self.connection_info, **self.advanced_info.get('consumer', {}))
         self.consumer.subscribe(topics=[self.stream_in_name])
-        self.producer = kafka.KafkaProducer(bootstrap_servers=f"{self.host}:{self.port}")
-        self.admin = kafka.KafkaAdminClient(bootstrap_servers=f"{self.host}:{self.port}")
+        self.producer = kafka.KafkaProducer(**self.connection_info, **self.advanced_info.get('producer', {}))
+        self.admin = kafka.KafkaAdminClient(**self.connection_info)
         try:
             self.topic = NewTopic(self.stream_out_name, num_partitions=1, replication_factor=1)
             self.admin.create_topics([self.topic])

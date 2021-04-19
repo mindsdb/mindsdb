@@ -50,7 +50,7 @@ class IntegrationDataNode(DataNode):
 
         ds, ds_name = self.default_store.save_datasource(f'temp_ds_{int(time.time()*100)}', self.integration_name, {'query': query})
         dso = self.default_store.get_datasource_obj(ds_name)
-        data = dso.df.T.to_dict().values()
+        data = list(dso.df.T.to_dict().values())
         self.default_store.delete_datasource(ds_name)
 
         return data

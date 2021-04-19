@@ -68,7 +68,7 @@ class Stream(Resource):
             abort(400, f"integration '{integration_name}' doesn't exist.")
         if integration_info["type"] not in ['redis', 'kafka']:
             abort(400, f"only integration of redis or kafka might be used to crate redis streams. got: '{integration_info.type}' type")
-        connection_params = params['connect']
+        connection_params = params.get('connect', {})
         advanced_params = params.get('advanced', {})
         predictor = params['predictor']
         stream_in = params['stream_in']

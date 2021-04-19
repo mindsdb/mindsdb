@@ -55,7 +55,7 @@ class StreamIntegration(Integration):
             del self.streams[stream_name]
 
     def delete_all_streams(self):
-        for stream in self.streams:
+        for stream in self.streams.copy():
             self.streams[stream].set()
             del self.streams[stream]
         session.query(Stream).filter_by(company_id=self.company_id, integration=self.name).delete()

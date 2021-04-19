@@ -4,9 +4,9 @@ import kafka
 
 from threading import Thread
 from mindsdb.utilities.config import STOP_THREADS_EVENT
-# from mindsdb.utilities.log import log
 from mindsdb.integrations.base import StreamIntegration
 from mindsdb.streams.kafka.kafka_stream import KafkaStream
+from mindsdb.streams.base.base_stream import StreamTypes
 from mindsdb.interfaces.storage.db import session, Stream, Configuration
 
 class KafkaConnectionChecker:
@@ -16,8 +16,6 @@ class KafkaConnectionChecker:
         self.connection_params = {}
         self.connection_params.update(self.connection_info)
         self.connection_params.update(self.advanced_info)
-        # self.host = kwargs.get('host')
-        # self.port = kwargs.get('port', 9092)
 
     def _get_connection(self):
         return kafka.KafkaAdminClient(**self.connection_params)
@@ -111,7 +109,7 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         stream_rec = Stream(name=stream_name, connection_params=self.connection_params, advanced_params=self.advanced_info,
                             _type=stream._type, predictor=stream.predictor,
                             integration=self.name, company_id=self.company_id,
-                            stream_in=stream.stream_in_name, stream_out=stream.stream_out_name)
+                            stream_in=stream.stream_in_name, stream_out=stream.stream_out_name, ts_params=stream.ts_params)
         session.add(stream_rec)
         session.commit()
         self.streams[stream_name] = stream.stop_event
@@ -120,7 +118,8 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         kwargs = {"type": db_record._type,
                   "predictor": db_record.predictor,
                   "input_stream": db_record.stream_in,
-                  "output_stream": db_record.stream_out}
+                  "output_stream": db_record.stream_out,
+                  "ts_params": db_record.ts_params}
         return self.get_stream_from_kwargs(**kwargs)
 
     def get_stream_from_kwargs(self, **kwargs):
@@ -128,6 +127,7 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         topic_out = kwargs.get('output_stream')
         predictor_name = kwargs.get('predictor')
         stream_type = kwargs.get('type', 'forecast')
+        ts_params = kwargs.get('ts_params')
         return KafkaStream(self.connection_params, self.advanced_info,
                            topic_in, topic_out,
-                           predictor_name, stream_type)
+                           predictor_name, stream_type, **ts_params)

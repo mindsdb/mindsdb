@@ -1,5 +1,7 @@
-from moz_sql_parser import format
 import time
+
+import pandas as pd
+from moz_sql_parser import format
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -50,7 +52,15 @@ class IntegrationDataNode(DataNode):
 
         ds, ds_name = self.default_store.save_datasource(f'temp_ds_{int(time.time()*100)}', self.integration_name, {'query': query})
         dso = self.default_store.get_datasource_obj(ds_name)
-        data = list(dso.df.T.to_dict().values())
+
+        data = dso.df.to_dict(orient='records')
+
+        for column_name in dso.df.columns:
+            if pd.core.dtypes.common.is_datetime_or_timedelta_dtype(dso.df[column_name]):
+                pass_data = dso.df[column_name].dt.to_pydatetime()
+                for i, rec in enumerate(data):
+                    rec[column_name] = pass_data[i].timestamp()
+
         self.default_store.delete_datasource(ds_name)
 
         return data

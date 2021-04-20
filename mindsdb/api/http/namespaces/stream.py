@@ -26,9 +26,8 @@ def get_streams():
 
 
 def to_dict(stream):
-    return {"host": stream.host,
-            "port": stream.port,
-            "db": stream.db,
+    return {"connect_info": stream.connection_params,
+            "advanced_info": stream.advanced_params,
             "type": stream._type,
             "predictor": stream.predictor,
             "stream_in": stream.stream_in,
@@ -69,16 +68,15 @@ class Stream(Resource):
             abort(400, f"integration '{integration_name}' doesn't exist.")
         if integration_info["type"] not in ['redis', 'kafka']:
             abort(400, f"only integration of redis or kafka might be used to crate redis streams. got: '{integration_info.type}' type")
-        host = integration_info['host']
-        port = integration_info['port']
-        db = integration_info.get('db', 0)
+        connection_params = params.get('connect', {})
+        advanced_params = params.get('advanced', {})
         predictor = params['predictor']
         stream_in = params['stream_in']
         stream_out  = params['stream_out']
         _type = params.get('type', 'forecast')
         if predictor not in get_predictors():
             abort(400, f"requested predictor '{predictor}' is not ready or doens't exist")
-        stream = StreamDB(_type=_type, name=name, host=host, port=port, db=db,
+        stream = StreamDB(_type=_type, name=name, connection_params=connection_params, advanced_params=advanced_params,
                           predictor=predictor, stream_in=stream_in, stream_out=stream_out,
                           integration=integration_name, company_id=COMPANY_ID)
 

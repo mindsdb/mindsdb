@@ -6,7 +6,7 @@ from pathlib import Path
 
 from werkzeug.exceptions import HTTPException
 from waitress import serve
-from flask import send_from_directory
+from flask import send_from_directory, request
 
 from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
@@ -70,6 +70,13 @@ def start(verbose, no_studio):
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):
         session.close()
+
+    @app.before_request
+    def before_request():
+        company_id = request.headers.get('company-id')  # str
+        # TODO setup env according company_id, somethin like
+        # from .initialize import initialize_interfaces
+        # initialize_interfaces(current_app, company_id)
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

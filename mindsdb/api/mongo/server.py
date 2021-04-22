@@ -13,7 +13,7 @@ import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.utilities import log
 
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 
 OP_REPLY = 1
 OP_UPDATE = 2001
@@ -293,7 +293,7 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self.mindsdb_env = {
             'config': config,
             'data_store': DataStore(),
-            'mindsdb_native': NativeInterface()
+            'mindsdb_native': ModelInterface()
         }
 
         respondersCollection = RespondersCollection()

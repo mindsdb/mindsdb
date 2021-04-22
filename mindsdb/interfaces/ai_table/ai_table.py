@@ -6,7 +6,7 @@ import pickle
 
 import pandas as pd
 
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource, AITable
@@ -15,13 +15,13 @@ from mindsdb.utilities.log import log
 
 
 class AITable_store():
-    def __init__(self):
-        self.config = Config()
+    def __init__(self, company_id):
+        self.config = Config(company_id)
+        self.fs_store = FsSotre(company_id)
+        self.company_id = company_id
 
-        self.fs_store = FsSotre()
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dir = self.config.paths['datasources']
-        self.mindsdb_native = NativeInterface()
+        self.mindsdb_native = ModelInterface()
 
     def is_ai_table(self, name):
         record = self.get_ai_table(name.lower())

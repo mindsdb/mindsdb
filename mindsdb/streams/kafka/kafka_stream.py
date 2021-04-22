@@ -8,7 +8,7 @@ from kafka.admin import NewTopic
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Predictor as DBPredictor
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 
 class KafkaStream(Thread):
     def __init__(self, connection_info, advanced_info, topic_in, topic_out, predictor, _type):
@@ -27,7 +27,7 @@ class KafkaStream(Thread):
         except kafka.errors.TopicAlreadyExistsError:
             pass
         self._type = _type
-        self.native_interface = NativeInterface()
+        self.native_interface = ModelInterface()
         self.format_flag = 'explain'
 
         self.stop_event = Event()

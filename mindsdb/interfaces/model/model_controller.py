@@ -22,11 +22,11 @@ from mindsdb.utilities.log import log
 
 
 class ModelController():
-    def __init__(self, ray_based):
-        self.config = Config()
-        self.fs_store = FsSotre()
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-        self.dbw = DatabaseWrapper()
+    def __init__(self, ray_based, company_id):
+        self.config = Config(company_id)
+        self.fs_store = FsSotre(company_id)
+        self.company_id = company_id
+        self.dbw = DatabaseWrapper(company_id)
         self.predictor_cache = {}
         self.ray_based = ray_based
 
@@ -43,7 +43,7 @@ class ModelController():
         from mindsdb.interfaces.storage.db import session, Predictor
 
 
-        # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
+        # @TODO: Cache will become stale if the respective ModelInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
         for predictor_name in list(self.predictor_cache.keys()):
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
                 del self.predictor_cache[predictor_name]
@@ -155,7 +155,7 @@ class ModelController():
         if self.ray_based:
             run_learn(name, from_data, to_predict, kwargs, datasource_id)
         else:
-            p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id)
+            p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id, self.company_id)
             p.start()
             if join_learn_process is True:
                 p.join()

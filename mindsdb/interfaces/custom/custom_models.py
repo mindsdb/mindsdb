@@ -8,7 +8,7 @@ import mindsdb_datasources
 import pandas as pd
 
 from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
@@ -23,7 +23,7 @@ class CustomModels():
         self.storage_dir = self.config['paths']['custom_models']
         os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
-        self.mindsdb_native = NativeInterface()
+        self.mindsdb_native = ModelInterface()
         self.dbw = DatabaseWrapper()
 
     def _dir(self, name):

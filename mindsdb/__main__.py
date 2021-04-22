@@ -11,7 +11,7 @@ import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
 from mindsdb.utilities.os_specific import get_mp_context
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.model.model_interface import ray_based
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.api.http.start import start as start_http
@@ -90,7 +90,7 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
-    mdb = NativeInterface()
+    mdb = ModelInterface()
     cst = CustomModels()
 
     model_data_arr = get_all_models_meta_data(mdb, cst)

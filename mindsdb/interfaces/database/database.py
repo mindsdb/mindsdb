@@ -20,8 +20,9 @@ class DatabaseWrapper():
                  'mongodb': MongoDB,
                  'redis': Redis,
                  'kafka': Kafka}
-    def __init__(self):
-        self.config = Config()
+    
+    def __init__(self, company_id):
+        self.config = Config(company_id)
 
     def setup_integration(self, db_alias):
         try:

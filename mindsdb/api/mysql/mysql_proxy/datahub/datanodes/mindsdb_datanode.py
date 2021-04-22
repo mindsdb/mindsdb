@@ -3,7 +3,7 @@ import pandas
 import time
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
@@ -39,7 +39,7 @@ class MindsDBDataNode(DataNode):
 
     def __init__(self, config):
         self.config = Config()
-        self.mindsdb_native = NativeInterface()
+        self.mindsdb_native = ModelInterface()
         self.custom_models = CustomModels()
         self.ai_table = AITable_store()
         self.default_store = DataStore()

@@ -42,7 +42,7 @@ def _merge_configs(original_config, override_config):
 
 
 class Config():
-    def __init__(self):
+    def __init__(self, company_id):
         self.config_path = os.environ['MINDSDB_CONFIG_PATH']
         if self.config_path == 'absent':
             self._override_config = {}
@@ -50,7 +50,7 @@ class Config():
             with open(self.config_path, 'r') as fp:
                 self._override_config = json.load(fp)
 
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        self.company_id = company_id
         self._db_config = {}
         self.last_updated = datetime.datetime.now() - datetime.timedelta(days=3600)
         self._read()

@@ -6,7 +6,7 @@ import walrus
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Predictor as DBPredictor
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 
 
 class RedisStream(Thread):
@@ -21,7 +21,7 @@ class RedisStream(Thread):
         self.stream_in = self.client.Stream(stream_in)
         self.stream_out = self.client.Stream(stream_out)
         self._type = _type
-        self.native_interface = NativeInterface()
+        self.native_interface = ModelInterface()
         self.format_flag = 'explain'
         self.stop_event = Event()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)

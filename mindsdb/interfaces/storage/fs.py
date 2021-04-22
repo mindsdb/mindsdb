@@ -11,8 +11,8 @@ except Exception as e:
     pass
 
 class FsSotre():
-    def __init__(self):
-        self.config = Config()
+    def __init__(self, company_id):
+        self.config = Config(company_id)
         self.location = self.config['permanent_storage']['location']
         if self.location == 'local':
             pass

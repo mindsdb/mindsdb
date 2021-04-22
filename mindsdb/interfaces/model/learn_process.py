@@ -30,15 +30,15 @@ def delete_learn_mark():
             p.unlink()
 
 
-def run_learn(name, from_data, to_predict, kwargs, datasource_id):
+def run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id):
     import mindsdb_native
     import mindsdb_datasources
     import mindsdb
 
     create_process_mark('learn')
 
-    config = Config()
-    fs_store = FsSotre()
+    config = Config(company_id)
+    fs_store = FsSotre(company_id)
 
     company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
 
@@ -87,7 +87,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     predictor_record.data = model_data
     session.commit()
 
-    DatabaseWrapper().register_predictors([model_data])
+    DatabaseWrapper(company_id).register_predictors([model_data])
     delete_process_mark('learn')
 
 
@@ -104,5 +104,5 @@ class LearnProcess(ctx.Process):
 
         this is work for celery worker here?
         '''
-        name, from_data, to_predict, kwargs, datasource_id = self._args
-        run_learn(name, from_data, to_predict, kwargs, datasource_id)
+        name, from_data, to_predict, kwargs, datasource_id, company_id = self._args
+        run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id)

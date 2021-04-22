@@ -6,7 +6,7 @@ import pandas as pd
 
 import mindsdb_datasources
 from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor
@@ -15,13 +15,13 @@ from mindsdb.utilities.log import log
 
 
 class DataStore():
-    def __init__(self):
-        self.config = Config()
+    def __init__(self, company_id):
+        self.config = Config(company_id)
+        self.fs_store = FsSotre(company_id)
 
-        self.fs_store = FsSotre()
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        self.company_id = company_id
         self.dir = self.config.paths['datasources']
-        self.mindsdb_native = NativeInterface()
+        self.mindsdb_native = ModelInterface()
 
     def get_analysis(self, name):
         datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
@@ -296,7 +296,7 @@ class DataStore():
                 datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, id=id).first()
             else:
                 datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
-                
+
             self.fs_store.get(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)
             if raw:

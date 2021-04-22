@@ -15,6 +15,7 @@ from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
 from mindsdb.api.http.utils import http_error
+from dateutil.tz import tzlocal
 
 
 def get_integration(name):

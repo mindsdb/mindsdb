@@ -183,7 +183,7 @@ class Vars(Resource):
         cloud = ca.config_obj.get('cloud', False)
 
         local_time = datetime.datetime.now(tzlocal())
-        local_timezone = current_time.tzname()
+        local_timezone = local_time.tzname()
 
         return {
             'mongo': mongo,

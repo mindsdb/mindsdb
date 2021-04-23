@@ -13,7 +13,7 @@ from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
-from mindsdb.api.http.utils import http_error
+from mindsdb.api.http.utils import http_error,
 from mindsdb.interfaces.database.integrations import add_db_integration, modify_db_integration, remove_db_integration
 
 def get_integration(name):
@@ -74,6 +74,7 @@ class Integration(Resource):
 
     @ns_conf.doc('put_integration')
     def put(self, name):
+        company_id = get_company_id(request)
         params = request.json.get('params')
 
         print(f'\n\n\nTRYING TO PUT: {name} WITH: {params}\n\n')
@@ -113,6 +114,7 @@ class Integration(Resource):
 
     @ns_conf.doc('delete_integration')
     def delete(self, name):
+        company_id = get_company_id(request)
         integration = get_integration(name)
         if integration is None:
             abort(400, f"Nothing to delete. '{name}' not exists.")
@@ -125,6 +127,7 @@ class Integration(Resource):
 
     @ns_conf.doc('modify_integration')
     def post(self, name):
+        company_id = get_company_id(request)
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")

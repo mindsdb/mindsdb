@@ -4,7 +4,7 @@ from mindsdb.interfaces.storage.db import Integration
 def add_db_integration(name, data, company_id):
     if 'database_name' not in data:
         data['database_name'] = name
-    if 'publish' not in dict:
+    if 'publish' not in data:
         data['publish'] = True
 
     integration_record = Integration(name=name, data=data)

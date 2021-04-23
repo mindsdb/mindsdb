@@ -45,11 +45,11 @@ if __name__ == '__main__':
     config = Config()
 
     if args.verbose is True:
-        config.set(['log', 'level', 'console'], 'DEBUG')
+        # Figure this one out later
+        pass
 
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
-    config.set(['mindsdb_last_started_at'], str(datetime.datetime.now()))
 
     # Switch to this once the native interface has it's own thread :/
     # ctx = mp.get_context(get_mp_context())

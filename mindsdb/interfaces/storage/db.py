@@ -140,7 +140,6 @@ class Stream(Base):
     stream_in = Column(String)
     stream_out = Column(String)
     integration = Column(String)
-    company_id = Column(Integer)
     name = Column(String)
     connection_params = Column(Json)
     advanced_params = Column(Json)
@@ -152,6 +151,7 @@ class Integration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String)
     data = Column(Json)
+    company_id = Column(Integer)
 
 Base.metadata.create_all(engine)
 orm.configure_mappers()

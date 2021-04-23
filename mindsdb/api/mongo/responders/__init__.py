@@ -28,6 +28,9 @@ from .delete import responder as responder_delete
 from .sasl_start import responder as sasl_start
 from .sasl_continue import responder as sasl_continue
 
+from .company_id import responder as responder_company_id
+
+
 responders = [
     # service queries
     responder_whatsmyuri,
@@ -57,5 +60,7 @@ responders = [
     responder_delete,
     # auth
     sasl_start,
-    sasl_continue
+    sasl_continue,
+    # cloud
+    responder_company_id
 ]

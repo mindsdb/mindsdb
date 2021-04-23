@@ -109,5 +109,4 @@ class Config():
 
     @property
     def paths(self):
-        self._read()
         return self._config['paths']

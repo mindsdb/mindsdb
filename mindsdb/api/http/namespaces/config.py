@@ -1,4 +1,5 @@
 import copy
+import datetime
 from dateutil.parser import parse as parse_datetime
 import subprocess
 import os
@@ -14,6 +15,7 @@ from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
 from mindsdb.api.http.utils import http_error
+from dateutil.tz import tzlocal
 
 
 def get_integration(name):
@@ -168,9 +170,10 @@ class ToggleTelemetry(Resource):
 @ns_conf.route('/vars')
 class Vars(Resource):
     def get(self):
-        telemtry = True
-        if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
+        if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false']:
             telemtry = False
+        else:
+            telemtry = True
 
         if ca.config_obj.get('disable_mongo', False):
             mongo = False
@@ -179,7 +182,15 @@ class Vars(Resource):
 
         cloud = ca.config_obj.get('cloud', False)
 
-        return {'mongo': mongo, 'telemtry': telemtry, 'cloud': cloud}
+        local_time = datetime.datetime.now(tzlocal())
+        local_timezone = local_time.tzname()
+
+        return {
+            'mongo': mongo,
+            'telemtry': telemtry,
+            'cloud': cloud,
+            'timezone': local_timezone,
+        }
 
 
 @ns_conf.param('flag', 'Turn telemtry on or off')

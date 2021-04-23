@@ -87,9 +87,6 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
-    for broken_name in [name for name, connected in dbw.check_connections().items() if connected is False]:
-        log.error(f'Error failed to integrate with database aliased: {broken_name}')
-
     for api_name, api_data in apis.items():
         if api_data['started']:
             continue

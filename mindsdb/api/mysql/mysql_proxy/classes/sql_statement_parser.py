@@ -348,6 +348,9 @@ class SqlStatementParser():
                     new_using[el['name']] = el['value']
             r['using'] = new_using
 
+        if isinstance(r.get('order_by'), list):
+            r['order_by'] = [x['name'] for x in r['order_by']]
+
         return r
 
     def parse_as_delete(self) -> dict:
@@ -548,7 +551,8 @@ class SqlStatementParser():
                 'select': 'select whatever',
                 'datasource_name': 'ds_name',
                 'predict': [{'name': 'f1', 'alias': 'f1_alias'}, {'name': 'f2'}, {'name': 'f3', 'alias': 'f3_alias'}],
-                'order_by': [{'name': 'f_order_1', 'sort': 'ASK'}, {'name': 'f_order_2'}, {'name': 'f_order_3', 'sort': 'DESC'}],
+                # 'order_by': [{'name': 'f_order_1', 'sort': 'ASK'}, {'name': 'f_order_2'}, {'name': 'f_order_3', 'sort': 'DESC'}],
+                'order_by': ['f_order_1', 'f_order_2', 'f_order_3'],
                 'group_by': ['f_group_1', 'f_group_2'],
                 'window': 100,
                 'using': {'x': 1, 'y': 'a'}

@@ -467,7 +467,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # use first integration by default
             struct['integration_name'] = list(config['integrations'].keys())[0]
 
-        ds_name = struct.get('datasource_name', f"{struct['integration_name']}_ds")
+        is_temp_ds = False
+        ds_name = struct.get('datasource_name')
+        if ds_name is None:
+            ds_name = f'temp_ds_{int(time.time()*100)}'
+            is_temp_ds = True
 
         ds, ds_name = default_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
         ds_data = default_store.get_datasource(ds_name)
@@ -488,6 +492,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
         mdb.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs)
+
+        if is_temp_ds:
+            default_store.delete_datasource(ds_name)
 
         self.packet(OkPacket).send()
 

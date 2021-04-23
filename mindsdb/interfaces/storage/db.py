@@ -70,16 +70,6 @@ class Semaphor(Base):
     uniq_const = UniqueConstraint('entity_type', 'entity_id')
 
 
-class Configuration(Base):
-    __tablename__ = 'configuration'
-
-    id = Column(Integer, primary_key=True)
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    data = Column(String)  # A JSON
-    company_id = Column(Integer, unique=True)
-
-
 class Datasource(Base):
     __tablename__ = 'datasource'
 

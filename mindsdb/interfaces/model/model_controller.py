@@ -22,10 +22,9 @@ from mindsdb.utilities.log import log
 
 
 class ModelController():
-    def __init__(self, ray_based, company_id):
+    def __init__(self, ray_based):
         self.config = Config(company_id)
         self.fs_store = FsSotre(company_id)
-        self.company_id = company_id
         self.dbw = DatabaseWrapper(company_id)
         self.predictor_cache = {}
         self.ray_based = ray_based
@@ -52,12 +51,12 @@ class ModelController():
         from mindsdb.interfaces.storage.db import session, Semaphor
 
         while True:
-            semaphor_record = session.query(Semaphor).filter_by(company_id=self.company_id, entity_id=id, entity_type='predictor').first()
+            semaphor_record = session.query(Semaphor).filter_by(entity_id=id, entity_type='predictor').first()
             if semaphor_record is not None:
                 if mode == 'read' and semaphor_record.action == 'read':
                     return True
             try:
-                semaphor_record = Semaphor(company_id=self.company_id, entity_id=id, entity_type='predictor', action=mode)
+                semaphor_record = Semaphor(entity_id=id, entity_type='predictor', action=mode)
                 session.add(semaphor_record)
                 session.commit()
                 return True
@@ -68,7 +67,7 @@ class ModelController():
 
     def _unlock_predictor(self, id):
         from mindsdb.interfaces.storage.db import session, Semaphor
-        semaphor_record = session.query(Semaphor).filter_by(company_id=self.company_id, entity_id=id, entity_type='predictor').first()
+        semaphor_record = session.query(Semaphor).filter_by(entity_id=id, entity_type='predictor').first()
         if semaphor_record is not None:
             session.delete(semaphor_record)
             session.commit()
@@ -81,7 +80,7 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
-    def _setup_for_creation(self, name):
+    def _setup_for_creation(self, name, company_id):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
         from mindsdb_native import F
@@ -94,9 +93,11 @@ class ModelController():
         # Here for no particular reason, because we want to run this sometimes but not too often
         self._invalidate_cached_predictors()
 
-        predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
+        config = Config(company_id)
+
+        predictor_dir = Path(config.paths['predictors']).joinpath(name)
         create_directory(predictor_dir)
-        predictor_record = Predictor(company_id=self.company_id, name=name, is_custom=False)
+        predictor_record = Predictor(company_id=company_id, name=name, is_custom=False)
 
         session.add(predictor_record)
         session.commit()
@@ -129,18 +130,6 @@ class ModelController():
         session.commit()
         return predictor_record
 
-    def create(self, name):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-        from mindsdb.interfaces.storage.db import session, Predictor
-
-
-        self._setup_for_creation(name)
-        predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
-        return predictor
-
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
         from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
 
@@ -150,7 +139,7 @@ class ModelController():
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
 
-        self._setup_for_creation(name)
+        self._setup_for_creation(name, company_id)
 
         if self.ray_based:
             run_learn(name, from_data, to_predict, kwargs, datasource_id)

@@ -4,13 +4,14 @@ from threading import Thread, Event
 import walrus
 
 from mindsdb.utilities.log import log
+from mindsdb.streams.base.base_stream import StreamTypes
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Predictor as DBPredictor
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 
 
 class RedisStream(Thread):
-    def __init__(self, name, connection_info, advanced_info, stream_in, stream_out, predictor, _type):
+    def __init__(self, name, connection_info, advanced_info, stream_in, stream_out, predictor, _type, **ts_params):
         self.stream_name = name
         self.connection_info = connection_info
         self.connection_info.update(advanced_info)
@@ -25,29 +26,18 @@ class RedisStream(Thread):
         self.format_flag = 'explain'
         self.stop_event = Event()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-        if self._type == 'timeseries':
+        self.ts_params = ts_params
+        if self._type.lower() == StreamTypes.timeseries:
+            self.target = self.ts_params.get('target')
+            self.window = self.ts_params.get('window_size')
+            self.gb = self.ts_params.get('group_by')
+            self.dt = self.ts_params.get('order_by')
             super().__init__(target=RedisStream.make_timeseries_predictions, args=(self,))
         else:
             super().__init__(target=RedisStream.make_predictions, args=(self,))
 
     def _get_client(self):
         return walrus.Database(**self.connection_info)
-
-    def _get_target(self):
-        return "pnew_case"
-        # pass
-
-    def _get_window_size(self):
-        return 10
-        # pass
-
-    def _get_gb(self):
-        return "state"
-        # pass
-
-    def _get_dt(self):
-        return "time"
-        # pass
 
     def predict(self, stream_in, stream_out, timeseries_mode=False):
         predict_info = stream_in.read(block=0)
@@ -57,10 +47,10 @@ class RedisStream(Thread):
             raw_when_data = record[1]
             when_data = self.decode(raw_when_data)
             if timeseries_mode:
-                # if self.target not in when_data:
-                #     when_data['make_predictions'] = False
-                # else:
-                #     when_data['make_predictions'] = True
+                if self.target not in when_data:
+                    when_data['make_predictions'] = False
+                else:
+                    when_data['make_predictions'] = True
                 when_list.append(when_data)
             else:
                 result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
@@ -91,10 +81,6 @@ class RedisStream(Thread):
         if predict_record is None:
             log.error(f"Error creating stream: requested predictor {self.predictor} is not exist")
             return
-        self.target = self._get_target()
-        self.window = self._get_window_size()
-        self.gb = self._get_gb()
-        self.dt = self._get_dt()
 
         while not self.stop_event.wait(0.5):
             # block==0 is a blocking mode

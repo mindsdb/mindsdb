@@ -3,12 +3,9 @@ import json
 import hashlib
 import datetime
 from copy import deepcopy
-from threading import Event
 
 from mindsdb.utilities.fs import create_directory
-from mindsdb.interfaces.storage.db import session, Configuration
 
-STOP_THREADS_EVENT = Event()
 
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
@@ -100,25 +97,3 @@ class Config():
     def paths(self):
         self._read()
         return self._config['paths']
-
-    # Higher level interface
-    def add_db_integration(self, name, dict):
-        dict['date_last_update'] = str(datetime.datetime.now()).split('.')[0]
-        if 'database_name' not in dict:
-            dict['database_name'] = name
-        if 'publish' not in dict:
-            dict['publish'] = True
-
-        self.set(['integrations', name], dict)
-
-    def modify_db_integration(self, name, dict):
-        self._read()
-        old_dict = self._config['integrations'][name]
-        for k in old_dict:
-            if k not in dict:
-                dict[k] = old_dict[k]
-
-        self.add_db_integration(name, dict)
-
-    def remove_db_integration(self, name):
-        self.set(['integrations', name], None, True)

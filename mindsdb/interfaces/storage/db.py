@@ -133,12 +133,9 @@ class Log(Base):
 class Stream(Base):
     __tablename__ = 'stream'
     id = Column(Integer, primary_key=True)
-    # integration_id = Column(Integer, ForeignKey('integration.id'))
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    _type = Column(String)
-    # host = Column(String)
-    # port = Column(Integer)
-    # db = Column(Integer, default=0)
+    company_id = Column(Integer)
     predictor = Column(String)
     stream_in = Column(String)
     stream_out = Column(String)
@@ -148,6 +145,13 @@ class Stream(Base):
     connection_params = Column(Json)
     advanced_params = Column(Json)
 
+class Integration(Base):
+    __tablename__ = 'integration'
+    id = Column(Integer, primary_key=True)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    name = Column(String)
+    data = Column(Json)
 
 Base.metadata.create_all(engine)
 orm.configure_mappers()

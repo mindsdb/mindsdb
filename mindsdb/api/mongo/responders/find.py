@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-
+from mindsdb.interfaces.database.integrations import get_db_integrations
 
 class Responce(Responder):
     when = {'find': helpers.is_true}
@@ -47,7 +47,8 @@ class Responce(Responder):
 
             datasource = where_data
             if 'select_data_query' in where_data:
-                integrations = mindsdb_env['config']['integrations'].keys()
+                # @COMPANY_TODO -- GET ID
+                integrations = get_db_integrations(None).keys()
                 connection = where_data.get('connection')
                 if connection is None:
                     if 'default_mongodb' in integrations:

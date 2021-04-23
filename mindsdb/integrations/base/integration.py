@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
 from mindsdb.interfaces.storage.db import session, Stream
 from mindsdb.utilities.log import log
+from mindsdb.interfaces.database.integrations import get_db_integration
 
 class Integration(ABC):
     def __init__(self, config, name):
@@ -37,7 +38,7 @@ class StreamIntegration(Integration):
         self.log = log
 
     def exist_in_db(self):
-        return self.name in Config()['integrations']
+        return get_db_integration(self.name, self.company_id) is not None
 
     def stop_streams(self):
         for stream in self.streams:

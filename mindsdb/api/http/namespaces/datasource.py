@@ -28,6 +28,7 @@ from mindsdb.api.http.namespaces.entitites.datasources.datasource_missed_files i
     datasource_missed_files_metadata,
     get_datasource_missed_files_params
 )
+from mindsdb.interfaces.database.integrations import get_db_integration
 
 
 def parse_filter(key, value):
@@ -129,15 +130,16 @@ class Datasource(Resource):
             data = request.json
 
         if 'query' in data:
-            source_type = request.json['integration_id']
-            if source_type not in ca.default_store.config['integrations']:
-                # integration doens't exist
-                abort(400, f"{source_type} integration doesn't exist")
+            integration_id = request.json['integration_id']
+            # @COMPANY_TODO -- GET ID
+            integration = get_db_integration(integration_id, None)
+            if integration is None:
+                abort(400, f"{integration_id} integration doesn't exist")
 
-            if ca.default_store.config['integrations'][source_type]['type'] == 'mongodb':
+            if integration['type'] == 'mongodb':
                 data['find'] = data['query']
 
-            ds_obj, ds_name = ca.default_store.save_datasource(name, source_type, data)
+            ds_obj, ds_name = ca.default_store.save_datasource(name, integration_id, data)
             os.rmdir(temp_dir_path)
             return ca.default_store.get_datasource(ds_name)
 

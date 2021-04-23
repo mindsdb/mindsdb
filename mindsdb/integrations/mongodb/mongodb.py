@@ -4,7 +4,7 @@ import certifi
 from pymongo import MongoClient
 
 from mindsdb.integrations.base import Integration
-
+from mindsdb.interfaces.database.integrations import get_db_integration
 
 class MongoConnectionChecker:
     def __init__(self, **kwargs):
@@ -52,7 +52,7 @@ class MongoConnectionChecker:
 class MongoDB(Integration, MongoConnectionChecker):
     def __init__(self, config, name):
         super().__init__(config, name)
-        db_info = self.config['integrations'][self.name]
+        db_info = get_db_integration(self.name, self.company_id)
         self.user = db_info.get('user', 'default')
         self.password = db_info.get('password', None)
         self.host = db_info.get('host')

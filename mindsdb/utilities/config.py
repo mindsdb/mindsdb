@@ -5,6 +5,7 @@ import datetime
 from copy import deepcopy
 
 from mindsdb.utilities.fs import create_directory
+from mindsdb.interfaces.database.integrations import add_db_integration
 
 
 def _merge_key_recursive(target_dict, source_dict, key):
@@ -83,6 +84,16 @@ class Config():
             create_directory(self._default_config['paths'][path_name])
 
         self._config = _merge_configs(self._default_config, self._override_config)
+
+        # @TODO Backwards compatibiltiy, remove later
+        for integration_name in self._config.get('integrations', {}):
+            try:
+                add_db_integration(integration_name, self._config['integrations'][integration_name], None)
+            except Exception as e:
+                # Already added
+                pass
+            
+        del self._config['integrations']
 
     def __getitem__(self, key):
         return self._config[key]

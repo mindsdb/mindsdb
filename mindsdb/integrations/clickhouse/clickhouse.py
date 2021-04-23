@@ -3,6 +3,7 @@ import requests
 from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
+from mindsdb.interfaces.database.integrations import get_db_integration
 
 
 class ClickhouseConnectionChecker:
@@ -25,8 +26,8 @@ class ClickhouseConnectionChecker:
 
 class Clickhouse(Integration, ClickhouseConnectionChecker):
     def __init__(self, config, name):
-        super().__init__(config, name)
-        db_info = self.config['integrations'][self.name]
+        super().__init__(config, name,)
+        db_info = get_db_integration(self.name, self.company_id)
         self.user = db_info.get('user', 'default')
         self.password = db_info.get('password', None)
         self.host = db_info.get('host')
@@ -65,18 +66,19 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
 
     def _query(self, query):
         params = {'user': 'default'}
+        integration = get_db_integration(self.name, self.company_id)
         try:
-            params['user'] = self.config['integrations'][self.name]['user']
+            params['user'] = integration['user']
         except Exception:
             pass
 
         try:
-            params['password'] = self.config['integrations'][self.name]['password']
+            params['password'] = integration['password']
         except Exception:
             pass
 
-        host = self.config['integrations'][self.name]['host']
-        port = self.config['integrations'][self.name]['port']
+        host = integration['host']
+        port = integration['port']
 
         response = requests.post(f'http://{host}:{port}', data=query, params=params)
 

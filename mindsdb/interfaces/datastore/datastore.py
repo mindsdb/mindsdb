@@ -12,6 +12,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import log
+from mindsdb.interfaces.database.integrations import get_db_integration, get_db_integrations
 
 
 class DataStore():
@@ -145,8 +146,8 @@ class DataStore():
                     'kwargs': {}
                 }
 
-            elif source_type in self.config['integrations']:
-                integration = self.config['integrations'][source_type]
+            elif get_db_integration(source_type, self.company_id) is not None:
+                integration = get_db_integration(source_type, self.company_id)
 
                 ds_class_map = {
                     'clickhouse': ClickhouseDS,
@@ -296,7 +297,7 @@ class DataStore():
                 datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, id=id).first()
             else:
                 datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=name).first()
-                
+
             self.fs_store.get(name, f'datasource_{self.company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)
             if raw:

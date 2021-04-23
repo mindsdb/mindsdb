@@ -24,3 +24,14 @@ def modify_db_integration(self, name, data, company_id):
 def remove_db_integration(self, name, company_id):
     session.query(Integration).filter_by(company_id=company_id, name=name).delete()
     session.commit()
+
+def get_db_integration(self, name, company_id):
+    integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+    return integration_record.data
+
+def get_db_integrations(self, company_id):
+    integration_records = session.query(Integration).filter_by(company_id=company_id).all()
+    integration_dict = {}
+    for record in integration_records:
+        integration_dict[record.name] = record.data
+    return integration_dict

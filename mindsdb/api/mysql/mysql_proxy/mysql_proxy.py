@@ -877,7 +877,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         keyword = statement.keyword
         struct = statement.struct
 
-        # TODO show tables from {name}
         if keyword == 'show':
             if 'show databases' in sql_lower:
                 sql = 'select schema_name as Database from information_schema.SCHEMATA;'
@@ -885,15 +884,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql_lower = statement.sql.lower()
                 keyword = statement.keyword
                 struct = statement.struct
-            elif 'show tables' in sql_lower:
-                schema = 'mindsdb'
-                sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
-                statement = SqlStatementParser(sql)
-                sql_lower = statement.sql.lower()
-                keyword = statement.keyword
-                struct = statement.struct
-            elif 'show full tables from' in sql_lower:
-                schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
+            elif 'tables' in sql_lower:
+                if sql_lower == 'show tables':
+                    schema = 'mindsdb'
+                elif 'show tables from' in sql_lower:
+                    schema = re.findall(r'show\s+tables\s+from\s+(\S*)', sql_lower)[0]
+                elif 'show full tables from' in sql_lower:
+                    schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
                 sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
                 statement = SqlStatementParser(sql)
                 sql_lower = statement.sql.lower()

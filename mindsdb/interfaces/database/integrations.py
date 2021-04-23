@@ -27,7 +27,7 @@ def remove_db_integration(name, company_id):
 
 def get_db_integration(name, company_id):
     integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
-    if integration_record is None
+    if integration_record is None:
         return None
     return integration_record.data
 

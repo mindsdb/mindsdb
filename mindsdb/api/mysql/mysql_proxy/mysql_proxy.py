@@ -426,9 +426,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise Exception(f"Column '{col}' not exists")
 
         if insert['name'] in [x['name'] for x in custom_models.get_models()]:
-            custom_models.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
+            # @COMPANY_INDEPENDENT figure out how to pass company_id here
+            custom_models.learn(None, insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
         else:
-            mdb.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
+            # @COMPANY_INDEPENDENT figure out how to pass company_id here
+            mdb.learn(None, insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
 
         self.packet(OkPacket).send()
 
@@ -487,7 +489,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-        mdb.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs)
+        # @COMPANY_INDEPENDENT figure out how to pass company_id here
+        mdb.learn(None, struct['predictor_name'], ds, predict, ds_data['id'], kwargs)
 
         self.packet(OkPacket).send()
 

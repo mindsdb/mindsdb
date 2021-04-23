@@ -130,7 +130,7 @@ class ModelController():
         session.commit()
         return predictor_record
 
-    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
+    def learn(self, company_id, name, from_data, to_predict, datasource_id, kwargs={}):
         from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
 
         create_process_mark('learn')
@@ -144,7 +144,7 @@ class ModelController():
         if self.ray_based:
             run_learn(name, from_data, to_predict, kwargs, datasource_id)
         else:
-            p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id, self.company_id)
+            p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id, company_id)
             p.start()
             if join_learn_process is True:
                 p.join()
@@ -155,12 +155,15 @@ class ModelController():
         delete_process_mark('learn')
         return 0
 
-    def predict(self, name, pred_format, when_data=None, kwargs={}):
+    def predict(self, company_id, name, pred_format, when_data=None, kwargs={}):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
         from mindsdb.interfaces.storage.db import session, Predictor
 
         create_process_mark('predict')
+
+        config = Config(company_id)
+        fs_store = FsSotre(company_id)
 
         if name not in self.predictor_cache:
             # Clear the cache entirely if we have less than 1.2 GB left

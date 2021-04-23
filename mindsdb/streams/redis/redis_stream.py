@@ -63,7 +63,7 @@ class RedisStream(Thread):
                 #     when_data['make_predictions'] = True
                 when_list.append(when_data)
             else:
-                result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
+                result = self.native_interface.predict(self.company_id, self.predictor, self.format_flag, when_data=when_data)
                 log.error(f"STREAM: got {result}")
                 for res in result:
                     in_json = json.dumps(res)
@@ -71,7 +71,7 @@ class RedisStream(Thread):
                 stream_in.delete(record_id)
 
         if timeseries_mode:
-            result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_list)
+            result = self.native_interface.predict(self.company_id, self.predictor, self.format_flag, when_data=when_list)
             log.error(f"TIMESERIES STREAM: got {result}")
             for res in result:
                 in_json = json.dumps(res)
@@ -83,7 +83,7 @@ class RedisStream(Thread):
         log.error("STREAM: in make_prediction_from_cache")
         if len(cache) >= self.window:
             log.error(f"STREAM: make_prediction_from_cache - len(cache) = {len(cache)}")
-            self.predict(cache, self.stream_out, timeseries_mode=True)
+            self.predict(self.company_id, cache, self.stream_out, timeseries_mode=True)
 
     def make_timeseries_predictions(self):
         log.error("STREAM: running 'make_timeseries_predictions'")
@@ -147,7 +147,7 @@ class RedisStream(Thread):
                 raw_when_data = record[1]
                 when_data = self.decode(raw_when_data)
 
-                result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
+                result = self.native_interface.predict(self.company_id, self.predictor, self.format_flag, when_data=when_data)
                 log.error(f"STREAM: got {result}")
                 for res in result:
                     in_json = json.dumps(res)

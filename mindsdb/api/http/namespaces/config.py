@@ -14,6 +14,7 @@ from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
 from mindsdb.api.http.utils import http_error
+from mindsdb.api.http.utils import get_company_id
 
 
 def get_integration(name):
@@ -26,6 +27,7 @@ def get_integration(name):
 class GetLogs(Resource):
     @ns_conf.doc('get_integrations')
     def get(self):
+        company_id = get_company_id(request)
         min_timestamp = parse_datetime(request.args['min_timestamp'])
         max_timestamp = request.args.get('max_timestamp', None)
         context = request.args.get('context', None)
@@ -42,6 +44,7 @@ class GetLogs(Resource):
 class ListIntegration(Resource):
     @ns_conf.doc('get_integrations')
     def get(self):
+        company_id = get_company_id(request)
         return {'integrations': [k for k in ca.config_obj.get('integrations', {})]}
 
 
@@ -50,6 +53,7 @@ class ListIntegration(Resource):
 class AllIntegration(Resource):
     @ns_conf.doc('get_all_integrations')
     def get(self):
+        company_id = get_company_id(request)
         integrations = copy.deepcopy(
             ca.config_obj.get('integrations', {})
         )
@@ -64,6 +68,7 @@ class AllIntegration(Resource):
 class Integration(Resource):
     @ns_conf.doc('get_integration')
     def get(self, name):
+        company_id = get_company_id(request)
         integration = get_integration(name)
         if integration is None:
             abort(404, f'Can\'t find database integration: {name}')
@@ -74,6 +79,7 @@ class Integration(Resource):
 
     @ns_conf.doc('put_integration')
     def put(self, name):
+        company_id = get_company_id(request)
         params = request.json.get('params')
 
         print(f'\n\n\nTRYING TO PUT: {name} WITH: {params}\n\n')
@@ -113,6 +119,7 @@ class Integration(Resource):
 
     @ns_conf.doc('delete_integration')
     def delete(self, name):
+        company_id = get_company_id(request)
         integration = get_integration(name)
         if integration is None:
             abort(400, f"Nothing to delete. '{name}' not exists.")
@@ -125,6 +132,7 @@ class Integration(Resource):
 
     @ns_conf.doc('modify_integration')
     def post(self, name):
+        company_id = get_company_id(request)
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
@@ -148,6 +156,7 @@ class Integration(Resource):
 class Check(Resource):
     @ns_conf.doc('check')
     def get(self, name):
+        company_id = get_company_id(request)
         if get_integration(name) is None:
             abort(404, f'Can\'t find database integration: {name}')
         connections = ca.dbw.check_connections()
@@ -159,6 +168,7 @@ class Check(Resource):
 class ToggleTelemetry(Resource):
     @ns_conf.doc('check')
     def get(self, flag):
+        company_id = get_company_id(request)
         if flag in ["True", "true", "t"]:
             return 'Enabled telemetry', 200
         else:
@@ -168,6 +178,7 @@ class ToggleTelemetry(Resource):
 @ns_conf.route('/vars')
 class Vars(Resource):
     def get(self):
+        company_id = get_company_id(request)
         telemtry = True
         if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
             telemtry = False
@@ -186,6 +197,7 @@ class Vars(Resource):
 class ToggleTelemetry2(Resource):
     @ns_conf.doc('check')
     def get(self, flag):
+        company_id = get_company_id(request)
         if flag in ["True", "true", "t"]:
             return 'Enabled telemetry', 200
         else:
@@ -196,6 +208,7 @@ class ToggleTelemetry2(Resource):
 @ns_conf.param('dependency_list', 'Install dependencies')
 class InstallDependenciesList(Resource):
     def get(self):
+        company_id = get_company_id(request)
         return {'dependencies': ['snowflake', 'athena', 'google', 's3', 'lightgbm_gpu', 'mssql']}
 
 
@@ -203,6 +216,7 @@ class InstallDependenciesList(Resource):
 @ns_conf.param('dependency', 'Install dependencies')
 class InstallDependencies(Resource):
     def get(self, dependency):
+        company_id = get_company_id(request)
         if dependency == 'snowflake':
             dependency = ['snowflake-connector-python[pandas]', 'asn1crypto==1.3.0']
         elif dependency == 'athena':

@@ -28,6 +28,7 @@ from mindsdb.api.http.namespaces.entitites.datasources.datasource_missed_files i
     datasource_missed_files_metadata,
     get_datasource_missed_files_params
 )
+from mindsdb.api.http.utils import get_company_id
 
 
 def parse_filter(key, value):
@@ -56,6 +57,7 @@ class DatasourcesList(Resource):
     @ns_conf.doc('get_datasources_list')
     @ns_conf.marshal_list_with(datasource_metadata)
     def get(self):
+        company_id = get_company_id(request)
         '''List all datasources'''
         return ca.default_store.get_datasources()
 
@@ -66,6 +68,7 @@ class Datasource(Resource):
     @ns_conf.doc('get_datasource')
     @ns_conf.marshal_with(datasource_metadata)
     def get(self, name):
+        company_id = get_company_id(request)
         '''return datasource metadata'''
         ds = ca.default_store.get_datasource(name)
         if ds is not None:
@@ -74,6 +77,7 @@ class Datasource(Resource):
 
     @ns_conf.doc('delete_datasource')
     def delete(self, name):
+        company_id = get_company_id(request)
         '''delete datasource'''
         try:
             ca.default_store.delete_datasource(name)
@@ -85,6 +89,7 @@ class Datasource(Resource):
     @ns_conf.doc('put_datasource', params=put_datasource_params)
     @ns_conf.marshal_with(datasource_metadata)
     def put(self, name):
+        company_id = get_company_id(request)
         '''add new datasource'''
         data = {}
 
@@ -169,6 +174,7 @@ def analyzing_thread(name, default_store):
 class Analyze(Resource):
     @ns_conf.doc('analyse_dataset')
     def get(self, name):
+        company_id = get_company_id(request)
         analysis = ca.default_store.get_analysis(name)
         if analysis is not None:
             return analysis, 200
@@ -188,6 +194,7 @@ class Analyze(Resource):
 class Analyze(Resource):
     @ns_conf.doc('analyze_refresh_dataset')
     def get(self, name):
+        company_id = get_company_id(request)
         analysis = ca.default_store.get_analysis(name)
         if analysis is not None:
             return analysis, 200
@@ -208,6 +215,7 @@ class DatasourceData(Resource):
     @ns_conf.doc('get_datasource_data', params=get_datasource_rows_params)
     @ns_conf.marshal_with(datasource_rows_metadata)
     def get(self, name):
+        company_id = get_company_id(request)
         '''return data rows'''
         ds = ca.default_store.get_datasource(name)
         if ds is None:
@@ -238,6 +246,7 @@ class DatasourceData(Resource):
 class DatasourceMissedFilesDownload(Resource):
     @ns_conf.doc('get_datasource_download')
     def get(self, name):
+        company_id = get_company_id(request)
         '''download uploaded file'''
         ds = ca.default_store.get_datasource(name)
         if not ds:

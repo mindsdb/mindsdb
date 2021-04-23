@@ -19,8 +19,8 @@ class ModelInterfaceRPC():
                 log.info('Wating for native RPC server to start')
         raise Exception('Unable to connect to RPC server')
 
-    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
-        self.proxy.learn(name, from_data, to_predict, datasource_id, kwargs)
+    def learn(self, company_id, name, from_data, to_predict, datasource_id, kwargs={}):
+        self.proxy.learn(company_id, name, from_data, to_predict, datasource_id, kwargs)
 
     def predict(self, name, pred_format, when_data=None, kwargs={}):
         bin = self.proxy.predict(name, pred_format, when_data, kwargs)

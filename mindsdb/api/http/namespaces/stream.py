@@ -7,6 +7,8 @@ from mindsdb.api.http.namespaces.configs.streams import ns_conf
 
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Stream as StreamDB
+from mindsdb.api.http.utils import get_company_id
+
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
 
@@ -48,6 +50,7 @@ class StreamList(Resource):
 class Stream(Resource):
     @ns_conf.doc("get_stream")
     def get(self, name):
+        company_id = get_company_id(request)
         streams = get_streams()
         for stream in streams:
             if stream["name"] == name:
@@ -56,6 +59,7 @@ class Stream(Resource):
 
     @ns_conf.doc("put_stream")
     def put(self, name):
+        company_id = get_company_id(request)
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
@@ -86,6 +90,7 @@ class Stream(Resource):
 
     @ns_conf.doc("delete_stream")
     def delete(self, name):
+        company_id = get_company_id(request)
         try:
             session.query(StreamDB).filter_by(company_id=COMPANY_ID, name=name).delete()
             session.commit()

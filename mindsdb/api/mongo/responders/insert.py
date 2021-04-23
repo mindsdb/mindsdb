@@ -106,7 +106,8 @@ class Responce(Responder):
                     raise Exception(f"Column '{col}' not exists")
 
             datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=ds_name).first()
-            mindsdb_env['mindsdb_native'].learn(doc['name'], mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True), predict, datasource_record.id, dict(kwargs))
+            # @COMPANY_INDEPENDENT figure out how to pass company_id here
+            mindsdb_env['mindsdb_native'].learn(None, doc['name'], mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True), predict, datasource_record.id, dict(kwargs))
 
         result = {
             "n": len(query['documents']),

@@ -22,3 +22,12 @@ def http_error(status_code, title, detail=''):
             'Content-Type': 'application/problem+json'
         }
     )
+
+def get_company_id(req):
+    company_id = req.headers.get('your-header-name')
+    try:
+        company_id = int(company_id)
+    except Exception as e:
+        print(f'Cloud not parse company id: {company_id} | exception: {e}')
+        company_id = None
+    return company_id

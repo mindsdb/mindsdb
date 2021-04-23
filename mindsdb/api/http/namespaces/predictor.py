@@ -8,6 +8,7 @@ from dateutil.parser import parse as parse_datetime
 from flask import request, send_file
 from flask_restx import Resource, abort
 from flask import current_app as ca
+from flask import request
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
@@ -18,17 +19,14 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     put_predictor_params
 )
 from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
-
-def is_custom(name):
-    if name in [x['name'] for x in ca.custom_models.get_models()]:
-        return True
-    return False
+from mindsdb.api.http.utils import get_company_id
 
 @ns_conf.route('/')
 class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
     @ns_conf.marshal_list_with(predictor_status, skip_none=True)
     def get(self):
+        company_id = get_company_id(request)
         '''List all predictors'''
 
         return [*ca.naitve_interface.get_models(),*ca.custom_models.get_models()]
@@ -39,6 +37,7 @@ class PredictorList(Resource):
 class CustomPredictor(Resource):
     @ns_conf.doc('put_custom_predictor')
     def put(self, name):
+        company_id = get_company_id(request)
         try:
             trained_status = request.json['trained_status']
         except Exception:
@@ -60,11 +59,9 @@ class Predictor(Resource):
     @ns_conf.doc('get_predictor')
     @ns_conf.marshal_with(predictor_metadata, skip_none=True)
     def get(self, name):
+        company_id = get_company_id(request)
         try:
-            if is_custom(name):
-                model = ca.custom_models.get_model_data(name)
-            else:
-                model = ca.naitve_interface.get_model_data(name, db_fix=False)
+            model = ca.naitve_interface.get_model_data(name, db_fix=False)
         except Exception as e:
             abort(404, "")
 
@@ -76,16 +73,15 @@ class Predictor(Resource):
 
     @ns_conf.doc('delete_predictor')
     def delete(self, name):
+        company_id = get_company_id(request)
         '''Remove predictor'''
-        if is_custom(name):
-            ca.custom_models.delete_model(name)
-        else:
-            ca.naitve_interface.delete_model(name)
+        ca.naitve_interface.delete_model(name)
 
         return '', 200
 
     @ns_conf.doc('put_predictor', params=put_predictor_params)
     def put(self, name):
+        company_id = get_company_id(request)
         '''Learning new predictor'''
         data = request.json
         to_predict = data.get('to_predict')
@@ -126,7 +122,7 @@ class Predictor(Resource):
             original_name = name
             name = name + '_retrained'
 
-        ca.naitve_interface.learn(name, from_data, to_predict, ca.default_store.get_datasource(ds_name)['id'], kwargs)
+        ca.naitve_interface.learn(company_id, name, from_data, to_predict, ca.default_store.get_datasource(ds_name)['id'], kwargs)
         for i in range(20):
             try:
                 # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
@@ -148,6 +144,7 @@ class Predictor(Resource):
 @ns_conf.param('name', 'The predictor identifier')
 class PredictorLearn(Resource):
     def post(self, name):
+        company_id = get_company_id(request)
         data = request.json
         to_predict = data.get('to_predict')
         kwargs = data.get('kwargs', None)
@@ -172,6 +169,7 @@ class PredictorLearn(Resource):
 class PredictorPredict(Resource):
     @ns_conf.doc('Update predictor')
     def get(self, name):
+        company_id = get_company_id(request)
         msg = ca.naitve_interface.update_model(name)
         return {
             'message': msg
@@ -182,6 +180,7 @@ class PredictorPredict(Resource):
 class PredictorPredict(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
+        company_id = get_company_id(request)
         '''Queries predictor'''
         data = request.json
         when = data.get('when', {})
@@ -192,7 +191,7 @@ class PredictorPredict(Resource):
             return 'No data provided for the predictions', 500
 
         if is_custom(name):
-            return ca.custom_models.predict(name, when_data=when, **kwargs)
+            return ca.custom_models.predict(company_id, name, when_data=when, **kwargs)
         else:
             results = ca.naitve_interface.predict(name, format_flag, when_data=when, **kwargs)
 
@@ -204,36 +203,28 @@ class PredictorPredict(Resource):
 class PredictorPredictFromDataSource(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
+        company_id = get_company_id(request)
         data = request.json
         format_flag = data.get('format_flag', 'explain')
         kwargs = data.get('kwargs', {})
 
-        use_raw = False
-        if is_custom(name):
-            use_raw = True
-
-        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=use_raw)
+        from_data = ca.default_store.get_datasource_obj(data.get('data_source_name'), raw=False)
         if from_data is None:
             abort(400, 'No valid datasource given')
 
-        if is_custom(name):
-            return ca.custom_models.predict(name, from_data=from_data, **kwargs)
+        return ca.naitve_interface.predict(name, format_flag, when_data=from_data, **kwargs)
 
-        results = ca.naitve_interface.predict(name, format_flag, when_data=from_data, **kwargs)
-        return results
 
 @ns_conf.route('/<name>/rename')
 @ns_conf.param('name', 'The predictor identifier')
 class PredictorDownload(Resource):
     @ns_conf.doc('get_predictor_download')
     def get(self, name):
+        company_id = get_company_id(request)
         '''Export predictor to file'''
         try:
             new_name = request.args.get('new_name')
-            if is_custom(name):
-                ca.custom_models.rename_model(name, new_name)
-            else:
-                ca.naitve_interface.rename_model(name, new_name)
+            ca.naitve_interface.rename_model(name, new_name)
         except Exception as e:
             return str(e), 400
 

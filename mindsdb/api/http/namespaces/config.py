@@ -13,7 +13,7 @@ from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
-from mindsdb.api.http.utils import http_error
+from mindsdb.api.http.utils import http_error, get_company_id
 from mindsdb.interfaces.database.integrations import add_db_integration, modify_db_integration, remove_db_integration
 
 def get_integration(name):

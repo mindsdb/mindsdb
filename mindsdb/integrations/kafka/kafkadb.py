@@ -7,7 +7,7 @@ from mindsdb.utilities.config import STOP_THREADS_EVENT
 # from mindsdb.utilities.log import log
 from mindsdb.integrations.base import StreamIntegration
 from mindsdb.streams.kafka.kafka_stream import KafkaStream
-from mindsdb.interfaces.storage.db import session, Stream, Configuration
+from mindsdb.interfaces.storage.db import session, Stream
 from mindsdb.interfaces.database.integrations import get_db_integration
 
 class KafkaConnectionChecker:

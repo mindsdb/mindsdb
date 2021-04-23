@@ -1,3 +1,5 @@
+import os
+
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
@@ -23,6 +25,7 @@ class DatabaseWrapper():
                  'kafka': Kafka}
     def __init__(self):
         self.config = Config()
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
 
     def setup_integration(self, db_alias):
         try:

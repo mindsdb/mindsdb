@@ -29,7 +29,7 @@ class PredictorList(Resource):
         company_id = get_company_id(request)
         '''List all predictors'''
 
-        return [*ca.naitve_interface.get_models(),*ca.custom_models.get_models()]
+        return ca.naitve_interface.get_models(company_id)
 
 @ns_conf.route('/custom/<name>')
 @ns_conf.param('name', 'The predictor identifier')
@@ -61,7 +61,7 @@ class Predictor(Resource):
     def get(self, name):
         company_id = get_company_id(request)
         try:
-            model = ca.naitve_interface.get_model_data(name, db_fix=False)
+            model = ca.naitve_interface.get_model_data(company_id, name, db_fix=False)
         except Exception as e:
             abort(404, "")
 
@@ -75,7 +75,7 @@ class Predictor(Resource):
     def delete(self, name):
         company_id = get_company_id(request)
         '''Remove predictor'''
-        ca.naitve_interface.delete_model(name)
+        ca.naitve_interface.delete_model(company_id, name)
 
         return '', 200
 
@@ -126,15 +126,15 @@ class Predictor(Resource):
         for i in range(20):
             try:
                 # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
-                ca.naitve_interface.get_model_data(name)
+                ca.naitve_interface.get_model_data(company_id, name)
                 break
             except Exception:
                 time.sleep(1)
 
         if retrain is True:
             try:
-                ca.naitve_interface.delete_model(original_name)
-                ca.naitve_interface.rename_model(name, original_name)
+                ca.naitve_interface.delete_model(company_id, original_name)
+                ca.naitve_interface.rename_model(company_id, name, original_name)
             except Exception:
                 pass
 
@@ -170,7 +170,7 @@ class PredictorPredict(Resource):
     @ns_conf.doc('Update predictor')
     def get(self, name):
         company_id = get_company_id(request)
-        msg = ca.naitve_interface.update_model(name)
+        msg = ca.naitve_interface.update_model(company_id, name)
         return {
             'message': msg
         }
@@ -190,11 +190,7 @@ class PredictorPredict(Resource):
         if when is None:
             return 'No data provided for the predictions', 500
 
-        if is_custom(name):
-            return ca.custom_models.predict(company_id, name, when_data=when, **kwargs)
-        else:
-            results = ca.naitve_interface.predict(name, format_flag, when_data=when, **kwargs)
-
+        results = ca.naitve_interface.predict(company_id, name, format_flag, when_data=when, **kwargs)
         return results
 
 
@@ -212,7 +208,7 @@ class PredictorPredictFromDataSource(Resource):
         if from_data is None:
             abort(400, 'No valid datasource given')
 
-        return ca.naitve_interface.predict(name, format_flag, when_data=from_data, **kwargs)
+        return ca.naitve_interface.predict(company_id, name, format_flag, when_data=from_data, **kwargs)
 
 
 @ns_conf.route('/<name>/rename')
@@ -224,7 +220,7 @@ class PredictorDownload(Resource):
         '''Export predictor to file'''
         try:
             new_name = request.args.get('new_name')
-            ca.naitve_interface.rename_model(name, new_name)
+            ca.naitve_interface.rename_model(company_id, name, new_name)
         except Exception as e:
             return str(e), 400
 

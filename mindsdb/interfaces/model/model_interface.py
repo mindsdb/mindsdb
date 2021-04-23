@@ -22,26 +22,26 @@ class ModelInterfaceRPC():
     def learn(self, company_id, name, from_data, to_predict, datasource_id, kwargs={}):
         self.proxy.learn(company_id, name, from_data, to_predict, datasource_id, kwargs)
 
-    def predict(self, name, pred_format, when_data=None, kwargs={}):
-        bin = self.proxy.predict(name, pred_format, when_data, kwargs)
+    def predict(self, company_id, name, pred_format, when_data=None, kwargs={}):
+        bin = self.proxy.predict(company_id, name, pred_format, when_data, kwargs)
         return pickle.loads(bin.data)
 
-    def analyse_dataset(self, ds):
-        bin = self.proxy.analyse_dataset(ds)
+    def analyse_dataset(self, company_id, ds):
+        bin = self.proxy.analyse_dataset(company_id, ds)
         return pickle.loads(bin.data)
 
-    def get_model_data(self, name, db_fix=True):
-        bin = self.proxy.get_model_data(name, db_fix)
+    def get_model_data(self, company_id, name, db_fix=True):
+        bin = self.proxy.get_model_data(company_id, name, db_fix)
         return pickle.loads(bin.data)
 
-    def get_models(self):
-        bin = self.proxy.get_models()
+    def get_models(self, company_id):
+        bin = self.proxy.get_models(company_id)
         return pickle.loads(bin.data)
 
-    def delete_model(self, name):
-        self.proxy.delete_model(name)
+    def delete_model(self, company_id, name):
+        self.proxy.delete_model(company_id, name)
 
-    def update_model(self, name):
+    def update_model(self, company_id, name):
         return 'Model updating is no available in this version of mindsdb'
 
 

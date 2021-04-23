@@ -170,9 +170,9 @@ class ModelController():
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
-            predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
+            predictor_record = Predictor.query.filter_by(company_id=company_id, name=name, is_custom=False).first()
             if predictor_record.data['status'] == 'complete':
-                self.fs_store.get(name, f'predictor_{self.company_id}_{predictor_record.id}', self.config['paths']['predictors'])
+                fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
                 self.predictor_cache[name] = {
                     'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
                     'created': datetime.datetime.now()
@@ -204,7 +204,7 @@ class ModelController():
         delete_process_mark('predict')
         return self._pack(predictions)
 
-    def analyse_dataset(self, ds):
+    def analyse_dataset(self, company_id, ds):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         from mindsdb_native import F
 
@@ -216,17 +216,20 @@ class ModelController():
         delete_process_mark('analyse')
         return self._pack(analysis)
 
-    def get_model_data(self, name, db_fix=True):
+    def get_model_data(self, company_id, name, db_fix=True):
         from mindsdb_native import F
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
+        config = Config(company_id)
+        fs_store = FsSotre(company_id)
+
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name, is_custom=False).first()
         predictor_record = self._try_outdate_db_status(predictor_record)
         model = predictor_record.data
         if model is None or model['status'] == 'training':
             try:
-                self.fs_store.get(name, f'predictor_{self.company_id}_{predictor_record.id}', self.config['paths']['predictors'])
+                fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
                 new_model_data = F.get_model_data(name)
             except Exception:
                 new_model_data = None
@@ -252,20 +255,20 @@ class ModelController():
         model['update'] = predictor_record.update_status
         return self._pack(model)
 
-    def get_models(self):
+    def get_models(self, company_id):
         from mindsdb.interfaces.storage.db import session, Predictor
 
         models = []
-        predictor_records = Predictor.query.filter_by(company_id=self.company_id, is_custom=False)
+        predictor_records = Predictor.query.filter_by(company_id=company_id, is_custom=False)
         predictor_names = [
             x.name for x in predictor_records
         ]
         for model_name in predictor_names:
             try:
                 if self.ray_based:
-                    model_data = self.get_model_data(model_name, db_fix=False)
+                    model_data = self.get_model_data(company_id, model_name, db_fix=False)
                 else:
-                    bin = self.get_model_data(model_name, db_fix=False)
+                    bin = self.get_model_data(company_id, model_name, db_fix=False)
                     model_data = pickle.loads(bin.data)
                 reduced_model_data = {}
 
@@ -287,31 +290,35 @@ class ModelController():
                 log.error(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
         return self._pack(models)
 
-    def delete_model(self, name):
+    def delete_model(self, company_id, name):
         from mindsdb_native import F
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
-        predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name, is_custom=False).first()
         id = predictor_record.id
         session.delete(predictor_record)
         session.commit()
         F.delete_model(name)
-        self.dbw.unregister_predictor(name)
-        self.fs_store.delete(f'predictor_{self.company_id}_{id}')
+
+        dbw = DatabaseWrapper(company_id)
+        fs_store = FsSotre(company_id)
+
+        dbw.unregister_predictor(name)
+        fs_store.delete(f'predictor_{company_id}_{id}')
         return 0
 
-    def update_model(self, name):
+    def update_model(self, company_id, name):
         from mindsdb_native import F
         from mindsdb_worker.updater.update_model import update_model
         from mindsdb.interfaces.storage.db import session, Predictor
         from mindsdb.interfaces.datastore.datastore import DataStore
 
         try:
-            predictor_record = Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=False).first()
+            predictor_record = Predictor.query.filter_by(company_id=company_id, name=name, is_custom=False).first()
             predictor_record.update_status = 'updating'
             session.commit()
-            update_model(name, self.delete_model, F.delete_model, self.learn, self._lock_context, self.company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStore())
+            update_model(name, self.delete_model, F.delete_model, self.learn, self._lock_context, self.company_id, Config(company_id)['paths']['predictors'], predictor_record, FsSotre(company_id), DataStore())
 
             predictor_record = self._update_db_status(predictor_record)
         except Exception as e:

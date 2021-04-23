@@ -1627,10 +1627,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             config['api']['mysql']['ssl']
         )
 
-        ai_table = AITable_store()
-        default_store = DataStore()
-        mdb = ModelInterface()
-        custom_models = CustomModels()
+        # @COMPANY_INDEPENDENT figure out how to pass company_id here
+        ai_table = AITable_store(None)
+        default_store = DataStore(None)
+        mdb = ModelInterface(None)
+        custom_models = CustomModels(None)
         datahub = init_datahub(config)
 
         host = config['api']['mysql']['host']

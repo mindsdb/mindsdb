@@ -546,7 +546,8 @@ class SQLQuery():
                 # @TODO: Figure out why initalization is so low, for now only initialize it when needed
                 # We should probably just pass this to the SQLQuery the same way we do integrations, databases, etc
                 if self.ai_table is None:
-                    self.ai_table = AITable_store()
+                    # @COMPANY_INDEPENDENT figure out how to pass company_id here
+                    self.ai_table = AITable_store(None)
 
                 if False and len(tables) == 1 and (
                         tables[0].lower() in ['mindsdb.predictors', 'mindsdb.commands'] \

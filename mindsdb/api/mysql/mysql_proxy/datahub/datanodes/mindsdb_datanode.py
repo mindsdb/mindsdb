@@ -39,10 +39,11 @@ class MindsDBDataNode(DataNode):
 
     def __init__(self, config):
         self.config = Config()
-        self.mindsdb_native = ModelInterface()
-        self.custom_models = CustomModels()
-        self.ai_table = AITable_store()
-        self.default_store = DataStore()
+        # @COMPANY_INDEPENDENT figure out how to pass company_id here
+        self.mindsdb_native = ModelInterface(None)
+        self.custom_models = CustomModels(None)
+        self.ai_table = AITable_store(None)
+        self.default_store = DataStore(None)
 
     def getTables(self):
         models = self.mindsdb_native.get_models()

@@ -9,6 +9,7 @@ class Integration(ABC):
     def __init__(self, config, name):
         self.config = config
         self.name = name
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.mindsdb_database = config['api']['mysql']['database']
 
     @abstractmethod

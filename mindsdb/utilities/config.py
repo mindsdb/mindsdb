@@ -3,10 +3,13 @@ import json
 import hashlib
 import datetime
 from copy import deepcopy
+from threading import Event
 
 from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.database.integrations import add_db_integration
 
+
+STOP_THREADS_EVENT = Event()
 
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
@@ -92,7 +95,7 @@ class Config():
             except Exception as e:
                 # Already added
                 pass
-            
+
         del self._config['integrations']
 
     def __getitem__(self, key):

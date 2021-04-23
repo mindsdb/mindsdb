@@ -14,7 +14,7 @@ from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
 from mindsdb.api.http.utils import http_error
-
+from mindsdb.interfaces.database.integrations import add_db_integration, modify_db_integration, remove_db_integration
 
 def get_integration(name):
     integrations = ca.config_obj.get('integrations', {})
@@ -99,7 +99,7 @@ class Integration(Resource):
             if 'enabled' in params:
                 params['publish'] = params['enabled']
                 del params['enabled']
-            ca.config_obj.add_db_integration(name, params)
+            add_db_integration(name, params, company_id)
 
             model_data_arr = get_all_models_meta_data(ca.naitve_interface, ca.custom_models)
             ca.dbw.setup_integration(name)
@@ -117,7 +117,7 @@ class Integration(Resource):
         if integration is None:
             abort(400, f"Nothing to delete. '{name}' not exists.")
         try:
-            ca.config_obj.remove_db_integration(name)
+            remove_db_integration(name, company_id)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during integration delete: {str(e)}')
@@ -135,7 +135,7 @@ class Integration(Resource):
             if 'enabled' in params:
                 params['publish'] = params['enabled']
                 del params['enabled']
-            ca.config_obj.modify_db_integration(name, params)
+            modify_db_integration(name, params, company_id)
             ca.dbw.setup_integration(name)
         except Exception as e:
             log.error(str(e))

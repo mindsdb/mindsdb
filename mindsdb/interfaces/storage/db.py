@@ -146,9 +146,6 @@ class Stream(Base):
     # integration_id = Column(Integer, ForeignKey('integration.id'))
     created_at = Column(DateTime, default=datetime.datetime.now)
     _type = Column(String)
-    # host = Column(String)
-    # port = Column(Integer)
-    # db = Column(Integer, default=0)
     predictor = Column(String)
     stream_in = Column(String)
     stream_out = Column(String)
@@ -157,6 +154,7 @@ class Stream(Base):
     name = Column(String)
     connection_params = Column(Json)
     advanced_params = Column(Json)
+    ts_params = Column(Json, default={})
 
 
 Base.metadata.create_all(engine)

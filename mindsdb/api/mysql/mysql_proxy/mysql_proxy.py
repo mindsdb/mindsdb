@@ -469,7 +469,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # use first integration by default
             struct['integration_name'] = list(config['integrations'].keys())[0]
 
-        ds_name = struct.get('datasource_name', f"{struct['integration_name']}_ds")
+        is_temp_ds = False
+        ds_name = struct.get('datasource_name')
+        if ds_name is None:
+            ds_name = f'temp_ds_{int(time.time()*100)}'
+            is_temp_ds = True
 
         ds, ds_name = default_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
         ds_data = default_store.get_datasource(ds_name)
@@ -491,6 +495,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         # @COMPANY_INDEPENDENT figure out how to pass company_id here
         mdb.learn(None, struct['predictor_name'], ds, predict, ds_data['id'], kwargs)
+
+        if is_temp_ds:
+            default_store.delete_datasource(ds_name)
 
         self.packet(OkPacket).send()
 
@@ -873,21 +880,25 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         keyword = statement.keyword
         struct = statement.struct
 
-        # TODO show tables from {name}
-        if keyword == 'show' and 'show databases' in sql_lower:
-            sql = 'select schema_name as Database from information_schema.SCHEMATA;'
-            statement = SqlStatementParser(sql)
-            sql_lower = statement.sql.lower()
-            keyword = statement.keyword
-            struct = statement.struct
-        if keyword == 'show' and 'show full tables from' in sql_lower:
-            schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
-            sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
-            statement = SqlStatementParser(sql)
-            sql_lower = statement.sql.lower()
-            keyword = statement.keyword
-            struct = statement.struct
-        # TODO show tables;
+        if keyword == 'show':
+            if 'show databases' in sql_lower:
+                sql = 'select schema_name as Database from information_schema.SCHEMATA;'
+                statement = SqlStatementParser(sql)
+                sql_lower = statement.sql.lower()
+                keyword = statement.keyword
+                struct = statement.struct
+            elif 'tables' in sql_lower:
+                if sql_lower == 'show tables':
+                    schema = 'mindsdb'
+                elif 'show tables from' in sql_lower:
+                    schema = re.findall(r'show\s+tables\s+from\s+(\S*)', sql_lower)[0]
+                elif 'show full tables from' in sql_lower:
+                    schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
+                sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
+                statement = SqlStatementParser(sql)
+                sql_lower = statement.sql.lower()
+                keyword = statement.keyword
+                struct = statement.struct
 
         if keyword == 'start':
             # start transaction

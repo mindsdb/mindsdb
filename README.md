@@ -29,7 +29,7 @@
 <h2 align="center">
    Predictive AI layer for existing databases
    <br/>
-  <img width="1200" src="https://github.com/ZoranPandovski/mindsdb/blob/master/assets/mdb-integration.png" alt="MindsDB">	
+  <img width="1200" src="https://github.com/mindsdb/mindsdb-docs/blob/master/mindsdb-docs/docs/assets/integration-image.png" alt="MindsDB">	
 
 </h2>
 

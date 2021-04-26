@@ -8,7 +8,7 @@ from mindsdb.api.http.namespaces.configs.streams import ns_conf
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Stream as StreamDB
 from mindsdb.api.http.utils import get_company_id
-
+from mindsdb.streams.base.base_stream import StreamTypes
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
 
@@ -78,11 +78,15 @@ class Stream(Resource):
         stream_in = params['stream_in']
         stream_out  = params['stream_out']
         _type = params.get('type', 'forecast')
+        if _type.lower() == StreamTypes.timeseries:
+            ts_params = params.get('ts_params')
+        else:
+            ts_params = {}
         if predictor not in get_predictors():
             abort(400, f"requested predictor '{predictor}' is not ready or doens't exist")
         stream = StreamDB(_type=_type, name=name, connection_params=connection_params, advanced_params=advanced_params,
                           predictor=predictor, stream_in=stream_in, stream_out=stream_out,
-                          integration=integration_name, company_id=COMPANY_ID)
+                          integration=integration_name, company_id=COMPANY_ID, ts_params=ts_params)
 
         session.add(stream)
         session.commit()

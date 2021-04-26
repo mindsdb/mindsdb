@@ -6,12 +6,13 @@ import kafka
 from kafka.admin import NewTopic
 
 from mindsdb.utilities.log import log
+from mindsdb.streams.base.base_stream import StreamTypes
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Predictor as DBPredictor
 from mindsdb.interfaces.model.model_interface import ModelInterface
 
 class KafkaStream(Thread):
-    def __init__(self, connection_info, advanced_info, topic_in, topic_out, predictor, _type):
+    def __init__(self, connection_info, advanced_info, topic_in, topic_out, predictor, _type, **ts_params):
         self.connection_info = connection_info
         self.advanced_info = advanced_info
         self.predictor = predictor
@@ -33,26 +34,15 @@ class KafkaStream(Thread):
         self.stop_event = Event()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.caches = {}
-        if self._type == 'timeseries':
+        self.ts_params = ts_params
+        if self._type.lower() == StreamTypes.timeseries:
+            self.target = self.ts_params.get('target')
+            self.window = self.ts_params.get('window_size')
+            self.gb = self.ts_params.get('group_by')
+            self.dt = self.ts_params.get('order_by')
             super().__init__(target=KafkaStream.make_timeseries_predictions, args=(self,))
         else:
             super().__init__(target=KafkaStream.make_prediction, args=(self,))
-
-    def _get_target(self):
-        return "pnew_case"
-        # pass
-
-    def _get_window_size(self):
-        return 10
-        # pass
-
-    def _get_gb(self):
-        return "state"
-        # pass
-
-    def _get_dt(self):
-        return "time"
-        # pass
 
     def predict_ts(self, cache_name):
         when_list = [x for x  in self.caches[cache_name]]
@@ -107,10 +97,6 @@ class KafkaStream(Thread):
         if predict_record is None:
             log.error(f"Error creating stream: requested predictor {self.predictor} is not exist")
             return
-        self.target = self._get_target()
-        self.window = self._get_window_size()
-        self.gb = self._get_gb()
-        self.dt = self._get_dt()
 
         while not self.stop_event.wait(0.5):
             try:

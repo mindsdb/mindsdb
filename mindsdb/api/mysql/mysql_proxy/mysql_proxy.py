@@ -103,7 +103,7 @@ def check_auth(username, password, scramble_func, salt, config):
         hardcoded_password_hash = scramble_func(hardcoded_password, salt)
         hardcoded_password = hardcoded_password.encode()
         # @COMPANY_TODO -- GET ID
-        integrations_names = get_integrations(None).keys()
+        integrations_names = get_db_integrations(None).keys()
 
         if password is None:
             password = ''
@@ -469,7 +469,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # @COMPANY_TODO -- GET ID
         if get_integration(struct['integration_name'], None) is None:
             # @COMPANY_TODO -- GET ID
-            struct['integration_name'] = list(get_integrations(None).keys())[0]
+            struct['integration_name'] = list(get_db_integrations(None).keys())[0]
 
         is_temp_ds = False
         ds_name = struct.get('datasource_name')

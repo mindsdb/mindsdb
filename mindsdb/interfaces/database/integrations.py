@@ -39,7 +39,7 @@ def get_db_integration(name, company_id, sensitive_info=True):
     if not sensitive_info:
         data['password'] = None
 
-    return integration_record.data
+    return data
 
 def get_db_integrations(company_id, sensitive_info=True):
     integration_records = session.query(Integration).filter_by(company_id=company_id).all()

@@ -54,12 +54,8 @@ class HTTPTest(unittest.TestCase):
         res = requests.get(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
         test_integration = res.json()
-<<<<<<< HEAD
         print(test_integration)
         assert len(test_integration) == 8
-=======
-        assert len(test_integration) == 7
->>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
 
         for k in test_integration_data:
             if k != 'password':

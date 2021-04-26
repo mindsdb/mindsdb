@@ -48,7 +48,7 @@ def get_db_integrations(company_id, sensitive_info=True):
         data = record.data
         if data.get('password', None) is None:
             data['password'] = ''
-        data['date_last_update'] = integration_record.updated_at
+        data['date_last_update'] = record.updated_at
         if not sensitive_info:
             data['password'] = None
         integration_dict[record.name] = data

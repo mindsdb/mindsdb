@@ -47,17 +47,18 @@ class HTTPTest(unittest.TestCase):
         res = res.json()
         assert isinstance(res['integrations'], list)
 
-        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse', 'port': 8123, 'user': 'default'}
+        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse', 'port': 8123, 'user': 'default', 'password': '123'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
         assert res.status_code == 200
 
         res = requests.get(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
         test_integration = res.json()
-        assert len(test_integration) == 8
+        assert len(test_integration) == 7
 
         for k in test_integration_data:
-            assert test_integration[k] == test_integration_data[k]
+            if k != 'password':
+                assert test_integration[k] == test_integration_data[k]
 
         for name in ['test_integration']:
             # Get the original
@@ -68,7 +69,7 @@ class HTTPTest(unittest.TestCase):
             for k in ['publish', 'host', 'port', 'type', 'user']:
                 assert k in integration
                 assert integration[k] is not None
-            assert integration['password'] is None
+            assert integration.get('password') is None
 
             # Modify it
             res = requests.post(

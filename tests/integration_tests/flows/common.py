@@ -171,8 +171,6 @@ if USE_EXTERNAL_DB_SERVER:
     config_json['api']['mysql']['database'] = MINDSDB_DATABASE
     config_json['api']['mongodb']['database'] = MINDSDB_DATABASE
 
-    config_json['company_id'] = mindsdb_port
-
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())
     override = {}

@@ -257,6 +257,13 @@ class DataStore():
                     ds = dsClass(**creation_info['kwargs'])
             else:
                 # This probably only happens for urls
+                print('-------------------------')
+                print(source_type)
+                print(source)
+                print(get_db_integration(source_type, self.company_id))
+                print(get_db_integrations(self.company_id))
+                print(self.company_id)
+                print('-------------------------')
                 ds = FileDS(source)
                 creation_info = {
                     'class': 'FileDS',

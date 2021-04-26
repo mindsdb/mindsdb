@@ -65,11 +65,7 @@ class Integration(Resource):
     @ns_conf.doc('get_integration')
     def get(self, name):
         company_id = get_company_id(request)
-<<<<<<< HEAD
         integration = get_db_integration(name,company_id,False)
-=======
-        integration = get_db_integration(name, company_id)
->>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
         if integration is None:
             abort(404, f'Can\'t find database integration: {name}')
         integration = copy.deepcopy(integration)
@@ -95,11 +91,7 @@ class Integration(Resource):
             checker = checker_class(**params)
             return {'success': checker.check_connection()}, 200
 
-<<<<<<< HEAD
         integration = get_db_integration(name,company_id,False)
-=======
-        integration = get_db_integration(name, company_id)
->>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
 
@@ -122,11 +114,7 @@ class Integration(Resource):
     @ns_conf.doc('delete_integration')
     def delete(self, name):
         company_id = get_company_id(request)
-<<<<<<< HEAD
         integration = get_db_integration(name,company_id)
-=======
-        integration = get_db_integration(name, company_id)
->>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
         if integration is None:
             abort(400, f"Nothing to delete. '{name}' not exists.")
         try:
@@ -142,11 +130,7 @@ class Integration(Resource):
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
-<<<<<<< HEAD
         integration = get_db_integration(name,company_id)
-=======
-        integration = get_db_integration(name, company_id)
->>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
         if integration is None:
             abort(400, f"Nothin to modify. '{name}' not exists.")
         try:
@@ -167,11 +151,7 @@ class Check(Resource):
     @ns_conf.doc('check')
     def get(self, name):
         company_id = get_company_id(request)
-<<<<<<< HEAD
         if get_db_integration(name,company_id) is None:
-=======
-        if get_db_integration(name, company_id) is None:
->>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
             abort(404, f'Can\'t find database integration: {name}')
         connections = ca.dbw.check_connections()
         return connections.get(name, False), 200

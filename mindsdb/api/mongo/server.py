@@ -256,7 +256,8 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             log.debug(f'GET length={length} id={request_id} opcode={opcode}')
             msg_bytes = self._read_bytes(length - pos)
             answer = self.get_answer(request_id, opcode, msg_bytes)
-            self.request.send(answer)
+            if answer is not None:
+                self.request.send(answer)
 
     def get_answer(self, request_id, opcode, msg_bytes):
         if opcode not in self.server.operationsHandlersMap:
@@ -264,7 +265,8 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         responder = self.server.operationsHandlersMap[opcode]
         assert responder is not None, 'error'
         response = responder.handle(msg_bytes, request_id, self.server.mindsdb_env, self.session)
-        assert response is not None, 'error'
+        if response is None:
+            return None
         return responder.to_bytes(response, request_id)
 
     def _read_bytes(self, length):

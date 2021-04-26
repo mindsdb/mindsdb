@@ -1,4 +1,5 @@
 import copy
+import datetime
 from dateutil.parser import parse as parse_datetime
 import subprocess
 import os
@@ -14,7 +15,15 @@ from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
 from mindsdb.api.http.utils import http_error, get_company_id
-from mindsdb.interfaces.database.integrations import add_db_integration, modify_db_integration, remove_db_integration, get_db_integration, get_db_integrations
+from mindsdb.interfaces.database.integrations import (
+    add_db_integration,
+    modify_db_integration,
+    remove_db_integration,
+    get_db_integration,
+    get_db_integrations
+)
+from dateutil.tz import tzlocal
+
 
 @ns_conf.route('/logs')
 @ns_conf.param('name', 'Get logs')
@@ -56,7 +65,11 @@ class Integration(Resource):
     @ns_conf.doc('get_integration')
     def get(self, name):
         company_id = get_company_id(request)
+<<<<<<< HEAD
         integration = get_db_integration(name,company_id,False)
+=======
+        integration = get_db_integration(name, company_id)
+>>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
         if integration is None:
             abort(404, f'Can\'t find database integration: {name}')
         integration = copy.deepcopy(integration)
@@ -82,7 +95,11 @@ class Integration(Resource):
             checker = checker_class(**params)
             return {'success': checker.check_connection()}, 200
 
+<<<<<<< HEAD
         integration = get_db_integration(name,company_id,False)
+=======
+        integration = get_db_integration(name, company_id)
+>>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
 
@@ -105,7 +122,11 @@ class Integration(Resource):
     @ns_conf.doc('delete_integration')
     def delete(self, name):
         company_id = get_company_id(request)
+<<<<<<< HEAD
         integration = get_db_integration(name,company_id)
+=======
+        integration = get_db_integration(name, company_id)
+>>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
         if integration is None:
             abort(400, f"Nothing to delete. '{name}' not exists.")
         try:
@@ -121,7 +142,11 @@ class Integration(Resource):
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
+<<<<<<< HEAD
         integration = get_db_integration(name,company_id)
+=======
+        integration = get_db_integration(name, company_id)
+>>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
         if integration is None:
             abort(400, f"Nothin to modify. '{name}' not exists.")
         try:
@@ -142,7 +167,11 @@ class Check(Resource):
     @ns_conf.doc('check')
     def get(self, name):
         company_id = get_company_id(request)
+<<<<<<< HEAD
         if get_db_integration(name,company_id) is None:
+=======
+        if get_db_integration(name, company_id) is None:
+>>>>>>> 69b850e74f3cb318bef359555777a95058075cc4
             abort(404, f'Can\'t find database integration: {name}')
         connections = ca.dbw.check_connections()
         return connections.get(name, False), 200
@@ -162,9 +191,10 @@ class ToggleTelemetry(Resource):
 @ns_conf.route('/vars')
 class Vars(Resource):
     def get(self):
-        telemtry = True
-        if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False']:
+        if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false']:
             telemtry = False
+        else:
+            telemtry = True
 
         if ca.config_obj.get('disable_mongo', False):
             mongo = False
@@ -173,7 +203,15 @@ class Vars(Resource):
 
         cloud = ca.config_obj.get('cloud', False)
 
-        return {'mongo': mongo, 'telemtry': telemtry, 'cloud': cloud}
+        local_time = datetime.datetime.now(tzlocal())
+        local_timezone = local_time.tzname()
+
+        return {
+            'mongo': mongo,
+            'telemtry': telemtry,
+            'cloud': cloud,
+            'timezone': local_timezone,
+        }
 
 
 @ns_conf.param('flag', 'Turn telemtry on or off')

@@ -118,7 +118,7 @@ def check_auth(username, password, scramble_func, salt, config):
                 extracted_username = hardcoded_user
                 integration = integration_name
                 # @COMPANY_TODO -- GET ID
-                integration_type = get_integration(integration, None)['type']
+                integration_type = get_db_integration(integration, None)['type']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
@@ -449,7 +449,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         # check integration exists
         # @COMPANY_TODO -- GET ID
-        if get_integration(struct['integration_name'], None) is None:
+        if get_db_integration(struct['integration_name'], None) is None:
             raise Exception(f"Integration with name {struct['integration_name']} not exists")
 
         ai_table.add(
@@ -467,7 +467,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         global mdb, default_store, config
 
         # @COMPANY_TODO -- GET ID
-        if get_integration(struct['integration_name'], None) is None:
+        if get_db_integration(struct['integration_name'], None) is None:
             # @COMPANY_TODO -- GET ID
             struct['integration_name'] = list(get_db_integrations(None).keys())[0]
 

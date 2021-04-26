@@ -45,7 +45,7 @@ class Config():
             'paths': {},
             "log": {
                 "level": {
-                    "console": "INFO",
+                    "console": "DEBUG",
                     "file": "DEBUG"
                 }
 

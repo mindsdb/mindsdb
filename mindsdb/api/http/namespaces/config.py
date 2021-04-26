@@ -37,7 +37,7 @@ class GetLogs(Resource):
 class ListIntegration(Resource):
     def get(self):
         company_id = get_company_id(request)
-        return {'integrations': [k for k in get_db_integrations(company_id)]}
+        return {'integrations': [k for k in get_db_integrations(company_id,False)]}
 
 
 @ns_conf.route('/all_integrations')
@@ -46,10 +46,7 @@ class AllIntegration(Resource):
     @ns_conf.doc('get_all_integrations')
     def get(self):
         company_id = get_company_id(request)
-        integrations = get_db_integrations(company_id)
-        for integration in integrations.values():
-            if 'password' in integration:
-                integration['password'] = None
+        integrations = get_db_integrations(company_id,False)
         return integrations
 
 
@@ -59,12 +56,10 @@ class Integration(Resource):
     @ns_conf.doc('get_integration')
     def get(self, name):
         company_id = get_company_id(request)
-        integration = get_db_integration(name,company_id)
+        integration = get_db_integration(name,company_id,False)
         if integration is None:
             abort(404, f'Can\'t find database integration: {name}')
         integration = copy.deepcopy(integration)
-        if 'password' in integration:
-            integration['password'] = None
         return integration
 
     @ns_conf.doc('put_integration')
@@ -87,7 +82,7 @@ class Integration(Resource):
             checker = checker_class(**params)
             return {'success': checker.check_connection()}, 200
 
-        integration = get_db_integration(name,company_id)
+        integration = get_db_integration(name,company_id,False)
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
 

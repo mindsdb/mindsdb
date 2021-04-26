@@ -54,7 +54,7 @@ class HTTPTest(unittest.TestCase):
         res = requests.get(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
         test_integration = res.json()
-        assert len(test_integration) == 8
+        assert len(test_integration) == 7
 
         for k in test_integration_data:
             assert test_integration[k] == test_integration_data[k]

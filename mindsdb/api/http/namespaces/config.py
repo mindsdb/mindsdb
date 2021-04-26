@@ -59,7 +59,7 @@ class Integration(Resource):
     @ns_conf.doc('get_integration')
     def get(self, name):
         company_id = get_company_id(request)
-        integration = get_integration(name,company_id)
+        integration = get_db_integration(name,company_id)
         if integration is None:
             abort(404, f'Can\'t find database integration: {name}')
         integration = copy.deepcopy(integration)
@@ -87,7 +87,7 @@ class Integration(Resource):
             checker = checker_class(**params)
             return {'success': checker.check_connection()}, 200
 
-        integration = get_integration(name,company_id)
+        integration = get_db_integration(name,company_id)
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
 
@@ -110,7 +110,7 @@ class Integration(Resource):
     @ns_conf.doc('delete_integration')
     def delete(self, name):
         company_id = get_company_id(request)
-        integration = get_integration(name,company_id)
+        integration = get_db_integration(name,company_id)
         if integration is None:
             abort(400, f"Nothing to delete. '{name}' not exists.")
         try:
@@ -126,7 +126,7 @@ class Integration(Resource):
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
-        integration = get_integration(name,company_id)
+        integration = get_db_integration(name,company_id)
         if integration is None:
             abort(400, f"Nothin to modify. '{name}' not exists.")
         try:
@@ -147,7 +147,7 @@ class Check(Resource):
     @ns_conf.doc('check')
     def get(self, name):
         company_id = get_company_id(request)
-        if get_integration(name,company_id) is None:
+        if get_db_integration(name,company_id) is None:
             abort(404, f'Can\'t find database integration: {name}')
         connections = ca.dbw.check_connections()
         return connections.get(name, False), 200

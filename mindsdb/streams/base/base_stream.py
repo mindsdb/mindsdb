@@ -1,0 +1,4 @@
+
+
+class StreamTypes:
+    timeseries = "timeseries"

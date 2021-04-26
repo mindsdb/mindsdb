@@ -136,6 +136,7 @@ class Stream(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     company_id = Column(Integer)
+    _type = Column(String)
     predictor = Column(String)
     stream_in = Column(String)
     stream_out = Column(String)
@@ -143,6 +144,7 @@ class Stream(Base):
     name = Column(String)
     connection_params = Column(Json)
     advanced_params = Column(Json)
+    ts_params = Column(Json, default={})
 
 class Integration(Base):
     __tablename__ = 'integration'

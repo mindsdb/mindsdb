@@ -346,8 +346,21 @@ def ping(): return True
 
 
 def start():
+    class Server(object):
+        def __init__(self):
+            self.server = SimpleXMLRPCServer(("localhost", 19329))
+
+        def register_function(self, function, name=None):
+            def _function(args, kwargs):
+                return function(*args, **kwargs)
+            _function.__name__ = function.__name__
+            self.server.register_function(_function, name)
+
+        def serve_forever(self):
+            self.server.serve_forever()
+
     controller = ModelController(False)
-    server = SimpleXMLRPCServer(("localhost", 19329))
+    server = Server()
 
     server.register_function(controller.create, "create")
     server.register_function(controller.learn, "learn")

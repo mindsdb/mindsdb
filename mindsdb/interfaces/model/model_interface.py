@@ -7,12 +7,37 @@ import pickle
 from mindsdb.utilities.log import log
 
 
+class ModelInterfaceWrapper(object):
+    def __init__(self, model_interface, company_id=None):
+        self.company_id = company_id
+        self.model_interface = model_interface
+
+    def __getattr__(self, name):
+        def wrapper(*args, **kwargs):
+            if kwargs.get('company_id') is None:
+                kwargs['company_id'] = self.company_id
+            return getattr(self.model_interface, name)(*args, **kwargs)
+        return wrapper
+
+
+class ServerProxy(object):
+    def __init__(self):
+        self._xmlrpc_server_proxy = xmlrpc.client.ServerProxy("http://localhost:19329/", allow_none=True)
+
+    def __getattr__(self, name):
+        call_proxy = getattr(self._xmlrpc_server_proxy, name)
+
+        def _call(*args, **kwargs):
+            return call_proxy(args, kwargs)
+        return _call
+
+
 class ModelInterfaceRPC():
     def __init__(self):
         for _ in range(10):
             try:
                 time.sleep(3)
-                self.proxy = xmlrpc.client.ServerProxy("http://localhost:19329/", allow_none=True)
+                self.proxy = ServerProxy()
                 assert self.proxy.ping()
                 return
             except Exception:
@@ -54,6 +79,6 @@ try:
     ray.init(ignore_reinit_error=True)
     ModelInterface = ModelInterfaceRay
     ray_based = True
-except Exception as e:
+except Exception:
     ModelInterface = ModelInterfaceRPC
     ray_based = False

@@ -19,6 +19,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import initialize_log, get_log
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.storage.db import session
+from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
 
 
 def start(verbose, no_studio):
@@ -84,8 +85,10 @@ def start(verbose, no_studio):
         request.company_id = company_id
 
         current_app.default_store = DataStore(company_id=company_id)
-        # TODO? add native
-        # current_app.naitve_interface = NativeInterface()
+        current_app.naitve_interface = ModelInterfaceWrapper(
+            model_interface=current_app.original_model_interface,
+            company_id=company_id
+        )
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

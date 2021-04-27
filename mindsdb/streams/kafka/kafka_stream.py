@@ -32,7 +32,8 @@ class KafkaStream(Thread):
             pass
         self._type = _type
         self.native_interface = NativeInterface()
-        self.format_flag = 'explain'
+        # self.format_flag = 'explain'
+        self.format_flag = 'dict'
 
         self.stop_event = Event()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
@@ -49,7 +50,7 @@ class KafkaStream(Thread):
 
     def is_anomaly(self, prediction):
         for key in prediction:
-            if "anomaly" in key:
+            if "anomaly" in key and prediction[key] is not None:
                 return True
         return False
 
@@ -66,7 +67,7 @@ class KafkaStream(Thread):
         for res in result:
             in_json = json.dumps(res)
             to_send = in_json.encode('utf-8')
-            out_stream = self.stream_anomaly_name if self.is_anomaly(in_json) else self.stream_out_name
+            out_stream = self.stream_anomaly_name if self.is_anomaly(res) else self.stream_out_name
             log.error(f"sending {to_send}")
             self.producer.send(out_stream, to_send)
         self.caches[cache_name] = self.caches[cache_name][1:]
@@ -136,7 +137,7 @@ class KafkaStream(Thread):
                     in_json = json.dumps(res)
                     to_send = in_json.encode('utf-8')
                     log.error(f"sending {to_send}")
-                    out_stream = self.stream_anomaly_name if self.is_anomaly(in_json) else self.stream_out_name
+                    out_stream = self.stream_anomaly_name if self.is_anomaly(res) else self.stream_out_name
                     self.producer.send(out_stream, to_send)
             except StopIteration:
                 pass

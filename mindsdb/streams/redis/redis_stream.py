@@ -39,7 +39,7 @@ class RedisStream(Thread):
 
     def is_anomaly(self, prediction):
         for key in prediction:
-            if "anomaly" in key:
+            if "anomaly" in key and prediction[key] is not None:
                 return True
         return False
 
@@ -64,7 +64,7 @@ class RedisStream(Thread):
                 log.error(f"STREAM: got {result}")
                 for res in result:
                     in_json = json.dumps(res)
-                    stream_out = self.stream_anomaly if self.is_anomaly(in_json) else self.stream_out
+                    stream_out = self.stream_anomaly if self.is_anomaly(res) else self.stream_out
                     stream_out.add(in_json)
                 stream_in.delete(record_id)
 
@@ -73,7 +73,7 @@ class RedisStream(Thread):
             log.error(f"TIMESERIES STREAM: got {result}")
             for res in result:
                 in_json = json.dumps(res)
-                stream_out = self.stream_anomaly if self.is_anomaly(in_json) else self.stream_out
+                stream_out = self.stream_anomaly if self.is_anomaly(res) else self.stream_out
                 stream_out.add(in_json)
             stream_in.trim(len(stream_in) - 1, approximate=False)
 

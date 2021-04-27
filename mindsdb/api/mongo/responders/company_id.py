@@ -1,4 +1,6 @@
 from mindsdb.api.mongo.classes import Responder
+from mindsdb.interfaces.datastore.datastore import DataStore
+from mindsdb.interfaces.model.model_interface import ModelInterface
 
 
 class Responce(Responder):
@@ -8,12 +10,8 @@ class Responce(Responder):
     def result(self, query, request_env, mindsdb_env, session):
         company_id = query.get('company_id')
 
-        # TODO change mindsdb_env according on company_id
-        # mindsdb_env = {
-        #     'config': config,
-        #     'data_store': DataStore(),
-        #     'mindsdb_native': NativeInterface()
-        # }
+        mindsdb_env['data_store'] = DataStore(company_id=company_id)
+        mindsdb_env['mindsdb_native'] = ModelInterface() # TODO? set company_id
 
         return None
 

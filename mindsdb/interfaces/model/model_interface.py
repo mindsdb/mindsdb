@@ -19,32 +19,32 @@ class ModelInterfaceRPC():
                 log.info('Wating for native RPC server to start')
         raise Exception('Unable to connect to RPC server')
 
-    def create(self, company_id, name):
-        self.proxy.create(name)
+    def create(self, *args, **kwargs):
+        self.proxy.create(*args, **kwargs)
 
-    def learn(self, company_id, name, from_data, to_predict, datasource_id, kwargs={}):
-        self.proxy.learn(name, from_data, to_predict, datasource_id, kwargs)
+    def learn(self, *args, **kwargs):
+        self.proxy.learn(*args, **kwargs)
 
-    def predict(self, company_id, name, pred_format, when_data=None, kwargs={}):
-        bin = self.proxy.predict(name, pred_format, when_data, kwargs)
+    def predict(self, *args, **kwargs):
+        bin = self.proxy.predict(*args, **kwargs)
         return pickle.loads(bin.data)
 
-    def analyse_dataset(self, company_id, ds):
-        bin = self.proxy.analyse_dataset(ds)
+    def analyse_dataset(self, *args, **kwargs):
+        bin = self.proxy.analyse_dataset(*args, **kwargs)
         return pickle.loads(bin.data)
 
-    def get_model_data(self, company_id, name, db_fix=True):
-        bin = self.proxy.get_model_data(name, db_fix)
+    def get_model_data(self, *args, **kwargs):
+        bin = self.proxy.get_model_data(*args, **kwargs)
         return pickle.loads(bin.data)
 
-    def get_models(self, company_id):
-        bin = self.proxy.get_models()
+    def get_models(self, *args, **kwargs):
+        bin = self.proxy.get_models(*args, **kwargs)
         return pickle.loads(bin.data)
 
-    def delete_model(self, company_id, name):
-        self.proxy.delete_model(name)
+    def delete_model(self, *args, **kwargs):
+        self.proxy.delete_model(*args, **kwargs)
 
-    def update_model(self, company_id, name):
+    def update_model(self, *args, **kwargs):
         return 'Model updating is no available in this version of mindsdb'
 
 

@@ -15,14 +15,24 @@ from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import get_db_integration, get_db_integrations
 
 
+def default_company_id(f):
+    def wrapper(*args, **kwargs):
+        if kwargs.get('company_id') is None:
+            kwargs['company_id'] = args[0].default_company_id
+        return f(*args, **kwargs)
+    return wrapper
+
+
 class DataStore():
-    def __init__(self):
+    def __init__(self, company_id=None):
+        self.default_company_id = company_id
         self.config = Config()
         self.fs_store = FsSotre()
         self.dir = self.config.paths['datasources']
         self.mindsdb_native = NativeInterface()
 
-    def get_analysis(self, company_id, name):
+    @default_company_id
+    def get_analysis(self, name, company_id=None):
         name = f'{company_id}@@@@@{name}'
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         if datasource_record.analysis is None:
@@ -30,7 +40,8 @@ class DataStore():
         analysis = json.loads(datasource_record.analysis)
         return analysis
 
-    def start_analysis(self, company_id,name):
+    @default_company_id
+    def start_analysis(self, name, company_id=None):
         name = f'{company_id}@@@@@{name}'
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         if datasource_record.analysis is not None:
@@ -54,7 +65,8 @@ class DataStore():
             session.delete(semaphor_record)
             session.commit()
 
-    def get_datasources(self, company_id,name=None):
+    @default_company_id
+    def get_datasources(self, name=None, company_id=None):
         datasource_arr = []
         if name is not None:
             name = f'{company_id}@@@@@{name}'
@@ -68,14 +80,18 @@ class DataStore():
                 datasource = json.loads(datasource_record.data)
                 datasource['created_at'] = datasource_record.created_at
                 datasource['updated_at'] = datasource_record.updated_at
-                datasource['name'] = datasource_record.names.split('@@@@@')[1]
+                try:
+                    datasource['name'] = datasource_record.name.split('@@@@@')[1]
+                except Exception:
+                    datasource['name'] = datasource_record.name
                 datasource['id'] = datasource_record.id
                 datasource_arr.append(datasource)
             except Exception as e:
                 log.error(e)
         return datasource_arr
 
-    def get_data(self, company_id,name, where=None, limit=None, offset=None):
+    @default_company_id
+    def get_data(self, name, where=None, limit=None, offset=None, company_id=None):
         name = f'{company_id}@@@@@{name}'
         offset = 0 if offset is None else offset
         ds = self.get_datasource_obj(name)
@@ -94,7 +110,8 @@ class DataStore():
             'columns_names': filtered_ds.columns
         }
 
-    def get_datasource(self, company_id, name):
+    @default_company_id
+    def get_datasource(self, name, company_id=None):
         name = f'{company_id}@@@@@{name}'
         datasource_arr = self.get_datasources(name)
         if len(datasource_arr) == 1:
@@ -105,7 +122,8 @@ class DataStore():
             raise Exception('Two or more datasource with the same name')
         return None
 
-    def delete_datasource(self, company_id, name):
+    @default_company_id
+    def delete_datasource(self, name, company_id=None):
         name = f'{company_id}@@@@@{name}'
         datasource_record = Datasource.query.filter_by(company_id=company_id, name=name).first()
         id = datasource_record.id
@@ -117,7 +135,8 @@ class DataStore():
         except Exception:
             pass
 
-    def save_datasource(self, company_id, name, source_type, source, file_path=None):
+    @default_company_id
+    def save_datasource(self, name, source_type, source, file_path=None, company_id=None):
         name = f'{company_id}@@@@@{name}'
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
@@ -296,7 +315,8 @@ class DataStore():
 
         return self.get_datasource_obj(name, raw=True), name
 
-    def get_datasource_obj(self, company_id, name, raw=False, id=None):
+    @default_company_id
+    def get_datasource_obj(self, name, raw=False, id=None, company_id=None):
         try:
             if name is None:
                 datasource_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()

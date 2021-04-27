@@ -153,7 +153,7 @@ class ModelController():
         self._setup_for_creation(name)
 
         if self.ray_based:
-            run_learn(name, from_data, to_predict, kwargs, datasource_id)
+            run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id)
         else:
             p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id)
             p.start()

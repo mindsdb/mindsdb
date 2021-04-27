@@ -124,11 +124,12 @@ class Redis(StreamIntegration, RedisConnectionChecker):
         name = kwargs.get('name')
         stream_in = kwargs.get('input_stream')
         stream_out = kwargs.get('output_stream')
+        stream_anomaly = kwargs.get('anomaly_stream', stream_out)
         predictor_name = kwargs.get('predictor')
         stream_type = kwargs.get('type', 'forecast')
         ts_params = kwargs.get('ts_params')
         return RedisStream(name, self.connection_info, self.advanced_info,
-                           stream_in, stream_out, predictor_name,
+                           stream_in, stream_out, stream_anomaly, predictor_name,
                            stream_type, **ts_params)
 
     def _decode(self, b_dict):

@@ -119,14 +119,6 @@ class Redis(StreamIntegration, RedisConnectionChecker):
         session.commit()
         self.streams[stream.stream_name] = stream.stop_event
 
-    def get_stream_from_db(self, db_record):
-        kwargs = {"type": db_record._type,
-                  "name": db_record.name,
-                  "predictor": db_record.predictor,
-                  "input_stream": db_record.stream_in,
-                  "output_stream": db_record.stream_out,
-                  "ts_params": db_record.ts_params}
-        return self.get_stream_from_kwargs(**kwargs)
 
     def get_stream_from_kwargs(self, **kwargs):
         name = kwargs.get('name')

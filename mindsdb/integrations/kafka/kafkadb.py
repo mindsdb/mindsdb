@@ -101,33 +101,23 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
 
     def store_stream(self, stream):
         """Stories a created stream."""
-        stream_name = f"{self.name}_{stream.predictor}"
-        stream_rec = Stream(name=stream_name, connection_params=self.connection_params, advanced_params=self.advanced_info,
+        stream_rec = Stream(name=stream.stream_name, connection_params=self.connection_params, advanced_params=self.advanced_info,
                             _type=stream._type, predictor=stream.predictor,
                             integration=self.name, company_id=self.company_id,
                             stream_in=stream.stream_in_name, stream_out=stream.stream_out_name,
                             ts_params=stream.ts_params, stream_anomaly=stream.stream_anomaly_name,)
         session.add(stream_rec)
         session.commit()
-        self.streams[stream_name] = stream.stop_event
-
-    def get_stream_from_db(self, db_record):
-        kwargs = {"type": db_record._type,
-                  "name": db_record.name,
-                  "predictor": db_record.predictor,
-                  "input_stream": db_record.stream_in,
-                  "output_stream": db_record.stream_out,
-                  "anomaly_stream": db_record.stream_anomaly,
-                  "ts_params": db_record.ts_params}
-        return self.get_stream_from_kwargs(**kwargs)
+        self.streams[stream.stream_name] = stream.stop_event
 
     def get_stream_from_kwargs(self, **kwargs):
+        name = kwargs.get('name')
         topic_in = kwargs.get('input_stream')
         topic_out = kwargs.get('output_stream')
         topic_anomaly = kwargs.get('anomaly_stream', topic_out)
         predictor_name = kwargs.get('predictor')
         stream_type = kwargs.get('type', 'forecast')
         ts_params = kwargs.get('ts_params')
-        return KafkaStream(self.connection_params, self.advanced_info,
+        return KafkaStream(name, self.connection_params, self.advanced_info,
                            topic_in, topic_out, topic_anomaly,
                            predictor_name, stream_type, **ts_params)

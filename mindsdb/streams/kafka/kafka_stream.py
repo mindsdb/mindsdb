@@ -12,7 +12,8 @@ from mindsdb.interfaces.storage.db import Predictor as DBPredictor
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 
 class KafkaStream(Thread):
-    def __init__(self, connection_info, advanced_info, topic_in, topic_out, topic_anomaly, predictor, _type, **ts_params):
+    def __init__(self, name, connection_info, advanced_info, topic_in, topic_out, topic_anomaly, predictor, _type, **ts_params):
+        self.stream_name = name
         self.connection_info = connection_info
         self.advanced_info = advanced_info
         self.predictor = predictor

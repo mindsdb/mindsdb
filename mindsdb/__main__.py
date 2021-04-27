@@ -17,6 +17,7 @@ from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
+from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.log import log
 
 
@@ -65,6 +66,19 @@ if __name__ == '__main__':
 
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config.paths['root']}")
+
+
+    # @TODO Backwards compatibiltiy, remove later
+    from mindsdb.interfaces.database.integrations import add_db_integration
+    dbw = DatabaseWrapper()
+    for integration_name in config.get('integrations', {}):
+        try:
+            add_db_integration(integration_name, config['integrations'][integration_name], None)
+            dbw.setup_integration(integration_name)
+        except Exception as e:
+            # Already added
+            pass
+
 
     if args.api is None:
         api_arr = ['http', 'mysql']

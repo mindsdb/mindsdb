@@ -88,14 +88,6 @@ class Config():
 
         self._config = _merge_configs(self._default_config, self._override_config)
 
-        # @TODO Backwards compatibiltiy, remove later
-        for integration_name in self._config.get('integrations', {}):
-            try:
-                add_db_integration(integration_name, self._config['integrations'][integration_name], None)
-            except Exception as e:
-                # Already added
-                pass
-
         del self._config['integrations']
 
     def __getitem__(self, key):

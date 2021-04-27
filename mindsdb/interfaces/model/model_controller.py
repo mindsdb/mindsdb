@@ -150,7 +150,7 @@ class ModelController():
         if self.ray_based:
             run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id)
         else:
-            p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id)
+            p = LearnProcess(name, from_data, to_predict, kwargs, datasource_id, company_id)
             p.start()
             if join_learn_process is True:
                 p.join()

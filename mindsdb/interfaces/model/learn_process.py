@@ -101,5 +101,4 @@ class LearnProcess(ctx.Process):
 
         this is work for celery worker here?
         '''
-        name, from_data, to_predict, kwargs, datasource_id = self._args
-        run_learn(name, from_data, to_predict, kwargs, datasource_id)
+        run_learn(*self._args)

@@ -112,7 +112,7 @@ class DataStore():
 
     @default_company_id
     def get_datasource(self, name, company_id=None):
-        name = f'{company_id}@@@@@{name}'
+        # name = f'{company_id}@@@@@{name}'
         datasource_arr = self.get_datasources(name)
         if len(datasource_arr) == 1:
             return datasource_arr[0]

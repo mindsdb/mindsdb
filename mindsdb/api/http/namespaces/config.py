@@ -23,6 +23,7 @@ from mindsdb.interfaces.database.integrations import (
     get_db_integrations
 )
 from dateutil.tz import tzlocal
+from mindsdb.interfaces.database.database import DatabaseWrapper
 
 
 @ns_conf.route('/logs')
@@ -102,9 +103,9 @@ class Integration(Resource):
             add_db_integration(name, params, company_id)
 
             model_data_arr = get_all_models_meta_data(ca.naitve_interface, ca.custom_models)
-            ca.dbw.setup_integration(name)
+            DatabaseWrapper(company_id).setup_integration(name)
             if is_test is False:
-                ca.dbw.register_predictors(model_data_arr, name)
+                DatabaseWrapper(company_id).register_predictors(model_data_arr, name)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during config update: {str(e)}')
@@ -138,7 +139,7 @@ class Integration(Resource):
                 params['publish'] = params['enabled']
                 del params['enabled']
             modify_db_integration(name, params, company_id)
-            ca.dbw.setup_integration(name)
+            DatabaseWrapper(company_id).setup_integration(name)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during integration modifycation: {str(e)}')
@@ -153,7 +154,7 @@ class Check(Resource):
         company_id = get_company_id(request)
         if get_db_integration(name,company_id) is None:
             abort(404, f'Can\'t find database integration: {name}')
-        connections = ca.dbw.check_connections()
+        connections = DatabaseWrapper(company_id).check_connections()
         return connections.get(name, False), 200
 
 

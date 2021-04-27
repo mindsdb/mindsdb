@@ -87,7 +87,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     predictor_record.data = model_data
     session.commit()
 
-    DatabaseWrapper().register_predictors([model_data])
+    DatabaseWrapper(company_id).register_predictors([model_data])
     delete_process_mark('learn')
 
 

@@ -23,9 +23,9 @@ class DatabaseWrapper():
                  'mongodb': MongoDB,
                  'redis': Redis,
                  'kafka': Kafka}
-    def __init__(self):
+    def __init__(self, company_id):
         self.config = Config()
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        self.company_id = company_id
 
     def setup_integration(self, db_alias):
         try:

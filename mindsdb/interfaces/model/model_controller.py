@@ -26,7 +26,7 @@ class ModelController():
         self.config = Config()
         self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-        self.dbw = DatabaseWrapper()
+        self.dbw = DatabaseWrapper(self.company_id)
         self.predictor_cache = {}
         self.ray_based = ray_based
 

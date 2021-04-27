@@ -20,7 +20,6 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
-from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
@@ -281,8 +280,6 @@ def initialize_flask(config, init_static_thread, no_studio):
 def initialize_interfaces(app):
     app.default_store = DataStore()
     app.naitve_interface = NativeInterface()
-    app.custom_models = CustomModels()
-    app.dbw = DatabaseWrapper()
     config = Config()
     app.config_obj = config
 

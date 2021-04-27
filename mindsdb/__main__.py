@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     # @TODO Backwards compatibiltiy, remove later
     from mindsdb.interfaces.database.integrations import add_db_integration
-    dbw = DatabaseWrapper()
+    dbw = DatabaseWrapper(None)
     for integration_name in config.get('integrations', {}):
         print(f'Adding: {integration_name}')
         try:

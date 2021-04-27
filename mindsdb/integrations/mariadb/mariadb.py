@@ -3,7 +3,7 @@ import mysql.connector
 from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
-
+from mindsdb.interfaces.database.integrations import get_db_integration
 
 class MariadbConnectionChecker:
     def __init__(self, **kwargs):
@@ -30,7 +30,7 @@ class MariadbConnectionChecker:
 class Mariadb(Integration, MariadbConnectionChecker):
     def __init__(self, config, name):
         super().__init__(config, name)
-        db_info = self.config['integrations'][self.name]
+        db_info = get_db_integration(self.name, self.company_id)
         self.user = db_info.get('user', 'default')
         self.password = db_info.get('password', None)
         self.host = db_info.get('host')
@@ -71,11 +71,12 @@ class Mariadb(Integration, MariadbConnectionChecker):
         return '`' + name.replace('`', '``') + '`'
 
     def _query(self, query):
+        integration = get_db_integration(self.name, self.company_id)
         con = mysql.connector.connect(
-            host=self.config['integrations'][self.name]['host'],
-            port=self.config['integrations'][self.name]['port'],
-            user=self.config['integrations'][self.name]['user'],
-            password=self.config['integrations'][self.name]['password']
+            host=integration['host'],
+            port=integration['port'],
+            user=integration['user'],
+            password=integration['password']
         )
 
         cur = con.cursor(dictionary=True, buffered=True)

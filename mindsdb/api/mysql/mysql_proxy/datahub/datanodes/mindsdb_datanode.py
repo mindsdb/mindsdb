@@ -14,7 +14,7 @@ from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.ai_table.ai_table import AITable_store
 from mindsdb.interfaces.datastore.datastore import DataStore
-
+from mindsdb.interfaces.database.integrations import get_db_integration
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -171,7 +171,8 @@ class MindsDBDataNode(DataNode):
             select_data_query = where['select_data_query']['$eq']
             del where['select_data_query']
 
-            dbtype = self.config['integrations'][came_from]['type']
+            # @COMPANY_TODO -- GET ID
+            dbtype = get_db_integration(came_from, None)['type']
             if dbtype == 'clickhouse':
                 ch = Clickhouse(self.config, came_from)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')

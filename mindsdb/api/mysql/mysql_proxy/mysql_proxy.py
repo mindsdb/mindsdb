@@ -82,7 +82,7 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.interfaces.ai_table.ai_table import AITable_store
-
+from mindsdb.interfaces.database.integrations import get_db_integrations, get_db_integration
 
 connection_id = 0
 
@@ -102,7 +102,8 @@ def check_auth(username, password, scramble_func, salt, config):
         hardcoded_password = config['api']['mysql']['password']
         hardcoded_password_hash = scramble_func(hardcoded_password, salt)
         hardcoded_password = hardcoded_password.encode()
-        integrations_names = config['integrations'].keys()
+        # @COMPANY_TODO -- GET ID
+        integrations_names = get_db_integrations(None).keys()
 
         if password is None:
             password = ''
@@ -116,7 +117,8 @@ def check_auth(username, password, scramble_func, salt, config):
             if username == f'{hardcoded_user}_{integration_name}':
                 extracted_username = hardcoded_user
                 integration = integration_name
-                integration_type = config['integrations'][integration]['type']
+                # @COMPANY_TODO -- GET ID
+                integration_type = get_db_integration(integration, None)['type']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
@@ -444,7 +446,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise Exception(f"Predictor with name {struct['predictor_name']} not exists")
 
         # check integration exists
-        if struct['integration_name'] not in config['integrations']:
+        # @COMPANY_TODO -- GET ID
+        if get_db_integration(struct['integration_name'], None) is None:
             raise Exception(f"Integration with name {struct['integration_name']} not exists")
 
         ai_table.add(
@@ -461,9 +464,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def answer_create_predictor(self, struct):
         global mdb, default_store, config
 
-        if struct['integration_name'] not in config['integrations'].keys():
-            # use first integration by default
-            struct['integration_name'] = list(config['integrations'].keys())[0]
+        # @COMPANY_TODO -- GET ID
+        if get_db_integration(struct['integration_name'], None) is None:
+            # @COMPANY_TODO -- GET ID
+            struct['integration_name'] = list(get_db_integrations(None).keys())[0]
 
         is_temp_ds = False
         ds_name = struct.get('datasource_name')

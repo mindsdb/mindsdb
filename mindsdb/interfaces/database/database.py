@@ -1,3 +1,5 @@
+import os
+
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
@@ -9,6 +11,7 @@ from mindsdb.integrations.kafka.kafkadb import Kafka
 
 from mindsdb.utilities.log import log as logger
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.database.integrations import get_db_integration, get_db_integrations
 
 
 class DatabaseWrapper():
@@ -20,8 +23,9 @@ class DatabaseWrapper():
                  'mongodb': MongoDB,
                  'redis': Redis,
                  'kafka': Kafka}
-    def __init__(self):
+    def __init__(self, company_id):
         self.config = Config()
+        self.company_id = company_id
 
     def setup_integration(self, db_alias):
         try:
@@ -35,8 +39,9 @@ class DatabaseWrapper():
             logger.warning('Failed to integrate with database ' + db_alias + f', error: {e}')
 
     def _get_integration(self, db_alias):
-        if self.config['integrations'][db_alias]['publish']:
-            db_type = self.config['integrations'][db_alias]['type']
+        integration = get_db_integration(db_alias, self.company_id)
+        if integration:
+            db_type = integration['type']
             if db_type in self.known_dbs:
                 return self.known_dbs[db_type](self.config, db_alias)
             logger.warning(f'Uknown integration type: {db_type} for database called: {db_alias}')
@@ -44,7 +49,7 @@ class DatabaseWrapper():
         return True
 
     def _get_integrations(self):
-        integrations = [self._get_integration(x) for x in self.config['integrations']]
+        integrations = [self._get_integration(x) for x in get_db_integrations(self.company_id)]
         integrations = [x for x in integrations if x != True and x != False]
         return integrations
 

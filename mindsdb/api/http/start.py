@@ -22,8 +22,6 @@ from flask_compress import Compress
 
 def start(verbose, no_studio):
     config = Config()
-    if verbose:
-        config.set(['log', 'level', 'console'], 'DEBUG')
 
     initialize_log(config, 'http', wrap_print=True)
 

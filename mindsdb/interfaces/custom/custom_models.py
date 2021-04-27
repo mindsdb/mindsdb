@@ -19,12 +19,11 @@ class CustomModels():
         self.config = Config()
         self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-        self.dbw = DatabaseWrapper()
+        self.dbw = DatabaseWrapper(None)
         self.storage_dir = self.config['paths']['custom_models']
         os.makedirs(self.storage_dir, exist_ok=True)
         self.model_cache = {}
         self.mindsdb_native = NativeInterface()
-        self.dbw = DatabaseWrapper()
 
     def _dir(self, name):
         return str(os.path.join(self.storage_dir, name))

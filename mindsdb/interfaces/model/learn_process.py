@@ -30,7 +30,7 @@ def delete_learn_mark():
             p.unlink()
 
 
-def run_learn(name, from_data, to_predict, kwargs, datasource_id):
+def run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id):
     import mindsdb_native
     import mindsdb_datasources
     import mindsdb
@@ -39,9 +39,6 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
 
     config = Config()
     fs_store = FsSotre()
-
-    company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-
     mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
     predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
@@ -87,7 +84,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id):
     predictor_record.data = model_data
     session.commit()
 
-    DatabaseWrapper().register_predictors([model_data])
+    DatabaseWrapper(company_id).register_predictors([model_data])
     delete_process_mark('learn')
 
 

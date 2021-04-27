@@ -71,10 +71,16 @@ def start(verbose, no_studio):
 
     @app.before_request
     def before_request():
-        company_id = request.headers.get('company-id')  # str
-        # TODO setup env according company_id, somethin like
-        # from .initialize import initialize_interfaces
-        # initialize_interfaces(current_app, company_id)
+        company_id = request.headers.get('company-id')
+
+        if company_id is not None:
+            try:
+                company_id = int(company_id)
+            except Exception as e:
+                print(f'Cloud not parse company id: {company_id} | exception: {e}')
+                company_id = None
+
+        request.company_id = company_id
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

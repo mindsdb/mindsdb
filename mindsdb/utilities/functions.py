@@ -31,7 +31,7 @@ def cast_row_types(row, field_types):
                 pass
 
 
-def get_all_models_meta_data(mindsdb_native, custom_models):
+def get_all_models_meta_data(mindsdb_native, company_id):
     ''' combine custom models and native models to one array
 
         :param mindsdb_native: instance of NativeInterface
@@ -39,15 +39,13 @@ def get_all_models_meta_data(mindsdb_native, custom_models):
         :return: list of models meta data
     '''
     model_data_arr = []
-    for model in mindsdb_native.get_models():
+    for model in mindsdb_native.get_models(company_id):
         if model['status'] == 'complete':
             try:
-                model_data_arr.append(mindsdb_native.get_model_data(model['name']))
+                model_data_arr.append(mindsdb_native.get_model_data(company_id, model['name']))
             except Exception:
                 pass
-
-    model_data_arr.extend(custom_models.get_models())
-
+            
     return model_data_arr
 
 

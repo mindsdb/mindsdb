@@ -8,8 +8,8 @@ from mindsdb.api.http.namespaces.configs.streams import ns_conf
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Stream as StreamDB
 from mindsdb.streams.base.base_stream import StreamTypes
+from mindsdb.api.http.utils import get_company_id
 
-COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
 
 def get_integration(name):
     integrations = ca.config_obj.get('integrations', {})
@@ -41,6 +41,7 @@ def to_dict(stream):
 class StreamList(Resource):
     @ns_conf.doc("get_streams")
     def get(self):
+        company_id = get_company_id(request)
         return {'streams': get_streams()}
 
 
@@ -49,6 +50,7 @@ class StreamList(Resource):
 class Stream(Resource):
     @ns_conf.doc("get_stream")
     def get(self, name):
+        company_id = get_company_id(request)
         streams = get_streams()
         for stream in streams:
             if stream["name"] == name:
@@ -57,6 +59,7 @@ class Stream(Resource):
 
     @ns_conf.doc("put_stream")
     def put(self, name):
+        company_id = get_company_id(request)
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
@@ -83,7 +86,7 @@ class Stream(Resource):
             abort(400, f"requested predictor '{predictor}' is not ready or doens't exist")
         stream = StreamDB(_type=_type, name=name, connection_params=connection_params, advanced_params=advanced_params,
                           predictor=predictor, stream_in=stream_in, stream_out=stream_out,
-                          integration=integration_name, company_id=COMPANY_ID, ts_params=ts_params)
+                          integration=integration_name, company_id=company_id, ts_params=ts_params)
 
         session.add(stream)
         session.commit()
@@ -91,8 +94,9 @@ class Stream(Resource):
 
     @ns_conf.doc("delete_stream")
     def delete(self, name):
+        company_id = get_company_id(request)
         try:
-            session.query(StreamDB).filter_by(company_id=COMPANY_ID, name=name).delete()
+            session.query(StreamDB).filter_by(company_id=company_id, name=name).delete()
             session.commit()
         except Exception as e:
             log.error(e)

@@ -102,7 +102,7 @@ class Integration(Resource):
                 del params['enabled']
             add_db_integration(name, params, company_id)
 
-            model_data_arr = get_all_models_meta_data(ca.naitve_interface, ca.custom_models)
+            model_data_arr = get_all_models_meta_data(ca.naitve_interface, company_id)
             DatabaseWrapper(company_id).setup_integration(name)
             if is_test is False:
                 DatabaseWrapper(company_id).register_predictors(model_data_arr, name)

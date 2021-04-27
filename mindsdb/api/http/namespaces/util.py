@@ -15,6 +15,8 @@ from mindsdb.utilities.telemetry import (
     telemetry_file_exists,
     inject_telemetry_to_static
 )
+from mindsdb.api.http.utils import get_company_id
+
 
 
 @ns_conf.route('/ping')
@@ -22,6 +24,7 @@ class Ping(Resource):
     @ns_conf.doc('get_ping')
     def get(self):
         '''Checks server avaliable'''
+        company_id = get_company_id(request)
         return {'status': 'ok'}
 
 
@@ -32,6 +35,7 @@ class PingNative(Resource):
         ''' Checks server use native for learn or analyse.
             Will return right result only on Linux.
         '''
+        company_id = get_company_id(request)
         if os.name != 'posix':
             return {'native_process': False}
 
@@ -61,12 +65,14 @@ class PingNative(Resource):
 class Telemetry(Resource):
     @ns_conf.doc('get_telemetry_status')
     def get(self):
+        company_id = get_company_id(request)
         storage_dir = ca.config_obj['storage_dir']
         status = "enabled" if telemetry_file_exists(storage_dir) else "disabled"
         return {"status": status}
 
     @ns_conf.doc('set_telemetry')
     def post(self):
+        company_id = get_company_id(request)
         data = request.json
         action = data['action']
         if str(action).lower() in ["true", "enable", "on"]:

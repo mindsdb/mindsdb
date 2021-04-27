@@ -88,8 +88,6 @@ class Config():
 
         self._config = _merge_configs(self._default_config, self._override_config)
 
-        del self._config['integrations']
-
     def __getitem__(self, key):
         return self._config[key]
 

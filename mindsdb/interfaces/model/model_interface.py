@@ -19,32 +19,32 @@ class ModelInterfaceRPC():
                 log.info('Wating for native RPC server to start')
         raise Exception('Unable to connect to RPC server')
 
-    def create(self, name):
+    def create(self, company_id, name):
         self.proxy.create(name)
 
-    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
+    def learn(self, company_id, name, from_data, to_predict, datasource_id, kwargs={}):
         self.proxy.learn(name, from_data, to_predict, datasource_id, kwargs)
 
-    def predict(self, name, pred_format, when_data=None, kwargs={}):
+    def predict(self, company_id, name, pred_format, when_data=None, kwargs={}):
         bin = self.proxy.predict(name, pred_format, when_data, kwargs)
         return pickle.loads(bin.data)
 
-    def analyse_dataset(self, ds):
+    def analyse_dataset(self, company_id, ds):
         bin = self.proxy.analyse_dataset(ds)
         return pickle.loads(bin.data)
 
-    def get_model_data(self, name, db_fix=True):
+    def get_model_data(self, company_id, name, db_fix=True):
         bin = self.proxy.get_model_data(name, db_fix)
         return pickle.loads(bin.data)
 
-    def get_models(self):
+    def get_models(self, company_id):
         bin = self.proxy.get_models()
         return pickle.loads(bin.data)
 
-    def delete_model(self, name):
+    def delete_model(self, company_id, name):
         self.proxy.delete_model(name)
 
-    def update_model(self, name):
+    def update_model(self, company_id, name):
         return 'Model updating is no available in this version of mindsdb'
 
 

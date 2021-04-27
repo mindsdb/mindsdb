@@ -71,6 +71,7 @@ class Responce(Responder):
 
             kwargs = doc.get('training_options', {})
 
+
             if is_select_data_query:
                 # @COMPANY_TODO -- GET ID
                 integrations = get_db_integrations(None).keys()

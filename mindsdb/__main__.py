@@ -76,9 +76,7 @@ if __name__ == '__main__':
             add_db_integration(integration_name, config['integrations'][integration_name], None)
             dbw.setup_integration(integration_name)
         except Exception as e:
-            # Already added
-            pass
-
+            log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
     if args.api is None:
         api_arr = ['http', 'mysql']

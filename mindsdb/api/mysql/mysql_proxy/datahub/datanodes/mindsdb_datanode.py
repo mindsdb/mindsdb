@@ -1,6 +1,5 @@
 import json
-import pandas
-import time
+import numpy as np
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
@@ -12,7 +11,7 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.ai_table.ai_table import AITable_store
+from mindsdb.interfaces.ai_table.ai_table import AITableStore
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.database.integrations import get_db_integration
 
@@ -34,14 +33,15 @@ class NumpyJSONEncoder(json.JSONEncoder):
         else:
             return super().default(obj)
 
+
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, config):
+    def __init__(self):
         self.config = Config()
         self.mindsdb_native = NativeInterface()
         self.custom_models = CustomModels()
-        self.ai_table = AITable_store()
+        self.ai_table = AITableStore()
         self.default_store = DataStore()
 
     def getTables(self):
@@ -174,7 +174,7 @@ class MindsDBDataNode(DataNode):
             # @COMPANY_TODO -- GET ID
             dbtype = get_db_integration(came_from, None)['type']
             if dbtype == 'clickhouse':
-                ch = Clickhouse(self.config, came_from)
+                ch = Clickhouse(self.config, came_from, 'company_id?')
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')
                 data = res.json()['data']
             elif dbtype == 'mariadb':

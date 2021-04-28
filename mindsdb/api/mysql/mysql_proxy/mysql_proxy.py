@@ -34,7 +34,6 @@ from mindsdb.utilities.wizards import make_ssl_cert
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
@@ -79,9 +78,9 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 )
 
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.custom.custom_models import CustomModels
-from mindsdb.interfaces.ai_table.ai_table import AITable_store
+from mindsdb.interfaces.ai_table.ai_table import AITableStore
 from mindsdb.interfaces.database.integrations import get_db_integrations, get_db_integration
 
 connection_id = 0
@@ -169,8 +168,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         log.debug(self.__dict__)
 
         connection_id += 1
-
-        self.session = SessionController(company_id=company_id)
+        # self is server????
+        self.session = SessionController(self.original_model_interface, company_id=company_id)
 
         if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
             self.salt = self.server.salt
@@ -1644,11 +1643,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             config['api']['mysql']['ssl']
         )
 
-        ai_table = AITable_store()
-        default_store = DataStore()
-        mdb = NativeInterface()
-        custom_models = CustomModels()
-        datahub = init_datahub(config)
+        # ai_table = AITableStore()
+        # default_store = DataStore()
+        # mdb = ModelInterface()
+        # custom_models = CustomModels()
+        # datahub = init_datahub(config)
 
         host = config['api']['mysql']['host']
         port = int(config['api']['mysql']['port'])
@@ -1660,6 +1659,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.mindsdb_config = config
         server.check_auth = partial(check_auth, config=config)
         server.cert_path = cert_path
+
+        server.original_model_interface = ModelInterface()
 
         atexit.register(MysqlProxy.server_close, srv=server)
 

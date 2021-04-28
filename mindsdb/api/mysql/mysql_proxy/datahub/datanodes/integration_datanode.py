@@ -10,8 +10,7 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 class IntegrationDataNode(DataNode):
     type = 'integration'
 
-    def __init__(self, config, integration_name):
-        self.config = config
+    def __init__(self, integration_name):
         self.integration_name = integration_name
         self.default_store = DataStore()
 

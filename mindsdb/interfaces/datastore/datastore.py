@@ -298,12 +298,12 @@ class DataStore():
         except Exception as e:
             log.error(f'Error creating datasource {name}, exception: {e}')
             try:
-                self.delete_datasource(original_name)
+                self.delete_datasource(name)
             except Exception:
                 pass
             raise e
 
-        return self.get_datasource_obj(original_name, raw=True), name
+        return self.get_datasource_obj(name, raw=True), name
 
     @default_company_id
     def get_datasource_obj(self, name, raw=False, id=None, company_id=None):

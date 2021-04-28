@@ -21,7 +21,7 @@ jobs:
     needs: matrix_prep
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
-    name: Setup
+    name: Tests
     runs-on: ${{ matrix.runs_on }}
     steps:
     - uses: actions/checkout@v2

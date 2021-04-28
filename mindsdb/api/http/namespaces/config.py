@@ -97,10 +97,10 @@ class Integration(Resource):
             add_db_integration(name, params, request.company_id)
 
             model_data_arr = []
-            for model in request.naitve_interface.get_models(company_id):
+            for model in request.naitve_interface.get_models():
                 if model['status'] == 'complete':
                     try:
-                        model_data_arr.append(request.naitve_interface.get_model_data(company_id, model['name']))
+                        model_data_arr.append(request.naitve_interface.get_model_data(model['name']))
                     except Exception:
                         pass
 

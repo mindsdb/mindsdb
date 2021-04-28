@@ -151,7 +151,7 @@ class DataStore():
         try:
             datasource_record = Datasource(
                 company_id=company_id,
-                name=name,
+                name=original_name,
                 datasources_version=mindsdb_datasources.__version__,
                 mindsdb_version=mindsdb_version
             )

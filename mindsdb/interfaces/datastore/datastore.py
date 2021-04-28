@@ -56,7 +56,7 @@ class DataStore():
         else:
             return
         try:
-            analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name, raw=True))
+            analysis = self.mindsdb_native.analyse_dataset(company_id, self.get_datasource_obj(name, raw=True))
             datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
             datasource_record.analysis = json.dumps(analysis)
             session.commit()
@@ -308,12 +308,12 @@ class DataStore():
         except Exception as e:
             log.error(f'Error creating datasource {name}, exception: {e}')
             try:
-                self.delete_datasource(name)
+                self.delete_datasource(original_name)
             except Exception:
                 pass
             raise e
 
-        return self.get_datasource_obj(name, raw=True), name
+        return self.get_datasource_obj(original_name, raw=True), name
 
     @default_company_id
     def get_datasource_obj(self, name, raw=False, id=None, company_id=None):

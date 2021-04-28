@@ -11,7 +11,6 @@ from flask import current_app as ca
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
-from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
 from mindsdb.api.http.utils import http_error
@@ -97,7 +96,17 @@ class Integration(Resource):
                 del params['enabled']
             add_db_integration(name, params, request.company_id)
 
-            model_data_arr = get_all_models_meta_data(request.naitve_interface, request.company_id)
+            model_data_arr = []
+            for model in request.naitve_interface.get_models(company_id):
+                if model['status'] == 'complete':
+                    try:
+                        model_data_arr.append(request.naitve_interface.get_model_data(company_id, model['name']))
+                    except Exception:
+                        pass
+
+            return model_data_arr
+
+
             DatabaseWrapper(request.company_id).setup_integration(name)
             if is_test is False:
                 DatabaseWrapper(request.company_id).register_predictors(model_data_arr, name)

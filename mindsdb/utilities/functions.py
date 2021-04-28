@@ -30,25 +30,6 @@ def cast_row_types(row, field_types):
             except Exception:
                 pass
 
-
-def get_all_models_meta_data(mindsdb_native, company_id):
-    ''' combine custom models and native models to one array
-
-        :param mindsdb_native: instance of NativeInterface
-        :param custom_models: instance of CustomModels
-        :return: list of models meta data
-    '''
-    model_data_arr = []
-    for model in mindsdb_native.get_models(company_id):
-        if model['status'] == 'complete':
-            try:
-                model_data_arr.append(mindsdb_native.get_model_data(company_id, model['name']))
-            except Exception:
-                pass
-            
-    return model_data_arr
-
-
 def is_notebook():
     try:
         shell = get_ipython().__class__.__name__

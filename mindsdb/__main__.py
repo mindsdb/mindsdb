@@ -16,7 +16,7 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.utilities.functions import args_parse, get_all_models_meta_data
+from mindsdb.utilities.functions import args_parse
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.log import log
 

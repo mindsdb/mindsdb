@@ -33,8 +33,9 @@ class DataStore():
 
     @default_company_id
     def get_analysis(self, name, company_id=None):
+        original_name = name
         name = f'{company_id}@@@@@{name}'
-        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
         if datasource_record.analysis is None:
             return None
         analysis = json.loads(datasource_record.analysis)
@@ -42,8 +43,9 @@ class DataStore():
 
     @default_company_id
     def start_analysis(self, name, company_id=None):
+        original_name = name
         name = f'{company_id}@@@@@{name}'
-        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
         if datasource_record.analysis is not None:
             return None
         semaphor_record = session.query(Semaphor).filter_by(company_id=company_id, entity_id=datasource_record.id, entity_type='datasource').first()
@@ -54,8 +56,8 @@ class DataStore():
         else:
             return
         try:
-            analysis = self.mindsdb_native.analyse_dataset(self.get_datasource_obj(name, raw=True))
-            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+            analysis = self.mindsdb_native.analyse_dataset(company_id, self.get_datasource_obj(name, raw=True))
+            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
             datasource_record.analysis = json.dumps(analysis)
             session.commit()
         except Exception as e:
@@ -69,8 +71,9 @@ class DataStore():
     def get_datasources(self, name=None, company_id=None):
         datasource_arr = []
         if name is not None:
+            original_name = name
             name = f'{company_id}@@@@@{name}'
-            datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id, name=name)
+            datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id, name=original_name)
         else:
             datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id)
         for datasource_record in datasource_record_arr:
@@ -80,10 +83,7 @@ class DataStore():
                 datasource = json.loads(datasource_record.data)
                 datasource['created_at'] = datasource_record.created_at
                 datasource['updated_at'] = datasource_record.updated_at
-                try:
-                    datasource['name'] = datasource_record.name.split('@@@@@')[1]
-                except Exception:
-                    datasource['name'] = datasource_record.name
+                datasource['name'] = datasource_record.name
                 datasource['id'] = datasource_record.id
                 datasource_arr.append(datasource)
             except Exception as e:
@@ -92,7 +92,6 @@ class DataStore():
 
     @default_company_id
     def get_data(self, name, where=None, limit=None, offset=None, company_id=None):
-        name = f'{company_id}@@@@@{name}'
         offset = 0 if offset is None else offset
         ds = self.get_datasource_obj(name)
 
@@ -112,7 +111,6 @@ class DataStore():
 
     @default_company_id
     def get_datasource(self, name, company_id=None):
-        # name = f'{company_id}@@@@@{name}'
         datasource_arr = self.get_datasources(name)
         if len(datasource_arr) == 1:
             return datasource_arr[0]
@@ -124,8 +122,9 @@ class DataStore():
 
     @default_company_id
     def delete_datasource(self, name, company_id=None):
+        original_name = name
         name = f'{company_id}@@@@@{name}'
-        datasource_record = Datasource.query.filter_by(company_id=company_id, name=name).first()
+        datasource_record = Datasource.query.filter_by(company_id=company_id, name=original_name).first()
         id = datasource_record.id
         session.delete(datasource_record)
         session.commit()
@@ -137,24 +136,25 @@ class DataStore():
 
     @default_company_id
     def save_datasource(self, name, source_type, source, file_path=None, company_id=None):
+        original_name = name
         name = f'{company_id}@@@@@{name}'
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
 
-        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
         while datasource_record is not None:
             raise Exception(f'Datasource with name {name} already exists')
 
         try:
             datasource_record = Datasource(
                 company_id=company_id,
-                name=name,
+                name=original_name,
                 datasources_version=mindsdb_datasources.__version__,
                 mindsdb_version=mindsdb_version
             )
             session.add(datasource_record)
             session.commit()
-            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
 
             ds_meta_dir = os.path.join(self.dir, name)
             os.mkdir(ds_meta_dir)
@@ -306,23 +306,21 @@ class DataStore():
             session.commit()
 
         except Exception as e:
-            log.error(f'{e}')
+            log.error(f'Error creating datasource {name}, exception: {e}')
             try:
-                self.delete_datasource(name)
+                self.delete_datasource(original_name)
             except Exception:
                 pass
             raise e
 
-        return self.get_datasource_obj(name, raw=True), name
+        return self.get_datasource_obj(original_name, raw=True), name
 
     @default_company_id
     def get_datasource_obj(self, name, raw=False, id=None, company_id=None):
         try:
-            if name is None:
-                datasource_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()
-            else:
-                name = f'{company_id}@@@@@{name}'
-                datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+            original_name = name
+            name = f'{company_id}@@@@@{name}'
+            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
 
             self.fs_store.get(name, f'datasource_{company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)
@@ -331,5 +329,5 @@ class DataStore():
             else:
                 return eval(creation_info['class'])(*creation_info['args'], **creation_info['kwargs'])
         except Exception as e:
-            log.error(f'\n{e}\n')
+            log.error(f'Error getting datasource {name}, exception: {e}')
             return None

@@ -11,7 +11,6 @@ from flask import current_app as ca
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
-from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
 from mindsdb.api.http.utils import http_error
@@ -46,9 +45,8 @@ class GetLogs(Resource):
 @ns_conf.param('name', 'List all database integration')
 class ListIntegration(Resource):
     def get(self):
-        company_id = request.company_id
         return {
-            'integrations': [k for k in get_db_integrations(company_id, False)]
+            'integrations': [k for k in get_db_integrations(request.company_id, False)]
         }
 
 
@@ -57,8 +55,7 @@ class ListIntegration(Resource):
 class AllIntegration(Resource):
     @ns_conf.doc('get_all_integrations')
     def get(self):
-        company_id = request.company_id
-        integrations = get_db_integrations(company_id, False)
+        integrations = get_db_integrations(request.company_id, False)
         return integrations
 
 
@@ -67,8 +64,7 @@ class AllIntegration(Resource):
 class Integration(Resource):
     @ns_conf.doc('get_integration')
     def get(self, name):
-        company_id = request.company_id
-        integration = get_db_integration(name, company_id, False)
+        integration = get_db_integration(name, request.company_id, False)
         if integration is None:
             abort(404, f'Can\'t find database integration: {name}')
         integration = copy.deepcopy(integration)
@@ -76,11 +72,7 @@ class Integration(Resource):
 
     @ns_conf.doc('put_integration')
     def put(self, name):
-        company_id = request.company_id
         params = request.json.get('params')
-
-        print(f'\n\n\nTRYING TO PUT: {name} WITH: {params}\n\n')
-
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
 
@@ -94,7 +86,7 @@ class Integration(Resource):
             checker = checker_class(**params)
             return {'success': checker.check_connection()}, 200
 
-        integration = get_db_integration(name, company_id, False)
+        integration = get_db_integration(name, request.company_id, False)
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
 
@@ -102,12 +94,22 @@ class Integration(Resource):
             if 'enabled' in params:
                 params['publish'] = params['enabled']
                 del params['enabled']
-            add_db_integration(name, params, company_id)
+            add_db_integration(name, params, request.company_id)
 
-            model_data_arr = get_all_models_meta_data(ca.naitve_interface, ca.custom_models)
-            DatabaseWrapper(company_id).setup_integration(name)
+            model_data_arr = []
+            for model in request.naitve_interface.get_models():
+                if model['status'] == 'complete':
+                    try:
+                        model_data_arr.append(request.naitve_interface.get_model_data(model['name']))
+                    except Exception:
+                        pass
+
+            return model_data_arr
+
+
+            DatabaseWrapper(request.company_id).setup_integration(name)
             if is_test is False:
-                DatabaseWrapper(company_id).register_predictors(model_data_arr, name)
+                DatabaseWrapper(request.company_id).register_predictors(model_data_arr, name)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during config update: {str(e)}')
@@ -116,12 +118,11 @@ class Integration(Resource):
 
     @ns_conf.doc('delete_integration')
     def delete(self, name):
-        company_id = request.company_id
-        integration = get_db_integration(name, company_id)
+        integration = get_db_integration(name, request.company_id)
         if integration is None:
             abort(400, f"Nothing to delete. '{name}' not exists.")
         try:
-            remove_db_integration(name, company_id)
+            remove_db_integration(name, request.company_id)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during integration delete: {str(e)}')
@@ -129,19 +130,18 @@ class Integration(Resource):
 
     @ns_conf.doc('modify_integration')
     def post(self, name):
-        company_id = request.company_id
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
-        integration = get_db_integration(name, company_id)
+        integration = get_db_integration(name, request.company_id)
         if integration is None:
             abort(400, f"Nothin to modify. '{name}' not exists.")
         try:
             if 'enabled' in params:
                 params['publish'] = params['enabled']
                 del params['enabled']
-            modify_db_integration(name, params, company_id)
-            DatabaseWrapper(company_id).setup_integration(name)
+            modify_db_integration(name, params, request.company_id)
+            DatabaseWrapper(request.company_id).setup_integration(name)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during integration modifycation: {str(e)}')

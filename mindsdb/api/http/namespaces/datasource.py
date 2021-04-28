@@ -58,7 +58,7 @@ class DatasourcesList(Resource):
     @ns_conf.marshal_list_with(datasource_metadata)
     def get(self):
         '''List all datasources'''
-        return ca.default_store.get_datasources()
+        return request.default_store.get_datasources()
 
 
 @ns_conf.route('/<name>')
@@ -68,7 +68,7 @@ class Datasource(Resource):
     @ns_conf.marshal_with(datasource_metadata)
     def get(self, name):
         '''return datasource metadata'''
-        ds = ca.default_store.get_datasource(name)
+        ds = request.default_store.get_datasource(name)
         if ds is not None:
             return ds
         return '', 404
@@ -77,7 +77,7 @@ class Datasource(Resource):
     def delete(self, name):
         '''delete datasource'''
         try:
-            ca.default_store.delete_datasource(name)
+            request.default_store.delete_datasource(name)
         except Exception as e:
             log.error(e)
             abort(400, str(e))
@@ -139,9 +139,9 @@ class Datasource(Resource):
             if integration['type'] == 'mongodb':
                 data['find'] = data['query']
 
-            ds_obj, ds_name = ca.default_store.save_datasource(name, integration_id, data)
+            ds_obj, ds_name = request.default_store.save_datasource(name, integration_id, data)
             os.rmdir(temp_dir_path)
-            return ca.default_store.get_datasource(ds_name)
+            return request.default_store.get_datasource(ds_name)
 
         ds_name = data['name'] if 'name' in data else name
         source = data['source'] if 'source' in data else name
@@ -152,10 +152,10 @@ class Datasource(Resource):
         else:
             file_path = None
 
-        ds_obj, ds_name = ca.default_store.save_datasource(ds_name, source_type, source, file_path)
+        ds_obj, ds_name = request.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 
-        return ca.default_store.get_datasource(ds_name)
+        return request.default_store.get_datasource(ds_name)
 
 
 def analyzing_thread(name, default_store):
@@ -172,17 +172,17 @@ def analyzing_thread(name, default_store):
 class Analyze(Resource):
     @ns_conf.doc('analyse_dataset')
     def get(self, name):
-        analysis = ca.default_store.get_analysis(name)
+        analysis = request.default_store.get_analysis(name)
         if analysis is not None:
             return analysis, 200
 
 
-        ds = ca.default_store.get_datasource(name)
+        ds = request.default_store.get_datasource(name)
         if ds is None:
             log.error('No valid datasource given')
             abort(400, 'No valid datasource given')
 
-        x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))
+        x = threading.Thread(target=analyzing_thread, args=(name, request.default_store))
         x.start()
         return {'status': 'analyzing'}, 200
 
@@ -192,16 +192,16 @@ class Analyze(Resource):
 class Analyze2(Resource):
     @ns_conf.doc('analyze_refresh_dataset')
     def get(self, name):
-        analysis = ca.default_store.get_analysis(name)
+        analysis = request.default_store.get_analysis(name)
         if analysis is not None:
             return analysis, 200
 
-        ds = ca.default_store.get_datasource(name)
+        ds = request.default_store.get_datasource(name)
         if ds is None:
             log.error('No valid datasource given')
             abort(400, 'No valid datasource given')
 
-        x = threading.Thread(target=analyzing_thread, args=(name, ca.default_store))
+        x = threading.Thread(target=analyzing_thread, args=(name, request.default_store))
         x.start()
         return {'status': 'analyzing'}, 200
 
@@ -213,7 +213,7 @@ class DatasourceData(Resource):
     @ns_conf.marshal_with(datasource_rows_metadata)
     def get(self, name):
         '''return data rows'''
-        ds = ca.default_store.get_datasource(name)
+        ds = request.default_store.get_datasource(name)
         if ds is None:
             abort(400, 'No valid datasource given')
 
@@ -233,7 +233,7 @@ class DatasourceData(Resource):
                     abort(400, f'Not valid filter "{key}"')
                 where.append(param)
 
-        data_dict = ca.default_store.get_data(name, where, params['page[size]'], params['page[offset]'])
+        data_dict = request.default_store.get_data(name, where, params['page[size]'], params['page[offset]'])
         return data_dict, 200
 
 
@@ -243,7 +243,7 @@ class DatasourceMissedFilesDownload(Resource):
     @ns_conf.doc('get_datasource_download')
     def get(self, name):
         '''download uploaded file'''
-        ds = ca.default_store.get_datasource(name)
+        ds = request.default_store.get_datasource(name)
         if not ds:
             abort(404, "{} not found".format(name))
         if not os.path.exists(ds['source']):

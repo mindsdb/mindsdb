@@ -105,7 +105,7 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
                             _type=stream._type, predictor=stream.predictor,
                             integration=self.name, company_id=self.company_id,
                             stream_in=stream.stream_in_name, stream_out=stream.stream_out_name,
-                            ts_params=stream.ts_params, stream_anomaly=stream.stream_anomaly_name,)
+                            stream_anomaly=stream.stream_anomaly_name)
         session.add(stream_rec)
         session.commit()
         self.streams[stream.stream_name] = stream.stop_event

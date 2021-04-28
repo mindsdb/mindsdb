@@ -84,8 +84,8 @@ def start(verbose, no_studio):
 
         request.company_id = company_id
 
-        current_app.default_store = DataStore(company_id=company_id)
-        current_app.naitve_interface = ModelInterfaceWrapper(
+        request.default_store = DataStore(company_id=company_id)
+        request.naitve_interface = ModelInterfaceWrapper(
             model_interface=current_app.original_model_interface,
             company_id=company_id
         )

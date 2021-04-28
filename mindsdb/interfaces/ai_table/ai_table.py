@@ -17,7 +17,6 @@ from mindsdb.utilities.log import log
 class AITable_store():
     def __init__(self):
         self.config = Config()
-
         self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.dir = self.config.paths['datasources']

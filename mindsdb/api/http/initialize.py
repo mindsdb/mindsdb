@@ -278,12 +278,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 
 def initialize_interfaces(app):
-    app.default_store = DataStore()
     app.original_model_interface = ModelInterface()
-    app.naitve_interface = ModelInterfaceWrapper(
-        model_interface=app.original_model_interface,
-        company_id=None
-    )
     app.custom_models = CustomModels()
     config = Config()
     app.config_obj = config

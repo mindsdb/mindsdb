@@ -75,7 +75,7 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
-    def _setup_for_creation(self, name, company_id=None):
+    def _setup_for_creation(self, name, original_name, company_id=None):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
         from mindsdb_native import F
@@ -89,7 +89,7 @@ class ModelController():
 
         predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
         create_directory(predictor_dir)
-        predictor_record = Predictor(company_id=company_id, name=name, is_custom=False)
+        predictor_record = Predictor(company_id=company_id, name=original_name, is_custom=False)
 
         session.add(predictor_record)
         session.commit()
@@ -132,7 +132,7 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        self._setup_for_creation(name)
+        self._setup_for_creation(name, original_name)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
 
@@ -147,7 +147,7 @@ class ModelController():
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
 
-        self._setup_for_creation(name)
+        self._setup_for_creation(name, original_name)
 
         if self.ray_based:
             run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id)
@@ -178,10 +178,11 @@ class ModelController():
                 self.predictor_cache = {}
 
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+            log.error(f'\n\n\nLooking up predictor with name: {original_name}\n\n\n')
             if predictor_record.data['status'] == 'complete':
                 self.fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
-                    'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
+                    'predictor': mindsdb_native.Predictor(name=original_name, run_env={'trigger': 'mindsdb'}),
                     'created': datetime.datetime.now()
                 }
 
@@ -344,8 +345,7 @@ try:
     ray.init(ignore_reinit_error=True)
     ModelController = ray_ify(ModelController)
 except Exception as e:
-    print(e)
-    pass
+    log.error(e)
 
 
 def ping(): return True

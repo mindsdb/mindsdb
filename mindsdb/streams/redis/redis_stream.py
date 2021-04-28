@@ -1,4 +1,3 @@
-import os
 import json
 from threading import Thread, Event
 import walrus
@@ -29,19 +28,6 @@ class RedisStream(Thread, BaseStream):
             super().__init__(target=RedisStream.make_timeseries_predictions, args=(self,))
         else:
             super().__init__(target=RedisStream.make_predictions, args=(self,))
-
-    def get_ts_settings(self, predict_record):
-        ts_settings = predict_record.learn_args['kwargs'].get('timeseries_settings', None)
-        if ts_settings is None:
-            raise Exception(f"Attempt to use {predict_record.name} predictor (not TS type) as timeseries predictor.")
-        ts_settings['to_predict'] = predict_record.learn_args['to_predict']
-        return ts_settings
-
-    def is_anomaly(self, prediction):
-        for key in prediction:
-            if "anomaly" in key and prediction[key] is not None:
-                return True
-        return False
 
     def _get_client(self):
         return walrus.Database(**self.connection_info)

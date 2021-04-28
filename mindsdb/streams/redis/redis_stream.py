@@ -11,7 +11,7 @@ from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInt
 
 
 class RedisStream(Thread):
-    def __init__(self, name, connection_info, advanced_info, stream_in, stream_out, predictor, _type, **ts_params):
+    def __init__(self, name, connection_info, advanced_info, stream_in, stream_out, stream_anomaly, predictor, _type, **ts_params):
         self.stream_name = name
         self.connection_info = connection_info
         self.connection_info.update(advanced_info)
@@ -21,6 +21,7 @@ class RedisStream(Thread):
         self.stream_out_name = stream_out
         self.stream_in = self.client.Stream(stream_in)
         self.stream_out = self.client.Stream(stream_out)
+        self.stream_anomaly = self.client.Stream(stream_anomaly)
         self._type = _type
         self.native_interface = NativeInterface()
         self.format_flag = 'explain'
@@ -36,10 +37,16 @@ class RedisStream(Thread):
         else:
             super().__init__(target=RedisStream.make_predictions, args=(self,))
 
+    def is_anomaly(self, prediction):
+        for key in prediction:
+            if "anomaly" in key and prediction[key] is not None:
+                return True
+        return False
+
     def _get_client(self):
         return walrus.Database(**self.connection_info)
 
-    def predict(self, stream_in, stream_out, timeseries_mode=False):
+    def predict(self, stream_in, timeseries_mode=False):
         predict_info = stream_in.read(block=0)
         when_list = []
         for record in predict_info:
@@ -57,7 +64,8 @@ class RedisStream(Thread):
                 log.error(f"STREAM: got {result}")
                 for res in result:
                     in_json = json.dumps(res)
-                    stream_out.add({"prediction": in_json})
+                    stream_out = self.stream_anomaly if self.is_anomaly(res) else self.stream_out
+                    stream_out.add(in_json)
                 stream_in.delete(record_id)
 
         if timeseries_mode:
@@ -65,7 +73,8 @@ class RedisStream(Thread):
             log.error(f"TIMESERIES STREAM: got {result}")
             for res in result:
                 in_json = json.dumps(res)
-                stream_out.add({"prediction": in_json})
+                stream_out = self.stream_anomaly if self.is_anomaly(res) else self.stream_out
+                stream_out.add(in_json)
             stream_in.trim(len(stream_in) - 1, approximate=False)
 
 
@@ -73,7 +82,7 @@ class RedisStream(Thread):
         log.error("STREAM: in make_prediction_from_cache")
         if len(cache) >= self.window:
             log.error(f"STREAM: make_prediction_from_cache - len(cache) = {len(cache)}")
-            self.predict(cache, self.stream_out, timeseries_mode=True)
+            self.predict(cache, timeseries_mode=True)
 
     def make_timeseries_predictions(self):
         log.error("STREAM: running 'make_timeseries_predictions'")

@@ -1,4 +1,3 @@
-import datetime
 import os
 import threading
 import tempfile
@@ -131,8 +130,7 @@ class Datasource(Resource):
 
         if 'query' in data:
             integration_id = request.json['integration_id']
-            # @COMPANY_TODO -- GET ID
-            integration = get_db_integration(integration_id, None)
+            integration = get_db_integration(integration_id, request.company_id)
             if integration is None:
                 abort(400, f"{integration_id} integration doesn't exist")
 

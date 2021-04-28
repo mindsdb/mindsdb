@@ -293,6 +293,7 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         super().__init__((host, int(port)), MongoRequestHandler)
 
         self.mindsdb_env = {
+            'company_id': None,
             'config': config,
             'data_store': DataStore(),
             'mindsdb_native': NativeInterface()

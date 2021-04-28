@@ -76,7 +76,8 @@ if __name__ == '__main__':
         try:
             # Setup for user `None`, since we don't need this for cloud
             add_db_integration(integration_name, config['integrations'][integration_name], None)
-            dbw.setup_integration(integration_name)
+            if config['integrations'][integration_name].get('publish', False):
+                dbw.setup_integration(integration_name)
         except Exception as e:
             log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 

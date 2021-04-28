@@ -4,14 +4,14 @@ from threading import Thread, Event
 import walrus
 
 from mindsdb.utilities.log import log
-from mindsdb.streams.base.base_stream import StreamTypes
+from mindsdb.streams.base.base_stream import StreamTypes, BaseStream
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Predictor as DBPredictor
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 
 
-class RedisStream(Thread):
-    def __init__(self, name, connection_info, advanced_info, stream_in, stream_out, stream_anomaly, predictor, _type, **ts_params):
+class RedisStream(Thread, BaseStream):
+    def __init__(self, name, connection_info, advanced_info, stream_in, stream_out, stream_anomaly, predictor, _type):
         self.stream_name = name
         self.connection_info = connection_info
         self.connection_info.update(advanced_info)
@@ -23,19 +23,19 @@ class RedisStream(Thread):
         self.stream_out = self.client.Stream(stream_out)
         self.stream_anomaly = self.client.Stream(stream_anomaly)
         self._type = _type
-        self.native_interface = NativeInterface()
-        self.format_flag = 'explain'
-        self.stop_event = Event()
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-        self.ts_params = ts_params
+
+        BaseStream.__init__(self)
         if self._type.lower() == StreamTypes.timeseries:
-            self.target = self.ts_params.get('target')
-            self.window = self.ts_params.get('window_size')
-            self.gb = self.ts_params.get('group_by')
-            self.dt = self.ts_params.get('order_by')
             super().__init__(target=RedisStream.make_timeseries_predictions, args=(self,))
         else:
             super().__init__(target=RedisStream.make_predictions, args=(self,))
+
+    def get_ts_settings(self, predict_record):
+        ts_settings = predict_record.learn_args['kwargs'].get('timeseries_settings', None)
+        if ts_settings is None:
+            raise Exception(f"Attempt to use {predict_record.name} predictor (not TS type) as timeseries predictor.")
+        ts_settings['to_predict'] = predict_record.learn_args['to_predict']
+        return ts_settings
 
     def is_anomaly(self, prediction):
         for key in prediction:
@@ -65,7 +65,7 @@ class RedisStream(Thread):
                 for res in result:
                     in_json = json.dumps(res)
                     stream_out = self.stream_anomaly if self.is_anomaly(res) else self.stream_out
-                    stream_out.add(in_json)
+                    stream_out.add({'prediction': in_json})
                 stream_in.delete(record_id)
 
         if timeseries_mode:
@@ -74,7 +74,7 @@ class RedisStream(Thread):
             for res in result:
                 in_json = json.dumps(res)
                 stream_out = self.stream_anomaly if self.is_anomaly(res) else self.stream_out
-                stream_out.add(in_json)
+                stream_out.add({'prediction': in_json})
             stream_in.trim(len(stream_in) - 1, approximate=False)
 
 
@@ -90,10 +90,16 @@ class RedisStream(Thread):
         if predict_record is None:
             log.error(f"Error creating stream: requested predictor {self.predictor} is not exist")
             return
+        ts_settings = self.get_ts_settings(predict_record)
+        log.error(f"STREAM TS_SETTINGS: {ts_settings}")
+        self.target = ts_settings['to_predict'][0]
+        self.window = ts_settings['window']
+        self.gb = ts_settings['group_by'][0]
+        self.dt = ts_settings['order_by'][0]
+
 
         while not self.stop_event.wait(0.5):
-            # block==0 is a blocking mode
-            predict_info = self.stream_in.read(block=0)
+            predict_info = self.stream_in.read()
             for record in predict_info:
                 record_id = record[0]
                 raw_when_data = record[1]
@@ -115,7 +121,6 @@ class RedisStream(Thread):
     def handle_record(self, cache, record):
         log.error(f"STREAM: handling cache {cache.key} and {record} record.")
         records = cache.read()
-        # log.error(f"STREAM: current {cache.key} state: {records}")
         records = [self.decode(x[1]) for x in records]
         log.error(f"STREAM: read {records} from cache.")
         records.append(record)

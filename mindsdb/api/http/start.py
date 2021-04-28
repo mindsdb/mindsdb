@@ -6,7 +6,8 @@ from pathlib import Path
 
 from werkzeug.exceptions import HTTPException
 from waitress import serve
-from flask import send_from_directory, request
+from flask import send_from_directory, request, current_app
+from flask_compress import Compress
 
 from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
@@ -16,8 +17,9 @@ from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import initialize_log, get_log
+from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.storage.db import session
-from flask_compress import Compress
+from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
 
 
 def start(verbose, no_studio):
@@ -71,10 +73,22 @@ def start(verbose, no_studio):
 
     @app.before_request
     def before_request():
-        company_id = request.headers.get('company-id')  # str
-        # TODO setup env according company_id, somethin like
-        # from .initialize import initialize_interfaces
-        # initialize_interfaces(current_app, company_id)
+        company_id = request.headers.get('company-id')
+
+        if company_id is not None:
+            try:
+                company_id = int(company_id)
+            except Exception as e:
+                get_log('http').error(f'Cloud not parse company id: {company_id} | exception: {e}')
+                company_id = None
+
+        request.company_id = company_id
+
+        current_app.default_store = DataStore(company_id=company_id)
+        current_app.naitve_interface = ModelInterfaceWrapper(
+            model_interface=current_app.original_model_interface,
+            company_id=company_id
+        )
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

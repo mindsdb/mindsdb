@@ -14,7 +14,7 @@ from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.functions import get_all_models_meta_data
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
-from mindsdb.api.http.utils import http_error, get_company_id
+from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.database.integrations import (
     add_db_integration,
     modify_db_integration,
@@ -46,8 +46,10 @@ class GetLogs(Resource):
 @ns_conf.param('name', 'List all database integration')
 class ListIntegration(Resource):
     def get(self):
-        company_id = get_company_id(request)
-        return {'integrations': [k for k in get_db_integrations(company_id,False)]}
+        company_id = request.company_id
+        return {
+            'integrations': [k for k in get_db_integrations(company_id, False)]
+        }
 
 
 @ns_conf.route('/all_integrations')
@@ -55,8 +57,8 @@ class ListIntegration(Resource):
 class AllIntegration(Resource):
     @ns_conf.doc('get_all_integrations')
     def get(self):
-        company_id = get_company_id(request)
-        integrations = get_db_integrations(company_id,False)
+        company_id = request.company_id
+        integrations = get_db_integrations(company_id, False)
         return integrations
 
 
@@ -65,8 +67,8 @@ class AllIntegration(Resource):
 class Integration(Resource):
     @ns_conf.doc('get_integration')
     def get(self, name):
-        company_id = get_company_id(request)
-        integration = get_db_integration(name,company_id,False)
+        company_id = request.company_id
+        integration = get_db_integration(name, company_id, False)
         if integration is None:
             abort(404, f'Can\'t find database integration: {name}')
         integration = copy.deepcopy(integration)
@@ -74,7 +76,7 @@ class Integration(Resource):
 
     @ns_conf.doc('put_integration')
     def put(self, name):
-        company_id = get_company_id(request)
+        company_id = request.company_id
         params = request.json.get('params')
 
         print(f'\n\n\nTRYING TO PUT: {name} WITH: {params}\n\n')
@@ -92,7 +94,7 @@ class Integration(Resource):
             checker = checker_class(**params)
             return {'success': checker.check_connection()}, 200
 
-        integration = get_db_integration(name,company_id,False)
+        integration = get_db_integration(name, company_id, False)
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
 
@@ -114,8 +116,8 @@ class Integration(Resource):
 
     @ns_conf.doc('delete_integration')
     def delete(self, name):
-        company_id = get_company_id(request)
-        integration = get_db_integration(name,company_id)
+        company_id = request.company_id
+        integration = get_db_integration(name, company_id)
         if integration is None:
             abort(400, f"Nothing to delete. '{name}' not exists.")
         try:
@@ -127,11 +129,11 @@ class Integration(Resource):
 
     @ns_conf.doc('modify_integration')
     def post(self, name):
-        company_id = get_company_id(request)
+        company_id = request.company_id
         params = request.json.get('params')
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
-        integration = get_db_integration(name,company_id)
+        integration = get_db_integration(name, company_id)
         if integration is None:
             abort(400, f"Nothin to modify. '{name}' not exists.")
         try:
@@ -151,8 +153,8 @@ class Integration(Resource):
 class Check(Resource):
     @ns_conf.doc('check')
     def get(self, name):
-        company_id = get_company_id(request)
-        if get_db_integration(name,company_id) is None:
+        company_id = request.company_id
+        if get_db_integration(name, company_id) is None:
             abort(404, f'Can\'t find database integration: {name}')
         connections = DatabaseWrapper(company_id).check_connections()
         return connections.get(name, False), 200

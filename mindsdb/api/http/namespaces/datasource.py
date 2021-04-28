@@ -171,6 +171,7 @@ def analyzing_thread(name, company_id, default_store):
     except Exception as e:
         log.error(e)
 
+
 @ns_conf.route('/<name>/analyze')
 @ns_conf.param('name', 'Datasource name')
 class Analyze(Resource):
@@ -191,9 +192,10 @@ class Analyze(Resource):
         x.start()
         return {'status': 'analyzing'}, 200
 
+
 @ns_conf.route('/<name>/analyze_refresh')
 @ns_conf.param('name', 'Datasource name')
-class Analyze(Resource):
+class Analyze2(Resource):
     @ns_conf.doc('analyze_refresh_dataset')
     def get(self, name):
         company_id = get_company_id(request)

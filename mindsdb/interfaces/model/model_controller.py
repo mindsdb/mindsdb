@@ -129,9 +129,10 @@ class ModelController():
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
+        original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        self._setup_for_creation(name)
+        self._setup_for_creation(original_name)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
 
@@ -139,13 +140,14 @@ class ModelController():
         from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
 
         create_process_mark('learn')
+        original_name = name
         name = f'{company_id}@@@@@{name}'
 
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
 
-        self._setup_for_creation(name)
+        self._setup_for_creation(original_name)
 
         if self.ray_based:
             run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id)
@@ -167,6 +169,7 @@ class ModelController():
         from mindsdb.interfaces.storage.db import session, Predictor
 
         create_process_mark('predict')
+        original_name = name
         name = f'{company_id}@@@@@{name}'
 
         if name not in self.predictor_cache:
@@ -174,7 +177,7 @@ class ModelController():
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
-            predictor_record = Predictor.query.filter_by(company_id=company_id, name=name, is_custom=False).first()
+            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
             if predictor_record.data['status'] == 'complete':
                 self.fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
@@ -225,9 +228,10 @@ class ModelController():
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
+        original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name, is_custom=False).first()
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
         predictor_record = self._try_outdate_db_status(predictor_record)
         model = predictor_record.data
         if model is None or model['status'] == 'training':
@@ -299,9 +303,10 @@ class ModelController():
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
+        original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name, is_custom=False).first()
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
         id = predictor_record.id
         session.delete(predictor_record)
         session.commit()
@@ -316,10 +321,11 @@ class ModelController():
         from mindsdb.interfaces.storage.db import session, Predictor
         from mindsdb.interfaces.datastore.datastore import DataStore
 
+        original_name = name
         name = f'{company_id}@@@@@{name}'
 
         try:
-            predictor_record = Predictor.query.filter_by(company_id=company_id, name=name, is_custom=False).first()
+            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
             predictor_record.update_status = 'updating'
             session.commit()
             update_model(name, self.delete_model, F.delete_model, self.learn, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStore())

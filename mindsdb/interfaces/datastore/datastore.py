@@ -71,8 +71,9 @@ class DataStore():
     def get_datasources(self, name=None, company_id=None):
         datasource_arr = []
         if name is not None:
+            original_name = name
             name = f'{company_id}@@@@@{name}'
-            datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id, name=name)
+            datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id, name=original_name)
         else:
             datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id)
         for datasource_record in datasource_record_arr:
@@ -156,7 +157,7 @@ class DataStore():
             )
             session.add(datasource_record)
             session.commit()
-            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
 
             ds_meta_dir = os.path.join(self.dir, name)
             os.mkdir(ds_meta_dir)
@@ -323,8 +324,9 @@ class DataStore():
             if name is None:
                 datasource_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()
             else:
+                original_name = name
                 name = f'{company_id}@@@@@{name}'
-                datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+                datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
 
             self.fs_store.get(name, f'datasource_{company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)

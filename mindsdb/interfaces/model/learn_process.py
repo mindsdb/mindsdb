@@ -30,7 +30,7 @@ def delete_learn_mark():
             p.unlink()
 
 
-def run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id):
+def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, company_id):
     import mindsdb_native
     import mindsdb_datasources
     import mindsdb
@@ -41,7 +41,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id):
     fs_store = FsSotre()
     mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
-    predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
+    predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
     predictor_record.datasource_id = datasource_id
     predictor_record.to_predict = to_predict
     predictor_record.native_version = mindsdb_native.__version__
@@ -51,7 +51,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id):
         'kwargs': kwargs
     }
     predictor_record.data = {
-        'name': name,
+        'name': db_name,
         'status': 'training'
     }
     session.commit()
@@ -69,7 +69,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id):
         log = logging.getLogger('mindsdb.main')
         log.error(f'Predictor learn error: {e}')
         predictor_record.data = {
-            'name': name,
+            'name': db_name,
             'status': 'error'
         }
         session.commit()
@@ -80,7 +80,7 @@ def run_learn(name, from_data, to_predict, kwargs, datasource_id, company_id):
 
     model_data = mindsdb_native.F.get_model_data(name)
 
-    predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
+    predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
     predictor_record.data = model_data
     session.commit()
 

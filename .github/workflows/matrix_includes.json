@@ -21,6 +21,6 @@
       "runs_on": "ubuntu-latest",
       "python-version": 3.7,
       "token": "install_ray",
-      "runOn": "refs/heads/staging"
+      "runOn": "always"
     }
   ]

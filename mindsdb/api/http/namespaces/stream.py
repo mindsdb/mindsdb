@@ -8,7 +8,6 @@ from mindsdb.api.http.namespaces.configs.streams import ns_conf
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Stream as StreamDB
 from mindsdb.streams.base.base_stream import StreamTypes
-from mindsdb.api.http.utils import get_company_id
 
 
 def get_integration(name):

@@ -5,11 +5,11 @@ from mindsdb.interfaces.storage.db import session, Stream
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import get_db_integration
 
+
 class Integration(ABC):
     def __init__(self, config, name):
         self.config = config
         self.name = name
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.mindsdb_database = config['api']['mysql']['database']
 
     @abstractmethod
@@ -76,7 +76,6 @@ class StreamIntegration(Integration):
     def stop_deleted_streams(self):
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
         actual_streams = [x.name for x in existed_streams]
-
 
         for stream in self.streams.copy():
             if stream not in actual_streams:

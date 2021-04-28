@@ -1,6 +1,6 @@
 import pytds
 from mindsdb.integrations.base import Integration
-from mindsdb.interfaces.database.integrations import get_db_integration
+
 
 class MSSQLConnectionChecker:
     def __init__(self, **kwargs):
@@ -31,9 +31,9 @@ class MSSQLConnectionChecker:
 
 
 class MSSQL(Integration, MSSQLConnectionChecker):
-    def __init__(self, config, name):
+    def __init__(self, config, name, db_info):
         super().__init__(config, name)
-        db_info = get_db_integration(self.name, self.company_id)
+        self.db_info = db_info
         self.user = db_info.get('user')
         self.password = db_info.get('password', None)
         self.host = db_info.get('host')
@@ -51,7 +51,7 @@ class MSSQL(Integration, MSSQLConnectionChecker):
         return res
 
     def setup(self):
-        integration = get_db_integration(self.name, self.company_id)
+        integration = self.db_info
         driver_name = integration.get('odbc_driver_name', 'MySQL ODBC 8.0 Unicode Driver')
         servers = self._query('exec sp_linkedservers;', fetch=True)
         servers = [x['SRV_NAME'] for x in servers]

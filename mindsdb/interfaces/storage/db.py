@@ -147,6 +147,7 @@ class Stream(Base):
     advanced_params = Column(Json)
     ts_params = Column(Json, default={})
 
+
 class Integration(Base):
     __tablename__ = 'integration'
     id = Column(Integer, primary_key=True)
@@ -155,6 +156,7 @@ class Integration(Base):
     name = Column(String)
     data = Column(Json)
     company_id = Column(Integer)
+
 
 Base.metadata.create_all(engine)
 orm.configure_mappers()

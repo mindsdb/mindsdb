@@ -1,9 +1,7 @@
-import os
 import json
 import kafka
 
 from threading import Thread
-from mindsdb.utilities.config import STOP_THREADS_EVENT
 from mindsdb.integrations.base import StreamIntegration
 from mindsdb.streams.kafka.kafka_stream import KafkaStream
 from mindsdb.interfaces.storage.db import session, Stream

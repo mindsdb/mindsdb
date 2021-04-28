@@ -13,7 +13,6 @@ import re
 import traceback
 
 from moz_sql_parser import parse
-from pyparsing import Word, Optional, Suppress, alphanums
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, binary_ops, unary_ops, operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES

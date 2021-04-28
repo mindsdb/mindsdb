@@ -15,6 +15,7 @@ from mindsdb.interfaces.ai_table.ai_table import AITableStore
 from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.utilities import log
+from mindsdb.utilities.config import Config
 
 
 class SessionController():
@@ -37,14 +38,21 @@ class SessionController():
         self.integration_type = None
         self.database = None
 
+        self.config = Config()
         self.ai_table = AITableStore(company_id=company_id)
-        self.default_store = DataStore(company_id=company_id)
-        self.mdb = ModelInterfaceWrapper(
+        self.data_store = DataStore(company_id=company_id)
+        self.model_interface = ModelInterfaceWrapper(
             model_interface=original_model_interface,
             company_id=None
         )
         self.custom_models = CustomModels(company_id=company_id)
-        self.datahub = init_datahub(company_id=company_id)
+        self.datahub = init_datahub(
+            model_interface=self.model_interface,
+            custom_models=self.custom_models,
+            ai_table=self.ai_table,
+            data_store=self.data_store,
+            company_id=company_id
+        )
 
         self.prepared_stmts = {}
 

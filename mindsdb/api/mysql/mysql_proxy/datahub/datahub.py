@@ -5,18 +5,18 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import
 from mindsdb.interfaces.database.integrations import get_db_integrations
 
 
-def init_datahub(company_id=None):
+def init_datahub(model_interface, custom_models, ai_table, data_store, company_id=None):
     datahub = InformationSchema()
 
     datahub.add({
-        'mindsdb': MindsDBDataNode(),
-        'datasource': DataSourceDataNode()
+        'mindsdb': MindsDBDataNode(model_interface, custom_models, ai_table, data_store, company_id),
+        'datasource': DataSourceDataNode(data_store)
     })
 
     integrations = get_db_integrations(company_id).keys()
     for key in integrations:
         datahub.add({
-            key: IntegrationDataNode(key)
+            key: IntegrationDataNode(key, data_store)
         })
 
     return datahub

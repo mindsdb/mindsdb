@@ -140,11 +140,13 @@ class Stream(Base):
     predictor = Column(String)
     stream_in = Column(String)
     stream_out = Column(String)
+    stream_anomaly = Column(String)
     integration = Column(String)
     name = Column(String)
     connection_params = Column(Json)
     advanced_params = Column(Json)
     ts_params = Column(Json, default={})
+
 
 class Integration(Base):
     __tablename__ = 'integration'
@@ -154,6 +156,7 @@ class Integration(Base):
     name = Column(String)
     data = Column(Json)
     company_id = Column(Integer)
+
 
 Base.metadata.create_all(engine)
 orm.configure_mappers()

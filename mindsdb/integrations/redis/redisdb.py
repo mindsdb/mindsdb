@@ -120,24 +120,17 @@ class Redis(StreamIntegration, RedisConnectionChecker):
         session.commit()
         self.streams[stream.stream_name] = stream.stop_event
 
-    def get_stream_from_db(self, db_record):
-        kwargs = {"type": db_record._type,
-                  "name": db_record.name,
-                  "predictor": db_record.predictor,
-                  "input_stream": db_record.stream_in,
-                  "output_stream": db_record.stream_out,
-                  "ts_params": db_record.ts_params}
-        return self.get_stream_from_kwargs(**kwargs)
 
     def get_stream_from_kwargs(self, **kwargs):
         name = kwargs.get('name')
         stream_in = kwargs.get('input_stream')
         stream_out = kwargs.get('output_stream')
+        stream_anomaly = kwargs.get('anomaly_stream', stream_out)
         predictor_name = kwargs.get('predictor')
         stream_type = kwargs.get('type', 'forecast')
         ts_params = kwargs.get('ts_params')
         return RedisStream(name, self.connection_info, self.advanced_info,
-                           stream_in, stream_out, predictor_name,
+                           stream_in, stream_out, stream_anomaly, predictor_name,
                            stream_type, **ts_params)
 
     def _decode(self, b_dict):

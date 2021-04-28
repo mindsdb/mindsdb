@@ -15,10 +15,10 @@ from mindsdb.interfaces.storage.fs import FsSotre
 
 
 class CustomModels():
-    def __init__(self):
+    def __init__(self, company_id=None):
         self.config = Config()
         self.fs_store = FsSotre()
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        self.company_id = company_id
         self.dbw = DatabaseWrapper(None)
         self.storage_dir = self.config['paths']['custom_models']
         os.makedirs(self.storage_dir, exist_ok=True)

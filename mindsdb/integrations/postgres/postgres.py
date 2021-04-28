@@ -4,7 +4,6 @@ import pg8000
 from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.database.integrations import get_db_integration
 
 
 class PostgreSQLConnectionChecker:
@@ -36,9 +35,8 @@ class PostgreSQLConnectionChecker:
 
 
 class PostgreSQL(Integration, PostgreSQLConnectionChecker):
-    def __init__(self, config, name):
+    def __init__(self, config, name, db_info):
         super().__init__(config, name)
-        db_info = get_db_integration(self.name, self.company_id)
         self.user = db_info.get('user')
         self.password = db_info.get('password')
         self.host = db_info.get('host')
@@ -117,11 +115,9 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
         except Exception:
             print('Error: cant find or activate mysql_fdw extension for PostgreSQL.')
 
-        integration = get_db_integration(self.name, self.company_id)
-
         self._query(f'DROP SCHEMA IF EXISTS {self.mindsdb_database} CASCADE')
 
-        self._query(f"DROP USER MAPPING IF EXISTS FOR {integration['user']} SERVER server_{self.mindsdb_database}")
+        self._query(f"DROP USER MAPPING IF EXISTS FOR {self.user} SERVER server_{self.mindsdb_database}")
 
         self._query(f'DROP SERVER IF EXISTS server_{self.mindsdb_database} CASCADE')
 
@@ -132,7 +128,7 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
         ''')
 
         self._query(f'''
-           CREATE USER MAPPING FOR {integration['user']}
+           CREATE USER MAPPING FOR {self.user}
                 SERVER server_{self.mindsdb_database}
                 OPTIONS (username '{user}', password '{password}');
         ''')

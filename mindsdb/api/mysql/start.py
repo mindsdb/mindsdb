@@ -8,4 +8,4 @@ def start(verbose=False):
 
     initialize_log(config, 'mysql', wrap_print=True)
 
-    MysqlProxy.startProxy(config)
+    MysqlProxy.startProxy()

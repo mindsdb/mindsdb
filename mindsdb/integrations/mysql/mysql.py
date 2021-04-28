@@ -4,7 +4,7 @@ import mysql.connector
 from mindsdb.utilities.subtypes import DATA_SUBTYPES
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.database.integrations import get_db_integration
+
 
 class MySQLConnectionChecker:
     def __init__(self, **kwargs):
@@ -32,9 +32,8 @@ class MySQLConnectionChecker:
 
 
 class MySQL(Integration, MySQLConnectionChecker):
-    def __init__(self, config, name):
+    def __init__(self, config, name, db_info):
         super().__init__(config, name)
-        db_info = get_db_integration(self.name, self.company_id)
         self.user = db_info.get('user')
         self.password = db_info.get('password')
         self.host = db_info.get('host')

@@ -4,6 +4,7 @@ from mindsdb.interfaces.storage.db import session, Datasource
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.interfaces.database.integrations import get_db_integrations
 
+
 class Responce(Responder):
     when = {'insert': helpers.is_true}
 
@@ -72,8 +73,7 @@ class Responce(Responder):
             kwargs = doc.get('training_options', {})
 
             if is_select_data_query:
-                # @COMPANY_TODO -- GET ID
-                integrations = get_db_integrations(None).keys()
+                integrations = get_db_integrations(mindsdb_env['company_id']).keys()
                 connection = doc.get('connection')
                 if connection is None:
                     if 'default_mongodb' in integrations:

@@ -10,6 +10,7 @@ class Responce(Responder):
     def result(self, query, request_env, mindsdb_env, session):
         company_id = query.get('company_id')
 
+        mindsdb_env['company_id'] = company_id
         mindsdb_env['data_store'] = DataStore(company_id=company_id)
         mindsdb_env['mindsdb_native'] = ModelInterfaceWrapper(
             model_interface=mindsdb_env['mindsdb_native'],

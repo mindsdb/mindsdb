@@ -23,6 +23,7 @@ class DatabaseWrapper():
                  'mongodb': MongoDB,
                  'redis': Redis,
                  'kafka': Kafka}
+
     def __init__(self, company_id):
         self.config = Config()
         self.company_id = company_id
@@ -31,9 +32,9 @@ class DatabaseWrapper():
         try:
             # If this is the name of an integration
             integration = self._get_integration(db_alias)
-            if integration == False:
+            if integration is False:
                 raise Exception(f'Unkonw database integration type for: {db_alias}')
-            if integration != True:
+            if integration is not True:
                 integration.setup()
         except Exception as e:
             logger.warning('Failed to integrate with database ' + db_alias + f', error: {e}')
@@ -43,14 +44,14 @@ class DatabaseWrapper():
         if integration:
             db_type = integration['type']
             if db_type in self.known_dbs:
-                return self.known_dbs[db_type](self.config, db_alias)
+                return self.known_dbs[db_type](self.config, db_alias, integration)
             logger.warning(f'Uknown integration type: {db_type} for database called: {db_alias}')
             return False
         return True
 
     def _get_integrations(self):
         integrations = [self._get_integration(x) for x in get_db_integrations(self.company_id)]
-        integrations = [x for x in integrations if x != True and x != False]
+        integrations = [x for x in integrations if x is not True and x is not False]
         return integrations
 
     def register_predictors(self, model_data_arr, integration_name=None):

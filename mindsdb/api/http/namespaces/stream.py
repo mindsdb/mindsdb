@@ -72,7 +72,8 @@ class Stream(Resource):
         advanced_params = params.get('advanced', {})
         predictor = params['predictor']
         stream_in = params['stream_in']
-        stream_out  = params['stream_out']
+        stream_out = params['stream_out']
+        stream_anomaly = params.get('stream_anomaly', stream_out)
         _type = params.get('type', 'forecast')
         if _type.lower() == StreamTypes.timeseries:
             ts_params = params.get('ts_params')
@@ -82,7 +83,7 @@ class Stream(Resource):
             abort(400, f"requested predictor '{predictor}' is not ready or doens't exist")
         stream = StreamDB(_type=_type, name=name, connection_params=connection_params, advanced_params=advanced_params,
                           predictor=predictor, stream_in=stream_in, stream_out=stream_out,
-                          integration=integration_name, company_id=request.company_id, ts_params=ts_params)
+                          integration=integration_name, company_id=request.company_id, ts_params=ts_params, stream_anomaly=stream_anomaly)
 
         session.add(stream)
         session.commit()

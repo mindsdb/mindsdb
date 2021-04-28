@@ -154,8 +154,9 @@ class HTTPTest(unittest.TestCase):
         }
         url = f'{root}/predictors/{pred_name}/predict'
         res = requests.post(url, json=params)
-        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
         assert res.status_code == 200
+        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
+
 
     def test_4_datasources(self):
         """

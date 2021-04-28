@@ -182,7 +182,7 @@ class ModelController():
             if predictor_record.data['status'] == 'complete':
                 self.fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
-                    'predictor': mindsdb_native.Predictor(name=original_name, run_env={'trigger': 'mindsdb'}),
+                    'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
                     'created': datetime.datetime.now()
                 }
 

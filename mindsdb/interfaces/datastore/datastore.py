@@ -83,10 +83,7 @@ class DataStore():
                 datasource = json.loads(datasource_record.data)
                 datasource['created_at'] = datasource_record.created_at
                 datasource['updated_at'] = datasource_record.updated_at
-                try:
-                    datasource['name'] = datasource_record.name.split('@@@@@')[1]
-                except Exception:
-                    datasource['name'] = datasource_record.name
+                datasource['name'] = datasource_record.name
                 datasource['id'] = datasource_record.id
                 datasource_arr.append(datasource)
             except Exception as e:
@@ -309,7 +306,7 @@ class DataStore():
             session.commit()
 
         except Exception as e:
-            log.error(f'{e}')
+            log.error(f'Error creating datasource {name}, exception: {e}')
             try:
                 self.delete_datasource(name)
             except Exception:
@@ -321,12 +318,9 @@ class DataStore():
     @default_company_id
     def get_datasource_obj(self, name, raw=False, id=None, company_id=None):
         try:
-            if name is None:
-                datasource_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()
-            else:
-                original_name = name
-                name = f'{company_id}@@@@@{name}'
-                datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
+            original_name = name
+            name = f'{company_id}@@@@@{name}'
+            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=original_name).first()
 
             self.fs_store.get(name, f'datasource_{company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)
@@ -335,5 +329,5 @@ class DataStore():
             else:
                 return eval(creation_info['class'])(*creation_info['args'], **creation_info['kwargs'])
         except Exception as e:
-            log.error(f'\n{e}\n')
+            log.error(f'Error getting datasource {name}, exception: {e}')
             return None

@@ -313,7 +313,7 @@ class DataStore():
                 pass
             raise e
 
-        return self.get_datasource_obj(original_name, raw=True), name
+        return self.get_datasource_obj(original_name, raw=True), original_name
 
     @default_company_id
     def get_datasource_obj(self, name, raw=False, id=None, company_id=None):

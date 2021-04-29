@@ -52,7 +52,7 @@ class DataStore():
         else:
             return
         try:
-            analysis = self.mindsdb_native.analyse_dataset(company_id, self.get_datasource_obj(name, raw=True))
+            analysis = self.mindsdb_native.analyse_dataset(ds=self.get_datasource_obj(name, raw=True), company_id=company_id)
             datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
             datasource_record.analysis = json.dumps(analysis)
             session.commit()

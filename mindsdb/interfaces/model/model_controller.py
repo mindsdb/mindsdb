@@ -144,13 +144,20 @@ class ModelController():
         name = f'{company_id}@@@@@{name}'
 
         join_learn_process = kwargs.get('join_learn_process', False)
-        if 'join_learn_process' in kwargs:
-            del kwargs['join_learn_process']
 
         self._setup_for_creation(name, original_name)
 
         if self.ray_based:
-            run_learn(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
+            run_learn(
+                name=name,
+                db_name=original_name,
+                from_data=from_data,
+                to_predict=to_predict,
+                kwargs=kwargs,
+                datasource_id=datasource_id,
+                company_id=company_id
+            )
+
         else:
             p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
             p.start()
@@ -217,7 +224,6 @@ class ModelController():
         from mindsdb_native import F
 
         create_process_mark('analyse')
-
         ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
         analysis = F.analyse_dataset(ds)
 

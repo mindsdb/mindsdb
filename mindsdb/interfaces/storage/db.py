@@ -155,7 +155,6 @@ class Stream(Base):
     name = Column(String)
     connection_params = Column(Json)
     advanced_params = Column(Json)
-    ts_params = Column(Json, default={})
 
 
 Base.metadata.create_all(engine)

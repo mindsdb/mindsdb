@@ -105,7 +105,7 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
                             _type=stream._type, predictor=stream.predictor,
                             integration=self.name, company_id=self.company_id,
                             stream_in=stream.stream_in_name, stream_out=stream.stream_out_name,
-                            ts_params=stream.ts_params, stream_anomaly=stream.stream_anomaly_name,)
+                            stream_anomaly=stream.stream_anomaly_name)
         session.add(stream_rec)
         session.commit()
         self.streams[stream.stream_name] = stream.stop_event
@@ -117,7 +117,6 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         topic_anomaly = kwargs.get('anomaly_stream', topic_out)
         predictor_name = kwargs.get('predictor')
         stream_type = kwargs.get('type', 'forecast')
-        ts_params = kwargs.get('ts_params')
         return KafkaStream(name, self.connection_params, self.advanced_info,
                            topic_in, topic_out, topic_anomaly,
-                           predictor_name, stream_type, **ts_params)
+                           predictor_name, stream_type)

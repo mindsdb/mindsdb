@@ -42,7 +42,7 @@
       "python-version": 3.8,
       "token": "install_ray",
       "runOn": "always"
-    }
+    },
 
     {
       "runs_on": "windows-latest",
@@ -61,5 +61,5 @@
       "python-version": 3.6,
       "token": "install_ray",
       "runOn": "always"
-    },
+    }
   ]

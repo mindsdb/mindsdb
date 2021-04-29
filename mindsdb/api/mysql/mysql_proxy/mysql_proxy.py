@@ -419,7 +419,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if insert['name'] in [x['name'] for x in custom_models.get_models()]:
             custom_models.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
         else:
-            model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
+            model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs)
 
         self.packet(OkPacket).send()
 
@@ -485,7 +485,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-        model_interface.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs)
+        model_interface.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs=kwargs)
 
         if is_temp_ds:
             data_store.delete_datasource(ds_name)

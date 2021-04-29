@@ -72,6 +72,10 @@ class DatabaseWrapper():
 
     def unregister_predictor(self, name):
         for integration in self._get_integrations():
+            # TODO
+            # Unregister only from publish=True
+            # Where is 'data' of integrations?
+            # !!! Integrations from config.json add to db on each start!!!!
             if integration.check_connection():
                 integration.unregister_predictor(name)
             else:

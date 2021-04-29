@@ -35,6 +35,9 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
     import mindsdb_datasources
     import mindsdb
 
+    if 'join_learn_process' in kwargs:
+        del kwargs['join_learn_process']
+
     create_process_mark('learn')
 
     config = Config()
@@ -84,6 +87,7 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
     predictor_record.data = model_data
     session.commit()
 
+    model_data['name'] = db_name
     DatabaseWrapper(company_id).register_predictors([model_data])
     delete_process_mark('learn')
 

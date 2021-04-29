@@ -137,7 +137,6 @@ class CustomModels():
 
         return models
 
-
     def delete_model(self, name):
         Predictor.query.filter_by(company_id=self.company_id, name=name, is_custom=True).delete()
         session.commit()

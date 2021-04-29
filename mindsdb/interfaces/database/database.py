@@ -1,5 +1,3 @@
-import os
-
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
@@ -49,14 +47,19 @@ class DatabaseWrapper():
             return False
         return True
 
-    def _get_integrations(self):
-        integrations = [self._get_integration(x) for x in get_db_integrations(self.company_id)]
+    def _get_integrations(self, publish=False):
+        all_integrations = get_db_integrations(self.company_id)
+        if publish is True:
+            all_integrations = [x for x, y in get_db_integrations(self.company_id).items() if y.get('publish') is True]
+        else:
+            all_integrations = [x for x in get_db_integrations(self.company_id)]
+        integrations = [self._get_integration(x) for x in all_integrations]
         integrations = [x for x in integrations if x is not True and x is not False]
         return integrations
 
     def register_predictors(self, model_data_arr, integration_name=None):
         if integration_name is None:
-            integrations = self._get_integrations()
+            integrations = self._get_integrations(publish=True)
         else:
             integration = self._get_integration(integration_name)
             integrations = [] if isinstance(integration, bool) else [integration]
@@ -71,11 +74,11 @@ class DatabaseWrapper():
                 logger.warning(f"There is no connection to {integration.name}. Predictor wouldn't be registred.")
 
     def unregister_predictor(self, name):
-        for integration in self._get_integrations():
-            # TODO
-            # Unregister only from publish=True
-            # Where is 'data' of integrations?
+        for integration in self._get_integrations(publish=True):
+            # FIXME
             # !!! Integrations from config.json add to db on each start!!!!
+            if '@@@@@' in name:
+                name = name.split('@@@@@')[1]
             if integration.check_connection():
                 integration.unregister_predictor(name)
             else:

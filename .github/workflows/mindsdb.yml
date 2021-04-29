@@ -7,18 +7,22 @@ on:
       - stable
 
 jobs:
+  matrix_prep:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-matrix
+        uses: JoshuaTheMiller/conditional-build-matrix@0.0.1
+        with:
+          filter: '[?runOn==`${{ github.ref }}` || runOn==`always`]'
   test:
-    runs-on: ${{ matrix.os }}
+    needs: matrix_prep
     strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            python-version: 3.8
-            token: install_ray
-          - os: ubuntu-latest
-            python-version: 3.8
-            token: not_install_ray
-
+      matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
+    name: Tests
+    runs-on: ${{ matrix.runs_on }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}

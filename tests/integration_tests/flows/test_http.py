@@ -157,7 +157,6 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
-
     def test_4_datasources(self):
         """
         Call list datasources endpoint
@@ -211,7 +210,7 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
 
-    def test_10_ds_from_unexist_integration(self):
+    def test__10_ds_from_unexist_integration(self):
         """
         Call telemetry enabled
         then check the response is status 200

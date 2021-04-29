@@ -229,6 +229,9 @@ class ModelController():
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
+        if '@@@@@' in name:
+            name = name.split('@@@@@')[1]
+
         original_name = name
         name = f'{company_id}@@@@@{name}'
 

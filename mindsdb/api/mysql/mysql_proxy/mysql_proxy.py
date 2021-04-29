@@ -255,8 +255,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     else:
                         password = get_fast_auth_password()
         elif 'caching_sha2_password' in client_auth_plugin:
-            log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                     'check auth using caching_sha2_password')
+            log.debug(
+                f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                'check auth using caching_sha2_password'
+            )
             password = handshake_resp.enc_password.value
             if password == b'\x00':
                 password = ''

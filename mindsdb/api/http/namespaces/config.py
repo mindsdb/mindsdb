@@ -104,11 +104,8 @@ class Integration(Resource):
                     except Exception:
                         pass
 
-            return model_data_arr
-
-
             DatabaseWrapper(request.company_id).setup_integration(name)
-            if is_test is False:
+            if is_test is False and params.get('publish', False) is True:
                 DatabaseWrapper(request.company_id).register_predictors(model_data_arr, name)
         except Exception as e:
             log.error(str(e))

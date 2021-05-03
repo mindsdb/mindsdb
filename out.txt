@@ -1,0 +1,1538 @@
+Warning: Permanently added '3.220.66.106' (ECDSA) to the list of known hosts.
+Warning: Permanently added '3.220.66.106' (ECDSA) to the list of known hosts.
+Stopped all 6 Ray processes.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+connect_to 127.0.0.1 port 47335: failed.
+Stopped all 6 Ray processes.
+connect_to 127.0.0.1 port 47335: failed.
+2021-05-03 16:12:54,422	INFO services.py:1267 -- View the Ray dashboard at [1m[32mhttp://127.0.0.1:8265[39m[22m
+2021-05-03 16:12:56,625	INFO worker.py:650 -- Calling ray.init() again after it has already been called.
+
+ x telemetry disabled 
+
+S3 Datasource is not available by default. If you wish to use it, please install mindsdb_native[extra_data_sources]
+Google Cloud Storage Datasource is not available by default. If you wish to use it, please install mindsdb_native[extra_data_sources]
+Version 2.28.0
+Configuration file:
+   /home/george/mindsdb/tests/temp/test_storage_1620054495972/config.json
+Storage path:
+   /home/george/mindsdb/tests/temp/test_storage_1620054495972
+[2m[36m(pid=48409)[0m S3 Datasource is not available by default. If you wish to use it, please install mindsdb_native[extra_data_sources]
+[2m[36m(pid=48409)[0m Google Cloud Storage Datasource is not available by default. If you wish to use it, please install mindsdb_native[extra_data_sources]
+Adding: default_clickhouse
+Adding: default_mariadb
+Adding: default_mongodb
+Adding: default_mssql
+Adding: default_mysql
+Adding: default_postgres
+Adding: default_mongodb_atlas
+Adding: default_snowflake
+mysql API: starting...
+[2m[36m(pid=48409)[0m 2021-05-03 16:12:57,204	INFO worker.py:650 -- Calling ray.init() again after it has already been called.
+http API: starting...
+2021-05-03 16:13:00,978	INFO services.py:1267 -- View the Ray dashboard at [1m[32mhttp://127.0.0.1:8266[39m[22m
+2021-05-03 16:13:01,116	INFO services.py:1267 -- View the Ray dashboard at [1m[32mhttp://127.0.0.1:8267[39m[22m
+connect_to 127.0.0.1 port 47335: failed.
+ - GUI available at http://127.0.0.1:47334/
+connect_to 127.0.0.1 port 47335: failed.
+2021-05-03 16:13:03,033	INFO worker.py:650 -- Calling ray.init() again after it has already been called.
+connect_to 127.0.0.1 port 47335: failed.
+New version of GUI available (0.3.7). Downloading...
+[2m[36m(pid=48869)[0m S3 Datasource is not available by default. If you wish to use it, please install mindsdb_native[extra_data_sources]
+Starting MindsDB Mysql proxy server on tcp://127.0.0.1:47335
+2021-05-03 16:13:04,049	INFO worker.py:650 -- Calling ray.init() again after it has already been called.
+Waiting for incoming connections...
+[2m[36m(pid=48869)[0m Google Cloud Storage Datasource is not available by default. If you wish to use it, please install mindsdb_native[extra_data_sources]
+[2m[36m(pid=48869)[0m 2021-05-03 16:13:04,162	INFO worker.py:650 -- Calling ray.init() again after it has already been called.
+[2m[36m(pid=49169)[0m S3 Datasource is not available by default. If you wish to use it, please install mindsdb_native[extra_data_sources]
+[2m[36m(pid=49169)[0m Google Cloud Storage Datasource is not available by default. If you wish to use it, please install mindsdb_native[extra_data_sources]
+[2m[36m(pid=49169)[0m 2021-05-03 16:13:04,667	INFO worker.py:650 -- Calling ray.init() again after it has already been called.
+handle new incoming connection
+New connection [127.0.0.1:33310]
+{'request': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33310)>, 'client_address': ('127.0.0.1', 33310), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: YAMDLvwJLrKfZU6XC11O
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x01\x00\x00\x00YAMDLvwJ\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00LrKfZU6XC11O\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'\xfe\xd6\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00YAMDLvwJLrKfZU6XC11O\x00'
+Get packet: SwitchOutResponse
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+GUI version updated to 0.3.7
+Serving on http://local.host:47334
+Serving on http://[::]:47334
+handle new incoming connection
+New connection [127.0.0.1:33356]
+{'request': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33356)>, 'client_address': ('127.0.0.1', 33356), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: ymQp3nk0hX7IuKX5umwu
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x02\x00\x00\x00ymQp3nk0\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00hX7IuKX5umwu\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'\r\xa2\x9e\x00\x00\x00\x00@\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00mindsdb_default_clickhouse\x00\x00mindsdb\x00mysql_native_password\x00g\x03_os\x05Linux\x0c_client_name\nlibmariadb\x04_pid\x011\x0f_client_version\x053.1.4\t_platform\x06x86_64\x0c_server_host\t127.0.0.1'
+Sending packet: SwitchOutPacket
+b',\x00\x00\x02\xfemysql_native_password\x00ymQp3nk0hX7IuKX5umwu\x00'
+Get packet: SwitchOutResponse
+handle new incoming connection
+New connection [127.0.0.1:33358]
+{'request': <socket.socket fd=41, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33358)>, 'client_address': ('127.0.0.1', 33358), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: J6xZ+edX5qcmXuY2fqyn
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x03\x00\x00\x00J6xZ+edX\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x005qcmXuY2fqyn\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'\xd8\x1a#\xd7.[e\xd6\xd3U\x03j*,\xca\xe5\xbb\xdd\xc8\xb8'
+Check auth, user=mindsdb_default_clickhouse, ssl=False, auth_method=mysql_native_password: connecting to database mindsdb
+Check auth, user=mindsdb_default_clickhouse: Ok
+Sending packet: OkPacket
+b'\x07\x00\x00\x04\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x08\xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00J6xZ+edX5qcmXuY2fqyn\x00'
+Get packet: SwitchOutResponse
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+Got packet: b'\x03SET NAMES utf8'
+Command TYPE: COM_QUERY
+COM_QUERY: SET NAMES utf8
+Sending packet: OkPacket
+b'b\x00\x00\x01\x00\x00\x00\x02@\x00\x00\x00Y\x00\x1a\x14character_set_client\x04utf8\x00\x1e\x18character_set_connection\x04utf8\x00\x1b\x15character_set_results\x04utf8'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x0e'
+Command TYPE: COM_PING
+Command has no specific handler, return OK msg
+{'header': {'length': 1, 'seq': 0}, 'type': 'COM_PING', 'vars': {'mysql_socket': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33356)>, 'session': <mindsdb.api.mysql.mysql_proxy.controllers.session_controller.SessionController object at 0x7f9228380e50>, 'proxy': <mindsdb.api.mysql.mysql_proxy.mysql_proxy.MysqlProxy object at 0x7f9228380f70>, '_kwargs': {}, '_length': 1, '_seq': 0, '_body': b'\x0e', 'type': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f92282ed310>, 'data': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f92210dc5b0>}}
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x03SELECT `name`, `status`, `accuracy`, `predict`, `select_data_query`, `external_datasource`, `training_options` FROM `mindsdb`.`predictors`'
+Command TYPE: COM_QUERY
+COM_QUERY: SELECT `name`, `status`, `accuracy`, `predict`, `select_data_query`, `external_datasource`, `training_options` FROM `mindsdb`.`predictors`
+Accumulating packet: ColumnCountPacket
+b'\x01\x00\x00\x01\x07'
+Accumulating packet: ColumnDefenitionPacket
+b'9\x00\x00\x02\x03def\x07mindsdb\npredictors\npredictors\x04name\x04name\x0c\xc0\x00\xff\xff\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: ColumnDefenitionPacket
+b'=\x00\x00\x03\x03def\x07mindsdb\npredictors\npredictors\x06status\x06status\x0c\xc0\x00\xff\xff\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: ColumnDefenitionPacket
+b'A\x00\x00\x04\x03def\x07mindsdb\npredictors\npredictors\x08accuracy\x08accuracy\x0c\xc0\x00\xff\xff\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: ColumnDefenitionPacket
+b'?\x00\x00\x05\x03def\x07mindsdb\npredictors\npredictors\x07predict\x07predict\x0c\xc0\x00\xff\xff\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: ColumnDefenitionPacket
+b'S\x00\x00\x06\x03def\x07mindsdb\npredictors\npredictors\x11select_data_query\x11select_data_query\x0c\xc0\x00\xff\xff\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: ColumnDefenitionPacket
+b'W\x00\x00\x07\x03def\x07mindsdb\npredictors\npredictors\x13external_datasource\x13external_datasource\x0c\xc0\x00\xff\xff\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: ColumnDefenitionPacket
+b'Q\x00\x00\x08\x03def\x07mindsdb\npredictors\npredictors\x10training_options\x10training_options\x0c\xc0\x00\xff\xff\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: EofPacket
+b'\x05\x00\x00\t\xfe\x00\x00\x00\x00'
+Accumulating packet: OkPacket
+b'\x07\x00\x00\n\xfe\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x01'
+Command TYPE: COM_QUIT
+.Session closed, on client disconnect
+WARNING:waitress.queue:Task queue depth is 1
+
+.handle new incoming connection
+New connection [127.0.0.1:33414]
+{'request': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33414)>, 'client_address': ('127.0.0.1', 33414), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: gFNHDwkQTQUzciyVVf5j
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x04\x00\x00\x00gFNHDwkQ\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00TQUzciyVVf5j\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'\r\xa2\x9e\x00\x00\x00\x00@\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00mindsdb_default_clickhouse\x00\x00mindsdb\x00mysql_native_password\x00g\x03_os\x05Linux\x0c_client_name\nlibmariadb\x04_pid\x011\x0f_client_version\x053.1.4\t_platform\x06x86_64\x0c_server_host\t127.0.0.1'
+Sending packet: SwitchOutPacket
+b',\x00\x00\x02\xfemysql_native_password\x00gFNHDwkQTQUzciyVVf5j\x00'
+Get packet: SwitchOutResponse
+Got packet: b'\x9e\xe0\xdc\x9a\xd4\xda\x0c\x02\x80:\xf3\xd8X\x08\x9d\xc2v\x86U%'
+Check auth, user=mindsdb_default_clickhouse, ssl=False, auth_method=mysql_native_password: connecting to database mindsdb
+Check auth, user=mindsdb_default_clickhouse: Ok
+Sending packet: OkPacket
+b'\x07\x00\x00\x04\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x03SET NAMES utf8'
+Command TYPE: COM_QUERY
+COM_QUERY: SET NAMES utf8
+Sending packet: OkPacket
+b'b\x00\x00\x01\x00\x00\x00\x02@\x00\x00\x00Y\x00\x1a\x14character_set_client\x04utf8\x00\x1e\x18character_set_connection\x04utf8\x00\x1b\x15character_set_results\x04utf8'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x0e'
+Command TYPE: COM_PING
+Command has no specific handler, return OK msg
+{'header': {'length': 1, 'seq': 0}, 'type': 'COM_PING', 'vars': {'mysql_socket': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33414)>, 'session': <mindsdb.api.mysql.mysql_proxy.controllers.session_controller.SessionController object at 0x7f9228317f70>, 'proxy': <mindsdb.api.mysql.mysql_proxy.mysql_proxy.MysqlProxy object at 0x7f9228317be0>, '_kwargs': {}, '_length': 1, '_seq': 0, '_body': b'\x0e', 'type': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f9228309bb0>, 'data': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f92283097f0>}}
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x03START TRANSACTION'
+Command TYPE: COM_QUERY
+COM_QUERY: START TRANSACTION
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x0e'
+Command TYPE: COM_PING
+Command has no specific handler, return OK msg
+{'header': {'length': 1, 'seq': 0}, 'type': 'COM_PING', 'vars': {'mysql_socket': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33414)>, 'session': <mindsdb.api.mysql.mysql_proxy.controllers.session_controller.SessionController object at 0x7f9228317f70>, 'proxy': <mindsdb.api.mysql.mysql_proxy.mysql_proxy.MysqlProxy object at 0x7f9228317be0>, '_kwargs': {}, '_length': 1, '_seq': 0, '_body': b'\x0e', 'type': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f9220e338b0>, 'data': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f9220e7aca0>}}
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x03INSERT INTO `mindsdb`.`predictors` (`name`, `status`, `accuracy`, `predict`, `select_data_query`, `external_datasource`, `training_options`) VALUES (\'home_rentals_predictor\',\'\',\'\',\'rental_price,location\',\'select * from test_data.home_rentals limit 100\',\'\',\'{"join_learn_process": true, "stop_training_in_x_seconds": 3}\');'
+Command TYPE: COM_QUERY
+COM_QUERY: INSERT INTO `mindsdb`.`predictors` (`name`, `status`, `accuracy`, `predict`, `select_data_query`, `external_datasource`, `training_options`) VALUES ('home_rentals_predictor','','','rental_price,location','select * from test_data.home_rentals limit 100','','{"join_learn_process": true, "stop_training_in_x_seconds": 3}')
+handle new incoming connection
+New connection [127.0.0.1:33456]
+{'request': <socket.socket fd=43, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33456)>, 'client_address': ('127.0.0.1', 33456), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: ODpv4kdnpyksOdS6+MOU
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x05\x00\x00\x00ODpv4kdn\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00pyksOdS6+MOU\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'\x15\xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00ODpv4kdnpyksOdS6+MOU\x00'
+Get packet: SwitchOutResponse
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/controllers/predictor.py:211 - Sample for analysis: False
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataExtractor
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataExtractor, execution time: 0.017 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataCleaner
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_cleaner/data_cleaner.py:29 - Dropped 6 duplicate rows.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataCleaner, execution time: 0.012 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] TypeDeductor
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "number_of_rooms" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 94
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "number_of_bathrooms" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 94
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "sqft" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 94
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "location" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 94
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "days_on_market" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 94
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "initial_price" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 94
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "neighborhood" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 94
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "rental_price" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 94
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] TypeDeductor, execution time: 0.126 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataAnalyzer
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:256 - Analyzing a sample of 94 from a total population of 94, this is equivalent to 100.0% of your data.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: number_of_rooms !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: number_of_rooms !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: number_of_bathrooms !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: number_of_bathrooms !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: sqft !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: sqft !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: location !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - You may to check if some categories occur too often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: location !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: days_on_market !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: days_on_market !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: initial_price !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - You may want to check if you see something suspicious on the right-hand-side graph. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: initial_price !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: neighborhood !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - You may to check if some categories occur too often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: neighborhood !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: rental_price !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - You may want to check if you see something suspicious on the right-hand-side graph. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: rental_price !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataAnalyzer, execution time: 0.079 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataCleaner
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataCleaner, execution time: 0.009 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataSplitter
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_splitter/data_splitter.py:109 - We have split the input data into:
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataSplitter, execution time: 0.014 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataTransformer
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [LightGBM] [Info] This is the GPU trainer!!
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Total Bins 36
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Number of data points in the train set: 50, number of used features: 2
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataTransformer, execution time: 0.020 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] ModelInterface
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m /usr/local/lib/python3.8/dist-packages/lightgbm/engine.py:151: UserWarning: Found `num_iterations` in params. Will use it instead of argument
+[2m[36m(pid=49169)[0m   warnings.warn("Found `{}` in params. Will use it instead of argument".format(alias))
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Using GPU Device: GeForce RTX 2070, Vendor: NVIDIA Corporation
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Compiling OpenCL Kernel with 64 bins...
+[2m[36m(pid=49169)[0m [LightGBM] [Info] GPU programs have been built
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Size of histogram bin entry: 8
+[2m[36m(pid=49169)[0m [LightGBM] [Info] 2 dense feature groups (0.00 MB) transferred to GPU in 0.000179 secs. 0 sparse feature groups
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Start training from score 0.500000
+[2m[36m(pid=49169)[0m [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+[2m[36m(pid=49169)[0m /usr/local/lib/python3.8/dist-packages/lightgbm/engine.py:151: UserWarning: Found `num_iterations` in params. Will use it instead of argument
+[2m[36m(pid=49169)[0m   warnings.warn("Found `{}` in params. Will use it instead of argument".format(alias))
+[2m[36m(pid=49169)[0m INFO:root:A single GBM itteration takes 0.1 seconds
+[2m[36m(pid=49169)[0m INFO:root:Training GBM (<module 'lightgbm' from '/usr/local/lib/python3.8/dist-packages/lightgbm/__init__.py'>) with 11 iterations
+[2m[36m(pid=49169)[0m INFO:root:A single GBM itteration takes 0.1 seconds
+[2m[36m(pid=49169)[0m INFO:root:Training GBM (<module 'lightgbm' from '/usr/local/lib/python3.8/dist-packages/lightgbm/__init__.py'>) with 11 iterations
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:462 - [LightGBMMixer] Training accuracy of: {'location': {'function': 'accuracy_score', 'value': 1.0}, 'rental_price': {'function': 'r2_score', 'value': 0.8341947842773181}}
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Building network of shape: [24, 400, 6]
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 17.03725242614746 on subset 1, overall test error: 17.03725242614746
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 0 with an accuracy of 0.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 0 with an r2 score of -5.375 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 1.899423360824585 on subset 1, overall test error: 1.899423360824585
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 100 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 100 with an r2 score of -0.546 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.23182079195976257 on subset 1, overall test error: 0.23182079195976257
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 200 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 200 with an r2 score of 0.251 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Enabled dropout !
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.16754268109798431 on subset 1, overall test error: 0.16754268109798431
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 250 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 250 with an r2 score of 0.694 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.14051003754138947 on subset 1, overall test error: 0.14051003754138947
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 300 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 300 with an r2 score of 0.747 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.11977634578943253 on subset 1, overall test error: 0.11977634578943253
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 350 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 350 with an r2 score of 0.886 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.10322225093841553 on subset 1, overall test error: 0.10322225093841553
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 400 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 400 with an r2 score of 0.947 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Finished fitting on 1 of 1 subset
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Finished training model !
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:462 - [NnMixer] Training accuracy of: {'location': {'function': 'accuracy_score', 'value': 1.0}, 'rental_price': {'function': 'r2_score', 'value': 0.9466693657205885}}
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] ModelInterface, execution time: 1.828 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] ModelAnalyzer
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-2064d422-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] ModelAnalyzer, execution time: 0.083 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Acquiring 0
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:UploadSubmissionTask(transfer_id=0, {'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51086e7880>}) about to wait for the following futures []
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:UploadSubmissionTask(transfer_id=0, {'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51086e7880>}) done waiting for dependent futures
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:Executing task UploadSubmissionTask(transfer_id=0, {'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51086e7880>}) with kwargs {'client': <botocore.client.S3 object at 0x7f5110202670>, 'config': <boto3.s3.transfer.TransferConfig object at 0x7f5110242460>, 'osutil': <s3transfer.utils.OSUtils object at 0x7f53043ab550>, 'request_executor': <s3transfer.futures.BoundedExecutor object at 0x7f5108714160>, 'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51086e7880>}
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.futures:Submitting task PutObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_1.tar.gz', 'extra_args': {}}) to executor <s3transfer.futures.BoundedExecutor object at 0x7f5108714160> for transfer request: 0.
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Acquiring 0
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:PutObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_1.tar.gz', 'extra_args': {}}) about to wait for the following futures []
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:PutObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_1.tar.gz', 'extra_args': {}}) done waiting for dependent futures
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:Executing task PutObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_1.tar.gz', 'extra_args': {}}) with kwargs {'client': <botocore.client.S3 object at 0x7f5110202670>, 'fileobj': <s3transfer.utils.ReadFileChunk object at 0x7f51086e7f70>, 'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_1.tar.gz', 'extra_args': {}}
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Releasing acquire 0/None
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function validate_ascii_metadata at 0x7f5236d01c10>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function sse_md5 at 0x7f5236d01040>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function convert_body_to_file_like_object at 0x7f5236d02550>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function validate_bucket_name at 0x7f5236cfcf70>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <bound method S3RegionRedirector.redirect_from_cache of <botocore.utils.S3RegionRedirector object at 0x7f5110225280>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <bound method S3ArnParamHandler.handle_arn of <botocore.utils.S3ArnParamHandler object at 0x7f5110225340>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function generate_idempotent_uuid at 0x7f5236cfcdc0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.PutObject: calling handler <function conditionally_calculate_md5 at 0x7f5236e800d0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.PutObject: calling handler <function add_expect_header at 0x7f5236d01310>
+[2m[36m(pid=49169)[0m DEBUG:botocore.handlers:Adding expect 100 continue header to request.
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.PutObject: calling handler <bound method S3RegionRedirector.set_request_url of <botocore.utils.S3RegionRedirector object at 0x7f5110225280>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.PutObject: calling handler <function inject_api_version_header_if_needed at 0x7f5236d02670>
+[2m[36m(pid=49169)[0m DEBUG:botocore.endpoint:Making request for OperationModel(name=PutObject) with params: {'url_path': '/mindsdb-cloud-storage-v1/predictor_None_1.tar.gz', 'query_string': {}, 'method': 'PUT', 'headers': {'User-Agent': 'Boto3/1.17.5 Python/3.8.5 Linux/5.4.0-72-generic Botocore/1.20.5', 'Content-MD5': 'woe3nmFBuRCxojJ7hOaZHw==', 'Expect': '100-continue'}, 'body': <s3transfer.utils.ReadFileChunk object at 0x7f51086e7f70>, 'url': 'https://s3.amazonaws.com/mindsdb-cloud-storage-v1/predictor_None_1.tar.gz', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x7f5110202790>, 'has_streaming_input': True, 'auth_type': None, 'signing': {'bucket': 'mindsdb-cloud-storage-v1'}}}
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.PutObject: calling handler <function signal_not_transferring at 0x7f5218d08550>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.PutObject: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x7f51102025b0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event choose-signer.s3.PutObject: calling handler <bound method ClientCreator._default_s3_presign_to_sigv2 of <botocore.client.ClientCreator object at 0x7f5110242550>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event choose-signer.s3.PutObject: calling handler <function set_operation_specific_signer at 0x7f5236cfcca0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-sign.s3.PutObject: calling handler <bound method S3EndpointSetter.set_endpoint of <botocore.utils.S3EndpointSetter object at 0x7f51102253d0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:Defaulting to S3 virtual host style addressing with path style addressing fallback.
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:Checking for DNS compatible bucket for: https://s3.amazonaws.com/mindsdb-cloud-storage-v1/predictor_None_1.tar.gz
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:URI updated to: https://mindsdb-cloud-storage-v1.s3.amazonaws.com/predictor_None_1.tar.gz
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:Calculating signature using v4 auth.
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:CanonicalRequest:
+[2m[36m(pid=49169)[0m PUT
+[2m[36m(pid=49169)[0m /predictor_None_1.tar.gz
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m content-md5:woe3nmFBuRCxojJ7hOaZHw==
+[2m[36m(pid=49169)[0m host:mindsdb-cloud-storage-v1.s3.amazonaws.com
+[2m[36m(pid=49169)[0m x-amz-content-sha256:UNSIGNED-PAYLOAD
+[2m[36m(pid=49169)[0m x-amz-date:20210503T151336Z
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m content-md5;host;x-amz-content-sha256;x-amz-date
+[2m[36m(pid=49169)[0m UNSIGNED-PAYLOAD
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:StringToSign:
+[2m[36m(pid=49169)[0m AWS4-HMAC-SHA256
+[2m[36m(pid=49169)[0m 20210503T151336Z
+[2m[36m(pid=49169)[0m 20210503/us-east-1/s3/aws4_request
+[2m[36m(pid=49169)[0m 1108d331565a49048ca5ecc3108a8366db170353520645032904c08c5c86529c
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:Signature:
+[2m[36m(pid=49169)[0m f9bb91aed8755de40284cdea24ac4d4925d4a48b77db5440637f4210798c1ac5
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.PutObject: calling handler <function signal_transferring at 0x7f5218d085e0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.endpoint:Sending http request: <AWSPreparedRequest stream_output=False, method=PUT, url=https://mindsdb-cloud-storage-v1.s3.amazonaws.com/predictor_None_1.tar.gz, headers={'User-Agent': b'Boto3/1.17.5 Python/3.8.5 Linux/5.4.0-72-generic Botocore/1.20.5', 'Content-MD5': b'woe3nmFBuRCxojJ7hOaZHw==', 'Expect': b'100-continue', 'X-Amz-Date': b'20210503T151336Z', 'X-Amz-Content-SHA256': b'UNSIGNED-PAYLOAD', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIA4KJYC2NSCYL5L3O3/20210503/us-east-1/s3/aws4_request, SignedHeaders=content-md5;host;x-amz-content-sha256;x-amz-date, Signature=f9bb91aed8755de40284cdea24ac4d4925d4a48b77db5440637f4210798c1ac5', 'Content-Length': '14006'}>
+[2m[36m(pid=49169)[0m DEBUG:botocore.httpsession:Certificate path: /etc/ssl/certs/ca-certificates.crt
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): mindsdb-cloud-storage-v1.s3.amazonaws.com:443
+[2m[36m(pid=49169)[0m DEBUG:botocore.awsrequest:Waiting for 100 Continue response.
+[2m[36m(pid=49169)[0m DEBUG:botocore.awsrequest:100 Continue response seen, now sending request body.
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:https://mindsdb-cloud-storage-v1.s3.amazonaws.com:443 "PUT /predictor_None_1.tar.gz HTTP/1.1" 200 0
+[2m[36m(pid=49169)[0m DEBUG:botocore.parsers:Response headers: {'x-amz-id-2': 'QngMidxMR7CmNZnSXcfaxSs+zmQxE8WbMNuIgbjhqN3r4iEmV+RIW8XfChncrvVJk1kHFkAFy48=', 'x-amz-request-id': 'HCEB0EQ4088NMZSZ', 'Date': 'Mon, 03 May 2021 15:13:38 GMT', 'ETag': '"c287b79e6141b910b1a2327b84e6991f"', 'Content-Length': '0', 'Server': 'AmazonS3'}
+[2m[36m(pid=49169)[0m DEBUG:botocore.parsers:Response body:
+[2m[36m(pid=49169)[0m b''
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event needs-retry.s3.PutObject: calling handler <botocore.retryhandler.RetryHandler object at 0x7f5110225220>
+[2m[36m(pid=49169)[0m DEBUG:botocore.retryhandler:No retry needed.
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event needs-retry.s3.PutObject: calling handler <bound method S3RegionRedirector.redirect_from_error of <botocore.utils.S3RegionRedirector object at 0x7f5110225280>>
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Releasing acquire 0/None
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 3.220.66.106:8123
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:http://3.220.66.106:8123 "POST /?user=root&password=iyDNE5g9fw9kdrCLIKoS3bkOJkE HTTP/1.1" 200 None
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 3.220.66.106:8123
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:http://3.220.66.106:8123 "POST /?user=root&password=iyDNE5g9fw9kdrCLIKoS3bkOJkE HTTP/1.1" 200 None
+Get packet: CommandPacket
+Got packet: b'\x03COMMIT'
+Command TYPE: COM_QUERY
+COM_QUERY: COMMIT
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x0e'
+Command TYPE: COM_PING
+Command has no specific handler, return OK msg
+{'header': {'length': 1, 'seq': 0}, 'type': 'COM_PING', 'vars': {'mysql_socket': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33414)>, 'session': <mindsdb.api.mysql.mysql_proxy.controllers.session_controller.SessionController object at 0x7f9228317f70>, 'proxy': <mindsdb.api.mysql.mysql_proxy.mysql_proxy.MysqlProxy object at 0x7f9228317be0>, '_kwargs': {}, '_length': 1, '_seq': 0, '_body': b'\x0e', 'type': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f9220e33f40>, 'data': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f9221067040>}}
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b"\x03SELECT `name`, `status` FROM `mindsdb`.`predictors` WHERE `name` = 'home_rentals_predictor'"
+Command TYPE: COM_QUERY
+COM_QUERY: SELECT `name`, `status` FROM `mindsdb`.`predictors` WHERE `name` = 'home_rentals_predictor'
+Accumulating packet: ColumnCountPacket
+b'\x01\x00\x00\x01\x02'
+Accumulating packet: ColumnDefenitionPacket
+b'9\x00\x00\x02\x03def\x07mindsdb\npredictors\npredictors\x04name\x04name\x0c\xc0\x00\x16\x00\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: ColumnDefenitionPacket
+b'=\x00\x00\x03\x03def\x07mindsdb\npredictors\npredictors\x06status\x06status\x0c\xc0\x00\x08\x00\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: EofPacket
+b'\x05\x00\x00\x04\xfe\x00\x00\x00\x00'
+Accumulating packet: ResultsetRowPacket
+b' \x00\x00\x05\x16home_rentals_predictor\x08complete'
+Accumulating packet: OkPacket
+b'\x07\x00\x00\x06\xfe\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x01'
+Command TYPE: COM_QUIT
+Session closed, on client disconnect
+.handle new incoming connection
+New connection [127.0.0.1:33470]
+{'request': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33470)>, 'client_address': ('127.0.0.1', 33470), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: vEaA6QlFEXlU5hwCx6H2
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x06\x00\x00\x00vEaA6QlF\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00EXlU5hwCx6H2\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'\r\xa2\x9e\x00\x00\x00\x00@\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00mindsdb_default_clickhouse\x00\x00mindsdb\x00mysql_native_password\x00g\x03_os\x05Linux\x0c_client_name\nlibmariadb\x04_pid\x011\x0f_client_version\x053.1.4\t_platform\x06x86_64\x0c_server_host\t127.0.0.1'
+Sending packet: SwitchOutPacket
+b',\x00\x00\x02\xfemysql_native_password\x00vEaA6QlFEXlU5hwCx6H2\x00'
+Get packet: SwitchOutResponse
+Got packet: b'U\x00\xe7\x1dv8\x06\xd5\x90\xd9a7\xcbEmm\x11\x9b]f'
+Check auth, user=mindsdb_default_clickhouse, ssl=False, auth_method=mysql_native_password: connecting to database mindsdb
+Check auth, user=mindsdb_default_clickhouse: Ok
+Sending packet: OkPacket
+b'\x07\x00\x00\x04\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x03SET NAMES utf8'
+Command TYPE: COM_QUERY
+COM_QUERY: SET NAMES utf8
+Sending packet: OkPacket
+b'b\x00\x00\x01\x00\x00\x00\x02@\x00\x00\x00Y\x00\x1a\x14character_set_client\x04utf8\x00\x1e\x18character_set_connection\x04utf8\x00\x1b\x15character_set_results\x04utf8'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x0e'
+Command TYPE: COM_PING
+Command has no specific handler, return OK msg
+{'header': {'length': 1, 'seq': 0}, 'type': 'COM_PING', 'vars': {'mysql_socket': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33470)>, 'session': <mindsdb.api.mysql.mysql_proxy.controllers.session_controller.SessionController object at 0x7f922048a160>, 'proxy': <mindsdb.api.mysql.mysql_proxy.mysql_proxy.MysqlProxy object at 0x7f922106bd90>, '_kwargs': {}, '_length': 1, '_seq': 0, '_body': b'\x0e', 'type': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f9220fcdeb0>, 'data': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f92210b7c10>}}
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x03START TRANSACTION'
+Command TYPE: COM_QUERY
+COM_QUERY: START TRANSACTION
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x0e'
+Command TYPE: COM_PING
+Command has no specific handler, return OK msg
+{'header': {'length': 1, 'seq': 0}, 'type': 'COM_PING', 'vars': {'mysql_socket': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33470)>, 'session': <mindsdb.api.mysql.mysql_proxy.controllers.session_controller.SessionController object at 0x7f922048a160>, 'proxy': <mindsdb.api.mysql.mysql_proxy.mysql_proxy.MysqlProxy object at 0x7f922106bd90>, '_kwargs': {}, '_length': 1, '_seq': 0, '_body': b'\x0e', 'type': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f9220450460>, 'data': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f922105e6a0>}}
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x03INSERT INTO `mindsdb`.`predictors` (`name`, `status`, `accuracy`, `predict`, `select_data_query`, `external_datasource`, `training_options`) VALUES (\'home_rentals_predictor_external\',\'\',\'\',\'rental_price,location\',\'\',\'home_rentals_external\',\'{"join_learn_process": true, "stop_training_in_x_seconds": 3}\');'
+Command TYPE: COM_QUERY
+COM_QUERY: INSERT INTO `mindsdb`.`predictors` (`name`, `status`, `accuracy`, `predict`, `select_data_query`, `external_datasource`, `training_options`) VALUES ('home_rentals_predictor_external','','','rental_price,location','','home_rentals_external','{"join_learn_process": true, "stop_training_in_x_seconds": 3}')
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event choose-service-name: calling handler <function handle_service_name_alias at 0x7f5236ce1670>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event creating-client-class.s3: calling handler <function add_generate_presigned_post at 0x7f5236d900d0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event creating-client-class.s3: calling handler <function lazy_call.<locals>._handler at 0x7f52193019d0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event creating-client-class.s3: calling handler <function add_generate_presigned_url at 0x7f5236d92e50>
+[2m[36m(pid=49169)[0m DEBUG:botocore.endpoint:Setting s3 timeout as (60, 60)
+[2m[36m(pid=49169)[0m DEBUG:botocore.client:Registering retry handlers for service: s3
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 3.220.66.106:8123
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:http://3.220.66.106:8123 "POST /?user=root&password=iyDNE5g9fw9kdrCLIKoS3bkOJkE HTTP/1.1" 200 None
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/controllers/predictor.py:211 - Sample for analysis: False
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataExtractor
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataExtractor, execution time: 0.030 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataCleaner
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_cleaner/data_cleaner.py:29 - Dropped 5 duplicate rows.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataCleaner, execution time: 0.013 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] TypeDeductor
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "number_of_rooms" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 45
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "number_of_bathrooms" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 45
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "sqft" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 45
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "location" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 45
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "days_on_market" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 45
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "initial_price" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 45
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "neighborhood" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 45
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/type_deductor/type_deductor.py:405 - Data distribution for column "rental_price" of type "Numeric" and subtype "Int"
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:81 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:124 -  Int: 45
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/data_types/mindsdb_logger.py:128 - ----------
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] TypeDeductor, execution time: 0.104 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataAnalyzer
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:256 - Analyzing a sample of 45 from a total population of 45, this is equivalent to 100.0% of your data.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: number_of_rooms !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: number_of_rooms !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: number_of_bathrooms !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - This column contains no information because it has a single possible value.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - You may to check if some categories occur too often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: number_of_bathrooms !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: sqft !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: sqft !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: location !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - This column contains no information because it has a single possible value.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - You may to check if some categories occur too often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: location !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: days_on_market !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: days_on_market !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: initial_price !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - You may want to check if you see something suspicious on the right-hand-side graph. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: initial_price !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: neighborhood !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - You may to check if some categories occur too often to too little in this columns. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: neighborhood !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:268 - Analyzing column: rental_price !
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [33mWARNING:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:326 - You may want to check if you see something suspicious on the right-hand-side graph. This doesn't necessarily mean there's an issue with your data, it just indicates a higher than usual probability there might be some issue.
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_analyzer/data_analyzer.py:346 - Finished analyzing column: rental_price !
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataAnalyzer, execution time: 0.086 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataCleaner
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataCleaner, execution time: 0.008 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataSplitter
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/data_splitter/data_splitter.py:109 - We have split the input data into:
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataSplitter, execution time: 0.010 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] DataTransformer
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [LightGBM] [Info] This is the GPU trainer!!
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Total Bins 36
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Number of data points in the train set: 50, number of used features: 2
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] DataTransformer, execution time: 0.018 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] ModelInterface
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m /usr/local/lib/python3.8/dist-packages/lightgbm/engine.py:151: UserWarning: Found `num_iterations` in params. Will use it instead of argument
+[2m[36m(pid=49169)[0m   warnings.warn("Found `{}` in params. Will use it instead of argument".format(alias))
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Using GPU Device: GeForce RTX 2070, Vendor: NVIDIA Corporation
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Compiling OpenCL Kernel with 64 bins...
+[2m[36m(pid=49169)[0m [LightGBM] [Info] GPU programs have been built
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Size of histogram bin entry: 8
+[2m[36m(pid=49169)[0m [LightGBM] [Info] 2 dense feature groups (0.00 MB) transferred to GPU in 0.000177 secs. 0 sparse feature groups
+[2m[36m(pid=49169)[0m [LightGBM] [Info] Start training from score 0.540000
+[2m[36m(pid=49169)[0m [LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+[2m[36m(pid=49169)[0m /usr/local/lib/python3.8/dist-packages/lightgbm/engine.py:151: UserWarning: Found `num_iterations` in params. Will use it instead of argument
+[2m[36m(pid=49169)[0m   warnings.warn("Found `{}` in params. Will use it instead of argument".format(alias))
+[2m[36m(pid=49169)[0m INFO:root:A single GBM itteration takes 0.1 seconds
+[2m[36m(pid=49169)[0m INFO:root:Training GBM (<module 'lightgbm' from '/usr/local/lib/python3.8/dist-packages/lightgbm/__init__.py'>) with 11 iterations
+[2m[36m(pid=49169)[0m INFO:root:A single GBM itteration takes 0.09761524200439453 seconds
+[2m[36m(pid=49169)[0m INFO:root:Training GBM (<module 'lightgbm' from '/usr/local/lib/python3.8/dist-packages/lightgbm/__init__.py'>) with 11 iterations
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:462 - [LightGBMMixer] Training accuracy of: {'location': {'function': 'accuracy_score', 'value': 1.0}, 'rental_price': {'function': 'r2_score', 'value': -0.14512210488141108}}
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Building network of shape: [21, 400, 5]
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 22.819236755371094 on subset 1, overall test error: 22.819236755371094
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 0 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 0 with an r2 score of -4.128 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+handle new incoming connection
+New connection [127.0.0.1:33478]
+{'request': <socket.socket fd=45, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33478)>, 'client_address': ('127.0.0.1', 33478), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: IrqRR9fEXOznjD0WtDfD
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x07\x00\x00\x00IrqRR9fE\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00XOznjD0WtDfD\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b' \xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00IrqRR9fEXOznjD0WtDfD\x00'
+Get packet: SwitchOutResponse
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 3.0714495182037354 on subset 1, overall test error: 3.0714495182037354
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 100 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 100 with an r2 score of 0.469 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Enabled dropout !
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.21022799611091614 on subset 1, overall test error: 0.21022799611091614
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 200 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 200 with an r2 score of 0.615 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.04887739568948746 on subset 1, overall test error: 0.04887739568948746
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 250 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 250 with an r2 score of 0.69 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.028903760015964508 on subset 1, overall test error: 0.028903760015964508
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 300 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 300 with an r2 score of 0.762 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.024122167378664017 on subset 1, overall test error: 0.024122167378664017
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 350 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 350 with an r2 score of 0.826 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.020759979262948036 on subset 1, overall test error: 0.020759979262948036
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 400 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 400 with an r2 score of 0.877 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Subtest test error: 0.018369005993008614 on subset 1, overall test error: 0.018369005993008614
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:336 - We've reached training epoch nr 450 with an accuracy of 100.0% on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [37mDEBUG:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:333 - We've reached training epoch nr 450 with an r2 score of 0.918 on the testing dataset
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Finished fitting on 1 of 1 subset
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Finished training model !
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/model_interface/lightwood_backend.py:462 - [NnMixer] Training accuracy of: {'location': {'function': 'accuracy_score', 'value': 1.0}, 'rental_price': {'function': 'r2_score', 'value': 0.9182038449978678}}
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] ModelInterface, execution time: 1.780 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:51 - [START] ModelAnalyzer
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Computing device used: cuda
+[2m[36m(pid=49169)[0m INFO:lightwood.49169:Model predictions and decoding completed
+[2m[36m(pid=49169)[0m [32mINFO:mindsdb-logger-25db95b2-ac22-11eb-b287-b16a3824d2ff---no_report:/home/george/mindsdb_native/mindsdb_native/libs/phases/base_module.py:56 - [END] ModelAnalyzer, execution time: 0.079 seconds
+[2m[36m(pid=49169)[0m [0m
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Acquiring 0
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:UploadSubmissionTask(transfer_id=0, {'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51085c0160>}) about to wait for the following futures []
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:UploadSubmissionTask(transfer_id=0, {'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51085c0160>}) done waiting for dependent futures
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:Executing task UploadSubmissionTask(transfer_id=0, {'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51085c0160>}) with kwargs {'client': <botocore.client.S3 object at 0x7f510865cc70>, 'config': <boto3.s3.transfer.TransferConfig object at 0x7f510868fd90>, 'osutil': <s3transfer.utils.OSUtils object at 0x7f510868f250>, 'request_executor': <s3transfer.futures.BoundedExecutor object at 0x7f5108605430>, 'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51085c0160>}
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.futures:Submitting task PutObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'extra_args': {}}) to executor <s3transfer.futures.BoundedExecutor object at 0x7f5108605430> for transfer request: 0.
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Acquiring 0
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:PutObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'extra_args': {}}) about to wait for the following futures []
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Releasing acquire 0/None
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:PutObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'extra_args': {}}) done waiting for dependent futures
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:Executing task PutObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'extra_args': {}}) with kwargs {'client': <botocore.client.S3 object at 0x7f510865cc70>, 'fileobj': <s3transfer.utils.ReadFileChunk object at 0x7f51085c07f0>, 'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'extra_args': {}}
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function validate_ascii_metadata at 0x7f5236d01c10>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function sse_md5 at 0x7f5236d01040>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function convert_body_to_file_like_object at 0x7f5236d02550>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function validate_bucket_name at 0x7f5236cfcf70>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <bound method S3RegionRedirector.redirect_from_cache of <botocore.utils.S3RegionRedirector object at 0x7f5108668910>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <bound method S3ArnParamHandler.handle_arn of <botocore.utils.S3ArnParamHandler object at 0x7f51086689d0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.PutObject: calling handler <function generate_idempotent_uuid at 0x7f5236cfcdc0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.PutObject: calling handler <function conditionally_calculate_md5 at 0x7f5236e800d0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.PutObject: calling handler <function add_expect_header at 0x7f5236d01310>
+[2m[36m(pid=49169)[0m DEBUG:botocore.handlers:Adding expect 100 continue header to request.
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.PutObject: calling handler <bound method S3RegionRedirector.set_request_url of <botocore.utils.S3RegionRedirector object at 0x7f5108668910>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.PutObject: calling handler <function inject_api_version_header_if_needed at 0x7f5236d02670>
+[2m[36m(pid=49169)[0m DEBUG:botocore.endpoint:Making request for OperationModel(name=PutObject) with params: {'url_path': '/mindsdb-cloud-storage-v1/predictor_None_2.tar.gz', 'query_string': {}, 'method': 'PUT', 'headers': {'User-Agent': 'Boto3/1.17.5 Python/3.8.5 Linux/5.4.0-72-generic Botocore/1.20.5', 'Content-MD5': 'wUXVAe2X5bJP3ptqB+iM8w==', 'Expect': '100-continue'}, 'body': <s3transfer.utils.ReadFileChunk object at 0x7f51085c07f0>, 'url': 'https://s3.amazonaws.com/mindsdb-cloud-storage-v1/predictor_None_2.tar.gz', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x7f510865ce20>, 'has_streaming_input': True, 'auth_type': None, 'signing': {'bucket': 'mindsdb-cloud-storage-v1'}}}
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.PutObject: calling handler <function signal_not_transferring at 0x7f5218d08550>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.PutObject: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x7f510865cd90>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event choose-signer.s3.PutObject: calling handler <bound method ClientCreator._default_s3_presign_to_sigv2 of <botocore.client.ClientCreator object at 0x7f510868fb80>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event choose-signer.s3.PutObject: calling handler <function set_operation_specific_signer at 0x7f5236cfcca0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-sign.s3.PutObject: calling handler <bound method S3EndpointSetter.set_endpoint of <botocore.utils.S3EndpointSetter object at 0x7f5108668a60>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:Defaulting to S3 virtual host style addressing with path style addressing fallback.
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:Checking for DNS compatible bucket for: https://s3.amazonaws.com/mindsdb-cloud-storage-v1/predictor_None_2.tar.gz
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:URI updated to: https://mindsdb-cloud-storage-v1.s3.amazonaws.com/predictor_None_2.tar.gz
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:Calculating signature using v4 auth.
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:CanonicalRequest:
+[2m[36m(pid=49169)[0m PUT
+[2m[36m(pid=49169)[0m /predictor_None_2.tar.gz
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m content-md5:wUXVAe2X5bJP3ptqB+iM8w==
+[2m[36m(pid=49169)[0m host:mindsdb-cloud-storage-v1.s3.amazonaws.com
+[2m[36m(pid=49169)[0m x-amz-content-sha256:UNSIGNED-PAYLOAD
+[2m[36m(pid=49169)[0m x-amz-date:20210503T151345Z
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m content-md5;host;x-amz-content-sha256;x-amz-date
+[2m[36m(pid=49169)[0m UNSIGNED-PAYLOAD
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:StringToSign:
+[2m[36m(pid=49169)[0m AWS4-HMAC-SHA256
+[2m[36m(pid=49169)[0m 20210503T151345Z
+[2m[36m(pid=49169)[0m 20210503/us-east-1/s3/aws4_request
+[2m[36m(pid=49169)[0m 5857d0bdf7d2921853172289bbba3b0c1173ae1ffaf37520367c16d7e4c734e5
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:Signature:
+[2m[36m(pid=49169)[0m b31e3597544e18febf8c6fa350d5f8a0f2d22f3ec28fe5c8fef5321f02de5bc9
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.PutObject: calling handler <function signal_transferring at 0x7f5218d085e0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.endpoint:Sending http request: <AWSPreparedRequest stream_output=False, method=PUT, url=https://mindsdb-cloud-storage-v1.s3.amazonaws.com/predictor_None_2.tar.gz, headers={'User-Agent': b'Boto3/1.17.5 Python/3.8.5 Linux/5.4.0-72-generic Botocore/1.20.5', 'Content-MD5': b'wUXVAe2X5bJP3ptqB+iM8w==', 'Expect': b'100-continue', 'X-Amz-Date': b'20210503T151345Z', 'X-Amz-Content-SHA256': b'UNSIGNED-PAYLOAD', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIA4KJYC2NSCYL5L3O3/20210503/us-east-1/s3/aws4_request, SignedHeaders=content-md5;host;x-amz-content-sha256;x-amz-date, Signature=b31e3597544e18febf8c6fa350d5f8a0f2d22f3ec28fe5c8fef5321f02de5bc9', 'Content-Length': '84737'}>
+[2m[36m(pid=49169)[0m DEBUG:botocore.httpsession:Certificate path: /etc/ssl/certs/ca-certificates.crt
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): mindsdb-cloud-storage-v1.s3.amazonaws.com:443
+[2m[36m(pid=49169)[0m DEBUG:botocore.awsrequest:Waiting for 100 Continue response.
+[2m[36m(pid=49169)[0m DEBUG:botocore.awsrequest:100 Continue response seen, now sending request body.
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:https://mindsdb-cloud-storage-v1.s3.amazonaws.com:443 "PUT /predictor_None_2.tar.gz HTTP/1.1" 200 0
+[2m[36m(pid=49169)[0m DEBUG:botocore.parsers:Response headers: {'x-amz-id-2': '1FdORwo1pJYUHFbHK52OOaKdh8PEOM/qj2heQDz8cY0+MGum/9GTglX+Y4k4kfkoaTHDGbMZ9dY=', 'x-amz-request-id': 'A4HRDCGNA8GCEH9Z', 'Date': 'Mon, 03 May 2021 15:13:47 GMT', 'ETag': '"c145d501ed97e5b24fde9b6a07e88cf3"', 'Content-Length': '0', 'Server': 'AmazonS3'}
+[2m[36m(pid=49169)[0m DEBUG:botocore.parsers:Response body:
+[2m[36m(pid=49169)[0m b''
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event needs-retry.s3.PutObject: calling handler <botocore.retryhandler.RetryHandler object at 0x7f51086688b0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.retryhandler:No retry needed.
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event needs-retry.s3.PutObject: calling handler <bound method S3RegionRedirector.redirect_from_error of <botocore.utils.S3RegionRedirector object at 0x7f5108668910>>
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Releasing acquire 0/None
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 3.220.66.106:8123
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:http://3.220.66.106:8123 "POST /?user=root&password=iyDNE5g9fw9kdrCLIKoS3bkOJkE HTTP/1.1" 200 None
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 3.220.66.106:8123
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:http://3.220.66.106:8123 "POST /?user=root&password=iyDNE5g9fw9kdrCLIKoS3bkOJkE HTTP/1.1" 200 None
+Got packet: b'\x03COMMIT'
+Command TYPE: COM_QUERY
+COM_QUERY: COMMIT
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x0e'
+Command TYPE: COM_PING
+Command has no specific handler, return OK msg
+{'header': {'length': 1, 'seq': 0}, 'type': 'COM_PING', 'vars': {'mysql_socket': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33470)>, 'session': <mindsdb.api.mysql.mysql_proxy.controllers.session_controller.SessionController object at 0x7f922048a160>, 'proxy': <mindsdb.api.mysql.mysql_proxy.mysql_proxy.MysqlProxy object at 0x7f922106bd90>, '_kwargs': {}, '_length': 1, '_seq': 0, '_body': b'\x0e', 'type': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f92282e5640>, 'data': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f92202e2bb0>}}
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b"\x03SELECT `name`, `status` FROM `mindsdb`.`predictors` WHERE `name` = 'home_rentals_predictor_external'"
+Command TYPE: COM_QUERY
+COM_QUERY: SELECT `name`, `status` FROM `mindsdb`.`predictors` WHERE `name` = 'home_rentals_predictor_external'
+Accumulating packet: ColumnCountPacket
+b'\x01\x00\x00\x01\x02'
+Accumulating packet: ColumnDefenitionPacket
+b'9\x00\x00\x02\x03def\x07mindsdb\npredictors\npredictors\x04name\x04name\x0c\xc0\x00\x1f\x00\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: ColumnDefenitionPacket
+b'=\x00\x00\x03\x03def\x07mindsdb\npredictors\npredictors\x06status\x06status\x0c\xc0\x00\x08\x00\x00\x00\xfd\x00\x00\x00\x00\x00'
+Accumulating packet: EofPacket
+b'\x05\x00\x00\x04\xfe\x00\x00\x00\x00'
+Accumulating packet: ResultsetRowPacket
+b')\x00\x00\x05\x1fhome_rentals_predictor_external\x08complete'
+Accumulating packet: OkPacket
+b'\x07\x00\x00\x06\xfe\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x01'
+Command TYPE: COM_QUIT
+Session closed, on client disconnect
+handle new incoming connection
+New connection [127.0.0.1:33492]
+{'request': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33492)>, 'client_address': ('127.0.0.1', 33492), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: EVgjL71QGhr99hLi7JR9
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x08\x00\x00\x00EVgjL71Q\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Ghr99hLi7JR9\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'\r\xa2\x9e\x00\x00\x00\x00@\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00mindsdb_default_clickhouse\x00\x00mindsdb\x00mysql_native_password\x00g\x03_os\x05Linux\x0c_client_name\nlibmariadb\x04_pid\x011\x0f_client_version\x053.1.4\t_platform\x06x86_64\x0c_server_host\t127.0.0.1'
+Sending packet: SwitchOutPacket
+b',\x00\x00\x02\xfemysql_native_password\x00EVgjL71QGhr99hLi7JR9\x00'
+Get packet: SwitchOutResponse
+Got packet: b'\xc8\xe1\x7fi\xd3\xf5\x08\xdbv"\xed\xcd\x7f\x10\xc7B\xdc\x86\xb4\xa2'
+Check auth, user=mindsdb_default_clickhouse, ssl=False, auth_method=mysql_native_password: connecting to database mindsdb
+Check auth, user=mindsdb_default_clickhouse: Ok
+Sending packet: OkPacket
+b'\x07\x00\x00\x04\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x03SET NAMES utf8'
+Command TYPE: COM_QUERY
+COM_QUERY: SET NAMES utf8
+Sending packet: OkPacket
+b'b\x00\x00\x01\x00\x00\x00\x02@\x00\x00\x00Y\x00\x1a\x14character_set_client\x04utf8\x00\x1e\x18character_set_connection\x04utf8\x00\x1b\x15character_set_results\x04utf8'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b'\x0e'
+Command TYPE: COM_PING
+Command has no specific handler, return OK msg
+{'header': {'length': 1, 'seq': 0}, 'type': 'COM_PING', 'vars': {'mysql_socket': <socket.socket fd=39, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33492)>, 'session': <mindsdb.api.mysql.mysql_proxy.controllers.session_controller.SessionController object at 0x7f9228309190>, 'proxy': <mindsdb.api.mysql.mysql_proxy.mysql_proxy.MysqlProxy object at 0x7f9220f1f5e0>, '_kwargs': {}, '_length': 1, '_seq': 0, '_body': b'\x0e', 'type': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f9220476220>, 'data': <mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum.Datum object at 0x7f92210b7af0>}}
+Sending packet: OkPacket
+b'\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00'
+Got a new packet
+Get packet: CommandPacket
+Got packet: b"\x03SELECT `number_of_rooms`, `number_of_bathrooms`, `sqft`, `location`, `location_original`, `days_on_market`, `initial_price`, `neighborhood`, `rental_price`, `rental_price_original`, `when_data`, `select_data_query`, `external_datasource`, `rental_price_confidence`, `rental_price_min`, `rental_price_max`, `rental_price_explain`, `location_confidence`, `location_explain` FROM `mindsdb`.`home_rentals_predictor_external` WHERE `external_datasource` = 'home_rentals_external'"
+Command TYPE: COM_QUERY
+COM_QUERY: SELECT `number_of_rooms`, `number_of_bathrooms`, `sqft`, `location`, `location_original`, `days_on_market`, `initial_price`, `neighborhood`, `rental_price`, `rental_price_original`, `when_data`, `select_data_query`, `external_datasource`, `rental_price_confidence`, `rental_price_min`, `rental_price_max`, `rental_price_explain`, `location_confidence`, `location_explain` FROM `mindsdb`.`home_rentals_predictor_external` WHERE `external_datasource` = 'home_rentals_external'
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Acquiring 0
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:DownloadSubmissionTask(transfer_id=0, {'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51085c51c0>}) about to wait for the following futures []
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:DownloadSubmissionTask(transfer_id=0, {'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51085c51c0>}) done waiting for dependent futures
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:Executing task DownloadSubmissionTask(transfer_id=0, {'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51085c51c0>}) with kwargs {'client': <botocore.client.S3 object at 0x7f5218d6bac0>, 'config': <boto3.s3.transfer.TransferConfig object at 0x7f510868fac0>, 'osutil': <s3transfer.utils.OSUtils object at 0x7f51085c0850>, 'request_executor': <s3transfer.futures.BoundedExecutor object at 0x7f51085c13d0>, 'transfer_future': <s3transfer.futures.TransferFuture object at 0x7f51085c51c0>, 'io_executor': <s3transfer.futures.BoundedExecutor object at 0x7f51085c1a90>}
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.HeadObject: calling handler <function sse_md5 at 0x7f5236d01040>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.HeadObject: calling handler <function validate_bucket_name at 0x7f5236cfcf70>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.HeadObject: calling handler <bound method S3RegionRedirector.redirect_from_cache of <botocore.utils.S3RegionRedirector object at 0x7f5218fa36d0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.HeadObject: calling handler <bound method S3ArnParamHandler.handle_arn of <botocore.utils.S3ArnParamHandler object at 0x7f5218fa3790>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.HeadObject: calling handler <function generate_idempotent_uuid at 0x7f5236cfcdc0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.HeadObject: calling handler <function add_expect_header at 0x7f5236d01310>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.HeadObject: calling handler <bound method S3RegionRedirector.set_request_url of <botocore.utils.S3RegionRedirector object at 0x7f5218fa36d0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.HeadObject: calling handler <function inject_api_version_header_if_needed at 0x7f5236d02670>
+[2m[36m(pid=49169)[0m DEBUG:botocore.endpoint:Making request for OperationModel(name=HeadObject) with params: {'url_path': '/mindsdb-cloud-storage-v1/predictor_None_2.tar.gz', 'query_string': {}, 'method': 'HEAD', 'headers': {'User-Agent': 'Boto3/1.17.5 Python/3.8.5 Linux/5.4.0-72-generic Botocore/1.20.5'}, 'body': b'', 'url': 'https://s3.amazonaws.com/mindsdb-cloud-storage-v1/predictor_None_2.tar.gz', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x7f5218d6be80>, 'has_streaming_input': False, 'auth_type': None, 'signing': {'bucket': 'mindsdb-cloud-storage-v1'}}}
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.HeadObject: calling handler <function signal_not_transferring at 0x7f5218d08550>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.HeadObject: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x7f5218d6baf0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event choose-signer.s3.HeadObject: calling handler <bound method ClientCreator._default_s3_presign_to_sigv2 of <botocore.client.ClientCreator object at 0x7f52193034f0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event choose-signer.s3.HeadObject: calling handler <function set_operation_specific_signer at 0x7f5236cfcca0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-sign.s3.HeadObject: calling handler <bound method S3EndpointSetter.set_endpoint of <botocore.utils.S3EndpointSetter object at 0x7f5218fa3820>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:Defaulting to S3 virtual host style addressing with path style addressing fallback.
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:Checking for DNS compatible bucket for: https://s3.amazonaws.com/mindsdb-cloud-storage-v1/predictor_None_2.tar.gz
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:URI updated to: https://mindsdb-cloud-storage-v1.s3.amazonaws.com/predictor_None_2.tar.gz
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:Calculating signature using v4 auth.
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:CanonicalRequest:
+[2m[36m(pid=49169)[0m HEAD
+[2m[36m(pid=49169)[0m /predictor_None_2.tar.gz
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m host:mindsdb-cloud-storage-v1.s3.amazonaws.com
+[2m[36m(pid=49169)[0m x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+[2m[36m(pid=49169)[0m x-amz-date:20210503T151353Z
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m host;x-amz-content-sha256;x-amz-date
+[2m[36m(pid=49169)[0m e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:StringToSign:
+[2m[36m(pid=49169)[0m AWS4-HMAC-SHA256
+[2m[36m(pid=49169)[0m 20210503T151353Z
+[2m[36m(pid=49169)[0m 20210503/us-east-1/s3/aws4_request
+[2m[36m(pid=49169)[0m 0bdb8f42592748d0fc48bd69939df867230aedae5a305c7606c8d9b3de60d113
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:Signature:
+[2m[36m(pid=49169)[0m 3d6da062cf321ae3ff935b34bc53551538938bf0c3e971cf1f56225599bb89e8
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.HeadObject: calling handler <function signal_transferring at 0x7f5218d085e0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.endpoint:Sending http request: <AWSPreparedRequest stream_output=False, method=HEAD, url=https://mindsdb-cloud-storage-v1.s3.amazonaws.com/predictor_None_2.tar.gz, headers={'User-Agent': b'Boto3/1.17.5 Python/3.8.5 Linux/5.4.0-72-generic Botocore/1.20.5', 'X-Amz-Date': b'20210503T151353Z', 'X-Amz-Content-SHA256': b'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIA4KJYC2NSCYL5L3O3/20210503/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=3d6da062cf321ae3ff935b34bc53551538938bf0c3e971cf1f56225599bb89e8'}>
+[2m[36m(pid=49169)[0m DEBUG:botocore.httpsession:Certificate path: /etc/ssl/certs/ca-certificates.crt
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): mindsdb-cloud-storage-v1.s3.amazonaws.com:443
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:https://mindsdb-cloud-storage-v1.s3.amazonaws.com:443 "HEAD /predictor_None_2.tar.gz HTTP/1.1" 200 0
+[2m[36m(pid=49169)[0m DEBUG:botocore.parsers:Response headers: {'x-amz-id-2': '58ofDnZEIi6l69MLlGOm9ujM10E1QF3IGXOgKxWYg7vctIO1OkMnr4Vq1NUXbbPF4yxf9+K+W18=', 'x-amz-request-id': 'JV4P7VYS0M5QEJXH', 'Date': 'Mon, 03 May 2021 15:13:54 GMT', 'Last-Modified': 'Mon, 03 May 2021 15:13:47 GMT', 'ETag': '"c145d501ed97e5b24fde9b6a07e88cf3"', 'Accept-Ranges': 'bytes', 'Content-Type': 'binary/octet-stream', 'Content-Length': '84737', 'Server': 'AmazonS3'}
+[2m[36m(pid=49169)[0m DEBUG:botocore.parsers:Response body:
+[2m[36m(pid=49169)[0m b''
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event needs-retry.s3.HeadObject: calling handler <botocore.retryhandler.RetryHandler object at 0x7f5218fa3670>
+[2m[36m(pid=49169)[0m DEBUG:botocore.retryhandler:No retry needed.
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event needs-retry.s3.HeadObject: calling handler <bound method S3RegionRedirector.redirect_from_error of <botocore.utils.S3RegionRedirector object at 0x7f5218fa36d0>>
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.futures:Submitting task ImmediatelyWriteIOGetObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'extra_args': {}}) to executor <s3transfer.futures.BoundedExecutor object at 0x7f51085c13d0> for transfer request: 0.
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Acquiring 0
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:ImmediatelyWriteIOGetObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'extra_args': {}}) about to wait for the following futures []
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Releasing acquire 0/None
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:ImmediatelyWriteIOGetObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'extra_args': {}}) done waiting for dependent futures
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:Executing task ImmediatelyWriteIOGetObjectTask(transfer_id=0, {'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'extra_args': {}}) with kwargs {'client': <botocore.client.S3 object at 0x7f5218d6bac0>, 'bucket': 'mindsdb-cloud-storage-v1', 'key': 'predictor_None_2.tar.gz', 'fileobj': <s3transfer.utils.DeferredOpenFile object at 0x7f5108f43880>, 'extra_args': {}, 'callbacks': [], 'max_attempts': 5, 'download_output_manager': <s3transfer.download.DownloadFilenameOutputManager object at 0x7f5108f439d0>, 'io_chunksize': 262144, 'bandwidth_limiter': None}
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.GetObject: calling handler <function sse_md5 at 0x7f5236d01040>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.GetObject: calling handler <function validate_bucket_name at 0x7f5236cfcf70>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.GetObject: calling handler <bound method S3RegionRedirector.redirect_from_cache of <botocore.utils.S3RegionRedirector object at 0x7f5218fa36d0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.GetObject: calling handler <bound method S3ArnParamHandler.handle_arn of <botocore.utils.S3ArnParamHandler object at 0x7f5218fa3790>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-parameter-build.s3.GetObject: calling handler <function generate_idempotent_uuid at 0x7f5236cfcdc0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.GetObject: calling handler <function add_expect_header at 0x7f5236d01310>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.GetObject: calling handler <bound method S3RegionRedirector.set_request_url of <botocore.utils.S3RegionRedirector object at 0x7f5218fa36d0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-call.s3.GetObject: calling handler <function inject_api_version_header_if_needed at 0x7f5236d02670>
+[2m[36m(pid=49169)[0m DEBUG:botocore.endpoint:Making request for OperationModel(name=GetObject) with params: {'url_path': '/mindsdb-cloud-storage-v1/predictor_None_2.tar.gz', 'query_string': {}, 'method': 'GET', 'headers': {'User-Agent': 'Boto3/1.17.5 Python/3.8.5 Linux/5.4.0-72-generic Botocore/1.20.5'}, 'body': b'', 'url': 'https://s3.amazonaws.com/mindsdb-cloud-storage-v1/predictor_None_2.tar.gz', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x7f5218d6be80>, 'has_streaming_input': False, 'auth_type': None, 'signing': {'bucket': 'mindsdb-cloud-storage-v1'}}}
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.GetObject: calling handler <function signal_not_transferring at 0x7f5218d08550>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.GetObject: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x7f5218d6baf0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event choose-signer.s3.GetObject: calling handler <bound method ClientCreator._default_s3_presign_to_sigv2 of <botocore.client.ClientCreator object at 0x7f52193034f0>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event choose-signer.s3.GetObject: calling handler <function set_operation_specific_signer at 0x7f5236cfcca0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event before-sign.s3.GetObject: calling handler <bound method S3EndpointSetter.set_endpoint of <botocore.utils.S3EndpointSetter object at 0x7f5218fa3820>>
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:Checking for DNS compatible bucket for: https://s3.amazonaws.com/mindsdb-cloud-storage-v1/predictor_None_2.tar.gz
+[2m[36m(pid=49169)[0m DEBUG:botocore.utils:URI updated to: https://mindsdb-cloud-storage-v1.s3.amazonaws.com/predictor_None_2.tar.gz
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:Calculating signature using v4 auth.
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:CanonicalRequest:
+[2m[36m(pid=49169)[0m GET
+[2m[36m(pid=49169)[0m /predictor_None_2.tar.gz
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m host:mindsdb-cloud-storage-v1.s3.amazonaws.com
+[2m[36m(pid=49169)[0m x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+[2m[36m(pid=49169)[0m x-amz-date:20210503T151353Z
+[2m[36m(pid=49169)[0m 
+[2m[36m(pid=49169)[0m host;x-amz-content-sha256;x-amz-date
+[2m[36m(pid=49169)[0m e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:StringToSign:
+[2m[36m(pid=49169)[0m AWS4-HMAC-SHA256
+[2m[36m(pid=49169)[0m 20210503T151353Z
+[2m[36m(pid=49169)[0m 20210503/us-east-1/s3/aws4_request
+[2m[36m(pid=49169)[0m 06559eb09c9b85c2d5b70be9688bb9ce234c424146229ad12f0d1593b851eaf4
+[2m[36m(pid=49169)[0m DEBUG:botocore.auth:Signature:
+[2m[36m(pid=49169)[0m 9ce5a204c3122ce4d000879a03a426981c36fa735d6bf9b79565adee586bb809
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event request-created.s3.GetObject: calling handler <function signal_transferring at 0x7f5218d085e0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.endpoint:Sending http request: <AWSPreparedRequest stream_output=True, method=GET, url=https://mindsdb-cloud-storage-v1.s3.amazonaws.com/predictor_None_2.tar.gz, headers={'User-Agent': b'Boto3/1.17.5 Python/3.8.5 Linux/5.4.0-72-generic Botocore/1.20.5', 'X-Amz-Date': b'20210503T151353Z', 'X-Amz-Content-SHA256': b'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIA4KJYC2NSCYL5L3O3/20210503/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=9ce5a204c3122ce4d000879a03a426981c36fa735d6bf9b79565adee586bb809'}>
+[2m[36m(pid=49169)[0m DEBUG:botocore.httpsession:Certificate path: /etc/ssl/certs/ca-certificates.crt
+[2m[36m(pid=49169)[0m DEBUG:urllib3.connectionpool:https://mindsdb-cloud-storage-v1.s3.amazonaws.com:443 "GET /predictor_None_2.tar.gz HTTP/1.1" 200 84737
+[2m[36m(pid=49169)[0m DEBUG:botocore.parsers:Response headers: {'x-amz-id-2': '+FBHlGuOP6sKg5/FtUm67g8I20lotckvE8aWGhWGwV1nXBNPIN5WLAVaehplEeW0vbFGJ0XWrps=', 'x-amz-request-id': 'JBM5SVAAGTNXDDAP', 'Date': 'Mon, 03 May 2021 15:13:55 GMT', 'Last-Modified': 'Mon, 03 May 2021 15:13:47 GMT', 'ETag': '"c145d501ed97e5b24fde9b6a07e88cf3"', 'Accept-Ranges': 'bytes', 'Content-Type': 'binary/octet-stream', 'Content-Length': '84737', 'Server': 'AmazonS3'}
+[2m[36m(pid=49169)[0m DEBUG:botocore.parsers:Response body:
+[2m[36m(pid=49169)[0m <botocore.response.StreamingBody object at 0x7f510866cdc0>
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event needs-retry.s3.GetObject: calling handler <botocore.retryhandler.RetryHandler object at 0x7f5218fa3670>
+[2m[36m(pid=49169)[0m DEBUG:botocore.retryhandler:No retry needed.
+[2m[36m(pid=49169)[0m DEBUG:botocore.hooks:Event needs-retry.s3.GetObject: calling handler <bound method S3RegionRedirector.redirect_from_error of <botocore.utils.S3RegionRedirector object at 0x7f5218fa36d0>>
+handle new incoming connection
+New connection [127.0.0.1:33502]
+{'request': <socket.socket fd=44, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33502)>, 'client_address': ('127.0.0.1', 33502), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: c9sW2gBFhsSN4/MZ08bL
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\t\x00\x00\x00c9sW2gBF\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00hsSN4/MZ08bL\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'+\xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:IOWriteTask(transfer_id=0, {'offset': 0}) about to wait for the following futures []
+b',\x00\x00\x01\xfemysql_native_password\x00c9sW2gBFhsSN4/MZ08bL\x00'
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:IOWriteTask(transfer_id=0, {'offset': 0}) done waiting for dependent futures
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:Executing task IOWriteTask(transfer_id=0, {'offset': 0}) with kwargs {'fileobj': <s3transfer.utils.DeferredOpenFile object at 0x7f5108f43880>, 'offset': 0}
+Get packet: SwitchOutResponse
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:IORenameFileTask(transfer_id=0, {'final_filename': '/home/george/mindsdb/tests/temp/test_storage_1620054495972/predictors/None@@@@@home_rentals_predictor_external.tar.gz'}) about to wait for the following futures []
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:IORenameFileTask(transfer_id=0, {'final_filename': '/home/george/mindsdb/tests/temp/test_storage_1620054495972/predictors/None@@@@@home_rentals_predictor_external.tar.gz'}) done waiting for dependent futures
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.tasks:Executing task IORenameFileTask(transfer_id=0, {'final_filename': '/home/george/mindsdb/tests/temp/test_storage_1620054495972/predictors/None@@@@@home_rentals_predictor_external.tar.gz'}) with kwargs {'fileobj': <s3transfer.utils.DeferredOpenFile object at 0x7f5108f43880>, 'final_filename': '/home/george/mindsdb/tests/temp/test_storage_1620054495972/predictors/None@@@@@home_rentals_predictor_external.tar.gz', 'osutil': <s3transfer.utils.OSUtils object at 0x7f51085c0850>}
+[2m[36m(pid=49169)[0m DEBUG:s3transfer.utils:Releasing acquire 0/None
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+handle new incoming connection
+New connection [127.0.0.1:33504]
+{'request': <socket.socket fd=44, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33504)>, 'client_address': ('127.0.0.1', 33504), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: rsqhbujotWoc+9moV1Wq
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\n\x00\x00\x00rsqhbujo\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00tWoc+9moV1Wq\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'8\xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00rsqhbujotWoc+9moV1Wq\x00'
+Get packet: SwitchOutResponse
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+handle new incoming connection
+New connection [127.0.0.1:33508]
+{'request': <socket.socket fd=44, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33508)>, 'client_address': ('127.0.0.1', 33508), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: rIAEBJM7iJddgf6jXTd3
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x0b\x00\x00\x00rIAEBJM7\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00iJddgf6jXTd3\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'C\xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00rIAEBJM7iJddgf6jXTd3\x00'
+Get packet: SwitchOutResponse
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+handle new incoming connection
+New connection [127.0.0.1:33512]
+{'request': <socket.socket fd=44, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33512)>, 'client_address': ('127.0.0.1', 33512), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: pP58iWUVBc9PU7vUBoyc
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x0c\x00\x00\x00pP58iWUV\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Bc9PU7vUBoyc\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'M\xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00pP58iWUVBc9PU7vUBoyc\x00'
+Get packet: SwitchOutResponse
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+handle new incoming connection
+New connection [127.0.0.1:33516]
+{'request': <socket.socket fd=44, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33516)>, 'client_address': ('127.0.0.1', 33516), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: pENcygtqZzVOQbR7m2pZ
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\r\x00\x00\x00pENcygtq\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00ZzVOQbR7m2pZ\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'Z\xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00pENcygtqZzVOQbR7m2pZ\x00'
+Get packet: SwitchOutResponse
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+handle new incoming connection
+New connection [127.0.0.1:33518]
+{'request': <socket.socket fd=44, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33518)>, 'client_address': ('127.0.0.1', 33518), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: Ov99UwBiSsgiwHIRzm4p
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x0e\x00\x00\x00Ov99UwBi\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00SsgiwHIRzm4p\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'f\xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00Ov99UwBiSsgiwHIRzm4p\x00'
+Get packet: SwitchOutResponse
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+handle new incoming connection
+New connection [127.0.0.1:33520]
+{'request': <socket.socket fd=44, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 47335), raddr=('127.0.0.1', 33520)>, 'client_address': ('127.0.0.1', 33520), 'server': <socketserver.ThreadingTCPServer object at 0x7f93276a5130>}
+session salt: R2veBG/8dZQzoKe5d1wz
+send HandshakePacket
+Sending packet: HandshakePacket
+b'U\x00\x00\x00\n5.7.1-MindsDB-1.0\x00\x0f\x00\x00\x00R2veBG/8\x00\x8f\xa2S\x02\x00\x18\x01\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00dZQzoKe5d1wz\x00caching_sha2_password\x00'
+Get packet: HandshakeResponsePacket
+Got packet: b'p\xd7\xb3\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\x01\x00\x00\x004\x01\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x08hangUpOnStepDown\x00\x00\x03client\x00\xa9\x00\x00\x00\x03driver\x00F\x00\x00\x00\x02name\x00#\x00\x00\x00NetworkInterfaceASIO-ShardRegistry\x00\x02version\x00\x07\x00\x00\x003.6.20\x00\x00\x03os\x00R\x00\x00\x00\x02type\x00\x06\x00\x00\x00Linux\x00\x02name\x00\x07\x00\x00\x00Ubuntu\x00\x02architecture\x00\x07\x00\x00\x00x86_64\x00\x02version\x00\x06\x00\x00\x0016.04\x00\x00\x00\x04compression\x00\x13\x00\x00\x00\x020\x00\x07\x00\x00\x00snappy\x00\x00\x03internalClient\x00-\x00\x00\x00\x10minWireVersion\x00\x06\x00\x00\x00\x10maxWireVersion\x00\x06\x00\x00\x00\x00\x00'
+Check auth, user=, ssl=False, auth_method=: switch auth method to mysql_native_password
+Sending packet: SwitchOutPacket
+b',\x00\x00\x01\xfemysql_native_password\x00R2veBG/8dZQzoKe5d1wz\x00'
+Get packet: SwitchOutResponse
+Packet with less than 4 bytes in length: b''
+Check auth, user=, ssl=False, auth_method=: connecting to database 
+Check auth, user=: user mismatch
+Sending packet: ErrPacket
+b'\x1a\x00\x00\x03\xffm\x04Access denied for user '
+Access denied for user 
+Process SpawnProcess-1:
+
+use mindsdb port=47335
+Starting mindsdb process!
+Waiting on ports!
+Done waiting, mindsdb has started!
+
+Executing test_1_initial_state
+
+Executing test_2_put_external_ds
+
+Executing test_3_insert_predictor
+Traceback (most recent call last):
+  File "tests/integration_tests/flows/test_clickhouse.py", line 265, in <module>
+    unittest.main(failfast=True)
+  File "/usr/lib/python3.8/unittest/main.py", line 101, in __init__
+    self.runTests()
+  File "/usr/lib/python3.8/unittest/main.py", line 271, in runTests
+    self.result = testRunner.run(self.test)
+  File "/usr/lib/python3.8/unittest/runner.py", line 176, in run
+    test(result)
+  File "/usr/lib/python3.8/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/usr/lib/python3.8/unittest/suite.py", line 122, in run
+    test(result)
+  File "/usr/lib/python3.8/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+  File "/usr/lib/python3.8/unittest/suite.py", line 122, in run
+    test(result)
+  File "/usr/lib/python3.8/unittest/case.py", line 736, in __call__
+    return self.run(*args, **kwds)
+  File "/usr/lib/python3.8/unittest/case.py", line 676, in run
+    self._callTestMethod(testMethod)
+  File "/usr/lib/python3.8/unittest/case.py", line 633, in _callTestMethod
+    method()
+  File "tests/integration_tests/flows/test_clickhouse.py", line 190, in test_4_external_ds
+    res = fetch(f"""
+  File "tests/integration_tests/flows/test_clickhouse.py", line 83, in fetch
+    return query(q)
+  File "tests/integration_tests/flows/test_clickhouse.py", line 66, in query
+    res = requests.post(
+  File "/home/george/.local/lib/python3.8/site-packages/requests/api.py", line 119, in post
+    return request('post', url, data=data, json=json, **kwargs)
+  File "/home/george/.local/lib/python3.8/site-packages/requests/api.py", line 61, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/home/george/.local/lib/python3.8/site-packages/requests/sessions.py", line 542, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/george/.local/lib/python3.8/site-packages/requests/sessions.py", line 655, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/george/.local/lib/python3.8/site-packages/requests/adapters.py", line 439, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 665, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 421, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 416, in _make_request
+    httplib_response = conn.getresponse()
+  File "/usr/lib/python3.8/http/client.py", line 1347, in getresponse
+    response.begin()
+  File "/usr/lib/python3.8/http/client.py", line 307, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.8/http/client.py", line 268, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.8/socket.py", line 669, in readinto
+    return self._sock.recv_into(b)
+KeyboardInterrupt
+Traceback (most recent call last):
+
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 315, in _bootstrap
+    self.run()
+
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/home/george/mindsdb/mindsdb/api/mysql/start.py", line 11, in start
+    MysqlProxy.startProxy()
+
+  File "/home/george/mindsdb/mindsdb/api/mysql/mysql_proxy/mysql_proxy.py", line 1658, in startProxy
+    server.serve_forever()
+
+  File "/usr/lib/python3.8/socketserver.py", line 232, in serve_forever
+    ready = selector.select(poll_interval)
+
+  File "/usr/lib/python3.8/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+
+KeyboardInterrupt
+
+2021-05-03 16:15:06,485	ERROR import_thread.py:88 -- ImportThread: Connection closed by server.
+2021-05-03 16:15:06,490	ERROR worker.py:1117 -- listen_error_messages_raylet: Connection closed by server.
+2021-05-03 16:15:06,490	ERROR worker.py:922 -- print_logs: Connection closed by server.
+2021-05-03 16:15:06,491	ERROR worker.py:1117 -- listen_error_messages_raylet: Connection closed by server.
+2021-05-03 16:15:06,491	ERROR import_thread.py:88 -- ImportThread: Connection closed by server.
+2021-05-03 16:15:06,492	ERROR worker.py:922 -- print_logs: Connection closed by server.
+
+Aborted!
+Stopped all 63 Ray processes.
+Traceback (most recent call last):
+  File "/usr/local/bin/ray", line 5, in <module>
+    from ray.scripts.scripts import main
+  File "/usr/local/lib/python3.8/dist-packages/ray/__init__.py", line 77, in <module>
+    from ray.worker import (  # noqa: E402,F401
+  File "/usr/local/lib/python3.8/dist-packages/ray/worker.py", line 21, in <module>
+    from ray.autoscaler._private.util import DEBUG_AUTOSCALING_ERROR
+  File "/usr/local/lib/python3.8/dist-packages/ray/autoscaler/_private/util.py", line 7, in <module>
+    import jsonschema
+  File "/usr/lib/python3/dist-packages/jsonschema/__init__.py", line 11, in <module>
+    from jsonschema.exceptions import (
+  File "/usr/lib/python3/dist-packages/jsonschema/exceptions.py", line 11, in <module>
+    from jsonschema import _utils
+  File "/usr/lib/python3/dist-packages/jsonschema/_utils.py", line 6, in <module>
+    from jsonschema.compat import MutableMapping, str_types, urlsplit
+  File "/usr/lib/python3/dist-packages/jsonschema/compat.py", line 25, in <module>
+    from urllib.request import pathname2url, urlopen
+  File "/usr/lib/python3.8/urllib/request.py", line 88, in <module>
+    import http.client
+  File "/usr/lib/python3.8/http/client.py", line 71, in <module>
+    import email.parser
+  File "/usr/lib/python3.8/email/parser.py", line 12, in <module>
+    from email.feedparser import FeedParser, BytesFeedParser
+  File "/usr/lib/python3.8/email/feedparser.py", line 27, in <module>
+    from email._policybase import compat32
+  File "/usr/lib/python3.8/email/_policybase.py", line 7, in <module>
+    from email import header
+  File "/usr/lib/python3.8/email/header.py", line 35, in <module>
+    ecre = re.compile(r'''
+  File "/usr/lib/python3.8/re.py", line 252, in compile
+    return _compile(pattern, flags)
+  File "/usr/lib/python3.8/re.py", line 304, in _compile
+    p = sre_compile.compile(pattern, flags)
+  File "/usr/lib/python3.8/sre_compile.py", line 764, in compile
+    p = sre_parse.parse(p, flags)
+  File "/usr/lib/python3.8/sre_parse.py", line 948, in parse
+    p = _parse_sub(source, state, flags & SRE_FLAG_VERBOSE, 0)
+  File "/usr/lib/python3.8/sre_parse.py", line 443, in _parse_sub
+    itemsappend(_parse(source, state, verbose, nested + 1,
+  File "/usr/lib/python3.8/sre_parse.py", line 511, in _parse
+    sourceget()
+  File "/usr/lib/python3.8/sre_parse.py", line 256, in get
+    self.__next()
+  File "/usr/lib/python3.8/sre_parse.py", line 248, in __next
+    self.next = char
+KeyboardInterrupt
+Error in atexit._run_exitfuncs:
+Traceback (most recent call last):
+  File "/home/george/mindsdb/tests/integration_tests/flows/common.py", line 229, in stop_mindsdb
+    time.sleep(6)
+KeyboardInterrupt
+Exit request sent.
+Exit request sent.

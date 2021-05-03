@@ -28,7 +28,7 @@ class DataStore():
         self.default_company_id = company_id
         self.config = Config()
         self.fs_store = FsSotre()
-        self.dir = self.config.paths['datasources']
+        self.dir = self.config['paths']['datasources']
         self.mindsdb_native = NativeInterface()
 
     @default_company_id

@@ -61,7 +61,6 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
 
     to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
     data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-
     try:
         mdb.learn(
             from_data=data_source,

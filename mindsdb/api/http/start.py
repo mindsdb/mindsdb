@@ -37,7 +37,7 @@ def start(verbose, no_studio):
     Compress(app)
     initialize_interfaces(app)
 
-    static_root = config.paths['static']
+    static_root = config['paths']['static']
     if os.path.isabs(static_root) is False:
         static_root = os.path.join(os.getcwd(), static_root)
     static_root = Path(static_root)

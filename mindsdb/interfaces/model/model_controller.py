@@ -7,6 +7,7 @@ from pathlib import Path
 import psutil
 import datetime
 import time
+import os
 from contextlib import contextmanager
 
 import pandas as pd
@@ -87,7 +88,7 @@ class ModelController():
         # Here for no particular reason, because we want to run this sometimes but not too often
         self._invalidate_cached_predictors()
 
-        predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
+        predictor_dir = Path(self.config['paths']['predictors']).joinpath(name)
         create_directory(predictor_dir)
         predictor_record = Predictor(company_id=company_id, name=original_name, is_custom=False)
 
@@ -185,7 +186,6 @@ class ModelController():
                 self.predictor_cache = {}
 
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-            log.error(f'\n\n\nLooking up predictor with name: {original_name}\n\n\n')
             if predictor_record.data['status'] == 'complete':
                 self.fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {

@@ -65,7 +65,7 @@ if __name__ == '__main__':
     print(f'Version {mindsdb_version}')
 
     print(f'Configuration file:\n   {config.config_path}')
-    print(f"Storage path:\n   {config.paths['root']}")
+    print(f"Storage path:\n   {config['paths']['root']}")
 
 
     # @TODO Backwards compatibiltiy, remove later

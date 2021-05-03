@@ -271,14 +271,12 @@ class DataStore():
                     ds = dsClass(**creation_info['kwargs'])
             else:
                 # This probably only happens for urls
-                print(f'\n\n\nGOT A URL: {source}\n\n\n')
                 ds = FileDS(source)
                 creation_info = {
                     'class': 'FileDS',
                     'args': [source],
                     'kwargs': {}
                 }
-                exit()
 
             df = ds.df
 

@@ -34,9 +34,6 @@ class ModelController():
 
     def _invalidate_cached_predictors(self):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
         # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
@@ -78,9 +75,6 @@ class ModelController():
 
     def _setup_for_creation(self, name, original_name, company_id=None):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
         #if name in self.predictor_cache:
@@ -126,8 +120,6 @@ class ModelController():
     def create(self, name, company_id=None):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
         original_name = name
@@ -238,6 +230,7 @@ class ModelController():
         from mindsdb_native import F
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
+        import torch
 
         if '@@@@@' in name:
             name = name.split('@@@@@')[1]
@@ -254,6 +247,12 @@ class ModelController():
                 new_model_data = F.get_model_data(name)
             except Exception:
                 new_model_data = None
+
+            try:
+                torch.cuda.empty_cache()
+            except Exception as e:
+                pass
+            gc.collect()
 
             if predictor_record.data is None or (new_model_data is not None and len(new_model_data) > len(predictor_record.data)):
                 predictor_record.data = new_model_data

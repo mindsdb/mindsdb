@@ -271,12 +271,14 @@ class DataStore():
                     ds = dsClass(**creation_info['kwargs'])
             else:
                 # This probably only happens for urls
+                print(f'\n\n\nGOT A URL: {source}\n\n\n')
                 ds = FileDS(source)
                 creation_info = {
                     'class': 'FileDS',
                     'args': [source],
                     'kwargs': {}
                 }
+                exit()
 
             df = ds.df
 
@@ -310,7 +312,7 @@ class DataStore():
         try:
             datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
 
-            self.fs_store.get(name, f'datasource_{company_id}_{datasource_record.id}', self.dir)
+            self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)
             if raw:
                 return creation_info

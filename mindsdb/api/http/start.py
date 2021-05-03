@@ -1,6 +1,6 @@
 import os
 import logging
-import multiprocessing
+import torch.multiprocessing as mp
 import threading
 from pathlib import Path
 
@@ -118,6 +118,6 @@ def start(verbose, no_studio):
 
         options = {
             'bind': f'{host}:{port}',
-            'workers': min(max(multiprocessing.cpu_count(), 2), 3)
+            'workers': min(max(mp.cpu_count(), 2), 3)
         }
         StandaloneApplication(app, options).run()

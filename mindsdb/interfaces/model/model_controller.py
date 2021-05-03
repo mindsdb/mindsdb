@@ -83,10 +83,10 @@ class ModelController():
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
-        if name in self.predictor_cache:
-            del self.predictor_cache[name]
+        #if name in self.predictor_cache:
+        #    del self.predictor_cache[name]
         # Here for no particular reason, because we want to run this sometimes but not too often
-        self._invalidate_cached_predictors()
+        #self._invalidate_cached_predictors()
 
         predictor_dir = Path(self.config['paths']['predictors']).joinpath(name)
         create_directory(predictor_dir)
@@ -188,10 +188,11 @@ class ModelController():
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
             if predictor_record.data['status'] == 'complete':
                 self.fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
-                self.predictor_cache[name] = {
-                    'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
-                    'created': datetime.datetime.now()
-                }
+                #self.predictor_cache[name] = {
+                #    'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
+                #    'created': datetime.datetime.now()
+                #}
+                predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
             data_source = getattr(mindsdb_datasources, when_data['class'])(*when_data['args'], **when_data['kwargs'])
@@ -202,10 +203,13 @@ class ModelController():
             except Exception:
                 data_source = when_data
 
-        predictions = self.predictor_cache[name]['predictor'].predict(
+        #predictor = self.predictor_cache[name]['predictor']
+
+        predictions = predictor.predict(
             when_data=data_source,
             **kwargs
         )
+        #del self.predictor_cache[name]
         if pred_format == 'explain' or pred_format == 'new_explain':
             predictions = [p.explain() for p in predictions]
         elif pred_format == 'dict':

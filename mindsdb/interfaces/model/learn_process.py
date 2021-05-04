@@ -34,6 +34,8 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
     import mindsdb_native
     import mindsdb_datasources
     import mindsdb
+    import torch
+    import gc
 
     if 'join_learn_process' in kwargs:
         del kwargs['join_learn_process']
@@ -61,13 +63,13 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
 
     to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
     data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-
     try:
         mdb.learn(
             from_data=data_source,
             to_predict=to_predict,
             **kwargs
         )
+
     except Exception as e:
         log = logging.getLogger('mindsdb.main')
         log.error(f'Predictor learn error: {e}')
@@ -82,6 +84,12 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
     fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
 
     model_data = mindsdb_native.F.get_model_data(name)
+
+    try:
+        torch.cuda.empty_cache()
+    except Exception as e:
+        pass
+    gc.collect()
 
     predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
     predictor_record.data = model_data

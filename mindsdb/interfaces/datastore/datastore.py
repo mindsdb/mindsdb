@@ -28,7 +28,7 @@ class DataStore():
         self.default_company_id = company_id
         self.config = Config()
         self.fs_store = FsSotre()
-        self.dir = self.config.paths['datasources']
+        self.dir = self.config['paths']['datasources']
         self.mindsdb_native = NativeInterface()
 
     @default_company_id
@@ -310,7 +310,7 @@ class DataStore():
         try:
             datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
 
-            self.fs_store.get(name, f'datasource_{company_id}_{datasource_record.id}', self.dir)
+            self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)
             if raw:
                 return creation_info

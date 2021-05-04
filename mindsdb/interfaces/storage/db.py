@@ -145,7 +145,6 @@ class Stream(Base):
     name = Column(String)
     connection_params = Column(Json)
     advanced_params = Column(Json)
-    ts_params = Column(Json, default={})
 
 
 class Integration(Base):

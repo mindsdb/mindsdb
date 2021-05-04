@@ -7,6 +7,7 @@ from pathlib import Path
 import psutil
 import datetime
 import time
+import os
 from contextlib import contextmanager
 
 import pandas as pd
@@ -33,9 +34,6 @@ class ModelController():
 
     def _invalidate_cached_predictors(self):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
         # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
@@ -77,9 +75,6 @@ class ModelController():
 
     def _setup_for_creation(self, name, original_name, company_id=None):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
         if name in self.predictor_cache:
@@ -87,7 +82,7 @@ class ModelController():
         # Here for no particular reason, because we want to run this sometimes but not too often
         self._invalidate_cached_predictors()
 
-        predictor_dir = Path(self.config.paths['predictors']).joinpath(name)
+        predictor_dir = Path(self.config['paths']['predictors']).joinpath(name)
         create_directory(predictor_dir)
         predictor_record = Predictor(company_id=company_id, name=original_name, is_custom=False)
 
@@ -125,8 +120,6 @@ class ModelController():
     def create(self, name, company_id=None):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
         original_name = name
@@ -146,6 +139,7 @@ class ModelController():
         join_learn_process = kwargs.get('join_learn_process', False)
 
         self._setup_for_creation(name, original_name)
+
 
         if self.ray_based:
             run_learn(
@@ -185,13 +179,13 @@ class ModelController():
                 self.predictor_cache = {}
 
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-            log.error(f'\n\n\nLooking up predictor with name: {original_name}\n\n\n')
             if predictor_record.data['status'] == 'complete':
                 self.fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
                     'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
                     'created': datetime.datetime.now()
                 }
+                predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
             data_source = getattr(mindsdb_datasources, when_data['class'])(*when_data['args'], **when_data['kwargs'])
@@ -202,10 +196,13 @@ class ModelController():
             except Exception:
                 data_source = when_data
 
-        predictions = self.predictor_cache[name]['predictor'].predict(
+        predictor = self.predictor_cache[name]['predictor']
+
+        predictions = predictor.predict(
             when_data=data_source,
             **kwargs
         )
+        del self.predictor_cache[name]
         if pred_format == 'explain' or pred_format == 'new_explain':
             predictions = [p.explain() for p in predictions]
         elif pred_format == 'dict':
@@ -234,6 +231,7 @@ class ModelController():
         from mindsdb_native import F
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
+        import torch
 
         if '@@@@@' in name:
             name = name.split('@@@@@')[1]
@@ -250,6 +248,12 @@ class ModelController():
                 new_model_data = F.get_model_data(name)
             except Exception:
                 new_model_data = None
+
+            try:
+                torch.cuda.empty_cache()
+            except Exception as e:
+                pass
+            gc.collect()
 
             if predictor_record.data is None or (new_model_data is not None and len(new_model_data) > len(predictor_record.data)):
                 predictor_record.data = new_model_data

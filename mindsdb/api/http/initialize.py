@@ -60,7 +60,7 @@ def initialize_static(config):
         Current GUI version stored in static/version.txt.
     '''
     log = get_log('http')
-    static_path = Path(config.paths['static'])
+    static_path = Path(config['paths']['static'])
     static_path.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -226,7 +226,7 @@ def initialize_flask(config, init_static_thread, no_studio):
             __name__
         )
     else:
-        static_path = os.path.join(config.paths['static'], 'static/')
+        static_path = os.path.join(config['paths']['static'], 'static/')
         if os.path.isabs(static_path) is False:
             static_path = os.path.join(os.getcwd(), static_path)
         app = Flask(
@@ -271,7 +271,7 @@ def initialize_flask(config, init_static_thread, no_studio):
         log.info(f' - GUI available at {url}')
 
         pid = os.getpid()
-        x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config.paths['static']), daemon=True)
+        x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config['paths']['static']), daemon=True)
         x.start()
 
     return app, api

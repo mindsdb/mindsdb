@@ -1,6 +1,6 @@
 import os
 import logging
-import multiprocessing
+import torch.multiprocessing as mp
 import threading
 from pathlib import Path
 
@@ -37,7 +37,7 @@ def start(verbose, no_studio):
     Compress(app)
     initialize_interfaces(app)
 
-    static_root = config.paths['static']
+    static_root = config['paths']['static']
     if os.path.isabs(static_root) is False:
         static_root = os.path.join(os.getcwd(), static_root)
     static_root = Path(static_root)
@@ -118,6 +118,6 @@ def start(verbose, no_studio):
 
         options = {
             'bind': f'{host}:{port}',
-            'workers': min(max(multiprocessing.cpu_count(), 2), 3)
+            'workers': min(max(mp.cpu_count(), 2), 3)
         }
         StandaloneApplication(app, options).run()

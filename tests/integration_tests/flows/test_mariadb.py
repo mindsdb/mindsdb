@@ -86,7 +86,7 @@ class MariaDBTest(unittest.TestCase):
                     }
                 }
                 ,'permanent_storage': {
-                    'location': 's3'
+                    'location': 'local'
                 }
             }
         )

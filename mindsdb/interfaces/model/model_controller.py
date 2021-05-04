@@ -125,7 +125,7 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        self._setup_for_creation(name, original_name)
+        self._setup_for_creation(name, original_name, company_id=company_id)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
 
@@ -138,8 +138,7 @@ class ModelController():
 
         join_learn_process = kwargs.get('join_learn_process', False)
 
-        self._setup_for_creation(name, original_name)
-
+        self._setup_for_creation(name, original_name, company_id=company_id)
 
         if self.ray_based:
             run_learn(

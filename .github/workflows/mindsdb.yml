@@ -70,6 +70,10 @@ jobs:
           echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
           sudo chmod 644 ~/.mindsdb_credentials.json
 
+          echo -e "\n===============\nPICKLE\n===============\n"
+          python -c "import pickle; print(pickle.HIGHEST_PROTOCOL)"
+          echo -e "\n===============\nPICKLE\n===============\n"
+
           export USE_EXTERNAL_DB_SERVER="1"
 
           # HTTP

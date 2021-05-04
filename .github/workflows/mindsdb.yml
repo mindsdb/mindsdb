@@ -70,11 +70,11 @@ jobs:
           echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
           sudo chmod 644 ~/.mindsdb_credentials.json
 
-          echo -e "\n===============\nPICKLE\n===============\n"
-          python -c "import pickle; print(pickle.HIGHEST_PROTOCOL)"
-          echo -e "\n===============\nPICKLE\n===============\n"
-
           export USE_EXTERNAL_DB_SERVER="1"
+
+          # Company independent
+          echo -e "\n===============\ntest company independent\n===============\n"
+          python tests/integration_tests/flows/test_company_independent.py
 
           # HTTP
           echo -e "\n===============\ntest HTTP\n===============\n"

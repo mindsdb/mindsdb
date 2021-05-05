@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
 
     # @TODO Backwards compatibiltiy, remove later
-    from mindsdb.interfaces.database.integrations import add_db_integration
+    from mindsdb.interfaces.database.integrations import add_db_integration, get_db_integration
     dbw = DatabaseWrapper(None)
     model_interface = ModelInterface()
     raw_model_data_arr = model_interface.get_models()
@@ -84,8 +84,9 @@ if __name__ == '__main__':
     for integration_name in config.get('integrations', {}):
         print(f'Adding: {integration_name}')
         try:
-            # Setup for user `None`, since we don't need this for cloud
-            add_db_integration(integration_name, config['integrations'][integration_name], None)
+            it = get_db_integration(integration_name, None)
+            if it is None:
+                add_db_integration(integration_name, config['integrations'][integration_name], None)            # Setup for user `None`, since we don't need this for cloud
             if config['integrations'][integration_name].get('publish', False):
                 dbw.setup_integration(integration_name)
                 dbw.register_predictors(model_data_arr, integration_name=integration_name)

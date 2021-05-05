@@ -147,7 +147,6 @@ class PredictorLearn(Resource):
         if 'advanced_args' not in kwargs:
             kwargs['advanced_args'] = {}
 
-
         ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
         from_data = request.default_store.get_datasource_obj(ds_name, raw=True)
 
@@ -166,9 +165,10 @@ class PredictorPredict(Resource):
             'message': msg
         }
 
+
 @ns_conf.route('/<name>/predict')
 @ns_conf.param('name', 'The predictor identifier')
-class PredictorPredict(Resource):
+class PredictorPredict2(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
         '''Queries predictor'''

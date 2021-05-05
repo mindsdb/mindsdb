@@ -7,7 +7,6 @@ from pathlib import Path
 import psutil
 import datetime
 import time
-import os
 from contextlib import contextmanager
 
 import pandas as pd
@@ -125,7 +124,7 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        self._setup_for_creation(name, original_name)
+        self._setup_for_creation(name, original_name, company_id=company_id)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
 
@@ -138,8 +137,7 @@ class ModelController():
 
         join_learn_process = kwargs.get('join_learn_process', False)
 
-        self._setup_for_creation(name, original_name)
-
+        self._setup_for_creation(name, original_name, company_id=company_id)
 
         if self.ray_based:
             run_learn(
@@ -252,7 +250,7 @@ class ModelController():
 
             try:
                 torch.cuda.empty_cache()
-            except Exception as e:
+            except Exception:
                 pass
             gc.collect()
 
@@ -289,9 +287,9 @@ class ModelController():
         for model_name in predictor_names:
             try:
                 if self.ray_based:
-                    model_data = self.get_model_data(model_name, db_fix=False)
+                    model_data = self.get_model_data(model_name, db_fix=False, company_id=company_id)
                 else:
-                    bin = self.get_model_data(model_name, db_fix=False)
+                    bin = self.get_model_data(model_name, db_fix=False, company_id=company_id)
                     model_data = pickle.loads(bin.data)
                 reduced_model_data = {}
 

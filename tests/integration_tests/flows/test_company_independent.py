@@ -4,6 +4,8 @@ from pathlib import Path
 import json
 import requests
 
+from pymongo import MongoClient
+
 from common import (
     CONFIG_PATH,
     HTTP_API_ROOT,
@@ -22,12 +24,17 @@ CID_A = 1
 CID_B = 2
 
 
+def get_mongo_predictors(company_id):
+    client = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
+    client.admin.command({'company_id': company_id, 'need_response': 1})
+    return [x['name'] for x in client.mindsdb.predictors.find()]
+
+
 class CompanyIndependentTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         run_environment(
-            # apis=['mysql', 'http', 'mongodb']
-            apis=['http']
+            apis=['http', 'mongodb']
         )
 
         config.update(
@@ -141,6 +148,11 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_p_a')
         self.assertTrue(len(predictors_b) == 0)
 
+        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
+        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
+        self.assertTrue(len(mongo_predictors_a) == 1 and mongo_predictors_a[0] == 'test_p_a')
+        self.assertTrue(len(mongo_predictors_b) == 0)
+
         params = {
             'data_source_name': 'test_ds_a',
             'to_predict': 'rental_price',
@@ -159,6 +171,11 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_p_a')
         self.assertTrue(len(predictors_b) == 0)
 
+        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
+        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
+        self.assertTrue(len(mongo_predictors_a) == 1 and mongo_predictors_a[0] == 'test_p_a')
+        self.assertTrue(len(mongo_predictors_b) == 0)
+
         params = {
             'data_source_name': 'test_ds_b',
             'to_predict': 'rental_price',
@@ -174,6 +191,43 @@ class CompanyIndependentTest(unittest.TestCase):
         predictors_a = get_predictors_names_list(company_id=CID_A)
         predictors_b = get_predictors_names_list(company_id=CID_B)
         self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_p_a')
+        self.assertTrue(len(predictors_b) == 1 and predictors_b[0] == 'test_p_b')
+
+        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
+        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
+        self.assertTrue(len(mongo_predictors_a) == 1 and mongo_predictors_a[0] == 'test_p_a')
+        self.assertTrue(len(mongo_predictors_b) == 1 and mongo_predictors_b[0] == 'test_p_b')
+
+    def test_5_add_predictors_mongo(self):
+        client = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
+        client.admin.command({'company_id': CID_A, 'need_response': 1})
+        client.mindsdb.predictors.insert_one({
+            'name': 'test_mon_p_a',
+            'predict': 'rental_price',
+            'external_datasource': 'test_ds_a',
+            'training_options': {
+                'join_learn_process': True,
+                'stop_training_in_x_seconds': 3
+            }
+        })
+
+        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
+        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
+        self.assertTrue(len(mongo_predictors_a) == 2 and mongo_predictors_a[1] == 'test_mon_p_a')
+        self.assertTrue(len(mongo_predictors_b) == 1 and mongo_predictors_b[0] == 'test_p_b')
+
+        client = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
+        client.admin.command({'company_id': CID_A, 'need_response': 1})
+        client.mindsdb.predictors.delete_one({'name': 'test_p_a'})
+
+        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
+        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
+        self.assertTrue(len(mongo_predictors_a) == 1 and mongo_predictors_a[0] == 'test_mon_p_a')
+        self.assertTrue(len(mongo_predictors_b) == 1 and mongo_predictors_b[0] == 'test_p_b')
+
+        predictors_a = get_predictors_names_list(company_id=CID_A)
+        predictors_b = get_predictors_names_list(company_id=CID_B)
+        self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_mon_p_a')
         self.assertTrue(len(predictors_b) == 1 and predictors_b[0] == 'test_p_b')
 
 

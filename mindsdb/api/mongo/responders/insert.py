@@ -9,7 +9,6 @@ class Responce(Responder):
     when = {'insert': helpers.is_true}
 
     def result(self, query, request_env, mindsdb_env, session):
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         try:
             res = self._result(query, request_env, mindsdb_env)
         except Exception as e:
@@ -106,7 +105,7 @@ class Responce(Responder):
                         mindsdb_env['data_store'].delete_datasource(ds_name)
                     raise Exception(f"Column '{col}' not exists")
 
-            datasource_record = session.query(Datasource).filter_by(company_id=self.company_id, name=ds_name).first()
+            datasource_record = session.query(Datasource).filter_by(company_id=mindsdb_env['company_id'], name=ds_name).first()
             mindsdb_env['mindsdb_native'].learn(
                 doc['name'],
                 mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True),

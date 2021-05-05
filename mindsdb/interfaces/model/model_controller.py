@@ -7,7 +7,6 @@ from pathlib import Path
 import psutil
 import datetime
 import time
-import os
 from contextlib import contextmanager
 
 import pandas as pd
@@ -251,7 +250,7 @@ class ModelController():
 
             try:
                 torch.cuda.empty_cache()
-            except Exception as e:
+            except Exception:
                 pass
             gc.collect()
 
@@ -288,9 +287,9 @@ class ModelController():
         for model_name in predictor_names:
             try:
                 if self.ray_based:
-                    model_data = self.get_model_data(model_name, db_fix=False)
+                    model_data = self.get_model_data(model_name, db_fix=False, company_id=company_id)
                 else:
-                    bin = self.get_model_data(model_name, db_fix=False)
+                    bin = self.get_model_data(model_name, db_fix=False, company_id=company_id)
                     model_data = pickle.loads(bin.data)
                 reduced_model_data = {}
 

@@ -137,7 +137,7 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(res.status_code == 200)
 
         predictors_a = get_predictors_names_list(company_id=CID_A)
-        predictors_b = get_predictors_names_list(company_id=CID_A)
+        predictors_b = get_predictors_names_list(company_id=CID_B)
         self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_p_a')
         self.assertTrue(len(predictors_b) == 0)
 
@@ -150,12 +150,12 @@ class CompanyIndependentTest(unittest.TestCase):
             }
         }
         url = f'{HTTP_API_ROOT}/predictors/test_p_b'
-        res = requests.put(url, json=params, headers={'company-id': f'{CID_A}'})
+        res = requests.put(url, json=params, headers={'company-id': f'{CID_B}'})
         # shld not able create predictor from foreign ds
         self.assertTrue(res.status_code != 200)
 
         predictors_a = get_predictors_names_list(company_id=CID_A)
-        predictors_b = get_predictors_names_list(company_id=CID_A)
+        predictors_b = get_predictors_names_list(company_id=CID_B)
         self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_p_a')
         self.assertTrue(len(predictors_b) == 0)
 
@@ -168,11 +168,11 @@ class CompanyIndependentTest(unittest.TestCase):
             }
         }
         url = f'{HTTP_API_ROOT}/predictors/test_p_b'
-        res = requests.put(url, json=params, headers={'company-id': f'{CID_A}'})
+        res = requests.put(url, json=params, headers={'company-id': f'{CID_B}'})
         self.assertTrue(res.status_code == 200)
 
         predictors_a = get_predictors_names_list(company_id=CID_A)
-        predictors_b = get_predictors_names_list(company_id=CID_A)
+        predictors_b = get_predictors_names_list(company_id=CID_B)
         self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_p_a')
         self.assertTrue(len(predictors_b) == 1 and predictors_b[0] == 'test_p_b')
 

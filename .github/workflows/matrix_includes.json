@@ -59,7 +59,7 @@
     {
       "runs_on": "ubuntu-latest",
       "python-version": 3.6,
-      "token": "install_ray",
+      "token": "not_install_ray",
       "runOn": "always"
     }
   ]

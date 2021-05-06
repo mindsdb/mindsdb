@@ -1,15 +1,13 @@
 import os
 import json
-import hashlib
-import datetime
 from copy import deepcopy
 from threading import Event
 
 from mindsdb.utilities.fs import create_directory
-from mindsdb.interfaces.database.integrations import add_db_integration
 
 
 STOP_THREADS_EVENT = Event()
+
 
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
@@ -19,6 +17,7 @@ def _merge_key_recursive(target_dict, source_dict, key):
     else:
         for k in list(source_dict[key].keys()):
             _merge_key_recursive(target_dict[key], source_dict[key], k)
+
 
 def _merge_configs(original_config, override_config):
     original_config = deepcopy(original_config)
@@ -35,8 +34,6 @@ class Config():
         else:
             with open(self.config_path, 'r') as fp:
                 self._override_config = json.load(fp)
-
-
 
         self._default_config = {
             'permanent_storage': {

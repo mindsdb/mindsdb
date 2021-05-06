@@ -76,6 +76,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
+from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import get_db_integrations, get_db_integration
 
@@ -158,7 +159,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.server.connection_id = 0
         self.server.connection_id += 1
         self.connection_id = self.server.connection_id
-        self.session = SessionController(self.server.original_model_interface, company_id=company_id)
+        self.session = SessionController(
+            self.server.original_model_interface,
+            self.server.original_data_store,
+            company_id=company_id
+        )
 
         if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
             self.salt = self.server.salt
@@ -1649,6 +1654,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.connection_id = 0
 
         server.original_model_interface = ModelInterface()
+        server.original_data_store = DataStore()
 
         atexit.register(MysqlProxy.server_close, srv=server)
 

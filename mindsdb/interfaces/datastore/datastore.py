@@ -12,26 +12,29 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.database.integrations import get_db_integration, get_db_integrations
+from mindsdb.interfaces.database.integrations import get_db_integration
 
 
-def default_company_id(f):
-    def wrapper(*args, **kwargs):
-        if kwargs.get('company_id') is None:
-            kwargs['company_id'] = args[0].default_company_id
-        return f(*args, **kwargs)
-    return wrapper
+class DataStoreWrapper(object):
+    def __init__(self, data_store, company_id=None):
+        self.company_id = company_id
+        self.data_store = data_store
+
+    def __getattr__(self, name):
+        def wrapper(*args, **kwargs):
+            if kwargs.get('company_id') is None:
+                kwargs['company_id'] = self.company_id
+            return getattr(self.data_store, name)(*args, **kwargs)
+        return wrapper
 
 
 class DataStore():
-    def __init__(self, company_id=None):
-        self.default_company_id = company_id
+    def __init__(self):
         self.config = Config()
         self.fs_store = FsSotre()
         self.dir = self.config['paths']['datasources']
         self.mindsdb_native = NativeInterface()
 
-    @default_company_id
     def get_analysis(self, name, company_id=None):
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         if datasource_record.analysis is None:
@@ -39,7 +42,6 @@ class DataStore():
         analysis = json.loads(datasource_record.analysis)
         return analysis
 
-    @default_company_id
     def start_analysis(self, name, company_id=None):
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         if datasource_record.analysis is not None:
@@ -63,7 +65,6 @@ class DataStore():
             session.delete(semaphor_record)
             session.commit()
 
-    @default_company_id
     def get_datasources(self, name=None, company_id=None):
         datasource_arr = []
         if name is not None:
@@ -84,10 +85,9 @@ class DataStore():
                 log.error(e)
         return datasource_arr
 
-    @default_company_id
     def get_data(self, name, where=None, limit=None, offset=None, company_id=None):
         offset = 0 if offset is None else offset
-        ds = self.get_datasource_obj(name)
+        ds = self.get_datasource_obj(name, company_id=company_id)
 
         if limit is not None:
             # @TODO Add `offset` to the `filter` method of the datasource and get rid of `offset`
@@ -103,9 +103,8 @@ class DataStore():
             'columns_names': filtered_ds.columns
         }
 
-    @default_company_id
     def get_datasource(self, name, company_id=None):
-        datasource_arr = self.get_datasources(name)
+        datasource_arr = self.get_datasources(name, company_id=company_id)
         if len(datasource_arr) == 1:
             return datasource_arr[0]
         # @TODO: Remove when db swithc is more stable, this should never happen, but good santiy check while this is kinda buggy
@@ -114,10 +113,8 @@ class DataStore():
             raise Exception('Two or more datasource with the same name')
         return None
 
-    @default_company_id
     def delete_datasource(self, name, company_id=None):
         datasource_record = Datasource.query.filter_by(company_id=company_id, name=name).first()
-        id = datasource_record.id
         session.delete(datasource_record)
         session.commit()
         self.fs_store.delete(f'datasource_{company_id}_{datasource_record.id}')
@@ -126,7 +123,6 @@ class DataStore():
         except Exception:
             pass
 
-    @default_company_id
     def save_datasource(self, name, source_type, source, file_path=None, company_id=None):
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
@@ -298,14 +294,13 @@ class DataStore():
         except Exception as e:
             log.error(f'Error creating datasource {name}, exception: {e}')
             try:
-                self.delete_datasource(name)
+                self.delete_datasource(name, company_id=company_id)
             except Exception:
                 pass
             raise e
 
-        return self.get_datasource_obj(name, raw=True), name
+        return self.get_datasource_obj(name, raw=True, company_id=company_id), name
 
-    @default_company_id
     def get_datasource_obj(self, name, raw=False, id=None, company_id=None):
         try:
             datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()

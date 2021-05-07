@@ -32,11 +32,6 @@ class ModelController():
         self.predictor_cache = {}
         self.ray_based = ray_based
 
-    def _pack(self, obj):
-        if self.ray_based:
-            return obj
-        return fl.Result(pa.py_buffer(pickle.dumps(obj)))
-
     def _invalidate_cached_predictors(self):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         import mindsdb_native
@@ -169,7 +164,9 @@ class ModelController():
         return 0
 
     def predict(self, name, pred_format, when_data=None, kwargs={}):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
+        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
+                                         MySqlDS, PostgresDS, MSSQLDS, MongoDS,
+                                         SnowflakeDS, AthenaDS)
         import mindsdb_native
         from mindsdb.interfaces.storage.db import session, Predictor
 
@@ -212,6 +209,7 @@ class ModelController():
             raise Exception(f'Unkown predictions format: {pred_format}')
 
         delete_process_mark('predict')
+
         return predictions
 
     def analyse_dataset(self, ds):

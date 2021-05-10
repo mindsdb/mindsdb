@@ -354,7 +354,10 @@ class ModelController():
 try:
     from mindsdb_worker.cluster.ray_controller import ray_ify
     import ray
-    ray.init(ignore_reinit_error=True)
+    try:
+        ray.init(ignore_reinit_error=True, address='auto')
+    except Exception:
+        ray.init(ignore_reinit_error=True)
     ModelController = ray_ify(ModelController)
 except Exception as e:
     log.error(e)

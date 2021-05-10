@@ -79,7 +79,6 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
         }
         session.commit()
         delete_process_mark('learn')
-        return
 
     fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
 

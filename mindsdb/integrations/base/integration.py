@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
 from mindsdb.interfaces.storage.db import session, Stream
 from mindsdb.utilities.log import log
+from mindsdb.interfaces.database.integrations import get_db_integration
+
 
 class Integration(ABC):
     def __init__(self, config, name):
@@ -36,12 +38,17 @@ class StreamIntegration(Integration):
         self.stop_event = STOP_THREADS_EVENT
         self.log = log
 
-    def exist_in_db(self):
-        return self.name in Config()['integrations']
+    def get_stream_from_db(self, db_record):
+        kwargs = {"type": db_record._type,
+                  "name": db_record.name,
+                  "predictor": db_record.predictor,
+                  "input_stream": db_record.stream_in,
+                  "output_stream": db_record.stream_out,
+                  "anomaly_stream": db_record.stream_anomaly}
+        return self.get_stream_from_kwargs(**kwargs)
 
-    def stop_streams(self):
-        for stream in self.streams:
-            self.streams[stream].set()
+    def exist_in_db(self):
+        return get_db_integration(self.name, self.company_id) is not None
 
     def delete_stream(self, predictor):
         """Deletes stream from database and stops it work by
@@ -61,10 +68,13 @@ class StreamIntegration(Integration):
         session.query(Stream).filter_by(company_id=self.company_id, integration=self.name).delete()
         session.commit()
 
+    def stop_streams(self):
+        for stream in self.streams:
+            self.streams[stream].set()
+
     def stop_deleted_streams(self):
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
         actual_streams = [x.name for x in existed_streams]
-
 
         for stream in self.streams.copy():
             if stream not in actual_streams:

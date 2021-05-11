@@ -8,6 +8,31 @@ from mindsdb.utilities.log import log
 import pyarrow.flight as fl
 
 
+class ModelInterfaceWrapper(object):
+    def __init__(self, model_interface, company_id=None):
+        self.company_id = company_id
+        self.model_interface = model_interface
+
+    def __getattr__(self, name):
+        def wrapper(*args, **kwargs):
+            if kwargs.get('company_id') is None:
+                kwargs['company_id'] = self.company_id
+            return getattr(self.model_interface, name)(*args, **kwargs)
+        return wrapper
+
+
+class ServerProxy(object):
+    def __init__(self):
+        self._xmlrpc_server_proxy = xmlrpc.client.ServerProxy("http://localhost:19329/", allow_none=True)
+
+    def __getattr__(self, name):
+        call_proxy = getattr(self._xmlrpc_server_proxy, name)
+
+        def _call(*args, **kwargs):
+            return call_proxy(args, kwargs)
+        return _call
+
+
 class ModelInterfaceRPC():
     def __init__(self):
         for _ in range(10):
@@ -30,41 +55,43 @@ class ModelInterfaceRPC():
     def _loads(self, res):
         return pickle.loads(next(iter(res)).body.to_pybytes())
 
-    def create(self, name):
-        self._action('create', name=name)
+    def create(self, *args, **kwargs):
+        self._action('create', *args, **kwargs)
 
-    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}):
-        self._action('learn', name=name, from_data=from_data, to_predict=to_predict, datasource_id=datasource_id, kwargs=kwargs)
+    def learn(self, *args, **kwargs):
+        self._action('learn', *args, **kwargs)
 
-    def predict(self, name, pred_format, when_data=None, kwargs={}):
-        res = self._action('predict', name=name, pred_format=pred_format, when_data=when_data, kwargs=kwargs)
+    def predict(self, *args, **kwargs):
+        res = self._action('predict', *args, **kwargs)
         return self._loads(res)
 
-    def analyse_dataset(self, ds):
-        res = self._action('analyse_dataset', ds=ds)
+    def analyse_dataset(self, *args, **kwargs):
+        res = self._action('analyse_dataset', *args, **kwargs)
         return self._loads(res)
 
-    def get_model_data(self, name, db_fix=True):
-        res = self._action('get_model_data', name=name, db_fix=db_fix)
+    def get_model_data(self, *args, **kwargs):
+        res = self._action('get_model_data', *args, **kwargs)
         return self._loads(res)
 
-    def get_models(self):
-        res = self._action('get_models')
+    def get_models(self, *args, **kwargs):
+        res = self._action('get_models', *args, **kwargs)
         return self._loads(res)
 
-    def delete_model(self, name):
-        self._action('delete_model', name=name)
+    def delete_model(self, *args, **kwargs):
+        self._action('delete_model', *args, **kwargs)
 
-    def update_model(self, name):
+    def update_model(self, *args, **kwargs):
         return 'Model updating is no available in this version of mindsdb'
-
 
 try:
     from mindsdb_worker.cluster.ray_interface import ModelInterfaceRay
     import ray
-    ray.init(ignore_reinit_error=True)
+    try:
+        ray.init(ignore_reinit_error=True, address='auto')
+    except Exception:
+        ray.init(ignore_reinit_error=True)
     ModelInterface = ModelInterfaceRay
     ray_based = True
-except Exception as e:
+except Exception:
     ModelInterface = ModelInterfaceRPC
     ray_based = False

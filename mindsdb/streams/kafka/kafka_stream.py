@@ -32,7 +32,7 @@ class KafkaStream(Thread, BaseStream):
         except kafka.errors.TopicAlreadyExistsError:
             pass
         except Exception as e:
-            log.error(f"STREAM: error creating topics - {e}")
+            log.error(f"STREAM {self.stream_name}: error creating topics - {e}")
         self._type = _type
 
         self.caches = {}
@@ -50,7 +50,7 @@ class KafkaStream(Thread, BaseStream):
                 x['make_predictions'] = True
 
         result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_list)
-        log.error(f"TIMESERIES STREAM: got {result}")
+        log.error(f"TIMESERIES STREAM {self.stream_name}: got {result}")
         for res in result:
             in_json = json.dumps(res)
             to_send = in_json.encode('utf-8')
@@ -61,7 +61,7 @@ class KafkaStream(Thread, BaseStream):
 
     def make_prediction_from_cache(self, cache_name):
         cache = self.caches[cache_name]
-        log.error("STREAM: in make_prediction_from_cache")
+        log.error("STREAM {self.stream_name}: in make_prediction_from_cache")
         if len(cache) >= self.window:
             log.error(f"STREAM: make_prediction_from_cache - len(cache) = {len(cache)}")
             self.predict_ts(cache_name)
@@ -73,7 +73,7 @@ class KafkaStream(Thread, BaseStream):
             cache = []
             self.caches[cache_name] = cache
 
-        log.error(f"STREAM: cache {cache_name} has been created")
+        log.error(f"STREAM {self.stream_name}: cache {cache_name} has been created")
         self.make_prediction_from_cache(cache_name)
         self.handle_record(cache_name, record)
         self.make_prediction_from_cache(cache_name)

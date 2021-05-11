@@ -382,16 +382,21 @@ class FlightServer(fl.FlightServerBase):
         }
 
     def do_action(self, context, action):
-        if action.type not in self.actions:
-            raise ValueError('Unknown action')
-        else:
-            args = pickle.loads(action.body['args'])
-            kwargs = pickle.loads(action.body['kwargs'])
-            obj = self.actions[action.type](*args, **kwargs)
-            buf = pa.py_buffer(pickle.dumps(obj))
-            res = pa.flight.Result(buf)
-            yield res
-
+        try:
+            if action.type not in self.actions:
+                raise ValueError('Unknown action')
+            else:
+                body = pickle.loads(action.body)
+                args = body['args']
+                kwargs = body['kwargs']
+                obj = self.actions[action.type](*args, **kwargs)
+                buf = pa.py_buffer(pickle.dumps(obj))
+                res = pa.flight.Result(buf)
+                yield res
+        except Exception:
+            import traceback
+            print(traceback.format_exc())
+            raise
 
 def start():
     server = FlightServer("grpc://localhost:19329")

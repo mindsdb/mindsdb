@@ -31,6 +31,8 @@ class KafkaStream(Thread, BaseStream):
             self.admin.create_topics([self.topic, self.topic_anomaly])
         except kafka.errors.TopicAlreadyExistsError:
             pass
+        except Exception as e:
+            log.error(f"STREAM: error creating topics - {e}")
         self._type = _type
 
         self.caches = {}

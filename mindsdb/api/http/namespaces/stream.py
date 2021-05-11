@@ -9,13 +9,17 @@ from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Stream as StreamDB
 from mindsdb.streams.base.base_stream import StreamTypes
 
+from mindsdb.interfaces.database.integrations import (
+    get_db_integration,
+)
 
-def get_integration(name):
-    integrations = ca.config_obj.get('integrations', {})
-    return integrations.get(name, {})
+# def get_integration(name):
+#     integrations = ca.config_obj.get('integrations', {})
+#     return integrations.get(name, {})
 
 def get_predictors():
-    full_predictors_list = [*request.naitve_interface.get_models(),*request.custom_models.get_models()]
+    # full_predictors_list = [*request.naitve_interface.get_models(),*request.custom_models.get_models()]
+    full_predictors_list = [*request.naitve_interface.get_models()]
     return [x["name"] for x in full_predictors_list
             if x["status"] == "complete" and x["current_phase"] == 'Trained']
 
@@ -64,7 +68,7 @@ class Stream(Resource):
             if param not in params:
                 abort(400, f"'{param}' is missed.")
         integration_name = params['integration_name']
-        integration_info = get_integration(integration_name)
+        integration_info = get_db_integration(integration_name, request.company_id, False)
         if not integration_info:
             abort(400, f"integration '{integration_name}' doesn't exist.")
         if integration_info["type"] not in ['redis', 'kafka']:

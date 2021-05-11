@@ -385,8 +385,9 @@ class FlightServer(fl.FlightServerBase):
         if action.type not in self.actions:
             raise ValueError('Unknown action')
         else:
-            kwargs = pickle.loads(action.body)
-            obj = self.actions[action.type](**kwargs)
+            args = pickle.loads(action.body['args'])
+            kwargs = pickle.loads(action.body['kwargs'])
+            obj = self.actions[action.type](*args, **kwargs)
             buf = pa.py_buffer(pickle.dumps(obj))
             res = pa.flight.Result(buf)
             yield res

@@ -48,8 +48,8 @@ class ModelInterfaceRPC():
                 log.info('Wating for native RPC server to start')
         raise Exception('Unable to connect to RPC server')
 
-    def _action(self, act_name, **kwargs):
-        action = fl.Action(act_name, pickle.dumps(kwargs))
+    def _action(self, act_name, *args, **kwargs):
+        action = fl.Action(act_name, pickle.dumps({'args': args, 'kwargs': kwargs}))
         return self.client.do_action(action)
 
     def _loads(self, res):

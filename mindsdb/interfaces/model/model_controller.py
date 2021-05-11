@@ -159,7 +159,7 @@ class ModelController():
         delete_process_mark('learn')
         return 0
 
-    def predict(self, name, pred_format, when_data=None, kwargs={}):
+    def predict(self, name, pred_format, when_data=None, kwargs={}, company_id=None):
         from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
                                          MySqlDS, PostgresDS, MSSQLDS, MongoDS,
                                          SnowflakeDS, AthenaDS)

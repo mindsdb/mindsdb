@@ -259,6 +259,15 @@ class ModelController():
                 model = new_model_data
                 session.commit()
 
+            if predictor_record.data is None:
+                if new_model_data is None:
+                    predictor_record.data = {"name": original_name, "status": "error"}
+                    model = {"name": original_name, "status": "error"}
+                elif len(new_model_data) > len(predictor_record.data):
+                    predictor_record.data = new_model_data
+                    model = new_model_data
+                session.commit()
+
         # Make some corrections for databases not to break when dealing with empty columns
         if db_fix:
             data_analysis = model['data_analysis_v2']
@@ -273,7 +282,8 @@ class ModelController():
         model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
         model['predict'] = predictor_record.to_predict
         model['update'] = predictor_record.update_status
-        model['name'] = model['name'].split('@@@@@')[1]
+        if '@@@@@' in model['name']:
+            model['name'] = model['name'].split('@@@@@')[1]
         return self._pack(model)
 
     def get_models(self, company_id=None):

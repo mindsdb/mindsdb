@@ -259,6 +259,15 @@ class ModelController():
                 model = new_model_data
                 session.commit()
 
+            if predictor_record.data is None:
+                if new_model_data is None:
+                    predictor_record.data = {"name": original_name, "status": "error"}
+                    model = {"name": original_name, "status": "error"}
+                elif len(new_model_data) > len(predictor_record.data):
+                    predictor_record.data = new_model_data
+                    model = new_model_data
+                session.commit()
+
         # Make some corrections for databases not to break when dealing with empty columns
         if db_fix:
             data_analysis = model['data_analysis_v2']

@@ -266,6 +266,7 @@ class MindsDBDataNode(DataNode):
             return data
         else:
             pred_dicts, explanations = self.model_interface.predict(table, 'dict&explain', when_data=where_data)
+            # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
             if isinstance(where_data, list):
                 for i in range(len(pred_dicts)):
                     for col in where_data[i]:

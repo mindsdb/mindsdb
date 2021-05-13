@@ -119,12 +119,10 @@ class MindsDBDataNode(DataNode):
         query = aitable_record.integration_query
         predictor_name = aitable_record.predictor_name
 
-        print(f'\n\n\n ERROR - Predicting fom query: {query}\n\n\n')
+
         ds, ds_name = self.data_store.save_datasource('temp_ds', integration, {'query': query})
         dso = self.data_store.get_datasource_obj(ds_name, raw=True)
-        print(f'\n\n\n ERROR - Predicting with temp datasource: {dso}\n\n\n')
         res = self.model_interface.predict(predictor_name, 'dict', when_data=dso)
-        print(f'\n\n\n ERROR - Got predictions {res}\n\n\n')
         self.data_store.delete_datasource(ds_name)
 
         keys_map = {}
@@ -268,6 +266,12 @@ class MindsDBDataNode(DataNode):
             return data
         else:
             pred_dicts, explanations = self.model_interface.predict(table, 'dict&explain', when_data=where_data)
+            if isinstance(where_data, list):
+                for i in range(len(pred_dicts)):
+                    for col in where_data[i]:
+                        if col not in predicted_columns:
+                            pred_dicts[i][col] = where_data[i][col]
+
 
             keys = [x for x in pred_dicts[0] if x in columns]
             min_max_keys = []
@@ -304,4 +308,5 @@ class MindsDBDataNode(DataNode):
                     row[key + '_min'] = min(explanation[key]['confidence_interval'])
                     row[key + '_max'] = max(explanation[key]['confidence_interval'])
 
+            log.error(f'Returning data: {data}')
             return data

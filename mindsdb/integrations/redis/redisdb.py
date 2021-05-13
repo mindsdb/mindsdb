@@ -31,7 +31,7 @@ class RedisConnectionChecker:
 class Redis(StreamIntegration, RedisConnectionChecker):
     """Redis Integration which is more a Streams factory
     than classical Integration."""
-    def __init__(self, config, name):
+    def __init__(self, config, name, db_info):
         StreamIntegration.__init__(self, config, name)
         integration_info = get_db_integration(self.name, self.company_id)
 

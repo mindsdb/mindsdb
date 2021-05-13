@@ -5,6 +5,7 @@ import traceback
 
 from mindsdb.interfaces.storage.db import session, Log
 from mindsdb.utilities.config import Config
+from functools import partial
 
 global_config = Config().get_all()
 telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false', 'False']
@@ -153,6 +154,7 @@ def initialize_log(config=global_config, logger_name='main', wrap_print=False):
         sys.stdout = LoggerWrapper([log.debug, log.info, log.warning, log.error], 1)
         sys.stderr = LoggerWrapper([log.debug, log.info, log.warning, log.error], 3)
 
+    log.error = partial(log.error, exc_info=True)
     return log
 
 

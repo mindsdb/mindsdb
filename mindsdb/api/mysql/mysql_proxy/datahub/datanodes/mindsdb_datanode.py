@@ -119,6 +119,7 @@ class MindsDBDataNode(DataNode):
         query = aitable_record.integration_query
         predictor_name = aitable_record.predictor_name
 
+
         ds, ds_name = self.data_store.save_datasource('temp_ds', integration, {'query': query})
         dso = self.data_store.get_datasource_obj(ds_name, raw=True)
         res = self.model_interface.predict(predictor_name, 'dict', when_data=dso)
@@ -265,6 +266,17 @@ class MindsDBDataNode(DataNode):
             return data
         else:
             pred_dicts, explanations = self.model_interface.predict(table, 'dict&explain', when_data=where_data)
+            # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
+            if isinstance(where_data, list):
+                for i in range(len(pred_dicts)):
+                    for col in where_data[i]:
+                        if col not in predicted_columns:
+                            pred_dicts[i][col] = where_data[i][col]
+
+            if isinstance(where_data, dict):
+                    for col in where_data:
+                        if col not in predicted_columns:
+                            pred_dicts[0][col] = where_data[col]
 
             keys = [x for x in pred_dicts[0] if x in columns]
             min_max_keys = []

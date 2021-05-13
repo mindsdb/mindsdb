@@ -195,7 +195,6 @@ class ModelController():
                 data_source = when_data
 
         predictor = self.predictor_cache[name]['predictor']
-
         predictions = predictor.predict(
             when_data=data_source,
             **kwargs
@@ -282,8 +281,7 @@ class ModelController():
         model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
         model['predict'] = predictor_record.to_predict
         model['update'] = predictor_record.update_status
-        if '@@@@@' in model['name']:
-            model['name'] = model['name'].split('@@@@@')[1]
+        model['name'] = predictor_record.name
         return self._pack(model)
 
     def get_models(self, company_id=None):

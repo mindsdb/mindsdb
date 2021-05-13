@@ -195,7 +195,6 @@ class ModelController():
                 data_source = when_data
 
         predictor = self.predictor_cache[name]['predictor']
-
         predictions = predictor.predict(
             when_data=data_source,
             **kwargs

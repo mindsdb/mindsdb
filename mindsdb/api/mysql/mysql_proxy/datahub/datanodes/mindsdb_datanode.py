@@ -273,6 +273,10 @@ class MindsDBDataNode(DataNode):
                         if col not in predicted_columns:
                             pred_dicts[i][col] = where_data[i][col]
 
+            if isinstance(where_data, dict):
+                    for col in where_data:
+                        if col not in predicted_columns:
+                            pred_dicts[0][col] = where_data[col]
 
             keys = [x for x in pred_dicts[0] if x in columns]
             min_max_keys = []

@@ -872,8 +872,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def queryAnswer(self, sql):
+        from mindsdb.utilities.log import log
         statement = SqlStatementParser(sql)
-
         sql = statement.sql
         sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')

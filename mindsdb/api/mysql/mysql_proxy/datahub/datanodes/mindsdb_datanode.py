@@ -309,5 +309,4 @@ class MindsDBDataNode(DataNode):
                     row[key + '_min'] = min(explanation[key]['confidence_interval'])
                     row[key + '_max'] = max(explanation[key]['confidence_interval'])
 
-            log.error(f'Returning data: {data}')
             return data

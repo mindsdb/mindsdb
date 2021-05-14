@@ -28,7 +28,7 @@ class KafkaConnectionChecker:
 
 
 class Kafka(StreamIntegration, KafkaConnectionChecker):
-    def __init__(self, config, name):
+    def __init__(self, config, name, db_info):
         StreamIntegration.__init__(self, config, name)
         integration_info = get_db_integration(self.name, self.company_id)
         self.connection_info = integration_info.get('connection')
@@ -90,10 +90,11 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
                     except StopIteration:
                         pass
             except Exception as e:
-                self.log.error(f"Integration {self.name}: {e}")
+                self.log.error(f"Integration {self.name} main loop error: {e}")
 
         # received exit event
-        self.consumer.close()
+        if self.consumer:
+            self.consumer.close()
         self.stop_streams()
         session.close()
         self.log.error(f"Integration {self.name}: exiting...")

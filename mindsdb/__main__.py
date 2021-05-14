@@ -20,6 +20,11 @@ from mindsdb.utilities.functions import args_parse
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.log import log
 
+from mindsdb.interfaces.database.integrations import get_db_integrations
+
+COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
+ 
+
 
 def close_api_gracefully(apis):
     try:
@@ -70,7 +75,7 @@ if __name__ == '__main__':
 
     # @TODO Backwards compatibiltiy, remove later
     from mindsdb.interfaces.database.integrations import add_db_integration, get_db_integration
-    dbw = DatabaseWrapper(None)
+    dbw = DatabaseWrapper(COMPANY_ID)
     model_interface = ModelInterface()
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []
@@ -81,6 +86,10 @@ if __name__ == '__main__':
                 model_data_arr.append(model_interface.get_model_data(model['name']))
             except Exception:
                 pass
+    for integration_name in get_db_integrations(COMPANY_ID, sensitive_info=True):
+        print(f"Setting up integration: {integration_name}")
+        dbw.setup_integration(integration_name)
+
     for integration_name in config.get('integrations', {}):
         print(f'Adding: {integration_name}')
         try:

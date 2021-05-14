@@ -40,20 +40,18 @@ class ModelInterfaceRPC():
                 time.sleep(3)
                 self.client = fl.connect("grpc://localhost:19329")
                 res = self._action('ping')
-                assert self._loads(res)
+                assert self._loads_first(res)
                 return
             except Exception:
-                import traceback
-                print(traceback.format_exc())
                 log.info('Wating for native RPC server to start')
         raise Exception('Unable to connect to RPC server')
 
     def _action(self, act_name, *args, **kwargs):
         action = fl.Action(act_name, pickle.dumps({'args': args, 'kwargs': kwargs}))
-        return self.client.do_action(action)
+        return list(self.client.do_action(action))
 
-    def _loads(self, res):
-        return pickle.loads(next(iter(res)).body.to_pybytes())
+    def _loads_first(self, res):
+        return pickle.loads(res[0].body.to_pybytes())
 
     def create(self, *args, **kwargs):
         self._action('create', *args, **kwargs)
@@ -63,19 +61,19 @@ class ModelInterfaceRPC():
 
     def predict(self, *args, **kwargs):
         res = self._action('predict', *args, **kwargs)
-        return self._loads(res)
+        return self._loads_first(res)
 
     def analyse_dataset(self, *args, **kwargs):
         res = self._action('analyse_dataset', *args, **kwargs)
-        return self._loads(res)
+        return self._loads_first(res)
 
     def get_model_data(self, *args, **kwargs):
         res = self._action('get_model_data', *args, **kwargs)
-        return self._loads(res)
+        return self._loads_first(res)
 
     def get_models(self, *args, **kwargs):
         res = self._action('get_models', *args, **kwargs)
-        return self._loads(res)
+        return self._loads_first(res)
 
     def delete_model(self, *args, **kwargs):
         self._action('delete_model', *args, **kwargs)

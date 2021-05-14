@@ -1,6 +1,4 @@
 # @TODO, replace with arrow later: https://mirai-solutions.ch/news/2020/06/11/apache-arrow-flight-tutorial/
-import xmlrpc
-from xmlrpc.server import SimpleXMLRPCServer
 from dateutil.parser import parse as parse_datetime
 import pickle
 from pathlib import Path
@@ -114,7 +112,9 @@ class ModelController():
         return predictor_record
 
     def create(self, name, company_id=None):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
+        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
+                                         MySqlDS, PostgresDS, MSSQLDS,
+                                         MongoDS, SnowflakeDS, AthenaDS)
         import mindsdb_native
         from mindsdb.interfaces.storage.db import session, Predictor
 
@@ -148,13 +148,22 @@ class ModelController():
             )
 
         else:
-            p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
-            p.start()
-            if join_learn_process is True:
-                p.join()
-                if p.exitcode != 0:
-                    delete_process_mark('learn')
-                    raise Exception('Learning process failed !')
+            run_learn(
+                name=name,
+                db_name=original_name,
+                from_data=from_data,
+                to_predict=to_predict,
+                kwargs=kwargs,
+                datasource_id=datasource_id,
+                company_id=company_id
+            )
+            # p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
+            # p.start()
+            # if join_learn_process is True:
+            #     p.join()
+            #     if p.exitcode != 0:
+            #         delete_process_mark('learn')
+            #         raise Exception('Learning process failed !')
 
         delete_process_mark('learn')
         return 0
@@ -389,21 +398,16 @@ class FlightServer(fl.FlightServerBase):
         }
 
     def do_action(self, context, action):
-        try:
-            if action.type not in self.actions:
-                raise ValueError('Unknown action')
-            else:
-                body = pickle.loads(action.body)
-                args = body['args']
-                kwargs = body['kwargs']
-                obj = self.actions[action.type](*args, **kwargs)
-                buf = pa.py_buffer(pickle.dumps(obj))
-                res = pa.flight.Result(buf)
-                yield res
-        except Exception:
-            import traceback
-            print(traceback.format_exc())
-            raise
+        if action.type not in self.actions:
+            raise ValueError('Unknown action')
+        else:
+            body = pickle.loads(action.body)
+            args = body['args']
+            kwargs = body['kwargs']
+            obj = self.actions[action.type](*args, **kwargs)
+            buf = pa.py_buffer(pickle.dumps(obj))
+            res = pa.flight.Result(buf)
+            yield res
 
 def start():
     server = FlightServer("grpc://localhost:19329")

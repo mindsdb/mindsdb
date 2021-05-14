@@ -148,22 +148,13 @@ class ModelController():
             )
 
         else:
-            run_learn(
-                name=name,
-                db_name=original_name,
-                from_data=from_data,
-                to_predict=to_predict,
-                kwargs=kwargs,
-                datasource_id=datasource_id,
-                company_id=company_id
-            )
-            # p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
-            # p.start()
-            # if join_learn_process is True:
-            #     p.join()
-            #     if p.exitcode != 0:
-            #         delete_process_mark('learn')
-            #         raise Exception('Learning process failed !')
+            p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
+            p.start()
+            if join_learn_process is True:
+                p.join()
+                if p.exitcode != 0:
+                    delete_process_mark('learn')
+                    raise Exception('Learning process failed !')
 
         delete_process_mark('learn')
         return 0

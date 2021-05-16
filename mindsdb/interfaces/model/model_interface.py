@@ -1,6 +1,3 @@
-# @TODO, replace with arrow later: https://mirai-solutions.ch/news/2020/06/11/apache-arrow-flight-tutorial/
-import xmlrpc
-import xmlrpc.client
 import time
 import pickle
 
@@ -19,18 +16,6 @@ class ModelInterfaceWrapper(object):
                 kwargs['company_id'] = self.company_id
             return getattr(self.model_interface, name)(*args, **kwargs)
         return wrapper
-
-
-class ServerProxy(object):
-    def __init__(self):
-        self._xmlrpc_server_proxy = xmlrpc.client.ServerProxy("http://localhost:19329/", allow_none=True)
-
-    def __getattr__(self, name):
-        call_proxy = getattr(self._xmlrpc_server_proxy, name)
-
-        def _call(*args, **kwargs):
-            return call_proxy(args, kwargs)
-        return _call
 
 
 class ModelInterfaceRPC():

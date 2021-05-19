@@ -167,7 +167,8 @@ if __name__ == '__main__':
     ioloop.run_until_complete(wait_apis_start())
     ioloop.close()
 
-    stop_model_controller()
+    if not ray_based:
+        stop_model_controller()
 
     try:
         for api_data in apis.values():

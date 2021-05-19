@@ -73,13 +73,16 @@ class ModelController():
             self._unlock_predictor(id)
 
     def _setup_for_creation(self, name, original_name, company_id=None):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         from mindsdb.interfaces.storage.db import session, Predictor
 
         if name in self.predictor_cache:
             del self.predictor_cache[name]
         # Here for no particular reason, because we want to run this sometimes but not too often
         self._invalidate_cached_predictors()
+
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
+        if predictor_record is not None:
+            raise Exception(f'Predictor with name {original_name} already exists.')
 
         predictor_dir = Path(self.config['paths']['predictors']).joinpath(name)
         create_directory(predictor_dir)

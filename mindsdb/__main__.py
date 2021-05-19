@@ -61,8 +61,6 @@ if __name__ == '__main__':
     # ctx = mp.get_context(get_mp_context())
     ctx = mp.get_context('spawn')
     if not ray_based:
-        from mindsdb.interfaces.model.model_controller import start as start_model_controller
-        from mindsdb.interfaces.model.model_controller import stop as stop_model_controller
         from mindsdb.interfaces.model.model_controller import FlightServer
         flight_server = FlightServer("grpc://localhost:19329")
         rpc_proc = ctx.Process(

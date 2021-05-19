@@ -1,4 +1,3 @@
-# @TODO, replace with arrow later: https://mirai-solutions.ch/news/2020/06/11/apache-arrow-flight-tutorial/
 from dateutil.parser import parse as parse_datetime
 import pickle
 from pathlib import Path
@@ -27,7 +26,9 @@ class ModelController():
         self.ray_based = ray_based
 
     def _invalidate_cached_predictors(self):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
+        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS, MySqlDS,
+                                         PostgresDS, MSSQLDS, MongoDS,
+                                         SnowflakeDS, AthenaDS)
         from mindsdb.interfaces.storage.db import session, Predictor
 
         # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
@@ -400,6 +401,11 @@ class FlightServer(fl.FlightServerBase):
             res = pa.flight.Result(buf)
             yield res
 
+
 def start():
     server = FlightServer("grpc://localhost:19329")
-    server.serve()
+    server.run()
+    # try:
+    #     server.serve()
+    # except BaseException:
+    #     server.stop()

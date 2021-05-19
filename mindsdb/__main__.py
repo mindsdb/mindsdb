@@ -63,7 +63,12 @@ if __name__ == '__main__':
     if not ray_based:
         from mindsdb.interfaces.model.model_controller import start as start_model_controller
         from mindsdb.interfaces.model.model_controller import stop as stop_model_controller
-        rpc_proc = ctx.Process(target=start_model_controller,)
+        from mindsdb.interfaces.model.model_controller import FlightServer
+        flight_server = FlightServer("grpc://localhost:19329")
+        rpc_proc = ctx.Process(
+            target=lambda s: s.serve(),
+            server=flight_server
+        )
         rpc_proc.start()
 
 
@@ -141,8 +146,9 @@ if __name__ == '__main__':
             raise e
 
     atexit.register(close_api_gracefully, apis=apis)
+
     if not ray_based:
-        atexit.register(stop_model_controller)
+        flight_server.shutdown()
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60

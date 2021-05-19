@@ -400,19 +400,3 @@ class FlightServer(fl.FlightServerBase):
             buf = pa.py_buffer(pickle.dumps(obj))
             res = pa.flight.Result(buf)
             yield res
-
-
-_server = None
-
-
-def start():
-    global _server
-    import time
-    time.sleep(60 * 5)
-    _server = FlightServer("grpc://localhost:19329")
-    _server.serve()
-
-
-def stop():
-    if _server is not None:
-        _server.shutdown()

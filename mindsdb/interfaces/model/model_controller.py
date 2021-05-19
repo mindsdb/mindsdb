@@ -402,10 +402,15 @@ class FlightServer(fl.FlightServerBase):
             yield res
 
 
+_server = None
+
+
 def start():
-    server = FlightServer("grpc://localhost:19329")
-    server.run()
-    # try:
-    #     server.serve()
-    # except BaseException:
-    #     server.stop()
+    global _server
+    _server = FlightServer("grpc://localhost:19329")
+    _server.serve()
+
+
+def stop():
+    if _server is not None:
+        _server.shutdown()

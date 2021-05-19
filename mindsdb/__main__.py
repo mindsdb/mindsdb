@@ -62,6 +62,7 @@ if __name__ == '__main__':
     ctx = mp.get_context('spawn')
     if not ray_based:
         from mindsdb.interfaces.model.model_controller import start as start_model_controller
+        from mindsdb.interfaces.model.model_controller import stop as stop_model_controller
         rpc_proc = ctx.Process(target=start_model_controller,)
         rpc_proc.start()
 
@@ -165,6 +166,8 @@ if __name__ == '__main__':
     ioloop = asyncio.get_event_loop()
     ioloop.run_until_complete(wait_apis_start())
     ioloop.close()
+
+    stop_model_controller()
 
     try:
         for api_data in apis.values():

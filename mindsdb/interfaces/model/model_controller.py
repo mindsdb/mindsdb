@@ -407,6 +407,8 @@ _server = None
 
 def start():
     global _server
+    import time
+    time.sleep(60 * 5)
     _server = FlightServer("grpc://localhost:19329")
     _server.serve()
 

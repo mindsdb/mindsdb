@@ -141,6 +141,8 @@ if __name__ == '__main__':
             raise e
 
     atexit.register(close_api_gracefully, apis=apis)
+    if not ray_based:
+        atexit.register(stop_model_controller)
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60
@@ -166,9 +168,6 @@ if __name__ == '__main__':
     ioloop = asyncio.get_event_loop()
     ioloop.run_until_complete(wait_apis_start())
     ioloop.close()
-
-    if not ray_based:
-        stop_model_controller()
 
     try:
         for api_data in apis.values():

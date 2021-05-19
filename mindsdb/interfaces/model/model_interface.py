@@ -74,7 +74,7 @@ class ModelInterfaceRPC():
         return 'Model updating is no available in this version of mindsdb'
 
 
-if os.environ.get('USE_RAY') in ['1', 'true']:
+if os.environ.get('USE_RAY', '0').lower() in ['1', 'true']:
     try:
         from mindsdb_worker.cluster.ray_interface import ModelInterfaceRay
         import ray

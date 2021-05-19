@@ -360,7 +360,7 @@ class ModelController():
             return str(e)
 
 
-if os.environ.get('USE_RAY') in ['1', 'true']:
+if os.environ.get('USE_RAY', '0').lower() in ['1', 'true']:
     try:
         from mindsdb_worker.cluster.ray_controller import ray_ify
         import ray

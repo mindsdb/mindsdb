@@ -63,7 +63,7 @@ if not is_ray_worker:
     elif 'ray' in user_config:
         os.environ['USE_RAY'] = str(user_config['ray']).lower()
 
-    if os.environ.get('USE_RAY').lower() in ['1', 'true']:
+    if os.environ.get('USE_RAY', '0').lower() in ['1', 'true']:
         try:
             import ray
         except Exception as e:

@@ -2,14 +2,14 @@ import os
 import sys
 import json
 
-from mindsdb.__about__ import __package_name__ as name, __version__   # noqa
+from mindsdb.__about__ import __version__
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.fs import get_or_create_data_dir, create_dirs_recursive
 from mindsdb.utilities.functions import args_parse, is_notebook
-from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 
 is_ray_worker = False
-if '-ray' in str(sys.argv):
+if sys.argv[0].endswith('ray/workers/default_worker.py'):
     is_ray_worker = True
 
 if not is_ray_worker:
@@ -57,6 +57,18 @@ if not is_ray_worker:
         user_config = {}
         config_path = 'absent'
     os.environ['MINDSDB_CONFIG_PATH'] = config_path
+
+    if args is not None and args.ray is not None:
+        os.environ['USE_RAY'] = str(args.ray).lower()
+    elif 'ray' in user_config:
+        os.environ['USE_RAY'] = str(user_config['ray']).lower()
+
+    if os.environ.get('USE_RAY').lower() in ['1', 'true']:
+        try:
+            import ray
+        except Exception as e:
+            print(f'MindsDB ordered to use Ray, but it can not be imported: {e}')
+            os.environ['USE_RAY'] = 'false'
 
     if 'storage_dir' in user_config:
         root_storage_dir = user_config['storage_dir']

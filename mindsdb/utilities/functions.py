@@ -9,7 +9,9 @@ def args_parse():
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no_studio', action='store_true')
     parser.add_argument('-v', '--version', action='store_true')
+    parser.add_argument('--ray', action='store_true', default=False)
     return parser.parse_args()
+
 
 def cast_row_types(row, field_types):
     '''
@@ -29,6 +31,7 @@ def cast_row_types(row, field_types):
                 row[key] = int(row[key])
             except Exception:
                 pass
+
 
 def is_notebook():
     try:

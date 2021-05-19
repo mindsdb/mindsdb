@@ -7,6 +7,7 @@ from pathlib import Path
 import psutil
 import datetime
 import time
+import os
 from contextlib import contextmanager
 
 import pandas as pd
@@ -359,19 +360,21 @@ class ModelController():
             return str(e)
 
 
-try:
-    from mindsdb_worker.cluster.ray_controller import ray_ify
-    import ray
+if os.environ.get('USE_RAY') in ['1', 'true']:
     try:
-        ray.init(ignore_reinit_error=True, address='auto')
-    except Exception:
-        ray.init(ignore_reinit_error=True)
-    ModelController = ray_ify(ModelController)
-except Exception as e:
-    log.error(e)
+        from mindsdb_worker.cluster.ray_controller import ray_ify
+        import ray
+        try:
+            ray.init(ignore_reinit_error=True, address='auto')
+        except Exception:
+            ray.init(ignore_reinit_error=True)
+        ModelController = ray_ify(ModelController)
+    except Exception as e:
+        log.error(f'Failed to import ray: {e}')
 
 
-def ping(): return True
+def ping():
+    return True
 
 
 def start():

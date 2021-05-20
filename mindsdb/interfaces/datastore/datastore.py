@@ -7,7 +7,10 @@ import pandas as pd
 import mindsdb_datasources
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
-from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
+from mindsdb_datasources import (
+    FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS,
+    SnowflakeDS, AthenaDS, CassandraDS, ScyllaDS
+)
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor
 from mindsdb.interfaces.storage.fs import FsSotre
@@ -167,7 +170,9 @@ class DataStore():
                     'mssql': MSSQLDS,
                     'mongodb': MongoDS,
                     'snowflake': SnowflakeDS,
-                    'athena': AthenaDS
+                    'athena': AthenaDS,
+                    'cassandra': CassandraDS,
+                    'scylladb': ScyllaDS
                 }
 
                 try:
@@ -192,7 +197,7 @@ class DataStore():
                     }
                     ds = dsClass(**creation_info['kwargs'])
 
-                elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql']:
+                elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql', 'cassandra', 'scylladb']:
                     creation_info = {
                         'class': dsClass.__name__,
                         'args': [],

@@ -11,7 +11,7 @@ from pathlib import Path
 import requests
 from pandas import DataFrame
 
-from .ps import wait_port, is_port_in_use, net_connections
+from ps import wait_port, is_port_in_use, net_connections
 
 
 HTTP_API_ROOT = 'http://localhost:47334/api'

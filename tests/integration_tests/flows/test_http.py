@@ -7,7 +7,7 @@ import json
 
 import requests
 
-from .common import (
+from common import (
     CONFIG_PATH,
     run_environment
 )

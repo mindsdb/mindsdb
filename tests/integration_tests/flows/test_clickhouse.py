@@ -4,7 +4,7 @@ import requests
 import inspect
 from pathlib import Path
 
-from .common import (
+from common import (
     MINDSDB_DATABASE,
     HTTP_API_ROOT,
     CONFIG_PATH,

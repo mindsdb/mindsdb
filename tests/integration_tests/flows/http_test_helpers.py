@@ -1,7 +1,7 @@
 import requests
 import time
 
-from .common import HTTP_API_ROOT
+from common import HTTP_API_ROOT
 
 
 def get_predictors_list(company_id=None):

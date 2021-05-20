@@ -3,7 +3,7 @@ import requests
 import asyncio
 import time
 
-from .common import (
+from common import (
     HTTP_API_ROOT,
     run_environment,
     stop_mindsdb

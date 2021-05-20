@@ -6,7 +6,7 @@ import requests
 
 from pymongo import MongoClient
 
-from .common import (
+from common import (
     CONFIG_PATH,
     HTTP_API_ROOT,
     run_environment

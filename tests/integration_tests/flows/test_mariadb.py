@@ -6,7 +6,7 @@ import requests
 
 import mysql.connector
 
-from .common import (
+from common import (
     USE_EXTERNAL_DB_SERVER,
     MINDSDB_DATABASE,
     HTTP_API_ROOT,

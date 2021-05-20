@@ -403,4 +403,10 @@ class FlightServer(fl.FlightServerBase):
 
 
 def serve():
-    FlightServer("grpc://localhost:19329").serve()
+    import time
+    s = FlightServer("grpc://localhost:19329")
+    for _ in range(10):
+        try:
+            s.serve()
+        except pa.lib.ArrowException:
+            time.sleep(5)

@@ -208,7 +208,7 @@ class ToggleTelemetry2(Resource):
 @ns_conf.param('dependency_list', 'Install dependencies')
 class InstallDependenciesList(Resource):
     def get(self):
-        return {'dependencies': ['snowflake', 'athena', 'google', 's3', 'lightgbm_gpu', 'mssql', 'cassandra', 'scylla']}
+        return {'dependencies': ['snowflake', 'athena', 'google', 's3', 'lightgbm_gpu', 'mssql', 'cassandra', 'scylladb']}
 
 
 @ns_conf.route('/install/<dependency>')
@@ -229,7 +229,7 @@ class InstallDependencies(Resource):
             dependency = ['pymssql >= 2.1.4']
         elif dependency == 'cassandra':
             dependency = ['cassandra-driver']
-        elif dependency == 'scylla':
+        elif dependency == 'scylladb':
             dependency = ['scylla-driver']
         else:
             return f'Unkown dependency: {dependency}', 400

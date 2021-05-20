@@ -62,13 +62,10 @@ if __name__ == '__main__':
     ctx = mp.get_context('spawn')
     if not ray_based:
         from mindsdb.interfaces.model.model_controller import FlightServer
-        flight_server = FlightServer("grpc://localhost:19329")
-        rpc_proc = ctx.Process(
-            target=lambda s: s.serve(),
-            server=flight_server
-        )
+        from mindsdb.interfaces.model.model_controller import serve
+        
+        rpc_proc = ctx.Process(target=serve)
         rpc_proc.start()
-
 
     from mindsdb.__about__ import __version__ as mindsdb_version
     print(f'Version {mindsdb_version}')
@@ -146,7 +143,8 @@ if __name__ == '__main__':
     atexit.register(close_api_gracefully, apis=apis)
 
     if not ray_based:
-        flight_server.shutdown()
+        pass
+        # FlightServer("grpc://localhost:19329").shutdown()
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60

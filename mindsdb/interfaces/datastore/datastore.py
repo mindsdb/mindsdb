@@ -314,7 +314,7 @@ class DataStore():
                 pass
             raise e
 
-        return self.get_datasource_obj(name, raw=True, company_id=company_id), name
+        return self.get_datasource_obj(name, raw=True, company_id=company_id)
 
     def get_datasource_obj(self, name, raw=False, id=None, company_id=None):
         try:

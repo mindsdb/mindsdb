@@ -4,7 +4,7 @@ import json
 
 from pymongo import MongoClient
 
-from common import (
+from .common import (
     MINDSDB_DATABASE,
     CONFIG_PATH,
     check_prediction_values,

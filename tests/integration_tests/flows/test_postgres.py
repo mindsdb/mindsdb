@@ -6,7 +6,7 @@ import requests
 
 import pg8000
 
-from common import (
+from .common import (
     MINDSDB_DATABASE,
     HTTP_API_ROOT,
     CONFIG_PATH,

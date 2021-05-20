@@ -7,7 +7,7 @@ import json
 
 import mysql.connector
 
-from common import (
+from .common import (
     MINDSDB_DATABASE,
     HTTP_API_ROOT,
     CONFIG_PATH,

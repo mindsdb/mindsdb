@@ -5,7 +5,7 @@ import json
 
 import mysql.connector
 
-from common import (
+from .common import (
     HTTP_API_ROOT,
     CONFIG_PATH,
     run_environment,

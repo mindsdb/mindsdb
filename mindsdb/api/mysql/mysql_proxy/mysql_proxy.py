@@ -26,7 +26,6 @@ from collections import OrderedDict
 from functools import partial
 import select
 import base64
-import time
 
 import moz_sql_parser as sql_parser
 
@@ -406,7 +405,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
             insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-            ds, ds_name = data_store.save_datasource(insert['name'], integration, {'query': insert['select_data_query']})
+            ds_name = data_store.get_vacant_name(insert['name'])
+            ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})
         elif is_external_datasource:
             ds = data_store.get_datasource_obj(insert['external_datasource'], raw=True)
             ds_name = insert['external_datasource']
@@ -469,10 +469,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         is_temp_ds = False
         ds_name = struct.get('datasource_name')
         if ds_name is None:
-            ds_name = f'temp_ds_{int(time.time()*100)}'
+            ds_name = data_store.get_vacant_name('temp')
             is_temp_ds = True
 
-        ds, ds_name = data_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
+        ds = data_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
         ds_data = data_store.get_datasource(ds_name)
 
         # TODO add alias here

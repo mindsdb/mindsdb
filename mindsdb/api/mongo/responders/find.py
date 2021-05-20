@@ -62,15 +62,14 @@ class Responce(Responder):
                 if connection is None:
                     raise Exception("Can't find connection from which fetch data")
 
-                ds_name = 'temp'
+                ds_name = mindsdb_env['data_store'].get_vacant_name('temp')
 
-                ds, ds_name = mindsdb_env['data_store'].save_datasource(
+                mindsdb_env['data_store'].save_datasource(
                     name=ds_name,
                     source_type=connection,
                     source=where_data['select_data_query']
                 )
                 datasource = mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True)
-
 
             if 'external_datasource' in where_data:
                 ds_name = where_data['external_datasource']

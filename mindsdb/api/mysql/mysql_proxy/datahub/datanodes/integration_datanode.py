@@ -1,5 +1,3 @@
-import time
-
 import pandas as pd
 from moz_sql_parser import format
 
@@ -48,7 +46,8 @@ class IntegrationDataNode(DataNode):
 
         query = format(format_data)
 
-        ds, ds_name = self.data_store.save_datasource(f'temp_ds_{int(time.time()*100)}', self.integration_name, {'query': query})
+        ds_name = self.data_store.get_vacant_name('temp')
+        self.data_store.save_datasource(ds_name, self.integration_name, {'query': query})
         dso = self.data_store.get_datasource_obj(ds_name)
 
         data = dso.df.to_dict(orient='records')

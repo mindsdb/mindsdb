@@ -1,16 +1,26 @@
 import time
 import tempfile
 import unittest
+import json
 
 import requests
 import walrus
 import pandas as pd
 
-from common import HTTP_API_ROOT, run_environment
+from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
+
 
 INTEGRATION_NAME = 'test_redis'
-REDIS_PORT = 6379
-CONNECTION_PARAMS = {"host": "127.0.0.1", "port": REDIS_PORT, "db": 0}
+redis_creds = {}
+if USE_EXTERNAL_DB_SERVER:
+    with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
+        redis_creds = json.loads(f.read())['redis']
+
+REDIS_PORT = redis_creds.get('port', 6973)
+REDIS_HOST = redis_creds.get('host', "127.0.0.1")
+REDIS_PASSWORD = redis_creds.get('password', None)
+
+CONNECTION_PARAMS = {"host": REDIS_HOST, "port": REDIS_PORT, "db": 0, "password": REDIS_PASSWORD}
 STREAM_IN = "test_stream_in"
 STREAM_OUT = "test_stream_out"
 STREAM_IN_TS = "test_stream_in_ts"
@@ -33,7 +43,6 @@ class RedisTest(unittest.TestCase):
                 'y': [x*3 for x in range(100,210)]
             })
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
-            print(f"TEMP FILE: {f.name}")
             df.to_csv(f, index=False)
             f.flush()
             url = f'{HTTP_API_ROOT}/datasources/{name}'
@@ -41,7 +50,6 @@ class RedisTest(unittest.TestCase):
                     "file": (f.name, f, 'text/csv'),
                     "source": (None, f.name.split('/')[-1]),
                     "name": (None, name)}
-            print(f"PUT DATA: {data}")
             res = requests.put(url, files=data)
             res.raise_for_status()
 
@@ -93,6 +101,7 @@ class RedisTest(unittest.TestCase):
 
 
     def test_2_create_stream(self):
+        print(f'\nExecuting {self._testMethodName}')
         try:
             self.upload_ds(DS_NAME)
         except Exception as e:
@@ -116,6 +125,7 @@ class RedisTest(unittest.TestCase):
             self.fail(f"error creating stream: {e}")
 
     def test_3_making_stream_prediction(self):
+        print(f'\nExecuting {self._testMethodName}')
         client = walrus.Database(**CONNECTION_PARAMS)
         stream_in = client.Stream(STREAM_IN)
         stream_out = client.Stream(STREAM_OUT)
@@ -131,6 +141,7 @@ class RedisTest(unittest.TestCase):
         self.assertTrue(len(prediction)==2)
 
     def test_4_create_ts_stream(self):
+        print(f'\nExecuting {self._testMethodName}')
         try:
             self.train_ts_predictor(DS_NAME, self._testMethodName)
         except Exception as e:
@@ -150,6 +161,7 @@ class RedisTest(unittest.TestCase):
             self.fail(f"error creating stream: {e}")
 
     def test_5_making_ts_stream_prediction(self):
+        print(f'\nExecuting {self._testMethodName}')
         client = walrus.Database(**CONNECTION_PARAMS)
         stream_in = client.Stream(STREAM_IN_TS)
         stream_out = client.Stream(STREAM_OUT_TS)
@@ -163,6 +175,7 @@ class RedisTest(unittest.TestCase):
         stream_out.trim(0, approximate=False)
         stream_in.trim(0, approximate=False)
         self.assertTrue(len(prediction)==2, f"expected 2 predictions, but got {len(prediction)}")
+
 
 if __name__ == "__main__":
     try:

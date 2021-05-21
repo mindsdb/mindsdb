@@ -419,5 +419,6 @@ class FlightServer(fl.FlightServerBase):
 #             time.sleep(5)
 
 
-def serve(s):
-    s.serve()
+def serve():
+    flight_server = FlightServer("grpc://localhost:19329")
+    flight_server.serve()

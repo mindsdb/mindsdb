@@ -17,6 +17,7 @@ from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.log import log
+from threading import Thread
 
 from mindsdb.interfaces.database.integrations import get_db_integrations
 
@@ -58,11 +59,7 @@ if __name__ == '__main__':
     # Switch to this once the native interface has it's own thread :/
     ctx = mp.get_context('spawn')
     if not ray_based:
-        from mindsdb.interfaces.model.model_controller import FlightServer
         from mindsdb.interfaces.model.model_controller import serve
-        
-        s = FlightServer("grpc://localhost:19329")
-
         rpc_proc = ctx.Process(target=serve, args=(s,))
         rpc_proc.start()
 

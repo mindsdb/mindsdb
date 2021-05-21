@@ -126,6 +126,21 @@ class DataStore():
         except Exception:
             pass
 
+    def get_vacant_name(self, base=None, company_id=None):
+        ''' returns name of datasource, which starts from 'base' and ds with that name is not exists yet
+        '''
+        if base is None:
+            base = 'datasource'
+        datasources = session.query(Datasource).filter_by(company_id=company_id).all()
+        datasources_names = [x.name for x in datasources]
+        if base not in datasources_names:
+            return base
+        for i in range(1, 1000):
+            candidate = f'{base}_{i}'
+            if candidate not in datasources_names:
+                return candidate
+        raise Exception(f"Can not find appropriate name for datasource '{base}'")
+
     def save_datasource(self, name, source_type, source, file_path=None, company_id=None):
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
@@ -304,7 +319,7 @@ class DataStore():
                 pass
             raise e
 
-        return self.get_datasource_obj(name, raw=True, company_id=company_id), name
+        return self.get_datasource_obj(name, raw=True, company_id=company_id)
 
     def get_datasource_obj(self, name, raw=False, id=None, company_id=None):
         try:

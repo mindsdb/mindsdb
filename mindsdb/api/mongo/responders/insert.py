@@ -85,8 +85,9 @@ class Responce(Responder):
                 if connection is None:
                     raise Exception("Can't find connection for data source")
 
-                _, ds_name = mindsdb_env['data_store'].save_datasource(
-                    name=doc['name'],
+                ds_name = mindsdb_env['data_store'].get_vacant_name(doc['name'])
+                mindsdb_env['data_store'].save_datasource(
+                    name=ds_name,
                     source_type=connection,
                     source=dict(doc['select_data_query'])
                 )

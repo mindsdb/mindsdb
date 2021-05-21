@@ -139,8 +139,9 @@ if __name__ == '__main__':
     atexit.register(close_api_gracefully, apis=apis)
 
     if not ray_based:
-        s.shutdown()
-        s.wait()
+        pass
+        #s.shutdown()
+        #s.wait()
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60

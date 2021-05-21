@@ -420,5 +420,9 @@ class FlightServer(fl.FlightServerBase):
 
 
 def serve():
-    flight_server = FlightServer("grpc://localhost:19329")
-    flight_server.serve()
+    try:
+        flight_server = FlightServer("grpc://localhost:19329")
+        flight_server.serve()
+    except:
+        flight_server.shutdown()
+        flight_server.wait()

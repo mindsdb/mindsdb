@@ -12,6 +12,7 @@ from mindsdb.api.mongo.responders import responders
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.utilities import log
 
+from mindsdb.interfaces.storage.db import session as db_session
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 
@@ -258,6 +259,8 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             answer = self.get_answer(request_id, opcode, msg_bytes)
             if answer is not None:
                 self.request.send(answer)
+
+        db_session.close()
 
     def get_answer(self, request_id, opcode, msg_bytes):
         if opcode not in self.server.operationsHandlersMap:

@@ -1,5 +1,6 @@
 import time
 import pickle
+import os
 
 from mindsdb.utilities.log import log
 import pyarrow.flight as fl
@@ -75,6 +76,7 @@ try:
         ray.init(ignore_reinit_error=True)
     ModelInterface = ModelInterfaceRay
     ray_based = True
-except Exception:
+except Exception as e:
+    log.error(f'Failed to import ray: {e}')
     ModelInterface = ModelInterfaceRPC
     ray_based = False

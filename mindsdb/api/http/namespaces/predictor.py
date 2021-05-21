@@ -1,15 +1,13 @@
-import copy
 import os
-import shutil
 import time
-from io import BytesIO
 
 from dateutil.parser import parse as parse_datetime
-from flask import request, send_file
+from flask import request
 from flask_restx import Resource, abort
 from flask import current_app as ca
 
 from mindsdb.utilities.log import log
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     predictor_metadata,
@@ -27,6 +25,7 @@ class PredictorList(Resource):
     def get(self):
         '''List all predictors'''
         return request.native_interface.get_models()
+
 
 @ns_conf.route('/custom/<name>')
 @ns_conf.param('name', 'The predictor identifier')
@@ -47,6 +46,7 @@ class CustomPredictor(Resource):
         request.custom_models.load_model(fpath, name, trained_status)
 
         return f'Uploaded custom model {name}'
+
 
 @ns_conf.route('/<name>')
 @ns_conf.param('name', 'The predictor identifier')
@@ -114,8 +114,16 @@ class Predictor(Resource):
         if retrain is True:
             original_name = name
             name = name + '_retrained'
-        
-        request.native_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
+
+        model_names = [x['name'] for x in request.naitve_interface.get_models()]
+        if name in model_names:
+            return http_error(
+                409,
+                f"Predictor '{name}' already exists",
+                f"Predictor with name '{name}' already exists. Each predictor must have unique name."
+            )
+
+        request.naitve_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
         for i in range(20):
             try:
                 # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
@@ -132,6 +140,7 @@ class Predictor(Resource):
                 pass
 
         return '', 200
+
 
 @ns_conf.route('/<name>/learn')
 @ns_conf.param('name', 'The predictor identifier')
@@ -202,6 +211,7 @@ class PredictorPredictFromDataSource(Resource):
 
         results = request.native_interface.predict(name, format_flag, when_data=from_data, **kwargs)
         return results
+
 
 @ns_conf.route('/<name>/rename')
 @ns_conf.param('name', 'The predictor identifier')

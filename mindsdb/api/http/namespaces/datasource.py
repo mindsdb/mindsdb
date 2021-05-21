@@ -4,7 +4,6 @@ import tempfile
 import re
 import multipart
 
-import mindsdb
 from dateutil.parser import parse
 from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
@@ -137,9 +136,9 @@ class Datasource(Resource):
             if integration['type'] == 'mongodb':
                 data['find'] = data['query']
 
-            ds_obj, ds_name = request.default_store.save_datasource(name, integration_id, data)
+            request.default_store.save_datasource(name, integration_id, data)
             os.rmdir(temp_dir_path)
-            return request.default_store.get_datasource(ds_name)
+            return request.default_store.get_datasource(name)
 
         ds_name = data['name'] if 'name' in data else name
         source = data['source'] if 'source' in data else name
@@ -150,7 +149,7 @@ class Datasource(Resource):
         else:
             file_path = None
 
-        ds_obj, ds_name = request.default_store.save_datasource(ds_name, source_type, source, file_path)
+        request.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 
         return request.default_store.get_datasource(ds_name)
@@ -244,6 +243,8 @@ class DatasourceMissedFilesDownload(Resource):
         ds = request.default_store.get_datasource(name)
         if not ds:
             abort(404, "{} not found".format(name))
+        # force download from s3
+        request.default_store.get_datasource_obj(name)
         if not os.path.exists(ds['source']):
             abort(404, "{} not found".format(name))
 

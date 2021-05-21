@@ -2,6 +2,7 @@ import time
 import tempfile
 import unittest
 import json
+import uuid
 
 import requests
 import walrus
@@ -16,15 +17,17 @@ if USE_EXTERNAL_DB_SERVER:
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         redis_creds = json.loads(f.read())['redis']
 
+
 REDIS_PORT = redis_creds.get('port', 6973)
 REDIS_HOST = redis_creds.get('host', "127.0.0.1")
 REDIS_PASSWORD = redis_creds.get('password', None)
 
 CONNECTION_PARAMS = {"host": REDIS_HOST, "port": REDIS_PORT, "db": 0, "password": REDIS_PASSWORD}
-STREAM_IN = "test_stream_in"
-STREAM_OUT = "test_stream_out"
-STREAM_IN_TS = "test_stream_in_ts"
-STREAM_OUT_TS = "test_stream_out_ts"
+STREAM_SUFFIX = uuid.uuid4()
+STREAM_IN = f"test_stream_in_{STREAM_SUFFIX}"
+STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
+STREAM_IN_TS = f"test_stream_in_ts_{STREAM_SUFFIX}"
+STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
 DS_NAME = "test_ds"
 
 
@@ -118,7 +121,7 @@ class RedisTest(unittest.TestCase):
                   "integration_name": INTEGRATION_NAME}
 
         try:
-            url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}'
+            url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
             res = requests.put(url, json={"params": params})
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
@@ -154,7 +157,7 @@ class RedisTest(unittest.TestCase):
                   "type": "timeseries"}
 
         try:
-            url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}'
+            url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
             res = requests.put(url, json={"params": params})
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
@@ -170,6 +173,9 @@ class RedisTest(unittest.TestCase):
             when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
             stream_in.add(when_data)
 
+        threshold = time.time() + 60
+        while len(stream_in) and time.time() < threshold:
+            time.sleep(1)
         time.sleep(10)
         prediction = stream_out.read()
         stream_out.trim(0, approximate=False)

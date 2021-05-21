@@ -60,7 +60,7 @@ if __name__ == '__main__':
     ctx = mp.get_context('spawn')
     if not ray_based:
         from mindsdb.interfaces.model.model_controller import serve
-        rpc_proc = ctx.Process(target=serve, args=(s,))
+        rpc_proc = ctx.Process(target=serve)
         rpc_proc.start()
 
     from mindsdb.__about__ import __version__ as mindsdb_version

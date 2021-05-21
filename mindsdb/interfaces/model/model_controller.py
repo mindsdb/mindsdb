@@ -368,8 +368,10 @@ try:
         ray.init(ignore_reinit_error=True, address='auto')
     except Exception:
         ray.init(ignore_reinit_error=True)
+    log.error('\n\nUSING RAY\n\n')
     ModelController = ray_ify(ModelController)
 except Exception as e:
+    log.error('\n\nUSING PYARROW\n\n')
     log.error(f'Failed to import ray: {e}')
 
 

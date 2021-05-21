@@ -115,7 +115,7 @@ class Predictor(Resource):
             original_name = name
             name = name + '_retrained'
 
-        model_names = [x['name'] for x in request.naitve_interface.get_models()]
+        model_names = [x['name'] for x in request.native_interface.get_models()]
         if name in model_names:
             return http_error(
                 409,
@@ -123,7 +123,7 @@ class Predictor(Resource):
                 f"Predictor with name '{name}' already exists. Each predictor must have unique name."
             )
 
-        request.naitve_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
+        request.native_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
         for i in range(20):
             try:
                 # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code

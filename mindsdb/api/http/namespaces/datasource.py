@@ -244,6 +244,8 @@ class DatasourceMissedFilesDownload(Resource):
         ds = request.default_store.get_datasource(name)
         if not ds:
             abort(404, "{} not found".format(name))
+        # force download from s3
+        request.default_store.get_datasource_obj(name)
         if not os.path.exists(ds['source']):
             abort(404, "{} not found".format(name))
 

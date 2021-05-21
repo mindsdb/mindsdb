@@ -119,8 +119,8 @@ class MindsDBDataNode(DataNode):
         query = aitable_record.integration_query
         predictor_name = aitable_record.predictor_name
 
-
-        ds, ds_name = self.data_store.save_datasource('temp_ds', integration, {'query': query})
+        ds_name = self.data_store.get_vacant_name('temp')
+        self.data_store.save_datasource(ds_name, integration, {'query': query})
         dso = self.data_store.get_datasource_obj(ds_name, raw=True)
         res = self.model_interface.predict(predictor_name, 'dict', when_data=dso)
         self.data_store.delete_datasource(ds_name)
@@ -274,9 +274,9 @@ class MindsDBDataNode(DataNode):
                             pred_dicts[i][col] = where_data[i][col]
 
             if isinstance(where_data, dict):
-                    for col in where_data:
-                        if col not in predicted_columns:
-                            pred_dicts[0][col] = where_data[col]
+                for col in where_data:
+                    if col not in predicted_columns:
+                        pred_dicts[0][col] = where_data[col]
 
             keys = [x for x in pred_dicts[0] if x in columns]
             min_max_keys = []

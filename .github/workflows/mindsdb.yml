@@ -72,6 +72,10 @@ jobs:
 
           export USE_EXTERNAL_DB_SERVER="1"
 
+          if [ "$INSTALL_RAY" == "install_ray" ]; then
+            export USE_RAY="1"
+          fi
+
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"
           python tests/integration_tests/flows/test_company_independent.py
@@ -133,6 +137,7 @@ jobs:
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+        INSTALL_RAY: ${{ matrix.token }}
 
   deploy_to_pypi:
     runs-on: ubuntu-latest

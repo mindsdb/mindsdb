@@ -4,13 +4,11 @@ import sys
 import os
 import time
 import asyncio
-import datetime
 import signal
 
 import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
-from mindsdb.utilities.os_specific import get_mp_context
 from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
@@ -23,7 +21,6 @@ from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import get_db_integrations
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
- 
 
 
 def close_api_gracefully(apis):
@@ -40,7 +37,8 @@ def close_api_gracefully(apis):
             process.terminate()
             process.join()
             sys.stdout.flush()
-        os.system('ray stop --force')
+        if ray_based:
+            os.system('ray stop --force')
     except KeyboardInterrupt:
         sys.exit(0)
 
@@ -58,7 +56,6 @@ if __name__ == '__main__':
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
 
     # Switch to this once the native interface has it's own thread :/
-    # ctx = mp.get_context(get_mp_context())
     ctx = mp.get_context('spawn')
     if not ray_based:
         from mindsdb.interfaces.model.model_controller import start as start_model_controller

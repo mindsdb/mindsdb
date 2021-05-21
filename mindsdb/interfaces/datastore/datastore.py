@@ -321,7 +321,7 @@ class DataStore():
 
         return self.get_datasource_obj(name, raw=True, company_id=company_id)
 
-    def get_datasource_obj(self, name, raw=False, id=None, company_id=None):
+    def get_datasource_obj(self, name, raw=False, company_id=None):
         try:
             datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
 

@@ -6,9 +6,10 @@ from mindsdb.utilities.config import Config
 
 try:
     import boto3
-except Exception as e:
+except Exception:
     # Only required for remote storage on s3
     pass
+
 
 class FsSotre():
     def __init__(self):
@@ -24,7 +25,6 @@ class FsSotre():
             self.bucket = self.config['permanent_storage']['bucket']
         else:
             raise Exception('Location: ' + self.location + ' not supported')
-
 
     def put(self, filename, remote_name, local_path):
         if self.location == 'local':

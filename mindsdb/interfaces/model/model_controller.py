@@ -300,7 +300,7 @@ class ModelController():
         for model_name in predictor_names:
             try:
                 model_data = self.get_model_data(model_name, db_fix=False, company_id=company_id)
-                
+
                 reduced_model_data = {}
 
                 for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update']:
@@ -361,17 +361,16 @@ class ModelController():
             return str(e)
 
 
-if os.environ.get('USE_RAY', '0').lower() in ['1', 'true']:
+try:
+    from mindsdb_worker.cluster.ray_controller import ray_ify
+    import ray
     try:
-        from mindsdb_worker.cluster.ray_controller import ray_ify
-        import ray
-        try:
-            ray.init(ignore_reinit_error=True, address='auto')
-        except Exception:
-            ray.init(ignore_reinit_error=True)
-        ModelController = ray_ify(ModelController)
-    except Exception as e:
-        log.error(f'Failed to import ray: {e}')
+        ray.init(ignore_reinit_error=True, address='auto')
+    except Exception:
+        ray.init(ignore_reinit_error=True)
+    ModelController = ray_ify(ModelController)
+except Exception as e:
+    log.error(f'Failed to import ray: {e}')
 
 
 def ping():
@@ -420,4 +419,3 @@ class FlightServer(fl.FlightServerBase):
 
 def serve(s):
     s.serve()
-    

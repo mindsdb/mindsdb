@@ -3,6 +3,7 @@ import xmlrpc
 import xmlrpc.client
 import time
 import pickle
+import os
 
 from mindsdb.utilities.log import log
 
@@ -73,15 +74,20 @@ class ModelInterfaceRPC():
         return 'Model updating is no available in this version of mindsdb'
 
 
-try:
-    from mindsdb_worker.cluster.ray_interface import ModelInterfaceRay
-    import ray
+if os.environ.get('USE_RAY', '0').lower() in ['1', 'true']:
     try:
-        ray.init(ignore_reinit_error=True, address='auto')
-    except Exception:
-        ray.init(ignore_reinit_error=True)
-    ModelInterface = ModelInterfaceRay
-    ray_based = True
-except Exception:
+        from mindsdb_worker.cluster.ray_interface import ModelInterfaceRay
+        import ray
+        try:
+            ray.init(ignore_reinit_error=True, address='auto')
+        except Exception:
+            ray.init(ignore_reinit_error=True)
+        ModelInterface = ModelInterfaceRay
+        ray_based = True
+    except Exception as e:
+        log.error(f'Failed to import ray: {e}')
+        ModelInterface = ModelInterfaceRPC
+        ray_based = False
+else:
     ModelInterface = ModelInterfaceRPC
     ray_based = False

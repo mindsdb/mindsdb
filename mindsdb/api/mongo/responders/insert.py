@@ -1,4 +1,3 @@
-import os
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.interfaces.storage.db import session, Datasource
 import mindsdb.api.mongo.functions as helpers

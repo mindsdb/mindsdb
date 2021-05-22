@@ -18,8 +18,8 @@ from mindsdb.interfaces.database.integrations import (
 #     return integrations.get(name, {})
 
 def get_predictors():
-    # full_predictors_list = [*request.naitve_interface.get_models(),*request.custom_models.get_models()]
-    full_predictors_list = [*request.naitve_interface.get_models()]
+    # full_predictors_list = [*request.native_interface.get_models(),*request.custom_models.get_models()]
+    full_predictors_list = [*request.native_interface.get_models()]
     return [x["name"] for x in full_predictors_list
             if x["status"] == "complete" and x["current_phase"] == 'Trained']
 

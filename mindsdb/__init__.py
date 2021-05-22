@@ -58,18 +58,6 @@ if not is_ray_worker:
         config_path = 'absent'
     os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
-    if args is not None and args.ray is not None:
-        os.environ['USE_RAY'] = str(args.ray).lower()
-    elif 'ray' in user_config:
-        os.environ['USE_RAY'] = str(user_config['ray']).lower()
-
-    if os.environ.get('USE_RAY', '0').lower() in ['1', 'true']:
-        try:
-            import ray
-        except Exception as e:
-            print(f'MindsDB ordered to use Ray, but it can not be imported: {e}')
-            os.environ['USE_RAY'] = 'false'
-
     if 'storage_dir' in user_config:
         root_storage_dir = user_config['storage_dir']
         os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir

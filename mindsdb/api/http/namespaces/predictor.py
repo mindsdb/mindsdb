@@ -24,7 +24,7 @@ class PredictorList(Resource):
     @ns_conf.marshal_list_with(predictor_status, skip_none=True)
     def get(self):
         '''List all predictors'''
-        return request.naitve_interface.get_models()
+        return request.native_interface.get_models()
 
 
 @ns_conf.route('/custom/<name>')
@@ -56,8 +56,8 @@ class Predictor(Resource):
     @ns_conf.marshal_with(predictor_metadata, skip_none=True)
     def get(self, name):
         try:
-            model = request.naitve_interface.get_model_data(name, db_fix=False)
-        except Exception:
+            model = request.native_interface.get_model_data(name, db_fix=False)
+        except Exception as e:
             abort(404, "")
 
         for k in ['train_end_at', 'updated_at', 'created_at']:
@@ -69,7 +69,7 @@ class Predictor(Resource):
     @ns_conf.doc('delete_predictor')
     def delete(self, name):
         '''Remove predictor'''
-        request.naitve_interface.delete_model(name)
+        request.native_interface.delete_model(name)
 
         return '', 200
 
@@ -115,7 +115,7 @@ class Predictor(Resource):
             original_name = name
             name = name + '_retrained'
 
-        model_names = [x['name'] for x in request.naitve_interface.get_models()]
+        model_names = [x['name'] for x in request.native_interface.get_models()]
         if name in model_names:
             return http_error(
                 409,
@@ -123,19 +123,19 @@ class Predictor(Resource):
                 f"Predictor with name '{name}' already exists. Each predictor must have unique name."
             )
 
-        request.naitve_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
+        request.native_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
         for i in range(20):
             try:
                 # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
-                request.naitve_interface.get_model_data(name)
+                request.native_interface.get_model_data(name)
                 break
             except Exception:
                 time.sleep(1)
 
         if retrain is True:
             try:
-                request.naitve_interface.delete_model(original_name)
-                request.naitve_interface.rename_model(name, original_name)
+                request.native_interface.delete_model(original_name)
+                request.native_interface.rename_model(name, original_name)
             except Exception:
                 pass
 
@@ -169,7 +169,7 @@ class PredictorLearn(Resource):
 class PredictorPredict(Resource):
     @ns_conf.doc('Update predictor')
     def get(self, name):
-        msg = request.naitve_interface.update_model(name)
+        msg = request.native_interface.update_model(name)
         return {
             'message': msg
         }
@@ -189,7 +189,7 @@ class PredictorPredict2(Resource):
         if when is None:
             return 'No data provided for the predictions', 500
 
-        results = request.naitve_interface.predict(name, format_flag, when_data=when, **kwargs)
+        results = request.native_interface.predict(name, format_flag, when_data=when, **kwargs)
 
         return results
 
@@ -209,7 +209,7 @@ class PredictorPredictFromDataSource(Resource):
         if from_data is None:
             abort(400, 'No valid datasource given')
 
-        results = request.naitve_interface.predict(name, format_flag, when_data=from_data, **kwargs)
+        results = request.native_interface.predict(name, format_flag, when_data=from_data, **kwargs)
         return results
 
 
@@ -221,7 +221,7 @@ class PredictorDownload(Resource):
         '''Export predictor to file'''
         try:
             new_name = request.args.get('new_name')
-            request.naitve_interface.rename_model(name, new_name)
+            request.native_interface.rename_model(name, new_name)
         except Exception as e:
             return str(e), 400
 

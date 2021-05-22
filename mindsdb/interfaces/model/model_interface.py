@@ -76,6 +76,7 @@ class ModelInterfaceRPC():
 
 if os.environ.get('USE_RAY', '0').lower() in ['1', 'true']:
     try:
+        import mindsdb_worker
         from mindsdb_worker.cluster.ray_interface import ModelInterfaceRay
         import ray
         try:

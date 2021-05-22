@@ -14,6 +14,7 @@ from pandas import DataFrame
 from ps import wait_port, is_port_in_use, net_connections
 
 
+
 HTTP_API_ROOT = 'http://localhost:47334/api'
 
 DATASETS_PATH = os.getenv('DATASETS_PATH')
@@ -170,7 +171,7 @@ if USE_EXTERNAL_DB_SERVER:
     MINDSDB_DATABASE = f'mindsdb_{mindsdb_port}'
     config_json['api']['mysql']['database'] = MINDSDB_DATABASE
     config_json['api']['mongodb']['database'] = MINDSDB_DATABASE
-    
+
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())
     override = {}

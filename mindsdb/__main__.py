@@ -17,6 +17,7 @@ from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.log import log
+from threading import Thread
 
 from mindsdb.interfaces.database.integrations import get_db_integrations
 
@@ -58,10 +59,9 @@ if __name__ == '__main__':
     # Switch to this once the native interface has it's own thread :/
     ctx = mp.get_context('spawn')
     if not ray_based:
-        from mindsdb.interfaces.model.model_controller import start as start_model_controller
-        rpc_proc = ctx.Process(target=start_model_controller,)
+        from mindsdb.interfaces.model.model_controller import serve
+        rpc_proc = ctx.Process(target=serve)
         rpc_proc.start()
-
 
     from mindsdb.__about__ import __version__ as mindsdb_version
     print(f'Version {mindsdb_version}')
@@ -137,6 +137,11 @@ if __name__ == '__main__':
             raise e
 
     atexit.register(close_api_gracefully, apis=apis)
+
+    if not ray_based:
+        pass
+        #s.shutdown()
+        #s.wait()
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60

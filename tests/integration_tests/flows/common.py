@@ -217,12 +217,8 @@ def stop_mindsdb(sp=None):
         pass
 
     conns = net_connections()
-    pids = [x.pid for x in conns
-            if x.pid is not None and x.status in ['LISTEN', 'CLOSE_WAIT']
-            and x.laddr[1] in (47334, 47335, 47336, 19329, 8273, 8274, 8275)]
+    pids = [x.pid for x in conns if x.pid is not None and x.laddr[1] in (47334, 47335, 47336, 19329, 8273, 8274, 8275)]
 
-    # ALWAYS KILL PYARROW
-    os.kill(19329, 9)
     for pid in pids:
         try:
             os.kill(pid, 9)

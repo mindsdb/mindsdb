@@ -205,7 +205,7 @@ def make_test_csv(name, data):
 
 def stop_mindsdb(sp=None):
     if sp:
-        os.kill(sp.pid, signal.CTRL_C_EVENT)
+        os.kill(sp.pid, signal.SIGTERM)
         #sp.kill()
     try:
         os.system('ray stop --force')
@@ -219,11 +219,14 @@ def stop_mindsdb(sp=None):
         pass
 
     conns = net_connections()
-    pids = [x.pid for x in conns if x.pid is not None and x.laddr[1] in (47334, 47335, 47336, 19329, 8273, 8274, 8275)]
+    procs = [[x.pid,x.laddr[1]] for x in conns if x.pid is not None and x.laddr[1] in (47334, 47335, 47336, 19329, 8273, 8274, 8275)]
 
-    for pid in pids:
+    for proc in procs:
         try:
-            os.kill(pid, 9)
+            os.kill(proc[0], 9)
+            pport = proc[1]
+            # It's complicated...
+            os.system(f'sudo fuser -k {pport}/tcp')
         # process may be killed by OS due to some reasons in that moment
         except ProcessLookupError:
             pass

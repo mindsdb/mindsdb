@@ -205,7 +205,8 @@ def make_test_csv(name, data):
 
 def stop_mindsdb(sp=None):
     if sp:
-        os.kill(sp.pid, signal.SIGINT) #SIGTERM
+        #os.kill(sp.pid, signal.SIGTERM) #SIGINT
+        sp.kill()
         time.sleep(2)
         #sp.kill()
     try:
@@ -229,7 +230,7 @@ def stop_mindsdb(sp=None):
             # I think this is what they call "defensive coding"...
             os.system(f'sudo fuser -k {pport}/tcp')
         # process may be killed by OS due to some reasons in that moment
-        except ProcessLookupError:
+        except Exception as e:
             pass
 
     waited_for = 0

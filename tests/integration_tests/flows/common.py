@@ -205,7 +205,8 @@ def make_test_csv(name, data):
 
 def stop_mindsdb(sp=None):
     if sp:
-        os.kill(sp.pid, signal.SIGTERM)
+        os.kill(sp.pid, signal.SIGINT) #SIGTERM
+        time.sleep(2)
         #sp.kill()
     try:
         os.system('ray stop --force')
@@ -225,7 +226,7 @@ def stop_mindsdb(sp=None):
         try:
             os.kill(proc[0], 9)
             pport = proc[1]
-            # It's complicated...
+            # I think this is what they call "defensive coding"...
             os.system(f'sudo fuser -k {pport}/tcp')
         # process may be killed by OS due to some reasons in that moment
         except ProcessLookupError:

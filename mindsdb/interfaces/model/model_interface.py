@@ -24,7 +24,7 @@ class ModelInterfaceRPC():
         for _ in range(10):
             try:
                 time.sleep(3)
-                self.client = fl.connect("grpc://localhost:19329")
+                self.client = fl.FlightClient("grpc://localhost:19329")
                 res = self._action('ping')
                 assert self._loads_first(res)
                 return

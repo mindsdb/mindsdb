@@ -218,8 +218,8 @@ def stop_mindsdb(sp=None):
         print(e)
         pass
 
-    conns = net_connections()
-    procs = [[x.pid,x.laddr[1]] for x in conns if x.pid is not None and x.laddr[1] in (47334, 47335, 47336, 19329, 8273, 8274, 8275)]
+    mdb_ports = (47334, 47335, 47336, 19329, 8273, 8274, 8275)
+    procs = [[x.pid,x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
 
     for proc in procs:
         try:
@@ -230,7 +230,12 @@ def stop_mindsdb(sp=None):
         # process may be killed by OS due to some reasons in that moment
         except ProcessLookupError:
             pass
-    time.sleep(6)
+
+    waited_for = 0
+    while len([x for x in net_connections() if x.laddr[1] in mdb_ports]):
+        print(f'\nSome mindsdb ports are yet to die, waiting for them to do so! Waited for a total of: {waited_for} seconds\n')
+        time.sleep(2)
+        waited_for += 2
 
 def override_recursive(a, b):
     for key in b:

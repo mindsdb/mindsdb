@@ -424,5 +424,6 @@ def serve():
         flight_server = FlightServer("grpc://localhost:19329")
         flight_server.serve()
     except:
+        print('\n\nShutting down flight server\n\n')
         flight_server.shutdown()
         flight_server.wait()

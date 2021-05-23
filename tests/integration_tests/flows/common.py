@@ -7,6 +7,7 @@ import asyncio
 import re
 import sys
 from pathlib import Path
+import signal
 
 import requests
 from pandas import DataFrame
@@ -204,7 +205,8 @@ def make_test_csv(name, data):
 
 def stop_mindsdb(sp=None):
     if sp:
-        sp.kill()
+        os.kill(sp.pid, signal.CTRL_C_EVENT)
+        #sp.kill()
     try:
         os.system('ray stop --force')
     except Exception as e:

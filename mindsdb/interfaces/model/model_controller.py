@@ -18,7 +18,6 @@ from mindsdb.utilities.log import log
 import pyarrow as pa
 import pyarrow.flight as fl
 
-
 class ModelController():
     def __init__(self, ray_based):
         self.config = Config()
@@ -368,10 +367,8 @@ try:
         ray.init(ignore_reinit_error=True, address='auto')
     except Exception:
         ray.init(ignore_reinit_error=True)
-    log.error('\n\nUSING RAY\n\n')
     ModelController = ray_ify(ModelController)
 except Exception as e:
-    log.error('\n\nUSING PYARROW\n\n')
     log.error(f'Failed to import ray: {e}')
 
 
@@ -408,20 +405,10 @@ class FlightServer(fl.FlightServerBase):
             res = pa.flight.Result(buf)
             yield res
 
-
-# def serve():
-#     import time
-#     s = FlightServer("grpc://localhost:19329")
-#     for _ in range(10):
-#         try:
-#             s.serve()
-#         except pa.lib.ArrowException:
-#             time.sleep(5)
-
-
 def serve():
     try:
         flight_server = FlightServer("grpc://localhost:19329")
+        print('\n\n Trying to start pyarrow server \n\n')
         flight_server.serve()
     except:
         print('\n\nShutting down flight server\n\n')

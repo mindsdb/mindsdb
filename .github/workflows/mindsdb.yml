@@ -128,6 +128,11 @@ jobs:
             echo -e "\n===============\nflow with mistakes\n===============\n"
             python tests/integration_tests/flows/test_mistakes.py
           fi
+
+          # Redis Stream
+          echo -e "\n===============\ntest Redis Stream Integration\n===============\n"
+          python tests/integration_tests/flows/test_redis.py
+
         fi
       shell: bash
       env:

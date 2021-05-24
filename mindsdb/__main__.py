@@ -66,7 +66,7 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
 
-    # @TODO Backwards compatibiltiy, remove later
+    # @TODO Backwards compatibiltiy for tests, remove later
     from mindsdb.interfaces.database.integrations import add_db_integration, get_db_integration
     dbw = DatabaseWrapper(COMPANY_ID)
     model_interface = ModelInterface()
@@ -94,6 +94,11 @@ if __name__ == '__main__':
                 dbw.register_predictors(model_data_arr, integration_name=integration_name)
         except Exception as e:
             log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
+
+    del model_interface
+    del dbw
+    # @TODO Backwards compatibiltiy for tests, remove later
+
 
     if args.api is None:
         api_arr = ['http', 'mysql']

@@ -221,7 +221,7 @@ def stop_mindsdb(sp=None):
         print(e)
         pass
 
-    mdb_ports = (47334, 47335, 47336, 19329, 8273, 8274, 8275)
+    mdb_ports = (47334, 47335, 47336, 8273, 8274, 8275)
     procs = [[x.pid,x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
 
     for proc in procs:

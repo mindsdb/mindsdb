@@ -26,9 +26,15 @@ class KafkaStream(Thread, BaseStream):
 
         BaseStream.__init__(self)
         try:
+            topics = []
             self.topic = NewTopic(self.stream_out_name, num_partitions=1, replication_factor=1)
-            self.topic_anomaly = NewTopic(self.stream_anomaly_name, num_partitions=1, replication_factor=1)
-            self.admin.create_topics([self.topic, self.topic_anomaly])
+            topics.append(self.topic)
+            if self.stream_out_name != self.stream_anomaly_name:
+                self.topic_anomaly = NewTopic(self.stream_anomaly_name, num_partitions=1, replication_factor=1)
+                topics.append(self.topic_anomaly)
+            else:
+                self.topic_anomaly = self.topic
+            self.admin.create_topics(topics)
         except kafka.errors.TopicAlreadyExistsError:
             pass
         except Exception as e:

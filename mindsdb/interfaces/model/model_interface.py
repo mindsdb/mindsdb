@@ -3,6 +3,7 @@ import pickle
 import os
 
 from mindsdb.utilities.log import log
+from mindsdb.interfaces.model.model_interface import ModelController
 import pyarrow.flight as fl
 
 
@@ -23,37 +24,26 @@ class ModelInterfaceNativeImport():
     def __init__(self):
         self.controller = ModelController()
 
-    def _action(self, act_name, *args, **kwargs):
-        action = fl.Action(act_name, pickle.dumps({'args': args, 'kwargs': kwargs}))
-        return list(self.client.do_action(action))
-
-    def _loads_first(self, res):
-        return pickle.loads(res[0].body.to_pybytes())
-
     def create(self, *args, **kwargs):
-        self._action('create', *args, **kwargs)
+        return self.controller.create(*args, **kwargs)
 
     def learn(self, *args, **kwargs):
-        self._action('learn', *args, **kwargs)
+        return self.controller.learn(*args, **kwargs)
 
     def predict(self, *args, **kwargs):
-        res = self._action('predict', *args, **kwargs)
-        return self._loads_first(res)
+        return self.controller.predict(*args, **kwargs)
 
     def analyse_dataset(self, *args, **kwargs):
-        res = self._action('analyse_dataset', *args, **kwargs)
-        return self._loads_first(res)
+        return self.controller.analyse_dataset(*args, **kwargs)
 
     def get_model_data(self, *args, **kwargs):
-        res = self._action('get_model_data', *args, **kwargs)
-        return self._loads_first(res)
+        return self.controller.get_model_data(*args, **kwargs)
 
     def get_models(self, *args, **kwargs):
-        res = self._action('get_models', *args, **kwargs)
-        return self._loads_first(res)
+        return self.controller.get_models(*args, **kwargs)
 
     def delete_model(self, *args, **kwargs):
-        self._action('delete_model', *args, **kwargs)
+        return self.controller.delete_model(*args, **kwargs)
 
     def update_model(self, *args, **kwargs):
         return 'Model updating is no available in this version of mindsdb'

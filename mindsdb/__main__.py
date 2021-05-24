@@ -58,10 +58,6 @@ if __name__ == '__main__':
 
     # Switch to this once the native interface has it's own thread :/
     ctx = mp.get_context('spawn')
-    if not ray_based:
-        from mindsdb.interfaces.model.model_controller import serve
-        rpc_proc = ctx.Process(target=serve)
-        rpc_proc.start()
 
     from mindsdb.__about__ import __version__ as mindsdb_version
     print(f'Version {mindsdb_version}')

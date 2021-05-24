@@ -19,18 +19,9 @@ class ModelInterfaceWrapper(object):
         return wrapper
 
 
-class ModelInterfaceRPC():
+class ModelInterfaceNativeImport():
     def __init__(self):
-        for _ in range(10):
-            try:
-                time.sleep(3)
-                self.client = fl.FlightClient("grpc://localhost:19329")
-                res = self._action('ping')
-                assert self._loads_first(res)
-                return
-            except Exception:
-                log.info('Wating for native RPC server to start')
-        raise Exception('Unable to connect to RPC server')
+        self.controller = ModelController()
 
     def _action(self, act_name, *args, **kwargs):
         action = fl.Action(act_name, pickle.dumps({'args': args, 'kwargs': kwargs}))
@@ -78,5 +69,5 @@ try:
     ray_based = True
 except Exception as e:
     log.error(f'Failed to import ray: {e}')
-    ModelInterface = ModelInterfaceRPC
+    ModelInterface = ModelInterfaceNativeImport
     ray_based = False

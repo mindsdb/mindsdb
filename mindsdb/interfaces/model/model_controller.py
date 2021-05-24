@@ -1,6 +1,3 @@
-# @TODO, replace with arrow later: https://mirai-solutions.ch/news/2020/06/11/apache-arrow-flight-tutorial/
-import xmlrpc
-from xmlrpc.server import SimpleXMLRPCServer
 from dateutil.parser import parse as parse_datetime
 import pickle
 from pathlib import Path
@@ -18,7 +15,8 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import log
-
+import pyarrow as pa
+import pyarrow.flight as fl
 
 class ModelController():
     def __init__(self, ray_based):
@@ -27,13 +25,10 @@ class ModelController():
         self.predictor_cache = {}
         self.ray_based = ray_based
 
-    def _pack(self, obj):
-        if self.ray_based:
-            return obj
-        return xmlrpc.client.Binary(pickle.dumps(obj))
-
     def _invalidate_cached_predictors(self):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
+        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS, MySqlDS,
+                                         PostgresDS, MSSQLDS, MongoDS,
+                                         SnowflakeDS, AthenaDS)
         from mindsdb.interfaces.storage.db import session, Predictor
 
         # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
@@ -121,7 +116,9 @@ class ModelController():
         return predictor_record
 
     def create(self, name, company_id=None):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
+        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
+                                         MySqlDS, PostgresDS, MSSQLDS,
+                                         MongoDS, SnowflakeDS, AthenaDS)
         import mindsdb_native
         from mindsdb.interfaces.storage.db import session, Predictor
 
@@ -167,7 +164,9 @@ class ModelController():
         return 0
 
     def predict(self, name, pred_format, when_data=None, kwargs={}, company_id=None):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
+        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
+                                         MySqlDS, PostgresDS, MSSQLDS, MongoDS,
+                                         SnowflakeDS, AthenaDS)
         import mindsdb_native
         from mindsdb.interfaces.storage.db import session, Predictor
 
@@ -215,7 +214,8 @@ class ModelController():
             raise Exception(f'Unkown predictions format: {pred_format}')
 
         delete_process_mark('predict')
-        return self._pack(predictions)
+
+        return predictions
 
     def analyse_dataset(self, ds, company_id=None):
         from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
@@ -226,7 +226,7 @@ class ModelController():
         analysis = F.analyse_dataset(ds)
 
         delete_process_mark('analyse')
-        return self._pack(analysis)
+        return analysis
 
     def get_model_data(self, name, db_fix=True, company_id=None):
         from mindsdb_native import F
@@ -286,7 +286,7 @@ class ModelController():
         model['predict'] = predictor_record.to_predict
         model['update'] = predictor_record.update_status
         model['name'] = predictor_record.name
-        return self._pack(model)
+        return model
 
     def get_models(self, company_id=None):
         from mindsdb.interfaces.storage.db import session, Predictor
@@ -298,11 +298,8 @@ class ModelController():
         ]
         for model_name in predictor_names:
             try:
-                if self.ray_based:
-                    model_data = self.get_model_data(model_name, db_fix=False, company_id=company_id)
-                else:
-                    bin = self.get_model_data(model_name, db_fix=False, company_id=company_id)
-                    model_data = pickle.loads(bin.data)
+                model_data = self.get_model_data(model_name, db_fix=False, company_id=company_id)
+
                 reduced_model_data = {}
 
                 for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update']:
@@ -321,7 +318,7 @@ class ModelController():
                 models.append(reduced_model_data)
             except Exception as e:
                 log.error(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
-        return self._pack(models)
+        return models
 
     def delete_model(self, name, company_id=None):
         from mindsdb_native import F
@@ -363,47 +360,13 @@ class ModelController():
             return str(e)
 
 
-if os.environ.get('USE_RAY', '0').lower() in ['1', 'true']:
+try:
+    from mindsdb_worker.cluster.ray_controller import ray_ify
+    import ray
     try:
-        from mindsdb_worker.cluster.ray_controller import ray_ify
-        import ray
-        try:
-            ray.init(ignore_reinit_error=True, address='auto')
-        except Exception:
-            ray.init(ignore_reinit_error=True)
-        ModelController = ray_ify(ModelController)
-    except Exception as e:
-        log.error(f'Failed to import ray: {e}')
-
-
-def ping():
-    return True
-
-
-def start():
-    class Server(object):
-        def __init__(self):
-            self.server = SimpleXMLRPCServer(("localhost", 19329))
-
-        def register_function(self, function, name=None):
-            def _function(args, kwargs):
-                return function(*args, **kwargs)
-            _function.__name__ = function.__name__
-            self.server.register_function(_function, name)
-
-        def serve_forever(self):
-            self.server.serve_forever()
-
-    controller = ModelController(False)
-    server = Server()
-
-    server.register_function(controller.create, "create")
-    server.register_function(controller.learn, "learn")
-    server.register_function(controller.predict, "predict")
-    server.register_function(controller.analyse_dataset, "analyse_dataset")
-    server.register_function(controller.get_model_data, "get_model_data")
-    server.register_function(controller.get_models, "get_models")
-    server.register_function(controller.delete_model, "delete_model")
-    server.register_function(ping, "ping")
-
-    server.serve_forever()
+        ray.init(ignore_reinit_error=True, address='auto')
+    except Exception:
+        ray.init(ignore_reinit_error=True)
+    ModelController = ray_ify(ModelController)
+except Exception as e:
+    log.error(f'Failed to import ray: {e}')

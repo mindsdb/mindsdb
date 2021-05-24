@@ -7,11 +7,13 @@ import asyncio
 import re
 import sys
 from pathlib import Path
+import signal
 
 import requests
 from pandas import DataFrame
 
 from ps import wait_port, is_port_in_use, net_connections
+
 
 
 HTTP_API_ROOT = 'http://localhost:47334/api'
@@ -170,14 +172,15 @@ if USE_EXTERNAL_DB_SERVER:
     MINDSDB_DATABASE = f'mindsdb_{mindsdb_port}'
     config_json['api']['mysql']['database'] = MINDSDB_DATABASE
     config_json['api']['mongodb']['database'] = MINDSDB_DATABASE
-    
+
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         credentials = json.loads(f.read())
     override = {}
     for key, value in credentials.items():
-        value['publish'] = False
-        value['type'] = key
-        config_json['integrations'][f'default_{key}'] = value
+        if key not in ("redis", "kafka"):
+            value['publish'] = False
+            value['type'] = key
+            config_json['integrations'][f'default_{key}'] = value
 
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', None)
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', None)
@@ -203,7 +206,10 @@ def make_test_csv(name, data):
 
 def stop_mindsdb(sp=None):
     if sp:
+        #os.kill(sp.pid, signal.SIGTERM) #SIGINT
         sp.kill()
+        time.sleep(2)
+        #sp.kill()
     try:
         os.system('ray stop --force')
     except Exception as e:
@@ -215,18 +221,24 @@ def stop_mindsdb(sp=None):
         print(e)
         pass
 
-    conns = net_connections()
-    pids = [x.pid for x in conns
-            if x.pid is not None and x.status in ['LISTEN', 'CLOSE_WAIT']
-            and x.laddr[1] in (47334, 47335, 47336, 19329, 8273, 8274, 8275)]
+    mdb_ports = (47334, 47335, 47336, 8273, 8274, 8275)
+    procs = [[x.pid,x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
 
-    for pid in pids:
+    for proc in procs:
         try:
-            os.kill(pid, 9)
+            os.kill(proc[0], 9)
+            pport = proc[1]
+            # I think this is what they call "defensive coding"...
+            os.system(f'sudo fuser -k {pport}/tcp')
         # process may be killed by OS due to some reasons in that moment
-        except ProcessLookupError:
+        except Exception as e:
             pass
-    time.sleep(6)
+
+    waited_for = 0
+    while len([x for x in net_connections() if x.laddr[1] in mdb_ports]):
+        print(f'\nSome mindsdb ports are yet to die, waiting for them to do so! Waited for a total of: {waited_for} seconds\n')
+        time.sleep(2)
+        waited_for += 2
 
 def override_recursive(a, b):
     for key in b:

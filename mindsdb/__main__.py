@@ -17,6 +17,7 @@ from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.log import log
+from threading import Thread
 
 from mindsdb.interfaces.database.integrations import get_db_integrations
 
@@ -57,11 +58,6 @@ if __name__ == '__main__':
 
     # Switch to this once the native interface has it's own thread :/
     ctx = mp.get_context('spawn')
-    if not ray_based:
-        from mindsdb.interfaces.model.model_controller import start as start_model_controller
-        rpc_proc = ctx.Process(target=start_model_controller,)
-        rpc_proc.start()
-
 
     from mindsdb.__about__ import __version__ as mindsdb_version
     print(f'Version {mindsdb_version}')
@@ -70,7 +66,7 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
 
-    # @TODO Backwards compatibiltiy, remove later
+    # @TODO Backwards compatibiltiy for tests, remove later
     from mindsdb.interfaces.database.integrations import add_db_integration, get_db_integration
     dbw = DatabaseWrapper(COMPANY_ID)
     model_interface = ModelInterface()
@@ -99,6 +95,11 @@ if __name__ == '__main__':
         except Exception as e:
             log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
+    del model_interface
+    del dbw
+    # @TODO Backwards compatibiltiy for tests, remove later
+
+
     if args.api is None:
         api_arr = ['http', 'mysql']
     else:
@@ -111,8 +112,6 @@ if __name__ == '__main__':
             'started': False
         } for api in api_arr
     }
-    if not ray_based:
-        apis['rcp'] = {'process': rpc_proc, 'started': True}
 
     start_functions = {
         'http': start_http,

@@ -72,10 +72,6 @@ jobs:
 
           export USE_EXTERNAL_DB_SERVER="1"
 
-          # Redis Stream
-          echo -e "\n===============\ntest Redis Stream Integration\n===============\n"
-          python tests/integration_tests/flows/test_redis.py
-
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"
           python tests/integration_tests/flows/test_company_independent.py
@@ -129,6 +125,9 @@ jobs:
             python tests/integration_tests/flows/test_mistakes.py
           fi
 
+          # Redis Stream
+          echo -e "\n===============\ntest Redis Stream Integration\n===============\n"
+          python tests/integration_tests/flows/test_redis.py
 
         fi
       shell: bash

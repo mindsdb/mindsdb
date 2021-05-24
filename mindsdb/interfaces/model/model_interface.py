@@ -21,8 +21,8 @@ class ModelInterfaceWrapper(object):
 
 class ModelInterfaceNativeImport():
     def __init__(self):
-        from mindsdb.interfaces.model.model_interface import ModelController
-        self.controller = ModelController()
+        from mindsdb.interfaces.model.model_controller import ModelController
+        self.controller = ModelController(False)
 
     def create(self, *args, **kwargs):
         return self.controller.create(*args, **kwargs)

@@ -112,8 +112,6 @@ if __name__ == '__main__':
             'started': False
         } for api in api_arr
     }
-    if not ray_based:
-        apis['rcp'] = {'process': rpc_proc, 'started': True}
 
     start_functions = {
         'http': start_http,
@@ -138,11 +136,6 @@ if __name__ == '__main__':
             raise e
 
     atexit.register(close_api_gracefully, apis=apis)
-
-    if not ray_based:
-        pass
-        #s.shutdown()
-        #s.wait()
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60

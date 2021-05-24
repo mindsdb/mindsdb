@@ -22,16 +22,14 @@ if USE_EXTERNAL_DB_SERVER:
 
 KAFKA_PORT = kafka_creds.get('port', 9092)
 KAFKA_HOST = kafka_creds.get('host', "127.0.0.1")
-# REDIS_PASSWORD = kafka_creds.get('password', None)
 
 CONNECTION_PARAMS = {"bootstrap_servers": f"{KAFKA_HOST}:{KAFKA_PORT}"}
-# STREAM_SUFFIX = uuid.uuid4()
-STREAM_SUFFIX = "foo"
+STREAM_SUFFIX = uuid.uuid4()
 STREAM_IN = f"test_stream_in_{STREAM_SUFFIX}"
 STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
 STREAM_IN_TS = f"test_stream_in_ts_{STREAM_SUFFIX}"
 STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
-DS_NAME = "test_ds"
+DS_NAME = "kafka_test_ds"
 
 def read_stream(stream_name, buf, stop_event):
     consumer = kafka.KafkaConsumer(**CONNECTION_PARAMS, consumer_timeout_ms=1000)
@@ -43,6 +41,7 @@ def read_stream(stream_name, buf, stop_event):
         except StopIteration:
             pass
     consumer.close()
+    print(f"STOPPING READING STREAM {stream_name} THREAD PROPERLY")
 
 class KafkaTest(unittest.TestCase):
 
@@ -157,6 +156,7 @@ class KafkaTest(unittest.TestCase):
         reading_th = threading.Thread(target=read_stream, args=(STREAM_OUT, predictions, stop_event))
         reading_th.start()
         time.sleep(1)
+
         for x in range(1, 3):
             when_data = {'x1': x, 'x2': 2*x}
             to_send = json.dumps(when_data)
@@ -165,6 +165,56 @@ class KafkaTest(unittest.TestCase):
         time.sleep(10)
         stop_event.set()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
+
+    def test_4_kafka_create_ts_stream(self):
+        print(f'\nExecuting {self._testMethodName}')
+        try:
+            self.train_ts_predictor(DS_NAME, self._testMethodName)
+        except Exception as e:
+            self.fail(f"couldn't train ts predictor: {e}")
+
+        params = {"predictor": self._testMethodName,
+                  "stream_in": STREAM_IN_TS,
+                  "stream_out": STREAM_OUT_TS,
+                  "integration_name": INTEGRATION_NAME,
+                  "type": "timeseries"}
+
+        try:
+            url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+            res = requests.put(url, json={"params": params})
+            self.assertTrue(res.status_code == 200, res.text)
+        except Exception as e:
+            self.fail(f"error creating stream: {e}")
+
+    def test_5_making_ts_stream_prediction(self):
+        print(f'\nExecuting {self._testMethodName}')
+        producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
+        admin = kafka.KafkaAdminClient(**CONNECTION_PARAMS)
+        topic = NewTopic(STREAM_IN_TS, num_partitions=1, replication_factor=1)
+        try:
+            admin.create_topics([topic])
+        except Exception as e:
+            print(e)
+
+        # wait when the integration launch created stream
+        time.sleep(15)
+        predictions = []
+        stop_event = threading.Event()
+        reading_th = threading.Thread(target=read_stream, args=(STREAM_OUT_TS, predictions, stop_event))
+        reading_th.start()
+        time.sleep(3)
+
+        for x in range(210, 221):
+            when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
+            to_send = json.dumps(when_data)
+            producer.send(STREAM_IN_TS, to_send.encode("utf-8"))
+        producer.close()
+
+        threshold = time.time() + 60
+        while len(predictions) != 2 and time.time() < threshold:
+            time.sleep(1)
+        stop_event.set()
+        self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
 
 if __name__ == "__main__":
     try:

@@ -3,7 +3,6 @@ import pickle
 import os
 
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.model.model_interface import ModelController
 import pyarrow.flight as fl
 
 
@@ -22,6 +21,7 @@ class ModelInterfaceWrapper(object):
 
 class ModelInterfaceNativeImport():
     def __init__(self):
+        from mindsdb.interfaces.model.model_interface import ModelController
         self.controller = ModelController()
 
     def create(self, *args, **kwargs):

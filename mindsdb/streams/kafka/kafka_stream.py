@@ -23,24 +23,8 @@ class KafkaStream(Thread, BaseStream):
         self.consumer = kafka.KafkaConsumer(**self.connection_info, **self.advanced_info.get('consumer', {}))
         self.consumer.subscribe(topics=[self.stream_in_name])
         self.producer = kafka.KafkaProducer(**self.connection_info, **self.advanced_info.get('producer', {}), acks='all')
-        # self.admin = kafka.KafkaAdminClient(**self.connection_info)
-        # self.admin = kafka.KafkaClient(**self.connection_info)
 
         BaseStream.__init__(self)
-        # try:
-        #     topics = []
-        #     self.topic = NewTopic(self.stream_out_name, num_partitions=1, replication_factor=1)
-        #     topics.append(self.topic)
-        #     if self.stream_out_name != self.stream_anomaly_name:
-        #         self.topic_anomaly = NewTopic(self.stream_anomaly_name, num_partitions=1, replication_factor=1)
-        #         topics.append(self.topic_anomaly)
-        #     else:
-        #         self.topic_anomaly = self.topic
-        #     self.admin.create_topics(topics)
-        # except kafka.errors.TopicAlreadyExistsError:
-        #     pass
-        # except Exception as e:
-        #     log.error(f"STREAM {self.stream_name}: error creating topics - {e}")
         self._type = _type
 
         self.caches = {}

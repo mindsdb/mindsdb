@@ -85,7 +85,6 @@ class KafkaTest(unittest.TestCase):
             'data_source_name': ds_name,
             'to_predict': 'y',
             'kwargs': {
-                # 'stop_training_in_x_seconds': 40,
                 'use_gpu': False,
                 'join_learn_process': True,
                 'ignore_columns': None,

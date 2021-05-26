@@ -23,7 +23,7 @@ if USE_EXTERNAL_DB_SERVER:
 KAFKA_PORT = kafka_creds.get('port', 9092)
 KAFKA_HOST = kafka_creds.get('host', "127.0.0.1")
 
-CONNECTION_PARAMS = {"bootstrap_servers": f"{KAFKA_HOST}:{KAFKA_PORT}"}
+CONNECTION_PARAMS = {"bootstrap_servers": [f"{KAFKA_HOST}:{KAFKA_PORT}"]}
 STREAM_SUFFIX = uuid.uuid4()
 STREAM_IN = f"test_stream_in_{STREAM_SUFFIX}"
 STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
@@ -142,12 +142,12 @@ class KafkaTest(unittest.TestCase):
     def test_3_making_stream_prediction(self):
         print(f'\nExecuting {self._testMethodName}')
         producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
-        admin = kafka.KafkaAdminClient(**CONNECTION_PARAMS)
-        topic = NewTopic(STREAM_IN, num_partitions=1, replication_factor=1)
-        try:
-            admin.create_topics([topic])
-        except Exception as e:
-            print(e)
+        # admin = kafka.KafkaAdminClient(**CONNECTION_PARAMS)
+        # topic = NewTopic(STREAM_IN, num_partitions=1, replication_factor=1)
+        # try:
+        #     admin.create_topics([topic])
+        # except Exception as e:
+        #     print(e)
 
         # wait when the integration launch created stream
         time.sleep(10)
@@ -162,7 +162,7 @@ class KafkaTest(unittest.TestCase):
             to_send = json.dumps(when_data)
             producer.send(STREAM_IN, to_send.encode("utf-8"))
         producer.close()
-        time.sleep(10)
+        time.sleep(60)
         stop_event.set()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
 
@@ -189,12 +189,12 @@ class KafkaTest(unittest.TestCase):
     def test_5_making_ts_stream_prediction(self):
         print(f'\nExecuting {self._testMethodName}')
         producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
-        admin = kafka.KafkaAdminClient(**CONNECTION_PARAMS)
-        topic = NewTopic(STREAM_IN_TS, num_partitions=1, replication_factor=1)
-        try:
-            admin.create_topics([topic])
-        except Exception as e:
-            print(e)
+        # admin = kafka.KafkaAdminClient(**CONNECTION_PARAMS)
+        # topic = NewTopic(STREAM_IN_TS, num_partitions=1, replication_factor=1)
+        # try:
+        #     admin.create_topics([topic])
+        # except Exception as e:
+        #     print(e)
 
         # wait when the integration launch created stream
         time.sleep(15)
@@ -210,9 +210,10 @@ class KafkaTest(unittest.TestCase):
             producer.send(STREAM_IN_TS, to_send.encode("utf-8"))
         producer.close()
 
-        threshold = time.time() + 60
-        while len(predictions) != 2 and time.time() < threshold:
-            time.sleep(1)
+        # threshold = time.time() + 60
+        # while len(predictions) != 2 and time.time() < threshold:
+        #     time.sleep(1)
+        time.sleep(60)
         stop_event.set()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
 

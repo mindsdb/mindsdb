@@ -18,7 +18,7 @@ if USE_EXTERNAL_DB_SERVER:
         redis_creds = json.loads(f.read())['redis']
 
 
-REDIS_PORT = redis_creds.get('port', 6973)
+REDIS_PORT = redis_creds.get('port', 6379)
 REDIS_HOST = redis_creds.get('host', "127.0.0.1")
 REDIS_PASSWORD = redis_creds.get('password', None)
 

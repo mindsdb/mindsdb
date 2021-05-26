@@ -5,6 +5,7 @@ from .mssql.mssql import MSSQLConnectionChecker
 from .mysql.mysql import MySQLConnectionChecker
 from .postgres.postgres import PostgreSQLConnectionChecker
 from .redis.redisdb import RedisConnectionChecker
+from .kafka.kafkadb import KafkaConnectionChecker
 
 CHECKERS = {
         "clickhouse": ClickhouseConnectionChecker,
@@ -14,4 +15,5 @@ CHECKERS = {
         "mysql": MySQLConnectionChecker,
         "postgres": PostgreSQLConnectionChecker,
         "redis": RedisConnectionChecker,
+        "kafka": KafkaConnectionChecker
         }

@@ -28,7 +28,7 @@ STREAM_IN = f"test_stream_in_{STREAM_SUFFIX}"
 STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
 STREAM_IN_TS = f"test_stream_in_ts_{STREAM_SUFFIX}"
 STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
-DS_NAME = "test_ds"
+DS_NAME = "redis_test_ds"
 
 
 class RedisTest(unittest.TestCase):
@@ -103,7 +103,7 @@ class RedisTest(unittest.TestCase):
             self.fail(e)
 
 
-    def test_2_create_stream(self):
+    def test_2_create_redis_stream(self):
         print(f'\nExecuting {self._testMethodName}')
         try:
             self.upload_ds(DS_NAME)
@@ -143,7 +143,7 @@ class RedisTest(unittest.TestCase):
         stream_in.trim(0, approximate=False)
         self.assertTrue(len(prediction)==2)
 
-    def test_4_create_ts_stream(self):
+    def test_4_create_redis_ts_stream(self):
         print(f'\nExecuting {self._testMethodName}')
         try:
             self.train_ts_predictor(DS_NAME, self._testMethodName)

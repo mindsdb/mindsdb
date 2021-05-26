@@ -7,7 +7,6 @@ import threading
 
 import requests
 import kafka
-from kafka.admin import NewTopic
 import pandas as pd
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
@@ -105,7 +104,6 @@ class KafkaTest(unittest.TestCase):
         print(f'\nExecuting {self._testMethodName}')
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
         params = {"type": "kafka",
-                  "stream": "control",
                   "connection": CONNECTION_PARAMS,
                  }
         try:
@@ -115,7 +113,7 @@ class KafkaTest(unittest.TestCase):
             self.fail(e)
 
 
-    def test_2_create_stream(self):
+    def test_2_create_kafka_stream(self):
         print(f'\nExecuting {self._testMethodName}')
         try:
             self.upload_ds(DS_NAME)
@@ -142,12 +140,6 @@ class KafkaTest(unittest.TestCase):
     def test_3_making_stream_prediction(self):
         print(f'\nExecuting {self._testMethodName}')
         producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
-        # admin = kafka.KafkaAdminClient(**CONNECTION_PARAMS)
-        # topic = NewTopic(STREAM_IN, num_partitions=1, replication_factor=1)
-        # try:
-        #     admin.create_topics([topic])
-        # except Exception as e:
-        #     print(e)
 
         # wait when the integration launch created stream
         time.sleep(10)
@@ -162,11 +154,13 @@ class KafkaTest(unittest.TestCase):
             to_send = json.dumps(when_data)
             producer.send(STREAM_IN, to_send.encode("utf-8"))
         producer.close()
-        time.sleep(60)
+        threshold = time.time() + 120
+        while len(predictions) != 2 and time.time() < threshold:
+            time.sleep(1)
         stop_event.set()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
 
-    def test_4_kafka_create_ts_stream(self):
+    def test_4_create_kafka_ts_stream(self):
         print(f'\nExecuting {self._testMethodName}')
         try:
             self.train_ts_predictor(DS_NAME, self._testMethodName)
@@ -189,12 +183,6 @@ class KafkaTest(unittest.TestCase):
     def test_5_making_ts_stream_prediction(self):
         print(f'\nExecuting {self._testMethodName}')
         producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
-        # admin = kafka.KafkaAdminClient(**CONNECTION_PARAMS)
-        # topic = NewTopic(STREAM_IN_TS, num_partitions=1, replication_factor=1)
-        # try:
-        #     admin.create_topics([topic])
-        # except Exception as e:
-        #     print(e)
 
         # wait when the integration launch created stream
         time.sleep(15)
@@ -210,10 +198,9 @@ class KafkaTest(unittest.TestCase):
             producer.send(STREAM_IN_TS, to_send.encode("utf-8"))
         producer.close()
 
-        # threshold = time.time() + 60
-        # while len(predictions) != 2 and time.time() < threshold:
-        #     time.sleep(1)
-        time.sleep(60)
+        threshold = time.time() + 120
+        while len(predictions) != 2 and time.time() < threshold:
+            time.sleep(1)
         stop_event.set()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
 

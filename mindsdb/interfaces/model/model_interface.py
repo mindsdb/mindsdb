@@ -19,50 +19,31 @@ class ModelInterfaceWrapper(object):
         return wrapper
 
 
-class ModelInterfaceRPC():
+class ModelInterfaceNativeImport():
     def __init__(self):
-        for _ in range(10):
-            try:
-                time.sleep(3)
-                self.client = fl.FlightClient("grpc://localhost:19329")
-                res = self._action('ping')
-                assert self._loads_first(res)
-                return
-            except Exception:
-                log.info('Wating for native RPC server to start')
-        raise Exception('Unable to connect to RPC server')
-
-    def _action(self, act_name, *args, **kwargs):
-        action = fl.Action(act_name, pickle.dumps({'args': args, 'kwargs': kwargs}))
-        return list(self.client.do_action(action))
-
-    def _loads_first(self, res):
-        return pickle.loads(res[0].body.to_pybytes())
+        from mindsdb.interfaces.model.model_controller import ModelController
+        self.controller = ModelController(False)
 
     def create(self, *args, **kwargs):
-        self._action('create', *args, **kwargs)
+        return self.controller.create(*args, **kwargs)
 
     def learn(self, *args, **kwargs):
-        self._action('learn', *args, **kwargs)
+        return self.controller.learn(*args, **kwargs)
 
     def predict(self, *args, **kwargs):
-        res = self._action('predict', *args, **kwargs)
-        return self._loads_first(res)
+        return self.controller.predict(*args, **kwargs)
 
     def analyse_dataset(self, *args, **kwargs):
-        res = self._action('analyse_dataset', *args, **kwargs)
-        return self._loads_first(res)
+        return self.controller.analyse_dataset(*args, **kwargs)
 
     def get_model_data(self, *args, **kwargs):
-        res = self._action('get_model_data', *args, **kwargs)
-        return self._loads_first(res)
+        return self.controller.get_model_data(*args, **kwargs)
 
     def get_models(self, *args, **kwargs):
-        res = self._action('get_models', *args, **kwargs)
-        return self._loads_first(res)
+        return self.controller.get_models(*args, **kwargs)
 
     def delete_model(self, *args, **kwargs):
-        self._action('delete_model', *args, **kwargs)
+        return self.controller.delete_model(*args, **kwargs)
 
     def update_model(self, *args, **kwargs):
         return 'Model updating is no available in this version of mindsdb'
@@ -78,5 +59,5 @@ try:
     ray_based = True
 except Exception as e:
     log.error(f'Failed to import ray: {e}')
-    ModelInterface = ModelInterfaceRPC
+    ModelInterface = ModelInterfaceNativeImport
     ray_based = False

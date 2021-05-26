@@ -2,7 +2,7 @@ import json
 from threading import Thread
 
 import kafka
-from kafka.admin import NewTopic
+# from kafka.admin import NewTopic
 
 from mindsdb.utilities.log import log
 from mindsdb.streams.base.base_stream import StreamTypes, BaseStream
@@ -19,26 +19,28 @@ class KafkaStream(Thread, BaseStream):
         self.stream_in_name = topic_in
         self.stream_out_name = topic_out
         self.stream_anomaly_name = topic_anomaly
+        log.error("STREAM: in INIT")
         self.consumer = kafka.KafkaConsumer(**self.connection_info, **self.advanced_info.get('consumer', {}))
         self.consumer.subscribe(topics=[self.stream_in_name])
-        self.producer = kafka.KafkaProducer(**self.connection_info, **self.advanced_info.get('producer', {}))
-        self.admin = kafka.KafkaAdminClient(**self.connection_info)
+        self.producer = kafka.KafkaProducer(**self.connection_info, **self.advanced_info.get('producer', {}), acks='all')
+        # self.admin = kafka.KafkaAdminClient(**self.connection_info)
+        # self.admin = kafka.KafkaClient(**self.connection_info)
 
         BaseStream.__init__(self)
-        try:
-            topics = []
-            self.topic = NewTopic(self.stream_out_name, num_partitions=1, replication_factor=1)
-            topics.append(self.topic)
-            if self.stream_out_name != self.stream_anomaly_name:
-                self.topic_anomaly = NewTopic(self.stream_anomaly_name, num_partitions=1, replication_factor=1)
-                topics.append(self.topic_anomaly)
-            else:
-                self.topic_anomaly = self.topic
-            self.admin.create_topics(topics)
-        except kafka.errors.TopicAlreadyExistsError:
-            pass
-        except Exception as e:
-            log.error(f"STREAM {self.stream_name}: error creating topics - {e}")
+        # try:
+        #     topics = []
+        #     self.topic = NewTopic(self.stream_out_name, num_partitions=1, replication_factor=1)
+        #     topics.append(self.topic)
+        #     if self.stream_out_name != self.stream_anomaly_name:
+        #         self.topic_anomaly = NewTopic(self.stream_anomaly_name, num_partitions=1, replication_factor=1)
+        #         topics.append(self.topic_anomaly)
+        #     else:
+        #         self.topic_anomaly = self.topic
+        #     self.admin.create_topics(topics)
+        # except kafka.errors.TopicAlreadyExistsError:
+        #     pass
+        # except Exception as e:
+        #     log.error(f"STREAM {self.stream_name}: error creating topics - {e}")
         self._type = _type
 
         self.caches = {}
@@ -67,7 +69,7 @@ class KafkaStream(Thread, BaseStream):
 
     def make_prediction_from_cache(self, cache_name):
         cache = self.caches[cache_name]
-        log.error("STREAM {self.stream_name}: in make_prediction_from_cache")
+        log.error(f"STREAM {self.stream_name}: in make_prediction_from_cache")
         if len(cache) >= self.window:
             log.error(f"STREAM: make_prediction_from_cache - len(cache) = {len(cache)}")
             self.predict_ts(cache_name)

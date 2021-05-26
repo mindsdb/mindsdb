@@ -5,6 +5,9 @@ from .mssql.mssql import MSSQLConnectionChecker
 from .mysql.mysql import MySQLConnectionChecker
 from .postgres.postgres import PostgreSQLConnectionChecker
 from .redis.redisdb import RedisConnectionChecker
+from .kafka.kafkadb import KafkaConnectionChecker
+
+
 try:
     from .scylladb.scylladb import ScyllaDBConnectionChecker
 except ImportError:
@@ -18,14 +21,16 @@ except ImportError:
 
 
 CHECKERS = {
-    "clickhouse": ClickhouseConnectionChecker,
-    "mariadb": MariadbConnectionChecker,
-    "mongodb": MongoConnectionChecker,
-    "mssql": MSSQLConnectionChecker,
-    "mysql": MySQLConnectionChecker,
-    "postgres": PostgreSQLConnectionChecker,
-    "redis": RedisConnectionChecker
-}
+        "clickhouse": ClickhouseConnectionChecker,
+        "mariadb": MariadbConnectionChecker,
+        "mongodb": MongoConnectionChecker,
+        "mssql": MSSQLConnectionChecker,
+        "mysql": MySQLConnectionChecker,
+        "postgres": PostgreSQLConnectionChecker,
+        "redis": RedisConnectionChecker,
+        "kafka": KafkaConnectionChecker
+        }
+
 
 if ScyllaDBConnectionChecker is not None:
     CHECKERS['scylladb'] = ScyllaDBConnectionChecker

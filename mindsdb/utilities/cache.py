@@ -25,6 +25,8 @@ class Cache:
         return self.cache.__enter__()
 
     def __exit__(self, _type, value, traceback):
+        if self.cache is None:
+            return None
         res = self.cache.__exit__(_type, value, traceback)
         self.cache = None
         return res
@@ -32,7 +34,7 @@ class Cache:
     def __contains__(self, key):
         return key in self.cache
 
-    def __del__(self):
+    def delete(self):
         try:
             self.cache.close()
         except Exception:

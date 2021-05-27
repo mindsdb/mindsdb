@@ -30,7 +30,7 @@ class RedisStream(Thread, BaseStream):
             super().__init__(target=RedisStream.make_timeseries_predictions, args=(self,))
         else:
             super().__init__(target=RedisStream.make_predictions, args=(self,))
-            # self.cache = None
+            self.cache = None
 
     def _get_client(self):
         return walrus.Database(**self.connection_info)
@@ -88,7 +88,7 @@ class RedisStream(Thread, BaseStream):
                     log.error(f"STREAM {self.stream_name}: make_prediction_from_cache")
                     self.predict_ts(group_by)
             else:
-                log.error("STREAM: in make_prediction_from_cache ELSE")
+                log.error("STREAM: creating empty cache for {group_by} group")
                 self.cache[group_by] = []
 
     def make_timeseries_predictions(self):
@@ -114,6 +114,7 @@ class RedisStream(Thread, BaseStream):
                 log.error(f"STREAM: next record have read from {self.stream_in.key}: {when_data}")
                 self.to_cache(when_data)
                 self.stream_in.delete(record_id)
+        self.cache.delete()
         session.close()
 
     def to_cache(self, record):

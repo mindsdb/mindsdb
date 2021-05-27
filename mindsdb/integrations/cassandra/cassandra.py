@@ -21,7 +21,7 @@ class CassandraConnectionChecker:
             if isinstance(self.keyspace, str) and len(self.keyspace) > 0:
                 session.set_keyspace(self.keyspace)
 
-            session.execute('select 1;').all()
+            session.execute('SELECT COUNT (1) FROM system.local;').all()
 
             connected = True
         except Exception:

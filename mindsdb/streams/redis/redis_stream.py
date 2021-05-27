@@ -3,6 +3,7 @@ from threading import Thread, Event
 import walrus
 
 from mindsdb.utilities.log import log
+from mindsdb.utilities.cache import Cache
 from mindsdb.streams.base.base_stream import StreamTypes, BaseStream
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Predictor as DBPredictor
@@ -25,52 +26,73 @@ class RedisStream(Thread, BaseStream):
 
         BaseStream.__init__(self)
         if self._type.lower() == StreamTypes.timeseries:
+            # self.cache = Cache(self.stream_name)
             super().__init__(target=RedisStream.make_timeseries_predictions, args=(self,))
         else:
             super().__init__(target=RedisStream.make_predictions, args=(self,))
+            # self.cache = None
 
     def _get_client(self):
         return walrus.Database(**self.connection_info)
 
-    def predict(self, stream_in, timeseries_mode=False):
-        predict_info = stream_in.read(block=0)
-        when_list = []
-        for record in predict_info:
-            record_id = record[0]
-            raw_when_data = record[1]
-            when_data = self.decode(raw_when_data)
-            if timeseries_mode:
-                if self.target not in when_data:
-                    when_data['make_predictions'] = False
+    def predict_ts(self, group_by):
+        with self.cache:
+            when_list = self.cache[group_by]
+            for x in when_list:
+                if self.target not in x:
+                    x['make_predictions'] = False
                 else:
-                    when_data['make_predictions'] = True
-                when_list.append(when_data)
-            else:
-                result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
-                log.error(f"STREAM: got {result}")
-                for res in result:
-                    in_json = json.dumps(res)
-                    stream_out = self.stream_anomaly if self.is_anomaly(res) else self.stream_out
-                    stream_out.add({'prediction': in_json})
-                stream_in.delete(record_id)
-
-        if timeseries_mode:
+                    x['make_predictions'] = True
             result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_list)
-            log.error(f"TIMESERIES STREAM: got {result}")
+            log.error(f"TIMESERIES STREAM {self.stream_name}: got {result}")
             for res in result:
                 in_json = json.dumps(res)
                 stream_out = self.stream_anomaly if self.is_anomaly(res) else self.stream_out
                 stream_out.add({'prediction': in_json})
-            stream_in.trim(len(stream_in) - 1, approximate=False)
 
+            #delete the oldest record from cache
+            updated_list = self.cache[group_by][1:]
+            self.cache[group_by] = updated_list
 
-    def make_prediction_from_cache(self, cache):
+    def predict(self, stream_in):
+        predict_info = stream_in.read()
+        for record in predict_info:
+            record_id = record[0]
+            raw_when_data = record[1]
+            when_data = self.decode(raw_when_data)
+            result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
+            log.error(f"STREAM {self.stream_name}: got {result}")
+            for res in result:
+                in_json = json.dumps(res)
+                stream_out = self.stream_anomaly if self.is_anomaly(res) else self.stream_out
+                stream_out.add({'prediction': in_json})
+            stream_in.delete(record_id)
+
+    def make_predictions(self):
+        predict_record = session.query(DBPredictor).filter_by(company_id=self.company_id, name=self.predictor).first()
+        if predict_record is None:
+            log.error(f"Error creating stream: requested predictor {self.predictor} is not exist")
+            return
+
+        while not self.stop_event.wait(0.5):
+            self.predict(self.stream_in)
+
+        session.close()
+        log.error("STREAM: stopping...")
+
+    def make_prediction_from_cache(self, group_by):
         log.error("STREAM: in make_prediction_from_cache")
-        if len(cache) >= self.window:
-            log.error(f"STREAM: make_prediction_from_cache - len(cache) = {len(cache)}")
-            self.predict(cache, timeseries_mode=True)
+        with self.cache:
+            if group_by in self.cache:
+                if len(self.cache[group_by]) >= self.window:
+                    log.error(f"STREAM {self.stream_name}: make_prediction_from_cache")
+                    self.predict_ts(group_by)
+            else:
+                log.error("STREAM: in make_prediction_from_cache ELSE")
+                self.cache[group_by] = []
 
     def make_timeseries_predictions(self):
+        self.cache = Cache(self.stream_name)
         log.error("STREAM: running 'make_timeseries_predictions'")
         predict_record = session.query(DBPredictor).filter_by(company_id=self.company_id, name=self.predictor).first()
         if predict_record is None:
@@ -82,7 +104,6 @@ class RedisStream(Thread, BaseStream):
         self.window = ts_settings['window']
         self.gb = ts_settings['group_by'][0]
         self.dt = ts_settings['order_by'][0]
-
 
         while not self.stop_event.wait(0.5):
             predict_info = self.stream_in.read()
@@ -96,52 +117,25 @@ class RedisStream(Thread, BaseStream):
         session.close()
 
     def to_cache(self, record):
-        gb_val = record[self.gb]
-        cache = self.client.Stream(f"{self.stream_name}.cache.{gb_val}")
-        log.error(f"STREAM: cache {cache.key} has been created")
-        self.make_prediction_from_cache(cache)
-        self.handle_record(cache, record)
-        self.make_prediction_from_cache(cache)
+        group_by = record.get(self.gb, 'no_group_by')
+        self.make_prediction_from_cache(group_by)
+        self.handle_record(group_by, record)
+        self.make_prediction_from_cache(group_by)
         log.error("STREAM in cache: current iteration has done.")
 
-    def handle_record(self, cache, record):
-        log.error(f"STREAM: handling cache {cache.key} and {record} record.")
-        records = cache.read()
-        records = [self.decode(x[1]) for x in records]
-        log.error(f"STREAM: read {records} from cache.")
-        records.append(record)
-        records = self.sort_cache(records)
-        log.error(f"STREAM: after updating and sorting - {records}.")
-        cache.trim(0, approximate=False)
-        for rec in records:
-            cache.add(rec)
-        log.error(f"STREAM: finish updating {cache.key}")
+    def handle_record(self, group_by, record):
+        log.error(f"STREAM: handling cache {group_by} and {record} record.")
+        with self.cache:
+            records = self.cache[group_by]
+            log.error(f"STREAM: read {records} from cache.")
+            records.append(record)
+            records = self.sort_cache(records)
+            self.cache[group_by] = records
+            log.error(f"STREAM: after updating and sorting - {records}.")
+        log.error(f"STREAM: finish updating {group_by}")
 
     def sort_cache(self, cache):
         return sorted(cache, key=lambda x: x[self.dt])
-
-    def make_predictions(self):
-        predict_record = session.query(DBPredictor).filter_by(company_id=self.company_id, name=self.predictor).first()
-        if predict_record is None:
-            log.error(f"Error creating stream: requested predictor {self.predictor} is not exist")
-            return
-
-        while not self.stop_event.wait(0.5):
-            predict_info = self.stream_in.read()
-            for record in predict_info:
-                record_id = record[0]
-                raw_when_data = record[1]
-                when_data = self.decode(raw_when_data)
-
-                result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
-                log.error(f"STREAM: got {result}")
-                for res in result:
-                    in_json = json.dumps(res)
-                    self.stream_out.add({"prediction": in_json})
-                self.stream_in.delete(record_id)
-
-        session.close()
-        log.error("STREAM: stopping...")
 
     def decode(self, redis_data):
         decoded = {}

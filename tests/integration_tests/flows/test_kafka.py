@@ -3,35 +3,46 @@ import tempfile
 import unittest
 import json
 import uuid
+import threading
 
 import requests
-import walrus
+import kafka
 import pandas as pd
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
 
 
-INTEGRATION_NAME = 'test_redis'
-redis_creds = {}
+INTEGRATION_NAME = 'test_kafka'
+kafka_creds = {}
 if USE_EXTERNAL_DB_SERVER:
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
-        redis_creds = json.loads(f.read())['redis']
+        kafka_creds = json.loads(f.read())['kafka']
 
 
-REDIS_PORT = redis_creds.get('port', 6379)
-REDIS_HOST = redis_creds.get('host', "127.0.0.1")
-REDIS_PASSWORD = redis_creds.get('password', None)
+KAFKA_PORT = kafka_creds.get('port', 9092)
+KAFKA_HOST = kafka_creds.get('host', "127.0.0.1")
 
-CONNECTION_PARAMS = {"host": REDIS_HOST, "port": REDIS_PORT, "db": 0, "password": REDIS_PASSWORD}
+CONNECTION_PARAMS = {"bootstrap_servers": [f"{KAFKA_HOST}:{KAFKA_PORT}"]}
 STREAM_SUFFIX = uuid.uuid4()
 STREAM_IN = f"test_stream_in_{STREAM_SUFFIX}"
 STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
 STREAM_IN_TS = f"test_stream_in_ts_{STREAM_SUFFIX}"
 STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
-DS_NAME = "redis_test_ds"
+DS_NAME = "kafka_test_ds"
 
+def read_stream(stream_name, buf, stop_event):
+    consumer = kafka.KafkaConsumer(**CONNECTION_PARAMS, consumer_timeout_ms=1000)
+    consumer.subscribe([stream_name])
+    while not stop_event.wait(0.5):
+        try:
+            msg = next(consumer)
+            buf.append(json.loads(msg.value))
+        except StopIteration:
+            pass
+    consumer.close()
+    print(f"STOPPING READING STREAM {stream_name} THREAD PROPERLY")
 
-class RedisTest(unittest.TestCase):
+class KafkaTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -74,7 +85,6 @@ class RedisTest(unittest.TestCase):
             'data_source_name': ds_name,
             'to_predict': 'y',
             'kwargs': {
-                # 'stop_training_in_x_seconds': 40,
                 'use_gpu': False,
                 'join_learn_process': True,
                 'ignore_columns': None,
@@ -92,8 +102,7 @@ class RedisTest(unittest.TestCase):
     def test_1_create_integration(self):
         print(f'\nExecuting {self._testMethodName}')
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
-        params = {"type": "redis",
-                  "stream": "control",
+        params = {"type": "kafka",
                   "connection": CONNECTION_PARAMS,
                  }
         try:
@@ -103,7 +112,7 @@ class RedisTest(unittest.TestCase):
             self.fail(e)
 
 
-    def test_2_create_redis_stream(self):
+    def test_2_create_kafka_stream(self):
         print(f'\nExecuting {self._testMethodName}')
         try:
             self.upload_ds(DS_NAME)
@@ -129,21 +138,28 @@ class RedisTest(unittest.TestCase):
 
     def test_3_making_stream_prediction(self):
         print(f'\nExecuting {self._testMethodName}')
-        client = walrus.Database(**CONNECTION_PARAMS)
-        stream_in = client.Stream(STREAM_IN)
-        stream_out = client.Stream(STREAM_OUT)
+        producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
+
+        # wait when the integration launch created stream
+        time.sleep(10)
+        predictions = []
+        stop_event = threading.Event()
+        reading_th = threading.Thread(target=read_stream, args=(STREAM_OUT, predictions, stop_event))
+        reading_th.start()
+        time.sleep(1)
 
         for x in range(1, 3):
             when_data = {'x1': x, 'x2': 2*x}
-            stream_in.add(when_data)
+            to_send = json.dumps(when_data)
+            producer.send(STREAM_IN, to_send.encode("utf-8"))
+        producer.close()
+        threshold = time.time() + 120
+        while len(predictions) != 2 and time.time() < threshold:
+            time.sleep(1)
+        stop_event.set()
+        self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
 
-        time.sleep(10)
-        prediction = stream_out.read()
-        stream_out.trim(0, approximate=False)
-        stream_in.trim(0, approximate=False)
-        self.assertTrue(len(prediction)==2)
-
-    def test_4_create_redis_ts_stream(self):
+    def test_4_create_kafka_ts_stream(self):
         print(f'\nExecuting {self._testMethodName}')
         try:
             self.train_ts_predictor(DS_NAME, self._testMethodName)
@@ -165,23 +181,27 @@ class RedisTest(unittest.TestCase):
 
     def test_5_making_ts_stream_prediction(self):
         print(f'\nExecuting {self._testMethodName}')
-        client = walrus.Database(**CONNECTION_PARAMS)
-        stream_in = client.Stream(STREAM_IN_TS)
-        stream_out = client.Stream(STREAM_OUT_TS)
+        producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
+
+        # wait when the integration launch created stream
+        time.sleep(15)
+        predictions = []
+        stop_event = threading.Event()
+        reading_th = threading.Thread(target=read_stream, args=(STREAM_OUT_TS, predictions, stop_event))
+        reading_th.start()
+        time.sleep(3)
 
         for x in range(210, 221):
             when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
-            stream_in.add(when_data)
+            to_send = json.dumps(when_data)
+            producer.send(STREAM_IN_TS, to_send.encode("utf-8"))
+        producer.close()
 
-        threshold = time.time() + 60
-        while len(stream_in) and time.time() < threshold:
+        threshold = time.time() + 120
+        while len(predictions) != 2 and time.time() < threshold:
             time.sleep(1)
-        time.sleep(10)
-        prediction = stream_out.read()
-        stream_out.trim(0, approximate=False)
-        stream_in.trim(0, approximate=False)
-        self.assertTrue(len(prediction)==2, f"expected 2 predictions, but got {len(prediction)}")
-
+        stop_event.set()
+        self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
 
 if __name__ == "__main__":
     try:

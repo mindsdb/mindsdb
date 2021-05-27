@@ -1,7 +1,7 @@
 import json
 import walrus
 
-from mindsdb.streams.base.base_stream import BaseStream
+from mindsdb.streams.base import BaseStream
 
 
 class RedisStream(BaseStream):

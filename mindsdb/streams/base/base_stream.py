@@ -11,15 +11,11 @@ class BaseStream:
     def __init__(self, name, predictor):
         self.name = name
         self.predictor = predictor
-
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-
         self.stop_event = Event()
-
         self.native_interface = ModelInterface()
 
         p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
-
         if p is None:
             raise Exception(f'Predictor {predictor} doesn\'t exist')
 
@@ -68,20 +64,19 @@ class BaseStream:
         while not self.stop_event.wait(0.5):
             for k, when_data in self._read_from_in_stream():
                 gb_value = tuple(when_data.get(gb, None) for gb in group_by)
-                gb_hash = str(hash(gb_value))
-                gb_dict[gb_hash].append(when_data)
+                gb_dict[gb_value].append(when_data)
                 self._del_from_in_stream(k)
 
-            for gb_hash, when_data_list in gb_dict.items():
-                gb_dict[gb_hash] = sorted(
-                    gb_dict[gb_hash],
+            for gb_value in gb_dict.keys():
+                gb_dict[gb_value] = sorted(
+                    gb_dict[gb_value],
                     key=lambda wd: (float(wd[ob]) for ob in order_by)
                 )
 
-                if len(when_data_list) >= window:
-                    for res in self.native_interface.predict(self.predictor, 'dict', when_data=when_data_list[-window:]):
+                if len(gb_dict[gb_value]) >= window:
+                    for res in self.native_interface.predict(self.predictor, 'dict', when_data=gb_dict[gb_value][-window:]):
                         self._write_to_out_stream(res)
-                    gb_dict[gb_hash] = when_data_list[1 - window:]
+                    gb_dict[gb_value] = gb_dict[gb_value][1 - window:]
 
             import time
             time.sleep(2)

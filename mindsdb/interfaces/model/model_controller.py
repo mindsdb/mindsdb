@@ -369,4 +369,4 @@ try:
         ray.init(ignore_reinit_error=True)
     ModelController = ray_ify(ModelController)
 except Exception as e:
-    log.error(f'Failed to import ray: {e}')
+    pass

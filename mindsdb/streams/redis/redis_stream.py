@@ -19,6 +19,7 @@ class RedisStream(Thread, BaseStream):
         self.client = self._get_client()
         self.stream_in_name = stream_in
         self.stream_out_name = stream_out
+        self.stream_anomaly_name = stream_anomaly
         self.stream_in = self.client.Stream(stream_in)
         self.stream_out = self.client.Stream(stream_out)
         self.stream_anomaly = self.client.Stream(stream_anomaly)

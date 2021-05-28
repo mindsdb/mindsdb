@@ -2,9 +2,9 @@ import json
 from threading import Thread
 
 import kafka
-# from kafka.admin import NewTopic
 
 from mindsdb.utilities.log import log
+from mindsdb.utilities.cache import Cache
 from mindsdb.streams.base.base_stream import StreamTypes, BaseStream
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Predictor as DBPredictor
@@ -19,7 +19,6 @@ class KafkaStream(Thread, BaseStream):
         self.stream_in_name = topic_in
         self.stream_out_name = topic_out
         self.stream_anomaly_name = topic_anomaly
-        log.error("STREAM: in INIT")
         self.consumer = kafka.KafkaConsumer(**self.connection_info, **self.advanced_info.get('consumer', {}))
         self.consumer.subscribe(topics=[self.stream_in_name])
         self.producer = kafka.KafkaProducer(**self.connection_info, **self.advanced_info.get('producer', {}), acks='all')
@@ -27,68 +26,42 @@ class KafkaStream(Thread, BaseStream):
         BaseStream.__init__(self)
         self._type = _type
 
-        self.caches = {}
         if self._type.lower() == StreamTypes.timeseries:
             super().__init__(target=KafkaStream.make_timeseries_predictions, args=(self,))
         else:
             super().__init__(target=KafkaStream.make_prediction, args=(self,))
+            self.cache = None
 
-    def predict_ts(self, cache_name):
-        when_list = [x for x  in self.caches[cache_name]]
-        for x in when_list:
-            if self.target not in x:
-                x['make_predictions'] = False
-            else:
-                x['make_predictions'] = True
+    def predict_ts(self, group_by):
+        with self.cache:
+            when_list = self.cache[group_by]
+            for x in when_list:
+                if self.target not in x:
+                    x['make_predictions'] = False
+                else:
+                    x['make_predictions'] = True
+            result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_list)
+            log.debug(f"TIMESERIES STREAM {self.stream_name}: got {result}")
+            for res in result:
+                in_json = json.dumps(res)
+                to_send = in_json.encode('utf-8')
+                out_stream = self.stream_anomaly_name if self.is_anomaly(res) else self.stream_out_name
+                log.debug(f"STREAM {self.stream_name}: sending {to_send}")
+                self.producer.send(out_stream, to_send)
 
-        result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_list)
-        log.error(f"TIMESERIES STREAM {self.stream_name}: got {result}")
-        for res in result:
-            in_json = json.dumps(res)
-            to_send = in_json.encode('utf-8')
-            out_stream = self.stream_anomaly_name if self.is_anomaly(res) else self.stream_out_name
-            log.error(f"sending {to_send}")
-            self.producer.send(out_stream, to_send)
-        self.caches[cache_name] = self.caches[cache_name][1:]
-
-    def make_prediction_from_cache(self, cache_name):
-        cache = self.caches[cache_name]
-        log.error(f"STREAM {self.stream_name}: in make_prediction_from_cache")
-        if len(cache) >= self.window:
-            log.error(f"STREAM: make_prediction_from_cache - len(cache) = {len(cache)}")
-            self.predict_ts(cache_name)
-
-    def to_cache(self, record):
-        gb_val = record[self.gb]
-        cache_name = f"cache.{gb_val}"
-        if cache_name not in self.caches:
-            cache = []
-            self.caches[cache_name] = cache
-
-        log.error(f"STREAM {self.stream_name}: cache {cache_name} has been created")
-        self.make_prediction_from_cache(cache_name)
-        self.handle_record(cache_name, record)
-        self.make_prediction_from_cache(cache_name)
-        log.error("STREAM in cache: current iteration has done.")
-
-    def handle_record(self, cache_name, record):
-        log.error(f"STREAM: handling cache {cache_name} and {record} record.")
-        cache = self.caches[cache_name]
-        cache.append(record)
-        cache = self.sort_cache(cache)
-        self.caches[cache_name] = cache
-
-    def sort_cache(self, cache):
-        return sorted(cache, key=lambda x: x[self.dt])
+            #delete the oldest record from cache
+            updated_list = self.cache[group_by][1:]
+            self.cache[group_by] = updated_list
 
     def make_timeseries_predictions(self):
-        log.error("STREAM: running 'make_timeseries_predictions'")
+        self.cache = Cache(self.stream_name)
+        log.debug("STREAM: running 'make_timeseries_predictions'")
         predict_record = session.query(DBPredictor).filter_by(company_id=self.company_id, name=self.predictor).first()
         if predict_record is None:
-            log.error(f"Error creating stream: requested predictor {self.predictor} is not exist")
+            log.error(f"STREAM {self.stream_name} got error: requested predictor {self.predictor} is not exist")
             return
         ts_settings = self.get_ts_settings(predict_record)
-        log.error(f"STREAM TS_SETTINGS: {ts_settings}")
+        log.debug(f"STREAM {self.stream_name} TS_SETTINGS: {ts_settings}")
         self.target = ts_settings['to_predict'][0]
         self.window = ts_settings['window']
         self.gb = ts_settings['group_by'][0]
@@ -102,31 +75,32 @@ class KafkaStream(Thread, BaseStream):
             except StopIteration:
                 pass
 
-        log.error("Stopping stream..")
+        log.debug(f"STREAM {self.stream_name}: stopping...")
         self.producer.close()
         self.consumer.close()
+        self.cache.delete()
         session.close()
 
     def make_prediction(self):
         predict_record = session.query(DBPredictor).filter_by(company_id=self.company_id, name=self.predictor).first()
         if predict_record is None:
-            log.error(f"Error creating stream: requested predictor {self.predictor} is not exist")
+            log.error(f"STREAM {self.stream_name} got error: requested predictor {self.predictor} is not exist")
             return
         while not self.stop_event.wait(0.5):
             try:
                 msg_str = next(self.consumer)
                 when_data = json.loads(msg_str.value)
                 result = self.native_interface.predict(self.predictor, self.format_flag, when_data=when_data)
-                log.error(f"STREAM: got {result}")
+                log.debug(f"STREAM {self.stream_name}: got {result}")
                 for res in result:
                     in_json = json.dumps(res)
                     to_send = in_json.encode('utf-8')
-                    log.error(f"sending {to_send}")
+                    log.debug(f"STREAM {self.stream_name}: sending {to_send}")
                     out_stream = self.stream_anomaly_name if self.is_anomaly(res) else self.stream_out_name
                     self.producer.send(out_stream, to_send)
             except StopIteration:
                 pass
-        log.error("Stopping stream..")
+        log.debug(f"STREAM {self.stream_name}: stopping...")
         self.producer.close()
         self.consumer.close()
         session.close()

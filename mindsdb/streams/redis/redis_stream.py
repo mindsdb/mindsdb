@@ -26,7 +26,6 @@ class RedisStream(Thread, BaseStream):
 
         BaseStream.__init__(self)
         if self._type.lower() == StreamTypes.timeseries:
-            # self.cache = Cache(self.stream_name)
             super().__init__(target=RedisStream.make_timeseries_predictions, args=(self,))
         else:
             super().__init__(target=RedisStream.make_predictions, args=(self,))
@@ -80,15 +79,6 @@ class RedisStream(Thread, BaseStream):
         session.close()
         log.debug(f"STREAM {self.stream_name}: stopping...")
 
-    def make_prediction_from_cache(self, group_by):
-        with self.cache:
-            if group_by in self.cache:
-                if len(self.cache[group_by]) >= self.window:
-                    self.predict_ts(group_by)
-            else:
-                log.debug(f"STREAM {self.stream_name}: creating empty cache for {group_by} group")
-                self.cache[group_by] = []
-
     def make_timeseries_predictions(self):
         self.cache = Cache(self.stream_name)
         predict_record = session.query(DBPredictor).filter_by(company_id=self.company_id, name=self.predictor).first()
@@ -113,25 +103,6 @@ class RedisStream(Thread, BaseStream):
                 self.stream_in.delete(record_id)
         self.cache.delete()
         session.close()
-
-    def to_cache(self, record):
-        group_by = record.get(self.gb, 'no_group_by')
-        self.make_prediction_from_cache(group_by)
-        self.handle_record(group_by, record)
-        self.make_prediction_from_cache(group_by)
-
-    def handle_record(self, group_by, record):
-        log.debug(f"STREAM {self.stream_name}: handling cache {group_by} and {record} record.")
-        with self.cache:
-            records = self.cache[group_by]
-            log.debug(f"STREAM: read {records} from cache.")
-            records.append(record)
-            records = self.sort_cache(records)
-            self.cache[group_by] = records
-        log.debug(f"STREAM {self.stream_name}: finish updating {group_by}")
-
-    def sort_cache(self, cache):
-        return sorted(cache, key=lambda x: x[self.dt])
 
     def decode(self, redis_data):
         decoded = {}

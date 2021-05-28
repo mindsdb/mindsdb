@@ -58,6 +58,5 @@ try:
     ModelInterface = ModelInterfaceRay
     ray_based = True
 except Exception as e:
-    log.error(f'Failed to import ray: {e}')
     ModelInterface = ModelInterfaceNativeImport
     ray_based = False

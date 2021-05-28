@@ -17,7 +17,8 @@ class KafkaConnectionChecker:
         self.connection_params.update(self.advanced_info)
 
     def _get_connection(self):
-        return kafka.KafkaAdminClient(**self.connection_params)
+        return kafka.KafkaClient(**self.connection_params)
+
     def check_connection(self):
         try:
             client = self._get_connection()
@@ -48,8 +49,8 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
 
         for stream in existed_streams:
-            to_launch = self.get_stream_from_db(stream)
             if stream.name not in self.streams:
+                to_launch = self.get_stream_from_db(stream)
                 params = {"integration": stream.integration,
                           "predictor": stream.predictor,
                           "stream_in": stream.stream_in,

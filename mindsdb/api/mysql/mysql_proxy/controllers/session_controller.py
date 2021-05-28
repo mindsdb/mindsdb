@@ -46,7 +46,7 @@ class SessionController():
         )
         self.model_interface = ModelInterfaceWrapper(
             model_interface=original_model_interface,
-            company_id=None
+            company_id=company_id
         )
         self.custom_models = CustomModels(company_id=company_id)
         self.datahub = init_datahub(

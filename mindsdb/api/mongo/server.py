@@ -62,12 +62,6 @@ class OperationResponder():
     def to_bytes(self, response, request_id):
         pass
 
-    def get_match_responder(self, query):
-        for responder in self.responders:
-            if responder['match'](query):
-                return responder['response']
-        raise Exception('is no responder')
-
 
 # NOTE probably, it need only for mongo version < 3.6
 class OpInsertResponder(OperationResponder):

@@ -13,12 +13,9 @@ class RedisStream(BaseStream):
 
     def _read_from_in_stream(self):
         print('reading from stream_in')
-        for k, when_data in self.stream_in.read():
-            yield (k, json.loads(when_data[b'']))
-
-    def _del_from_in_stream(self, k):
-        print('deleting from stream_in')
-        self.stream_in.delete(k)
+        for k, when_data in self.stream_in.read(block=0):
+            self.stream_in.delete(k)
+            yield json.loads(when_data[b''])
 
     def _write_to_out_stream(self, dct):
         print('writing to stream_out')

@@ -6,7 +6,6 @@ from collections import defaultdict
 import mindsdb.interfaces.storage.db as db
 
 
-
 class BaseStream:
     def __init__(self, name, predictor):
         self.name = name
@@ -34,9 +33,6 @@ class BaseStream:
     def _read_from_in_stream(self):
         raise NotImplementedError
 
-    def _del_from_in_stream(self, k):
-        raise NotImplementedError
-
     def _write_to_out_stream(self, dct):
         raise NotImplementedError
 
@@ -45,10 +41,9 @@ class BaseStream:
 
     def _make_predictions(self):
         while not self.stop_event.wait(0.5):
-            for k, when_data in self._read_from_in_stream():
+            for when_data in self._read_from_in_stream():
                 for res in self.native_interface.predict(self.predictor, 'dict', when_data=when_data):
                     self._write_to_out_stream(res)
-                self._del_from_in_stream(k)
 
     def _make_ts_predictions(self):
         window = self.ts_settings['window']
@@ -59,26 +54,51 @@ class BaseStream:
         group_by = self.ts_settings['group_by']
         group_by = [group_by] if isinstance(group_by, str) else group_by
 
-        gb_dict = defaultdict(list)
+        if group_by is None:
+            cache = []
 
-        while not self.stop_event.wait(0.5):
-            for k, when_data in self._read_from_in_stream():
-                gb_value = tuple(when_data.get(gb, None) for gb in group_by)
-                gb_dict[gb_value].append(when_data)
-                self._del_from_in_stream(k)
+            while not self.stop_event.wait(0.5):
+                for when_data in self._read_from_in_stream():
+                    for ob in order_by:
+                        if ob not in when_data:
+                            raise Exception(f'when_data doesn\'t contain order_by[{ob}]')
 
-            for gb_value in gb_dict.keys():
-                gb_dict[gb_value] = sorted(
-                    gb_dict[gb_value],
-                    key=lambda wd: (float(wd[ob]) for ob in order_by)
+                    cache.append(when_data)
+                
+                cache = sorted(
+                    cache,
+                    # WARNING: assuming wd[ob] is numeric
+                    key=lambda wd: tuple(wd[ob] for ob in order_by)
                 )
 
-                if len(gb_dict[gb_value]) >= window:
-                    for res in self.native_interface.predict(self.predictor, 'dict', when_data=gb_dict[gb_value][-window:]):
-                        self._write_to_out_stream(res)
-                    gb_dict[gb_value] = gb_dict[gb_value][1 - window:]
+                if len(cache) >= window:
+                    res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[-window:])
+                    self._write_to_out_stream(res_list[-1])
+                    cache = cache[1 - window:]
+        else:
+            gb_cache = defaultdict(list)
 
-            import time
-            time.sleep(2)
+            while not self.stop_event.wait(0.5):
+                for when_data in self._read_from_in_stream():
+                    for ob in order_by:
+                        if ob not in when_data:
+                            raise Exception(f'when_data doesn\'t contain order_by[{ob}]')
 
-            print(gb_dict)
+                    for gb in group_by:
+                        if gb not in when_data:
+                            raise Exception(f'when_data doesn\'t contain group_by[{gb}]')
+
+                    gb_value = tuple(when_data[gb] for gb in group_by)
+                    gb_cache[gb_value].append(when_data)
+
+                for gb_value in gb_cache.keys():
+                    gb_cache[gb_value] = sorted(
+                        gb_cache[gb_value],
+                        # WARNING: assuming wd[ob] is numeric
+                        key=lambda wd: tuple(wd[ob] for ob in order_by)
+                    )
+
+                    if len(gb_cache[gb_value]) >= window:
+                        res_list = self.native_interface.predict(self.predictor, 'dict', when_data=gb_cache[gb_value][-window:]):
+                        self._write_to_out_stream(res_list[-1])
+                        gb_cache[gb_value] = gb_cache[gb_value][1 - window:]

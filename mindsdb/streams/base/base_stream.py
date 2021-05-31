@@ -99,6 +99,6 @@ class BaseStream:
                     )
 
                     if len(gb_cache[gb_value]) >= window:
-                        res_list = self.native_interface.predict(self.predictor, 'dict', when_data=gb_cache[gb_value][-window:]):
+                        res_list = self.native_interface.predict(self.predictor, 'dict', when_data=gb_cache[gb_value][-window:])
                         self._write_to_out_stream(res_list[-1])
                         gb_cache[gb_value] = gb_cache[gb_value][1 - window:]

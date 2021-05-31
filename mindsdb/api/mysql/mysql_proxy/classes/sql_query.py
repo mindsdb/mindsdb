@@ -13,12 +13,15 @@ import re
 import traceback
 
 from moz_sql_parser import parse
+from mindsdb_sql import parse_sql
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, binary_ops, unary_ops, operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
+
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
 
 
 class TableWithoutDatasourceException(Exception):
@@ -143,7 +146,13 @@ class SQLQuery():
         return s
 
     def _parseQuery(self, sql):
+        print(f'! parse === {sql}')
+
         self.struct = parse(sql)
+
+        mindsdb_sql_struct = parse_sql(sql)
+        new_struct = to_moz_sql_struct(mindsdb_sql_struct)
+        self.struct = new_struct
 
         if 'limit' in self.struct:
             limit = self.struct.get('limit')

@@ -48,7 +48,7 @@ class Config():
 
             },
             "debug": False,
-            "integrations": {},
+            "integrations": {'redis': {'type': 'redis'}},
             "api": {
                 "http": {
                     "host": "127.0.0.1",

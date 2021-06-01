@@ -1,3 +1,4 @@
+import traceback
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
@@ -35,6 +36,7 @@ class DatabaseWrapper():
             if integration is not True:
                 integration.setup()
         except Exception as e:
+            traceback.print_exc()
             logger.warning('Failed to integrate with database ' + db_alias + f', error: {e}')
 
     def _get_integration(self, db_alias):

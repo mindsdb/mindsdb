@@ -1,115 +1,72 @@
+COMPANY_ID = None
 import os
-from abc import ABC, abstractmethod
-from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
-from mindsdb.interfaces.storage.db import session, Stream
-from mindsdb.utilities.log import log
-from mindsdb.interfaces.database.integrations import get_db_integration
+from re import S
+from threading import Thread
+
+from mindsdb.utilities.config import STOP_THREADS_EVENT
+import mindsdb.interfaces.storage.db as db
 
 
-class Integration(ABC):
+class Integration:
     def __init__(self, config, name):
         self.config = config
         self.name = name
         self.mindsdb_database = config['api']['mysql']['database']
 
-    @abstractmethod
     def setup(self):
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def _query(self, query, fetch=False):
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def register_predictors(self, model_data_arr):
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def unregister_predictor(self, name):
-        pass
+        raise NotImplementedError
 
 
 class StreamIntegration(Integration):
-    """Base abstract class for stream integrations like redis and kafka."""
     def __init__(self, config, name):
         Integration.__init__(self, config, name)
-        self.streams = {}
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-        self.stop_event = STOP_THREADS_EVENT
-        self.log = log
-
-    def get_stream_from_db(self, db_record):
-        kwargs = {"type": db_record._type,
-                  "name": db_record.name,
-                  "predictor": db_record.predictor,
-                  "input_stream": db_record.stream_in,
-                  "output_stream": db_record.stream_out,
-                  "anomaly_stream": db_record.stream_anomaly}
-        return self.get_stream_from_kwargs(**kwargs)
-
-    def exist_in_db(self):
-        return get_db_integration(self.name, self.company_id) is not None
-
-    def delete_stream(self, predictor):
-        """Deletes stream from database and stops it work by
-        setting up a special threading.Event flag."""
-        stream_name = f"{self.name}_{predictor}"
-        self.log.debug(f"Integration {self.name}: deleting {stream_name}")
-        session.query(Stream).filter_by(company_id=self.company_id, integration=self.name, name=stream_name).delete()
-        session.commit()
-        if stream_name in self.streams:
-            self.streams[stream_name].set()
-            del self.streams[stream_name]
-
-    def delete_all_streams(self):
-        for stream in self.streams.copy():
-            self.streams[stream].set()
-            del self.streams[stream]
-        session.query(Stream).filter_by(company_id=self.company_id, integration=self.name).delete()
-        session.commit()
-
-    def stop_streams(self):
-        for stream in self.streams:
-            self.streams[stream].set()
-
-    def stop_deleted_streams(self):
-        existed_streams = session.query(Stream).filter_by(company_id=self.company_id, integration=self.name)
-        actual_streams = [x.name for x in existed_streams]
-
-        for stream in self.streams.copy():
-            if stream not in actual_streams:
-                # this stream is still running but it has been deleted from database.
-                # need to stop it.
-                self.log.error(f"INTEGRATION {self.name}: deleting {stream} stream.")
-                self.streams[stream].set()
-                del self.streams[stream]
-
+        self._streams = []
+    
     def setup(self):
-        """Launches streams stored in db and
-        Launches a worker in separate thread which waits
-        data from control stream and creates a particular Streams."""
+        Thread(target=StreamIntegration._loop, args=(self, )).start()
 
-        self.start_stored_streams()
-        # launch worker which reads control steam and spawn streams
-        self.start()
+    def _loop(self):
+        while not STOP_THREADS_EVENT.wait(1.0):
+            stream_db_recs = db.session.query(db.Stream).filter_by(company_id=COMPANY_ID, integration=self.name).all()
 
-    @abstractmethod
-    def start_stored_streams(self):
-        pass
+            # Stop streams that weren't found in DB
+            indices_to_delete = []
+            for i, s in enumerate(self._streams):
+                if s.name not in map(lambda x: x.name, stream_db_recs):
+                    indices_to_delete.append(i)
+                    self._streams[i].stop_event.set()
+                    self._streams[i].thread.join()
+            self._streams = [s for i, s in enumerate(self._streams) if i not in indices_to_delete]
 
-    @abstractmethod
-    def work(self):
-        pass
+            # Start new streams found in DB
+            for s in stream_db_recs:
+                if s.name not in map(lambda x: x.name, self._streams):
+                    self._streams.append(self._make_stream(s))
 
-    @abstractmethod
-    def start(self):
-        pass
+        for s in self._streams:
+            print('1s', s)
+            s.stop_event.set()
+            print('2s', s)
+            s.thread.join()
+            print('3s', s)
+
+    def _make_stream(self, s):
+        raise NotImplementedError
 
     def _query(self, query, fetch=False):
-        pass
+        raise NotImplementedError
 
     def register_predictors(self, model_data_arr):
-        pass
+        raise NotImplementedError
 
     def unregister_predictor(self, name):
-        pass
+        raise NotImplementedError

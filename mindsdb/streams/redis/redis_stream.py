@@ -5,11 +5,12 @@ from mindsdb.streams.base import BaseStream
 
 
 class RedisStream(BaseStream):
-    def __init__(self, name, predictor, connection_info, stream_in, stream_out):
+    def __init__(self, name, predictor, connection_info, stream_in, stream_out, stream_anomaly):
         BaseStream.__init__(self, name, predictor)
         self.client = walrus.Database(**connection_info)
         self.stream_in = self.client.Stream(stream_in)
         self.stream_out = self.client.Stream(stream_out)
+        self.stream_anomaly = self.client.Stream(stream_anomaly)
 
     def _read_from_in_stream(self):
         print('reading from stream_in')
@@ -21,6 +22,6 @@ class RedisStream(BaseStream):
         print('writing to stream_out')
         self.stream_out.add({'': json.dumps(dct)})
 
-    def write_to_in_stream(self, dct):
-        print('writing to stream_in')
-        self.stream_in.add({'': json.dumps(dct)})
+    def _write_to_anomaly_stream(self, dct):
+        print('writing to stream_anomaly')
+        self.stream_anomaly.add({'': json.dumps(dct)})

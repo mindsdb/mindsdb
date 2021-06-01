@@ -35,8 +35,8 @@ class BaseStream:
 
     def _write_to_out_stream(self, dct):
         raise NotImplementedError
-
-    def write_to_in_stream(self, dct):
+    
+    def _write_to_anomaly_stream(self, dct):
         raise NotImplementedError
 
     def _make_predictions(self):

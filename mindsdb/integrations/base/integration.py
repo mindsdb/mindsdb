@@ -1,6 +1,4 @@
-COMPANY_ID = None
 import os
-from re import S
 from threading import Thread
 
 from mindsdb.utilities.config import STOP_THREADS_EVENT
@@ -35,8 +33,9 @@ class StreamIntegration(Integration):
         Thread(target=StreamIntegration._loop, args=(self, )).start()
 
     def _loop(self):
+        company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         while not STOP_THREADS_EVENT.wait(1.0):
-            stream_db_recs = db.session.query(db.Stream).filter_by(company_id=COMPANY_ID, integration=self.name).all()
+            stream_db_recs = db.session.query(db.Stream).filter_by(company_id=company_id, integration=self.name).all()
 
             # Stop streams that weren't found in DB
             indices_to_delete = []
@@ -59,14 +58,17 @@ class StreamIntegration(Integration):
             s.thread.join()
             print('3s', s)
 
+    def check_connection(self):
+        raise NotImplementedError
+
     def _make_stream(self, s):
         raise NotImplementedError
 
     def _query(self, query, fetch=False):
-        raise NotImplementedError
+        pass
 
     def register_predictors(self, model_data_arr):
-        raise NotImplementedError
+        pass
 
     def unregister_predictor(self, name):
-        raise NotImplementedError
+        pass

@@ -1,13 +1,7 @@
 import json
-from threading import Thread
-
 import kafka
 
-from mindsdb.utilities.log import log
-from mindsdb.utilities.cache import Cache
 from mindsdb.streams.base.base_stream import BaseStream
-from mindsdb.interfaces.storage.db import session
-from mindsdb.interfaces.storage.db import Predictor as DBPredictor
 
 
 class KafkaStream(BaseStream):

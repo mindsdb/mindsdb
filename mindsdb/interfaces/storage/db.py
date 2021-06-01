@@ -132,7 +132,7 @@ class Log(Base):
 
 
 class Integration(Base):
-    __tablename__ = 'integrationq'
+    __tablename__ = 'integration'
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
@@ -142,7 +142,7 @@ class Integration(Base):
 
 
 class Stream(Base):
-    __tablename__ = 'streamq'
+    __tablename__ = 'stream'
     id = Column(Integer, primary_key=True)
     name = Column(String)
     connection_info = Column(Json)

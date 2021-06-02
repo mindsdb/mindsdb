@@ -1,4 +1,5 @@
-from mindsdb_sql.ast import Join, Identifier, BinaryOperation, Constant
+from mindsdb_sql.ast import Join, Identifier, BinaryOperation, Constant, Operation
+from mindsdb_sql.ast.operation import UnaryOperation
 
 
 def get_alias(element):
@@ -21,6 +22,9 @@ def where_to_dict(root):
         if op == '=':
             op = 'eq'
         return {op: [where_to_dict(root.args[0]), where_to_dict(root.args[1])]}
+    elif isinstance(root, UnaryOperation):
+        op = root.op.lower()
+        return {op: [where_to_dict(root.args[0])]}
     elif isinstance(root, Identifier):
         return root.value
     elif isinstance(root, Constant):
@@ -30,6 +34,28 @@ def where_to_dict(root):
             return root.value
     else:
         raise Exception(f'unknown type in "where": {root}')
+
+
+def plain_where_conditions(self, condition):
+    ''' Transform current tree view of 'where' conditions to plain dict.
+        All oprations must be 'equal', and must be joined via 'AND'.
+    '''
+    conditions = {}
+    # condition = self.mindsdb_sql_struct.where
+    if condition is None:
+        return conditions
+    if condition.op not in ['AND', '=']:
+        raise Exception('must be only AND and =')
+    if isinstance(condition.args[0], Operation):
+        add_condition = self._plain_where_conditions(condition.args[0])
+        conditions.update(add_condition)
+        add_condition = self._plain_where_conditions(condition.args[1])
+        conditions.update(add_condition)
+    elif isinstance(condition.args[0], Identifier):
+        if isinstance(condition.args[1], Constant) is False:
+            raise Exception('must be = to constant')
+        conditions[condition.args[0].value] = condition.args[1].value
+    return conditions
 
 
 def to_moz_sql_struct(mp):

@@ -11,6 +11,8 @@ from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import get_db_integration
 
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+
 
 class NumpyJSONEncoder(json.JSONEncoder):
     """
@@ -147,6 +149,8 @@ class MindsDBDataNode(DataNode):
             return []
         if self.ai_table.get_ai_table(table):
             return self._select_from_ai_table(table, columns, where)
+
+        where = plain_where_conditions(where)
 
         original_when_data = None
         if 'when_data' in where:

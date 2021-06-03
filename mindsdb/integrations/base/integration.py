@@ -46,7 +46,6 @@ class StreamIntegration(Integration):
                 if s.name not in map(lambda x: x.name, stream_db_recs):
                     indices_to_delete.append(i)
                     self._streams[i].stop_event.set()
-                    self._streams[i].thread.join()
             self._streams = [s for i, s in enumerate(self._streams) if i not in indices_to_delete]
 
             # Start new streams found in DB
@@ -56,10 +55,6 @@ class StreamIntegration(Integration):
 
         for s in self._streams:
             s.stop_event.set()
-            s.thread.join()
-
-    def check_connection(self):
-        raise NotImplementedError
 
     def _make_stream(self, s: db.Stream):
         raise NotImplementedError

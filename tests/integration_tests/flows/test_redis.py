@@ -97,7 +97,7 @@ class RedisTest(unittest.TestCase):
     def test_1_create_integration(self):
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
         try:
-            res = requests.put(url, json={"type": "redis", "connection": CONNECTION_PARAMS})
+            res = requests.put(url, json={"params": {"type": "redis", "connection": CONNECTION_PARAMS}})
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(e)

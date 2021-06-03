@@ -31,31 +31,31 @@ STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
 DEFAULT_PREDICTOR = "redis_predictor"
 TS_PREDICTOR = "redis_ts_predictor"
 DS_NAME = "redis_test_ds"
-CONTROL_STREAM = f"control_stream_{STREAM_SUFFIX}"
 
 
 class RedisTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         run_environment(apis=['mysql', 'http'])
 
     def upload_ds(self, name):
         df = pd.DataFrame({
-                'group': ["A" for _ in range(100, 210)],
-                'order': [x for x in range(100, 210)],
-                'x1': [x for x in range(100,210)],
-                'x2': [x*2 for x in range(100,210)],
-                'y': [x*3 for x in range(100,210)]
-            })
+            'group': ["A" for _ in range(100, 210)],
+            'order': [x for x in range(100, 210)],
+            'x1': [x for x in range(100,210)],
+            'x2': [x*2 for x in range(100,210)],
+            'y': [x*3 for x in range(100,210)]
+        })
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)
             f.flush()
             url = f'{HTTP_API_ROOT}/datasources/{name}'
-            data = {"source_type": (None, 'file'),
-                    "file": (f.name, f, 'text/csv'),
-                    "source": (None, f.name.split('/')[-1]),
-                    "name": (None, name)}
+            data = {
+                "source_type": (None, 'file'),
+                "file": (f.name, f, 'text/csv'),
+                "source": (None, f.name.split('/')[-1]),
+                "name": (None, name)
+            }
             res = requests.put(url, files=data)
             res.raise_for_status()
 
@@ -81,11 +81,13 @@ class RedisTest(unittest.TestCase):
                 'use_gpu': False,
                 'join_learn_process': True,
                 'ignore_columns': None,
-                'timeseries_settings': {"order_by": ["order"],
-                                        "group_by": ["group"],
-                                        "nr_predictions": 1,
-                                        "use_previous_target": True,
-                                        "window": 10},
+                'timeseries_settings': {
+                    "order_by": ["order"],
+                    "group_by": ["group"],
+                    "nr_predictions": 1,
+                    "use_previous_target": True,
+                    "window": 10
+                },
             }
         }
         url = f'{HTTP_API_ROOT}/predictors/{predictor_name}'
@@ -93,21 +95,14 @@ class RedisTest(unittest.TestCase):
         res.raise_for_status()
 
     def test_1_create_integration(self):
-        print(f'\nExecuting {self._testMethodName}')
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
-        params = {"type": "redis",
-                  "stream": CONTROL_STREAM,
-                  "connection": CONNECTION_PARAMS,
-                 }
         try:
-            res = requests.put(url, json={"params": params})
+            res = requests.put(url, json={"type": "redis", "connection": CONNECTION_PARAMS})
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(e)
 
-
     def test_2_create_redis_stream(self):
-        print(f'\nExecuting {self._testMethodName}')
         try:
             self.upload_ds(DS_NAME)
         except Exception as e:
@@ -118,20 +113,19 @@ class RedisTest(unittest.TestCase):
         except Exception as e:
             self.fail(f"couldn't train predictor: {e}")
 
-        params = {"predictor": DEFAULT_PREDICTOR,
-                  "stream_in": STREAM_IN,
-                  "stream_out": STREAM_OUT,
-                  "integration_name": INTEGRATION_NAME}
-
         try:
             url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json={"params": params})
+            res = requests.put(url, json={
+                "predictor": DEFAULT_PREDICTOR,
+                "stream_in": STREAM_IN,
+                "stream_out": STREAM_OUT,
+                "integration": INTEGRATION_NAME
+            })
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(f"error creating stream: {e}")
 
     def test_3_making_stream_prediction(self):
-        print(f'\nExecuting {self._testMethodName}')
         client = walrus.Database(**CONNECTION_PARAMS)
         stream_in = client.Stream(STREAM_IN)
         stream_out = client.Stream(STREAM_OUT)
@@ -141,33 +135,30 @@ class RedisTest(unittest.TestCase):
             stream_in.add(when_data)
 
         time.sleep(10)
-        prediction = stream_out.read()
+        predictions = stream_out.read()
         stream_out.trim(0, approximate=False)
         stream_in.trim(0, approximate=False)
-        self.assertTrue(len(prediction)==2)
+        self.assertTrue(len(predictions)==2)
 
     def test_4_create_redis_ts_stream(self):
-        print(f'\nExecuting {self._testMethodName}')
         try:
             self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
         except Exception as e:
             self.fail(f"couldn't train ts predictor: {e}")
 
-        params = {"predictor": TS_PREDICTOR,
-                  "stream_in": STREAM_IN_TS,
-                  "stream_out": STREAM_OUT_TS,
-                  "integration_name": INTEGRATION_NAME,
-                  "type": "timeseries"}
-
         try:
             url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json={"params": params})
+            res = requests.put(url, json={
+                "predictor": TS_PREDICTOR,
+                "stream_in": STREAM_IN_TS,
+                "stream_out": STREAM_OUT_TS,
+                "integration": INTEGRATION_NAME,
+            })
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(f"error creating stream: {e}")
 
     def test_5_making_ts_stream_prediction(self):
-        print(f'\nExecuting {self._testMethodName}')
         client = walrus.Database(**CONNECTION_PARAMS)
         stream_in = client.Stream(STREAM_IN_TS)
         stream_out = client.Stream(STREAM_OUT_TS)
@@ -180,64 +171,11 @@ class RedisTest(unittest.TestCase):
         while len(stream_in) and time.time() < threshold:
             time.sleep(1)
         time.sleep(10)
-        prediction = stream_out.read()
+        predictions = stream_out.read()
         stream_out.trim(0, approximate=False)
         stream_in.trim(0, approximate=False)
-        self.assertTrue(len(prediction)==2, f"expected 2 predictions, but got {len(prediction)}")
+        self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
 
-
-    def test_6_create_redis_stream_native_api(self):
-        print(f'\nExecuting {self._testMethodName}')
-        client = walrus.Database(**CONNECTION_PARAMS)
-        STREAM_IN_NATIVE = STREAM_IN + "_native"
-        STREAM_OUT_NATIVE = STREAM_OUT + "_native"
-        stream_params = {'input_stream': STREAM_IN_NATIVE,
-                'output_stream': STREAM_OUT_NATIVE,
-                'predictor': DEFAULT_PREDICTOR}
-        stream_control = client.Stream(CONTROL_STREAM)
-        stream_in = client.Stream(STREAM_IN_NATIVE)
-        stream_out = client.Stream(STREAM_OUT_NATIVE)
-        stream_control.add(stream_params)
-
-        for x in range(1, 3):
-            when_data = {'x1': x, 'x2': 2*x}
-            stream_in.add(when_data)
-
-        time.sleep(10)
-        prediction = stream_out.read()
-        stream_out.trim(0, approximate=False)
-        stream_in.trim(0, approximate=False)
-        self.assertTrue(len(prediction)==2)
-
-
-    def test_7_create_redis_ts_stream_native_api(self):
-        print(f'\nExecuting {self._testMethodName}')
-        client = walrus.Database(**CONNECTION_PARAMS)
-        STREAM_IN_NATIVE = STREAM_IN_TS + "_native"
-        STREAM_OUT_NATIVE = STREAM_OUT_TS + "_native"
-
-        stream_params = {"predictor": TS_PREDICTOR,
-                  "input_stream": STREAM_IN_NATIVE,
-                  "output_stream": STREAM_OUT_NATIVE,
-                  "type": "timeseries"}
-
-        stream_control = client.Stream(CONTROL_STREAM)
-        stream_in = client.Stream(STREAM_IN_NATIVE)
-        stream_out = client.Stream(STREAM_OUT_NATIVE)
-        stream_control.add(stream_params)
-
-        for x in range(210, 221):
-            when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
-            stream_in.add(when_data)
-
-        threshold = time.time() + 60
-        while len(stream_in) and time.time() < threshold:
-            time.sleep(1)
-        time.sleep(10)
-        prediction = stream_out.read()
-        stream_out.trim(0, approximate=False)
-        stream_in.trim(0, approximate=False)
-        self.assertTrue(len(prediction)==2, f"expected 2 predictions, but got {len(prediction)}")
 
 if __name__ == "__main__":
     try:

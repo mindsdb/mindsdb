@@ -23,7 +23,7 @@ class RedisConnectionChecker:
             return False
 
 
-class Redis(StreamIntegration):
+class Redis(StreamIntegration, RedisConnectionChecker):
     def __init__(self, config, name, db_info):
         StreamIntegration.__init__(self, config, name)
         self.connection_info = {

@@ -7,7 +7,6 @@ from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.integrations.mongodb.mongodb import MongoDB
 from mindsdb.integrations.redis.redisdb import Redis
 from mindsdb.integrations.kafka.kafkadb import Kafka
-from mindsdb.integrations import CHECKERS
 
 from mindsdb.utilities.log import log as logger
 from mindsdb.utilities.config import Config
@@ -67,7 +66,7 @@ class DatabaseWrapper():
             integrations = [] if isinstance(integration, bool) else [integration]
 
         for integration in integrations:
-            if CHECKERS[integration['type']](**integration['connection']).check_connection():
+            if integration.check_connection():
                 try:
                     integration.register_predictors(model_data_arr)
                 except Exception as e:
@@ -81,7 +80,7 @@ class DatabaseWrapper():
             # !!! Integrations from config.json add to db on each start!!!!
             if '@@@@@' in name:
                 name = name.split('@@@@@')[1]
-            if CHECKERS[integration['type']](**integration['connection']).check_connection():
+            if integration.check_connection():
                 integration.unregister_predictor(name)
             else:
                 logger.warning(f"There is no connection to {integration.name}. predictor wouldn't be unregistred")
@@ -89,6 +88,6 @@ class DatabaseWrapper():
     def check_connections(self):
         connections = {}
         for integration in self._get_integrations():
-            connections[integration.name] = CHECKERS[integration['type']](**integration['connection']).check_connection()
+            connections[integration.name] = integration.check_connection()
 
         return connections

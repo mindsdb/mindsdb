@@ -21,7 +21,6 @@ def get_streams():
             'integration': s.integration,
             'stream_in': s.stream_in,
             'stream_out': s.stream_out,
-            'stream_anomaly': s.stream_anomaly,
         })
     return streams_as_dicts
 
@@ -45,7 +44,7 @@ class Stream(Resource):
 
     @ns_conf.doc("put_stream")
     def put(self, name):
-        for param in ['name', 'integration', 'predictor', 'stream_in', 'stream_out', 'stream_anomaly']:
+        for param in ['name', 'integration', 'predictor', 'stream_in', 'stream_out']:
             if param not in request.json.keys():
                 return abort(400, 'Please provide "{}"'.format(param))
 
@@ -72,7 +71,6 @@ class Stream(Resource):
             predictor=request.json['predictor'],
             stream_in=request.json['stream_in'],
             stream_out=request.json['stream_out'],
-            stream_anomaly=request.json['stream_anomaly']
         )
         session.add(stream)
         session.commit()

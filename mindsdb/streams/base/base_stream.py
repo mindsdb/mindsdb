@@ -18,7 +18,7 @@ class BaseStream:
         if p is None:
             raise Exception(f'Predictor {predictor} doesn\'t exist')
 
-        self.target = p.learn_args['to_predict']
+        self.target = p.learn_args['to_predict'] if isinstance(p.learn_args['to_predict'], str) else p.learn_args['to_predict'][0]
 
         ts_settings = p.learn_args['kwargs'].get('timeseries_settings', None)
 
@@ -36,9 +36,6 @@ class BaseStream:
     def _write_to_out_stream(self, dct):
         raise NotImplementedError
     
-    def _write_to_anomaly_stream(self, dct):
-        raise NotImplementedError
-
     def _make_predictions(self):
         while not self.stop_event.wait(0.5):
             for when_data in self._read_from_in_stream():
@@ -72,6 +69,12 @@ class BaseStream:
                 )
 
                 if len(cache) >= window:
+                    for when_data in cache[-window:]:
+                        if self.target in when_data:
+                            when_data['make_predictions'] = True
+                        else:
+                            when_data['make_predictions'] = False
+                        
                     res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[-window:])
                     self._write_to_out_stream(res_list[-1])
                     cache = cache[1 - window:]
@@ -99,6 +102,11 @@ class BaseStream:
                     )
 
                     if len(gb_cache[gb_value]) >= window:
+                        for when_data in gb_cache[gb_value][-window:]:
+                            if self.target in when_data:
+                                when_data['make_predictions'] = True
+                            else:
+                                when_data['make_predictions'] = False
                         res_list = self.native_interface.predict(self.predictor, 'dict', when_data=gb_cache[gb_value][-window:])
                         self._write_to_out_stream(res_list[-1])
                         gb_cache[gb_value] = gb_cache[gb_value][1 - window:]

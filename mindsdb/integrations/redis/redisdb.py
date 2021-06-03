@@ -1,15 +1,16 @@
 import walrus
 
 from mindsdb.integrations.base import StreamIntegration
-from mindsdb.streams import RedisStream
+import mindsdb.interfaces.storage.db as db
+import mindsdb.streams
 
 
 class RedisConnectionChecker:
     def __init__(self, **params):
         self.connection_info = {
-            'host': params['host'],
-            'port': params['port'],
-            'password': params['password'],
+            'host': params['connection']['host'],
+            'port': params['connection']['port'],
+            'password': params['connection']['password'],
         }
 
     def check_connection(self):
@@ -26,13 +27,13 @@ class Redis(StreamIntegration):
     def __init__(self, config, name, db_info):
         StreamIntegration.__init__(self, config, name)
         self.connection_info = {
-            'host': db_info['host'],
-            'port': db_info['port'],
-            'password': db_info['password'],
+            'host': db_info['connection']['host'],
+            'port': db_info['connection']['port'],
+            'password': db_info['connection']['password'],
         }
     
-    def _make_stream(self, s):
-        return RedisStream(
+    def _make_stream(self, s: db.Stream):
+        return mindsdb.streams.RedisStream(
             s.name,
             s.predictor,
             self.connection_info,

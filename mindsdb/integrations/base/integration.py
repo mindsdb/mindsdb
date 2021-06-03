@@ -30,12 +30,15 @@ class StreamIntegration(Integration):
         self._streams = []
     
     def setup(self):
-        Thread(target=StreamIntegration._loop, args=(self, )).start()
+        Thread(target=StreamIntegration._loop, args=(self,)).start()
 
     def _loop(self):
         company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         while not STOP_THREADS_EVENT.wait(1.0):
-            stream_db_recs = db.session.query(db.Stream).filter_by(company_id=company_id, integration=self.name).all()
+            stream_db_recs = db.session.query(db.Stream).filter_by(
+                company_id=company_id,
+                integration=self.name
+            ).all()
 
             # Stop streams that weren't found in DB
             indices_to_delete = []
@@ -52,16 +55,13 @@ class StreamIntegration(Integration):
                     self._streams.append(self._make_stream(s))
 
         for s in self._streams:
-            print('1s', s)
             s.stop_event.set()
-            print('2s', s)
             s.thread.join()
-            print('3s', s)
 
     def check_connection(self):
         raise NotImplementedError
 
-    def _make_stream(self, s):
+    def _make_stream(self, s: db.Stream):
         raise NotImplementedError
 
     def _query(self, query, fetch=False):

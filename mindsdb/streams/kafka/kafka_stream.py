@@ -5,11 +5,10 @@ from mindsdb.streams.base.base_stream import BaseStream
 
 
 class KafkaStream(BaseStream):
-    def __init__(self, name, predictor, connection_info, topic_in, topic_out, topic_anomaly):
+    def __init__(self, name, predictor, connection_info, topic_in, topic_out):
         BaseStream.__init__(self, name, predictor)
         self.topic_in = topic_in
         self.topic_out = topic_out
-        self.topic_anomaly = topic_anomaly
         self.consumer = kafka.KafkaConsumer(**connection_info)
         self.consumer.subscribe(topics=[self.topic_in])
         self.producer = kafka.KafkaProducer(**connection_info, acks='all')
@@ -21,9 +20,6 @@ class KafkaStream(BaseStream):
     def _write_to_out_stream(self, dct):
         self.producer.send(self.topic_out, json.dumps(dct).encode('utf-8'))
     
-    def _write_to_anomaly_stream(self, dct):
-        self.producer.send(self.topic_anomaly, json.dumps(dct).encode('utf-8'))
-
     def __del__(self):
         self.consumer.close()
         self.producer.close()

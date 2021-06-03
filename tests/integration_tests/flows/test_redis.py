@@ -136,6 +136,7 @@ class RedisTest(unittest.TestCase):
             stream_in.add({'': json.dumps(when_data)})
 
         time.sleep(10)
+
         predictions = stream_out.read()
         stream_out.trim(0, approximate=False)
         stream_in.trim(0, approximate=False)
@@ -165,14 +166,12 @@ class RedisTest(unittest.TestCase):
         stream_in = client.Stream(STREAM_IN_TS)
         stream_out = client.Stream(STREAM_OUT_TS)
 
-        for x in range(210, 221):
+        for x in range(210, 223):
             when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
             stream_in.add({'': json.dumps(when_data)})
 
-        threshold = time.time() + 60
-        while len(stream_in) and time.time() < threshold:
-            time.sleep(1)
         time.sleep(10)
+
         predictions = stream_out.read()
         stream_out.trim(0, approximate=False)
         stream_in.trim(0, approximate=False)

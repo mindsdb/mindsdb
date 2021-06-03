@@ -30,6 +30,7 @@ STREAM_IN_TS = f"test_stream_in_ts_{STREAM_SUFFIX}"
 STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
 DS_NAME = "kafka_test_ds"
 
+
 def read_stream(stream_name, buf, stop_event):
     consumer = kafka.KafkaConsumer(**CONNECTION_PARAMS, consumer_timeout_ms=1000)
     consumer.subscribe([stream_name])
@@ -42,20 +43,20 @@ def read_stream(stream_name, buf, stop_event):
     consumer.close()
     print(f"STOPPING READING STREAM {stream_name} THREAD PROPERLY")
 
-class KafkaTest(unittest.TestCase):
 
+class KafkaTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         run_environment(apis=['mysql', 'http'])
 
     def upload_ds(self, name):
         df = pd.DataFrame({
-                'group': ["A" for _ in range(100, 210)],
-                'order': [x for x in range(100, 210)],
-                'x1': [x for x in range(100,210)],
-                'x2': [x*2 for x in range(100,210)],
-                'y': [x*3 for x in range(100,210)]
-            })
+            'group': ["A" for _ in range(100, 210)],
+            'order': [x for x in range(100, 210)],
+            'x1': [x for x in range(100,210)],
+            'x2': [x*2 for x in range(100,210)],
+            'y': [x*3 for x in range(100,210)]
+        })
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)
             f.flush()
@@ -88,11 +89,13 @@ class KafkaTest(unittest.TestCase):
                 'use_gpu': False,
                 'join_learn_process': True,
                 'ignore_columns': None,
-                'timeseries_settings': {"order_by": ["order"],
-                                        "group_by": ["group"],
-                                        "nr_predictions": 1,
-                                        "use_previous_target": True,
-                                        "window": 10},
+                'timeseries_settings': {
+                    "order_by": ["order"],
+                    "group_by": ["group"],
+                    "nr_predictions": 1,
+                    "use_previous_target": True,
+                    "window": 10
+                },
             }
         }
         url = f'{HTTP_API_ROOT}/predictors/{predictor_name}'
@@ -100,20 +103,15 @@ class KafkaTest(unittest.TestCase):
         res.raise_for_status()
 
     def test_1_create_integration(self):
-        print(f'\nExecuting {self._testMethodName}')
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
-        params = {"type": "kafka",
-                  "connection": CONNECTION_PARAMS,
-                 }
+        params = {"type": "kafka", "connection": CONNECTION_PARAMS}
         try:
-            res = requests.put(url, json={"params": params})
+            res = requests.put(url, json=params)
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(e)
 
-
     def test_2_create_kafka_stream(self):
-        print(f'\nExecuting {self._testMethodName}')
         try:
             self.upload_ds(DS_NAME)
         except Exception as e:
@@ -124,20 +122,21 @@ class KafkaTest(unittest.TestCase):
         except Exception as e:
             self.fail(f"couldn't train predictor: {e}")
 
-        params = {"predictor": self._testMethodName,
-                  "stream_in": STREAM_IN,
-                  "stream_out": STREAM_OUT,
-                  "integration_name": INTEGRATION_NAME}
+        params = {
+            "predictor": self._testMethodName,
+            "stream_in": STREAM_IN,
+            "stream_out": STREAM_OUT,
+            "integration": INTEGRATION_NAME
+        }
 
         try:
             url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json={"params": params})
+            res = requests.put(url, json=params)
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(f"error creating stream: {e}")
 
     def test_3_making_stream_prediction(self):
-        print(f'\nExecuting {self._testMethodName}')
         producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
 
         # wait when the integration launch created stream
@@ -160,27 +159,26 @@ class KafkaTest(unittest.TestCase):
         self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
 
     def test_4_create_kafka_ts_stream(self):
-        print(f'\nExecuting {self._testMethodName}')
         try:
             self.train_ts_predictor(DS_NAME, self._testMethodName)
         except Exception as e:
             self.fail(f"couldn't train ts predictor: {e}")
 
-        params = {"predictor": self._testMethodName,
-                  "stream_in": STREAM_IN_TS,
-                  "stream_out": STREAM_OUT_TS,
-                  "integration_name": INTEGRATION_NAME,
-                  "type": "timeseries"}
+        params = {
+            "predictor": self._testMethodName,
+            "stream_in": STREAM_IN_TS,
+            "stream_out": STREAM_OUT_TS,
+            "integration": INTEGRATION_NAME,
+        }
 
         try:
             url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json={"params": params})
+            res = requests.put(url, json=params)
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(f"error creating stream: {e}")
 
     def test_5_making_ts_stream_prediction(self):
-        print(f'\nExecuting {self._testMethodName}')
         producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
 
         # wait when the integration launch created stream

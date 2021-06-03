@@ -39,5 +39,4 @@ class Redis(StreamIntegration, RedisConnectionChecker):
             self.connection_info,
             s.stream_in,
             s.stream_out,
-            s.stream_anomaly
         )

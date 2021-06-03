@@ -69,12 +69,6 @@ class BaseStream:
                 )
 
                 if len(cache) >= window:
-                    for when_data in cache[-window:]:
-                        if self.target in when_data:
-                            when_data['make_predictions'] = True
-                        else:
-                            when_data['make_predictions'] = False
-                        
                     res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[-window:])
                     self._write_to_out_stream(res_list[-1])
                     cache = cache[1 - window:]
@@ -102,11 +96,6 @@ class BaseStream:
                     )
 
                     if len(gb_cache[gb_value]) >= window:
-                        for when_data in gb_cache[gb_value][-window:]:
-                            if self.target in when_data:
-                                when_data['make_predictions'] = True
-                            else:
-                                when_data['make_predictions'] = False
                         res_list = self.native_interface.predict(self.predictor, 'dict', when_data=gb_cache[gb_value][-window:])
                         self._write_to_out_stream(res_list[-1])
                         gb_cache[gb_value] = gb_cache[gb_value][1 - window:]

@@ -20,7 +20,3 @@ class RedisStream(BaseStream):
     def _write_to_out_stream(self, dct):
         print('writing to stream_out')
         self.stream_out.add({'': json.dumps(dct)})
-
-    def _write_to_anomaly_stream(self, dct):
-        print('writing to stream_anomaly')
-        self.stream_anomaly.add({'': json.dumps(dct)})

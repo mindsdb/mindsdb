@@ -116,6 +116,7 @@ class RedisTest(unittest.TestCase):
         try:
             url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
             res = requests.put(url, json={
+                "name": "test_redis_stream",
                 "predictor": DEFAULT_PREDICTOR,
                 "stream_in": STREAM_IN,
                 "stream_out": STREAM_OUT,
@@ -149,6 +150,7 @@ class RedisTest(unittest.TestCase):
         try:
             url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
             res = requests.put(url, json={
+                "name": "test_redis_stream_ts",
                 "predictor": TS_PREDICTOR,
                 "stream_in": STREAM_IN_TS,
                 "stream_out": STREAM_OUT_TS,

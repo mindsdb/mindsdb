@@ -11,13 +11,11 @@ import pandas as pd
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
 
-
 INTEGRATION_NAME = 'test_kafka'
 kafka_creds = {}
 if USE_EXTERNAL_DB_SERVER:
     with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
         kafka_creds = json.loads(f.read())['kafka']
-
 
 KAFKA_PORT = kafka_creds.get('port', 9092)
 KAFKA_HOST = kafka_creds.get('host', "127.0.0.1")
@@ -123,6 +121,7 @@ class KafkaTest(unittest.TestCase):
             self.fail(f"couldn't train predictor: {e}")
 
         params = {
+            "name": "test_kafka_stream",
             "predictor": self._testMethodName,
             "stream_in": STREAM_IN,
             "stream_out": STREAM_OUT,
@@ -165,6 +164,7 @@ class KafkaTest(unittest.TestCase):
             self.fail(f"couldn't train ts predictor: {e}")
 
         params = {
+            "name": "test_kafka_stream_ts",
             "predictor": self._testMethodName,
             "stream_in": STREAM_IN_TS,
             "stream_out": STREAM_OUT_TS,
@@ -200,6 +200,7 @@ class KafkaTest(unittest.TestCase):
             time.sleep(1)
         stop_event.set()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
+
 
 if __name__ == "__main__":
     try:

@@ -166,7 +166,7 @@ class RedisTest(unittest.TestCase):
         stream_in = client.Stream(STREAM_IN_TS)
         stream_out = client.Stream(STREAM_OUT_TS)
 
-        for x in range(210, 223):
+        for x in range(210, 233):
             when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
             stream_in.add({'': json.dumps(when_data)})
 

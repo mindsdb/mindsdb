@@ -350,7 +350,7 @@ class ModelController():
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
             predictor_record.update_status = 'updating'
             session.commit()
-            update_model(name, self.delete_model, F.delete_model, self.learn, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStore())
+            update_model(name, self.delete_model, F.delete_model, self.learn, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
 
             predictor_record = self._update_db_status(predictor_record)
         except Exception as e:

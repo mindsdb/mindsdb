@@ -62,11 +62,11 @@ class BaseStream:
 
                     cache.append(when_data)
                 
-                cache = sorted(
+                cache = [*sorted(
                     cache,
                     # WARNING: assuming wd[ob] is numeric
                     key=lambda wd: tuple(wd[ob] for ob in order_by)
-                )
+                )]
 
                 if len(cache) >= window:
                     res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[-window:])
@@ -76,6 +76,8 @@ class BaseStream:
             gb_cache = defaultdict(list)
 
             while not self.stop_event.wait(0.5):
+                if len(gb_cache):
+                    print(gb_cache)
                 for when_data in self._read_from_in_stream():
                     for ob in order_by:
                         if ob not in when_data:
@@ -89,11 +91,11 @@ class BaseStream:
                     gb_cache[gb_value].append(when_data)
 
                 for gb_value in gb_cache.keys():
-                    gb_cache[gb_value] = sorted(
+                    gb_cache[gb_value] = [*sorted(
                         gb_cache[gb_value],
                         # WARNING: assuming wd[ob] is numeric
                         key=lambda wd: tuple(wd[ob] for ob in order_by)
-                    )
+                    )]
 
                     if len(gb_cache[gb_value]) >= window:
                         res_list = self.native_interface.predict(self.predictor, 'dict', when_data=gb_cache[gb_value][-window:])

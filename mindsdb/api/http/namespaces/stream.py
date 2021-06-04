@@ -44,7 +44,7 @@ class Stream(Resource):
 
     @ns_conf.doc("put_stream")
     def put(self, name):
-        for param in ['name', 'integration', 'predictor', 'stream_in', 'stream_out']:
+        for param in ['integration', 'predictor', 'stream_in', 'stream_out']:
             if param not in request.json.keys():
                 return abort(400, 'Please provide "{}"'.format(param))
 
@@ -52,8 +52,8 @@ class Stream(Resource):
         if integration is None:
             return abort(404, 'Integration "{}" doesn\'t exist'.format(request.json['integration']))
 
-        if db.session.query(db.Stream).filter_by(company_id=request.company_id, name=request.json['name']).first() is not None:
-            return abort(404, 'Stream "{}" already exists'.format(request.json['name']))
+        if db.session.query(db.Stream).filter_by(company_id=request.company_id, name=name).first() is not None:
+            return abort(404, 'Stream "{}" already exists'.format(name))
 
         if db.session.query(db.Predictor).filter_by(company_id=request.company_id, name=request.json['predictor']).first() is None:
             return abort(404, 'Predictor "{}" doesn\'t exist'.format(request.json['predictor']))
@@ -66,7 +66,7 @@ class Stream(Resource):
 
         stream = db.Stream(
             company_id=request.company_id,
-            name=request.json['name'],
+            name=name,
             integration=request.json['integration'],
             predictor=request.json['predictor'],
             stream_in=request.json['stream_in'],
@@ -79,12 +79,9 @@ class Stream(Resource):
 
     @ns_conf.doc("delete_stream")
     def delete(self, name):
-        if 'name' not in request.json:
-            return abort(400, 'Please provide stream name')
-
-        stream = db.session.query(db.Stream).filter_by(company_id=request.company_id, name=request.json['name']).first()
+        stream = db.session.query(db.Stream).filter_by(company_id=request.company_id, name=name).first()
         if stream is None:
-            return abort(404, 'Stream "{}" doesn\'t exist'.format(request.json['name']))
+            return abort(404, 'Stream "{}" doesn\'t exist'.format(name))
 
         stream.delete()
         db.session.commit()

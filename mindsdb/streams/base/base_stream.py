@@ -76,8 +76,6 @@ class BaseStream:
             gb_cache = defaultdict(list)
 
             while not self.stop_event.wait(0.5):
-                if len(gb_cache):
-                    print(gb_cache)
                 for when_data in self._read_from_in_stream():
                     for ob in order_by:
                         if ob not in when_data:

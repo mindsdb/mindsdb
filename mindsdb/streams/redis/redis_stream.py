@@ -13,7 +13,7 @@ class RedisStream(BaseStream):
 
     def _read_from_in_stream(self):
         print('reading from stream_in')
-        for k, when_data in self.stream_in.read(block=0):
+        for k, when_data in self.stream_in.read():
             self.stream_in.delete(k)
             yield json.loads(when_data[b''])
 

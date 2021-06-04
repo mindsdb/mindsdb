@@ -27,9 +27,7 @@ class Kafka(StreamIntegration):
     def __init__(self, config, name, db_info):
         StreamIntegration.__init__(self, config, name)
         self.connection_info = {
-            'host': db_info['connection']['host'],
-            'port': db_info['connection']['port'],
-            'password': db_info['connection']['password'],
+            'bootstrap_servers': [str(x) for x in db_info['connection']['bootstrap_servers']]
         }
 
     def _make_stream(self, s: db.Stream):

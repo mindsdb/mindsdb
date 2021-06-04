@@ -189,7 +189,7 @@ class Vars(Resource):
         return {
             'mongo': mongo,
             'telemtry': telemtry,
-            'cloud': True,
+            'cloud': cloud,
             'timezone': local_timezone,
         }
 

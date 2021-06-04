@@ -104,7 +104,7 @@ class KafkaTest(unittest.TestCase):
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
         params = {"type": "kafka", "connection": CONNECTION_PARAMS}
         try:
-            res = requests.put(url, json=params)
+            res = requests.put(url, json={'params': params})
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(e)
@@ -121,7 +121,6 @@ class KafkaTest(unittest.TestCase):
             self.fail(f"couldn't train predictor: {e}")
 
         params = {
-            "name": "test_kafka_stream",
             "predictor": self._testMethodName,
             "stream_in": STREAM_IN,
             "stream_out": STREAM_OUT,
@@ -164,7 +163,6 @@ class KafkaTest(unittest.TestCase):
             self.fail(f"couldn't train ts predictor: {e}")
 
         params = {
-            "name": "test_kafka_stream_ts",
             "predictor": self._testMethodName,
             "stream_in": STREAM_IN_TS,
             "stream_out": STREAM_OUT_TS,

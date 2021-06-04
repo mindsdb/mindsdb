@@ -134,8 +134,7 @@ class RedisTest(unittest.TestCase):
         for x in range(1, 3):
             when_data = {'x1': x, 'x2': 2*x}
             stream_in.add({'': json.dumps(when_data)})
-
-        time.sleep(10)
+            time.sleep(5)
 
         predictions = stream_out.read()
         stream_out.trim(0, approximate=False)
@@ -168,10 +167,8 @@ class RedisTest(unittest.TestCase):
 
         for x in range(210, 221):
             when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
-            time.sleep(5)
             stream_in.add({'': json.dumps(when_data)})
-
-        time.sleep(10)
+            time.sleep(5)
 
         predictions = stream_out.read()
         stream_out.trim(0, approximate=False)

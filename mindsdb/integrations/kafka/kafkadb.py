@@ -23,7 +23,7 @@ class KafkaConnectionChecker:
             return True
 
 
-class Kafka(StreamIntegration):
+class Kafka(StreamIntegration, KafkaConnectionChecker):
     def __init__(self, config, name, db_info):
         StreamIntegration.__init__(self, config, name)
         self.connection_info = {

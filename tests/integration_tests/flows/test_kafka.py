@@ -29,17 +29,17 @@ STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
 DS_NAME = "kafka_test_ds"
 
 
-def read_stream(stream_name, buf, stop_event):
+def read_stream(stream_name):
     consumer = kafka.KafkaConsumer(**CONNECTION_PARAMS, consumer_timeout_ms=1000)
     consumer.subscribe([stream_name])
-    while not stop_event.wait(0.5):
+    while True:
         try:
             msg = next(consumer)
-            buf.append(json.loads(msg.value))
         except StopIteration:
-            pass
-    consumer.close()
-    print(f"STOPPING READING STREAM {stream_name} THREAD PROPERLY")
+            consumer.close()
+            return
+        else:
+            yield json.loads(msg.value)
 
 
 class KafkaTest(unittest.TestCase):
@@ -137,21 +137,13 @@ class KafkaTest(unittest.TestCase):
     def test_3_making_stream_prediction(self):
         producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
 
-        # wait when the integration launch created stream
-        time.sleep(10)
-        predictions = []
-        stop_event = threading.Event()
-        reading_th = threading.Thread(target=read_stream, args=(STREAM_OUT, predictions, stop_event))
-        reading_th.start()
-        time.sleep(1)
-
         for x in range(1, 3):
             when_data = {'x1': x, 'x2': 2*x}
             to_send = json.dumps(when_data)
             producer.send(STREAM_IN, to_send.encode("utf-8"))
             time.sleep(5)
-
-        stop_event.set()
+        
+        predictions = read_stream(STREAM_OUT)
         self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
 
     def test_4_create_kafka_ts_stream(self):
@@ -177,14 +169,6 @@ class KafkaTest(unittest.TestCase):
     def test_5_making_ts_stream_prediction(self):
         producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
 
-        # wait when the integration launch created stream
-        time.sleep(15)
-        predictions = []
-        stop_event = threading.Event()
-        reading_th = threading.Thread(target=read_stream, args=(STREAM_OUT_TS, predictions, stop_event))
-        reading_th.start()
-        time.sleep(3)
-
         for x in range(210, 221):
             when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
             to_send = json.dumps(when_data)
@@ -192,7 +176,7 @@ class KafkaTest(unittest.TestCase):
             time.sleep(5)
         producer.close()
 
-        stop_event.set()
+        predictions = read_stream(STREAM_OUT_TS)
         self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
 
 

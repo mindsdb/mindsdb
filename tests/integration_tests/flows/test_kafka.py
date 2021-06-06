@@ -143,7 +143,7 @@ class KafkaTest(unittest.TestCase):
             producer.send(STREAM_IN, to_send.encode("utf-8"))
             time.sleep(5)
         
-        predictions = read_stream(STREAM_OUT)
+        predictions = list(read_stream(STREAM_OUT))
         self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
 
     def test_4_create_kafka_ts_stream(self):
@@ -176,7 +176,7 @@ class KafkaTest(unittest.TestCase):
             time.sleep(5)
         producer.close()
 
-        predictions = read_stream(STREAM_OUT_TS)
+        predictions = list(read_stream(STREAM_OUT_TS))
         self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
 
 

@@ -35,8 +35,8 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
             s.name,
             s.predictor,
             self.connection_info,
-            s.topic_in,
-            s.topic_out,
-            s.topic_anomaly
+            s.stream_in,
+            s.stream_out,
+            s.stream_anomaly
         )
     

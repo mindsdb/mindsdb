@@ -14,15 +14,15 @@ class KafkaStream(BaseStream):
         self.producer = kafka.KafkaProducer(**connection_info, acks='all')
 
     def _read_from_in_stream(self):
-        # while True:
-        #     try:
-        #         msg = next(self.consumer)
-        #     except StopIteration:
-        #         return
-        #     else:
-        #         yield json.loads(msg.value)
-        for msg in self.consumer:
-            yield json.loads(msg.value)
+        while True:
+            try:
+                msg = next(self.consumer)
+            except StopIteration:
+                return
+            else:
+                yield json.loads(msg.value)
+        # for msg in self.consumer:
+        #     yield json.loads(msg.value)
 
     def _write_to_out_stream(self, dct):
         self.producer.send(self.topic_out, json.dumps(dct).encode('utf-8'))

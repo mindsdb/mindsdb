@@ -149,10 +149,8 @@ class KafkaTest(unittest.TestCase):
             when_data = {'x1': x, 'x2': 2*x}
             to_send = json.dumps(when_data)
             producer.send(STREAM_IN, to_send.encode("utf-8"))
-        producer.close()
-        threshold = time.time() + 120
-        while len(predictions) != 2 and time.time() < threshold:
-            time.sleep(1)
+            time.sleep(5)
+
         stop_event.set()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
 
@@ -191,11 +189,9 @@ class KafkaTest(unittest.TestCase):
             when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
             to_send = json.dumps(when_data)
             producer.send(STREAM_IN_TS, to_send.encode("utf-8"))
+            time.sleep(5)
         producer.close()
 
-        threshold = time.time() + 120
-        while len(predictions) != 2 and time.time() < threshold:
-            time.sleep(1)
         stop_event.set()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
 

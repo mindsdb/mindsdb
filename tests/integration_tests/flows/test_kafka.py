@@ -120,16 +120,14 @@ class KafkaTest(unittest.TestCase):
         except Exception as e:
             self.fail(f"couldn't train predictor: {e}")
 
-        params = {
-            "predictor": self._testMethodName,
-            "stream_in": STREAM_IN,
-            "stream_out": STREAM_OUT,
-            "integration": INTEGRATION_NAME
-        }
-
         try:
             url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json=params)
+            res = requests.put(url, json={
+                "predictor": self._testMethodName,
+                "stream_in": STREAM_IN,
+                "stream_out": STREAM_OUT,
+                "integration": INTEGRATION_NAME
+            })
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(f"error creating stream: {e}")
@@ -144,6 +142,7 @@ class KafkaTest(unittest.TestCase):
             time.sleep(5)
         
         predictions = list(read_stream(STREAM_OUT))
+        producer.close()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
 
     def test_4_create_kafka_ts_stream(self):
@@ -152,16 +151,14 @@ class KafkaTest(unittest.TestCase):
         except Exception as e:
             self.fail(f"couldn't train ts predictor: {e}")
 
-        params = {
-            "predictor": self._testMethodName,
-            "stream_in": STREAM_IN_TS,
-            "stream_out": STREAM_OUT_TS,
-            "integration": INTEGRATION_NAME,
-        }
-
         try:
             url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json=params)
+            res = requests.put(url, json={
+                "predictor": self._testMethodName,
+                "stream_in": STREAM_IN_TS,
+                "stream_out": STREAM_OUT_TS,
+                "integration": INTEGRATION_NAME,
+            })
             self.assertTrue(res.status_code == 200, res.text)
         except Exception as e:
             self.fail(f"error creating stream: {e}")
@@ -174,9 +171,9 @@ class KafkaTest(unittest.TestCase):
             to_send = json.dumps(when_data)
             producer.send(STREAM_IN_TS, to_send.encode("utf-8"))
             time.sleep(5)
-        producer.close()
 
         predictions = list(read_stream(STREAM_OUT_TS))
+        producer.close()
         self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
 
 

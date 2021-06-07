@@ -117,6 +117,10 @@ class ModelController():
         self._setup_for_creation(name, original_name, company_id=company_id)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
+    
+    def learn_sync(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
+        kwargs['join_learn_process'] = True
+        return self.learn(name, from_data, to_predict, datasource_id, kwargs, company_id)
 
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
         from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
@@ -344,7 +348,7 @@ class ModelController():
 
             session.commit()
 
-            update_model(name, original_name, self.delete_model, F.rename_model, self.learn, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
+            update_model(name, original_name, self.delete_model, F.rename_model, self.learn_sync, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
 
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
 

@@ -1,13 +1,17 @@
-import shelve
 import os
+import shelve
+import json
 
+import walrus
 from mindsdb.utilities.config import Config
 
+CONFIG = Config()
 
-class Cache:
+
+class LocalCache:
     def __init__(self, name, *args, **kwargs):
         self.kwargs = kwargs
-        self.cache_file = os.path.join(Config()['paths']['cache'], name)
+        self.cache_file = os.path.join(CONFIG['paths']['cache'], name)
         self.cache = shelve.open(self.cache_file, **kwargs)
 
     def __getattr__(self, name):
@@ -40,3 +44,54 @@ class Cache:
         except Exception:
             pass
         os.remove(self.cache_file)
+
+
+class RedisCache:
+    def __init__(self, prefix, *args, **kwargs):
+        self.prefix = prefix
+        if CONFIG["cache"]["type"] != "redis":
+            raise Exception(f"wrong cache type in config. expected 'redis', but got {CONFIG['cache']['type']}.")
+        connection_info = CONFIG["cache"]["params"]
+        self.client = walrus.Database(**connection_info)
+
+    def __decode(self, data):
+
+        if isinstance(data, dict):
+            return dict((self.__decode(x), self.__decode(data[x])) for x in data)
+        if isinstance(data, list):
+            return list(self.__decode(x) for x in data)
+        # assume it is string
+        return data.decode("utf8")
+
+    def __contains__(self, key):
+        key = f"{self.prefix}_{key}"
+        return key in self.__decode(self.client.keys())
+
+    def __getitem__(self, key):
+        key = f"{self.prefix}_{key}"
+        raw = self.client.get(key)
+        if raw is None:
+            raise KeyError(key)
+        try:
+            res = json.loads(raw)
+        except json.JSONDecodeError:
+            res = raw.decode('utf8')
+        return res
+
+    def __setitem__(self, key, value):
+        key = f"{self.prefix}_{key}"
+        self.client.set(key, json.dumps(value))
+
+    def __iter__(self):
+        return iter(self.__decode(self.client.keys()))
+
+    def __next__(self):
+        for i in self.__decode(self.client.keys()):
+            yield i
+
+    def __delitem__(self, key):
+        key = f"{self.prefix}_key"
+        self.client.delete(key)
+
+
+Cache = RedisCache if CONFIG['cache']['type'] == 'redis' else LocalCache

@@ -1,6 +1,7 @@
 import os
 import shelve
 import json
+from abc import ABC, abstractmethod
 
 import walrus
 from mindsdb.utilities.config import Config
@@ -8,10 +9,29 @@ from mindsdb.utilities.config import Config
 CONFIG = Config()
 
 
-class LocalCache:
+class BaseCache(ABC):
+    def __init__(self):
+        self.config = Config()
+
+    @abstractmethod
+    def delete(self):
+        pass
+
+    @abstractmethod
+    def __getitem__(self, key):
+        pass
+
+    @abstractmethod
+    def __setitem__(self, key, value):
+        pass
+
+
+
+class LocalCache(BaseCache):
     def __init__(self, name, *args, **kwargs):
+        super().__init__()
         self.kwargs = kwargs
-        self.cache_file = os.path.join(CONFIG['paths']['cache'], name)
+        self.cache_file = os.path.join(self.config['paths']['cache'], name)
         self.cache = shelve.open(self.cache_file, **kwargs)
 
     def __getattr__(self, name):
@@ -46,12 +66,13 @@ class LocalCache:
         os.remove(self.cache_file)
 
 
-class RedisCache:
+class RedisCache(BaseCache):
     def __init__(self, prefix, *args, **kwargs):
+        super().__init__()
         self.prefix = prefix
-        if CONFIG["cache"]["type"] != "redis":
-            raise Exception(f"wrong cache type in config. expected 'redis', but got {CONFIG['cache']['type']}.")
-        connection_info = CONFIG["cache"]["params"]
+        if self.config["cache"]["type"] != "redis":
+            raise Exception(f"wrong cache type in config. expected 'redis', but got {self.config['cache']['type']}.")
+        connection_info = self.config["cache"]["params"]
         self.client = walrus.Database(**connection_info)
 
     def __decode(self, data):
@@ -92,6 +113,9 @@ class RedisCache:
     def __delitem__(self, key):
         key = f"{self.prefix}_key"
         self.client.delete(key)
+
+    def delete(self):
+        pass
 
 
 Cache = RedisCache if CONFIG['cache']['type'] == 'redis' else LocalCache

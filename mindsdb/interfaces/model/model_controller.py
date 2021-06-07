@@ -63,7 +63,7 @@ class ModelController():
     @contextmanager
     def _lock_context(self, id, mode='write'):
         try:
-            self._lock_predictor(mode)
+            self._lock_predictor(id, mode)
             yield True
         finally:
             self._unlock_predictor(id)
@@ -88,32 +88,18 @@ class ModelController():
         session.commit()
 
     def _try_outdate_db_status(self, predictor_record):
-        from mindsdb_native import __version__ as native_version
         from mindsdb import __version__ as mindsdb_version
         from mindsdb.interfaces.storage.db import session
 
         if predictor_record.update_status == 'update_failed':
             return predictor_record
 
-        if predictor_record.native_version != native_version:
-            predictor_record.update_status = 'available'
         if predictor_record.mindsdb_version != mindsdb_version:
             predictor_record.update_status = 'available'
 
         session.commit()
         return predictor_record
 
-    def _update_db_status(self, predictor_record):
-        from mindsdb_native import __version__ as native_version
-        from mindsdb import __version__ as mindsdb_version
-        from mindsdb.interfaces.storage.db import session
-
-        predictor_record.native_version = native_version
-        predictor_record.mindsdb_version = mindsdb_version
-        predictor_record.update_status = 'up_to_date'
-
-        session.commit()
-        return predictor_record
 
     def create(self, name, company_id=None):
         from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
@@ -128,6 +114,10 @@ class ModelController():
         self._setup_for_creation(name, original_name, company_id=company_id)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
+    
+    def learn_sync(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
+        kwargs['join_learn_process'] = True
+        return self.learn(name, from_data, to_predict, datasource_id, kwargs, company_id)
 
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
         from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
@@ -341,25 +331,41 @@ class ModelController():
         from mindsdb_native import F
         from mindsdb_worker.updater.update_model import update_model
         from mindsdb.interfaces.storage.db import session, Predictor
-        from mindsdb.interfaces.datastore.datastore import DataStore
+        from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
+        from mindsdb_native import __version__ as native_version
+        from mindsdb import __version__ as mindsdb_version
 
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
         try:
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-            predictor_record.update_status = 'updating'
-            session.commit()
-            update_model(name, self.delete_model, F.delete_model, self.learn, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStore())
 
-            predictor_record = self._update_db_status(predictor_record)
+            predictor_record.update_status = 'updating'
+
+            session.commit()
+
+            update_model(name, original_name, self.delete_model, F.rename_model, self.learn_sync, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
+
+            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+
+            predictor_record.native_version = native_version
+            predictor_record.mindsdb_version = mindsdb_version
+            predictor_record.update_status = 'up_to_date'
+
+            session.commit()
+            
         except Exception as e:
             log.error(e)
             predictor_record.update_status = 'update_failed'
             session.commit()
             return str(e)
+        
+        return 'Updated successfully'
 
 
+'''
+Notes: Remove ray from actors are getting stuck
 try:
     from mindsdb_worker.cluster.ray_controller import ray_ify
     import ray
@@ -370,3 +376,4 @@ try:
     ModelController = ray_ify(ModelController)
 except Exception as e:
     pass
+'''

@@ -321,9 +321,12 @@ class DataStore():
 
         return self.get_datasource_obj(name, raw=True, company_id=company_id)
 
-    def get_datasource_obj(self, name, raw=False, company_id=None):
+    def get_datasource_obj(self, name=None, id=None, raw=False, company_id=None):
         try:
-            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+            if name is not None:
+                datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+            else:
+                datasource_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()
 
             self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)

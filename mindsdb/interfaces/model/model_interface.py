@@ -50,6 +50,7 @@ class ModelInterfaceNativeImport():
 
 
 ray_based = False
+ModelInterface = ModelInterfaceNativeImport
 
 '''
 Notes: Remove ray from actors are getting stuck

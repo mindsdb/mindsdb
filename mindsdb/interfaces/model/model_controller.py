@@ -63,7 +63,7 @@ class ModelController():
     @contextmanager
     def _lock_context(self, id, mode='write'):
         try:
-            self._lock_predictor(mode)
+            self._lock_predictor(id, mode)
             yield True
         finally:
             self._unlock_predictor(id)

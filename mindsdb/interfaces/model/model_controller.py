@@ -341,18 +341,24 @@ class ModelController():
         from mindsdb_native import F
         from mindsdb_worker.updater.update_model import update_model
         from mindsdb.interfaces.storage.db import session, Predictor
-        from mindsdb.interfaces.datastore.datastore import DataStore
+        from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
 
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
         try:
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+
             predictor_record.update_status = 'updating'
+
             session.commit()
-            update_model(name, self.delete_model, F.delete_model, self.learn, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStore())
+
+            update_model(name, original_name, self.delete_model, F.rename_model, self.learn, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
+
+            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
 
             predictor_record = self._update_db_status(predictor_record)
+
         except Exception as e:
             log.error(e)
             predictor_record.update_status = 'update_failed'

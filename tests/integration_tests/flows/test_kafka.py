@@ -30,7 +30,7 @@ DS_NAME = "kafka_test_ds"
 
 
 def read_stream(stream_name):
-    consumer = kafka.KafkaConsumer(**CONNECTION_PARAMS, consumer_timeout_ms=1000)
+    consumer = kafka.KafkaConsumer(**CONNECTION_PARAMS)
     consumer.subscribe([stream_name])
     while True:
         try:

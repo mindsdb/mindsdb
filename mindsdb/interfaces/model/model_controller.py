@@ -363,6 +363,8 @@ class ModelController():
             predictor_record.update_status = 'update_failed'
             session.commit()
             return str(e)
+        
+        return 'Updated successfully'
 
 
 '''

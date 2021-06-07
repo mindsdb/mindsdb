@@ -9,7 +9,6 @@ jobs:
   build_amis_packer:
    #TODO: in the future migrate to https://github.com/hashicorp/packer-github-actions, when we can send config as an url
       runs-on: ubuntu-latest
-      if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
       steps:
       - uses: actions/checkout@v2
       - name: Deploy AMI's

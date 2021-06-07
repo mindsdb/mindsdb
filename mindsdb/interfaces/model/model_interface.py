@@ -49,8 +49,14 @@ class ModelInterfaceNativeImport():
         return self.controller.delete_model(*args, **kwargs)
 
     def update_model(self, *args, **kwargs):
-        return 'Model updating is no available in this version of mindsdb'
+        return self.controller.update_model(*args, **kwargs)
 
+
+ray_based = False
+ModelInterface = ModelInterfaceNativeImport
+
+'''
+Notes: Remove ray from actors are getting stuck
 try:
     from mindsdb_worker.cluster.ray_interface import ModelInterfaceRay
     import ray
@@ -63,3 +69,4 @@ try:
 except Exception as e:
     ModelInterface = ModelInterfaceNativeImport
     ray_based = False
+'''

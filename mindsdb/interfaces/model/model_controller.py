@@ -103,17 +103,6 @@ class ModelController():
         session.commit()
         return predictor_record
 
-    def _update_db_status(self, predictor_record):
-        from mindsdb_native import __version__ as native_version
-        from mindsdb import __version__ as mindsdb_version
-        from mindsdb.interfaces.storage.db import session
-
-        predictor_record.native_version = native_version
-        predictor_record.mindsdb_version = mindsdb_version
-        predictor_record.update_status = 'up_to_date'
-
-        session.commit()
-        return predictor_record
 
     def create(self, name, company_id=None):
         from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
@@ -342,6 +331,8 @@ class ModelController():
         from mindsdb_worker.updater.update_model import update_model
         from mindsdb.interfaces.storage.db import session, Predictor
         from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
+        from mindsdb_native import __version__ as native_version
+        from mindsdb import __version__ as mindsdb_version
 
         original_name = name
         name = f'{company_id}@@@@@{name}'
@@ -357,8 +348,12 @@ class ModelController():
 
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
 
-            predictor_record = self._update_db_status(predictor_record)
+            predictor_record.native_version = native_version
+            predictor_record.mindsdb_version = mindsdb_version
+            predictor_record.update_status = 'up_to_date'
 
+            session.commit()
+            
         except Exception as e:
             log.error(e)
             predictor_record.update_status = 'update_failed'

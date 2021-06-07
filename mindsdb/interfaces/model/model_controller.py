@@ -366,6 +366,8 @@ class ModelController():
             return str(e)
 
 
+'''
+Notes: Remove ray from actors are getting stuck
 try:
     from mindsdb_worker.cluster.ray_controller import ray_ify
     import ray
@@ -376,3 +378,4 @@ try:
     ModelController = ray_ify(ModelController)
 except Exception as e:
     pass
+'''

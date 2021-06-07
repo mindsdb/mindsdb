@@ -49,6 +49,8 @@ class ModelInterfaceNativeImport():
         return self.controller.update_model(*args, **kwargs)
 
 
+ray_based = False
+
 '''
 Notes: Remove ray from actors are getting stuck
 try:

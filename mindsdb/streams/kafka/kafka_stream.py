@@ -14,6 +14,7 @@ class KafkaStream(BaseStream):
         self.producer = kafka.KafkaProducer(**connection_info, acks='all')
 
     def _read_from_in_stream(self):
+        print('reading from stream_in')
         while True:
             try:
                 msg = next(self.consumer)
@@ -25,6 +26,7 @@ class KafkaStream(BaseStream):
         #     yield json.loads(msg.value)
 
     def _write_to_out_stream(self, dct):
+        print('writing to stream_out')
         self.producer.send(self.topic_out, json.dumps(dct).encode('utf-8'))
     
     def __del__(self):

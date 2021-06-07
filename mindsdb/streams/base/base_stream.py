@@ -7,7 +7,7 @@ import mindsdb.interfaces.storage.db as db
 
 
 class BaseStream:
-    def __init__(self, name, predictor):
+    def __init__(self, name, predictor, learn_threshold=None):
         self.name = name
         self.predictor = predictor
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
@@ -20,24 +20,36 @@ class BaseStream:
 
         self.target = p.learn_args['to_predict'] if isinstance(p.learn_args['to_predict'], str) else p.learn_args['to_predict'][0]
 
-        ts_settings = p.learn_args['kwargs'].get('timeseries_settings', None)
-
-        if ts_settings is None:
+        self.ts_settings = p.learn_args['kwargs'].get('timeseries_settings', None)
+        if self.ts_settings is None:
             self.thread = Thread(target=BaseStream._make_predictions, args=(self,))
         else:
-            self.ts_settings = ts_settings
             self.thread = Thread(target=BaseStream._make_ts_predictions, args=(self,))
-
         self.thread.start()
+        self._learn_threshold = learn_threshold
+
+    def _read_from_learning_stream(self):
+        raise NotImplementedError
+
+    def _get_learning_stream_size(self):
+        raise NotImplementedError
 
     def _read_from_in_stream(self):
         raise NotImplementedError
 
     def _write_to_out_stream(self, dct):
         raise NotImplementedError
-    
+
+    def _consider_adjusting_model(self):
+        if self._get_learning_stream_size() >= self._learn_data_threshold:
+            when_data = list(self._read_from_learning_stream())
+            print('adjusting model with {} rows'.format(len(when_data)))
+            self.native_interface.adjust(self.predictor, 'dict', when_data=when_data)
+
     def _make_predictions(self):
         while not self.stop_event.wait(0.5):
+            if self._learn_threshold is not None:
+                self._consider_adjusting_model()
             for when_data in self._read_from_in_stream():
                 for res in self.native_interface.predict(self.predictor, 'dict', when_data=when_data):
                     self._write_to_out_stream(res)
@@ -55,6 +67,8 @@ class BaseStream:
             cache = []
 
             while not self.stop_event.wait(0.5):
+                if self._learn_threshold is not None:
+                    self._consider_adjusting_model()
                 for when_data in self._read_from_in_stream():
                     for ob in order_by:
                         if ob not in when_data:
@@ -76,6 +90,7 @@ class BaseStream:
             gb_cache = defaultdict(list)
 
             while not self.stop_event.wait(0.5):
+                self._consider_adjusting_model()
                 for when_data in self._read_from_in_stream():
                     for ob in order_by:
                         if ob not in when_data:

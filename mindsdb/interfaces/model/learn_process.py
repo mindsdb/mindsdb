@@ -99,6 +99,36 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
     delete_process_mark('learn')
 
 
+def run_adjust(name, db_name, from_data, company_id):
+    import mindsdb_native
+
+    create_process_mark('learn')
+
+    mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
+
+    # set status to 'training'
+    predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
+    predictor_record.data['status'] = 'training'
+    session.commit()
+
+    # adjust
+    try:
+        mdb.adjust(from_data=from_data)
+    except Exception as e:
+        log = logging.getLogger('mindsdb.main')
+        log.error(f'Predictor adjust error: {e}')
+        predictor_record.data['status'] = 'error'
+        session.commit()
+        delete_process_mark('learn')
+
+    # update model data in DB
+    predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
+    predictor_record.data = mindsdb_native.F.get_model_data(name)
+    session.commit()
+
+    delete_process_mark('learn')
+
+
 class LearnProcess(ctx.Process):
     daemon = True
 
@@ -112,4 +142,14 @@ class LearnProcess(ctx.Process):
 
         this is work for celery worker here?
         '''
+        run_learn(*self._args)
+
+
+class AdjustProcess(ctx.Process):
+    daemon = True
+
+    def __init__(self, *args):
+        super(AdjustProcess, self).__init__(args=args)
+    
+    def run(self):
         run_learn(*self._args)

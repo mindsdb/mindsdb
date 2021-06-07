@@ -26,11 +26,6 @@ class ModelController():
         self.ray_based = ray_based
 
     def _invalidate_cached_predictors(self):
-        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS, MySqlDS,
-                                         PostgresDS, MSSQLDS, MongoDS,
-                                         SnowflakeDS, AthenaDS)
-        from mindsdb.interfaces.storage.db import session, Predictor
-
         # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
         for predictor_name in list(self.predictor_cache.keys()):
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
@@ -116,18 +111,40 @@ class ModelController():
         return predictor_record
 
     def create(self, name, company_id=None):
-        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
-                                         MySqlDS, PostgresDS, MSSQLDS,
-                                         MongoDS, SnowflakeDS, AthenaDS)
         import mindsdb_native
-        from mindsdb.interfaces.storage.db import session, Predictor
-
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
         self._setup_for_creation(name, original_name, company_id=company_id)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
+
+    def adjust(self, name, from_data, datasource_id, join=False, company_id=None):
+        from mindsdb.interfaces.model.learn_process import AdjustProcess, run_adjust
+
+        create_process_mark('learn')
+        original_name = name
+        name = f'{company_id}@@@@@{name}'
+
+        if self.ray_based:
+            run_adjust(
+                name=name,
+                db_name=original_name,
+                from_data=from_data,
+                datasource_id=datasource_id,
+                company_id=company_id
+            )
+        else:
+            p = AdjustProcess(name, original_name, from_data, datasource_id, company_id)
+            p.start()
+            if join:
+                p.join()
+                if p.exitcode != 0:
+                    delete_process_mark('learn')
+                    raise Exception('Adjusting process failed!')
+
+        delete_process_mark('learn')
+        return 0
 
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
         from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
@@ -150,7 +167,6 @@ class ModelController():
                 datasource_id=datasource_id,
                 company_id=company_id
             )
-
         else:
             p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
             p.start()
@@ -158,17 +174,14 @@ class ModelController():
                 p.join()
                 if p.exitcode != 0:
                     delete_process_mark('learn')
-                    raise Exception('Learning process failed !')
+                    raise Exception('Learning process failed!')
 
         delete_process_mark('learn')
         return 0
 
     def predict(self, name, pred_format, when_data=None, kwargs={}, company_id=None):
-        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
-                                         MySqlDS, PostgresDS, MSSQLDS, MongoDS,
-                                         SnowflakeDS, AthenaDS)
         import mindsdb_native
-        from mindsdb.interfaces.storage.db import session, Predictor
+        from mindsdb.interfaces.storage.db import Predictor
 
         create_process_mark('predict')
         original_name = name
@@ -218,7 +231,6 @@ class ModelController():
         return predictions
 
     def analyse_dataset(self, ds, company_id=None):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
         from mindsdb_native import F
 
         create_process_mark('analyse')
@@ -289,7 +301,7 @@ class ModelController():
         return model
 
     def get_models(self, company_id=None):
-        from mindsdb.interfaces.storage.db import session, Predictor
+        from mindsdb.interfaces.storage.db import Predictor
 
         models = []
         predictor_records = Predictor.query.filter_by(company_id=company_id, is_custom=False)
@@ -322,7 +334,6 @@ class ModelController():
 
     def delete_model(self, name, company_id=None):
         from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
         from mindsdb.interfaces.storage.db import session, Predictor
 
         original_name = name

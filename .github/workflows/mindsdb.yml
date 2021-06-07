@@ -175,7 +175,6 @@ jobs:
 
   deploy_version_file:
     runs-on: ubuntu-latest
-    needs: build_amis_packer
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2

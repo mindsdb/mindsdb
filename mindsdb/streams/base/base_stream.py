@@ -62,13 +62,12 @@ class BaseStream:
 
                     cache.append(when_data)
                 
-                cache = [*sorted(
-                    cache,
-                    # WARNING: assuming wd[ob] is numeric
-                    key=lambda wd: tuple(wd[ob] for ob in order_by)
-                )]
-
                 if len(cache) >= window:
+                    cache = [*sorted(
+                        cache,
+                        # WARNING: assuming wd[ob] is numeric
+                        key=lambda wd: tuple(wd[ob] for ob in order_by)
+                    )]
                     res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[-window:])
                     self._write_to_out_stream(res_list[-1])
                     cache = cache[1 - window:]
@@ -89,13 +88,12 @@ class BaseStream:
                     gb_cache[gb_value].append(when_data)
 
                 for gb_value in gb_cache.keys():
-                    gb_cache[gb_value] = [*sorted(
-                        gb_cache[gb_value],
-                        # WARNING: assuming wd[ob] is numeric
-                        key=lambda wd: tuple(wd[ob] for ob in order_by)
-                    )]
-
                     if len(gb_cache[gb_value]) >= window:
+                        gb_cache[gb_value] = [*sorted(
+                            gb_cache[gb_value],
+                            # WARNING: assuming wd[ob] is numeric
+                            key=lambda wd: tuple(wd[ob] for ob in order_by)
+                        )]
                         res_list = self.native_interface.predict(self.predictor, 'dict', when_data=gb_cache[gb_value][-window:])
                         self._write_to_out_stream(res_list[-1])
                         gb_cache[gb_value] = gb_cache[gb_value][1 - window:]

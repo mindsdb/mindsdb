@@ -30,10 +30,9 @@ def delete_learn_mark():
             p.unlink()
 
 
-def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, company_id):
+def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, company_id, save=True):
     import mindsdb_native
     import mindsdb_datasources
-    import mindsdb
     import torch
     import gc
 
@@ -46,20 +45,21 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
     fs_store = FsSotre()
     mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
-    predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
-    predictor_record.datasource_id = datasource_id
-    predictor_record.to_predict = to_predict
-    predictor_record.native_version = mindsdb_native.__version__
-    predictor_record.mindsdb_version = mindsdb_version
-    predictor_record.learn_args = {
-        'to_predict': to_predict,
-        'kwargs': kwargs
-    }
-    predictor_record.data = {
-        'name': db_name,
-        'status': 'training'
-    }
-    session.commit()
+    if save:
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
+        predictor_record.datasource_id = datasource_id
+        predictor_record.to_predict = to_predict
+        predictor_record.native_version = mindsdb_native.__version__
+        predictor_record.mindsdb_version = mindsdb_version
+        predictor_record.learn_args = {
+            'to_predict': to_predict,
+            'kwargs': kwargs
+        }
+        predictor_record.data = {
+            'name': db_name,
+            'status': 'training'
+        }
+        session.commit()
 
     to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
     data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'], **from_data['kwargs'])
@@ -73,26 +73,29 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
     except Exception as e:
         log = logging.getLogger('mindsdb.main')
         log.error(f'Predictor learn error: {e}')
-        predictor_record.data = {
-            'name': db_name,
-            'status': 'error'
-        }
-        session.commit()
+        if save:
+            predictor_record.data = {
+                'name': db_name,
+                'status': 'error'
+            }
+            session.commit()
         delete_process_mark('learn')
 
-    fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
+    if save:
+        fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
 
     model_data = mindsdb_native.F.get_model_data(name)
 
     try:
         torch.cuda.empty_cache()
-    except Exception as e:
+    except Exception:
         pass
     gc.collect()
 
-    predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
-    predictor_record.data = model_data
-    session.commit()
+    if save:
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
+        predictor_record.data = model_data
+        session.commit()
 
     model_data['name'] = db_name
     DatabaseWrapper(company_id).register_predictors([model_data])

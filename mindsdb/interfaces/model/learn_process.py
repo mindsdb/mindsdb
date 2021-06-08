@@ -30,7 +30,7 @@ def delete_learn_mark():
             p.unlink()
 
 
-def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, company_id, save=True):
+def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, company_id, save):
     import mindsdb_native
     import mindsdb_datasources
     import torch

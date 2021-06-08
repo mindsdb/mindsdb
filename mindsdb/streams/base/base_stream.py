@@ -41,7 +41,7 @@ class BaseStream:
         raise NotImplementedError
 
     def _consider_adjusting_model(self):
-        if self._get_learning_stream_size() >= self._learn_data_threshold:
+        if self._get_learning_stream_size() >= self.learn_threshold:
             when_data = list(self._read_from_learning_stream())
             print('adjusting model with {} rows'.format(len(when_data)))
             self.native_interface.adjust(self.predictor, 'dict', when_data=when_data)

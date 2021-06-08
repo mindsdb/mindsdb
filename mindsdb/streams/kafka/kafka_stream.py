@@ -27,9 +27,12 @@ class KafkaStream(BaseStream):
                 return
             else:
                 yield json.loads(msg.value)
-        # for msg in self.consumer:
+        # for msg in self.learning_consumer:
         #     yield json.loads(msg.value)
         
+    def _get_learning_stream_size(self):
+        return self.learning_consumer.position()
+
     def _read_from_in_stream(self):
         print('reading from stream_in')
         while True:

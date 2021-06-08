@@ -143,7 +143,7 @@ class ModelController():
             )
 
         else:
-            p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
+            p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id, save)
             p.start()
             if join_learn_process is True:
                 p.join()

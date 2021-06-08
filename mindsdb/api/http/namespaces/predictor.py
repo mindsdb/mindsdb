@@ -150,7 +150,7 @@ class PredictorLearn(Resource):
         to_predict = data.get('to_predict')
         kwargs = data.get('kwargs', None)
 
-        if type(kwargs) != type({}):
+        if not isinstance(kwargs, dict):
             kwargs = {}
 
         if 'advanced_args' not in kwargs:

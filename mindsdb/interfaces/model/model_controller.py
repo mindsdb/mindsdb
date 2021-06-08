@@ -125,11 +125,10 @@ class ModelController():
         create_process_mark('learn')
         original_name = name
         name = f'{company_id}@@@@@{name}'
-
+        join_learn_process = kwargs.get('join_learn_process', False)
+        
         if save:
-            join_learn_process = kwargs.get('join_learn_process', False)
-
-        self._setup_for_creation(name, original_name, company_id=company_id)
+            self._setup_for_creation(name, original_name, company_id=company_id)
 
         if self.ray_based:
             run_learn(

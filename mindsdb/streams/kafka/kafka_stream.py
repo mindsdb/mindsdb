@@ -20,18 +20,25 @@ class KafkaStream(BaseStream):
 
     def _read_from_learning_stream(self):
         print('reading from learning_stream')
-        while True:
-            try:
-                msg = next(self.learning_consumer)
-            except StopIteration:
-                return
-            else:
-                yield json.loads(msg.value)
-        # for msg in self.learning_consumer:
-        #     yield json.loads(msg.value)
+        if self.learning_stream is None:
+            raise NotImplementedError('learning_stream is not provided in constructor')
+        else:
+            while True:
+                try:
+                    msg = next(self.learning_consumer)
+                except StopIteration:
+                    return
+                else:
+                    yield json.loads(msg.value)
+            # for msg in self.learning_consumer:
+            #     yield json.loads(msg.value)
         
     def _get_learning_stream_size(self):
-        return self.learning_consumer.position()
+        print('getting learning_stream size')
+        if self.learning_stream is None:
+            raise NotImplementedError('learning_stream is not provided in constructor')
+        else:
+            return self.learning_consumer.position()
 
     def _read_from_in_stream(self):
         print('reading from stream_in')

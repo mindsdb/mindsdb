@@ -135,7 +135,7 @@ class RedisTest(unittest.TestCase):
             stream_in.add({'': json.dumps(when_data)})
             time.sleep(5)
 
-        predictions = stream_out.read()
+        predictions = list(stream_out.read())
         stream_out.trim(0, approximate=False)
         stream_in.trim(0, approximate=False)
         self.assertTrue(len(predictions)==2)
@@ -168,7 +168,7 @@ class RedisTest(unittest.TestCase):
             stream_in.add({'': json.dumps(when_data)})
             time.sleep(5)
 
-        predictions = stream_out.read()
+        predictions = list(stream_out.read())
         stream_out.trim(0, approximate=False)
         stream_in.trim(0, approximate=False)
         self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")

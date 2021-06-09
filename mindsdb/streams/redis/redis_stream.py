@@ -17,13 +17,19 @@ class RedisStream(BaseStream):
 
     def _read_from_learning_stream(self):
         print('reading from learning_stream')
-        for k, when_data in self.learning_stream.read():
-            self.learning_stream.delete(k)
-            yield json.loads(when_data[b''])
+        if self.learning_stream is None:
+            raise NotImplementedError('learning_stream is not provided in constructor')
+        else:
+            for k, when_data in self.learning_stream.read():
+                self.learning_stream.delete(k)
+                yield json.loads(when_data[b''])
 
     def _get_learning_stream_size(self):
         print('getting learning_stream size')
-        return self.learning_stream.size()
+        if self.learning_stream is None:
+            raise NotImplementedError('learning_stream is not provided in constructor')
+        else:
+            return self.learning_stream.size()
 
     def _read_from_in_stream(self):
         print('reading from stream_in')

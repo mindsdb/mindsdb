@@ -222,9 +222,11 @@ class ModelController():
 
     def analyse_dataset(self, ds, company_id=None):
         from mindsdb_native import F
+        import mindsdb_datasources
 
         create_process_mark('analyse')
-        ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
+        ds_cls = getattr(mindsdb_datasources, ds['class'])
+        ds = ds_cls(*ds['args'], **ds['kwargs'])
         analysis = F.analyse_dataset(ds)
 
         delete_process_mark('analyse')

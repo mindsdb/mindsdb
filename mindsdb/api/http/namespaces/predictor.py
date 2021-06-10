@@ -188,10 +188,9 @@ class PredictorAdjust(Resource):
             return {'message': f'Can not find datasource: {ds_name}'}, 400
 
         request.native_interface.adjust(
-            name,
-            from_data,
-            request.default_store.get_datasource(ds_name)['id'],
-            join=True
+            name=name,
+            from_data=from_data,
+            join=True,
         )
 
         for i in range(20):

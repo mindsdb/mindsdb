@@ -44,7 +44,7 @@ class BaseStream:
         if self._get_learning_stream_size() >= self.learn_threshold:
             when_data = list(self._read_from_learning_stream())
             print('adjusting model with {} rows'.format(len(when_data)))
-            self.native_interface.adjust(self.predictor, 'dict', when_data=when_data)
+            self.native_interface.adjust(self.predictor, when_data, join=False, company_id=self.company_id)
 
     def _make_predictions(self):
         while not self.stop_event.wait(0.5):

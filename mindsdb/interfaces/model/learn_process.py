@@ -152,4 +152,4 @@ class AdjustProcess(ctx.Process):
         super(AdjustProcess, self).__init__(args=args)
     
     def run(self):
-        run_learn(*self._args)
+        run_adjust(*self._args)

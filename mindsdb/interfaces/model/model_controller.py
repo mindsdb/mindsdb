@@ -109,7 +109,7 @@ class ModelController():
         kwargs['join_learn_process'] = True
         return self.learn(name, from_data, to_predict, datasource_id, kwargs, company_id)
 
-    def adjust(self, name, from_data, datasource_id, join=False, company_id=None):
+    def adjust(self, name, from_data, join=False, company_id=None):
         from mindsdb.interfaces.model.learn_process import AdjustProcess, run_adjust
 
         create_process_mark('learn')
@@ -121,11 +121,10 @@ class ModelController():
                 name=name,
                 db_name=original_name,
                 from_data=from_data,
-                datasource_id=datasource_id,
                 company_id=company_id
             )
         else:
-            p = AdjustProcess(name, original_name, from_data, datasource_id, company_id)
+            p = AdjustProcess(name, original_name, from_data, company_id)
             p.start()
             if join:
                 p.join()

@@ -175,7 +175,7 @@ class PredictorPredict(Resource):
         }
 
 
-@ns_conf.route('/<name>/predict')
+@ns_conf.route('/<name>/adjust')
 @ns_conf.param('name', 'The predictor identifier')
 class PredictorAdjust(Resource):
     @ns_conf.doc('Adjust predictor')
@@ -187,7 +187,7 @@ class PredictorAdjust(Resource):
         if from_data is None:
             return {'message': f'Can not find datasource: {ds_name}'}, 400
 
-        request.native_interface.learn(
+        request.native_interface.adjust(
             name,
             from_data,
             request.default_store.get_datasource(ds_name)['id'],

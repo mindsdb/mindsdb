@@ -148,15 +148,6 @@ class HTTPTest(unittest.TestCase):
         res = requests.put(url, json=params)
         assert res.status_code == 200
 
-        # POST predictions
-        params = {
-            'when': {'sqft': 500}
-        }
-        url = f'{root}/predictors/{pred_name}/predict'
-        res = requests.post(url, json=params)
-        assert res.status_code == 200
-        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
-
         # POST predictions #1
         params = {
             'when': {'sqft': 500}

@@ -187,19 +187,7 @@ class PredictorAdjust(Resource):
         if from_data is None:
             return {'message': f'Can not find datasource: {ds_name}'}, 400
 
-        request.native_interface.adjust(
-            name=name,
-            from_data=from_data,
-            join=True,
-        )
-
-        for i in range(20):
-            try:
-                # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
-                request.native_interface.get_model_data(name)
-                break
-            except Exception:
-                time.sleep(1)
+        request.native_interface.adjust(name=name, from_data=from_data, join=False)
 
         return '', 200
 

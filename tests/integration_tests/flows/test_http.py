@@ -157,6 +157,33 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
+        # POST predictions #1
+        params = {
+            'when': {'sqft': 500}
+        }
+        url = f'{root}/predictors/{pred_name}/predict'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
+
+        # Adjust predictor
+        params = {
+            'data_source_name': ds_name,
+        }
+        url = f'{root}/predictors/{pred_name}/adjust'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+
+        # POST predictions #2
+        params = {
+            'when': {'sqft': 500}
+        }
+        url = f'{root}/predictors/{pred_name}/predict'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
+
+
     def test_4_datasources(self):
         """
         Call list datasources endpoint

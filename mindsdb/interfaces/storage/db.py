@@ -85,7 +85,7 @@ class Datasource(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     datasources_version = Column(String)
-    integration_id = Column(Integer)
+    integration_id = Column(Integer, ForeignKey('integration.id'))
 
 
 class Predictor(Base):
@@ -100,7 +100,8 @@ class Predictor(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     native_version = Column(String)
-    datasource_id = Column(Integer)
+    datasource_id = Column(Integer, ForeignKey('datasource.id'))
+    additional_datasource_ids = Column(Array, default=[]) # datasources used to adjust model
     is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')

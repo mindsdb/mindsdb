@@ -84,7 +84,7 @@ class Predictor(Resource):
         except Exception:
             kwargs = None
 
-        if type(kwargs) != type({}):
+        if not isinstance(kwargs, dict):
             kwargs = {}
 
         if 'equal_accuracy_for_all_output_categories' not in kwargs:
@@ -173,6 +173,36 @@ class PredictorPredict(Resource):
         return {
             'message': msg
         }
+
+
+@ns_conf.route('/<name>/predict')
+@ns_conf.param('name', 'The predictor identifier')
+class PredictorAdjust(Resource):
+    @ns_conf.doc('Adjust predictor')
+    def post(self, name):
+        data = request.json
+        ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
+        from_data = request.default_store.get_datasource_obj(ds_name, raw=True)
+
+        if from_data is None:
+            return {'message': f'Can not find datasource: {ds_name}'}, 400
+
+        request.native_interface.learn(
+            name,
+            from_data,
+            request.default_store.get_datasource(ds_name)['id'],
+            join=True
+        )
+
+        for i in range(20):
+            try:
+                # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
+                request.native_interface.get_model_data(name)
+                break
+            except Exception:
+                time.sleep(1)
+
+        return '', 200
 
 
 @ns_conf.route('/<name>/predict')

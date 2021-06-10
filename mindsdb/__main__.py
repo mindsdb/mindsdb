@@ -68,33 +68,32 @@ if __name__ == '__main__':
 
     # @TODO Backwards compatibiltiy for tests, remove later
     from mindsdb.interfaces.database.integrations import add_db_integration, get_db_integration
-
     dbw = DatabaseWrapper(COMPANY_ID)
     model_interface = ModelInterface()
-
+    raw_model_data_arr = model_interface.get_models()
     model_data_arr = []
-    for model in model_interface.get_models():
+    for model in raw_model_data_arr:
         if model['status'] == 'complete':
+            x = model_interface.get_model_data(model['name'])
             try:
                 model_data_arr.append(model_interface.get_model_data(model['name']))
             except Exception:
-                log.error('get_model_data() failed for model "{}"'.format(model['name']))
-
-    for integration_name in config.get('integrations', {}):
-        try:
-            if get_db_integration(integration_name, COMPANY_ID) is None:
-                print(f'Adding: "{integration_name}" from config["integrations"]')
-                add_db_integration(integration_name, config['integrations'][integration_name], None)            # Setup for user `None`, since we don't need this for cloud
-            else:
-                print(f'Ignoring "{integration_name}" from config["integrations"] (already exists in DB)')
-
-        except Exception as e:
-            log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
-
+                pass
     for integration_name in get_db_integrations(COMPANY_ID, sensitive_info=True):
-        print(integration_name)
         print(f"Setting up integration: {integration_name}")
         dbw.setup_integration(integration_name)
+
+    for integration_name in config.get('integrations', {}):
+        print(f'Adding: {integration_name}')
+        try:
+            it = get_db_integration(integration_name, None)
+            if it is None:
+                add_db_integration(integration_name, config['integrations'][integration_name], None)            # Setup for user `None`, since we don't need this for cloud
+            if config['integrations'][integration_name].get('publish', False):
+                dbw.setup_integration(integration_name)
+                dbw.register_predictors(model_data_arr, integration_name=integration_name)
+        except Exception as e:
+            log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
     del model_interface
     del dbw

@@ -107,7 +107,7 @@ class Datum():
 
     def toStringPacket(self):
         if self.type == 'string<packet>':
-            return self.value.getPacketString()
+            return self.value.get_packet_string()
 
         if self.type in ['string<EOF>', 'byte<EOF>']:
             length = int(len(self.value))

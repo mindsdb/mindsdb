@@ -46,7 +46,7 @@ class ResultsetRowPacket(Packet):
     def test():
         import pprint
         pprint.pprint(
-            str(ResultsetRowPacket().getPacketString())
+            str(ResultsetRowPacket().get_packet_string())
         )
 
 

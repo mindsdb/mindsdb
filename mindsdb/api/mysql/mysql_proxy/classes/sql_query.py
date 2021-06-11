@@ -13,7 +13,7 @@ import re
 import traceback
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.ast import Join, Identifier, Operation, Constant
+from mindsdb_sql.ast import Join, Identifier, Operation, Constant, UnaryOperation, BinaryOperation
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, binary_ops, unary_ops, operator_map
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators2 import operator_map as new_operator_map
@@ -203,17 +203,17 @@ class SQLQuery():
 
     def _format_field(self, identifier):
         name = identifier.value
+        table_alias = None
         if '.' in name:
+            table_alias = name.split('.')[0]
             name = name.split('.')[-1]
         return {
             'identifier': identifier,
             'value': identifier.value,
             'name': name,
-            'alias': name if identifier.alias is None else identifier.alias
+            'alias': name if identifier.alias is None else identifier.alias,
+            'table_alias': table_alias
         }
-
-    def _parse_fields(self, el):
-        pass
 
     def _parse_operation_identifiers(self, args):
         res = []
@@ -250,6 +250,10 @@ class SQLQuery():
         tables_aliases = [x['alias'] for x in tables_list]
         if len(tables_aliases) != len(set(tables_aliases)):
             raise Exception('each table must have unique alias')
+
+        self.tables_alias_map = {}
+        for el in self.new_tables_list:
+            self.tables_alias_map[el['alias']] = el
 
         # take fields list from 'select', 'join on' and 'where'
         identifiers_list = []
@@ -507,6 +511,9 @@ class SQLQuery():
             # else:
             #     raise Exception('not ready yet')
             table['data'] = data
+            columns = dn.getTableColumns(table['name'])
+            table['columns'] = columns
+        # x = 1
 
         # +++ make columns list
         # TODO del in future
@@ -522,7 +529,6 @@ class SQLQuery():
         #     caption=caption
         # ))
         # --- make columns list
-        x = 1
 
     def _fetchData(self):
         self.table_data = {}
@@ -646,27 +652,20 @@ class SQLQuery():
         return self.table_data[table_name]
 
     def _apply_where_filter(self, row, where):
-        from mindsdb_sql.ast import Join, Identifier, Operation, BinaryOperation, UnaryOperation
-
         if isinstance(where, Identifier):
             return row[where.value]
         elif isinstance(where, Constant):
             return where.value
+        elif not isinstance(where, (UnaryOperation, BinaryOperation)):
+            Exception(f'Unknown operation type: {where}')
 
         op_fn = new_operator_map.get(where.op)
         if op_fn is None:
             raise Exception(f'unknown operator {where.op}')
-        if isinstance(where, UnaryOperation):
-            value_a = self._apply_where_filter(row, where.args[0])
-            result = op_fn(value_a)
-            return result
-        elif isinstance(where, BinaryOperation):
-            value_a = self._apply_where_filter(row, where.args[0])
-            value_b = self._apply_where_filter(row, where.args[1])
-            result = op_fn(value_a, value_b)
-            return result
 
-        raise Exception('What? _apply_where_filter')
+        args = [self._apply_where_filter(row, arg) for arg in where.args]
+        result = op_fn(*args)
+        return result
 
     def _process_data(self):
         where = self.mindsdb_sql_struct.where
@@ -816,14 +815,16 @@ class SQLQuery():
         for record in data:
             row = []
             for col in self.columns:
-                col_name = f"{col['database']}.{col['table_name']}"
+                # col_name = f"{col['database']}.{col['table_name']}"
+                col_name = col['alias']
 
                 # FIXME that only for 'integration JOIN predictor'
                 if col_name not in record:
                     col_name = [x for x in record.keys() if col_name in x][0]
 
-                table_record = record[col_name]
-                val = table_record[col['name']]
+                # table_record = record[col_name]
+                # val = table_record[col['name']]
+                val = record[col_name]
                 row.append(val)
             result.append(row)
 
@@ -1075,6 +1076,50 @@ class SQLQuery():
 
     @property
     def columns(self):
+        result = []
+        # identifiers_list_select
+        for el in self.identifiers_list_select:
+            if el['alias'] == '*':
+                if el['table_alias'] is not None:
+                    table_meta = self.tables_alias_map.get(el['table_alias'])
+                    if table_meta is None:
+                        raise Exception(f"can not find table {el['table_alias']}")
+                    for column_name in table_meta['columns']:
+                        result.append({
+                            'database': '',  # TODO
+                            'table_name': '',  # TODO
+                            'name': column_name,
+                            'alias': column_name,
+                            # NOTE all work with text-type, but if/when wanted change types to real,
+                            # it will need to check all types casts in BinaryResultsetRowPacket
+                            'type': TYPES.MYSQL_TYPE_VAR_STRING
+                        })
+                else:
+                    for table_meta in self.new_tables_list:
+                        for column_name in table_meta['columns']:
+                            result.append({
+                                'database': '',  # TODO
+                                'table_name': '',  # TODO
+                                'name': column_name,
+                                'alias': column_name,
+                                # NOTE all work with text-type, but if/when wanted change types to real,
+                                # it will need to check all types casts in BinaryResultsetRowPacket
+                                'type': TYPES.MYSQL_TYPE_VAR_STRING
+                            })
+            else:
+                result.append({
+                    'database': '',  # TODO
+                    'table_name': '',  # TODO
+                    'name': el['name'],
+                    'alias': el['alias'],
+                    # NOTE all work with text-type, but if/when wanted change types to real,
+                    # it will need to check all types casts in BinaryResultsetRowPacket
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                })
+        return result
+
+    @property
+    def columns2(self):
         result = []
         for column in self.select_columns:
             parts = column['table'].split('.')

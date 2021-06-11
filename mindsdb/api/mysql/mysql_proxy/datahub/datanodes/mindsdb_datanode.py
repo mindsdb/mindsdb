@@ -150,7 +150,11 @@ class MindsDBDataNode(DataNode):
         if self.ai_table.get_ai_table(table):
             return self._select_from_ai_table(table, columns, where)
 
-        where = plain_where_conditions(where)
+        try:
+            where = plain_where_conditions(where)
+        except Exception as e:
+            x = 1
+
 
         original_when_data = None
         if 'when_data' in where:

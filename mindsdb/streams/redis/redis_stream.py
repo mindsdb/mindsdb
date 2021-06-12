@@ -16,6 +16,3 @@ class RedisStream(BaseStream):
 
     def write(self, dct):
         self.stream.add({'': json.dumps(dct)})
-
-    def __len__(self):
-        return self.stream.length()

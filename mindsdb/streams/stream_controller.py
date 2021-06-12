@@ -9,15 +9,15 @@ import mindsdb.interfaces.storage.db as db
 
 class StreamController:
     def __init__(self, name, predictor, stream_in, stream_out, learning_stream=None, learning_threshold=100):
-
         self.name = name
         self.predictor = predictor
 
         self.stream_in = stream_in
         self.stream_out = stream_out
+        
         self.learning_stream = learning_stream
-
         self.learning_threshold = learning_threshold
+        self.learning_data = []
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.stop_event = Event()
@@ -40,9 +40,11 @@ class StreamController:
 
         self.thread.start()
 
+
     def _consider_learning(self):
-        pass
-        # if len(self.learning_stream) >= self.learning_threshold:
+        self.learning_data.extend(self.learning_stream.read())
+        if len(self.learning_data) >= self.learning_threshold:
+            pass
         #     # 1. Create a new datasource
         #     when_data_list = self.learning_stream.read()
         #     ds_id = self.data_store.save(name='random_name', data=when_data_list)

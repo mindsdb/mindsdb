@@ -20,7 +20,6 @@ class StreamController:
         self.stop_event = Event()
         self.native_interface = ModelInterface()
 
-
         p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
         if p is None:
             raise Exception(f'Predictor {predictor} doesn\'t exist')

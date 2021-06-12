@@ -11,6 +11,8 @@ import pandas as pd
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
 
+from mindsdb.streams import KafkaStream
+
 INTEGRATION_NAME = 'test_kafka'
 kafka_creds = {}
 if USE_EXTERNAL_DB_SERVER:
@@ -27,19 +29,6 @@ STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
 STREAM_IN_TS = f"test_stream_in_ts_{STREAM_SUFFIX}"
 STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
 DS_NAME = "kafka_test_ds"
-
-
-def read_stream(stream_name):
-    consumer = kafka.KafkaConsumer(**CONNECTION_PARAMS)
-    consumer.subscribe([stream_name])
-    while True:
-        try:
-            msg = next(consumer)
-        except StopIteration:
-            consumer.close()
-            return
-        else:
-            yield json.loads(msg.value)
 
 
 class KafkaTest(unittest.TestCase):
@@ -103,81 +92,58 @@ class KafkaTest(unittest.TestCase):
     def test_1_create_integration(self):
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
         params = {"type": "kafka", "connection": CONNECTION_PARAMS}
-        try:
-            res = requests.put(url, json={'params': params})
-            self.assertTrue(res.status_code == 200, res.text)
-        except Exception as e:
-            self.fail(e)
+        res = requests.put(url, json={'params': params})
+        assert res.status_code == 200
 
     def test_2_create_kafka_stream(self):
-        try:
-            self.upload_ds(DS_NAME)
-        except Exception as e:
-            self.fail(f"couldn't upload datasource: {e}")
+        self.upload_ds(DS_NAME)
+        self.train_predictor(DS_NAME, self._testMethodName)
 
-        try:
-            self.train_predictor(DS_NAME, self._testMethodName)
-        except Exception as e:
-            self.fail(f"couldn't train predictor: {e}")
+        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        res = requests.put(url, json={
+            "predictor": self._testMethodName,
+            "stream_in": STREAM_IN,
+            "stream_out": STREAM_OUT,
+            "integration": INTEGRATION_NAME
+        })
 
-        try:
-            url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json={
-                "predictor": self._testMethodName,
-                "stream_in": STREAM_IN,
-                "stream_out": STREAM_OUT,
-                "integration": INTEGRATION_NAME
-            })
-            self.assertTrue(res.status_code == 200, res.text)
-        except Exception as e:
-            self.fail(f"error creating stream: {e}")
+        assert res.status_code == 200
 
     def test_3_making_stream_prediction(self):
-        producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
+        stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS)
+        stream_out = KafkaStream(STREAM_OUT, CONNECTION_PARAMS)
 
         for x in range(1, 3):
-            when_data = {'x1': x, 'x2': 2*x}
-            to_send = json.dumps(when_data)
-            producer.send(STREAM_IN, to_send.encode("utf-8"))
+            stream_in.write({'x1': x, 'x2': 2*x})
             time.sleep(5)
-        
-        predictions = list(read_stream(STREAM_OUT))
-        producer.close()
-        self.assertTrue(len(predictions)==2, f"expected 2 predictions but got {len(predictions)}")
+
+        assert len(list(stream_out.read())) == 2
 
     def test_4_create_kafka_ts_stream(self):
-        try:
-            self.train_ts_predictor(DS_NAME, self._testMethodName)
-        except Exception as e:
-            self.fail(f"couldn't train ts predictor: {e}")
+        self.train_ts_predictor(DS_NAME, self._testMethodName)
 
-        try:
-            url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json={
-                "predictor": self._testMethodName,
-                "stream_in": STREAM_IN_TS,
-                "stream_out": STREAM_OUT_TS,
-                "integration": INTEGRATION_NAME,
-            })
-            self.assertTrue(res.status_code == 200, res.text)
-        except Exception as e:
-            self.fail(f"error creating stream: {e}")
+        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        res = requests.put(url, json={
+            'predictor': self._testMethodName,
+            'stream_in': STREAM_IN_TS,
+            'stream_out': STREAM_OUT_TS,
+            'integration': INTEGRATION_NAME,
+        })
+
+        assert res.status_code == 200
 
     def test_5_making_ts_stream_prediction(self):
-        producer = kafka.KafkaProducer(**CONNECTION_PARAMS)
-
+        stream_in = KafkaStream(STREAM_IN_TS, CONNECTION_PARAMS)
+        stream_out = KafkaStream(STREAM_OUT_TS, CONNECTION_PARAMS)
+        
         for x in range(210, 221):
-            when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
-            to_send = json.dumps(when_data)
-            producer.send(STREAM_IN_TS, to_send.encode("utf-8"))
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A'})
             time.sleep(5)
 
-        predictions = list(read_stream(STREAM_OUT_TS))
-        producer.close()
-        self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
+        assert len(list(stream_out.read())) == 2
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
         unittest.main(failfast=True)
         print('Tests passed!')

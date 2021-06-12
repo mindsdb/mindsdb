@@ -5,11 +5,13 @@ import json
 import uuid
 
 import requests
+from werkzeug.wrappers import StreamOnlyMixin
 import walrus
 import pandas as pd
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
 
+from mindsdb.streams import RedisStream
 
 INTEGRATION_NAME = 'test_redis'
 redis_creds = {}
@@ -96,82 +98,55 @@ class RedisTest(unittest.TestCase):
 
     def test_1_create_integration(self):
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
-        try:
-            res = requests.put(url, json={"params": {"type": "redis", "connection": CONNECTION_PARAMS}})
-            self.assertTrue(res.status_code == 200, res.text)
-        except Exception as e:
-            self.fail(e)
+        res = requests.put(url, json={"params": {"type": "redis", "connection": CONNECTION_PARAMS}})
+        assert res.status_code == 200
 
     def test_2_create_redis_stream(self):
-        try:
-            self.upload_ds(DS_NAME)
-        except Exception as e:
-            self.fail(f"couldn't upload datasource: {e}")
+        self.upload_ds(DS_NAME)
+        self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
-        try:
-            self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
-        except Exception as e:
-            self.fail(f"couldn't train predictor: {e}")
+        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        res = requests.put(url, json={
+            "predictor": DEFAULT_PREDICTOR,
+            "stream_in": STREAM_IN,
+            "stream_out": STREAM_OUT,
+            "integration": INTEGRATION_NAME
+        })
 
-        try:
-            url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json={
-                "predictor": DEFAULT_PREDICTOR,
-                "stream_in": STREAM_IN,
-                "stream_out": STREAM_OUT,
-                "integration": INTEGRATION_NAME
-            })
-            self.assertTrue(res.status_code == 200, res.text)
-        except Exception as e:
-            self.fail(f"error creating stream: {e}")
+        assert res.status_code == 200
 
     def test_3_making_stream_prediction(self):
-        client = walrus.Database(**CONNECTION_PARAMS)
-        stream_in = client.Stream(STREAM_IN)
-        stream_out = client.Stream(STREAM_OUT)
+        stream_in = RedisStream(STREAM_IN, CONNECTION_PARAMS)
+        stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
 
         for x in range(1, 3):
-            when_data = {'x1': x, 'x2': 2*x}
-            stream_in.add({'': json.dumps(when_data)})
+            stream_in.write({'x1': x, 'x2': 2*x})
             time.sleep(5)
 
-        predictions = stream_out.read()
-        stream_out.trim(0, approximate=False)
-        stream_in.trim(0, approximate=False)
-        self.assertTrue(len(predictions)==2)
+        assert len(list(stream_out.read())) == 2
 
     def test_4_create_redis_ts_stream(self):
-        try:
-            self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
-        except Exception as e:
-            self.fail(f"couldn't train ts predictor: {e}")
+        self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
 
-        try:
-            url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
-            res = requests.put(url, json={
-                "predictor": TS_PREDICTOR,
-                "stream_in": STREAM_IN_TS,
-                "stream_out": STREAM_OUT_TS,
-                "integration": INTEGRATION_NAME,
-            })
-            self.assertTrue(res.status_code == 200, res.text)
-        except Exception as e:
-            self.fail(f"error creating stream: {e}")
+        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        res = requests.put(url, json={
+            "predictor": TS_PREDICTOR,
+            "stream_in": STREAM_IN_TS,
+            "stream_out": STREAM_OUT_TS,
+            "integration": INTEGRATION_NAME,
+        })
+
+        assert res.status_code == 200
 
     def test_5_making_ts_stream_prediction(self):
-        client = walrus.Database(**CONNECTION_PARAMS)
-        stream_in = client.Stream(STREAM_IN_TS)
-        stream_out = client.Stream(STREAM_OUT_TS)
+        stream_in = RedisStream(STREAM_IN_TS, CONNECTION_PARAMS)
+        stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
         for x in range(210, 221):
-            when_data = {'x1': x, 'x2': 2*x, 'order': x, 'group': "A"}
-            stream_in.add({'': json.dumps(when_data)})
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
             time.sleep(5)
 
-        predictions = stream_out.read()
-        stream_out.trim(0, approximate=False)
-        stream_in.trim(0, approximate=False)
-        self.assertTrue(len(predictions)==2, f"expected 2 predictions, but got {len(predictions)}")
+        assert len(list(stream_out.read())) == 2
 
 
 if __name__ == "__main__":

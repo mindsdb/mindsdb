@@ -7,7 +7,6 @@ from mindsdb.api.http.namespaces.configs.streams import ns_conf
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.db import session
 
-
 STREAM_INTEGRATION_TYPES = ('kafka', 'redis')
 
 
@@ -57,7 +56,7 @@ class Stream(Resource):
 
         if db.session.query(db.Predictor).filter_by(company_id=request.company_id, name=request.json['predictor']).first() is None:
             return abort(404, 'Predictor "{}" doesn\'t exist'.format(request.json['predictor']))
-
+        
         if integration['type'] not in STREAM_INTEGRATION_TYPES:
             return abort(400, 'Integration "{}" is not of type [{}]'.format(
                 request.json['integration'],

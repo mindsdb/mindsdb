@@ -38,6 +38,5 @@ class Redis(StreamIntegration, RedisConnectionChecker):
             s.predictor,
             stream_in=RedisStream(s.stream_in, self.connection_info),
             stream_out=RedisStream(s.stream_out, self.connection_info),
-            learning_stream=RedisStream(s.learning_stream) if s.learning_stream is not None else None,
-            anomaly_stream=RedisStream(s.anomaly_stream) if s.anomaly_stream is not None else None,
+            learning_stream=RedisStream(s.learning_stream) if s.learning_stream is not None else None
         )

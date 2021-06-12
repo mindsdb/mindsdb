@@ -36,6 +36,5 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
             s.predictor,
             stream_in=KafkaStream(s.stream_in, self.connection_info),
             stream_out=KafkaStream(s.stream_out, self.connection_info),
-            learning_stream=KafkaStream(s.learning_stream) if s.learning_stream is not None else None,
-            anomaly_stream=KafkaStream(s.anomaly_stream) if s.anomaly_stream is not None else None,
+            learning_stream=KafkaStream(s.learning_stream) if s.learning_stream is not None else None
         )

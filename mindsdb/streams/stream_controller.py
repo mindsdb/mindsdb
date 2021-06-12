@@ -9,15 +9,13 @@ import mindsdb.interfaces.storage.db as db
 
 
 class StreamController:
-    def __init__(self, name, predictor, stream_in, stream_out, 
-                 anomaly_stream=None, learning_stream=None, learning_threshold=100):
+    def __init__(self, name, predictor, stream_in, stream_out, learning_stream=None, learning_threshold=100):
 
         self.name = name
         self.predictor = predictor
 
         self.stream_in = stream_in
         self.stream_out = stream_out
-        self.anomaly_stream = anomaly_stream
         self.learning_stream = learning_stream
 
         self.learning_threshold = learning_threshold

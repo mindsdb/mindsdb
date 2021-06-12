@@ -34,6 +34,29 @@ class KafkaTest(unittest.TestCase):
     def setUpClass(cls):
         run_environment(apis=['mysql', 'http'])
 
+    def test_length(self):
+        stream = KafkaStream(STREAM_IN, CONNECTION_PARAMS)
+
+        stream.write({'0': 0})
+        time.sleep(1)
+        assert len(stream) == 1
+    
+        stream.write({'0': 0})
+        time.sleep(1)
+        assert len(stream) == 2
+
+        stream.read()
+
+        assert len(stream) == 0
+
+        stream.write({'0': 0})
+        time.sleep(1)
+        assert len(stream) == 1
+    
+        stream.write({'0': 0})
+        time.sleep(1)
+        assert len(stream) == 2
+
     def upload_ds(self, name):
         df = pd.DataFrame({
             'group': ["A" for _ in range(100, 210)],

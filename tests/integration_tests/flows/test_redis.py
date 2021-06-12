@@ -5,8 +5,6 @@ import json
 import uuid
 
 import requests
-from werkzeug.wrappers import StreamOnlyMixin
-import walrus
 import pandas as pd
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER

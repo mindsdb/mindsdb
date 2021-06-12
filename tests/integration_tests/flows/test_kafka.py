@@ -3,10 +3,8 @@ import tempfile
 import unittest
 import json
 import uuid
-import threading
 
 import requests
-import kafka
 import pandas as pd
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER

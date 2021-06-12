@@ -41,12 +41,14 @@ class RedisTest(unittest.TestCase):
     def test_length(self):
         stream = RedisStream(STREAM_IN, CONNECTION_PARAMS)
 
+        assert len(stream) == 0
+
         stream.write({'0': 0})
-        time.sleep(1)
+        time.sleep(5)
         assert len(stream) == 1
     
         stream.write({'0': 0})
-        time.sleep(1)
+        time.sleep(5)
         assert len(stream) == 2
 
         stream.read()
@@ -54,11 +56,11 @@ class RedisTest(unittest.TestCase):
         assert len(stream) == 0
 
         stream.write({'0': 0})
-        time.sleep(1)
+        time.sleep(5)
         assert len(stream) == 1
     
         stream.write({'0': 0})
-        time.sleep(1)
+        time.sleep(5)
         assert len(stream) == 2
 
     def upload_ds(self, name):

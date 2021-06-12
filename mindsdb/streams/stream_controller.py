@@ -1,10 +1,9 @@
-from datetime import datetime
 import os
 from threading import Event, Thread
+from collections import defaultdict
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from collections import defaultdict
 import mindsdb.interfaces.storage.db as db
 
 

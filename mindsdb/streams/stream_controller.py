@@ -44,17 +44,18 @@ class StreamController:
         self.thread.start()
 
     def _consider_learning(self):
-        if len(self.learning_stream) >= self.learning_threshold:
-            # 1. Create a new datasource
-            when_data_list = self.learning_stream.read()
-            ds_id = self.data_store.save(name='random_name', data=when_data_list)
+        pass
+        # if len(self.learning_stream) >= self.learning_threshold:
+        #     # 1. Create a new datasource
+        #     when_data_list = self.learning_stream.read()
+        #     ds_id = self.data_store.save(name='random_name', data=when_data_list)
 
-            # 2. Add it to db.Predictor.additional_datasources
-            p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
-            p.additional_datasource_ids.append(ds_id)
+        #     # 2. Add it to db.Predictor.additional_datasources
+        #     p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
+        #     p.additional_datasource_ids.append(ds_id)
 
-            # 3. Call self.model_interface.adjust(...)
-            self.native_interface.adjust(p)
+        #     # 3. Call self.model_interface.adjust(...)
+        #     self.native_interface.adjust(p)
 
     def _make_predictions(self):
         while not self.stop_event.wait(0.5):

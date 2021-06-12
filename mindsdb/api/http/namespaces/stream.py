@@ -71,6 +71,8 @@ class Stream(Resource):
             predictor=request.json['predictor'],
             stream_in=request.json['stream_in'],
             stream_out=request.json['stream_out'],
+            learning_stream=request.json.get('learning_stream'),
+            anomaly_stream=request.json.get('anomaly_stream'),
         )
         session.add(stream)
         session.commit()

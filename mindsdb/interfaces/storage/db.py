@@ -148,6 +148,8 @@ class Stream(Base):
     name = Column(String, nullable=False, unique=True)
     stream_in = Column(String, nullable=False)
     stream_out = Column(String, nullable=False)
+    anomaly_stream = Column(String)
+    learning_stream = Column(String)
     integration = Column(String, ForeignKey('integration.name', ondelete='CASCADE'), nullable=False)
     predictor = Column(String, ForeignKey('predictor.name', ondelete='CASCADE'), nullable=False)
     company_id = Column(Integer)

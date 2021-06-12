@@ -7,7 +7,9 @@ import mindsdb.interfaces.storage.db as db
 
 
 class StreamController:
-    def __init__(self, name, predictor, stream_in, stream_out, anomaly_stream=None, learning_stream=None):
+    def __init__(self, name, predictor, stream_in, stream_out, 
+                 anomaly_stream=None, learning_stream=None, learning_threshold=100):
+
         self.name = name
         self.predictor = predictor
 
@@ -15,6 +17,8 @@ class StreamController:
         self.stream_out = stream_out
         self.anomaly_stream = anomaly_stream
         self.learning_stream = learning_stream
+
+        self.learning_threshold = learning_threshold
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.stop_event = Event()
@@ -36,8 +40,16 @@ class StreamController:
 
         self.thread.start()
 
+    def _consider_learning(self):
+        if len(self.learning_stream) >= self.learning_threshold:
+            # 1. Create a new file datasource
+            # 2. Add it to db.Predictor.additional_datasources
+            # 3. Call self.model_interface.adjust(...)
+            pass
+
     def _make_predictions(self):
         while not self.stop_event.wait(0.5):
+            self._consider_learning()
             for when_data in self.stream_in.read():
                 for res in self.native_interface.predict(self.predictor, 'dict', when_data=when_data):
                     self.stream_out.write(res)
@@ -55,6 +67,7 @@ class StreamController:
             cache = []
 
             while not self.stop_event.wait(0.5):
+                self._consider_learning()
                 for when_data in self.stream_in.read():
                     for ob in order_by:
                         if ob not in when_data:
@@ -75,6 +88,7 @@ class StreamController:
             gb_cache = defaultdict(list)
 
             while not self.stop_event.wait(0.5):
+                self._consider_learning()
                 for when_data in self.stream_in.read():
                     for ob in order_by:
                         if ob not in when_data:

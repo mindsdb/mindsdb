@@ -37,19 +37,19 @@ class KafkaTest(unittest.TestCase):
     def test_length(self):
         stream = KafkaStream(STREAM_IN, CONNECTION_PARAMS)
 
-        assert len(stream.read()) == 0
+        assert len(list(stream.read())) == 0
 
         stream.write({'0': 0})
         time.sleep(5)
 
-        assert len(stream.read()) == 1
+        assert len(list(stream.read())) == 1
 
         stream.write({'0': 0})
         stream.write({'0': 0})
         time.sleep(5)
 
-        assert len(stream.read()) == 2
-        assert len(stream.read()) == 0
+        assert len(list(stream.read())) == 2
+        assert len(list(stream.read())) == 0
 
     def upload_ds(self, name):
         df = pd.DataFrame({

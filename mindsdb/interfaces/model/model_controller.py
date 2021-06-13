@@ -153,6 +153,9 @@ class ModelController():
         delete_process_mark('learn')
         return 0
 
+    def adjust(self, name, from_data, datasource_id, company_id):
+        raise NotImplementedError
+
     def predict(self, name, pred_format, when_data=None, kwargs={}, company_id=None):
         from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
                                          MySqlDS, PostgresDS, MSSQLDS, MongoDS,

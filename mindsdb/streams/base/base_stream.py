@@ -6,6 +6,3 @@ class BaseStream:
 
     def write(self, dct):
         raise NotImplementedError
-
-    def __len__(self):
-        raise NotImplementedError    

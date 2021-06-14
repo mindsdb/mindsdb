@@ -39,7 +39,7 @@ class RedisTest(unittest.TestCase):
         run_environment(apis=['mysql', 'http'])
 
     def test_length(self):
-        stream = RedisStream(STREAM_IN, CONNECTION_PARAMS)
+        stream = RedisStream(f'test_stream_length_{STREAM_SUFFIX}', CONNECTION_PARAMS)
 
         self.assertEqual(len(list(stream.read())), 0)
         time.sleep(5)

@@ -140,7 +140,6 @@ class ModelController():
                 datasource_id=datasource_id,
                 company_id=company_id
             )
-
         else:
             p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
             p.start()
@@ -153,8 +152,36 @@ class ModelController():
         delete_process_mark('learn')
         return 0
 
-    def adjust(self, name, from_data, datasource_id, company_id):
-        raise NotImplementedError
+    def adjust(self, name, from_data, datasource_id, company_id=None):
+        from mindsdb.interfaces.model.learn_process import AdjustProcess, run_adjust
+        
+        create_process_mark('learn')
+        original_name = name
+        name = f'{company_id}@@@@@{name}'
+
+        join_learn_process = False
+
+        self._setup_for_creation(name, original_name, company_id=company_id)
+
+        if self.ray_based:
+            run_adjust(
+                name=name,
+                db_name=original_name,
+                from_data=from_data,
+                datasource_id=datasource_id,
+                company_id=company_id
+            )
+        else:
+            p = AdjustProcess(name, original_name, from_data, datasource_id, company_id)
+            p.start()
+            if join_learn_process is True:
+                p.join()
+                if p.exitcode != 0:
+                    delete_process_mark('learn')
+                    raise Exception('Learning process failed !')
+
+        delete_process_mark('learn')
+        return 0
 
     def predict(self, name, pred_format, when_data=None, kwargs={}, company_id=None):
         from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,

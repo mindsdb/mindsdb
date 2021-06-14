@@ -46,8 +46,9 @@ class StreamController:
         if self.learning_stream is not None:
             self.learning_data.extend(self.learning_stream.read())
             if len(self.learning_data) >= self.learning_threshold:
+                # TODO
                 # 1. Create a new datasource from self.learning_data
-                # 2. Add it to db.Predictor.additional_datasources
+                # 2. Add its ID to db.Predictor.additional_datasource_ids
                 # 3. Call self.model_interface.adjust(...)
                 self.learning_data.clear()
 

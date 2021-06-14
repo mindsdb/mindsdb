@@ -115,20 +115,20 @@ class ModelController():
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
     
-    def learn_sync(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
+    def learn_for_update(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
         kwargs['join_learn_process'] = True
-        return self.learn(name, from_data, to_predict, datasource_id, kwargs, company_id)
+        return self.learn(name, from_data, to_predict, datasource_id, kwargs, company_id, False)
 
-    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
+    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None, save=True):
         from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
 
         create_process_mark('learn')
         original_name = name
         name = f'{company_id}@@@@@{name}'
-
         join_learn_process = kwargs.get('join_learn_process', False)
-
-        self._setup_for_creation(name, original_name, company_id=company_id)
+        
+        if save:
+            self._setup_for_creation(name, original_name, company_id=company_id)
 
         if self.ray_based:
             run_learn(
@@ -138,10 +138,11 @@ class ModelController():
                 to_predict=to_predict,
                 kwargs=kwargs,
                 datasource_id=datasource_id,
-                company_id=company_id
+                company_id=company_id,
+                save=save
             )
         else:
-            p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id)
+            p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id, save)
             p.start()
             if join_learn_process is True:
                 p.join()
@@ -375,7 +376,7 @@ class ModelController():
 
             session.commit()
 
-            update_model(name, original_name, self.delete_model, F.rename_model, self.learn_sync, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
+            update_model(name, original_name, self.delete_model, F.rename_model, self.learn_for_update, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
 
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
 

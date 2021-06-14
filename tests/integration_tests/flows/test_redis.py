@@ -42,6 +42,7 @@ class RedisTest(unittest.TestCase):
         stream = RedisStream(STREAM_IN, CONNECTION_PARAMS)
 
         self.assertEqual(len(list(stream.read())), 0)
+        time.sleep(5)
 
         stream.write({'0': 0})
         time.sleep(5)

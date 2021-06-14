@@ -38,6 +38,7 @@ class KafkaTest(unittest.TestCase):
         stream = KafkaStream(STREAM_IN, CONNECTION_PARAMS)
 
         self.assertEqual(len(list(stream.read())), 0)
+        time.sleep(5)
 
         stream.write({'0': 0})
         time.sleep(5)

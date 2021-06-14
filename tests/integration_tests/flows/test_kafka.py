@@ -108,7 +108,7 @@ class KafkaTest(unittest.TestCase):
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
         params = {"type": "kafka", "connection": CONNECTION_PARAMS}
         res = requests.put(url, json={'params': params})
-        assert res.status_code == 200
+        self.assertEqual(res.status_code, 200)
 
     def test_2_create_kafka_stream(self):
         self.upload_ds(DS_NAME)
@@ -122,7 +122,7 @@ class KafkaTest(unittest.TestCase):
             "integration": INTEGRATION_NAME
         })
 
-        assert res.status_code == 200
+        self.assertEqual(res.status_code, 200)
 
     def test_3_making_stream_prediction(self):
         stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS)
@@ -132,7 +132,7 @@ class KafkaTest(unittest.TestCase):
             stream_in.write({'x1': x, 'x2': 2*x})
             time.sleep(5)
 
-        assert len(list(stream_out.read())) == 2
+        self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_4_create_kafka_ts_stream(self):
         self.train_ts_predictor(DS_NAME, self._testMethodName)
@@ -145,7 +145,7 @@ class KafkaTest(unittest.TestCase):
             'integration': INTEGRATION_NAME,
         })
 
-        assert res.status_code == 200
+        self.assertEqual(res.status_code, 200)
 
     def test_5_making_ts_stream_prediction(self):
         stream_in = KafkaStream(STREAM_IN_TS, CONNECTION_PARAMS)
@@ -155,7 +155,7 @@ class KafkaTest(unittest.TestCase):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A'})
             time.sleep(5)
 
-        assert len(list(stream_out.read())) == 2
+        self.assertEqual(len(list(stream_out.read())), 2)
 
 
 if __name__ == '__main__':

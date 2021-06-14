@@ -114,7 +114,7 @@ class RedisTest(unittest.TestCase):
     def test_1_create_integration(self):
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
         res = requests.put(url, json={"params": {"type": "redis", "connection": CONNECTION_PARAMS}})
-        assert res.status_code == 200
+        self.assertEqual(res.status_code, 200)
 
     def test_2_create_redis_stream(self):
         self.upload_ds(DS_NAME)
@@ -128,7 +128,7 @@ class RedisTest(unittest.TestCase):
             "integration": INTEGRATION_NAME
         })
 
-        assert res.status_code == 200
+        self.assertEqual(res.status_code, 200)
 
     def test_3_making_stream_prediction(self):
         stream_in = RedisStream(STREAM_IN, CONNECTION_PARAMS)
@@ -138,7 +138,7 @@ class RedisTest(unittest.TestCase):
             stream_in.write({'x1': x, 'x2': 2*x})
             time.sleep(5)
 
-        assert len(list(stream_out.read())) == 2
+        self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_4_create_redis_ts_stream(self):
         self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
@@ -151,7 +151,7 @@ class RedisTest(unittest.TestCase):
             "integration": INTEGRATION_NAME,
         })
 
-        assert res.status_code == 200
+        self.assertEqual(res.status_code, 200)
 
     def test_5_making_ts_stream_prediction(self):
         stream_in = RedisStream(STREAM_IN_TS, CONNECTION_PARAMS)
@@ -161,7 +161,7 @@ class RedisTest(unittest.TestCase):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
             time.sleep(5)
 
-        assert len(list(stream_out.read())) == 2
+        self.assertEqual(len(list(stream_out.read())), 2)
 
 
 if __name__ == "__main__":

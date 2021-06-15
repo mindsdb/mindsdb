@@ -90,11 +90,12 @@ class ModelController():
     def _try_outdate_db_status(self, predictor_record):
         from mindsdb import __version__ as mindsdb_version
         from mindsdb.interfaces.storage.db import session
+        from packaging import version
 
         if predictor_record.update_status == 'update_failed':
             return predictor_record
 
-        if predictor_record.mindsdb_version != mindsdb_version:
+        if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
             predictor_record.update_status = 'available'
 
         session.commit()

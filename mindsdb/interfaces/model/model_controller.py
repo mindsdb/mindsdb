@@ -103,11 +103,7 @@ class ModelController():
 
 
     def create(self, name, company_id=None):
-        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
-                                         MySqlDS, PostgresDS, MSSQLDS,
-                                         MongoDS, SnowflakeDS, AthenaDS)
         import mindsdb_native
-        from mindsdb.interfaces.storage.db import session, Predictor
 
         original_name = name
         name = f'{company_id}@@@@@{name}'

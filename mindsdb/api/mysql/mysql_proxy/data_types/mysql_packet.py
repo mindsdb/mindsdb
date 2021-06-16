@@ -15,28 +15,22 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MAX_PACKET_SIZE
 
 
 class Packet:
-    def __init__(self, length=0, seq=0, body='', packet_string=None, socket=None, session=None, proxy=None, parent_packet=None, **kwargs):
-        if parent_packet is None:
-            self.mysql_socket = socket
-            self.session = session
-            self.proxy = proxy
-        else:
-            self.mysql_socket = parent_packet.mysql_socket
-            self.session = parent_packet.session
-            self.proxy = parent_packet.proxy
-
+    def __init__(self, length=0, body='', packet_string=None, socket=None, session=None, proxy=None, **kwargs):
+        self.mysql_socket = socket
+        self.session = session
+        self.proxy = proxy
         self._kwargs = kwargs
 
         self.setup()
         if packet_string is not None:
-            self.loadFromPacketString(packet_string)
+            self.load_from_packet_string(packet_string)
         else:
-            self.loadFromParams(length, seq, body)
+            self.load_from_params(length, session.packet_sequence_number, body)
 
     def setup(self, length=0, seq=0, body=None):
-        self.loadFromParams(length=length, seq=seq, body=body)
+        self.load_from_params(length=length, seq=seq, body=body)
 
-    def loadFromParams(self, length, seq, body):
+    def load_from_params(self, length, seq, body):
         self._length = length
         self._seq = seq
         self._body = body
@@ -45,13 +39,13 @@ class Packet:
         self._body = body_string
         self._length = len(body_string)
 
-    def loadFromPacketString(self, packet_string):
+    def load_from_packet_string(self, packet_string):
         len_header = struct.unpack('>i', struct.pack('1s', '') + packet_string[:3])[0]
         count_header = struct.unpack('B', packet_string[3])[0]
         body = packet_string[4:]
-        self.loadFromParams(length=len_header, seq=count_header, body=body)
+        self.load_from_params(length=len_header, seq=count_header, body=body)
 
-    def getPacketString(self):
+    def get_packet_string(self):
         body = self.body
         len_header = struct.pack('<i', self.length)[:3]  # keep it 3 bytes
         count_header = struct.pack('B', self.seq)
@@ -76,18 +70,18 @@ class Packet:
                 break
             body += self.mysql_socket.recv(len_header)
         self.session.logging.debug(f'Got packet: {str(body)}')
-        self.proxy.count = (int(count_header) + 1) % 256
+        self.session.packet_sequence_number = (int(count_header) + 1) % 256
         self.setup(len(body), count_header, body)
         return True
 
     def send(self):
-        string = self.getPacketString()
+        string = self.get_packet_string()
         self.session.logging.debug(f'Sending packet: {self.__class__.__name__}')
         self.session.logging.debug(string)
         self.mysql_socket.sendall(string)
 
     def accum(self):
-        string = self.getPacketString()
+        string = self.get_packet_string()
         self.session.logging.debug(f'Accumulating packet: {self.__class__.__name__}')
         self.session.logging.debug(string)
         return string
@@ -148,7 +142,7 @@ class Packet:
 def test():
     import pprint
 
-    pprint.pprint(Packet.bodyStringToPackets('abdds')[0].getPacketString())
+    pprint.pprint(Packet.bodyStringToPackets('abdds')[0].get_packet_string())
 
 
 # only run the test if this file is called from debugger

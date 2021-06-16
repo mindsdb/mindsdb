@@ -7,11 +7,7 @@ from mindsdb.streams import KafkaStream, StreamController
 
 class KafkaConnectionChecker:
     def __init__(self, **params):
-        self.connection_info = {
-            'host': params['connection']['host'],
-            'port': params['connection']['port'],
-            'password': params['connection']['password'],
-        }
+        self.connection_info = params['connection']
 
     def check_connection(self):
         try:
@@ -26,9 +22,7 @@ class KafkaConnectionChecker:
 class Kafka(StreamIntegration, KafkaConnectionChecker):
     def __init__(self, config, name, db_info):
         StreamIntegration.__init__(self, config, name)
-        self.connection_info = {
-            'bootstrap_servers': [str(x) for x in db_info['connection']['bootstrap_servers']]
-        }
+        self.connection_info = db_info['connection']
 
     def _make_stream(self, s: db.Stream):
         return StreamController(

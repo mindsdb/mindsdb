@@ -104,7 +104,7 @@ class StreamController:
                         self.stream_out.write(res_list[-1])
                     cache = cache[1 - window:]
         else:
-            gb_cache = Cache(self.name + '_gb')
+            cache = Cache(self.name + '_gb')
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()
@@ -118,18 +118,19 @@ class StreamController:
                             raise Exception(f'when_data doesn\'t contain group_by[{gb}]')
 
                     gb_value = tuple(when_data[gb] for gb in group_by)
-                    gb_cache[gb_value].append(when_data)
+                    cache[gb_value].append(when_data)
 
-                for gb_value in gb_cache.keys():
-                    if len(gb_cache[gb_value]) >= window:
-                        gb_cache[gb_value] = [*sorted(
-                            gb_cache[gb_value],
+                for gb_value in cache.keys():
+                    if len(cache[gb_value]) >= window:
+                        cache[gb_value] = [*sorted(
+                            cache[gb_value],
                             # WARNING: assuming wd[ob] is numeric
                             key=lambda wd: tuple(wd[ob] for ob in order_by)
                         )]
-                        res_list = self.native_interface.predict(self.predictor, 'dict', when_data=gb_cache[gb_value][-window:])
+                        res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[gb_value][-window:])
                         if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                             self.anomaly_stream.write(res_list[-1])
                         else:
                             self.stream_out.write(res_list[-1])
-                        gb_cache[gb_value] = gb_cache[gb_value][1 - window:]
+                        cache[gb_value] = cache[gb_value][1 - window:]
+        del cache

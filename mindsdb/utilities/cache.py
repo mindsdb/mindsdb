@@ -38,10 +38,16 @@ class LocalCache(BaseCache):
         return getattr(self.cache, name)
 
     def __getitem__(self, key):
-        return self.cache.__getitem__(key)
+        if isinstance(key, tuple):
+            self.cache.__getitem__(str(hash(key)))
+        else:
+            return self.cache.__getitem__(key)
 
     def __setitem__(self, key, value):
-        return self.cache.__setitem__(key, value)
+        if isinstance(key, tuple):
+            return self.cache.__setitem__(str(hash(key)), value)
+        else:
+            return self.cache.__setitem__(key, value)
 
     def __enter__(self):
         if self.cache is None:

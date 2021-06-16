@@ -7,8 +7,8 @@ from mindsdb.streams.base.base_stream import BaseStream
 class KafkaStream(BaseStream):
     def __init__(self, topic, connection_info):
         self.topic = topic
-        self.consumer = kafka.KafkaConsumer(**connection_info)
         self.producer = kafka.KafkaProducer(**connection_info, acks='all')
+        self.consumer = kafka.KafkaConsumer(**connection_info, consumer_timeout_ms=0)
         self.consumer.subscribe(topics=[topic])
         self.position = 0
 

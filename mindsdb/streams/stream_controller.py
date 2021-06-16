@@ -7,6 +7,7 @@ import mindsdb_datasources
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 import mindsdb.interfaces.storage.db as db
+from mindsdb.utilities.cache import Cache
 
 
 class StreamController:
@@ -69,7 +70,10 @@ class StreamController:
         group_by = [group_by] if isinstance(group_by, str) else group_by
 
         if group_by is None:
-            cache = []
+            cache = Cache(self.name)
+
+            # TODO: make cache of type list maybe, so we dont have to treat "dict[None] = []" as a list
+            cache[None] = []
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()
@@ -78,19 +82,19 @@ class StreamController:
                         if ob not in when_data:
                             raise Exception(f'when_data doesn\'t contain order_by[{ob}]')
 
-                    cache.append(when_data)
+                    cache[None].append(when_data)
                 
-                if len(cache) >= window:
-                    cache = [*sorted(
-                        cache,
+                if len(cache[None]) >= window:
+                    cache[None] = [*sorted(
+                        cache[None],
                         # WARNING: assuming wd[ob] is numeric
                         key=lambda wd: tuple(wd[ob] for ob in order_by)
                     )]
-                    res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[-window:])
+                    res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[None][-window:])
                     self.stream_out.write(res_list[-1])
-                    cache = cache[1 - window:]
+                    cache[None] = cache[None][1 - window:]
         else:
-            gb_cache = defaultdict(list)
+            gb_cache = Cache(self.name)
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()

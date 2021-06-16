@@ -107,7 +107,7 @@ class StreamController:
                         self.stream_out.write(res_list[-1])
                     cache[None] = cache[None][1 - window:]
         else:
-            cache = Cache(self.name + '_gb')
+            gb_cache = Cache(self.name + '_gb')
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()

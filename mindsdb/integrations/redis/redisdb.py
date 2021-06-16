@@ -16,7 +16,7 @@ class RedisConnectionChecker:
         except Exception:
             return False
         else:
-            return False
+            return True
 
 
 class Redis(StreamIntegration, RedisConnectionChecker):

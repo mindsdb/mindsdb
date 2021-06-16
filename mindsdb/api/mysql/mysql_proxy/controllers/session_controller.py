@@ -58,6 +58,10 @@ class SessionController():
         )
 
         self.prepared_stmts = {}
+        self.packet_sequence_number = 0
+
+    def inc_packet_sequence_number(self):
+        self.packet_sequence_number = (self.packet_sequence_number + 1) % 256
 
     def register_stmt(self, statement):
         i = 1

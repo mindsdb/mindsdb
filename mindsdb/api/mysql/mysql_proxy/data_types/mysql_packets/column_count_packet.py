@@ -36,7 +36,7 @@ class ColumnCountPacket(Packet):
     def test():
         import pprint
         pprint.pprint(
-            str(ColumnCountPacket(count=1).getPacketString())
+            str(ColumnCountPacket(count=1).get_packet_string())
         )
 
 

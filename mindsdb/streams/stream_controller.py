@@ -21,7 +21,7 @@ class StreamController:
         
         self.learning_stream = learning_stream
         self.learning_threshold = learning_threshold
-        self.learning_data = []
+        self.learning_data = Cache(self.name + '_learning_data')
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.stop_event = Event()
@@ -80,7 +80,7 @@ class StreamController:
         group_by = [group_by] if isinstance(group_by, str) else group_by
 
         if group_by is None:
-            cache = Cache(self.name)
+            cache = Cache(self.name + '_gb')
 
             # TODO: make cache of type list maybe, so we dont have to treat "dict[None] = []" as a list
             cache[None] = []
@@ -107,7 +107,7 @@ class StreamController:
                         self.stream_out.write(res_list[-1])
                     cache[None] = cache[None][1 - window:]
         else:
-            gb_cache = Cache(self.name)
+            cache = Cache(self.name + '_gb')
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()

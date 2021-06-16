@@ -36,7 +36,6 @@ class StreamIntegration(Integration):
         Thread(target=StreamIntegration._loop, args=(self,)).start()
 
     def _loop(self):
-        company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         while not STOP_THREADS_EVENT.wait(1.0):
 
             # Create or delete streams based on messages from control_stream
@@ -79,9 +78,10 @@ class StreamIntegration(Integration):
                             db.session.commit()
                     else:
                         # Bad action value
+                        pass
               
             stream_db_recs = db.session.query(db.Stream).filter_by(
-                company_id=company_id,
+                company_id=self.company_id,
                 integration=self.name
             ).all()
 

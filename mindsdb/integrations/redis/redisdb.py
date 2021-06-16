@@ -21,8 +21,13 @@ class RedisConnectionChecker:
 
 class Redis(StreamIntegration, RedisConnectionChecker):
     def __init__(self, config, name, db_info):
-        StreamIntegration.__init__(self, config, name)
         self.connection_info = db_info['connection']
+        StreamIntegration.__init__(
+            self,
+            config,
+            name,
+            control_stream=RedisStream('control_stream', self.connection_info)
+        )
     
     def _make_stream(self, s: db.Stream) -> StreamController:
         return StreamController(

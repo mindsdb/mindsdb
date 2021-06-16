@@ -11,12 +11,13 @@ from mindsdb.utilities.cache import Cache
 
 
 class StreamController:
-    def __init__(self, name, predictor, stream_in, stream_out, learning_stream=None, learning_threshold=100):
+    def __init__(self, name, predictor, stream_in, stream_out, anomaly_stream=None, learning_stream=None, learning_threshold=100):
         self.name = name
         self.predictor = predictor
 
         self.stream_in = stream_in
         self.stream_out = stream_out
+        self.anomaly_stream = anomaly_stream
         
         self.learning_stream = learning_stream
         self.learning_threshold = learning_threshold
@@ -43,6 +44,12 @@ class StreamController:
 
         self.thread.start()
 
+    def _is_anomaly(self, when_data):
+        for k in when_data:
+            if k.endswith('_anomaly') and when_data[k] is not None:
+                return True
+        return False
+
     def _consider_learning(self):
         if self.learning_stream is not None:
             self.learning_data.extend(self.learning_stream.read())
@@ -58,7 +65,10 @@ class StreamController:
             self._consider_learning()
             for when_data in self.stream_in.read():
                 for res in self.native_interface.predict(self.predictor, 'dict', when_data=when_data):
-                    self.stream_out.write(res)
+                    if self.anomaly_stream is not None and self._is_anomaly(res):
+                        self.anomaly_stream.write(res)
+                    else:
+                        self.stream_out.write(res)
 
     def _make_ts_predictions(self):
         window = self.ts_settings['window']
@@ -91,7 +101,10 @@ class StreamController:
                         key=lambda wd: tuple(wd[ob] for ob in order_by)
                     )]
                     res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[None][-window:])
-                    self.stream_out.write(res_list[-1])
+                    if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
+                        self.anomaly_stream.write(res_list[-1])
+                    else:
+                        self.stream_out.write(res_list[-1])
                     cache[None] = cache[None][1 - window:]
         else:
             gb_cache = Cache(self.name)
@@ -118,5 +131,8 @@ class StreamController:
                             key=lambda wd: tuple(wd[ob] for ob in order_by)
                         )]
                         res_list = self.native_interface.predict(self.predictor, 'dict', when_data=gb_cache[gb_value][-window:])
-                        self.stream_out.write(res_list[-1])
+                        if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
+                            self.anomaly_stream.write(res_list[-1])
+                        else:
+                            self.stream_out.write(res_list[-1])
                         gb_cache[gb_value] = gb_cache[gb_value][1 - window:]

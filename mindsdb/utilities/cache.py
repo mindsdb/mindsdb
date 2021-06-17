@@ -38,15 +38,9 @@ class LocalCache(BaseCache):
         return getattr(self.cache, name)
 
     def __getitem__(self, key):
-        if isinstance(key, tuple):
-            key = str(hash(key))
-
         return self.cache.__getitem__(key)
 
     def __setitem__(self, key, value):
-        if isinstance(key, tuple):
-            key = str(hash(key))
-
         return self.cache.__setitem__(key, value)
 
     def __enter__(self):
@@ -62,9 +56,6 @@ class LocalCache(BaseCache):
         return res
 
     def __contains__(self, key):
-        if isinstance(key, tuple):
-            key = str(hash(key))
-
         return key in self.cache
 
     def delete(self):
@@ -94,16 +85,10 @@ class RedisCache(BaseCache):
         return data.decode("utf8")
 
     def __contains__(self, key):
-        if isinstance(key, tuple):
-            key = str(hash(key))
-
         key = f"{self.prefix}_{key}"
         return key in self.__decode(self.client.keys())
 
     def __getitem__(self, key):
-        if isinstance(key, tuple):
-            key = str(hash(key))
-
         key = f"{self.prefix}_{key}"
         raw = self.client.get(key)
         if raw is None:
@@ -115,9 +100,6 @@ class RedisCache(BaseCache):
         return res
 
     def __setitem__(self, key, value):
-        if isinstance(key, tuple):
-            key = str(hash(key))
-
         key = f"{self.prefix}_{key}"
         self.client.set(key, json.dumps(value))
 
@@ -129,9 +111,6 @@ class RedisCache(BaseCache):
             yield i
 
     def __delitem__(self, key):
-        if isinstance(key, tuple):
-            key = str(hash(key))
-
         key = f"{self.prefix}_key"
         self.client.delete(key)
 

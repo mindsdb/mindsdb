@@ -118,6 +118,10 @@ class StreamController:
                             raise Exception(f'when_data doesn\'t contain group_by[{gb}]')
 
                     gb_value = tuple(when_data[gb] for gb in group_by)
+
+                    # because cache doesn't work for tuples
+                    str(hash(gb_value))
+
                     cache[gb_value].append(when_data)
 
                 for gb_value in cache.keys():

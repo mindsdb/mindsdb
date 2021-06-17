@@ -80,7 +80,7 @@ class StreamController:
         group_by = [group_by] if isinstance(group_by, str) else group_by
 
         if group_by is None:
-            cache = Cache(self.name + '_gb')
+            cache = dict()
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()
@@ -104,7 +104,7 @@ class StreamController:
                         self.stream_out.write(res_list[-1])
                     cache[''] = cache[''][1 - window:]
         else:
-            cache = Cache(self.name + '_gb')
+            cache = dict()
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()
@@ -128,7 +128,7 @@ class StreamController:
 
                     cache[gb_value].append(when_data)
 
-                for gb_value in cache:
+                for gb_value in cache.keys():
                     if len(cache[gb_value]) >= window:
                         cache[gb_value] = [*sorted(
                             cache[gb_value],

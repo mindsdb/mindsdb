@@ -119,6 +119,9 @@ class StreamController:
 
                     gb_value = tuple(when_data[gb] for gb in group_by)
 
+                    # because cache doesn't work for tuples
+                    gb_value = str(hash(gb_value))
+
                     if gb_value not in cache:
                         cache[gb_value] = []
 

@@ -27,6 +27,8 @@ STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
 STREAM_IN_TS = f"test_stream_in_ts_{STREAM_SUFFIX}"
 STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
 CONTROL_STREAM = f"test_stream_control_{STREAM_SUFFIX}"
+DEFAULT_PREDICTOR = "kafka_predictor"
+TS_PREDICTOR = "kafka_ts_predictor"
 DS_NAME = "kafka_test_ds"
 
 
@@ -114,11 +116,11 @@ class KafkaTest(unittest.TestCase):
 
     def test_2_create_kafka_stream(self):
         self.upload_ds(DS_NAME)
-        self.train_predictor(DS_NAME, self._testMethodName)
+        self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
         url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
         res = requests.put(url, json={
-            "predictor": self._testMethodName,
+            "predictor": DEFAULT_PREDICTOR,
             "stream_in": STREAM_IN,
             "stream_out": STREAM_OUT,
             "integration": INTEGRATION_NAME
@@ -137,11 +139,11 @@ class KafkaTest(unittest.TestCase):
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_4_create_kafka_ts_stream(self):
-        self.train_ts_predictor(DS_NAME, self._testMethodName)
+        self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
 
         url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
         res = requests.put(url, json={
-            'predictor': self._testMethodName,
+            'predictor': TS_PREDICTOR,
             'stream_in': STREAM_IN_TS,
             'stream_out': STREAM_OUT_TS,
             'integration': INTEGRATION_NAME,
@@ -159,8 +161,7 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-
-    def test_6_create_stream_redis_native_api(self):
+    def test_6_create_stream_kafka_native_api(self):
         STREAM_IN_NATIVE = STREAM_IN + "_native"
         STREAM_OUT_NATIVE = STREAM_OUT + "_native"
 
@@ -181,7 +182,7 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    def test_7_create_ts_stream_redis_native_api(self):
+    def test_7_create_ts_stream_kafka_native_api(self):
         STREAM_IN_NATIVE = STREAM_IN_TS + "_native"
         STREAM_OUT_NATIVE = STREAM_OUT_TS + "_native"
 

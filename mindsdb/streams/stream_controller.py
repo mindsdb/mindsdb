@@ -89,20 +89,20 @@ class StreamController:
                         if ob not in when_data:
                             raise Exception(f'when_data doesn\'t contain order_by[{ob}]')
 
-                    cache.append(when_data)
+                    cache[None].append(when_data)
                 
-                if len(cache) >= window:
-                    cache = [*sorted(
-                        cache,
+                if len(cache[None]) >= window:
+                    cache[None] = [*sorted(
+                        cache[None],
                         # WARNING: assuming wd[ob] is numeric
                         key=lambda wd: tuple(wd[ob] for ob in order_by)
                     )]
-                    res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[-window:])
+                    res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[None][-window:])
                     if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                         self.anomaly_stream.write(res_list[-1])
                     else:
                         self.stream_out.write(res_list[-1])
-                    cache = cache[1 - window:]
+                    cache[None] = cache[None][1 - window:]
         else:
             cache = Cache(self.name + '_gb')
 

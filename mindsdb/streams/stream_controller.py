@@ -120,7 +120,7 @@ class StreamController:
                     gb_value = tuple(when_data[gb] for gb in group_by)
 
                     # because cache doesn't work for tuples
-                    str(hash(gb_value))
+                    gb_value = str(hash(gb_value))
 
                     cache[gb_value].append(when_data)
 

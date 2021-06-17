@@ -14,9 +14,8 @@ from mindsdb.utilities.fs import create_directory, create_process_mark, delete_p
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
-from mindsdb.utilities.log import log
-import pyarrow as pa
-import pyarrow.flight as fl
+from mindsdb.utilities.log import Log
+
 
 class ModelController():
     def __init__(self, ray_based):

@@ -2,9 +2,6 @@ import time
 import pickle
 import os
 
-from mindsdb.utilities.log import log
-import pyarrow.flight as fl
-
 
 class ModelInterfaceWrapper(object):
     def __init__(self, model_interface, company_id=None):

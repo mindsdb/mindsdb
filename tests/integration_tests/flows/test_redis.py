@@ -96,7 +96,6 @@ class RedisTest(unittest.TestCase):
             'data_source_name': ds_name,
             'to_predict': 'y',
             'kwargs': {
-                # 'stop_training_in_x_seconds': 40,
                 'use_gpu': False,
                 'join_learn_process': True,
                 'ignore_columns': None,
@@ -115,7 +114,8 @@ class RedisTest(unittest.TestCase):
 
     def test_1_create_integration(self):
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
-        res = requests.put(url, json={"params": {"type": "redis", "connection": CONNECTION_PARAMS}})
+        params = {"type": "redis", "connection": CONNECTION_PARAMS}
+        res = requests.put(url, json={"params": params})
         self.assertEqual(res.status_code, 200)
 
     def test_2_create_redis_stream(self):

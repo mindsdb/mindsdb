@@ -44,21 +44,21 @@ class StreamController:
 
         self.thread.start()
 
-    def _is_anomaly(self, when_data):
-        for k in when_data:
-            if k.endswith('_anomaly') and when_data[k] is not None:
+    def _is_anomaly(self, res):
+        for k in res:
+            if k.endswith('_anomaly') and res[k] is not None:
                 return True
         return False
 
     def _consider_learning(self):
         if self.learning_stream is not None:
-            self.learning_data.extend(self.learning_stream.read())
-            if len(self.learning_data) >= self.learning_threshold:
+            self.learning_data[''].extend(self.learning_stream.read())
+            if len(self.learning_data['']) >= self.learning_threshold:
                 # TODO
-                # 1. Create a new datasource from self.learning_data
+                # 1. Create a new datasource from self.learning_data['']
                 # 2. Add its ID to db.Predictor.additional_datasource_ids
                 # 3. Call self.model_interface.adjust(...)
-                self.learning_data.clear()
+                self.learning_data[''].clear()
 
     def _make_predictions(self):
         while not self.stop_event.wait(0.5):
@@ -120,6 +120,7 @@ class StreamController:
                     gb_value = tuple(when_data[gb] for gb in group_by)
 
                     # because cache doesn't work for tuples
+                    # (raises Exception: tuple doesn't have "encode" attribute)
                     gb_value = str(hash(gb_value))
 
                     if gb_value not in cache:
@@ -127,7 +128,7 @@ class StreamController:
 
                     cache[gb_value].append(when_data)
 
-                for gb_value in cache.keys():
+                for gb_value in cache:
                     if len(cache[gb_value]) >= window:
                         cache[gb_value] = [*sorted(
                             cache[gb_value],

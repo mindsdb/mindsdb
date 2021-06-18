@@ -1,6 +1,5 @@
 import os
 from threading import Event, Thread
-from collections import defaultdict
 
 import pandas as pd
 import mindsdb_datasources

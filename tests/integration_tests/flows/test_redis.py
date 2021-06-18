@@ -178,6 +178,8 @@ class RedisTest(unittest.TestCase):
             'stream_out': STREAM_OUT_NATIVE,
         })
 
+        time.sleep(5)
+
         stream_in = RedisStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
 
@@ -186,6 +188,19 @@ class RedisTest(unittest.TestCase):
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)
+
+        control_stream.write({
+            'action': 'delete',
+            'name': f'{self._testMethodName}_{STREAM_SUFFIX}'
+        })
+
+        time.sleep(5)
+
+        for x in range(1, 3):
+            stream_in.write({'x1': x, 'x2': 2*x})
+            time.sleep(5)
+
+        self.assertEqual(len(list(stream_out.read())), 0)
 
     def test_7_create_ts_stream_redis_native_api(self):
         STREAM_IN_NATIVE = STREAM_IN_TS + "_native"
@@ -199,6 +214,8 @@ class RedisTest(unittest.TestCase):
             'stream_in': STREAM_IN_NATIVE,
             'stream_out': STREAM_OUT_NATIVE,
         })
+
+        time.sleep(5)
 
         stream_in = RedisStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)

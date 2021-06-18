@@ -169,6 +169,7 @@ class KafkaTest(unittest.TestCase):
 
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
+            'action': 'create',
             'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
             'predictor': DEFAULT_PREDICTOR,
             'stream_in': STREAM_IN_NATIVE,
@@ -190,6 +191,7 @@ class KafkaTest(unittest.TestCase):
 
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
+            'action': 'create',
             'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
             'predictor': TS_PREDICTOR,
             'stream_in': STREAM_IN_NATIVE,
@@ -204,6 +206,17 @@ class KafkaTest(unittest.TestCase):
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)
+
+        control_stream.write({
+            'action': 'delete',
+            'name': f'{self._testMethodName}_{STREAM_SUFFIX}'
+        })
+
+        for x in range(210, 221):
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
+            time.sleep(5)
+
+        self.assertEqual(len(list(stream_out.read())), 0)
 
 if __name__ == '__main__':
     try:

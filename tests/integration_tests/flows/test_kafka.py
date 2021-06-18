@@ -175,8 +175,8 @@ class KafkaTest(unittest.TestCase):
             'stream_out': STREAM_OUT_NATIVE,
         })
 
-        stream_in = KafkaStream(STREAM_IN_NATIVE)
-        stream_out = KafkaStream(STREAM_OUT_NATIVE)
+        stream_in = KafkaStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
+        stream_out = KafkaStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
 
         for x in range(1, 3):
             stream_in.add({'x1': x, 'x2': 2*x})
@@ -196,8 +196,8 @@ class KafkaTest(unittest.TestCase):
             'stream_out': STREAM_OUT_NATIVE,
         })
 
-        stream_in = KafkaStream(STREAM_IN_NATIVE)
-        stream_out = KafkaStream(STREAM_OUT_NATIVE)
+        stream_in = KafkaStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
+        stream_out = KafkaStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
 
         for x in range(210, 221):
             stream_in.add({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})

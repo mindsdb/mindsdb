@@ -26,7 +26,7 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
             self,
             config,
             name,
-            control_stream=KafkaStream('control_stream', self.connection_info)
+            control_stream=KafkaStream('control_stream_' + name, self.connection_info)
         )
 
     def _make_stream(self, s: db.Stream):

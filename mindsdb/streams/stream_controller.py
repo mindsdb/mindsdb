@@ -2,7 +2,6 @@ import os
 from threading import Event, Thread
 
 import pandas as pd
-import mindsdb_datasources
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 import mindsdb.interfaces.storage.db as db
@@ -20,7 +19,7 @@ class StreamController:
         
         self.learning_stream = learning_stream
         self.learning_threshold = learning_threshold
-        self.learning_data = Cache(self.name + '_learning_data')
+        self.learning_data = []
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.stop_event = Event()
@@ -51,13 +50,27 @@ class StreamController:
 
     def _consider_learning(self):
         if self.learning_stream is not None:
-            self.learning_data[''].extend(self.learning_stream.read())
-            if len(self.learning_data['']) >= self.learning_threshold:
-                # TODO
-                # 1. Create a new datasource from self.learning_data['']
-                # 2. Add its ID to db.Predictor.additional_datasource_ids
-                # 3. Call self.model_interface.adjust(...)
-                self.learning_data[''].clear()
+            self.learning_data.extend(self.learning_stream.read())
+            if len(self.learning_data) >= self.learning_threshold:
+                df = pd.DataFrame(self.learning_data)
+
+                p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
+
+                name = 'name'
+                path = os.path.join(self._default_config['paths']['datasources'], name)
+                df.to_csv(path)
+
+                from_data = {
+                    'class': 'FileDS',
+                    'args': [path],
+                    'kwargs': {},
+                }
+
+                self.data_store.save_datasource(name=name, source_type='file', source=path, company_id=self.company_id)
+                ds = self.data_store.get_datasource(name, self.company_id)
+
+                self.model_interface.adjust(p.name, from_data, ds['id'], self.company_id)
+                self.learning_data.clear()
 
     def _make_predictions(self):
         while not self.stop_event.wait(0.5):

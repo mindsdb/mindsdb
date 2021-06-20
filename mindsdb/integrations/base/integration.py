@@ -37,49 +37,49 @@ class StreamIntegration(Integration):
 
     def _loop(self):
         while not STOP_THREADS_EVENT.wait(1.0):
-
-            # Create or delete streams based on messages from control_stream
-            for dct in self._control_stream.read():
-                if 'action' not in dct:
-                    pass
-                else:
-                    if dct['action'] == 'create':
-                        for k in ['name', 'predictor', 'stream_in', 'stream_out']:
-                            if k not in dct:
-                                # Not all required parameters were provided (i.e. stream will not be created)
-                                # TODO: what's a good way to notify user about this?
-                                break
-                        else:
-                            stream = db.Stream(
-                                company_id=self.company_id,
-                                name=stream,
-                                integration=stream['name'],
-                                predictor=stream['predictor'],
-                                stream_in=stream['stream_in'],
-                                stream_out=stream['stream_out'],
-                                anomaly_stream=stream.get('anomaly_stream', None),
-                                learning_stream=stream.get('learning_stream', None)
-                            )
-                            db.session.add(stream)
-                            db.session.commit()
-
-                    elif dct['action'] == 'delete':
-                        for k in ['name']:
-                            if k not in dct:
-                                # Not all required parameters were provided (i.e. stream will not be created)
-                                # TODO: what's a good way to notify user about this?
-                                break
-                        else:
-                            db.session.query(db.Stream).filter_by(
-                                company_id=self.company_id,
-                                integration=self.name,
-                                name=dct['name']
-                            ).delete()
-                            db.session.commit()
-                    else:
-                        # Bad action value
+            if self._control_stream is not None:
+                # Create or delete streams based on messages from control_stream
+                for dct in self._control_stream.read():
+                    if 'action' not in dct:
                         pass
-              
+                    else:
+                        if dct['action'] == 'create':
+                            for k in ['name', 'predictor', 'stream_in', 'stream_out']:
+                                if k not in dct:
+                                    # Not all required parameters were provided (i.e. stream will not be created)
+                                    # TODO: what's a good way to notify user about this?
+                                    break
+                            else:
+                                stream = db.Stream(
+                                    company_id=self.company_id,
+                                    name=stream,
+                                    integration=stream['name'],
+                                    predictor=stream['predictor'],
+                                    stream_in=stream['stream_in'],
+                                    stream_out=stream['stream_out'],
+                                    anomaly_stream=stream.get('anomaly_stream', None),
+                                    learning_stream=stream.get('learning_stream', None)
+                                )
+                                db.session.add(stream)
+                                db.session.commit()
+
+                        elif dct['action'] == 'delete':
+                            for k in ['name']:
+                                if k not in dct:
+                                    # Not all required parameters were provided (i.e. stream will not be created)
+                                    # TODO: what's a good way to notify user about this?
+                                    break
+                            else:
+                                db.session.query(db.Stream).filter_by(
+                                    company_id=self.company_id,
+                                    integration=self.name,
+                                    name=dct['name']
+                                ).delete()
+                                db.session.commit()
+                        else:
+                            # Bad action value
+                            pass
+                
             stream_db_recs = db.session.query(db.Stream).filter_by(
                 company_id=self.company_id,
                 integration=self.name

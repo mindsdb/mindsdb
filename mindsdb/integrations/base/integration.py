@@ -52,13 +52,13 @@ class StreamIntegration(Integration):
                             else:
                                 stream = db.Stream(
                                     company_id=self.company_id,
-                                    name=stream,
-                                    integration=stream['name'],
-                                    predictor=stream['predictor'],
-                                    stream_in=stream['stream_in'],
-                                    stream_out=stream['stream_out'],
-                                    anomaly_stream=stream.get('anomaly_stream', None),
-                                    learning_stream=stream.get('learning_stream', None)
+                                    name=dct['name'],
+                                    integration=self.name,
+                                    predictor=dct['predictor'],
+                                    stream_in=dct['stream_in'],
+                                    stream_out=dct['stream_out'],
+                                    anomaly_stream=dct.get('anomaly_stream', None),
+                                    learning_stream=dct.get('learning_stream', None)
                                 )
                                 db.session.add(stream)
                                 db.session.commit()

@@ -70,11 +70,13 @@ class StreamIntegration(Integration):
                                     # TODO: what's a good way to notify user about this?
                                     break
                             else:
-                                db.session.query(db.Stream).filter_by(
+                                s = db.session.query(db.Stream).filter_by(
                                     company_id=self.company_id,
                                     integration=self.name,
                                     name=dct['name']
-                                ).delete()
+                                ).first()
+                                if s is not None:
+                                    s.delete()
                                 db.session.commit()
                         else:
                             # Bad action value

@@ -153,4 +153,3 @@ class StreamController:
                         else:
                             self.stream_out.write(res_list[-1])
                         cache[gb_value] = cache[gb_value][1 - window:]
-        cache.delete()

@@ -159,8 +159,6 @@ class ModelController():
 
         join_learn_process = True
 
-        self._setup_for_creation(name, original_name, company_id=company_id)
-
         if self.ray_based:
             run_adjust(
                 name=name,

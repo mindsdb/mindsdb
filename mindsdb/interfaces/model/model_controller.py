@@ -157,7 +157,7 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        join_learn_process = False
+        join_learn_process = True
 
         self._setup_for_creation(name, original_name, company_id=company_id)
 

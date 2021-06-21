@@ -157,14 +157,11 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
-    def test_adjust_predicotor(self):
-        # PUT predictor
+        # Adjust predictor
         params = {'data_source_name': ds_name,}
         url = f'{root}/predictors/{pred_name}/adjust'
         res = requests.post(url, json=params)
         assert res.status_code == 200
-
-        time.sleep(20)
 
         # POST predictions
         params = {'when': {'sqft': 500}}

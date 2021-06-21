@@ -26,6 +26,10 @@ STREAM_IN = f"test_stream_in_{STREAM_SUFFIX}"
 STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
 STREAM_IN_TS = f"test_stream_in_ts_{STREAM_SUFFIX}"
 STREAM_OUT_TS = f"test_stream_out_ts_{STREAM_SUFFIX}"
+LEARNING_STREAM = f"test_learning_stream_{STREAM_SUFFIX}"
+LEARNING_STREAM_TS = f"test_learning_stream_ts_{STREAM_SUFFIX}"
+STREAM_IN_NATIVE = STREAM_IN_TS + "_native"
+STREAM_OUT_NATIVE = STREAM_OUT_TS + "_native"
 DEFAULT_PREDICTOR = "kafka_predictor"
 TS_PREDICTOR = "kafka_ts_predictor"
 DS_NAME = "kafka_test_ds"
@@ -163,9 +167,6 @@ class KafkaTest(unittest.TestCase):
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_6_create_stream_kafka_native_api(self):
-        STREAM_IN_NATIVE = STREAM_IN + "_native"
-        STREAM_OUT_NATIVE = STREAM_OUT + "_native"
-
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -200,9 +201,6 @@ class KafkaTest(unittest.TestCase):
         self.assertEqual(len(list(stream_out.read())), 0)
 
     def test_7_create_ts_stream_kafka_native_api(self):
-        STREAM_IN_NATIVE = STREAM_IN_TS + "_native"
-        STREAM_OUT_NATIVE = STREAM_OUT_TS + "_native"
-
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -235,6 +233,31 @@ class KafkaTest(unittest.TestCase):
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 0)
+
+    def test_8_test_online_learning(self):
+        control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
+        stream_in = KafkaStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
+        stream_out = KafkaStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
+
+        control_stream.write({
+            'action': 'create',
+            'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
+            'predictor': DEFAULT_PREDICTOR,
+            'stream_in': STREAM_IN_NATIVE,
+            'stream_out': STREAM_OUT_NATIVE,
+            'learning_stream': LEARNING_STREAM
+        })
+
+        for x in range(1, 101):
+            stream_in.write({'x1': x, 'x2': 2*x})
+        
+        time.sleep(30)
+
+        for x in range(1, 3):
+            stream_in.write({'x1': x, 'x2': 2*x})
+            time.sleep(5)
+        
+        self.assertEqual(len(list(stream_out.read())), 2)
 
 
 if __name__ == '__main__':

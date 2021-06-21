@@ -240,6 +240,7 @@ class RedisTest(unittest.TestCase):
         control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         stream_in = RedisStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
+        learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
 
         control_stream.write({
             'action': 'create',
@@ -251,7 +252,7 @@ class RedisTest(unittest.TestCase):
         })
 
         for x in range(1, 101):
-            stream_in.write({'x1': x, 'x2': 2*x})
+            learning_stream.write({'x1': x, 'x2': 2*x})
         
         time.sleep(30)
 

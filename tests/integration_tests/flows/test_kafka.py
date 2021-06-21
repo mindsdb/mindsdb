@@ -238,6 +238,7 @@ class KafkaTest(unittest.TestCase):
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         stream_in = KafkaStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
         stream_out = KafkaStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
+        learning_stream = KafkaStream(LEARNING_STREAM, CONNECTION_PARAMS)
 
         control_stream.write({
             'action': 'create',
@@ -249,7 +250,7 @@ class KafkaTest(unittest.TestCase):
         })
 
         for x in range(1, 101):
-            stream_in.write({'x1': x, 'x2': 2*x})
+            learning_stream.write({'x1': x, 'x2': 2*x})
         
         time.sleep(30)
 

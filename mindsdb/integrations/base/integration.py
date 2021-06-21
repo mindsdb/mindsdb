@@ -41,6 +41,7 @@ class StreamIntegration(Integration):
                 # Create or delete streams based on messages from control_stream
                 for dct in self._control_stream.read():
                     if 'action' not in dct:
+                        print('no action value')
                         pass
                     else:
                         if dct['action'] == 'create':
@@ -48,38 +49,43 @@ class StreamIntegration(Integration):
                                 if k not in dct:
                                     # Not all required parameters were provided (i.e. stream will not be created)
                                     # TODO: what's a good way to notify user about this?
+                                    print('not creating stream')
                                     break
                             else:
-                                stream = db.Stream(
-                                    company_id=self.company_id,
-                                    name=dct['name'],
-                                    integration=self.name,
-                                    predictor=dct['predictor'],
-                                    stream_in=dct['stream_in'],
-                                    stream_out=dct['stream_out'],
-                                    anomaly_stream=dct.get('anomaly_stream', None),
-                                    learning_stream=dct.get('learning_stream', None)
-                                )
-                                db.session.add(stream)
-                                db.session.commit()
-
+                                print('creating stream')
+                                if db.session.query(db.Stream).filter_by(name=dct['name'], company_id=self.company_id).first() is None:
+                                    stream = db.Stream(
+                                        company_id=self.company_id,
+                                        name=dct['name'],
+                                        integration=self.name,
+                                        predictor=dct['predictor'],
+                                        stream_in=dct['stream_in'],
+                                        stream_out=dct['stream_out'],
+                                        anomaly_stream=dct.get('anomaly_stream', None),
+                                        learning_stream=dct.get('learning_stream', None)
+                                    )
+                                    db.session.add(stream)
+                                    db.session.commit()
+                                else:
+                                    print('stream with this name already exists')
                         elif dct['action'] == 'delete':
                             for k in ['name']:
                                 if k not in dct:
                                     # Not all required parameters were provided (i.e. stream will not be created)
                                     # TODO: what's a good way to notify user about this?
+                                    print('not deleting stream')
                                     break
                             else:
-                                s = db.session.query(db.Stream).filter_by(
+                                print('deleting stream')
+                                db.session.query(db.Stream).filter_by(
                                     company_id=self.company_id,
                                     integration=self.name,
                                     name=dct['name']
-                                ).first()
-                                if s is not None:
-                                    s.delete()
+                                ).delete()
                                 db.session.commit()
                         else:
                             # Bad action value
+                            print('bad action value')
                             pass
                 
             stream_db_recs = db.session.query(db.Stream).filter_by(

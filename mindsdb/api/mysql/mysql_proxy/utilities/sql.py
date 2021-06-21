@@ -1,16 +1,16 @@
-from mindsdb_sql.ast import Join, Identifier, BinaryOperation, Constant, Operation
-from mindsdb_sql.ast.operation import UnaryOperation
+from mindsdb_sql.parser.ast import Join, Identifier, BinaryOperation, Constant, Operation, UnaryOperation
+from mindsdb_sql.parser.ast.select.star import Star
 
 
 def get_alias(element):
-    if element.value == '*':
+    if '.'.join(element.parts) == '*':
         return '*'
-    return element.value if element.alias is None else element.alias
+    return '.'.join(element.parts) if element.alias is None else element.alias
 
 
 def identifier_to_dict(identifier):
     res = {
-        'value': identifier.value,
+        'value': '.'.join(identifier.parts),
         'name': get_alias(identifier)
     }
     return res
@@ -63,10 +63,18 @@ def to_moz_sql_struct(mp):
         'select': [],
         'from': []
     }
-    res['select'] = [{
-        'value': x.value,
-        'name': get_alias(x)
-    } for x in mp.targets]
+
+    for t in mp.targets:
+        if isinstance(t, Star):
+            res['select'].append({
+                'value': '*',
+                'name': '*'
+            })
+        else:
+            res['select'].append({
+                'value': '.'.join(t.parts),
+                'name': get_alias(t)
+            })
 
     if isinstance(mp.from_table, Identifier):
         res['from'] = [identifier_to_dict(mp.from_table)]
@@ -97,4 +105,3 @@ def to_moz_sql_struct(mp):
         res['limit'] = mp.limit.value
 
     return res
-

@@ -12,17 +12,13 @@
 import re
 import traceback
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.ast import Join, Identifier, Operation, Constant, UnaryOperation, BinaryOperation
+from moz_sql_parser import parse
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import join_keywords, binary_ops, unary_ops, operator_map
-from mindsdb.api.mysql.mysql_proxy.classes.com_operators2 import operator_map as new_operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
-
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
 
 
 class TableWithoutDatasourceException(Exception):
@@ -53,7 +49,7 @@ class SQLQuery():
     struct = {}
     result = None
 
-    def __init__(self, sql, integration=None, database=None):
+    def __init__(self, sql, integration=None, database=None, datahub=None):
         # parse
         self.integration = integration
         self.database = database
@@ -67,16 +63,13 @@ class SQLQuery():
         self._parseQuery(sql)
 
         # prepare
-        self._prepare()
-        # self._prepareQuery()
+        self._prepareQuery()
 
     def fetch(self, datahub, view='list'):
         try:
             self.datahub = datahub
-            self._fetch_data()
-            data = self._process_data()
-            # self._fetchData()
-            # data = self._processData()
+            self._fetchData()
+            data = self._processData()
             if view == 'dict':
                 self.result = self._makeDictResultVeiw(data)
             elif view == 'list':
@@ -150,10 +143,7 @@ class SQLQuery():
         return s
 
     def _parseQuery(self, sql):
-        mindsdb_sql_struct = parse_sql(sql)
-        new_struct = to_moz_sql_struct(mindsdb_sql_struct)
-        self.struct = new_struct
-        self.mindsdb_sql_struct = mindsdb_sql_struct
+        self.struct = parse(sql)
 
         if 'limit' in self.struct:
             limit = self.struct.get('limit')
@@ -176,102 +166,6 @@ class SQLQuery():
         if isinstance(orderby, dict):
             self.struct['orderby'] = [orderby]
 
-    def _format_table(self, identifier):
-        name = identifier.value
-        database = self.database
-        if '.' in name:
-            database = name.split('.')[-2]
-            name = name.split('.')[-1]
-        return {
-            'identifier': identifier,
-            'value': identifier.value,
-            'name': name,
-            'database': database,
-            'alias': name if identifier.alias is None else identifier.alias
-        }
-
-    def _parse_tables(self, el):
-        if isinstance(el, Identifier):
-            return [self._format_table(el)]
-        elif isinstance(el, Join):
-            return [
-                self._format_table(el.left),
-                self._format_table(el.right)
-            ]
-        else:
-            raise Exception('!')
-
-    def _format_field(self, identifier):
-        name = identifier.value
-        table_alias = None
-        if '.' in name:
-            table_alias = name.split('.')[0]
-            name = name.split('.')[-1]
-        return {
-            'identifier': identifier,
-            'value': identifier.value,
-            'name': name,
-            'alias': name if identifier.alias is None else identifier.alias,
-            'table_alias': table_alias
-        }
-
-    def _parse_operation_identifiers(self, args):
-        res = []
-        for arg in args:
-            if isinstance(arg, Operation):
-                res.extend(
-                    self._parse_operation_identifiers(arg.args)
-                )
-            elif isinstance(arg, Identifier):
-                res.append(self._format_field(arg))
-        return res
-
-    def _parse_join_fields(self, root):
-        if not isinstance(root, Join):
-            return []
-        if not isinstance(root.condition, Operation):
-            return []
-        return self._parse_operation_identifiers(root.condition.args)
-
-    def _parse_where_fields(self, root):
-        if not isinstance(root, Operation):
-            return []
-        return self._parse_operation_identifiers(root.args)
-
-    def _prepare(self):
-        sql_struct = self.mindsdb_sql_struct
-
-        # +++ prepare from
-        from_statement = sql_struct.from_table
-        is_join = isinstance(from_statement, Join)
-        tables_list = self._parse_tables(from_statement)
-        self.new_tables_list = tables_list
-
-        tables_aliases = [x['alias'] for x in tables_list]
-        if len(tables_aliases) != len(set(tables_aliases)):
-            raise Exception('each table must have unique alias')
-
-        self.tables_alias_map = {}
-        for el in self.new_tables_list:
-            self.tables_alias_map[el['alias']] = el
-
-        # take fields list from 'select', 'join on' and 'where'
-        identifiers_list = []
-        identifiers_list_select = [self._format_field(x) for x in sql_struct.targets]
-        identifiers_list.extend(identifiers_list_select)
-
-        identifiers_list_join = self._parse_join_fields(from_statement)
-        identifiers_list.extend(identifiers_list_join)
-
-        if sql_struct.where is not None:
-            identifiers_list_where = self._parse_where_fields(sql_struct.where)
-            identifiers_list.extend(identifiers_list_where)
-            self.identifiers_list_where = identifiers_list_where
-
-        self.identifiers_list = identifiers_list
-        self.identifiers_list_select = identifiers_list_select
-        self.identifiers_list_join = identifiers_list_join
-
     def _prepareQuery(self):
         # prepare "from" statement
         from_statement = self.struct.get('from')
@@ -287,7 +181,7 @@ class SQLQuery():
                 if isinstance(statement, dict) and 'on' in statement:
                     # maybe join
                     join_type = None
-                    for join in join_keywords:  # !!!!
+                    for join in join_keywords:
                         if join in statement:
                             join_type = join
                             break
@@ -459,77 +353,6 @@ class SQLQuery():
         self.order_rules.reverse()  # sorting processed in reverse order
         # print(self.order_rules)
 
-    def _fetch_external_datasource_data(self):
-        pass
-
-    # def _plain_where_conditions(self, condition):
-    #     ''' Transform current tree view of 'where' conditions to plain dict.
-    #         All oprations must be 'equal', and must be joined via 'AND'.
-    #     '''
-    #     conditions = {}
-    #     # condition = self.mindsdb_sql_struct.where
-    #     if condition is None:
-    #         return conditions
-    #     if condition.op not in ['AND', '=']:
-    #         raise Exception('must be only AND and =')
-    #     if isinstance(condition.args[0], Operation):
-    #         add_condition = self._plain_where_conditions(condition.args[0])
-    #         conditions.update(add_condition)
-    #         add_condition = self._plain_where_conditions(condition.args[1])
-    #         conditions.update(add_condition)
-    #     elif isinstance(condition.args[0], Identifier):
-    #         if isinstance(condition.args[1], Constant) is False:
-    #             raise Exception('must be = to constant')
-    #         conditions[condition.args[0].value] = condition.args[1].value
-    #     return conditions
-
-    def _fetch_data(self):
-
-        # TODO fetch data from external_datasource, if need
-        # self._fetch_external_datasource_data()
-
-        # TODO optimisation: atm all columns from table will be fetched, and only then will be filtered.
-        # Will need filter only columns which used in 'where' or 'select'
-        # if 'external_datasource' in conditions
-
-        for table in self.new_tables_list:
-            database = table['database']
-            dn = self.datahub.get(database)
-            if dn is None:
-                raise Exception(f"Unknown database {dn}")
-            # посылаем в where весь where, но в конкретном datanode делаем проверки если нужны
-            # if database == 'mindsdb':
-            # conditions = self._plain_where_conditions(self.mindsdb_sql_struct.where)
-            data = dn.select(
-                table=table['name'],
-                columns=None,   # TODO see above
-                # where_data=[conditions],
-                where=self.mindsdb_sql_struct.where,
-                # where=condition if dn.getType() != 'integration' else table_info['conditions'],
-                came_from=self.integration
-            )
-            # else:
-            #     raise Exception('not ready yet')
-            table['data'] = data
-            columns = dn.getTableColumns(table['name'])
-            table['columns'] = columns
-        # x = 1
-
-        # +++ make columns list
-        # TODO del in future
-        # self.select_columns = [{
-        #         'table': 
-        #         'field': 
-        #         'caption':  # alias
-        #     } for x in identifiers_list_select
-        # ]
-        # self.select_columns.append(dict(
-        #     table=table_name,
-        #     field=field_name,
-        #     caption=caption
-        # ))
-        # --- make columns list
-
     def _fetchData(self):
         self.table_data = {}
 
@@ -651,43 +474,11 @@ class SQLQuery():
         self.table_data[table_name] = list(self.table_data[table_name])
         return self.table_data[table_name]
 
-    def _apply_where_filter(self, row, where):
-        if isinstance(where, Identifier):
-            return row[where.value]
-        elif isinstance(where, Constant):
-            return where.value
-        elif not isinstance(where, (UnaryOperation, BinaryOperation)):
-            Exception(f'Unknown operation type: {where}')
-
-        op_fn = new_operator_map.get(where.op)
-        if op_fn is None:
-            raise Exception(f'unknown operator {where.op}')
-
-        args = [self._apply_where_filter(row, arg) for arg in where.args]
-        result = op_fn(*args)
-        return result
-
-    def _process_data(self):
-        where = self.mindsdb_sql_struct.where
-        data = self.new_tables_list[0]['data']
-        if where is None:
-            return data
-        filtered_data = []
-        for row in data:
-            filtered = self._apply_where_filter(row, where)
-            if filtered is True:
-                filtered_data.append(row)
-        return filtered_data
-        
-        # if self.where_conditions:
-        # pass
-
     def _processData(self):
         # do join with "on" filter
         data = []
         table1_name = self.tables_select[0]['name']
 
-        # +++ JOIN
         # FIXME that for 'integration JOIN predictoir'
         if len(table1_name.split('.')) == 3:
             self._resolveTableData(table1_name[table1_name.find('.') + 1: ])
@@ -741,7 +532,6 @@ class SQLQuery():
                     data2.append(record2)
 
             data = data2
-        # --- JOIN
 
         # do "where" filter
         if self.where_conditions:
@@ -815,16 +605,14 @@ class SQLQuery():
         for record in data:
             row = []
             for col in self.columns:
-                # col_name = f"{col['database']}.{col['table_name']}"
-                col_name = col['alias']
+                col_name = f"{col['database']}.{col['table_name']}"
 
                 # FIXME that only for 'integration JOIN predictor'
                 if col_name not in record:
                     col_name = [x for x in record.keys() if col_name in x][0]
 
-                # table_record = record[col_name]
-                # val = table_record[col['name']]
-                val = record[col_name]
+                table_record = record[col_name]
+                val = table_record[col['name']]
                 row.append(val)
             result.append(row)
 
@@ -1076,50 +864,6 @@ class SQLQuery():
 
     @property
     def columns(self):
-        result = []
-        # identifiers_list_select
-        for el in self.identifiers_list_select:
-            if el['alias'] == '*':
-                if el['table_alias'] is not None:
-                    table_meta = self.tables_alias_map.get(el['table_alias'])
-                    if table_meta is None:
-                        raise Exception(f"can not find table {el['table_alias']}")
-                    for column_name in table_meta['columns']:
-                        result.append({
-                            'database': '',  # TODO
-                            'table_name': '',  # TODO
-                            'name': column_name,
-                            'alias': column_name,
-                            # NOTE all work with text-type, but if/when wanted change types to real,
-                            # it will need to check all types casts in BinaryResultsetRowPacket
-                            'type': TYPES.MYSQL_TYPE_VAR_STRING
-                        })
-                else:
-                    for table_meta in self.new_tables_list:
-                        for column_name in table_meta['columns']:
-                            result.append({
-                                'database': '',  # TODO
-                                'table_name': '',  # TODO
-                                'name': column_name,
-                                'alias': column_name,
-                                # NOTE all work with text-type, but if/when wanted change types to real,
-                                # it will need to check all types casts in BinaryResultsetRowPacket
-                                'type': TYPES.MYSQL_TYPE_VAR_STRING
-                            })
-            else:
-                result.append({
-                    'database': '',  # TODO
-                    'table_name': '',  # TODO
-                    'name': el['name'],
-                    'alias': el['alias'],
-                    # NOTE all work with text-type, but if/when wanted change types to real,
-                    # it will need to check all types casts in BinaryResultsetRowPacket
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                })
-        return result
-
-    @property
-    def columns2(self):
         result = []
         for column in self.select_columns:
             parts = column['table'].split('.')

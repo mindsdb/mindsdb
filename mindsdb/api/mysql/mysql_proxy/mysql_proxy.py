@@ -43,6 +43,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     NotImplementedError,
     SqlError
 )
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query_new import SQLQuery as SQLQuery_new
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
@@ -982,7 +983,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'database()' in sql_lower:
                 self.answerSelectDatabase()
                 return
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+
+            if ' left join ' not in sql_lower and ' join ' in sql_lower:
+                query_class = SQLQuery_new
+            else:
+                query_class = SQLQuery
+            query = query_class(
+                sql,
+                integration=self.session.integration,
+                database=self.session.database,
+                datahub=self.session.datahub
+            )
             self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()

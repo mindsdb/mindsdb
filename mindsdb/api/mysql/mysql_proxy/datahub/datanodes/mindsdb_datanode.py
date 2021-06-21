@@ -140,6 +140,16 @@ class MindsDBDataNode(DataNode):
 
         return data
 
+    def select_query(self, query):
+        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+        moz_struct = to_moz_sql_struct(query)
+        data = self.select(
+            table=query.from_table.parts[-1],
+            columns=None,
+            where=moz_struct.get('where')
+        )
+        return data
+
     def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
@@ -150,11 +160,10 @@ class MindsDBDataNode(DataNode):
         if self.ai_table.get_ai_table(table):
             return self._select_from_ai_table(table, columns, where)
 
-        try:
-            where = plain_where_conditions(where)
-        except Exception as e:
-            x = 1
-
+        # try:
+        #     where = plain_where_conditions(where)
+        # except Exception as e:
+        #     x = 1
 
         original_when_data = None
         if 'when_data' in where:
@@ -285,6 +294,9 @@ class MindsDBDataNode(DataNode):
                 for col in where_data:
                     if col not in predicted_columns:
                         pred_dicts[0][col] = where_data[col]
+
+            if columns is None:
+                columns = list(pred_dicts[0].keys())
 
             keys = [x for x in pred_dicts[0] if x in columns]
             min_max_keys = []

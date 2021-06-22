@@ -68,7 +68,7 @@ class StreamController:
                     'kwargs': {},
                 }
 
-                self.data_store.save_datasource(name=name, source_type='file', source=path, company_id=self.company_id)
+                self.data_store.save_datasource(name=name, source_type='file', source=path, file_path=path, company_id=self.company_id)
                 ds = self.data_store.get_datasource(name, self.company_id)
 
                 self.model_interface.adjust(p.name, from_data, ds['id'], self.company_id)

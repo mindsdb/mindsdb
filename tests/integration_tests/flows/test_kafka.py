@@ -191,18 +191,18 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-        control_stream.write({
-            'action': 'delete',
-            'name': f'{self._testMethodName}_{STREAM_SUFFIX}'
-        })
+        # control_stream.write({
+        #     'action': 'delete',
+        #     'name': f'{self._testMethodName}_{STREAM_SUFFIX}'
+        # })
 
-        time.sleep(5)
+        # time.sleep(5)
 
-        for x in range(1, 3):
-            stream_in.write({'x1': x, 'x2': 2*x})
-            time.sleep(5)
+        # for x in range(1, 3):
+        #     stream_in.write({'x1': x, 'x2': 2*x})
+        #     time.sleep(5)
 
-        self.assertEqual(len(list(stream_out.read())), 0)
+        # self.assertEqual(len(list(stream_out.read())), 0)
 
     def test_7_create_ts_stream_kafka_native_api(self):
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
@@ -225,18 +225,18 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-        control_stream.write({
-            'action': 'delete',
-            'name': f'{self._testMethodName}_{STREAM_SUFFIX}'
-        })
+        # control_stream.write({
+        #     'action': 'delete',
+        #     'name': f'{self._testMethodName}_{STREAM_SUFFIX}'
+        # })
 
-        time.sleep(5)
+        # time.sleep(5)
 
-        for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
-            time.sleep(5)
+        # for x in range(210, 221):
+        #     stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
+        #     time.sleep(5)
 
-        self.assertEqual(len(list(stream_out.read())), 0)
+        # self.assertEqual(len(list(stream_out.read())), 0)
 
     def test_8_test_online_learning(self):
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)

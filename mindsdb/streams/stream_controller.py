@@ -55,11 +55,12 @@ class StreamController:
         if self.learning_stream is not None:
             self.learning_data.extend(self.learning_stream.read())
             if len(self.learning_data) >= self.learning_threshold:
-                df = pd.DataFrame(self.learning_data)
+                p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
+                ds_record = db.session.query(db.Datasource).filter_by(id=p.datasource_id).first()
+
+                df = pd.DataFrame(self.learning_data, columns=[x['name'] for x in ds_record.data['columns']])
                 ds = mindsdb_datasources.DataSource(df)
                 df = ds._internal_df
-
-                p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
 
                 name = 'name'
                 path = os.path.join(self.config['paths']['datasources'], name)

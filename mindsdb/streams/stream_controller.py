@@ -6,6 +6,7 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.cache import Cache
+from mindsdb.utilities.config import Config
 
 
 class StreamController:
@@ -25,6 +26,7 @@ class StreamController:
         self.stop_event = Event()
         self.native_interface = ModelInterface()
         self.data_store = DataStore()
+        self.config = Config()
 
         p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
         if p is None:
@@ -57,7 +59,7 @@ class StreamController:
                 p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
 
                 name = 'name'
-                path = os.path.join(self._default_config['paths']['datasources'], name)
+                path = os.path.join(self.config['paths']['datasources'], name)
                 df.to_csv(path)
 
                 from_data = {

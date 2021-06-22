@@ -18,6 +18,7 @@ from mindsdb.utilities.log import log
 import pyarrow as pa
 import pyarrow.flight as fl
 
+
 class ModelController():
     def __init__(self, ray_based):
         self.config = Config()

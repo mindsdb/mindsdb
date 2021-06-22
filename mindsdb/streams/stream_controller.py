@@ -7,6 +7,7 @@ from mindsdb.interfaces.model.model_interface import ModelInterface
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.cache import Cache
 from mindsdb.utilities.config import Config
+import mindsdb_datasources
 
 
 class StreamController:
@@ -55,6 +56,8 @@ class StreamController:
             self.learning_data.extend(self.learning_stream.read())
             if len(self.learning_data) >= self.learning_threshold:
                 df = pd.DataFrame(self.learning_data)
+                ds = mindsdb_datasources.DataSource(df)
+                df = ds._internal_df
 
                 p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
 

@@ -210,7 +210,7 @@ class KafkaTest(unittest.TestCase):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
             time.sleep(5)
 
-        self.assertEqual(len(list(stream_out.read())), 2)
+        self.assertEqual(len(list(stream_out.read())), 1)
 
     def test_8_test_online_learning(self):
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
@@ -221,7 +221,7 @@ class KafkaTest(unittest.TestCase):
             'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
             'predictor': DEFAULT_PREDICTOR,
             'stream_in': STREAM_IN_OL,
-            'stream_out': STREAM_IN_OL,
+            'stream_out': STREAM_OUT_OL,
             'learning_stream': LEARNING_STREAM
         })
 

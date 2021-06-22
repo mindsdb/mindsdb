@@ -223,7 +223,7 @@ class KafkaTest(unittest.TestCase):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
             time.sleep(5)
 
-        self.assertEqual(len(list(stream_out.read())), 1)
+        self.assertEqual(len(list(stream_out.read())), 2)
 
         control_stream.write({
             'action': 'delete',

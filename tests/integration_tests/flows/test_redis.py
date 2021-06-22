@@ -32,6 +32,10 @@ LEARNING_STREAM = f"test_learning_stream_{STREAM_SUFFIX}"
 LEARNING_STREAM_TS = f"test_learning_stream_ts_{STREAM_SUFFIX}"
 STREAM_IN_NATIVE = STREAM_IN_TS + "_native"
 STREAM_OUT_NATIVE = STREAM_OUT_TS + "_native"
+TS_STREAM_IN_NATIVE = 'TS_' + STREAM_IN_NATIVE
+TS_STREAM_OUT_NATIVE = 'TS_' + STREAM_OUT_NATIVE
+STREAM_IN_OL = f"test_stream_in_ol_{STREAM_SUFFIX}"
+STREAM_OUT_OL = f"test_stream_out_ol_{STREAM_SUFFIX}"
 DEFAULT_PREDICTOR = "redis_predictor"
 TS_PREDICTOR = "redis_ts_predictor"
 DS_NAME = "redis_test_ds"
@@ -195,14 +199,14 @@ class RedisTest(unittest.TestCase):
             'action': 'create',
             'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
             'predictor': TS_PREDICTOR,
-            'stream_in': STREAM_IN_NATIVE,
-            'stream_out': STREAM_OUT_NATIVE,
+            'stream_in': TS_STREAM_IN_NATIVE,
+            'stream_out': TS_STREAM_OUT_NATIVE,
         })
 
         time.sleep(5)
 
-        stream_in = RedisStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
-        stream_out = RedisStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
+        stream_in = RedisStream(TS_STREAM_IN_NATIVE, CONNECTION_PARAMS)
+        stream_out = RedisStream(TS_STREAM_OUT_NATIVE, CONNECTION_PARAMS)
 
         for x in range(210, 221):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
@@ -212,16 +216,14 @@ class RedisTest(unittest.TestCase):
 
     def test_8_test_online_learning(self):
         control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
-        stream_in = RedisStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
-        stream_out = RedisStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
         learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
 
         control_stream.write({
             'action': 'create',
             'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
             'predictor': DEFAULT_PREDICTOR,
-            'stream_in': STREAM_IN_NATIVE,
-            'stream_out': STREAM_OUT_NATIVE,
+            'stream_in': STREAM_IN_OL,
+            'stream_out': STREAM_OUT_OL,
             'learning_stream': LEARNING_STREAM
         })
 

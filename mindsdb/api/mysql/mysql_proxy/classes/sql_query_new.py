@@ -227,7 +227,7 @@ class SQLQuery():
                 'database': self.database or 'mindsdb',  # TODO
                 'table_name': column_record['table_name'],  # TODO
                 'name': column_record['column_name'],
-                'alias': column_record['column_alias'],
+                'alias': column_record.get('column_alias', column_record['column_name']),
                 # NOTE all work with text-type, but if/when wanted change types to real,
                 # it will need to check all types casts in BinaryResultsetRowPacket
                 'type': TYPES.MYSQL_TYPE_VAR_STRING

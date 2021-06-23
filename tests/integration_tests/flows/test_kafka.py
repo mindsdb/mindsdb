@@ -192,6 +192,8 @@ class KafkaTest(unittest.TestCase):
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_7_create_ts_stream_kafka_native_api(self):
+        stream_in = KafkaStream(TS_STREAM_IN_NATIVE, CONNECTION_PARAMS)
+        stream_out = KafkaStream(TS_STREAM_OUT_NATIVE, CONNECTION_PARAMS)
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -203,8 +205,6 @@ class KafkaTest(unittest.TestCase):
 
         time.sleep(5)
 
-        stream_in = KafkaStream(TS_STREAM_IN_NATIVE, CONNECTION_PARAMS)
-        stream_out = KafkaStream(TS_STREAM_OUT_NATIVE, CONNECTION_PARAMS)
 
         for x in range(210, 221):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})

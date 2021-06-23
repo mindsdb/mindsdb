@@ -212,6 +212,19 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
+        # control_stream.write({
+        #     'action': 'delete',
+        #     'name': f'{self._testMethodName}_{STREAM_SUFFIX}'
+        # })
+
+        # time.sleep(5)
+
+        # for x in range(210, 221):
+        #     stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
+        #     time.sleep(5)
+
+        # self.assertEqual(len(list(stream_out.read())), 0)
+
     def test_8_test_online_learning(self):
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         learning_stream = KafkaStream(LEARNING_STREAM, CONNECTION_PARAMS)
@@ -229,7 +242,14 @@ class KafkaTest(unittest.TestCase):
 
         for x in range(1, 101):
             learning_stream.write({'x1': x, 'x2': 2*x})
+        
+        # time.sleep(30)
 
+        # for x in range(1, 3):
+        #     stream_in.write({'x1': x, 'x2': 2*x})
+        #     time.sleep(5)
+
+        # self.assertEqual(len(list(stream_out.read())), 2)
 
 if __name__ == '__main__':
     try:

@@ -24,7 +24,7 @@ class IntegrationDataNode(DataNode):
         return []
 
     def select_query(self, query):
-        sql_query = str(query) + ' limit 10;' # FIXME
+        sql_query = str(query)
 
         ds_name = self.data_store.get_vacant_name('temp')
         self.data_store.save_datasource(ds_name, self.integration_name, {'query': sql_query})

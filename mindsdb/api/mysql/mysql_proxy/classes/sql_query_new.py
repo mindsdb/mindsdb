@@ -65,16 +65,26 @@ class SQLQuery():
         mindsdb_sql_struct = parse_sql(sql)
 
         integrations_list = [x.lower() for x in self.datahub.index if x.lower() not in ['information_schema', 'datasource']]  # mindsdb?
-        predictors_list = self.datahub.get('mindsdb').getTables()
 
-        plan = plan_query(mindsdb_sql_struct, integrations=integrations_list, predictors=predictors_list)
+        plan = plan_query(mindsdb_sql_struct, integrations=integrations_list, predictor_namespace='mindsdb')
         steps_data = []
         for i, step in enumerate(plan.steps):
             data = []
             if isinstance(step, FetchDataframeStep):
                 dn = self.datahub.get(step.integration)
+                query = step.query
+
+                # +++ FIXME temp 'where' section
+                where_str = ''
+                where_index = self.raw.lower().rfind(' where ')
+                if where_index != -1:
+                    where_str = self.raw[self.raw.lower().rfind(' where '):]
+                    query = f'{str(step.query)} {where_str}'
+                    query = parse_sql(query)
+                # ---
+
                 data = dn.select_query(
-                    query=step.query
+                    query=query
                 )
                 table_alias = get_table_alias(step.query.from_table)
                 data = [{table_alias: x} for x in data]
@@ -158,6 +168,14 @@ class SQLQuery():
                 for column_record in columns_list:
                     column_list_dict_view[column_record['table_name']] = column_list_dict_view.get(column_record['table_name'], [])
                     column_list_dict_view[column_record['table_name']].append(column_record['column_name'])
+
+                # TODO fix it
+                for column_record in columns_list:
+                    if column_record['column_name'] in step.aliases:
+                        column_record['column_alias'] = step.aliases[column_record['column_name']]
+                    elif f"{column_record['table_name']}.{column_record['column_name']}" in step.aliases:
+                        column_record['column_alias'] = step.aliases[f"{column_record['table_name']}.{column_record['column_name']}"]
+
                 self.columns_list = columns_list
                 data = step_data
             steps_data.append(data)
@@ -206,10 +224,10 @@ class SQLQuery():
         result = []
         for column_record in self.columns_list:
             result.append({
-                'database': 'mindsdb',  # TODO
+                'database': self.database or 'mindsdb',  # TODO
                 'table_name': column_record['table_name'],  # TODO
                 'name': column_record['column_name'],
-                'alias': column_record['column_name'],
+                'alias': column_record['column_alias'],
                 # NOTE all work with text-type, but if/when wanted change types to real,
                 # it will need to check all types casts in BinaryResultsetRowPacket
                 'type': TYPES.MYSQL_TYPE_VAR_STRING

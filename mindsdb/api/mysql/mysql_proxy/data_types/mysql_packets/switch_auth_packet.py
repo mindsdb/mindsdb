@@ -46,7 +46,7 @@ class SwitchOutPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        pprint.pprint(str(SwitchOutPacket().getPacketString()))
+        pprint.pprint(str(SwitchOutPacket().get_packet_string()))
 
 
 if __name__ == "__main__":

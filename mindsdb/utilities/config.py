@@ -67,7 +67,10 @@ class Config():
                     "port": "47336",
                     "database": "mindsdb"
                 }
-            }
+            },
+            "cache": {
+                "type": "local"
+                }
         }
 
         self._default_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']

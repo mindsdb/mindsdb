@@ -50,7 +50,7 @@ class ErrPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        pprint.pprint(str(ErrPacket().getPacketString()))
+        pprint.pprint(str(ErrPacket().get_packet_string()))
 
 
 # only run the test if this file is called from debugger

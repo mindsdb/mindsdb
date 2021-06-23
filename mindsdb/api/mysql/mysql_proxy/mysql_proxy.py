@@ -171,7 +171,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.salt = base64.b64encode(os.urandom(15)).decode()
 
         self.socket = self.request
-        self.count = 0  # next packet number
         self.logging = log
 
         self.current_transaction = None
@@ -1629,8 +1628,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         :param kwargs:
         :return:
         """
-        p = packetClass(socket=self.socket, seq=self.count, session=self.session, proxy=self, **kwargs)
-        self.count = (self.count + 1) % 256
+        p = packetClass(
+            socket=self.socket,
+            session=self.session,
+            proxy=self,
+            **kwargs
+        )
+        self.session.inc_packet_sequence_number()
         return p
 
     @staticmethod

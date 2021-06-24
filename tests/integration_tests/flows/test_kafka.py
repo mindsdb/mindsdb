@@ -138,6 +138,8 @@ class KafkaTest(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
 
     def test_3_making_stream_prediction(self):
+        stream_in = KafkaStream('abc'+STREAM_IN, CONNECTION_PARAMS)
+        stream_out = KafkaStream('abc'+STREAM_OUT, CONNECTION_PARAMS)
         url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             "predictor": DEFAULT_PREDICTOR,
@@ -147,9 +149,6 @@ class KafkaTest(unittest.TestCase):
         })
 
         self.assertEqual(res.status_code, 200)
-
-        stream_in = KafkaStream('abc'+STREAM_IN, CONNECTION_PARAMS)
-        stream_out = KafkaStream('abc'+STREAM_OUT, CONNECTION_PARAMS)
 
         for x in range(1, 3):
             stream_in.write({'x1': x, 'x2': 2*x})

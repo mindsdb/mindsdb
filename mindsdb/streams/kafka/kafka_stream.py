@@ -10,7 +10,6 @@ class KafkaStream(BaseStream):
         self.producer = kafka.KafkaProducer(**connection_info, acks='all')
         self.consumer = kafka.KafkaConsumer(**connection_info, consumer_timeout_ms=0)
         self.consumer.subscribe(topics=[topic])
-        self.position = 0
 
     def read(self):
         for msg in self.consumer:

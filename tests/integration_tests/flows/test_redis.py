@@ -190,6 +190,7 @@ class RedisTest(unittest.TestCase):
         for x in range(1, 3):
             stream_in.write({'x1': x, 'x2': 2*x})
             time.sleep(5)
+        time.sleep(30)
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
@@ -223,6 +224,7 @@ class RedisTest(unittest.TestCase):
         for x in range(210, 221):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
             time.sleep(5)
+        time.sleep(30)
 
         self.assertEqual(len(list(stream_out.read())), 2)
 

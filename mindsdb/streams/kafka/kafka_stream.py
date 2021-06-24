@@ -12,8 +12,14 @@ class KafkaStream(BaseStream):
         self.consumer.subscribe(topics=[topic])
 
     def read(self):
-        for msg in self.consumer:
-            yield json.loads(msg.value)
+        while True:
+            try:
+                msg = next(self.consumer)
+                yield json.loads(msg.value)
+            except StopIteration:
+                break
+        # for msg in self.consumer:
+        #     yield json.loads(msg.value)
 
     def write(self, dct):
         self.producer.send(self.topic, json.dumps(dct).encode('utf-8'))

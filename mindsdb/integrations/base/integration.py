@@ -52,7 +52,7 @@ class StreamIntegration(Integration):
                                     print('not creating stream')
                                     break
                             else:
-                                print('creating stream')
+                                print('creating stream:', dct['name'])
                                 if db.session.query(db.Stream).filter_by(name=dct['name'], company_id=self.company_id).first() is None:
                                     stream = db.Stream(
                                         company_id=self.company_id,
@@ -76,7 +76,7 @@ class StreamIntegration(Integration):
                                     print('not deleting stream')
                                     break
                             else:
-                                print('deleting stream')
+                                print('deleting stream:', dct['name'])
                                 db.session.query(db.Stream).filter_by(
                                     company_id=self.company_id,
                                     integration=self.name,

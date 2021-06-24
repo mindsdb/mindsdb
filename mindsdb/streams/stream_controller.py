@@ -58,7 +58,7 @@ class StreamController:
                 p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
                 ds_record = db.session.query(db.Datasource).filter_by(id=p.datasource_id).first()
 
-                df = pd.DataFrame(self.learning_data, columns=ds_record.data['columns'])
+                df = pd.DataFrame.from_records(self.learning_data)
                 ds = mindsdb_datasources.DataSource(df)
                 df = ds._internal_df
 

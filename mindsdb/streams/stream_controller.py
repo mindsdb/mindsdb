@@ -1,5 +1,6 @@
 import os
 from threading import Event, Thread
+from time import time
 
 import pandas as pd
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -59,10 +60,7 @@ class StreamController:
                 ds_record = db.session.query(db.Datasource).filter_by(id=p.datasource_id).first()
 
                 df = pd.DataFrame.from_records(self.learning_data)
-                ds = mindsdb_datasources.DataSource(df)
-                df = ds._internal_df
-
-                name = 'name'
+                name = 'name_' + str(time.time()).replace('.', '_')
                 path = os.path.join(self.config['paths']['datasources'], name)
                 df.to_csv(path)
 

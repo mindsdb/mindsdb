@@ -194,7 +194,7 @@ class RedisTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    def test_7_test_online_learning(self):
+    def test_8_test_online_learning(self):
         control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
         stream_in = RedisStream(STREAM_IN_OL, CONNECTION_PARAMS)

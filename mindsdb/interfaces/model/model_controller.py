@@ -12,6 +12,7 @@ import lightwood
 import autopep8
 import mindsdb_datasources
 
+import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.fs import create_directory, create_process_mark, delete_process_mark
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
@@ -363,9 +364,9 @@ class ModelController():
         
         return 'Updated successfully'
 
-    def generate_lightwood_predictor(self, ds, problem_definition):
-        ds_cls = getattr(mindsdb_datasources, ds['class'])
-        ds = ds_cls(*ds['args'], **ds['kwargs'])
+    def generate_lightwood_predictor(self, from_data, problem_definition):
+        ds_cls = getattr(mindsdb_datasources, from_data['class'])
+        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds._internal_df
 
         type_information = lightwood.data.infer_types(df, problem_definition.pct_invalid)
@@ -375,6 +376,38 @@ class ModelController():
         predictor_code = autopep8.fix_code(predictor_code)  # Note: ~3s overhead, might be more depending on source complexity, should try a few more examples and make a decision
 
         return predictor_code, json_ml
+
+    def edit_json_ml(self, name, json_ml, company_id=None):
+        original_name = name
+        name = f'{company_id}@@@@@{name}'
+        p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        
+        try:
+            code = lightwood.api.generate_predictor_code(json_ml)
+            exec(code)
+        except Exception as e:
+            print(f'Failed to generate predictor from json_ml: {e}')
+            return False
+        else:
+            p.code = code
+            db.session.commit()
+            return True
+
+    def edit_code(self, name, code, company_id=None):
+        original_name = name
+        name = f'{company_id}@@@@@{name}'
+        p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        
+        try:
+            # TODO: make this safe from code injection
+            predictor_object = exec(code)
+        except Exception as e:
+            print(f'Failed to generate predictor from json_ml: {e}')
+            return False
+        else:
+            p.code = code
+            db.session.commit()
+            return True
 
 '''
 Notes: Remove ray from actors are getting stuck

@@ -123,9 +123,16 @@ class KafkaTest(unittest.TestCase):
         res = requests.put(url, json={'params': params})
         self.assertEqual(res.status_code, 200)
 
-    def test_2_create_kafka_stream(self):
+    def test_2_create_ds_and_predictors(self):
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
+        self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
+
+    def test_3_making_stream_prediction(self):
+        stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS)
+        stream_out = KafkaStream(STREAM_OUT, CONNECTION_PARAMS)
+
+        time.sleep(5)
 
         url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
         res = requests.put(url, json={
@@ -137,19 +144,19 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(res.status_code, 200)
 
-    def test_3_making_stream_prediction(self):
-        stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS)
-        stream_out = KafkaStream(STREAM_OUT, CONNECTION_PARAMS)
-
         for x in range(1, 3):
             stream_in.write({'x1': x, 'x2': 2*x})
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    def test_4_create_kafka_ts_stream(self):
-        self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
+    def test_4_making_ts_stream_prediction(self):
+        stream_out = KafkaStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
+        time.sleep(5)
+
+        stream_in = KafkaStream(STREAM_IN_TS, CONNECTION_PARAMS)
+        
         url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             'predictor': TS_PREDICTOR,
@@ -160,17 +167,18 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(res.status_code, 200)
 
-    def test_5_making_ts_stream_prediction(self):
-        stream_in = KafkaStream(STREAM_IN_TS, CONNECTION_PARAMS)
-        stream_out = KafkaStream(STREAM_OUT_TS, CONNECTION_PARAMS)
-        
         for x in range(210, 221):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A'})
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    def test_6_create_stream_kafka_native_api(self):
+    def test_5_create_stream_kafka_native_api(self):
+        stream_out = KafkaStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
+
+        time.sleep(5)
+
+        stream_in = KafkaStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -182,20 +190,19 @@ class KafkaTest(unittest.TestCase):
 
         time.sleep(5)
 
-        stream_in = KafkaStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
-        stream_out = KafkaStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
-
         for x in range(1, 3):
             stream_in.write({'x1': x, 'x2': 2*x})
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    def test_7_test_online_learning(self):
+    def test_6_test_online_learning(self):
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         learning_stream = KafkaStream(LEARNING_STREAM, CONNECTION_PARAMS)
         stream_in = KafkaStream(STREAM_IN_OL, CONNECTION_PARAMS)
         stream_out = KafkaStream(STREAM_OUT_OL, CONNECTION_PARAMS)
+
+        time.sleep(5)
 
         control_stream.write({
             'action': 'create',

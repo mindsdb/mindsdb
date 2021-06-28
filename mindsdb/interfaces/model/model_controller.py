@@ -8,6 +8,8 @@ import os
 from contextlib import contextmanager
 
 import pandas as pd
+import lightwood
+import autopep8
 import mindsdb_datasources
 
 from mindsdb.utilities.fs import create_directory, create_process_mark, delete_process_mark
@@ -15,6 +17,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import Log
+from lightwood.api import generate_predictor, generate_json_ml, JsonML
 
 
 class ModelController():
@@ -360,6 +363,18 @@ class ModelController():
         
         return 'Updated successfully'
 
+    def generate_lightwood_predictor(self, ds, problem_definition):
+        ds_cls = getattr(mindsdb_datasources, ds['class'])
+        ds = ds_cls(*ds['args'], **ds['kwargs'])
+        df = ds._internal_df
+
+        type_information = lightwood.data.infer_types(df, problem_definition.pct_invalid)
+        statistical_analysis = lightwood.data.statistical_analysis(df, type_information, problem_definition)
+        json_ml = lightwood.generate_json_ml(type_information=type_information, statistical_analysis=statistical_analysis, problem_definition=problem_definition)
+        predictor_code = lightwood.api.generate_predictor_code(json_ml)
+        predictor_code = autopep8.fix_code(predictor_code)  # Note: ~3s overhead, might be more depending on source complexity, should try a few more examples and make a decision
+
+        return predictor_code, json_ml
 
 '''
 Notes: Remove ray from actors are getting stuck

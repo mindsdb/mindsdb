@@ -45,6 +45,18 @@ class ModelInterfaceNativeImport():
     def update_model(self, *args, **kwargs):
         return self.controller.update_model(*args, **kwargs)
 
+    def generate_lightwood_predictor(self, *args, **kwargs):
+        return self.controller.generate_lightwood_predictor(*args, **kwargs)
+    
+    def edit_json_ml(self, *args, **kwargs):
+        return self.controller.edit_json_ml(*args, **kwargs)
+    
+    def edit_code(self, *args, **kwargs):
+        return self.controller.edit_code(*args, **kwargs)
+    
+    def fit_predictor(self, *args, **kwargs):
+        return self.controller.fit_predictor(*args, **kwargs)
+
 
 ray_based = False
 ModelInterface = ModelInterfaceNativeImport

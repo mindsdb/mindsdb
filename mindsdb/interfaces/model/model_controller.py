@@ -408,6 +408,7 @@ class ModelController():
             return False
         else:
             p.code = code
+            p.json_ml = None
             db.session.commit()
             return True
 

@@ -381,36 +381,47 @@ class ModelController():
     def edit_json_ml(self, name, json_ml, company_id=None):
         original_name = name
         name = f'{company_id}@@@@@{name}'
-        p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
 
         try:
             code = lightwood.api.generate_predictor_code(json_ml)
-            exec(code)
         except Exception as e:
             print(f'Failed to generate predictor from json_ml: {e}')
             return False
         else:
-            p.code = code
-            p.json_ml = json_ml
+            db_p.code = code
+            db_p.json_ml = json_ml
             db.session.commit()
             return True
 
     def edit_code(self, name, code, company_id=None):
         original_name = name
         name = f'{company_id}@@@@@{name}'
-        p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         
         try:
             # TODO: make this safe from code injection
-            predictor_object = exec(code)
+            lightwood.helpers.predictor_from_code(code)
         except Exception as e:
             print(f'Failed to generate predictor from json_ml: {e}')
             return False
         else:
-            p.code = code
-            p.json_ml = None
+            db_p.code = code
+            db_p.json_ml = None
             db.session.commit()
             return True
+
+    def fit_predictor(self, name, from_data, company_id=None):
+        ds_cls = getattr(mindsdb_datasources, from_data['class'])
+        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
+        df = ds.df
+
+        original_name = name
+        name = f'{company_id}@@@@@{name}'
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+
+        lw_p = lightwood.helpers.predictor_from_code(db_p.code)
+        lw_p.learn(df)
 
 '''
 Notes: Remove ray from actors are getting stuck

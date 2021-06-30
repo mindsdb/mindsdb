@@ -364,7 +364,7 @@ class ModelController():
         
         return 'Updated successfully'
 
-    def generate_lightwood_predictor(self, from_data, problem_definition):
+    def generate_lightwood_predictor(self, from_data: dict, problem_definition: dict) -> tuple():
         problem_definition = lightwood.api.types.JsonML.from_dict(problem_definition)
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
@@ -422,6 +422,15 @@ class ModelController():
 
         lw_p = lightwood.helpers.predictor_from_code(db_p.code)
         lw_p.learn(df)
+
+        config = Config()
+        fs_store = FsSotre()
+
+        # save predictor locally
+        lw_p.save(os.path.join(config['paths']['predictors'], name))
+        
+        # save predictor to s3
+        fs_store.put(name, f'predictor_{company_id}_{db_p.id}', config['paths']['predictors'])
 
 '''
 Notes: Remove ray from actors are getting stuck

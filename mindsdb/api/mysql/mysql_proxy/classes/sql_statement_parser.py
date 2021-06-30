@@ -445,7 +445,7 @@ class SqlStatementParser():
         from_value = (
             QuotedString('`')
             | originalTextFor(
-                Word(printables, excludeChars='.`')
+                Word(printables, excludeChars='().`')
             )
         )
 
@@ -597,7 +597,7 @@ class SqlStatementParser():
                 ' START transaction',
                 {'keyword': 'start'}
             ], [
-                "insert into a.b (col1, col2) values ('val1', 'val2');",
+                "insert into a.b(col1, col2) values ('val1', 'val2');",
                 {
                     'keyword': 'insert',
                     'struct': {

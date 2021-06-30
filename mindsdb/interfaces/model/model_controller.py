@@ -365,9 +365,10 @@ class ModelController():
         return 'Updated successfully'
 
     def generate_lightwood_predictor(self, from_data, problem_definition):
+        problem_definition = lightwood.api.types.JsonML.from_dict(problem_definition)
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
-        df = ds._internal_df
+        df = ds.df
 
         type_information = lightwood.data.infer_types(df, problem_definition.pct_invalid)
         statistical_analysis = lightwood.data.statistical_analysis(df, type_information, problem_definition)
@@ -381,7 +382,7 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
         p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
-        
+
         try:
             code = lightwood.api.generate_predictor_code(json_ml)
             exec(code)
@@ -390,6 +391,7 @@ class ModelController():
             return False
         else:
             p.code = code
+            p.json_ml = json_ml
             db.session.commit()
             return True
 

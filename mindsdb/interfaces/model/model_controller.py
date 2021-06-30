@@ -364,7 +364,7 @@ class ModelController():
         
         return 'Updated successfully'
 
-    def generate_lightwood_predictor(self, from_data: dict, problem_definition: dict) -> tuple():
+    def generate_lightwood_predictor(self, from_data: dict, problem_definition: dict):
         problem_definition = lightwood.api.types.JsonML.from_dict(problem_definition)
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
@@ -378,7 +378,7 @@ class ModelController():
 
         return predictor_code, json_ml
 
-    def edit_json_ml(self, name, json_ml, company_id=None):
+    def edit_json_ml(self, name: str, json_ml: lightwood.api.types.JsonML, company_id=None):
         original_name = name
         name = f'{company_id}@@@@@{name}'
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
@@ -394,7 +394,7 @@ class ModelController():
             db.session.commit()
             return True
 
-    def edit_code(self, name, code, company_id=None):
+    def edit_code(self, name: str, code: str, company_id=None):
         original_name = name
         name = f'{company_id}@@@@@{name}'
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
@@ -411,7 +411,7 @@ class ModelController():
             db.session.commit()
             return True
 
-    def fit_predictor(self, name, from_data, company_id=None):
+    def fit_predictor(self, name: str, from_data: dict, company_id=None):
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df

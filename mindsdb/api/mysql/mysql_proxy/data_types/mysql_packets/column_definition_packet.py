@@ -86,7 +86,7 @@ class ColumnDefenitionPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        pprint.pprint(str(ColumnDefenitionPacket().getPacketString()))
+        pprint.pprint(str(ColumnDefenitionPacket().get_packet_string()))
 
 
 # only run the test if this file is called from debugger

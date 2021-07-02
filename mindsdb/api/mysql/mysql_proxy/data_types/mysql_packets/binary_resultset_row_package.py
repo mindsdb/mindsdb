@@ -87,7 +87,7 @@ class BinaryResultsetRowPacket(Packet):
     def test():
         import pprint
         pprint.pprint(
-            str(BinaryResultsetRowPacket().getPacketString())
+            str(BinaryResultsetRowPacket().get_packet_string())
         )
 
 

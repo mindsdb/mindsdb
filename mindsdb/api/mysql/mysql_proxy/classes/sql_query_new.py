@@ -77,15 +77,6 @@ class SQLQuery():
                 dn = self.datahub.get(step.integration)
                 query = step.query
 
-                # +++ FIXME temp 'limit' section
-                limit_str = ''
-                limit_index = self.raw.lower().rfind(' limit ')
-                if limit_index != -1:
-                    limit_str = self.raw[self.raw.lower().rfind(' limit '):]
-                    query = f'{str(step.query)} {limit_str}'
-                    query = parse_sql(query)
-                # ---
-
                 data = dn.select_query(
                     query=query
                 )

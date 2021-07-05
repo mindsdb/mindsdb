@@ -32,7 +32,10 @@ class SQLQuery():
 
     def __init__(self, sql, integration=None, database=None, datahub=None):
         self.integration = integration
-        self.database = database
+        if not database:
+            self.database = 'mindsdb'
+        else:
+            self.database = database
         self.datahub = datahub
 
         self.ai_table = None
@@ -64,9 +67,9 @@ class SQLQuery():
 
         mindsdb_sql_struct = parse_sql(sql)
 
-        integrations_list = self.datahub.get_integrations_names()
+        integrations_names = self.datahub.get_integrations_names()
 
-        plan = plan_query(mindsdb_sql_struct, integrations=integrations_list, predictor_namespace='mindsdb')
+        plan = plan_query(mindsdb_sql_struct, integrations=integrations_names, predictor_namespace=self.database)
         steps_data = []
         for i, step in enumerate(plan.steps):
             data = []

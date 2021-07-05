@@ -57,10 +57,10 @@ class InformationSchema(DataNode):
             # SELECT schema_name as name FROM INFORMATION_SCHEMA.SCHEMATA;
             # SELECT default_character_set_name as CharacterSetName, default_collation_name as CollationName FROM INFORMATION_SCHEMA.SCHEMATA WHERE schema_name = 'information_schema';
             if len(columns) == 1 and columns[0] == 'schema_name':
-                data = [{'schema_name': 'information_schema'}]
+                data = [{'schema_name': 'INFORMATION_SCHEMA'}]
                 for key in self.index:
                     data.append({
-                        'schema_name': key
+                        'schema_name': key.upper()
                     })
                 return data
             elif len(columns) == 3 and where is not None and 'schema_name' in where:

@@ -45,6 +45,11 @@ class InformationSchema(DataNode):
             return self.information_schema[tn]
         raise Exception()
 
+    def get_integrations_names(self):
+        return [
+            x.lower() for x in self.index if x.lower() not in ['mindsdb', 'datasource']
+        ]
+
     def select(self, columns=None, table=None, where=None, order_by=None, group_by=None, came_from=None):
         tn = table.upper()
         if tn == 'SCHEMATA':

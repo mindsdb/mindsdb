@@ -14,7 +14,7 @@ import re
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
 from mindsdb_sql.parser.ast import Join, Identifier, Operation, Constant, UnaryOperation, BinaryOperation
-from mindsdb_sql.planner.steps import FetchDataframeStep, ApplyPredictorStep, JoinStep, ProjectStep
+from mindsdb_sql.planner.steps import FetchDataframeStep, ApplyPredictorStep, JoinStep, ProjectStep, FilterStep
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators_new import operator_map as new_operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
@@ -64,7 +64,7 @@ class SQLQuery():
 
         mindsdb_sql_struct = parse_sql(sql)
 
-        integrations_list = [x.lower() for x in self.datahub.index if x.lower() not in ['information_schema', 'datasource']]  # mindsdb?
+        integrations_list = self.datahub.get_integrations_names()
 
         plan = plan_query(mindsdb_sql_struct, integrations=integrations_list, predictor_namespace='mindsdb')
         steps_data = []
@@ -119,6 +119,9 @@ class SQLQuery():
                         })
                 else:
                     raise Exception('Unknown join type')
+            elif isinstance(step, FilterStep):
+                x = 1
+                pass
             elif isinstance(step, ProjectStep):
                 step_data = steps_data[step.dataframe.step_num]
                 row = step_data[0]  # TODO if rowcount = 0

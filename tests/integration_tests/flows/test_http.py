@@ -222,6 +222,31 @@ class HTTPTest(unittest.TestCase):
         response = requests.put(f'{root}/datasources/{ds_name}', json=data)
         assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
 
+    # def test_11_edit_json_ml(self):
+    #     r = requests.put(
+    #         f'{root}/predictors/lwr/jsonml/edit/{pred_name}',
+    #         json={
+    #             'json_ml': ?
+    #         }
+    #     )
+
+
+    def test_12_edit_code(self):
+        r = requests.put(
+            f'{root}/predictors/lwr/jsonml/edit/{pred_name}',
+            json={'code': 'class A: pass'}
+        )
+
+
+    def test_13_generate(self):
+        r = requests.put(
+            f'{root}/predictors/lwr/jsonml/edit/{pred_name}',
+            json={
+                'data_source_name': ds_name,
+                'problem_definition': {'target': 'rental_price'}
+            }
+        )
+
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

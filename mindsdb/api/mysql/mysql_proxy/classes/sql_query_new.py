@@ -88,7 +88,11 @@ class SQLQuery():
                 for row in steps_data[step.dataframe.step_num]:
                     new_row = {}
                     for table_name in row:
-                        # TODO add key intersection checking
+                        keys_intersection = set(new_row) & set(row[table_name])
+                        if len(keys_intersection) > 0:
+                            raise Exception(
+                                f'The predictor got two identical keys from different datasources: {keys_intersection}'
+                            )
                         new_row.update(row[table_name])
                     where_data.append(new_row)
                 data = dn.select(

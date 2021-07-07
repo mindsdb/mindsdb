@@ -927,6 +927,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
                 self.answer_show_variables(variables)
                 return
+            elif "show session variables like" in sql_lower:
+                # for workbench
+                variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
 
         if keyword == 'start':
             # start transaction

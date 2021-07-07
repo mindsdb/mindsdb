@@ -303,6 +303,22 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         string = b''.join([x.accum() for x in packages])
         self.socket.sendall(string)
 
+    def answer_version(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'version()',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=['0.1']
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+
     def answer_current_user(self):
         packages = []
         packages += self.getTabelPackets(
@@ -1033,6 +1049,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             if 'current_user()' in sql_lower:
                 self.answer_current_user()
+                return
+            if 'version()' in sql_lower:
+                self.answer_version()
                 return
             query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
             self.selectAnswer(query)

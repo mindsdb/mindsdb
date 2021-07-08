@@ -43,7 +43,8 @@ class Config():
             "log": {
                 "level": {
                     "console": "INFO",
-                    "file": "DEBUG"
+                    "file": "DEBUG",
+                    "db": "WARNING"
                 }
 
             },
@@ -70,7 +71,7 @@ class Config():
             },
             "cache": {
                 "type": "local"
-                }
+            }
         }
 
         self._default_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']

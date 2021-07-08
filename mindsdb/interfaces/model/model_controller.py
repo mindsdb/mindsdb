@@ -378,13 +378,15 @@ class ModelController():
 
         return predictor_code, json_ai
 
-    def edit_json_ai(self, name: str, json_ai: lightwood.api.types.JsonAI, company_id=None):
+    def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         original_name = name
         name = f'{company_id}@@@@@{name}'
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
 
         try:
-            code = lightwood.api.generate_predictor_code(json_ai)
+            code = lightwood.api.generate_predictor_code(
+                lightwood.api.types.JsonAI.from_dict(json_ai)
+            )
         except Exception as e:
             print(f'Failed to generate predictor from json_ai: {e}')
             return False

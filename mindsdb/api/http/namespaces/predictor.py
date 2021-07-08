@@ -228,6 +228,23 @@ class PredictorDownload(Resource):
         return f'Renamed model to {new_name}', 200
 
 
+@ns_conf.route('/lwr/generate/<name>')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class LWR_Generate(Resource):
+    def put(self, name):
+        from_data = request.default_store.get_datasource_obj(
+            request.json['data_source_name'],
+            raw=True
+        )
+        request.native_interface.generate_lightwood_predictor(
+            name,
+            from_data,
+            request.json['problem_definition']
+        )
+        return '', 200
+
+
 @ns_conf.route('/lwr/jsonai/edit/<name>')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
@@ -244,22 +261,6 @@ class LWR_EditCode(Resource):
     def put(self, name):
         request.native_interface.edit_code(name, request.json['code'])
         return '', 200
-
-
-@ns_conf.route('/lwr/generate')
-@ns_conf.param('name', 'The predictor identifier')
-@ns_conf.response(404, 'predictor not found')
-class LWR_Generate(Resource):
-    def put(self):
-        from_data = request.default_store.get_datasource_obj(
-            request.json['data_source_name'],
-            raw=True
-        )
-        predictor_code, json_ai = request.native_interface.generate_lightwood_predictor(
-            from_data,
-            request.json['problem_definition']
-        )
-        return {'code': predictor_code, 'json_ai': json_ai}
     
 
 @ns_conf.route('/lwr/train/<name>')

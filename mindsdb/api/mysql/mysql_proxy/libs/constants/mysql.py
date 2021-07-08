@@ -974,6 +974,9 @@ SERVER_VARIABLES = {
     '@@wait_timeout': (28800, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
 
     '@@session.tx_read_only': ('0', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+
+    '@@version_comment': ('(MindsDB)', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+    '@@version': ('0.1', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci'])
 }
 
 class SESSION_TRACK(object):

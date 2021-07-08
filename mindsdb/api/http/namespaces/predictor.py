@@ -237,7 +237,7 @@ class LWR_EditJsonAI(Resource):
         return '', 200
 
 
-@ns_conf.route('/lwr/edit/<name>')
+@ns_conf.route('/lwr/code/edit/<name>')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
 class LWR_EditCode(Resource):

@@ -103,6 +103,9 @@ class Predictor(Base):
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
 
+    json_ai = Column(Json)
+    predictor_code = Column(Json)
+
 
 class AITable(Base):
     __tablename__ = 'ai_table'

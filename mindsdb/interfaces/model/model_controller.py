@@ -1,3 +1,4 @@
+from mindsdb.api.http.namespaces.predictor import Predictor
 from dateutil.parser import parse as parse_datetime
 import pickle
 from pathlib import Path
@@ -364,8 +365,9 @@ class ModelController():
         
         return 'Updated successfully'
 
-    def generate_lightwood_predictor(self, from_data: dict, problem_definition: dict):
+    def generate_lightwood_predictor(self, name: str, from_data: dict, problem_definition: dict, company_id=None):
         problem_definition = lightwood.api.types.JsonAI.from_dict(problem_definition)
+
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
@@ -376,12 +378,22 @@ class ModelController():
         predictor_code = lightwood.api.generate_predictor_code(json_ai)
         predictor_code = autopep8.fix_code(predictor_code)  # Note: ~3s overhead, might be more depending on source complexity, should try a few more examples and make a decision
 
-        return predictor_code, json_ai
+        if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
+            raise Exception('Predictor {} already exists'.format(name))
+        else:
+            db_p = db.Predictor(
+                company_id=company_id,
+                name=name,
+                json_ai=json_ai,
+                predictor_code=predictor_code,
+            )
+            db.session.add(db_p)
+            db.session.commit()
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        """Edit an existing predictor's json_ai"""
+
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
 
         try:
             code = lightwood.api.generate_predictor_code(
@@ -397,9 +409,9 @@ class ModelController():
             return True
 
     def edit_code(self, name: str, code: str, company_id=None):
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        """Edit an existing predictor's code"""
+
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         
         try:
             # TODO: make this safe from code injection (on lightwood side)
@@ -414,13 +426,13 @@ class ModelController():
             return True
 
     def fit_predictor(self, name: str, from_data: dict, company_id=None):
+        """Train an existing predictor"""
+
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
 
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
 
         lw_p = lightwood.helpers.predictor_from_code(db_p.code)
         lw_p.learn(df)

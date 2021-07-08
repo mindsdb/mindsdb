@@ -400,8 +400,8 @@ class ModelController():
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         
         try:
-            # TODO: make this safe from code injection
-            lightwood.helpers.predictor_from_code(code)
+            # TODO: make this safe from code injection (on lightwood side)
+            lightwood.api.high_level.predictor_from_code(code)
         except Exception as e:
             print(f'Failed to generate predictor from json_ml: {e}')
             return False

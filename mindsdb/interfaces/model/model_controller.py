@@ -18,7 +18,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import Log
-from lightwood.api import generate_predictor, generate_json_ml, JsonAI
+from lightwood.api import generate_predictor, generate_json_ai, JsonAI
 
 
 class ModelController():
@@ -372,25 +372,25 @@ class ModelController():
 
         type_information = lightwood.data.infer_types(df, problem_definition.pct_invalid)
         statistical_analysis = lightwood.data.statistical_analysis(df, type_information, problem_definition)
-        json_ml = lightwood.generate_json_ml(type_information=type_information, statistical_analysis=statistical_analysis, problem_definition=problem_definition)
-        predictor_code = lightwood.api.generate_predictor_code(json_ml)
+        json_ai = lightwood.generate_json_ai(type_information=type_information, statistical_analysis=statistical_analysis, problem_definition=problem_definition)
+        predictor_code = lightwood.api.generate_predictor_code(json_ai)
         predictor_code = autopep8.fix_code(predictor_code)  # Note: ~3s overhead, might be more depending on source complexity, should try a few more examples and make a decision
 
-        return predictor_code, json_ml
+        return predictor_code, json_ai
 
-    def edit_json_ml(self, name: str, json_ml: lightwood.api.types.JsonAI, company_id=None):
+    def edit_json_ai(self, name: str, json_ai: lightwood.api.types.JsonAI, company_id=None):
         original_name = name
         name = f'{company_id}@@@@@{name}'
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
 
         try:
-            code = lightwood.api.generate_predictor_code(json_ml)
+            code = lightwood.api.generate_predictor_code(json_ai)
         except Exception as e:
-            print(f'Failed to generate predictor from json_ml: {e}')
+            print(f'Failed to generate predictor from json_ai: {e}')
             return False
         else:
             db_p.code = code
-            db_p.json_ml = json_ml
+            db_p.json_ai = json_ai
             db.session.commit()
             return True
 
@@ -403,11 +403,11 @@ class ModelController():
             # TODO: make this safe from code injection (on lightwood side)
             lightwood.api.high_level.predictor_from_code(code)
         except Exception as e:
-            print(f'Failed to generate predictor from json_ml: {e}')
+            print(f'Failed to generate predictor from json_ai: {e}')
             return False
         else:
             db_p.code = code
-            db_p.json_ml = None
+            db_p.json_ai = None
             db.session.commit()
             return True
 

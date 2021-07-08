@@ -233,7 +233,7 @@ class PredictorDownload(Resource):
 @ns_conf.response(404, 'predictor not found')
 class LWR_EditJsonAI(Resource):
     def put(self, name):
-        request.native_interface.edit_json_ml(name, request.json['json_ml'])
+        request.native_interface.edit_json_ai(name, request.json['json_ai'])
         return '', 200
 
 
@@ -255,11 +255,11 @@ class LWR_Generate(Resource):
             request.json['data_source_name'],
             raw=True
         )
-        predictor_code, json_ml = request.native_interface.generate_lightwood_predictor(
+        predictor_code, json_ai = request.native_interface.generate_lightwood_predictor(
             from_data,
             request.json['problem_definition']
         )
-        return {'code': predictor_code, 'json_ml': json_ml}
+        return {'code': predictor_code, 'json_ai': json_ai}
     
 
 @ns_conf.route('/lwr/train/<name>')

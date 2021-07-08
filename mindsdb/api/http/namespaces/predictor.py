@@ -228,10 +228,10 @@ class PredictorDownload(Resource):
         return f'Renamed model to {new_name}', 200
 
 
-@ns_conf.route('/lwr/jsonml/edit/<name>')
+@ns_conf.route('/lwr/jsonai/edit/<name>')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
-class LWR_EditJsonML(Resource):
+class LWR_EditJsonAI(Resource):
     def put(self, name):
         request.native_interface.edit_json_ml(name, request.json['json_ml'])
         return '', 200

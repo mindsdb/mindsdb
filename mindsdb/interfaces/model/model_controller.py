@@ -18,7 +18,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import Log
-from lightwood.api import generate_predictor, generate_json_ml, JsonML
+from lightwood.api import generate_predictor, generate_json_ml, JsonAI
 
 
 class ModelController():
@@ -365,7 +365,7 @@ class ModelController():
         return 'Updated successfully'
 
     def generate_lightwood_predictor(self, from_data: dict, problem_definition: dict):
-        problem_definition = lightwood.api.types.JsonML.from_dict(problem_definition)
+        problem_definition = lightwood.api.types.JsonAI.from_dict(problem_definition)
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
@@ -378,7 +378,7 @@ class ModelController():
 
         return predictor_code, json_ml
 
-    def edit_json_ml(self, name: str, json_ml: lightwood.api.types.JsonML, company_id=None):
+    def edit_json_ml(self, name: str, json_ml: lightwood.api.types.JsonAI, company_id=None):
         original_name = name
         name = f'{company_id}@@@@@{name}'
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()

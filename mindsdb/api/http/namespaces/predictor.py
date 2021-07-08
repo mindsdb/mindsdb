@@ -233,15 +233,21 @@ class PredictorDownload(Resource):
 @ns_conf.response(404, 'predictor not found')
 class LWR_Generate(Resource):
     def put(self, name):
+        for param in ['data_source_name', 'problem_definition']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+
         from_data = request.default_store.get_datasource_obj(
             request.json['data_source_name'],
             raw=True
         )
+
         request.native_interface.generate_lightwood_predictor(
             name,
             from_data,
             request.json['problem_definition']
         )
+
         return '', 200
 
 
@@ -250,6 +256,10 @@ class LWR_Generate(Resource):
 @ns_conf.response(404, 'predictor not found')
 class LWR_EditJsonAI(Resource):
     def put(self, name):
+        for param in ['json_ai']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+
         request.native_interface.edit_json_ai(name, request.json['json_ai'])
         return '', 200
 
@@ -259,6 +269,10 @@ class LWR_EditJsonAI(Resource):
 @ns_conf.response(404, 'predictor not found')
 class LWR_EditCode(Resource):
     def put(self, name):
+        for param in ['code']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+
         request.native_interface.edit_code(name, request.json['code'])
         return '', 200
     
@@ -268,9 +282,14 @@ class LWR_EditCode(Resource):
 @ns_conf.response(404, 'predictor not found')
 class LWR_Train(Resource):
     def put(self, name):
+        for param in ['data_source_name']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+
         from_data = request.default_store.get_datasource_obj(
             request.json['data_source_name'],
             raw=True
         )
+
         request.native_interface.fit_predictor(name, from_data)
         return '', 200

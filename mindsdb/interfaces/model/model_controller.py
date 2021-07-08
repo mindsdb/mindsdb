@@ -19,7 +19,9 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import Log
-from lightwood.api import generate_predictor, generate_json_ai, JsonAI
+from lightwood.api.high_level import predictor_from_problem
+from lightwood.api.json_ai import generate_json_ai
+from lightwood.api.types import JsonAI
 
 
 class ModelController():

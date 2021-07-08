@@ -1669,6 +1669,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     if new_database != 'null':
                         self.session.database = new_database
                     self.packet(OkPacket).send()
+                elif p.type.value == COMMANDS.COM_FIELD_LIST:
+                    # this command is deprecated, but console client still use it.
+                    self.packet(OkPacket).send()
                 else:
                     log.warning('Command has no specific handler, return OK msg')
                     log.debug(str(p))

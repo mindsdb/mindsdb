@@ -1,6 +1,12 @@
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 
 
+def get_table_alias(table_obj):
+    if table_obj.alias is not None:
+        return table_obj.alias
+    return '.'.join(table_obj.parts)
+
+
 class InformationSchema(DataNode):
     type = 'INFORMATION_SCHEMA'
 
@@ -49,6 +55,19 @@ class InformationSchema(DataNode):
         return [
             x.lower() for x in self.index if x.lower() not in ['mindsdb', 'datasource']
         ]
+
+    def select_query(self, query):
+        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+        sql_query = str(query)
+        moz_struct = to_moz_sql_struct(sql_query)
+        data = self.select(
+            table=query.from_table.parts[-1],
+            columns=None,
+            where=moz_struct.get('where')
+        )
+
+        self.select(table=get_table_alias(query.from_table))
+        return data
 
     def select(self, columns=None, table=None, where=None, order_by=None, group_by=None, came_from=None):
         tn = table.upper()

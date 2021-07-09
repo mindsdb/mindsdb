@@ -68,6 +68,7 @@ class SQLQuery():
         mindsdb_sql_struct = parse_sql(sql)
 
         integrations_names = self.datahub.get_integrations_names()
+        integrations_names.append('INFORMATION_SCHEMA')
 
         plan = plan_query(mindsdb_sql_struct, integrations=integrations_names, predictor_namespace=self.database)
         steps_data = []
@@ -118,8 +119,7 @@ class SQLQuery():
                 else:
                     raise Exception('Unknown join type')
             elif isinstance(step, FilterStep):
-                x = 1
-                pass
+                raise Exception('FilterStep not implemented')
             elif isinstance(step, ProjectStep):
                 step_data = steps_data[step.dataframe.step_num]
                 row = step_data[0]  # TODO if rowcount = 0

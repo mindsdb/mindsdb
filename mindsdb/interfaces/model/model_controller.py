@@ -6,6 +6,7 @@ import psutil
 import datetime
 import time
 import os
+import shutil
 from contextlib import contextmanager
 
 import pandas as pd
@@ -104,56 +105,6 @@ class ModelController():
         session.commit()
         return predictor_record
 
-
-    def create(self, name, company_id=None):
-        import mindsdb_native
-
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        self._setup_for_creation(name, original_name, company_id=company_id)
-        predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
-        return predictor
-    
-    def learn_for_update(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
-        kwargs['join_learn_process'] = True
-        return self.learn(name, from_data, to_predict, datasource_id, kwargs, company_id, False)
-
-    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None, save=True):
-        from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
-
-        create_process_mark('learn')
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-        join_learn_process = kwargs.get('join_learn_process', False)
-        
-        if save:
-            self._setup_for_creation(name, original_name, company_id=company_id)
-
-        if self.ray_based:
-            run_learn(
-                name=name,
-                db_name=original_name,
-                from_data=from_data,
-                to_predict=to_predict,
-                kwargs=kwargs,
-                datasource_id=datasource_id,
-                company_id=company_id,
-                save=save
-            )
-
-        else:
-            p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id, save)
-            p.start()
-            if join_learn_process is True:
-                p.join()
-                if p.exitcode != 0:
-                    delete_process_mark('learn')
-                    raise Exception('Learning process failed !')
-
-        delete_process_mark('learn')
-        return 0
-
     def predict(self, name, pred_format, when_data=None, kwargs={}, company_id=None):
         from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
                                          MySqlDS, PostgresDS, MSSQLDS, MongoDS,
@@ -209,160 +160,31 @@ class ModelController():
         return predictions
 
     def analyse_dataset(self, ds, company_id=None):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        from mindsdb_native import F
+        ds_cls = getattr(mindsdb_datasources, ds['class'])
+        ds = ds_cls(*ds['args'], **ds['kwargs'])
+        return lightwood.api.high_level.analyze_dataset(ds.df)
 
-        create_process_mark('analyse')
-        ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
-        analysis = F.analyse_dataset(ds)
-
-        delete_process_mark('analyse')
-        return analysis
-
-    def get_model_data(self, name, db_fix=True, company_id=None):
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-        from mindsdb.interfaces.storage.db import session, Predictor
-        import torch
-        import gc
-
-        if '@@@@@' in name:
-            name = name.split('@@@@@')[1]
-
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-        predictor_record = self._try_outdate_db_status(predictor_record)
-        model = predictor_record.data
-        if model is None or model['status'] == 'training':
-            try:
-                self.fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
-                new_model_data = F.get_model_data(name)
-            except Exception:
-                new_model_data = None
-
-            try:
-                torch.cuda.empty_cache()
-            except Exception:
-                pass
-            gc.collect()
-
-            if predictor_record.data is None or (new_model_data is not None and len(new_model_data) > len(predictor_record.data)):
-                predictor_record.data = new_model_data
-                model = new_model_data
-                session.commit()
-
-            if predictor_record.data is None:
-                if new_model_data is None:
-                    predictor_record.data = {"name": original_name, "status": "error"}
-                    model = {"name": original_name, "status": "error"}
-                elif len(new_model_data) > len(predictor_record.data):
-                    predictor_record.data = new_model_data
-                    model = new_model_data
-                session.commit()
-
-        # Make some corrections for databases not to break when dealing with empty columns
-        if db_fix:
-            data_analysis = model['data_analysis_v2']
-            for column in model['columns']:
-                analysis = data_analysis.get(column)
-                if isinstance(analysis, dict) and (len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False)):
-                    data_analysis[column]['typing'] = {
-                        'data_subtype': DATA_SUBTYPES.INT
-                    }
-
-        model['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
-        model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
-        model['predict'] = predictor_record.to_predict
-        model['update'] = predictor_record.update_status
-        model['name'] = predictor_record.name
-        return model
+    def get_model_data(self, name, company_id=None):
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        lw_p = lightwood.api.Predictor.load(os.path.join(self.config['paths']['predictors'], name))
+        return lw_p.model_analysis.to_dict()
 
     def get_models(self, company_id=None):
-        from mindsdb.interfaces.storage.db import session, Predictor
-
-        models = []
-        predictor_records = Predictor.query.filter_by(company_id=company_id, is_custom=False)
-        predictor_names = [
-            x.name for x in predictor_records
-        ]
-        for model_name in predictor_names:
-            try:
-                model_data = self.get_model_data(model_name, db_fix=False, company_id=company_id)
-
-                reduced_model_data = {}
-
-                for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update']:
-                    reduced_model_data[k] = model_data.get(k, None)
-
-                for k in ['train_end_at', 'updated_at', 'created_at']:
-                    reduced_model_data[k] = model_data.get(k, None)
-                    if reduced_model_data[k] is not None:
-                        try:
-                            reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]).split('.')[0])
-                        except Exception as e:
-                            # @TODO Does this ever happen
-                            log.error(f'Date parsing exception while parsing: {k} in get_models: ', e)
-                            reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]))
-
-                models.append(reduced_model_data)
-            except Exception as e:
-                log.error(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
-        return models
+        predictors_db = db.session.query(db.Predictor).filter_by(company_id=company_id)
+        return [self.get_model_data(db_p.name) for db_p in predictors_db]
 
     def delete_model(self, name, company_id=None):
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-        from mindsdb.interfaces.storage.db import session, Predictor
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        db.session.delete(db_p)
+        db.session.commit()
 
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-        id = predictor_record.id
-        session.delete(predictor_record)
-        session.commit()
-        F.delete_model(name)
         DatabaseWrapper(company_id).unregister_predictor(name)
-        self.fs_store.delete(f'predictor_{company_id}_{id}')
-        return 0
 
-    def update_model(self, name, company_id=None):
-        from mindsdb_native import F
-        from mindsdb_worker.updater.update_model import update_model
-        from mindsdb.interfaces.storage.db import session, Predictor
-        from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
-        from mindsdb_native import __version__ as native_version
-        from mindsdb import __version__ as mindsdb_version
+        # Remove locally
+        shutil.rmtree(os.path.join(self.config['paths']['predictors'], name))
 
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        try:
-            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-
-            predictor_record.update_status = 'updating'
-
-            session.commit()
-
-            update_model(name, original_name, self.delete_model, F.rename_model, self.learn_for_update, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
-
-            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-
-            predictor_record.native_version = native_version
-            predictor_record.mindsdb_version = mindsdb_version
-            predictor_record.update_status = 'up_to_date'
-
-            session.commit()
-            
-        except Exception as e:
-            log.error(e)
-            predictor_record.update_status = 'update_failed'
-            session.commit()
-            return str(e)
-        
-        return 'Updated successfully'
+        # Remove from s3
+        self.fs_store.delete(f'predictor_{company_id}_{db_p.id}')
 
     def generate_lightwood_predictor(self, name: str, from_data: dict, problem_definition: dict, company_id=None):
         if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
@@ -436,14 +258,11 @@ class ModelController():
         lw_p = lightwood.api.high_level.predictor_from_code(db_p.predictor_code)
         lw_p.learn(df)
 
-        config = Config()
-        fs_store = FsSotre()
-
         # save predictor locally
-        lw_p.save(os.path.join(config['paths']['predictors'], name))
+        lw_p.save(os.path.join(self.config['paths']['predictors'], name))
         
         # save predictor to s3
-        fs_store.put(name, f'predictor_{company_id}_{db_p.id}', config['paths']['predictors'])
+        self.fs_store.put(name, f'predictor_{company_id}_{db_p.id}', self.config['paths']['predictors'])
 
 '''
 Notes: Remove ray from actors are getting stuck

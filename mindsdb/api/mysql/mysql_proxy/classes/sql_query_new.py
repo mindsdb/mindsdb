@@ -13,7 +13,7 @@ import re
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
-from mindsdb_sql.parser.ast import Join, Identifier, Operation, Constant, UnaryOperation, BinaryOperation
+from mindsdb_sql.parser.ast import Join, Identifier, Operation, Constant, UnaryOperation, BinaryOperation, OrderBy
 from mindsdb_sql.planner.steps import FetchDataframeStep, ApplyPredictorStep, JoinStep, ProjectStep, FilterStep
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators_new import operator_map as new_operator_map
@@ -65,6 +65,21 @@ class SQLQuery():
                 return table_obj.alias
             return '.'.join(table_obj.parts)
 
+        def replace_latest(el):
+            if isinstance(el, BinaryOperation):
+                if isinstance(el.args[1], Identifier) and 'LATEST' in el.args[1].parts:
+                    result = el.args[0].parts
+                    el.op = '='
+                    el.args = (Constant(1), Constant(1))
+                    return result
+                else:
+                    result = replace_latest(el.args[0])
+                    if result is not None:
+                        return result
+                    result = replace_latest(el.args[1])
+                    if result is not None:
+                        return result
+
         mindsdb_sql_struct = parse_sql(sql)
 
         integrations_names = self.datahub.get_integrations_names()
@@ -72,9 +87,26 @@ class SQLQuery():
 
         plan = plan_query(mindsdb_sql_struct, integrations=integrations_names, predictor_namespace=self.database)
         steps_data = []
+
+        is_timeseries = False
+
         for i, step in enumerate(plan.steps):
             data = []
             if isinstance(step, FetchDataframeStep):
+                if i == 0 and isinstance(plan.steps[1], ApplyPredictorStep) and 'LATEST' in str(step.query):
+                    predicotr_name = plan.steps[1].predictor
+                    dn = self.datahub.get('mindsdb')
+                    model_meta = dn.model_interface.get_model_data(predicotr_name)
+                    window = model_meta.get('timeseries', {}).get('user_settings', {}).get('window')
+                    if window is None:
+                        raise Exception('Used LATEST for not TS predicotr')
+                    dt_field = replace_latest(step.query.where)
+                    if step.query.order_by is not None:
+                        raise Exception("'order by' and LAEST can not be use in one query")
+                    step.query.order_by = [OrderBy(field=Identifier('.'.join(dt_field)), direction='DESC')]
+                    step.query.limit.value = window
+                    is_timeseries = True
+
                 dn = self.datahub.get(step.integration)
                 query = step.query
 
@@ -83,6 +115,18 @@ class SQLQuery():
                 )
                 table_alias = get_table_alias(step.query.from_table)
                 data = [{table_alias: x} for x in data]
+
+                if is_timeseries:
+                    new_data = {}
+                    for x in data:
+                        for tn in x:
+                            for key in x[tn]:
+                                if key not in new_data:
+                                    new_data[key] = []
+                                new_data[key].append(x[tn][key])
+                    for key, value in new_data.items():
+                        if len(set(value)) == 1:
+                            new_data[key] = value[0]
             elif isinstance(step, ApplyPredictorStep):
                 dn = self.datahub.get('mindsdb')
                 where_data = []

@@ -303,6 +303,65 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         string = b''.join([x.accum() for x in packages])
         self.socket.sendall(string)
 
+    def answer_version(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'version()',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=['0.1']
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+
+    def answer_current_user(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'current_user()',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=['mindsdb']
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+
+    def answer_show_variables(self, variables):
+        data = []
+        for variable_name in variables:
+            variable_data = SERVER_VARIABLES.get(f'@@{variable_name}')
+            if variable_data is None:
+                variable_data = ['']
+            data.append([variable_name, variable_data[0]])
+
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': 'session_variables',
+                'name': 'Variable_name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': 'session_variables',
+                'name': 'Value',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=data
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+
     def answerVersionComment(self):
         packages = []
         packages += self.getTabelPackets(
@@ -898,6 +957,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql_lower = statement.sql.lower()
                 keyword = statement.keyword
                 struct = statement.struct
+            elif 'show variables' in sql_lower:
+                variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
+            elif "show session variables like" in sql_lower:
+                # for workbench
+                variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
+            elif 'show session status like' in sql_lower:
+                # for workbench
+                variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
 
         if keyword == 'start':
             # start transaction
@@ -980,6 +1053,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             if 'database()' in sql_lower:
                 self.answerSelectDatabase()
+                return
+            if 'current_user()' in sql_lower:
+                self.answer_current_user()
+                return
+            if 'version()' in sql_lower:
+                self.answer_version()
                 return
             query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
             self.selectAnswer(query)
@@ -1589,6 +1668,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     # send packet with COM_INIT_DB=null. In this case keep old database name as default.
                     if new_database != 'null':
                         self.session.database = new_database
+                    self.packet(OkPacket).send()
+                elif p.type.value == COMMANDS.COM_FIELD_LIST:
+                    # this command is deprecated, but console client still use it.
                     self.packet(OkPacket).send()
                 else:
                     log.warning('Command has no specific handler, return OK msg')

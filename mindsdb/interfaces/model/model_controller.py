@@ -19,9 +19,6 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import Log
-from lightwood.api.high_level import predictor_from_problem
-from lightwood.api.json_ai import generate_json_ai
-from lightwood.api.types import JsonAI
 
 
 class ModelController():
@@ -368,7 +365,10 @@ class ModelController():
         return 'Updated successfully'
 
     def generate_lightwood_predictor(self, name: str, from_data: dict, problem_definition: dict, company_id=None):
-        problem_definition = lightwood.api.types.JsonAI.from_dict(problem_definition)
+        if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
+            raise Exception('Predictor {} already exists'.format(name))
+
+        problem_definition = lightwood.api.types.ProblemDefinition.from_dict(problem_definition)
 
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
@@ -376,21 +376,18 @@ class ModelController():
 
         type_information = lightwood.data.infer_types(df, problem_definition.pct_invalid)
         statistical_analysis = lightwood.data.statistical_analysis(df, type_information, problem_definition)
-        json_ai = lightwood.generate_json_ai(type_information=type_information, statistical_analysis=statistical_analysis, problem_definition=problem_definition)
-        predictor_code = lightwood.api.generate_predictor_code(json_ai)
+        json_ai = lightwood.api.json_ai.generate_json_ai(type_information=type_information, statistical_analysis=statistical_analysis, problem_definition=problem_definition)
+        predictor_code = lightwood.api.high_level.code_from_json_ai(json_ai)
         predictor_code = autopep8.fix_code(predictor_code)  # Note: ~3s overhead, might be more depending on source complexity, should try a few more examples and make a decision
 
-        if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
-            raise Exception('Predictor {} already exists'.format(name))
-        else:
-            db_p = db.Predictor(
-                company_id=company_id,
-                name=name,
-                json_ai=json_ai,
-                predictor_code=predictor_code,
-            )
-            db.session.add(db_p)
-            db.session.commit()
+        db_p = db.Predictor(
+            company_id=company_id,
+            name=name,
+            json_ai=json_ai.to_dict(),
+            predictor_code=predictor_code,
+        )
+        db.session.add(db_p)
+        db.session.commit()
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         """Edit an existing predictor's json_ai"""
@@ -405,7 +402,7 @@ class ModelController():
             print(f'Failed to generate predictor from json_ai: {e}')
             return False
         else:
-            db_p.code = code
+            db_p.predictor_code = code
             db_p.json_ai = json_ai
             db.session.commit()
             return True
@@ -422,7 +419,7 @@ class ModelController():
             print(f'Failed to generate predictor from json_ai: {e}')
             return False
         else:
-            db_p.code = code
+            db_p.predictor_code = code
             db_p.json_ai = None
             db.session.commit()
             return True
@@ -436,7 +433,7 @@ class ModelController():
 
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
 
-        lw_p = lightwood.helpers.predictor_from_code(db_p.code)
+        lw_p = lightwood.api.high_level.predictor_from_code(db_p.predictor_code)
         lw_p.learn(df)
 
         config = Config()

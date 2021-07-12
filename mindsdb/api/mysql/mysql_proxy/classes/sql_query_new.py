@@ -14,7 +14,15 @@ import re
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
 from mindsdb_sql.parser.ast import Join, Identifier, Operation, Constant, UnaryOperation, BinaryOperation, OrderBy
-from mindsdb_sql.planner.steps import FetchDataframeStep, ApplyPredictorStep, JoinStep, ProjectStep, FilterStep
+from mindsdb_sql.planner.steps import (
+    FetchDataframeStep,
+    ApplyPredictorStep,
+    ApplyPredictorRowStep,
+    JoinStep,
+    ProjectStep,
+    FilterStep
+)
+from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators_new import operator_map as new_operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
@@ -95,7 +103,7 @@ class SQLQuery():
             if isinstance(step, FetchDataframeStep):
                 if i == 0 and isinstance(plan.steps[1], ApplyPredictorStep) and 'LATEST' in str(step.query):
                     predicotr_name = plan.steps[1].predictor
-                    dn = self.datahub.get('mindsdb')
+                    dn = self.datahub.get(self.database)
                     model_meta = dn.model_interface.get_model_data(predicotr_name)
                     window = model_meta.get('timeseries', {}).get('user_settings', {}).get('window')
                     if window is None:
@@ -120,9 +128,18 @@ class SQLQuery():
                     for row in data:
                         for table_name in row:
                             row[table_name]['make_predictions'] = False
-
+            elif isinstance(step, ApplyPredictorRowStep):
+                dn = self.datahub.get(self.database)
+                where_data = step.row_dict
+                data = dn.select(
+                    table=step.predictor,
+                    columns=None,
+                    where_data=where_data,
+                    where={}
+                )
+                data = [{step.predictor: x} for x in data]
             elif isinstance(step, ApplyPredictorStep):
-                dn = self.datahub.get('mindsdb')
+                dn = self.datahub.get(self.database)
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]:
                     new_row = {}

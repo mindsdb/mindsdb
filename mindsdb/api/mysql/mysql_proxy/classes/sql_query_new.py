@@ -68,6 +68,11 @@ class SQLQuery():
         }
 
     def _parse_query(self, sql):
+        def get_preditor_alias(step):
+            if step.alias is not None:
+                return step.alias
+            return step.predictor
+
         def get_table_alias(table_obj):
             if table_obj.alias is not None:
                 return table_obj.alias
@@ -137,7 +142,7 @@ class SQLQuery():
                     where_data=where_data,
                     where={}
                 )
-                data = [{step.predictor: x} for x in data]
+                data = [{get_preditor_alias(step): x} for x in data]
             elif isinstance(step, ApplyPredictorStep):
                 dn = self.datahub.get(self.database)
                 where_data = []
@@ -157,7 +162,7 @@ class SQLQuery():
                     where_data=where_data,
                     where={}
                 )
-                data = [{step.predictor: x} for x in data]
+                data = [{get_preditor_alias(step): x} for x in data]
             elif isinstance(step, JoinStep):
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]

@@ -74,6 +74,11 @@ class Datasource(Resource):
     @ns_conf.doc('delete_datasource')
     def delete(self, name):
         '''delete datasource'''
+
+        models = request.native_interface.get_models()
+        linked_models = [x["name"] for x in models if x['data_source_name'] == name]
+        if linked_models:
+            return "Can't delete {} datasource because there are next models linked to it: {}".format(name, linked_models), 403
         try:
             request.default_store.delete_datasource(name)
         except Exception as e:

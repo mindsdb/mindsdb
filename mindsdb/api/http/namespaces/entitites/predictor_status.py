@@ -10,6 +10,7 @@ predictor_status = ns_conf.model('PredictorStatus', {
     # other attributes
     'is_active': fields.Boolean(required=False, description='Only one predictor by public_name can be active'),
     'data_source': fields.String(required=False, description='The data source it\'s learning from'),
+    'data_source_name': fields.String(required=False, description='The name of the datasource it\'s learning from'),
     'predict': fields.List(fields.String, required=False, description='The list of columns/fields to be predicted'),
     'accuracy': fields.Float(description='The current accuracy of the model'),
     'status': fields.String(required=False, description='The current model status', enum=['training', 'complete', 'error']),

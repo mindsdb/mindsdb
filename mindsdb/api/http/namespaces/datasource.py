@@ -74,6 +74,7 @@ class Datasource(Resource):
     @ns_conf.doc('delete_datasource')
     def delete(self, name):
         '''delete datasource'''
+
         try:
             request.default_store.delete_datasource(name)
         except Exception as e:

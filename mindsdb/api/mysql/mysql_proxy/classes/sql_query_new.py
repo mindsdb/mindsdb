@@ -98,27 +98,39 @@ class SQLQuery():
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
 
-        plan = plan_query(mindsdb_sql_struct, integrations=integrations_names, predictor_namespace=self.database)
-        steps_data = []
+        mindsdb_datanode = self.datahub.get(self.database)
 
-        is_timeseries = False
+        models = mindsdb_datanode.model_interface.get_models()
+        predictor_metadata = {}
+        for model in models:
+            model_meta = mindsdb_datanode.model_interface.get_model_data(name=model['name'])
+            window = model_meta.get('timeseries', {}).get('user_settings', {}).get('window')
+            predictor_metadata[model_meta['name']] = {'timeseries': False}
+            if window is not None:
+                order_by = model_meta.get('timeseries', {}).get('user_settings', {}).get('order_by')[0]
+                group_by = model_meta.get('timeseries', {}).get('user_settings', {}).get('group_by')[0]
+                predictor_metadata[model_meta['name']] = {
+                    'timeseries': True,
+                    'window': window,
+                    'time_column': order_by,
+                    'group_by': group_by
+                }
+
+        plan = plan_query(
+            mindsdb_sql_struct,
+            integrations=integrations_names,
+            predictor_namespace=self.database,
+            predictor_metadata=predictor_metadata
+        )
+        steps_data = []
 
         for i, step in enumerate(plan.steps):
             data = []
             if isinstance(step, FetchDataframeStep):
+                # +++ temp
                 if i == 0 and isinstance(plan.steps[1], ApplyPredictorStep) and 'LATEST' in str(step.query):
-                    predicotr_name = plan.steps[1].predictor
-                    dn = self.datahub.get(self.database)
-                    model_meta = dn.model_interface.get_model_data(predicotr_name)
-                    window = model_meta.get('timeseries', {}).get('user_settings', {}).get('window')
-                    if window is None:
-                        raise Exception('Used LATEST for not TS predicotr')
-                    dt_field = replace_latest(step.query.where)
-                    if step.query.order_by is not None:
-                        raise Exception("'order by' and LAEST can not be use in one query")
-                    step.query.order_by = [OrderBy(field=Identifier('.'.join(dt_field)), direction='DESC')]
-                    step.query.limit.value = window
-                    is_timeseries = True
+                    replace_latest(step.query.where)
+                # --- temp
 
                 dn = self.datahub.get(step.integration)
                 query = step.query
@@ -128,11 +140,6 @@ class SQLQuery():
                 )
                 table_alias = get_table_alias(step.query.from_table)
                 data = [{table_alias: x} for x in data]
-
-                if is_timeseries:
-                    for row in data:
-                        for table_name in row:
-                            row[table_name]['make_predictions'] = False
             elif isinstance(step, ApplyPredictorRowStep):
                 dn = self.datahub.get(self.database)
                 where_data = step.row_dict
@@ -156,19 +163,26 @@ class SQLQuery():
                             )
                         new_row.update(row[table_name])
                     where_data.append(new_row)
+
+                is_timeseries = predictor_metadata[step.predictor]['timeseries']
+                if is_timeseries:
+                    for row in where_data:
+                        row['make_predictions'] = False
+
                 data = dn.select(
                     table=step.predictor,
                     columns=None,
                     where_data=where_data,
-                    where={}
+                    where={},
+                    is_timeseries=is_timeseries
                 )
                 data = [{get_preditor_alias(step): x} for x in data]
             elif isinstance(step, JoinStep):
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
-                if is_timeseries:
-                    data = right_data   # only predictor data
-                elif step.query.condition is None:
+                # if is_timeseries:
+                #     data = right_data   # only predictor data
+                if step.query.condition is None:
                     # line-to-line join
                     if len(left_data) != len(right_data):
                         raise Exception('wrong data length')

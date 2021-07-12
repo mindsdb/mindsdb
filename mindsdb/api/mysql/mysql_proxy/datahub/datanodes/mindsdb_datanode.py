@@ -150,7 +150,7 @@ class MindsDBDataNode(DataNode):
         )
         return data
 
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
+    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None, is_timeseries=False):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
         if table == 'predictors':
@@ -284,16 +284,31 @@ class MindsDBDataNode(DataNode):
         else:
             pred_dicts, explanations = self.model_interface.predict(table, 'dict&explain', when_data=where_data)
             # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
-            if isinstance(where_data, list):
-                for i in range(len(pred_dicts)):
-                    for col in where_data[i]:
-                        if col not in predicted_columns:
-                            pred_dicts[i][col] = where_data[i][col]
+            if not is_timeseries:
+                if isinstance(where_data, list):
+                    for i in range(len(pred_dicts)):
+                        for col in where_data[i]:
+                            if col not in predicted_columns:
+                                pred_dicts[i][col] = where_data[i][col]
 
-            if isinstance(where_data, dict):
-                for col in where_data:
-                    if col not in predicted_columns:
-                        pred_dicts[0][col] = where_data[col]
+                if isinstance(where_data, dict):
+                    for col in where_data:
+                        if col not in predicted_columns:
+                            pred_dicts[0][col] = where_data[col]
+            else:
+                pred_dict = pred_dicts[0]
+                new_pred_dicts = []
+                predict = model['predict'][0]
+                data_column = model['timeseries']['user_settings']['order_by'][0]
+                predictions = pred_dict[predict]
+                data_values = pred_dict[data_column]
+                for i in range(model['timeseries']['user_settings']['nr_predictions']):
+                    nd = {}
+                    nd.update(pred_dict)
+                    new_pred_dicts.append(nd)
+                    nd[predict] = predictions[i]
+                    nd[data_column] = data_values[-1 * i]
+                pred_dicts = new_pred_dicts
 
             if columns is None:
                 columns = list(pred_dicts[0].keys())
@@ -308,7 +323,10 @@ class MindsDBDataNode(DataNode):
             explains = []
             for i, el in enumerate(pred_dicts):
                 data.append({key: el[key] for key in keys})
-                explains.append(explanations[i])
+                if not is_timeseries:
+                    explains.append(explanations[i])
+                else:
+                    explains.append(explanations[0])
 
             field_types = {
                 f: model['data_analysis_v2'][f]['typing']['data_subtype']

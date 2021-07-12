@@ -117,16 +117,10 @@ class SQLQuery():
                 data = [{table_alias: x} for x in data]
 
                 if is_timeseries:
-                    new_data = {}
-                    for x in data:
-                        for tn in x:
-                            for key in x[tn]:
-                                if key not in new_data:
-                                    new_data[key] = []
-                                new_data[key].append(x[tn][key])
-                    for key, value in new_data.items():
-                        if len(set(value)) == 1:
-                            new_data[key] = value[0]
+                    for row in data:
+                        for table_name in row:
+                            row[table_name]['make_predictions'] = False
+
             elif isinstance(step, ApplyPredictorStep):
                 dn = self.datahub.get('mindsdb')
                 where_data = []
@@ -150,7 +144,9 @@ class SQLQuery():
             elif isinstance(step, JoinStep):
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
-                if step.query.condition is None:
+                if is_timeseries:
+                    data = right_data   # only predictor data
+                elif step.query.condition is None:
                     # line-to-line join
                     if len(left_data) != len(right_data):
                         raise Exception('wrong data length')

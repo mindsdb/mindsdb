@@ -264,6 +264,14 @@ class ModelController():
         # save predictor to s3
         self.fs_store.put(name, f'predictor_{company_id}_{db_p.id}', self.config['paths']['predictors'])
 
+    def code_from_json_ai(self, json_ai: dict, company_id=None):
+        json_ai = lightwood.api.types.JsonAI.from_dict(json_ai)
+        if lightwood.api.json_ai.validate_json_ai(json_ai):
+            return lightwood.api.high_level.code_from_json_ai(json_ai)
+        else:
+            return None
+
+
 '''
 Notes: Remove ray from actors are getting stuck
 try:

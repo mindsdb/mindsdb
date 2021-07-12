@@ -253,3 +253,14 @@ class LWR_Train(Resource):
 
         request.native_interface.fit_predictor(name, from_data)
         return '', 200
+
+
+@ns_conf.route('/code_from_json_ai')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class LWR_Train(Resource):
+    def get(self):
+        for param in ['json_ai']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+        return {'code': request.native_interface.code_from_json_ai(request.json['json_ai'])}

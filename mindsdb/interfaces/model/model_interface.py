@@ -1,6 +1,3 @@
-import time
-import pickle
-import os
 
 
 class ModelInterfaceWrapper(object):
@@ -56,6 +53,9 @@ class ModelInterfaceNativeImport():
     
     def fit_predictor(self, *args, **kwargs):
         return self.controller.fit_predictor(*args, **kwargs)
+
+    def code_from_json_ai(self, *args, **kwargs):
+        return self.controller.code_from_json_ai(*args, **kwargs)
 
 
 ray_based = False

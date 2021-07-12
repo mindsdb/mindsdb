@@ -28,8 +28,6 @@ from mindsdb.api.http.namespaces.entitites.datasources.datasource_missed_files i
 )
 from mindsdb.interfaces.database.integrations import get_db_integration
 
-from mindsdb.utilities.config import Config
-
 
 def parse_filter(key, value):
     result = re.search(r'filter(_*.*)\[(.*)\]', key)
@@ -77,11 +75,6 @@ class Datasource(Resource):
     def delete(self, name):
         '''delete datasource'''
 
-        if not Config()["force_datasource_removing"]:
-            models = request.native_interface.get_models()
-            linked_models = [x["name"] for x in models if x['data_source_name'] == name]
-            if linked_models:
-                return "Can't delete {} datasource because there are next models linked to it: {}".format(name, linked_models), 403
         try:
             request.default_store.delete_datasource(name)
         except Exception as e:

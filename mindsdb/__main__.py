@@ -82,17 +82,20 @@ if __name__ == '__main__':
     if not is_cloud:
         for integration_name in get_db_integrations(COMPANY_ID, sensitive_info=True):
             print(f"Setting up integration: {integration_name}")
-            dbw.setup_integration(integration_name)
+            if get_db_integration(integration_name, COMPANY_ID)['publish']:
+                # do setup and register only if it is 'publish' integration
+                dbw.setup_integration(integration_name)
+                dbw.register_predictors(model_data_arr, integration_name=integration_name)
 
     for integration_name in config.get('integrations', {}):
         print(f'Adding: {integration_name}')
         try:
             it = get_db_integration(integration_name, None)
-            if it is None:
+            if it is None:      # register and setup it only if it doesn't conflict with records in db
                 add_db_integration(integration_name, config['integrations'][integration_name], None)            # Setup for user `None`, since we don't need this for cloud
-            if config['integrations'][integration_name].get('publish', False) and not is_cloud:
-                dbw.setup_integration(integration_name)
-                dbw.register_predictors(model_data_arr, integration_name=integration_name)
+                if config['integrations'][integration_name].get('publish', False) and not is_cloud:
+                    dbw.setup_integration(integration_name)
+                    dbw.register_predictors(model_data_arr, integration_name=integration_name)
         except Exception as e:
             log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 

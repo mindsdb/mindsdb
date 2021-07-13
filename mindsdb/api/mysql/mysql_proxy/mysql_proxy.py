@@ -1066,13 +1066,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 query_class = SQLQuery_new
             else:
                 query_class = SQLQuery
+            # query_class = SQLQuery_new
             query = query_class(
                 sql,
                 integration=self.session.integration,
                 database=self.session.database,
                 datahub=self.session.datahub
             )
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
             self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()

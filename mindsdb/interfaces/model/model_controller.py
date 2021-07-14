@@ -91,8 +91,16 @@ class ModelController():
     def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, save=True, company_id=None):
         create_process_mark('learn')
         
-        # TODO: add a few more values other than 'target' (e.g. stop_training_in_x -> stop_after)
         problem_definition = {'target': to_predict}
+
+        # TODO add more important values from kwargs to problem_definition
+        if 'timeseries_settings' in kwargs:
+            problem_definition['timeseries_settings'] = kwargs['timeseries_settings']
+        
+        # TODO add more important values from kwargs to problem_definition
+        if 'stop_training_in_x_seconds' in kwargs:
+            problem_definition['stop_after'] = kwargs['stop_training_in_x_seconds']
+
         self.generate_lightwood_predictor(name, from_data, datasource_id, problem_definition, company_id)
 
         # TODO: support kwargs['join_learn_process']

@@ -15,6 +15,7 @@ import autopep8
 import mindsdb_datasources
 
 from mindsdb.__about__ import __version__ as mindsdb_version
+from lightwood import __version__ as lightwood_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.fs import create_directory, create_process_mark, delete_process_mark
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -160,7 +161,7 @@ class ModelController():
         ds = ds_cls(*ds['args'], **ds['kwargs'])
         analysis = lightwood.api.high_level.analyze_dataset(ds.df)
         delete_process_mark('analyse')
-        return analysis
+        return analysis.to_dict()
 
     def get_model_data(self, name, db_fix=True, company_id=None):
         from mindsdb_native import F
@@ -335,7 +336,7 @@ class ModelController():
             predictor_code=predictor_code,
             datasource_id=datasource_id,
             mindsdb_version=mindsdb_version,
-            to_predict=problem_definition.target # backwards compatibility
+            lightwood_version=lightwood_version
         )
         db.session.add(db_p)
         db.session.commit()

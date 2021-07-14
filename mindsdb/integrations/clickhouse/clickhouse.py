@@ -132,7 +132,7 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             msqyl_user = self._get_mysql_user()
 
             q = f"""
-                CREATE IF NOT EXISTS TABLE {self.mindsdb_database}.{name}
+                CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.{name}
                 ({columns_sql}
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', {name}, '{msqyl_user}', '{msqyl_pass}')
             """

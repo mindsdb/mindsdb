@@ -88,10 +88,10 @@ if __name__ == '__main__':
                 dbw.register_predictors(model_data_arr, integration_name=integration_name)
 
     for integration_name in config.get('integrations', {}):
-        print(f'Adding: {integration_name}')
         try:
             it = get_db_integration(integration_name, None)
             if it is None:      # register and setup it only if it doesn't conflict with records in db
+                print(f'Adding: {integration_name}')
                 add_db_integration(integration_name, config['integrations'][integration_name], None)            # Setup for user `None`, since we don't need this for cloud
                 if config['integrations'][integration_name].get('publish', False) and not is_cloud:
                     dbw.setup_integration(integration_name)

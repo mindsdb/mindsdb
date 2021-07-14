@@ -87,7 +87,7 @@ class Datasource(Base):
 
 
 class Predictor(Base):
-    __tablename__ = 'qweeeeeeapredictor'
+    __tablename__ = 'predictor'
 
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
@@ -105,6 +105,7 @@ class Predictor(Base):
 
     json_ai = Column(Json)
     predictor_code = Column(Json)
+    lightwood_version = Column(String)
 
 
 class AITable(Base):

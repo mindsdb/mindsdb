@@ -14,6 +14,7 @@ import lightwood
 import autopep8
 import mindsdb_datasources
 
+from mindsdb.__about__ import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.fs import create_directory, create_process_mark, delete_process_mark
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -72,25 +73,6 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
-    def _setup_for_creation(self, name, original_name, company_id=None):
-        from mindsdb.interfaces.storage.db import session, Predictor
-
-        if name in self.predictor_cache:
-            del self.predictor_cache[name]
-        # Here for no particular reason, because we want to run this sometimes but not too often
-        self._invalidate_cached_predictors()
-
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
-        if predictor_record is not None:
-            raise Exception(f'Predictor with name {original_name} already exists.')
-
-        predictor_dir = Path(self.config['paths']['predictors']).joinpath(name)
-        create_directory(predictor_dir)
-        predictor_record = Predictor(company_id=company_id, name=original_name, is_custom=False)
-
-        session.add(predictor_record)
-        session.commit()
-
     def _try_outdate_db_status(self, predictor_record):
         from mindsdb import __version__ as mindsdb_version
         from mindsdb.interfaces.storage.db import session
@@ -105,52 +87,15 @@ class ModelController():
         session.commit()
         return predictor_record
 
-
-    def create(self, name, company_id=None):
-        import mindsdb_native
-
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        self._setup_for_creation(name, original_name, company_id=company_id)
-        predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
-        return predictor
-    
-    def learn_for_update(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
-        kwargs['join_learn_process'] = True
-        return self.learn(name, from_data, to_predict, datasource_id, kwargs, company_id, False)
-
-    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None, save=True):
-        from mindsdb.interfaces.model.learn_process import LearnProcess, run_learn
-
+    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, save=True, company_id=None):
         create_process_mark('learn')
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-        join_learn_process = kwargs.get('join_learn_process', False)
         
-        if save:
-            self._setup_for_creation(name, original_name, company_id=company_id)
+        # TODO: add a few more values other than 'target' (e.g. stop_training_in_x -> stop_after)
+        problem_definition = {'target': to_predict}
+        self.generate_lightwood_predictor(name, from_data, datasource_id, problem_definition, company_id)
 
-        if self.ray_based:
-            run_learn(
-                name=name,
-                db_name=original_name,
-                from_data=from_data,
-                to_predict=to_predict,
-                kwargs=kwargs,
-                datasource_id=datasource_id,
-                company_id=company_id,
-                save=save
-            )
-
-        else:
-            p = LearnProcess(name, original_name, from_data, to_predict, kwargs, datasource_id, company_id, save)
-            p.start()
-            if join_learn_process is True:
-                p.join()
-                if p.exitcode != 0:
-                    delete_process_mark('learn')
-                    raise Exception('Learning process failed !')
+        # TODO: support kwargs['join_learn_process']
+        self.fit_predictor(name, from_data, datasource_id, company_id)
 
         delete_process_mark('learn')
         return 0
@@ -210,20 +155,16 @@ class ModelController():
         return predictions
 
     def analyse_dataset(self, ds, company_id=None):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        from mindsdb_native import F
-
         create_process_mark('analyse')
-        ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
-        analysis = F.analyse_dataset(ds)
-
+        ds_cls = getattr(mindsdb_datasources, ds['class'])
+        ds = ds_cls(*ds['args'], **ds['kwargs'])
+        analysis = lightwood.api.high_level.analyze_dataset(ds.df)
         delete_process_mark('analyse')
         return analysis
 
     def get_model_data(self, name, db_fix=True, company_id=None):
         from mindsdb_native import F
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-        from mindsdb.interfaces.storage.db import session, Predictor, Datasource
         import torch
         import gc
 
@@ -233,13 +174,13 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-        linked_data_source = Datasource.query.filter_by(company_id=company_id, id=predictor_record.datasource_id).first()
-        predictor_record = self._try_outdate_db_status(predictor_record)
-        model = predictor_record.data
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+        linked_data_source = db.session.query(db.Datasource).filter_by(company_id=company_id, id=db_p.datasource_id).first()
+        db_p = self._try_outdate_db_status(db_p)
+        model = db_p.data
         if model is None or model['status'] == 'training':
             try:
-                self.fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
+                self.fs_store.get(name, f'predictor_{company_id}_{db_p.id}', self.config['paths']['predictors'])
                 new_model_data = F.get_model_data(name)
             except Exception:
                 new_model_data = None
@@ -250,19 +191,19 @@ class ModelController():
                 pass
             gc.collect()
 
-            if predictor_record.data is None or (new_model_data is not None and len(new_model_data) > len(predictor_record.data)):
-                predictor_record.data = new_model_data
+            if db_p.data is None or (new_model_data is not None and len(new_model_data) > len(db_p.data)):
+                db_p.data = new_model_data
                 model = new_model_data
-                session.commit()
+                db.session.commit()
 
-            if predictor_record.data is None:
+            if db_p.data is None:
                 if new_model_data is None:
-                    predictor_record.data = {"name": original_name, "status": "error"}
+                    db_p.data = {"name": original_name, "status": "error"}
                     model = {"name": original_name, "status": "error"}
-                elif len(new_model_data) > len(predictor_record.data):
-                    predictor_record.data = new_model_data
+                elif len(new_model_data) > len(db_p.data):
+                    db_p.data = new_model_data
                     model = new_model_data
-                session.commit()
+                db.session.commit()
 
         # Make some corrections for databases not to break when dealing with empty columns
         if db_fix:
@@ -274,26 +215,21 @@ class ModelController():
                         'data_subtype': DATA_SUBTYPES.INT
                     }
 
-        model['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
-        model['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
-        model['predict'] = predictor_record.to_predict
-        model['update'] = predictor_record.update_status
-        model['name'] = predictor_record.name
+        model['created_at'] = str(parse_datetime(str(db_p.created_at).split('.')[0]))
+        model['updated_at'] = str(parse_datetime(str(db_p.updated_at).split('.')[0]))
+        model['predict'] = db_p.to_predict
+        model['update'] = db_p.update_status
+        model['name'] = db_p.name
         model['data_source_name'] = linked_data_source.name if linked_data_source else None
         return model
 
     def get_models(self, company_id=None):
-        from mindsdb.interfaces.storage.db import session, Predictor
-
         models = []
-        predictor_records = Predictor.query.filter_by(company_id=company_id, is_custom=False)
-        predictor_names = [
-            x.name for x in predictor_records
-        ]
-        for model_name in predictor_names:
-            try:
-                model_data = self.get_model_data(model_name, db_fix=False, company_id=company_id)
+        for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id, is_custom=False):
 
+            # An old predictor that used to use mindsdb_native
+            if db_p.predictor_code is None:
+                model_data = self.get_model_data(db_p.name, db_fix=False, company_id=company_id)
                 reduced_model_data = {}
 
                 for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update', 'data_source_name']:
@@ -310,8 +246,12 @@ class ModelController():
                             reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]))
 
                 models.append(reduced_model_data)
-            except Exception as e:
-                log.error(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
+
+            # New predictor that uses lightwood
+            else:
+                # TODO
+                pass
+
         return models
 
     def delete_model(self, name, company_id=None):
@@ -367,7 +307,7 @@ class ModelController():
         
         return 'Updated successfully'
 
-    def generate_lightwood_predictor(self, name: str, from_data: dict, problem_definition: dict, company_id=None):
+    def generate_lightwood_predictor(self, name: str, from_data: dict, datasource_id, problem_definition: dict, company_id=None):
         if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
             raise Exception('Predictor {} already exists'.format(name))
 
@@ -383,11 +323,19 @@ class ModelController():
         predictor_code = lightwood.api.high_level.code_from_json_ai(json_ai)
         predictor_code = autopep8.fix_code(predictor_code)  # Note: ~3s overhead, might be more depending on source complexity, should try a few more examples and make a decision
 
+        create_directory(os.path.join(
+            self.config['paths']['predictors'],
+            '{}@@@@@{}'.format(company_id, name)
+        ))
+
         db_p = db.Predictor(
             company_id=company_id,
             name=name,
             json_ai=json_ai.to_dict(),
             predictor_code=predictor_code,
+            datasource_id=datasource_id,
+            mindsdb_version=mindsdb_version,
+            to_predict=problem_definition.target # backwards compatibility
         )
         db.session.add(db_p)
         db.session.commit()
@@ -427,13 +375,14 @@ class ModelController():
             db.session.commit()
             return True
 
-    def fit_predictor(self, name: str, from_data: dict, company_id=None):
+    def fit_predictor(self, name: str, from_data: dict, datasource_id, company_id=None):
         """Train an existing predictor"""
 
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
 
+        # TODO: set db_p.data['status'] to 'training'
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
 
         lw_p = lightwood.api.high_level.predictor_from_code(db_p.predictor_code)

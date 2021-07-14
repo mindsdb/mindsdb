@@ -57,10 +57,10 @@ class SQLQuery():
     def fetch(self, datahub, view='list'):
         data = self.fetched_data
 
-        if view == 'dict':
-            self.result = self._make_dict_result_view(data)
-        elif view == 'list':
+        if view == 'list':
             self.result = self._make_list_result_view(data)
+        else:
+            raise Exception('Only "list" view supported atm')
 
         return {
             'success': True,
@@ -68,32 +68,21 @@ class SQLQuery():
         }
 
     def _parse_query(self, sql):
-        def get_preditor_alias(step):
-            if step.alias is not None:
-                return step.alias
-            return step.predictor
+        def get_preditor_alias(step, mindsdb_database):
+            return (mindsdb_database, step.predictor, step.alias)
 
-        def get_table_alias(table_obj):
-            if table_obj.alias is not None:
-                return table_obj.alias
-            return '.'.join(table_obj.parts)
+        def get_table_alias(table_obj, default_db_name):
+            # (database, table, alias)
+            if len(table_obj.parts) > 2:
+                raise Exception(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
+            elif len(table_obj.parts) == 1:
+                name = (default_db_name, table_obj.parts[0])
+            else:
+                name = tuple(table_obj.parts)
+            name = name + (table_obj.alias,)
+            return name
 
-        def replace_latest(el):
-            if isinstance(el, BinaryOperation):
-                if isinstance(el.args[1], Identifier) and 'LATEST' in el.args[1].parts:
-                    result = el.args[0].parts
-                    el.op = '='
-                    el.args = (Constant(1), Constant(1))
-                    return result
-                else:
-                    result = replace_latest(el.args[0])
-                    if result is not None:
-                        return result
-                    result = replace_latest(el.args[1])
-                    if result is not None:
-                        return result
-
-        mindsdb_sql_struct = parse_sql(sql)
+        mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
@@ -112,8 +101,8 @@ class SQLQuery():
                 predictor_metadata[model_meta['name']] = {
                     'timeseries': True,
                     'window': window,
-                    'time_column': order_by,
-                    'group_by': group_by
+                    'order_by_column': order_by,
+                    'group_by_column': group_by
                 }
 
         plan = plan_query(
@@ -127,18 +116,13 @@ class SQLQuery():
         for i, step in enumerate(plan.steps):
             data = []
             if isinstance(step, FetchDataframeStep):
-                # +++ temp
-                if i == 0 and isinstance(plan.steps[1], ApplyPredictorStep) and 'LATEST' in str(step.query):
-                    replace_latest(step.query.where)
-                # --- temp
-
                 dn = self.datahub.get(step.integration)
                 query = step.query
 
                 data = dn.select_query(
                     query=query
                 )
-                table_alias = get_table_alias(step.query.from_table)
+                table_alias = get_table_alias(step.query.from_table, self.database)
                 data = [{table_alias: x} for x in data]
             elif isinstance(step, ApplyPredictorRowStep):
                 dn = self.datahub.get(self.database)
@@ -149,7 +133,7 @@ class SQLQuery():
                     where_data=where_data,
                     where={}
                 )
-                data = [{get_preditor_alias(step): x} for x in data]
+                data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, ApplyPredictorStep):
                 dn = self.datahub.get(self.database)
                 where_data = []
@@ -176,21 +160,21 @@ class SQLQuery():
                     where={},
                     is_timeseries=is_timeseries
                 )
-                data = [{get_preditor_alias(step): x} for x in data]
+                data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, JoinStep):
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
-                # if is_timeseries:
-                #     data = right_data   # only predictor data
                 if step.query.condition is None:
                     # line-to-line join
                     if len(left_data) != len(right_data):
                         raise Exception('wrong data length')
                     data = []
+                    left_alias = step.query.left.alias
+                    right_alias = step.query.right.alias
                     for i in range(len(left_data)):
                         data.append({
-                            step.query.left.alias: left_data[i][step.query.left.alias],
-                            step.query.right.alias: right_data[i][step.query.right.alias]
+                            left_alias: left_data[i][left_alias],
+                            right_alias: right_data[i][right_alias]
                         })
                 else:
                     raise Exception('Unknown join type')
@@ -199,63 +183,58 @@ class SQLQuery():
             elif isinstance(step, ProjectStep):
                 step_data = steps_data[step.dataframe.step_num]
                 row = step_data[0]  # TODO if rowcount = 0
+                tables_columns = {}
+                for table_name in row:
+                    tables_columns[table_name] = list(row[table_name].keys())
+
                 columns_list = []
-                for column in step.columns:
+                for column_full_name in step.columns:
                     table_name = None
-                    column_name = column
-                    if '.' in column:
-                        name_parts = column.split('.')
-                        if len(name_parts) > 2:
-                            raise Exception('at this moment only 2 parts name supports')
-                        table_name = name_parts[0]
-                        column_name = name_parts[1]
+                    if column_full_name != '*':
+                        column_name_parts = column_full_name.split('.')
+                        if len(column_name_parts) > 2:
+                            raise Exception(f'Column name must contain no more than 2 parts. Got name: {column_full_name}')
+                        elif len(column_name_parts) == 1:
+                            column_name = column_name_parts[0]
+                            column_alias = step.aliases.get(column_full_name)
 
-                    # TODO check columns exists
-                    if column_name == '*':
-                        if table_name is None:
-                            for tn in row.keys():
-                                for key in row[tn].keys():
-                                    columns_list.append({
-                                        'table_name': tn,
-                                        'column_name': key
-                                    })
-                        else:
-                            for key in row[table_name].keys():
-                                columns_list.append({
-                                    'table_name': table_name,
-                                    'column_name': key
-                                })
-                    else:
-                        if table_name is not None:
-                            columns_list.append({
-                                'table_name': table_name,
-                                'column_name': column_name
-                            })
-                        else:
-                            for tn in row.keys():
-                                if column in row[tn]:
-                                    columns_list.append({
-                                        'table_name': tn,
-                                        'column_name': column
-                                    })
+                            appropriate_table = None
+                            for table_name, table_columns in tables_columns.items():
+                                if column_name in table_columns:
+                                    if appropriate_table is not None:
+                                        raise Exception('Fount multiple appropriate tables for column {column_name}')
+                                    else:
+                                        appropriate_table = table_name
+                            if appropriate_table is None:
+                                raise Exception(f'Can not find approproate table for column {column_name}')
+                            columns_list.append(appropriate_table + (column_name, column_alias))
+                        elif len(column_name_parts) == 2:
+                            table_name_or_alias = column_name_parts[0]
+                            column_name = column_name_parts[1]
+                            column_alias = step.aliases.get(column_full_name)
+
+                            appropriate_table = None
+                            for table_name, table_columns in tables_columns.items():
+                                checkig_table_name_or_alias = table_name[2] or table_name[1]
+                                if table_name_or_alias == checkig_table_name_or_alias:
+                                    if column_name not in table_columns:
+                                        raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
+                                    appropriate_table = table_name
                                     break
-                            else:
-                                raise Exception(f'can not find column with name {column}')
-                column_list_dict_view = {}
-                for column_record in columns_list:
-                    column_list_dict_view[column_record['table_name']] = column_list_dict_view.get(column_record['table_name'], [])
-                    column_list_dict_view[column_record['table_name']].append(column_record['column_name'])
-
-                # TODO fix it
-                for column_record in columns_list:
-                    if column_record['column_name'] in step.aliases:
-                        column_record['column_alias'] = step.aliases[column_record['column_name']]
-                    elif f"{column_record['table_name']}.{column_record['column_name']}" in step.aliases:
-                        column_record['column_alias'] = step.aliases[f"{column_record['table_name']}.{column_record['column_name']}"]
+                            if appropriate_table is None:
+                                raise Exception(f'Can not find approproate table for column {column_name}')
+                            columns_list.append(appropriate_table + (column_name, column_alias))
+                        else:
+                            raise Exception('Undefined column name')
+                    else:
+                        for table_name, table_columns in tables_columns.items():
+                            for column_name in table_columns:
+                                columns_list.append(table_name + (column_name, None))
 
                 self.columns_list = columns_list
                 data = step_data
             steps_data.append(data)
+
         self.fetched_data = steps_data[-1]
 
     def _apply_where_filter(self, row, where):
@@ -274,25 +253,14 @@ class SQLQuery():
         result = op_fn(*args)
         return result
 
-    def _make_dict_result_view(self, data):
-        result = []
-        columns = self.columns_list
-        for record in data:
-            row = {}
-            for col in columns:
-                col_name = f"{col['table_name']}.{col['column_name']}"
-                table_record = record[col_name]
-                row[col['name']] = table_record[col['name']]
-            result.append(row)
-
-        return result
-
     def _make_list_result_view(self, data):
         result = []
         for row in data:
             data_row = []
             for column_record in self.columns_list:
-                data_row.append(row[column_record['table_name']][column_record['column_name']])
+                table_name = column_record[:3]
+                column_name = column_record[3]
+                data_row.append(row[table_name][column_name])
             result.append(data_row)
         return result
 
@@ -301,10 +269,11 @@ class SQLQuery():
         result = []
         for column_record in self.columns_list:
             result.append({
-                'database': self.database or 'mindsdb',  # TODO
-                'table_name': column_record['table_name'],  # TODO
-                'name': column_record['column_name'],
-                'alias': column_record.get('column_alias', column_record['column_name']),
+                'database': column_record[0] or self.database,
+                #  TODO add 'original_table'
+                'table_name': column_record[1],
+                'name': column_record[3],
+                'alias': column_record[4] or column_record[3],
                 # NOTE all work with text-type, but if/when wanted change types to real,
                 # it will need to check all types casts in BinaryResultsetRowPacket
                 'type': TYPES.MYSQL_TYPE_VAR_STRING

@@ -131,8 +131,9 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             msqyl_pass = self.config['api']['mysql']['password']
             msqyl_user = self._get_mysql_user()
 
+            self.unregister_predictor(model_meta['name'])
             q = f"""
-                CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.{name}
+                CREATE TABLE {self.mindsdb_database}.{name}
                 ({columns_sql}
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', {name}, '{msqyl_user}', '{msqyl_pass}')
             """

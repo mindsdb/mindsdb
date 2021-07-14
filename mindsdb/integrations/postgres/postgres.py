@@ -172,8 +172,9 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
                     columns_sql += f',"{col}_max" float8'
                 columns_sql += f',"{col}_explain" text'
 
+            self.unregister_predictor(name)
             q = f"""
-                CREATE FOREIGN TABLE IF NOT EXISTS {self.mindsdb_database}.{self._escape_table_name(name)} (
+                CREATE FOREIGN TABLE {self.mindsdb_database}.{self._escape_table_name(name)} (
                     {columns_sql}
                 ) SERVER server_{self.mindsdb_database}
                 OPTIONS (dbname 'mindsdb', table_name '{name}');

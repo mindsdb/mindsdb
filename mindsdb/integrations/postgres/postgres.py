@@ -173,7 +173,7 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
                 columns_sql += f',"{col}_explain" text'
 
             q = f"""
-                CREATE FOREIGN TABLE {self.mindsdb_database}.{self._escape_table_name(name)} (
+                CREATE FOREIGN IF NOT EXISTS TABLE {self.mindsdb_database}.{self._escape_table_name(name)} (
                     {columns_sql}
                 ) SERVER server_{self.mindsdb_database}
                 OPTIONS (dbname 'mindsdb', table_name '{name}');

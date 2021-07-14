@@ -147,7 +147,7 @@ class MySQL(Integration, MySQLConnectionChecker):
             connect = self._get_connect_string(name)
 
             q = f"""
-                CREATE TABLE {self.mindsdb_database}.{self._escape_table_name(name)} (
+                CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.{self._escape_table_name(name)} (
                     {columns_sql},
                     index when_data_index (when_data),
                     index select_data_query_index (select_data_query),

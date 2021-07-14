@@ -148,7 +148,7 @@ class Mariadb(Integration, MariadbConnectionChecker):
             connect = self._get_connect_string(name)
 
             q = f"""
-                    CREATE TABLE {self.mindsdb_database}.{self._escape_table_name(name)}
+                    CREATE TABLE IF NOT EXISTS {self.mindsdb_database}.{self._escape_table_name(name)}
                     ({columns_sql}
                     ) ENGINE=CONNECT CHARSET=utf8 TABLE_TYPE=MYSQL CONNECTION='{connect}';
             """

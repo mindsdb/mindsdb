@@ -55,32 +55,65 @@ class Predictor(Resource):
     @ns_conf.doc('get_predictor')
     @ns_conf.marshal_with(predictor_metadata, skip_none=True)
     def get(self, name):
-        return request.native_interface.get_model_data(name)
+        try:
+            model = request.native_interface.get_model_data(name, db_fix=False)
+        except Exception as e:
+            abort(404, "")
+
+        for k in ['train_end_at', 'updated_at', 'created_at']:
+            if k in model and model[k] is not None:
+                model[k] = parse_datetime(model[k])
+
+        return model
 
     @ns_conf.doc('delete_predictor')
     def delete(self, name):
+        '''Remove predictor'''
         request.native_interface.delete_model(name)
+
         return '', 200
 
     @ns_conf.doc('put_predictor', params=put_predictor_params)
     def put(self, name):
         '''Learning new predictor'''
+        data = request.json
+        to_predict = data.get('to_predict')
 
-        if 'data_source_name' not in request.json and 'from_data' not in request.json:
-            return abort(400, 'Please provide either "data_source_name" or "from_data"')
+        try:
+            kwargs = data.get('kwargs')
+        except Exception:
+            kwargs = None
 
-        if 'to_predict' not in request.json:
-            return abort(400, 'Please provide "to_predict"')
-
-        kwargs = request.json.get('kwargs')
-        if not isinstance(kwargs, dict):
+        if type(kwargs) != type({}):
             kwargs = {}
 
-        ds_name = request.json.get('data_source_name') if request.json.get('data_source_name') is not None else request.json.get('from_data')
+        if 'equal_accuracy_for_all_output_categories' not in kwargs:
+            kwargs['equal_accuracy_for_all_output_categories'] = True
+
+        if 'advanced_args' not in kwargs:
+            kwargs['advanced_args'] = {}
+
+        if 'use_selfaware_model' not in kwargs['advanced_args']:
+            kwargs['advanced_args']['use_selfaware_model'] = False
+
+        try:
+            retrain = data.get('retrain')
+            if retrain in ('true', 'True'):
+                retrain = True
+            else:
+                retrain = False
+        except Exception:
+            retrain = None
+
+        ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
         from_data = request.default_store.get_datasource_obj(ds_name, raw=True)
 
         if from_data is None:
             return {'message': f'Can not find datasource: {ds_name}'}, 400
+
+        if retrain is True:
+            original_name = name
+            name = name + '_retrained'
 
         model_names = [x['name'] for x in request.native_interface.get_models()]
         if name in model_names:
@@ -90,16 +123,21 @@ class Predictor(Resource):
                 f"Predictor with name '{name}' already exists. Each predictor must have unique name."
             )
 
-        problem_definition = {'target': request.json.get('to_predict')}
+        request.native_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
+        for i in range(20):
+            try:
+                # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
+                request.native_interface.get_model_data(name)
+                break
+            except Exception:
+                time.sleep(1)
 
-        if 'timeseries_settings' in kwargs:
-            problem_definition['timeseries_settings'] = kwargs['timeseries_settings']
-        
-        if 'stop_training_in_x_seconds' in kwargs:
-            problem_definition['stop_after'] = kwargs['stop_training_in_x_seconds']
-
-        request.native_interface.generate_lightwood_predictor(name, from_data, problem_definition)
-        request.native_interface.fit_predictor(name, from_data)
+        if retrain is True:
+            try:
+                request.native_interface.delete_model(original_name)
+                request.native_interface.rename_model(name, original_name)
+            except Exception:
+                pass
 
         return '', 200
 
@@ -132,7 +170,9 @@ class PredictorPredict(Resource):
     @ns_conf.doc('Update predictor')
     def get(self, name):
         msg = request.native_interface.update_model(name)
-        return {'message': msg}
+        return {
+            'message': msg
+        }
 
 
 @ns_conf.route('/<name>/predict')
@@ -142,12 +182,12 @@ class PredictorPredict2(Resource):
     def post(self, name):
         '''Queries predictor'''
         data = request.json
-        when = data.get('when', {})
+        when = data.get('when')
         format_flag = data.get('format_flag', 'explain')
         kwargs = data.get('kwargs', {})
 
-        if when is None:
-            return 'No data provided for the predictions', 500
+        if isinstance(when, dict) is False or len(when) == 0:
+            return 'No data provided for the predictions', 400
 
         results = request.native_interface.predict(name, format_flag, when_data=when, **kwargs)
 

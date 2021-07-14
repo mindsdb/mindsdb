@@ -87,7 +87,7 @@ class Datasource(Base):
 
 
 class Predictor(Base):
-    __tablename__ = 'predictor'
+    __tablename__ = 'qweeeeeeapredictor'
 
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)

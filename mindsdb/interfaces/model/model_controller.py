@@ -184,7 +184,7 @@ class ModelController():
         name = f'{company_id}@@@@@{name}'
 
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-        linked_data_source = db.session.query(db.Datasource).filter_by(company_id=company_id, id=db_p.datasource_id).first()
+        linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=db_p.datasource_id).first()
         db_p = self._try_outdate_db_status(db_p)
         model = db_p.data
         if model is None or model['status'] == 'training':
@@ -229,7 +229,7 @@ class ModelController():
         model['predict'] = db_p.to_predict
         model['update'] = db_p.update_status
         model['name'] = db_p.name
-        model['data_source_name'] = linked_data_source.name if linked_data_source else None
+        model['data_source_name'] = linked_db_ds.name if linked_db_ds else None
         return model
 
     def get_models(self, company_id=None):
@@ -258,26 +258,28 @@ class ModelController():
 
             # New predictor that uses lightwood
             else:
-                # TODO
-                pass
+                lw_p = lightwood.api.high_level.predictor_from_code(db_p.code)
+                models.append(lw_p.model_analysis)
 
         return models
 
     def delete_model(self, name, company_id=None):
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-        from mindsdb.interfaces.storage.db import session, Predictor
-
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-        id = predictor_record.id
-        session.delete(predictor_record)
-        session.commit()
-        F.delete_model(name)
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+        db.session.delete(db_p)
+        db.session.commit()
+
+        # NOTE: should this be name or original_name?
         DatabaseWrapper(company_id).unregister_predictor(name)
-        self.fs_store.delete(f'predictor_{company_id}_{id}')
+
+        # delete locally
+        shutil.rmtree(os.path.join(self.config['paths']['predictors'], name))
+        
+        # delete from s3
+        self.fs_store.delete(f'predictor_{company_id}_{db_p.id}')
+
         return 0
 
     def update_model(self, name, company_id=None):

@@ -18,6 +18,7 @@ from mindsdb.utilities.log import log
 import pyarrow as pa
 import pyarrow.flight as fl
 
+
 class ModelController():
     def __init__(self, ray_based):
         self.config = Config()
@@ -95,12 +96,15 @@ class ModelController():
         if predictor_record.update_status == 'update_failed':
             return predictor_record
 
-        if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
-            predictor_record.update_status = 'available'
+        try:
+            if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
+                predictor_record.update_status = 'available'
+        except Exception:
+            # predictor.mindsdb_version can be None at begining of training
+            pass
 
         session.commit()
         return predictor_record
-
 
     def create(self, name, company_id=None):
         import mindsdb_native
@@ -111,7 +115,7 @@ class ModelController():
         self._setup_for_creation(name, original_name, company_id=company_id)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
-    
+
     def learn_for_update(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
         kwargs['join_learn_process'] = True
         return self.learn(name, from_data, to_predict, datasource_id, kwargs, company_id, False)
@@ -123,7 +127,7 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
         join_learn_process = kwargs.get('join_learn_process', False)
-        
+
         if save:
             self._setup_for_creation(name, original_name, company_id=company_id)
 
@@ -219,7 +223,7 @@ class ModelController():
     def get_model_data(self, name, db_fix=True, company_id=None):
         from mindsdb_native import F
         from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-        from mindsdb.interfaces.storage.db import session, Predictor
+        from mindsdb.interfaces.storage.db import session, Predictor, Datasource
         import torch
         import gc
 
@@ -230,6 +234,7 @@ class ModelController():
         name = f'{company_id}@@@@@{name}'
 
         predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+        linked_data_source = Datasource.query.filter_by(company_id=company_id, id=predictor_record.datasource_id).first()
         predictor_record = self._try_outdate_db_status(predictor_record)
         model = predictor_record.data
         if model is None or model['status'] == 'training':
@@ -274,6 +279,7 @@ class ModelController():
         model['predict'] = predictor_record.to_predict
         model['update'] = predictor_record.update_status
         model['name'] = predictor_record.name
+        model['data_source_name'] = linked_data_source.name if linked_data_source else None
         return model
 
     def get_models(self, company_id=None):
@@ -290,7 +296,7 @@ class ModelController():
 
                 reduced_model_data = {}
 
-                for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update']:
+                for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update', 'data_source_name']:
                     reduced_model_data[k] = model_data.get(k, None)
 
                 for k in ['train_end_at', 'updated_at', 'created_at']:

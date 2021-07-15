@@ -19,4 +19,4 @@ flask-compress >= 1.0.0
 kafka-python >= 2.0.0
 pyarrow >= 4.00
 appdirs >= 1.0.0
-mindsdb_sql @ git+https://github.com/mindsdb/mindsdb_sql.git@609d5b6632228ba73bd1eff86973f26c43733955
+mindsdb_sql == 0.0.13

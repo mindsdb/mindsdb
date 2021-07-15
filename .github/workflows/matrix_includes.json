@@ -47,12 +47,5 @@
       "python-version": 3.8,
       "token": "not_install_ray",
       "runOn": "always"
-    },
-
-    {
-      "runs_on": "ubuntu-latest",
-      "python-version": 3.6,
-      "token": "not_install_ray",
-      "runOn": "refs/heads/stable"
     }
   ]

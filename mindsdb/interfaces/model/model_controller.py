@@ -18,6 +18,7 @@ from mindsdb.utilities.log import log
 import pyarrow as pa
 import pyarrow.flight as fl
 
+
 class ModelController():
     def __init__(self, ray_based):
         self.config = Config()
@@ -95,12 +96,15 @@ class ModelController():
         if predictor_record.update_status == 'update_failed':
             return predictor_record
 
-        if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
-            predictor_record.update_status = 'available'
+        try:
+            if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
+                predictor_record.update_status = 'available'
+        except Exception:
+            # predictor.mindsdb_version can be None at begining of training
+            pass
 
         session.commit()
         return predictor_record
-
 
     def create(self, name, company_id=None):
         import mindsdb_native
@@ -111,7 +115,7 @@ class ModelController():
         self._setup_for_creation(name, original_name, company_id=company_id)
         predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
         return predictor
-    
+
     def learn_for_update(self, name, from_data, to_predict, datasource_id, kwargs={}, company_id=None):
         kwargs['join_learn_process'] = True
         return self.learn(name, from_data, to_predict, datasource_id, kwargs, company_id, False)
@@ -123,7 +127,7 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
         join_learn_process = kwargs.get('join_learn_process', False)
-        
+
         if save:
             self._setup_for_creation(name, original_name, company_id=company_id)
 

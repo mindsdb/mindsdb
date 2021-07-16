@@ -82,6 +82,15 @@ class SQLQuery():
             name = name + (table_obj.alias,)
             return name
 
+        def get_all_tables(from_stmt):
+            result = []
+            if isinstance(from_stmt, Identifier):
+                result.append(from_stmt.parts[-1])
+            elif isinstance(from_stmt, Join):
+                result.extend(get_all_tables(from_stmt.left))
+                result.extend(get_all_tables(from_stmt.right))
+            return result
+
         mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
         integrations_names = self.datahub.get_integrations_names()
@@ -89,9 +98,12 @@ class SQLQuery():
 
         mindsdb_datanode = self.datahub.get(self.database)
 
+        all_tables = get_all_tables(mindsdb_sql_struct.from_table)
+
         models = mindsdb_datanode.model_interface.get_models()
+        model_names = [m['name'] for m in models]
         predictor_metadata = {}
-        for model in models:
+        for model in (set(model_names) & set(all_tables)):
             model_meta = mindsdb_datanode.model_interface.get_model_data(name=model['name'])
             window = model_meta.get('timeseries', {}).get('user_settings', {}).get('window')
             predictor_metadata[model_meta['name']] = {'timeseries': False}

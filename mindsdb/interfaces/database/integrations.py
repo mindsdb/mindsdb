@@ -61,6 +61,10 @@ def get_db_integration(name, company_id, sensitive_info=True):
 
     if not sensitive_info:
         data['password'] = None
+        if data['type'] == 'mysql':
+            for key in ['ssl_ca', 'ssl_cert', 'ssl_key']:
+                if key in data:
+                    data[key] = ''
 
     return data
 

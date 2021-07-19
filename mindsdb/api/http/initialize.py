@@ -14,6 +14,7 @@ from flask import Flask, url_for, make_response
 from flask.json import dumps
 from flask_restx import Api
 from flask.json import JSONEncoder
+from flask_cors import CORS
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -234,7 +235,7 @@ def initialize_flask(config, init_static_thread, no_studio):
             static_url_path='/static',
             static_folder=static_path
         )
-
+    CORS(app)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     app.json_encoder = CustomJSONEncoder

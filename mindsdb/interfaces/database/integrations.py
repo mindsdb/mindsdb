@@ -28,6 +28,10 @@ def add_db_integration(name, data, company_id):
                 if os.path.isfile(data[key]):
                     with open(data[key], 'rt') as f:
                         data[key] = f.read()
+        else:
+            for key in ['ssl_ca', 'ssl_cert', 'ssl_key']:
+                if key in data:
+                    del data[key]
 
     integration_record = Integration(name=name, data=data, company_id=company_id)
     session.add(integration_record)

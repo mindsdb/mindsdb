@@ -229,6 +229,15 @@ class DataStore():
                         }
                     }
 
+                    if integration['type'] == 'mysql':
+                        creation_info['kwargs']['ssl'] = integration.get('ssl')
+                        creation_info['kwargs']['ssl_ca'] = integration.get('ssl_ca')
+                        creation_info['kwargs']['ssl_ca_name'] = integration.get('ssl_ca_name', 'ssl_ca.pem')
+                        creation_info['kwargs']['ssl_cert'] = integration.get('ssl_cert')
+                        creation_info['kwargs']['ssl_cert_name'] = integration.get('ssl_cert_name', 'ssl_cert.pem')
+                        creation_info['kwargs']['ssl_key'] = integration.get('ssl_key')
+                        creation_info['kwargs']['ssl_key_name'] = integration.get('ssl_key_name', 'ssl_key.pem')
+
                     if 'database' in integration:
                         creation_info['kwargs']['database'] = integration['database']
 

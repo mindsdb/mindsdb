@@ -91,7 +91,7 @@ if __name__ == '__main__':
         try:
             it = get_db_integration(integration_name, None)
             if it is not None:
-                remove_db_integration(integration_name)
+                remove_db_integration(integration_name, None)
             print(f'Adding: {integration_name}')
             add_db_integration(integration_name, config['integrations'][integration_name], None)            # Setup for user `None`, since we don't need this for cloud
             if config['integrations'][integration_name].get('publish', False) and not is_cloud:

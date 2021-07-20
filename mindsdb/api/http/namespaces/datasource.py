@@ -3,6 +3,8 @@ import threading
 import tempfile
 import re
 import multipart
+import zipfile
+import tarfile
 
 from dateutil.parser import parse
 from flask import request, send_file
@@ -10,6 +12,7 @@ from flask_restx import Resource, abort     # 'abort' using to return errors as 
 from flask import current_app as ca
 
 from mindsdb.utilities.log import log
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
 from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
     datasource_metadata,
@@ -147,6 +150,24 @@ class Datasource(Resource):
 
         if source_type == 'file':
             file_path = os.path.join(temp_dir_path, data['file'])
+            lp = file_path.lower()
+            if lp.endswith(('.zip', '.tar.gz')):
+                if lp.endswith('.zip'):
+                    with zipfile.ZipFile(file_path) as f:
+                        f.extractall(temp_dir_path)
+                elif lp.endswith('.tar.gz'):
+                    with tarfile.open(file_path) as f:
+                        f.extractall(temp_dir_path)
+                os.remove(file_path)
+                files = os.listdir(temp_dir_path)
+                if len(files) != 1:
+                    os.rmdir(temp_dir_path)
+                    return http_error(400, 'Wrong content.', 'Archive must contain only one data file.')
+                file_path = os.path.join(temp_dir_path, files[0])
+                source = files[0]
+                if not os.path.isfile(file_path):
+                    os.rmdir(temp_dir_path)
+                    return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
         else:
             file_path = None
 
@@ -173,7 +194,6 @@ class Analyze(Resource):
         analysis = request.default_store.get_analysis(name)
         if analysis is not None:
             return analysis, 200
-
 
         ds = request.default_store.get_datasource(name)
         if ds is None:

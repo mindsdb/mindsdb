@@ -941,7 +941,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if keyword == 'show':
             if 'show databases' in sql_lower:
-                sql = 'select schema_name as Database from information_schema.SCHEMATA;'
+                sql = 'select schema_name as Database from information_schema.SCHEMATA'
                 statement = SqlStatementParser(sql)
                 sql_lower = statement.sql.lower()
                 keyword = statement.keyword

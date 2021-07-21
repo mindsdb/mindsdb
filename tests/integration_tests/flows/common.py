@@ -301,7 +301,6 @@ def run_environment(apis, override_config={}):
     ioloop.close()
     if not success:
         raise Exception('Cant start mindsdb apis')
-    time.sleep(20)
     print('Done waiting, mindsdb has started!')
 
 

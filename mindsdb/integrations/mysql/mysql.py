@@ -26,7 +26,7 @@ class MySQLConnectionChecker:
         self._temp_dir = None
 
     def __del__(self):
-        if self._temp_dir is None:
+        if self._temp_dir is not None:
             shutil.rmtree(self._temp_dir)
 
     def _get_connnection(self):

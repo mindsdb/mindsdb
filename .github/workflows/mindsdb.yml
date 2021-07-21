@@ -101,8 +101,8 @@ jobs:
 
 
           # MySQL
-          echo -e "\n===============\ntest MySQL\n===============\n"
-          python tests/integration_tests/flows/test_mysql.py
+          # echo -e "\n===============\ntest MySQL\n===============\n"
+          # python tests/integration_tests/flows/test_mysql.py
 
 
           # MariaDB

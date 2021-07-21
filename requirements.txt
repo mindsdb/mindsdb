@@ -16,6 +16,7 @@ sentry-sdk
 walrus==0.8.2
 mindsdb_datasources >= 1.2.1
 flask-compress >= 1.0.0
+Flask-Cors==3.0.10
 kafka-python >= 2.0.0
 pyarrow >= 4.00
 appdirs >= 1.0.0

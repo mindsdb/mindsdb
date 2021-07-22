@@ -103,8 +103,8 @@ class SQLQuery():
         models = mindsdb_datanode.model_interface.get_models()
         model_names = [m['name'] for m in models]
         predictor_metadata = {}
-        for model in (set(model_names) & set(all_tables)):
-            model_meta = mindsdb_datanode.model_interface.get_model_data(name=model['name'])
+        for model_name in (set(model_names) & set(all_tables)):
+            model_meta = mindsdb_datanode.model_interface.get_model_data(name=model_name)
             window = model_meta.get('timeseries', {}).get('user_settings', {}).get('window')
             predictor_metadata[model_meta['name']] = {'timeseries': False}
             if window is not None:
@@ -181,8 +181,12 @@ class SQLQuery():
                     if len(left_data) != len(right_data):
                         raise Exception('wrong data length')
                     data = []
-                    left_alias = step.query.left.alias
-                    right_alias = step.query.right.alias
+                    # +++ temp fix while we have only 1 to 1 join
+                    if len(left_data) > 0:
+                        left_alias = list(left_data[0].keys())[0]
+                    if len(left_data) > 0:
+                        right_alias = list(right_data[0].keys())[0]
+                    # ---
                     for i in range(len(left_data)):
                         data.append({
                             left_alias: left_data[i][left_alias],

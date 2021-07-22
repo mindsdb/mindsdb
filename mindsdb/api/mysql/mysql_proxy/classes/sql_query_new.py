@@ -49,7 +49,7 @@ class SQLQuery():
         self.ai_table = None
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
-        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
+        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<2> ', sql, flags=re.IGNORECASE)
 
         self.raw = sql
         self._parse_query(sql)

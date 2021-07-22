@@ -360,7 +360,7 @@ class ModelController():
             import traceback
             traceback.print_exc()
         else:
-            db_p.data = {'status': 'trained', 'name': name, 'analysis': lw_p.model_analysis}
+            db_p.data = {'status': 'trained', 'name': name, 'analysis': lw_p.model_analysis.to_dict()}
             db.session.commit()
 
             # save predictor locally

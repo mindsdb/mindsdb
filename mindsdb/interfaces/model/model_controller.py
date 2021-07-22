@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from packaging import version
 
 import pandas as pd
+from sqlalchemy.sql.selectable import TableClause
 import lightwood
 import autopep8
 import mindsdb_datasources
@@ -180,52 +181,33 @@ class ModelController():
             db_p.update_status = 'available'
             db.session.commit()
 
-        model = db_p.data
-
         # Make some corrections for databases not to break when dealing with empty columns
         if 'data_analysis_v2' in db_p.data:
             if db_fix:
-                for column in model['columns']:
-                    analysis = model['data_analysis_v2'].get(column)
+                for column in db_p.data['columns']:
+                    analysis = db_p.data['data_analysis_v2'].get(column)
                     if isinstance(analysis, dict):
                         if len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False):
                             # mindsdb_native.libs.constants.mindsdb.DATA_SUBTYPES.INT
-                            model['data_analysis_v2'][column]['typing'] = {'data_subtype': 'Int'}
+                            db_p.data['data_analysis_v2'][column]['typing'] = {'data_subtype': 'Int'}
         
         if 'analysis' in db_p.data:
             if db_fix:
                 pass # TODO ???
 
-        model['created_at'] = str(parse_datetime(str(db_p.created_at).split('.')[0]))
-        model['updated_at'] = str(parse_datetime(str(db_p.updated_at).split('.')[0]))
-        model['predict'] = db_p.to_predict
-        model['update'] = db_p.update_status
-        model['name'] = db_p.name
-        model['data_source_name'] = linked_db_ds.name if linked_db_ds else None
+        db_p.data['created_at'] = str(parse_datetime(str(db_p.created_at).split('.')[0]))
+        db_p.data['updated_at'] = str(parse_datetime(str(db_p.updated_at).split('.')[0]))
+        db_p.data['predict'] = db_p.to_predict
+        db_p.data['update'] = db_p.update_status
+        db_p.data['name'] = db_p.name
+        db_p.data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
 
-        return model
+        return db_p.data
 
     def get_models(self, company_id=None):
         models = []
         for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id, is_custom=False):
-            model_data = self.get_model_data(db_p.name, db_fix=False, company_id=company_id)
-            reduced_model_data = {}
-
-            for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update', 'data_source_name']:
-                reduced_model_data[k] = model_data.get(k, None)
-
-            for k in ['train_end_at', 'updated_at', 'created_at']:
-                reduced_model_data[k] = model_data.get(k, None)
-                if reduced_model_data[k] is not None:
-                    try:
-                        reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]).split('.')[0])
-                    except Exception as e:
-                        # @TODO Does this ever happen
-                        log.error(f'Date parsing exception while parsing: {k} in get_models: ', e)
-                        reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]))
-
-            models.append(reduced_model_data)
-
+            models.append(self.get_model_data(db_p.name, db_fix=False, company_id=company_id))
         return models
 
     def delete_model(self, name, company_id=None):
@@ -284,6 +266,7 @@ class ModelController():
         return 'Updated successfully'
 
     def generate_lightwood_predictor(self, name: str, from_data: dict, datasource_id, problem_definition: dict, company_id=None):
+        print('generate predicrtor start')
         if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
             raise Exception('Predictor {} already exists'.format(name))
 
@@ -316,6 +299,7 @@ class ModelController():
         )
         db.session.add(db_p)
         db.session.commit()
+        print('generate predicrtor end')
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         """Edit an existing predictor's json_ai"""
@@ -353,23 +337,28 @@ class ModelController():
             return True
 
     def fit_predictor(self, name: str, from_data: dict, datasource_id, company_id=None):
+        print('fit predicrtor start')
         """Train an existing predictor"""
 
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
 
-        # TODO: set db_p.data['status'] to 'training'
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         db_p.data = {'status': 'training', 'name': name}
         db.session.commit()
 
         try:
             lw_p = lightwood.api.high_level.predictor_from_code(db_p.predictor_code)
+            print('before learn')
             lw_p.learn(df)
+            print('after learn')
         except Exception:
             db_p.data = {'status': 'error', 'name': name}
             db.session.commit()
+            print('fit predictor exception')
+            import traceback
+            traceback.print_exc()
         else:
             db_p.data = {'status': 'trained', 'name': name, 'analysis': lw_p.model_analysis}
             db.session.commit()
@@ -379,6 +368,8 @@ class ModelController():
             
             # save predictor to s3
             self.fs_store.put(name, f'predictor_{company_id}_{db_p.id}', self.config['paths']['predictors'])
+            print('fit predictor NO exception')
+        print('fit predicrtor end')
 
     def code_from_json_ai(self, json_ai: dict, company_id=None):
         json_ai = lightwood.api.types.JsonAI.from_dict(json_ai)

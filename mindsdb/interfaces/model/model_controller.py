@@ -33,11 +33,6 @@ class ModelController():
         self.ray_based = ray_based
 
     def _invalidate_cached_predictors(self):
-        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS, MySqlDS,
-                                         PostgresDS, MSSQLDS, MongoDS,
-                                         SnowflakeDS, AthenaDS)
-        from mindsdb.interfaces.storage.db import session, Predictor
-
         # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
         for predictor_name in list(self.predictor_cache.keys()):
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
@@ -100,14 +95,18 @@ class ModelController():
 
         # TODO: support kwargs['join_learn_process']
         self.fit_predictor(name, from_data, datasource_id, company_id)
+        
+        # TODO: fix all register_predictors and unregister_predictor
+        # methods implementations according to new data types in lightwood
+        # DatabaseWrapper(company_id).register_predictors([
+        #     self.get_model_data(name, company_id=company_id)
+        # ])
 
         delete_process_mark('learn')
         return 0
 
     def predict(self, name, pred_format, when_data=None, kwargs={}, company_id=None):
         import mindsdb_native
-        from mindsdb.interfaces.storage.db import session, Predictor
-
         create_process_mark('predict')
         original_name = name
         name = f'{company_id}@@@@@{name}'
@@ -117,14 +116,14 @@ class ModelController():
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
-            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
-            if predictor_record.data['status'] == 'complete':
-                self.fs_store.get(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
+            db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+            if db_p.data['status'] == 'complete':
+                self.fs_store.get(name, f'predictor_{company_id}_{db_p.id}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
-                    'predictor': mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'}),
+                    'predictor': lightwood.api.high_level.predictor_from_code(db_p.predictor_code),
                     'created': datetime.datetime.now()
                 }
-                predictor = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
+                self.predictor_cache[name]['predictor']
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
             data_source = getattr(mindsdb_datasources, when_data['class'])(*when_data['args'], **when_data['kwargs'])
@@ -136,11 +135,9 @@ class ModelController():
                 data_source = when_data
 
         predictor = self.predictor_cache[name]['predictor']
-        predictions = predictor.predict(
-            when_data=data_source,
-            **kwargs
-        )
+        predictions = predictor.predict(data_source.df)
         del self.predictor_cache[name]
+
         if pred_format == 'explain' or pred_format == 'new_explain':
             predictions = [p.explain() for p in predictions]
         elif pred_format == 'dict':
@@ -170,7 +167,7 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=db_p.datasource_id).first()
 
         # check update availability
@@ -179,14 +176,13 @@ class ModelController():
             db.session.commit()
 
         # Make some corrections for databases not to break when dealing with empty columns
-        if 'data_analysis_v2' in db_p.data:
-            if db_fix:
-                for column in db_p.data['columns']:
-                    analysis = db_p.data['data_analysis_v2'].get(column)
-                    if isinstance(analysis, dict):
-                        if len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False):
-                            # mindsdb_native.libs.constants.mindsdb.DATA_SUBTYPES.INT
-                            db_p.data['data_analysis_v2'][column]['typing'] = {'data_subtype': 'Int'}
+        if 'data_analysis_v2' in db_p.data and db_fix:
+            for column in db_p.data['columns']:
+                analysis = db_p.data['data_analysis_v2'].get(column)
+                if isinstance(analysis, dict):
+                    if len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False):
+                        # mindsdb_native.libs.constants.mindsdb.DATA_SUBTYPES.INT
+                        db_p.data['data_analysis_v2'][column]['typing'] = {'data_subtype': 'Int'}
         
         if 'analysis' in db_p.data:
             if db_fix:
@@ -205,7 +201,7 @@ class ModelController():
 
     def get_models(self, company_id=None):
         models = []
-        for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id, is_custom=False):
+        for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id):
             models.append(self.get_model_data(db_p.name, db_fix=False, company_id=company_id))
         return models
 
@@ -268,6 +264,12 @@ class ModelController():
         print('generate predicrtor start')
         if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
             raise Exception('Predictor {} already exists'.format(name))
+
+        if name in self.predictor_cache:
+            del self.predictor_cache[name]
+
+        # Here for no particular reason, because we want to run this sometimes but not too often
+        self._invalidate_cached_predictors()
 
         problem_definition = lightwood.api.types.ProblemDefinition.from_dict(problem_definition)
 
@@ -359,7 +361,7 @@ class ModelController():
             import traceback
             traceback.print_exc()
         else:
-            db_p.data = {'status': 'trained', 'name': name, 'analysis': lw_p.model_analysis}
+            db_p.data = {'status': 'trained', 'name': name, 'analysis': lw_p.model_analysis.to_dict()}
             db.session.commit()
 
             # save predictor locally

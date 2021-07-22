@@ -49,7 +49,7 @@ class SQLQuery():
         self.ai_table = None
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
-        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<1> ', sql)
+        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<2> ', sql, flags=re.IGNORECASE)
 
         self.raw = sql
         self._parse_query(sql)
@@ -82,6 +82,15 @@ class SQLQuery():
             name = name + (table_obj.alias,)
             return name
 
+        def get_all_tables(from_stmt):
+            result = []
+            if isinstance(from_stmt, Identifier):
+                result.append(from_stmt.parts[-1])
+            elif isinstance(from_stmt, Join):
+                result.extend(get_all_tables(from_stmt.left))
+                result.extend(get_all_tables(from_stmt.right))
+            return result
+
         mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
         integrations_names = self.datahub.get_integrations_names()
@@ -89,10 +98,13 @@ class SQLQuery():
 
         mindsdb_datanode = self.datahub.get(self.database)
 
+        all_tables = get_all_tables(mindsdb_sql_struct.from_table)
+
         models = mindsdb_datanode.model_interface.get_models()
+        model_names = [m['name'] for m in models]
         predictor_metadata = {}
-        for model in models:
-            model_meta = mindsdb_datanode.model_interface.get_model_data(name=model['name'])
+        for model_name in (set(model_names) & set(all_tables)):
+            model_meta = mindsdb_datanode.model_interface.get_model_data(name=model_name)
             window = model_meta.get('timeseries', {}).get('user_settings', {}).get('window')
             predictor_metadata[model_meta['name']] = {'timeseries': False}
             if window is not None:
@@ -169,8 +181,12 @@ class SQLQuery():
                     if len(left_data) != len(right_data):
                         raise Exception('wrong data length')
                     data = []
-                    left_alias = step.query.left.alias
-                    right_alias = step.query.right.alias
+                    # +++ temp fix while we have only 1 to 1 join
+                    if len(left_data) > 0:
+                        left_alias = list(left_data[0].keys())[0]
+                    if len(left_data) > 0:
+                        right_alias = list(right_data[0].keys())[0]
+                    # ---
                     for i in range(len(left_data)):
                         data.append({
                             left_alias: left_data[i][left_alias],

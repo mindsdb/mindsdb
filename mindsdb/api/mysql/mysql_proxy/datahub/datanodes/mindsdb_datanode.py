@@ -311,7 +311,11 @@ class MindsDBDataNode(DataNode):
                     nd.update(pred_dict)
                     new_pred_dicts.append(nd)
                     nd[predict] = predictions[i]
-                    nd[data_column] = data_values[-1 * (i + 1)]
+                    if i == 0:
+                        nd[data_column] = data_values[-1]
+                    else:
+                        nd[data_column] = f'T + {i}'
+                    # nd[data_column] = data_values[-1 * (i + 1)]
                 pred_dicts = new_pred_dicts
 
             if columns is None:

@@ -301,7 +301,11 @@ class MindsDBDataNode(DataNode):
                 predict = model['predict'][0]
                 data_column = model['timeseries']['user_settings']['order_by'][0]
                 predictions = pred_dict[predict]
+                if isinstance(predictions, list) is False:
+                    predictions = [predictions]
                 data_values = pred_dict[data_column]
+                if isinstance(data_values, list) is False:
+                    data_values = [data_values]
                 for i in range(model['timeseries']['user_settings']['nr_predictions']):
                     nd = {}
                     nd.update(pred_dict)
@@ -328,10 +332,10 @@ class MindsDBDataNode(DataNode):
                 else:
                     explains.append(explanations[0])
 
-            field_types = {
-                f: model['data_analysis_v2'][f]['typing']['data_subtype']
-                for f in model['columns'] if 'typing' in model['data_analysis_v2'][f]
-            }
+            field_types = {}
+            for f in set(model['columns']) & set(model['data_analysis_v2'].keys()):
+                if 'typing' in model['data_analysis_v2'][f]:
+                    field_types[f] = model['data_analysis_v2'][f]['typing']['data_subtype']
 
             for i, row in enumerate(data):
                 cast_row_types(row, field_types)

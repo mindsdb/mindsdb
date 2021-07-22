@@ -90,7 +90,7 @@ class RedisStream(Thread, BaseStream):
         log.debug(f"STREAM {self.stream_name} TS_SETTINGS: {ts_settings}")
         self.target = ts_settings['to_predict'][0]
         self.window = ts_settings['window']
-        self.gb = ts_settings['group_by'][0]
+        self.gb = None if not ts_settings.get('group_by') else ts_settings.get('group_by')[0]
         self.dt = ts_settings['order_by'][0]
 
         while not self.stop_event.wait(0.5):

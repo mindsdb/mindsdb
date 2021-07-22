@@ -202,7 +202,23 @@ class ModelController():
     def get_models(self, company_id=None):
         models = []
         for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id):
-            models.append(self.get_model_data(db_p.name, db_fix=False, company_id=company_id))
+            model_data = self.get_model_data(db_p.name, db_fix=False, company_id=company_id)
+            reduced_model_data = {}
+
+            for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update', 'data_source_name']:
+                reduced_model_data[k] = model_data.get(k, None)
+
+            for k in ['train_end_at', 'updated_at', 'created_at']:
+                reduced_model_data[k] = model_data.get(k, None)
+                if reduced_model_data[k] is not None:
+                    try:
+                        reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]).split('.')[0])
+                    except Exception as e:
+                        # @TODO Does this ever happen
+                        log.error(f'Date parsing exception while parsing: {k} in get_models: ', e)
+                        reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]))
+
+            models.append(reduced_model_data)
         return models
 
     def delete_model(self, name, company_id=None):

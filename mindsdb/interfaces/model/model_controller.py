@@ -105,9 +105,6 @@ class ModelController():
         return 0
 
     def predict(self, name, pred_format, when_data=None, kwargs={}, company_id=None):
-        from mindsdb_datasources import (FileDS, ClickhouseDS, MariaDS,
-                                         MySqlDS, PostgresDS, MSSQLDS, MongoDS,
-                                         SnowflakeDS, AthenaDS)
         import mindsdb_native
         from mindsdb.interfaces.storage.db import session, Predictor
 
@@ -200,6 +197,8 @@ class ModelController():
         db_p.data['predict'] = db_p.to_predict
         db_p.data['update'] = db_p.update_status
         db_p.data['name'] = db_p.name
+        db_p.data['predictor_code'] = db_p.predictor_code
+        db_p.data['json_ai'] = db_p.json_ai
         db_p.data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
 
         return db_p.data

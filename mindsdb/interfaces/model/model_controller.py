@@ -105,52 +105,68 @@ class ModelController():
         delete_process_mark('learn')
         return 0
 
-    def predict(self, name, pred_format, when_data=None, kwargs={}, company_id=None):
-        import mindsdb_native
+    def predict(self, name, pred_format, when_data=None, kwargs={}, bc=True, company_id=None):
         create_process_mark('predict')
         original_name = name
         name = f'{company_id}@@@@@{name}'
+
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
 
         if name not in self.predictor_cache:
             # Clear the cache entirely if we have less than 1.2 GB left
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
-            db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name, is_custom=False).first()
             if db_p.data['status'] == 'complete':
                 self.fs_store.get(name, f'predictor_{company_id}_{db_p.id}', self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
                     'predictor': lightwood.api.high_level.predictor_from_code(db_p.predictor_code),
                     'created': datetime.datetime.now()
                 }
-                self.predictor_cache[name]['predictor']
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
-            data_source = getattr(mindsdb_datasources, when_data['class'])(*when_data['args'], **when_data['kwargs'])
+            ds_cls = getattr(mindsdb_datasources, when_data['class'])
+            ds = ds_cls(*when_data['args'], **when_data['kwargs'])
         else:
             # @TODO: Replace with Datasource
             try:
-                data_source = pd.DataFrame(when_data)
+                ds = pd.DataFrame(when_data)
             except Exception:
-                data_source = when_data
+                ds = when_data
 
         predictor = self.predictor_cache[name]['predictor']
-        predictions = predictor.predict(data_source.df)
+        predictions = predictor.predict(ds.df)
         del self.predictor_cache[name]
 
-        if pred_format == 'explain' or pred_format == 'new_explain':
-            predictions = [p.explain() for p in predictions]
-        elif pred_format == 'dict':
-            predictions = [p.as_dict() for p in predictions]
-        elif pred_format == 'dict&explain':
-            predictions = [[p.as_dict() for p in predictions], [p.explain() for p in predictions]]
-        else:
-            delete_process_mark('predict')
-            raise Exception(f'Unkown predictions format: {pred_format}')
+        if pred_format != 'dict':
+            raise ValueError('only dict is supported for "pred_format"')
+        # if pred_format == 'explain' or pred_format == 'new_explain':
+        #     predictions = [p.explain() for p in predictions]
+        # elif pred_format == 'dict':
+        #     predictions = [p.as_dict() for p in predictions]
+        # elif pred_format == 'dict&explain':
+        #     predictions = [[p.as_dict() for p in predictions], [p.explain() for p in predictions]]
+        # else:
+        #     delete_process_mark('predict')
+        #     raise Exception(f'Unkown predictions format: {pred_format}')
 
         delete_process_mark('predict')
 
-        return predictions
+        target = db_p.to_predict[0]
+
+        if bc:
+            bc_predictions = []
+            for _, row in predictions.iterrows():
+                bc_predictions.append({
+                    '{}_confidence'.format(target): row['confidence'],
+                    '{}_lower_bound'.format(target): row['lower'],
+                    '{}_upper_bound'.format(target): row['upper'],
+                    '{}_anomaly'.format(target): row['anomaly'],
+                    '{}'.format(target): row['prediction'],
+                })
+            return bc_predictions
+        else:
+            return [dict(row) for _, row in predictions.iterrows()]
 
     def analyse_dataset(self, ds, company_id=None):
         create_process_mark('analyse')
@@ -190,7 +206,7 @@ class ModelController():
 
         db_p.data['created_at'] = str(parse_datetime(str(db_p.created_at).split('.')[0]))
         db_p.data['updated_at'] = str(parse_datetime(str(db_p.updated_at).split('.')[0]))
-        db_p.data['predict'] = db_p.to_predict
+        db_p.data['predict'] = db_p.to_predict[0]
         db_p.data['update'] = db_p.update_status
         db_p.data['name'] = db_p.name
         db_p.data['predictor_code'] = db_p.predictor_code
@@ -312,6 +328,7 @@ class ModelController():
             datasource_id=datasource_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
+            to_predict=[problem_definition['target']],
             data={'status': 'untrained', 'name': name}
         )
         db.session.add(db_p)

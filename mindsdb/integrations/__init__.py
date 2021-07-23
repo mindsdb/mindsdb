@@ -21,15 +21,16 @@ except ImportError:
 
 
 CHECKERS = {
-        "clickhouse": ClickhouseConnectionChecker,
-        "mariadb": MariadbConnectionChecker,
-        "mongodb": MongoConnectionChecker,
-        "mssql": MSSQLConnectionChecker,
-        "mysql": MySQLConnectionChecker,
-        "postgres": PostgreSQLConnectionChecker,
-        "redis": RedisConnectionChecker,
-        "kafka": KafkaConnectionChecker
-        }
+    "clickhouse": ClickhouseConnectionChecker,
+    "mariadb": MariadbConnectionChecker,
+    "mongodb": MongoConnectionChecker,
+    "mssql": MSSQLConnectionChecker,
+    "mysql": MySQLConnectionChecker,
+    "singlestore": MySQLConnectionChecker,
+    "postgres": PostgreSQLConnectionChecker,
+    "redis": RedisConnectionChecker,
+    "kafka": KafkaConnectionChecker
+}
 
 
 if ScyllaDBConnectionChecker is not None:

@@ -33,9 +33,8 @@ class DataStoreWrapper(object):
 
 class DataStore():
     def __init__(self):
-        self.config = Config()
         self.fs_store = FsSotre()
-        self.dir = self.config['paths']['datasources']
+        self.dir = Config()['paths']['datasources']
         self.mindsdb_native = NativeInterface()
 
     def get_analysis(self, name, company_id=None):
@@ -185,6 +184,7 @@ class DataStore():
                     'clickhouse': ClickhouseDS,
                     'mariadb': MariaDS,
                     'mysql': MySqlDS,
+                    'singlestore': MySqlDS,
                     'postgres': PostgresDS,
                     'mssql': MSSQLDS,
                     'mongodb': MongoDS,
@@ -216,7 +216,7 @@ class DataStore():
                     }
                     ds = dsClass(**creation_info['kwargs'])
 
-                elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql', 'cassandra', 'scylladb']:
+                elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
                     creation_info = {
                         'class': dsClass.__name__,
                         'args': [],

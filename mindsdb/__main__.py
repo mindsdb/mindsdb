@@ -87,18 +87,18 @@ if __name__ == '__main__':
                 dbw.setup_integration(integration_name)
                 dbw.register_predictors(model_data_arr, integration_name=integration_name)
 
-    for integration_name in config.get('integrations', {}):
-        try:
-            it = get_db_integration(integration_name, None)
-            if it is not None:
-                remove_db_integration(integration_name, None)
-            print(f'Adding: {integration_name}')
-            add_db_integration(integration_name, config['integrations'][integration_name], None)            # Setup for user `None`, since we don't need this for cloud
-            if config['integrations'][integration_name].get('publish', False) and not is_cloud:
-                dbw.setup_integration(integration_name)
-                dbw.register_predictors(model_data_arr, integration_name=integration_name)
-        except Exception as e:
-            log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
+        for integration_name in config.get('integrations', {}):
+            try:
+                it = get_db_integration(integration_name, None)
+                if it is not None:
+                    remove_db_integration(integration_name, None)
+                print(f'Adding: {integration_name}')
+                add_db_integration(integration_name, config['integrations'][integration_name], None)            # Setup for user `None`, since we don't need this for cloud
+                if config['integrations'][integration_name].get('publish', False) and not is_cloud:
+                    dbw.setup_integration(integration_name)
+                    dbw.register_predictors(model_data_arr, integration_name=integration_name)
+            except Exception as e:
+                log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
     del model_interface
     del dbw

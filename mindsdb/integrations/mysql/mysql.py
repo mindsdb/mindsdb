@@ -18,16 +18,8 @@ class MySQLConnectionChecker:
         self.password = kwargs.get('password')
         self.ssl = kwargs.get('ssl')
         self.ssl_ca = kwargs.get('ssl_ca')
-        self.ssl_ca_name = kwargs.get('ssl_ca_name', 'ssl_ca.pem')
         self.ssl_cert = kwargs.get('ssl_cert')
-        self.ssl_cert_name = kwargs.get('ssl_cert_name', 'ssl_cert.pem')
         self.ssl_key = kwargs.get('ssl_key')
-        self.ssl_key_name = kwargs.get('ssl_key_name', 'ssl_key.pem')
-        self._temp_dir = None
-
-    def __del__(self):
-        if self._temp_dir is not None:
-            shutil.rmtree(self._temp_dir)
 
     def _get_connnection(self):
         config = {
@@ -39,23 +31,12 @@ class MySQLConnectionChecker:
         if self.ssl is True:
             config['client_flags'] = [mysql.connector.constants.ClientFlag.SSL]
             if self.ssl_ca is not None:
-                config["ssl_ca"] = self._get_cert_file_path(self.ssl_ca_name, self.ssl_ca)
+                config["ssl_ca"] = self.ssl_ca
             if self.ssl_cert is not None:
-                config["ssl_cert"] = self._get_cert_file_path(self.ssl_cert_name, self.ssl_cert)
+                config["ssl_cert"] = self.ssl_cert
             if self.ssl_key is not None:
-                config["ssl_key"] = self._get_cert_file_path(self.ssl_key_name, self.ssl_key)
+                config["ssl_key"] = self.ssl_key
         return mysql.connector.connect(**config)
-
-    def _get_cert_file_path(self, name: str, cert: str) -> str:
-        if isinstance(cert, str) and os.path.isfile(cert) is False:
-            if self._temp_dir is None:
-                self._temp_dir = tempfile.mkdtemp(prefix='mindsdb_mysql_cert_')
-            file_path = os.path.join(self._temp_dir, name)
-            with open(file_path, 'wt') as f:
-                f.write(cert)
-            return file_path
-        else:
-            return cert
 
     def check_connection(self):
         try:
@@ -76,12 +57,8 @@ class MySQL(Integration, MySQLConnectionChecker):
         self.port = db_info.get('port')
         self.ssl = db_info.get('ssl')
         self.ssl_ca = db_info.get('ssl_ca')
-        self.ssl_ca_name = db_info.get('ssl_ca_name', 'ssl_ca.pem')
         self.ssl_cert = db_info.get('ssl_cert')
-        self.ssl_cert_name = db_info.get('ssl_cert_name', 'ssl_cert.pem')
         self.ssl_key = db_info.get('ssl_key')
-        self.ssl_key_name = db_info.get('ssl_key_name', 'ssl_key.pem')
-        self._temp_dir = None
 
     def _to_mysql_table(self, stats, predicted_cols, columns):
         subtype_map = {

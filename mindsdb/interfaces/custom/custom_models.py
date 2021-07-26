@@ -11,13 +11,13 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Predictor
-from mindsdb.interfaces.storage.fs import FsSotre
+from mindsdb.interfaces.storage.fs import FsStore
 
 
 class CustomModels():
     def __init__(self, company_id=None):
         self.config = Config()
-        self.fs_store = FsSotre()
+        self.fs_store = FsStore()
         self.company_id = company_id
         self.dbw = DatabaseWrapper(None)
         self.storage_dir = self.config['paths']['custom_models']

@@ -18,11 +18,8 @@ class MySQLConnectionChecker:
         self.password = kwargs.get('password')
         self.ssl = kwargs.get('ssl')
         self.ssl_ca = kwargs.get('ssl_ca')
-        self.ssl_ca_name = kwargs.get('ssl_ca_name', 'ssl_ca.pem')
         self.ssl_cert = kwargs.get('ssl_cert')
-        self.ssl_cert_name = kwargs.get('ssl_cert_name', 'ssl_cert.pem')
         self.ssl_key = kwargs.get('ssl_key')
-        self.ssl_key_name = kwargs.get('ssl_key_name', 'ssl_key.pem')
         self._temp_dir = None
 
     def __del__(self):
@@ -76,11 +73,8 @@ class MySQL(Integration, MySQLConnectionChecker):
         self.port = db_info.get('port')
         self.ssl = db_info.get('ssl')
         self.ssl_ca = db_info.get('ssl_ca')
-        self.ssl_ca_name = db_info.get('ssl_ca_name', 'ssl_ca.pem')
         self.ssl_cert = db_info.get('ssl_cert')
-        self.ssl_cert_name = db_info.get('ssl_cert_name', 'ssl_cert.pem')
         self.ssl_key = db_info.get('ssl_key')
-        self.ssl_key_name = db_info.get('ssl_key_name', 'ssl_key.pem')
         self._temp_dir = None
 
     def _to_mysql_table(self, stats, predicted_cols, columns):

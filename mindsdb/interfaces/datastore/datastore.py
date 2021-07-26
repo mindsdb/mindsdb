@@ -237,11 +237,8 @@ class DataStore():
                     if integration['type'] in ('mysql', 'mariadb'):
                         kwargs['ssl'] = integration.get('ssl')
                         kwargs['ssl_ca'] = integration.get('ssl_ca')
-                        kwargs['ssl_ca_name'] = integration.get('ssl_ca_name', 'ssl_ca.pem')
                         kwargs['ssl_cert'] = integration.get('ssl_cert')
-                        kwargs['ssl_cert_name'] = integration.get('ssl_cert_name', 'ssl_cert.pem')
                         kwargs['ssl_key'] = integration.get('ssl_key')
-                        kwargs['ssl_key_name'] = integration.get('ssl_key_name', 'ssl_key.pem')
                         for key in ['ssl_ca', 'ssl_cert', 'ssl_key']:
                             if isinstance(kwargs[key], str) and len(kwargs[key]) > 0:
                                 kwargs[key] = os.path.join(

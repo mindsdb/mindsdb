@@ -1,4 +1,4 @@
-mindsdb_native >= 2.47.0, < 2.48.0
+mindsdb_native >= 2.48.0, < 2.49.0
 flask-restx >= 0.2.0
 flask >= 1.0, < 2.0
 python-multipart >= 0.0.5
@@ -19,3 +19,4 @@ flask-compress >= 1.0.0
 kafka-python >= 2.0.0
 pyarrow >= 4.00
 appdirs >= 1.0.0
+mindsdb_sql == 0.0.13

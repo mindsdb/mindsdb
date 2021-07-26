@@ -208,12 +208,12 @@ class PredictorPredict2(Resource):
     def post(self, name):
         '''Queries predictor'''
         data = request.json
-        when = data.get('when', {})
+        when = data.get('when')
         format_flag = data.get('format_flag', 'explain')
         kwargs = data.get('kwargs', {})
 
-        if when is None:
-            return 'No data provided for the predictions', 500
+        if isinstance(when, dict) is False or len(when) == 0:
+            return 'No data provided for the predictions', 400
 
         results = request.native_interface.predict(name, format_flag, when_data=when, **kwargs)
 

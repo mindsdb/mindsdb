@@ -59,6 +59,7 @@ jobs:
       run: |
           pip install git+https://github.com/mindsdb/mindsdb_native.git@staging --upgrade --no-cache-dir
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+          pip install git+https://github.com/mindsdb/mindsdb_sql.git@main --upgrade --no-cache-dir
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
@@ -71,10 +72,6 @@ jobs:
           sudo chmod 644 ~/.mindsdb_credentials.json
 
           export USE_EXTERNAL_DB_SERVER="1"
-
-          if [ "$INSTALL_RAY" == "install_ray" ]; then
-            export USE_RAY="1"
-          fi
 
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"

@@ -23,6 +23,25 @@ class IntegrationDataNode(DataNode):
     def getTableColumns(self, tableName):
         return []
 
+    def select_query(self, query):
+        sql_query = str(query)
+
+        ds_name = self.data_store.get_vacant_name('temp')
+        self.data_store.save_datasource(ds_name, self.integration_name, {'query': sql_query})
+        dso = self.data_store.get_datasource_obj(ds_name)
+
+        data = dso.df.to_dict(orient='records')
+
+        for column_name in dso.df.columns:
+            if pd.core.dtypes.common.is_datetime_or_timedelta_dtype(dso.df[column_name]):
+                pass_data = dso.df[column_name].dt.to_pydatetime()
+                for i, rec in enumerate(data):
+                    rec[column_name] = pass_data[i].timestamp()
+
+        self.data_store.delete_datasource(ds_name)
+
+        return data
+
     def select(self, table=None, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
         has_where = isinstance(where, (dict, list)) and len(where) > 0
 

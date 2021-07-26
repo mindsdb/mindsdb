@@ -1,6 +1,12 @@
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 
 
+def get_table_alias(table_obj):
+    if table_obj.alias is not None:
+        return table_obj.alias
+    return '.'.join(table_obj.parts)
+
+
 class InformationSchema(DataNode):
     type = 'INFORMATION_SCHEMA'
 
@@ -45,6 +51,24 @@ class InformationSchema(DataNode):
             return self.information_schema[tn]
         raise Exception()
 
+    def get_integrations_names(self):
+        return [
+            x.lower() for x in self.index if x.lower() not in ['mindsdb', 'datasource']
+        ]
+
+    def select_query(self, query):
+        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+        sql_query = str(query)
+        moz_struct = to_moz_sql_struct(sql_query)
+        data = self.select(
+            table=query.from_table.parts[-1],
+            columns=None,
+            where=moz_struct.get('where')
+        )
+
+        self.select(table=get_table_alias(query.from_table))
+        return data
+
     def select(self, columns=None, table=None, where=None, order_by=None, group_by=None, came_from=None):
         tn = table.upper()
         if tn == 'SCHEMATA':
@@ -52,10 +76,10 @@ class InformationSchema(DataNode):
             # SELECT schema_name as name FROM INFORMATION_SCHEMA.SCHEMATA;
             # SELECT default_character_set_name as CharacterSetName, default_collation_name as CollationName FROM INFORMATION_SCHEMA.SCHEMATA WHERE schema_name = 'information_schema';
             if len(columns) == 1 and columns[0] == 'schema_name':
-                data = [{'schema_name': 'information_schema'}]
+                data = [{'schema_name': 'INFORMATION_SCHEMA'}]
                 for key in self.index:
                     data.append({
-                        'schema_name': key
+                        'schema_name': key.upper()
                     })
                 return data
             elif len(columns) == 3 and where is not None and 'schema_name' in where:

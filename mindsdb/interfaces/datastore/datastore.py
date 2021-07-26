@@ -12,7 +12,7 @@ from mindsdb_datasources import (
     SnowflakeDS, AthenaDS, CassandraDS, ScyllaDS
 )
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.db import session, Datasource, Semaphor
+from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import get_db_integration
@@ -118,6 +118,10 @@ class DataStore():
 
     def delete_datasource(self, name, company_id=None):
         datasource_record = Datasource.query.filter_by(company_id=company_id, name=name).first()
+        if not Config()["force_datasource_removing"]:
+            linked_models = Predictor.query.filter_by(company_id=company_id, datasource_id=datasource_record.id).all()
+            if linked_models:
+                raise Exception("Can't delete {} datasource because there are next models linked to it: {}".format(name, [model.name for model in linked_models]))
         session.delete(datasource_record)
         session.commit()
         self.fs_store.delete(f'datasource_{company_id}_{datasource_record.id}')

@@ -60,7 +60,7 @@ class StreamController:
                 ds_record = db.session.query(db.Datasource).filter_by(id=p.datasource_id).first()
 
                 df = pd.DataFrame.from_records(self.learning_data)
-                name = 'name_' + str(time.time()).replace('.', '_')
+                name = 'name_' + str(time()).replace('.', '_')
                 path = os.path.join(self.config['paths']['datasources'], name)
                 df.to_csv(path)
 

@@ -120,12 +120,14 @@ class RedisTest(unittest.TestCase):
         res.raise_for_status()
 
     def test_1_create_integration(self):
+        print(f"\nExecuting {self._testMethodName}")
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
         params = {"type": "redis", "connection": CONNECTION_PARAMS}
         res = requests.put(url, json={"params": params})
         self.assertEqual(res.status_code, 200)
 
     def test_2_create_redis_stream(self):
+        print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
@@ -140,6 +142,7 @@ class RedisTest(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
 
     def test_3_making_stream_prediction(self):
+        print(f"\nExecuting {self._testMethodName}")
         stream_in = RedisStream(STREAM_IN, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
 
@@ -150,6 +153,7 @@ class RedisTest(unittest.TestCase):
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_4_create_redis_ts_stream(self):
+        print(f"\nExecuting {self._testMethodName}")
         self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
 
         url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
@@ -163,6 +167,7 @@ class RedisTest(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
 
     def test_5_making_ts_stream_prediction(self):
+        print(f"\nExecuting {self._testMethodName}")
         stream_in = RedisStream(STREAM_IN_TS, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
@@ -173,6 +178,7 @@ class RedisTest(unittest.TestCase):
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_6_create_stream_redis_native_api(self):
+        print(f"\nExecuting {self._testMethodName}")
         control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -195,6 +201,7 @@ class RedisTest(unittest.TestCase):
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_8_test_online_learning(self):
+        print(f"\nExecuting {self._testMethodName}")
         control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
         stream_in = RedisStream(STREAM_IN_OL, CONNECTION_PARAMS)

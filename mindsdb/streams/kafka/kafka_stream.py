@@ -1,29 +1,39 @@
 import json
+from copy import deepcopy
 import kafka
 
 from mindsdb.streams.base.base_stream import BaseStream
 
 
 class KafkaStream(BaseStream):
-    def __init__(self, topic, connection_info):
+    def __init__(self, topic, connection_info, mode='rw'):
         self.topic = topic
-        self.producer = kafka.KafkaProducer(**connection_info, acks='all')
-        self.consumer = kafka.KafkaConsumer(**connection_info, consumer_timeout_ms=100)
-        self.consumer.subscribe(topics=[topic])
+        self.producer_kwargs = {'acks': 'all'}
+        self.connection_info = deepcopy(connection_info)
+        self.producer_kwargs.update(self.connection_info.get('advanced', {}).get('producer', {}))
+        self.consumer_kwargs = {'consumer_timeout_ms': 1000}
+        self.consumer_kwargs.update(self.connection_info.get('advanced', {}).get('consumer', {}))
+        self.producer = None
+        self.consumer = None
+
+        if 'advanced' in self.connection_info:
+            del self.connection_info['advanced']
+        if 'w' in mode:
+            self.producer = kafka.KafkaProducer(**self.connection_info, **self.producer_kwargs)
+        if 'r' in mode:
+            self.consumer = kafka.KafkaConsumer(**self.connection_info, **self.consumer_kwargs)
+            self.consumer.subscribe(topics=[topic])
 
     def read(self):
-        while True:
-            try:
-                msg = next(self.consumer)
-                yield json.loads(msg.value)
-            except StopIteration:
-                break
-        # for msg in self.consumer:
-        #     yield json.loads(msg.value)
+        for msg in self.consumer:
+            yield json.loads(msg.value)
 
     def write(self, dct):
         self.producer.send(self.topic, json.dumps(dct).encode('utf-8'))
+        self.producer.flush()
 
     def __del__(self):
-        self.consumer.close()
-        self.producer.close()
+        if self.consumer:
+            self.consumer.close()
+        if self.producer:
+            self.producer.close()

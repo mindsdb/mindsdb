@@ -1,15 +1,22 @@
+import sys
 import time
 import tempfile
 import unittest
 import json
 import uuid
+import logging
 
 import requests
 import pandas as pd
+import kafka
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
 
 from mindsdb.streams import KafkaStream
+
+# logger = logging.getLogger('kafka')
+# logger.addHandler(logging.StreamHandler(sys.stdout))
+# logger.setLevel(logging.DEBUG)
 
 INTEGRATION_NAME = 'test_kafka'
 kafka_creds = {}
@@ -20,7 +27,7 @@ if USE_EXTERNAL_DB_SERVER:
 KAFKA_PORT = kafka_creds.get('port', 9092)
 KAFKA_HOST = kafka_creds.get('host', "127.0.0.1")
 
-CONNECTION_PARAMS = {"bootstrap_servers": [f"{KAFKA_HOST}:{KAFKA_PORT}"]}
+CONNECTION_PARAMS = {"bootstrap_servers": [f"{KAFKA_HOST}:{KAFKA_PORT}"], 'advanced': {'consumer': {'auto_offset_reset': 'earliest'}}}
 STREAM_SUFFIX = uuid.uuid4()
 STREAM_IN = f"test_stream_in_{STREAM_SUFFIX}"
 STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
@@ -45,6 +52,7 @@ class KafkaTest(unittest.TestCase):
         run_environment(apis=['mysql', 'http'])
 
     def test_length(self):
+        print(f"\nExecuting {self._testMethodName}")
         stream = KafkaStream(f'test_stream_length_{STREAM_SUFFIX}', CONNECTION_PARAMS)
 
         self.assertEqual(len(list(stream.read())), 0)
@@ -118,12 +126,14 @@ class KafkaTest(unittest.TestCase):
         res.raise_for_status()
 
     def test_1_create_integration(self):
+        print(f"\nExecuting {self._testMethodName}")
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
         params = {"type": "kafka", "connection": CONNECTION_PARAMS}
         res = requests.put(url, json={'params': params})
         self.assertEqual(res.status_code, 200)
 
     def test_2_create_kafka_stream(self):
+        print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
@@ -138,16 +148,19 @@ class KafkaTest(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
 
     def test_3_making_stream_prediction(self):
-        stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS)
-        stream_out = KafkaStream(STREAM_OUT, CONNECTION_PARAMS)
-
+        print(f"\nExecuting {self._testMethodName}")
+        stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS, mode='w')
+        stream_out = KafkaStream(STREAM_OUT, CONNECTION_PARAMS, mode='r')
+        # wait when the integration launches created stream
+        time.sleep(10)
         for x in range(1, 3):
             stream_in.write({'x1': x, 'x2': 2*x})
             time.sleep(5)
-
+        time.sleep(10)
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_4_create_kafka_ts_stream(self):
+        print(f"\nExecuting {self._testMethodName}")
         self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
 
         url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
@@ -161,16 +174,20 @@ class KafkaTest(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
 
     def test_5_making_ts_stream_prediction(self):
+        print(f"\nExecuting {self._testMethodName}")
         stream_in = KafkaStream(STREAM_IN_TS, CONNECTION_PARAMS)
         stream_out = KafkaStream(STREAM_OUT_TS, CONNECTION_PARAMS)
-        
+
+        # wait when the integration launches created stream
+        time.sleep(10)
         for x in range(210, 221):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A'})
             time.sleep(5)
-
+        time.sleep(10)
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_6_create_stream_kafka_native_api(self):
+        print(f"\nExecuting {self._testMethodName}")
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -192,6 +209,7 @@ class KafkaTest(unittest.TestCase):
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_8_test_online_learning(self):
+        print(f"\nExecuting {self._testMethodName}")
         control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         learning_stream = KafkaStream(LEARNING_STREAM, CONNECTION_PARAMS)
         stream_in = KafkaStream(STREAM_IN_OL, CONNECTION_PARAMS)

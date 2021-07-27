@@ -1,3 +1,4 @@
+from copy import deepcopy
 import kafka
 
 from mindsdb.integrations.base import StreamIntegration
@@ -22,11 +23,19 @@ class KafkaConnectionChecker:
 class Kafka(StreamIntegration, KafkaConnectionChecker):
     def __init__(self, config, name, db_info):
         self.connection_info = db_info['connection']
+        self.control_connection_info = deepcopy(self.connection_info)
+
+        # don't need to read all records from 'control stream' from the beginning
+        # since all active streams are saved in db
+        if 'advanced' in self.control_connection_info:
+            if 'consumer' in self.control_connection_info['advanced']:
+                self.control_connection_info['advanced']['consumer']['auto_offset_reset'] = 'latest'
+
         StreamIntegration.__init__(
             self,
             config,
             name,
-            control_stream=KafkaStream('control_stream_' + name, self.connection_info)
+            control_stream=KafkaStream('control_stream_' + name, self.control_connection_info)
         )
 
     def _make_stream(self, s: db.Stream):

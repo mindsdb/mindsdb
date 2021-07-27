@@ -940,7 +940,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         struct = statement.struct
 
         if keyword == 'show':
-            if 'show databases' in sql_lower:
+            if 'show databases' in sql_lower or 'show schemas' in sql_lower:
                 sql = 'select schema_name as Database from information_schema.SCHEMATA'
                 statement = SqlStatementParser(sql)
                 sql_lower = statement.sql.lower()
@@ -1061,6 +1061,41 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'version()' in sql_lower:
                 self.answer_version()
                 return
+            
+            # region apache superset
+            if "select 'test plain returns' as anon_1" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'anon_1',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['test plain returns']
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            if "select 'test unicode returns' as anon_1" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'anon_1',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['test unicode returns']
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            # endregion
 
             if ' left join ' not in sql_lower and ' join ' in sql_lower:
                 query_class = SQLQuery_new

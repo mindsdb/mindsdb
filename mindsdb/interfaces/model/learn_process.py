@@ -8,7 +8,7 @@ import torch.multiprocessing as mp
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.storage.db import session, Predictor
-from mindsdb.interfaces.storage.fs import FsSotre
+from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 
@@ -42,7 +42,7 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
     create_process_mark('learn')
 
     config = Config()
-    fs_store = FsSotre()
+    fs_store = FsStore()
     mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
 
     if save:

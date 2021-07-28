@@ -108,12 +108,9 @@ class StreamController:
                             if ob not in when_data:
                                 raise Exception(f'when_data doesn\'t contain order_by[{ob}]')
 
-                        # cache[''].append(when_data)
                         records = cache['']
                         records.append(when_data)
                         cache[''] = records
-
-                        # cache[''] = cache[''].append(when_data)
 
                     if len(cache['']) >= window:
                         cache[''] = [*sorted(
@@ -150,13 +147,11 @@ class StreamController:
                         if gb_value not in cache:
                             cache[gb_value] = []
 
-                        # cache[gb_value].append(when_data)
-
-                        print(f"adding {when_data} with type - {type(when_data)} to {gb_value} key")
+                        # do this because shelve-cache doesn't support
+                        # in-place changing
                         records = cache[gb_value]
                         records.append(when_data)
                         cache[gb_value] = records
-                        print(f"after adding {when_data} with type - {type(when_data)} to {gb_value}: {cache[gb_value]}")
 
                 with cache:
                     for gb_value in cache.keys():

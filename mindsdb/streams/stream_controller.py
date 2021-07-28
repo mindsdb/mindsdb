@@ -94,32 +94,40 @@ class StreamController:
         group_by = self.ts_settings.get('group_by', None)
         group_by = [group_by] if isinstance(group_by, str) else group_by
 
+        cache = Cache(self.name)
         if group_by is None:
-            cache = Cache(self.name)
+
+            if '' not in cache:
+                cache[''] = []
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()
-                for when_data in self.stream_in.read():
-                    for ob in order_by:
-                        if ob not in when_data:
-                            raise Exception(f'when_data doesn\'t contain order_by[{ob}]')
+                with cache:
+                    for when_data in self.stream_in.read():
+                        for ob in order_by:
+                            if ob not in when_data:
+                                raise Exception(f'when_data doesn\'t contain order_by[{ob}]')
 
-                    cache[''].append(when_data)
-                
-                if len(cache['']) >= window:
-                    cache[''] = [*sorted(
-                        cache[''],
-                        # WARNING: assuming wd[ob] is numeric
-                        key=lambda wd: tuple(wd[ob] for ob in order_by)
-                    )]
-                    res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[''][-window:])
-                    if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
-                        self.anomaly_stream.write(res_list[-1])
-                    else:
-                        self.stream_out.write(res_list[-1])
-                    cache[''] = cache[''][1 - window:]
+                        # cache[''].append(when_data)
+                        records = cache['']
+                        records.append(when_data)
+                        cache[''] = records
+
+                        # cache[''] = cache[''].append(when_data)
+
+                    if len(cache['']) >= window:
+                        cache[''] = [*sorted(
+                            cache[''],
+                            # WARNING: assuming wd[ob] is numeric
+                            key=lambda wd: tuple(wd[ob] for ob in order_by)
+                        )]
+                        res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[''][-window:])
+                        if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
+                            self.anomaly_stream.write(res_list[-1])
+                        else:
+                            self.stream_out.write(res_list[-1])
+                        cache[''] = cache[''][1 - window:]
         else:
-            cache = Cache(self.name)
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()
@@ -136,23 +144,32 @@ class StreamController:
 
                     # because cache doesn't work for tuples
                     # (raises Exception: tuple doesn't have "encode" attribute)
-                    gb_value = str(hash(gb_value))
+                    gb_value = str(gb_value)
 
-                    if gb_value not in cache:
-                        cache[gb_value] = []
+                    with cache:
+                        if gb_value not in cache:
+                            cache[gb_value] = []
 
-                    cache[gb_value].append(when_data)
+                        # cache[gb_value].append(when_data)
 
-                for gb_value in cache.keys():
-                    if len(cache[gb_value]) >= window:
-                        cache[gb_value] = [*sorted(
-                            cache[gb_value],
-                            # WARNING: assuming wd[ob] is numeric
-                            key=lambda wd: tuple(wd[ob] for ob in order_by)
-                        )]
-                        res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[gb_value][-window:])
-                        if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
-                            self.anomaly_stream.write(res_list[-1])
-                        else:
-                            self.stream_out.write(res_list[-1])
-                        cache[gb_value] = cache[gb_value][1 - window:]
+                        print(f"adding {when_data} with type - {type(when_data)} to {gb_value} key")
+                        records = cache[gb_value]
+                        records.append(when_data)
+                        cache[gb_value] = records
+                        print(f"after adding {when_data} with type - {type(when_data)} to {gb_value}: {cache[gb_value]}")
+
+                with cache:
+                    for gb_value in cache.keys():
+                        print(f"getting {gb_value}: {cache[gb_value]} - {type(cache[gb_value])}")
+                        if len(cache[gb_value]) >= window:
+                            cache[gb_value] = [*sorted(
+                                cache[gb_value],
+                                # WARNING: assuming wd[ob] is numeric
+                                key=lambda wd: tuple(wd[ob] for ob in order_by)
+                            )]
+                            res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[gb_value][-window:])
+                            if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
+                                self.anomaly_stream.write(res_list[-1])
+                            else:
+                                self.stream_out.write(res_list[-1])
+                            cache[gb_value] = cache[gb_value][1 - window:]

@@ -245,6 +245,7 @@ class LWR_Generate(Resource):
         request.native_interface.generate_lightwood_predictor(
             name,
             from_data,
+            request.default_store.get_datasource(request.json['data_source_name'])['id'],
             request.json['problem_definition']
         )
 

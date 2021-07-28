@@ -23,6 +23,7 @@ class KafkaConnectionChecker:
 class Kafka(StreamIntegration, KafkaConnectionChecker):
     def __init__(self, config, name, db_info):
         self.connection_info = db_info['connection']
+        self.control_stream = db_info.get('control_stream', None)
         self.control_connection_info = deepcopy(self.connection_info)
 
         # don't need to read all records from 'control stream' from the beginning
@@ -35,7 +36,7 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
             self,
             config,
             name,
-            control_stream=KafkaStream('control_stream_' + name, self.control_connection_info)
+            control_stream=KafkaStream(self.control_stream, self.control_connection_info)
         )
 
     def _make_stream(self, s: db.Stream):

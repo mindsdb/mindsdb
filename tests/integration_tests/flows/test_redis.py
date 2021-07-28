@@ -24,6 +24,7 @@ REDIS_PASSWORD = redis_creds.get('password', None)
 
 CONNECTION_PARAMS = {"host": REDIS_HOST, "port": REDIS_PORT, "db": 0, "password": REDIS_PASSWORD}
 STREAM_SUFFIX = uuid.uuid4()
+CONTROL_STREAM = f"{INTEGRATION_NAME}_{STREAM_SUFFIX}"
 STREAM_IN = f"test_stream_in_{STREAM_SUFFIX}"
 STREAM_OUT = f"test_stream_out_{STREAM_SUFFIX}"
 STREAM_IN_TS = f"test_stream_in_ts_{STREAM_SUFFIX}"
@@ -47,6 +48,7 @@ class RedisTest(unittest.TestCase):
         run_environment(apis=['mysql', 'http'])
 
     def test_length(self):
+        print(f"\nExecuting {self._testMethodName}")
         stream = RedisStream(f'test_stream_length_{STREAM_SUFFIX}', CONNECTION_PARAMS)
 
         self.assertEqual(len(list(stream.read())), 0)
@@ -122,7 +124,11 @@ class RedisTest(unittest.TestCase):
     def test_1_create_integration(self):
         print(f"\nExecuting {self._testMethodName}")
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
-        params = {"type": "redis", "connection": CONNECTION_PARAMS}
+
+        params = {"type": "redis",
+                  "connection": CONNECTION_PARAMS,
+                  "control_stream": CONTROL_STREAM}
+
         res = requests.put(url, json={"params": params})
         self.assertEqual(res.status_code, 200)
 
@@ -179,7 +185,8 @@ class RedisTest(unittest.TestCase):
 
     def test_6_create_stream_redis_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
-        control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
+        # control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
+        control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
             'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
@@ -202,10 +209,11 @@ class RedisTest(unittest.TestCase):
 
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
-        control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
+        # control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
+        control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
         learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
-        stream_in = RedisStream(STREAM_IN_OL, CONNECTION_PARAMS)
-        stream_out = RedisStream(STREAM_OUT_OL, CONNECTION_PARAMS)
+        # stream_in = RedisStream(STREAM_IN_OL, CONNECTION_PARAMS)
+        # stream_out = RedisStream(STREAM_OUT_OL, CONNECTION_PARAMS)
 
         control_stream.write({
             'action': 'create',
@@ -218,7 +226,7 @@ class RedisTest(unittest.TestCase):
 
         for x in range(1, 101):
             learning_stream.write({'x1': x, 'x2': 2*x})
-        
+
 
 if __name__ == "__main__":
     try:

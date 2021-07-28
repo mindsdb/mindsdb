@@ -11,8 +11,8 @@ class RedisStream(BaseStream):
 
     def read(self):
         for k, when_data in self.stream.read():
-            self.stream.delete(k)
             yield json.loads(when_data[b''])
+            self.stream.delete(k)
 
     def write(self, dct):
         self.stream.add({'': json.dumps(dct)})

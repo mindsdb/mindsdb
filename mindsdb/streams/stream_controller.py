@@ -8,7 +8,6 @@ from mindsdb.interfaces.model.model_interface import ModelInterface
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.cache import Cache
 from mindsdb.utilities.config import Config
-import mindsdb_datasources
 
 
 class StreamController:
@@ -92,11 +91,11 @@ class StreamController:
         order_by = self.ts_settings['order_by']
         order_by = [order_by] if isinstance(order_by, str) else order_by
 
-        group_by = self.ts_settings['group_by']
+        group_by = self.ts_settings.get('group_by', None)
         group_by = [group_by] if isinstance(group_by, str) else group_by
 
         if group_by is None:
-            cache = dict()
+            cache = Cache(self.name)
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()
@@ -120,7 +119,7 @@ class StreamController:
                         self.stream_out.write(res_list[-1])
                     cache[''] = cache[''][1 - window:]
         else:
-            cache = dict()
+            cache = Cache(self.name)
 
             while not self.stop_event.wait(0.5):
                 self._consider_learning()

@@ -27,7 +27,7 @@ class Redis(StreamIntegration, RedisConnectionChecker):
             self,
             config,
             name,
-            control_stream=RedisStream(self.control_stream, self.connection_info)
+            control_stream=RedisStream(self.control_stream, self.connection_info) if self.control_stream else None
         )
     
     def _make_stream(self, s: db.Stream) -> StreamController:

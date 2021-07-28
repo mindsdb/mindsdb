@@ -36,7 +36,7 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
             self,
             config,
             name,
-            control_stream=KafkaStream(self.control_stream, self.control_connection_info)
+            control_stream=KafkaStream(self.control_stream, self.control_connection_info) if self.control_stream else None
         )
 
     def _make_stream(self, s: db.Stream):

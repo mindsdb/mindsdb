@@ -99,6 +99,7 @@ class StreamIntegration(Integration):
             indices_to_delete = []
             for i, s in enumerate(self._streams):
                 if s.name not in map(lambda x: x.name, stream_db_recs):
+                    print(f"Integration {self.name} - stopping stream: {s.name}")
                     indices_to_delete.append(i)
                     self._streams[i].stop_event.set()
             self._streams = [s for i, s in enumerate(self._streams) if i not in indices_to_delete]

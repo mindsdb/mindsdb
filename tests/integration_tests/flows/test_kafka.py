@@ -24,7 +24,8 @@ if USE_EXTERNAL_DB_SERVER:
 KAFKA_PORT = kafka_creds.get('port', 9092)
 KAFKA_HOST = kafka_creds.get('host', "127.0.0.1")
 
-CONNECTION_PARAMS = {"bootstrap_servers": [f"{KAFKA_HOST}:{KAFKA_PORT}"], 'advanced': {'consumer': {'auto_offset_reset': 'earliest'}}}
+CONNECTION_PARAMS = {"bootstrap_servers": [f"{KAFKA_HOST}:{KAFKA_PORT}"],
+                     'advanced': {'consumer': {'auto_offset_reset': 'earliest'}}}
 STREAM_SUFFIX = uuid.uuid4()
 CONTROL_STREAM = f"{INTEGRATION_NAME}_{STREAM_SUFFIX}"
 STREAM_IN = f"test_stream_in_{STREAM_SUFFIX}"
@@ -188,7 +189,6 @@ class KafkaTest(unittest.TestCase):
 
     def test_6_create_stream_kafka_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
-        # control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -211,11 +211,8 @@ class KafkaTest(unittest.TestCase):
 
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
-        # control_stream = KafkaStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
         learning_stream = KafkaStream(LEARNING_STREAM, CONNECTION_PARAMS)
-        # stream_in = KafkaStream(STREAM_IN_OL, CONNECTION_PARAMS)
-        # stream_out = KafkaStream(STREAM_OUT_OL, CONNECTION_PARAMS)
 
         control_stream.write({
             'action': 'create',

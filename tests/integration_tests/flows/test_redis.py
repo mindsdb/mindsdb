@@ -185,7 +185,6 @@ class RedisTest(unittest.TestCase):
 
     def test_6_create_stream_redis_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
-        # control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -209,11 +208,8 @@ class RedisTest(unittest.TestCase):
 
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
-        # control_stream = RedisStream('control_stream_' + INTEGRATION_NAME, CONNECTION_PARAMS)
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
         learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
-        # stream_in = RedisStream(STREAM_IN_OL, CONNECTION_PARAMS)
-        # stream_out = RedisStream(STREAM_OUT_OL, CONNECTION_PARAMS)
 
         control_stream.write({
             'action': 'create',

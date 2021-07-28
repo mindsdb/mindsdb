@@ -328,7 +328,7 @@ class ModelController():
             datasource_id=datasource_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
-            to_predict=[problem_definition['target']],
+            to_predict=[problem_definition.target],
             data={'status': 'untrained', 'name': name}
         )
         db.session.add(db_p)

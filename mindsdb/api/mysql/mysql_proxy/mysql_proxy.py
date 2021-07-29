@@ -940,7 +940,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         struct = statement.struct
 
         if keyword == 'show':
-            if 'show databases' in sql_lower:
+            if 'show databases' in sql_lower or 'show schemas' in sql_lower:
                 sql = 'select schema_name as Database from information_schema.SCHEMATA'
                 statement = SqlStatementParser(sql)
                 sql_lower = statement.sql.lower()
@@ -972,6 +972,44 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
                 self.answer_show_variables(variables)
                 return
+            elif "show status like 'ssl_version'" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': 'session_variables',
+                        'name': 'Variable_name',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': 'session_variables',
+                        'name': 'Value',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=[['Ssl_version', 'TLSv1.1']]   # FIX
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            elif (
+                sql_lower.startswith("show function status where db = 'mindsdb'")
+                or sql_lower.startswith("show procedure status where db = 'mindsdb'")
+            ):
+                # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB';
+                # SHOW PROCEDURE STATUS WHERE Db = 'MINDSDB'
+                # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB' AND Name LIKE '%';
+                self.answer_function_status()
+                return
+            elif 'show index from' in sql_lower:
+                # SHOW INDEX FROM `ny_output` FROM `data`;
+                self.answer_show_index()
+                return
+            # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
+            # elif 'show create table' in sql_lower:
+            #     # SHOW CREATE TABLE `MINDSDB`.`predictors`
+            #     table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
+            #     self.answer_show_create_table(table)
 
         if keyword == 'start':
             # start transaction
@@ -1062,6 +1100,76 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_version()
                 return
 
+            # region apache superset
+            if "select 'test plain returns' as anon_1" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'anon_1',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['test plain returns']
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            if "select 'test unicode returns' as anon_1" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'anon_1',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['test unicode returns']
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            # endregion
+
+            # region DataGrip
+            if 'select user()' in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'USER()',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['mindsdb']    # TODO set here actual user
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            if "select 'keep alive'" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'keep alive',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['keep alive']
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            # endregion
+
             if ' left join ' not in sql_lower and ' join ' in sql_lower:
                 query_class = SQLQuery_new
             else:
@@ -1081,7 +1189,261 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'explain':
             self.answer_explain_table(sql)
         else:
+            print(sql)
             raise NotImplementedError('Action not implemented')
+
+    def answer_show_create_table(self, table):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'Table',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'Create Table',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=[[table, f'create table {table} ()']]
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+        return
+
+    def answer_show_index(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'database': 'mysql',
+                'table_name': 'tables',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Table',
+                'alias': 'Table',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Non_unique',
+                'alias': 'Non_unique',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Key_name',
+                'alias': 'Key_name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'index_column_usage',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Seq_in_index',
+                'alias': 'Seq_in_index',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Column_name',
+                'alias': 'Column_name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Collation',
+                'alias': 'Collation',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Cardinality',
+                'alias': 'Cardinality',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Sub_part',
+                'alias': 'Sub_part',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': '',
+                'name': '',
+                'alias': 'Packed',
+                'type': TYPES.MYSQL_TYPE_NULL,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Null',
+                'alias': 'Null',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Index_type',
+                'alias': 'Index_type',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Comment',
+                'alias': 'Comment',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'indexes',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Index_comment',
+                'alias': 'Index_comment',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'indexes',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Visible',
+                'alias': 'Visible',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Expression',
+                'alias': 'Expression',
+                'type': TYPES.MYSQL_TYPE_BLOB,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }],
+            data=[]
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+
+    def answer_function_status(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'database': 'mysql',
+                'table_name': 'schemata',
+                'table_alias': 'ROUTINES',
+                'name': 'Db',
+                'alias': 'Db',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'name',
+                'alias': 'name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Type',
+                'alias': 'Type',
+                'type': TYPES.MYSQL_TYPE_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Definer',
+                'alias': 'Definer',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Modified',
+                'alias': 'Modified',
+                'type': TYPES.MYSQL_TYPE_TIMESTAMP,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Created',
+                'alias': 'Created',
+                'type': TYPES.MYSQL_TYPE_TIMESTAMP,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Security_type',
+                'alias': 'Security_type',
+                'type': TYPES.MYSQL_TYPE_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Comment',
+                'alias': 'Comment',
+                'type': TYPES.MYSQL_TYPE_BLOB,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'character_sets',
+                'table_alias': 'ROUTINES',
+                'name': 'character_set_client',
+                'alias': 'character_set_client',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'collations',
+                'table_alias': 'ROUTINES',
+                'name': 'collation_connection',
+                'alias': 'collation_connection',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'collations',
+                'table_alias': 'ROUTINES',
+                'name': 'Database Collation',
+                'alias': 'Database Collation',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }],
+            data=[]
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
 
     def answer_show_table_status(self, sql):
         # NOTE at this moment parsed statement only like `SHOW TABLE STATUS LIKE 'table'`.

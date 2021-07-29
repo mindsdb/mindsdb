@@ -2,6 +2,7 @@ from copy import deepcopy
 import os
 import shutil
 from pathlib import Path
+import tempfile
 
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Integration
@@ -47,12 +48,21 @@ def add_db_integration(name, data, company_id):
     elif data.get('type') in ('mysql', 'mariadb'):
         ssl = data.get('ssl')
         files = {}
+        temp_dir = None
         if ssl is True:
             for key in ['ssl_ca', 'ssl_cert', 'ssl_key']:
-                if key not in data or not _is_not_empty_str(data[key]):
+                if key not in data:
                     continue
-                if not os.path.isfile(data[key]):
-                    raise Exception("'ssl_ca', 'ssl_cert' and 'ssl_key' must be paths")
+                if os.path.isfile(data[key]) is False:
+                    if _is_not_empty_str(data[key]) is False:
+                        raise Exception("'ssl_ca', 'ssl_cert' and 'ssl_key' must be paths or inline certs")
+                    if temp_dir is None:
+                        temp_dir = tempfile.mkdtemp(prefix='integration_files_')
+                    cert_file_name = data.get(f'{key}_name', f'{key}.pem')
+                    cert_file_path = os.path.join(temp_dir, cert_file_name)
+                    with open(cert_file_path, 'wt') as f:
+                        f.write(data[key])
+                    data[key] = cert_file_path
                 files[key] = data[key]
                 p = Path(data[key])
                 data[key] = p.name

@@ -228,10 +228,10 @@ class PredictorDownload(Resource):
         return f'Renamed model to {new_name}', 200
 
 
-@ns_conf.route('/lwr/generate/<name>')
+@ns_conf.route('/<name>/generate')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
-class LWR_Generate(Resource):
+class PredictorGenerate(Resource):
     def put(self, name):
         for param in ['data_source_name', 'problem_definition']:
             if param not in request.json:

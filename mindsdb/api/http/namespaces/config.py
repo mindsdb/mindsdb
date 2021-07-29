@@ -4,6 +4,9 @@ from dateutil.parser import parse as parse_datetime
 import subprocess
 import os
 import sys
+import tempfile
+import shutil
+from pathlib import Path
 
 from flask import request
 from flask_restx import Resource, abort
@@ -72,9 +75,25 @@ class Integration(Resource):
 
     @ns_conf.doc('put_integration')
     def put(self, name):
-        params = request.json.get('params')
-        if not isinstance(params, dict):
+        params = {}
+        params.update((request.json or {}).get('params', {}))
+        params.update(request.form or {})
+
+        if len(params) == 0:
             abort(400, "type of 'params' must be dict")
+
+        files = request.files
+        temp_dir = None
+        if files is not None:
+            temp_dir = tempfile.mkdtemp(prefix='integration_files_')
+            for key, file in files.items():
+                temp_dir_path = Path(temp_dir)
+                file_name = Path(file.filename)
+                file_path = temp_dir_path.joinpath(file_name).resolve()
+                if temp_dir_path not in file_path.parents:
+                    raise Exception(f'Can not save file at path: {file_path}')
+                file.save(file_path)
+                params[key] = file_path
 
         is_test = params.get('test', False)
         if is_test:
@@ -84,6 +103,8 @@ class Integration(Resource):
             if checker_class is None:
                 abort(400, f"Unknown integration type: {db_type}")
             checker = checker_class(**params)
+            if temp_dir is not None:
+                shutil.rmtree(temp_dir)
             return {'success': checker.check_connection()}, 200
 
         integration = get_db_integration(name, request.company_id, False)
@@ -109,8 +130,12 @@ class Integration(Resource):
                 DatabaseWrapper(request.company_id).register_predictors(model_data_arr, name)
         except Exception as e:
             log.error(str(e))
+            if temp_dir is not None:
+                shutil.rmtree(temp_dir)
             abort(500, f'Error during config update: {str(e)}')
 
+        if temp_dir is not None:
+            shutil.rmtree(temp_dir)
         return '', 200
 
     @ns_conf.doc('delete_integration')

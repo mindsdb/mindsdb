@@ -11,15 +11,28 @@ class MariadbConnectionChecker:
         self.port = kwargs.get('port')
         self.user = kwargs.get('user')
         self.password = kwargs.get('password')
+        self.ssl = kwargs.get('ssl')
+        self.ssl_ca = kwargs.get('ssl_ca')
+        self.ssl_cert = kwargs.get('ssl_cert')
+        self.ssl_key = kwargs.get('ssl_key')
 
     def check_connection(self):
         try:
-            con = mysql.connector.connect(
-                host=self.host,
-                port=self.port,
-                user=self.user,
-                password=self.password
-            )
+            config = {
+                "host": self.host,
+                "port": self.port,
+                "user": self.user,
+                "password": self.password
+            }
+            if self.ssl is True:
+                config['client_flags'] = [mysql.connector.constants.ClientFlag.SSL]
+                if self.ssl_ca is not None:
+                    config["ssl_ca"] = self.ssl_ca
+                if self.ssl_cert is not None:
+                    config["ssl_cert"] = self.ssl_cert
+                if self.ssl_key is not None:
+                    config["ssl_key"] = self.ssl_key
+            con = mysql.connector.connect(**config)
             connected = con.is_connected()
             con.close()
         except Exception:
@@ -34,6 +47,10 @@ class Mariadb(Integration, MariadbConnectionChecker):
         self.password = db_info.get('password', None)
         self.host = db_info.get('host')
         self.port = db_info.get('port')
+        self.ssl = db_info.get('ssl')
+        self.ssl_ca = db_info.get('ssl_ca')
+        self.ssl_cert = db_info.get('ssl_cert')
+        self.ssl_key = db_info.get('ssl_key')
 
     def _to_mariadb_table(self, stats, predicted_cols, columns):
         subtype_map = {

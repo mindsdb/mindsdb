@@ -252,10 +252,10 @@ class PredictorGenerate(Resource):
         return '', 200
 
 
-@ns_conf.route('/lwr/jsonai/edit/<name>')
+@ns_conf.route('/<name>/edit/jsonai')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
-class LWR_EditJsonAI(Resource):
+class PredictorEditJsonAI(Resource):
     def put(self, name):
         for param in ['json_ai']:
             if param not in request.json:
@@ -265,10 +265,10 @@ class LWR_EditJsonAI(Resource):
         return '', 200
 
 
-@ns_conf.route('/lwr/code/edit/<name>')
+@ns_conf.route('/<name>/edit/code')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
-class LWR_EditCode(Resource):
+class PredictorEditCode(Resource):
     def put(self, name):
         for param in ['code']:
             if param not in request.json:
@@ -278,10 +278,10 @@ class LWR_EditCode(Resource):
         return '', 200
     
 
-@ns_conf.route('/lwr/train/<name>')
+@ns_conf.route('/<name>/train')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
-class LWR_Train(Resource):
+class PredictorTrain(Resource):
     def put(self, name):
         for param in ['data_source_name']:
             if param not in request.json:
@@ -294,12 +294,3 @@ class LWR_Train(Resource):
 
         request.model_interface.fit_predictor(name, from_data)
         return '', 200
-
-
-@ns_conf.route('/code_from_json_ai')
-class LWR_Train(Resource):
-    def get(self):
-        json_ai = request.json.get('json_ai')
-        if json_ai is None:
-            return abort(400, 'Please provide json_ai')
-        return {'code': request.model_interface.code_from_json_ai(json_ai)}

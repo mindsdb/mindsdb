@@ -76,3 +76,11 @@ class Telemetry(Resource):
             disable_telemetry(ca.config_obj['storage_dir'])
         inject_telemetry_to_static(ca.config_obj.paths['static'])
         return '', 200
+
+@ns_conf.route('/validate_json_ai')
+class ValidateJsonAI(Resource):
+    def post(self):
+        json_ai = request.json.get('json_ai')
+        if json_ai is None:
+            return abort(400, 'Please provide json_ai')
+        return {'code': request.model_interface.code_from_json_ai(json_ai)}

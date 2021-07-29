@@ -1,4 +1,4 @@
-import os
+import time
 import unittest
 from random import randint
 from pathlib import Path
@@ -152,6 +152,19 @@ class HTTPTest(unittest.TestCase):
         params = {
             'when': {'sqft': 500}
         }
+        url = f'{root}/predictors/{pred_name}/predict'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
+
+        # Adjust predictor
+        params = {'data_source_name': ds_name,}
+        url = f'{root}/predictors/{pred_name}/adjust'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+
+        # POST predictions
+        params = {'when': {'sqft': 500}}
         url = f'{root}/predictors/{pred_name}/predict'
         res = requests.post(url, json=params)
         assert res.status_code == 200

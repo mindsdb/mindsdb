@@ -4,6 +4,7 @@ from random import randint
 from pathlib import Path
 from uuid import uuid1
 import json
+import lightwood
 
 import requests
 
@@ -222,6 +223,36 @@ class HTTPTest(unittest.TestCase):
         response = requests.put(f'{root}/datasources/{ds_name}', json=data)
         assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
 
+    def test_lwr_generate_predictor(self):
+        r = requests.put(
+            f'{root}/predictors/lwr/generate/lwr_{pred_name}',
+            json={
+                'problem_definition': {'target': 'rental_price'},
+                'data_source_name': ds_name
+            }
+        )
+        r.raise_for_status()
+
+    # def test_lwr_edit_json_ai(self):
+    #     r = requests.put(
+    #         f'{root}/predictors/lwr/jsonai/edit/lwr_{pred_name}',
+    #         json={'json_ai': '?'}
+    #     )
+    #     r.raise_for_status()
+
+    # def test_lwr_edit_code(self):
+    #     r = requests.put(
+    #         f'{root}/predictors/lwr/code/edit/lwr_{pred_name}',
+    #         json={'code': '?'}
+    #     )
+    #     r.raise_for_status()
+
+    def test_lwr_train_predictor(self):
+        r = requests.put(
+            f'{root}/predictors/lwr/train/lwr_{pred_name}',
+            json={'data_source_name': ds_name}
+        )
+        r.raise_for_status()
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

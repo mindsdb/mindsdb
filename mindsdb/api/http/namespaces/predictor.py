@@ -21,7 +21,7 @@ from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_sta
 @ns_conf.route('/')
 class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
-    @ns_conf.marshal_list_with(predictor_status, skip_none=True)
+    #@ns_conf.marshal_list_with(predictor_status, skip_none=True)
     def get(self):
         '''List all predictors'''
         return request.native_interface.get_models()
@@ -53,7 +53,7 @@ class CustomPredictor(Resource):
 @ns_conf.response(404, 'predictor not found')
 class Predictor(Resource):
     @ns_conf.doc('get_predictor')
-    @ns_conf.marshal_with(predictor_metadata, skip_none=True)
+    #@ns_conf.marshal_with(predictor_metadata, skip_none=True)
     def get(self, name):
         try:
             model = request.native_interface.get_model_data(name, db_fix=False)
@@ -182,12 +182,12 @@ class PredictorPredict2(Resource):
     def post(self, name):
         '''Queries predictor'''
         data = request.json
-        when = data.get('when', {})
+        when = data.get('when')
         format_flag = data.get('format_flag', 'explain')
         kwargs = data.get('kwargs', {})
 
-        if when is None:
-            return 'No data provided for the predictions', 500
+        if isinstance(when, dict) is False or len(when) == 0:
+            return 'No data provided for the predictions', 400
 
         results = request.native_interface.predict(name, format_flag, when_data=when, **kwargs)
 
@@ -226,3 +226,80 @@ class PredictorDownload(Resource):
             return str(e), 400
 
         return f'Renamed model to {new_name}', 200
+
+
+@ns_conf.route('/lwr/generate/<name>')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class LWR_Generate(Resource):
+    def put(self, name):
+        for param in ['data_source_name', 'problem_definition']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+
+        from_data = request.default_store.get_datasource_obj(
+            request.json['data_source_name'],
+            raw=True
+        )
+
+        request.native_interface.generate_lightwood_predictor(
+            name,
+            from_data,
+            request.default_store.get_datasource(request.json['data_source_name'])['id'],
+            request.json['problem_definition']
+        )
+
+        return '', 200
+
+
+@ns_conf.route('/lwr/jsonai/edit/<name>')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class LWR_EditJsonAI(Resource):
+    def put(self, name):
+        for param in ['json_ai']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+
+        request.native_interface.edit_json_ai(name, request.json['json_ai'])
+        return '', 200
+
+
+@ns_conf.route('/lwr/code/edit/<name>')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class LWR_EditCode(Resource):
+    def put(self, name):
+        for param in ['code']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+
+        request.native_interface.edit_code(name, request.json['code'])
+        return '', 200
+    
+
+@ns_conf.route('/lwr/train/<name>')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class LWR_Train(Resource):
+    def put(self, name):
+        for param in ['data_source_name']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+
+        from_data = request.default_store.get_datasource_obj(
+            request.json['data_source_name'],
+            raw=True
+        )
+
+        request.native_interface.fit_predictor(name, from_data)
+        return '', 200
+
+
+@ns_conf.route('/code_from_json_ai')
+class LWR_Train(Resource):
+    def get(self):
+        json_ai = request.json.get('json_ai')
+        if json_ai is None:
+            return abort(400, 'Please provide json_ai')
+        return {'code': request.native_interface.code_from_json_ai(json_ai)}

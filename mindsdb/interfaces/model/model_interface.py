@@ -1,6 +1,3 @@
-import time
-import pickle
-import os
 
 
 class ModelInterfaceWrapper(object):
@@ -44,6 +41,21 @@ class ModelInterfaceNativeImport():
 
     def update_model(self, *args, **kwargs):
         return self.controller.update_model(*args, **kwargs)
+
+    def generate_lightwood_predictor(self, *args, **kwargs):
+        return self.controller.generate_lightwood_predictor(*args, **kwargs)
+    
+    def edit_json_ai(self, *args, **kwargs):
+        return self.controller.edit_json_ai(*args, **kwargs)
+    
+    def edit_code(self, *args, **kwargs):
+        return self.controller.edit_code(*args, **kwargs)
+    
+    def fit_predictor(self, *args, **kwargs):
+        return self.controller.fit_predictor(*args, **kwargs)
+
+    def code_from_json_ai(self, *args, **kwargs):
+        return self.controller.code_from_json_ai(*args, **kwargs)
 
 
 ray_based = False

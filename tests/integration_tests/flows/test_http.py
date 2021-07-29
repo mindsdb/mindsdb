@@ -133,9 +133,10 @@ class HTTPTest(unittest.TestCase):
 
     def test_3_analyze(self):
         response = requests.get(f'{root}/datasources/{ds_name}/analyze')
+        print(response)
         assert response.status_code == 200
 
-    def test_3_put_predictor(self):
+    def test_4_put_predictor(self):
         # PUT predictor
         params = {
             'data_source_name': ds_name,
@@ -158,7 +159,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
-    def test_4_datasources(self):
+    def test_5_datasources(self):
         """
         Call list datasources endpoint
         THEN check the response is success
@@ -166,7 +167,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/datasources/')
         assert response.status_code == 200
 
-    def test_5_datasource_not_found(self):
+    def test_6_datasource_not_found(self):
         """
         Call unexisting datasource
         then check the response is NOT FOUND
@@ -174,7 +175,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/datasources/dummy_source')
         assert response.status_code == 404
 
-    def test_6_utils(self):
+    def test_7_utils(self):
         """
         Call utilities ping endpoint
         THEN check the response is success
@@ -187,7 +188,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/config/vars')
         assert response.status_code == 200
 
-    def test_7_predictors(self):
+    def test_8_predictors(self):
         """
         Call list predictors endpoint
         THEN check the response is success
@@ -195,7 +196,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/')
         assert response.status_code == 200
 
-    def test_8_predictor_not_found(self):
+    def test_9_predictor_not_found(self):
         """
         Call unexisting predictor
         then check the response is NOT FOUND
@@ -203,7 +204,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/dummy_predictor')
         assert response.status_code == 404
 
-    def test_9_gui_is_served(self):
+    def test_10_gui_is_served(self):
         """
         GUI downloaded and available
         """
@@ -211,7 +212,7 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
 
-    def test__10_ds_from_unexist_integration(self):
+    def test__11_ds_from_unexist_integration(self):
         """
         Call telemetry enabled
         then check the response is status 200
@@ -223,7 +224,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.put(f'{root}/datasources/{ds_name}', json=data)
         assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
 
-    def test_lwr_generate_predictor(self):
+    def test_12_generate_predictor(self):
         r = requests.put(
             f'{root}/predictors/lwr/generate/lwr_{pred_name}',
             json={
@@ -247,7 +248,7 @@ class HTTPTest(unittest.TestCase):
     #     )
     #     r.raise_for_status()
 
-    def test_lwr_train_predictor(self):
+    def test_13_train_predictor(self):
         r = requests.put(
             f'{root}/predictors/lwr/train/lwr_{pred_name}',
             json={'data_source_name': ds_name}

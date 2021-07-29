@@ -197,7 +197,6 @@ class ModelController():
                 analysis = db_p.data['data_analysis_v2'].get(column)
                 if isinstance(analysis, dict):
                     if len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False):
-                        # mindsdb_native.libs.constants.mindsdb.DATA_SUBTYPES.INT
                         db_p.data['data_analysis_v2'][column]['typing'] = {'data_subtype': 'Int'}
         
         if 'analysis' in db_p.data:

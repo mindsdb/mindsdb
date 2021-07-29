@@ -17,7 +17,7 @@ class BaseStream:
         self.window = None
         self.gb = None
         self.dt = None
-        self.native_interface = NativeInterface()
+        self.model_interface = NativeInterface()
 
     @staticmethod
     def get_ts_settings(predict_record):

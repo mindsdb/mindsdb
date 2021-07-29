@@ -43,35 +43,37 @@ class Stream(Resource):
 
     @ns_conf.doc("put_stream")
     def put(self, name):
+        # Back compatibility with previous endpoint version
+        params = request.json.get('params') or request.json
         for param in ['integration', 'predictor', 'stream_in', 'stream_out']:
-            if param not in request.json.keys():
+            if param not in params.keys():
                 return abort(400, 'Please provide "{}"'.format(param))
 
-        integration = get_db_integration(request.json['integration'], request.company_id)
+        integration = get_db_integration(params['integration'], request.company_id)
         if integration is None:
-            return abort(404, 'Integration "{}" doesn\'t exist'.format(request.json['integration']))
+            return abort(404, 'Integration "{}" doesn\'t exist'.format(params['integration']))
 
         if db.session.query(db.Stream).filter_by(company_id=request.company_id, name=name).first() is not None:
             return abort(404, 'Stream "{}" already exists'.format(name))
 
-        if db.session.query(db.Predictor).filter_by(company_id=request.company_id, name=request.json['predictor']).first() is None:
-            return abort(404, 'Predictor "{}" doesn\'t exist'.format(request.json['predictor']))
+        if db.session.query(db.Predictor).filter_by(company_id=request.company_id, name=params['predictor']).first() is None:
+            return abort(404, 'Predictor "{}" doesn\'t exist'.format(params['predictor']))
         
         if integration['type'] not in STREAM_INTEGRATION_TYPES:
             return abort(400, 'Integration "{}" is not of type [{}]'.format(
-                request.json['integration'],
+                params['integration'],
                 '/'.join(STREAM_INTEGRATION_TYPES)
             ))
 
         stream = db.Stream(
             company_id=request.company_id,
             name=name,
-            integration=request.json['integration'],
-            predictor=request.json['predictor'],
-            stream_in=request.json['stream_in'],
-            stream_out=request.json['stream_out'],
-            anomaly_stream=request.json.get('anomaly_stream'),
-            learning_stream=request.json.get('learning_stream')
+            integration=params['integration'],
+            predictor=params['predictor'],
+            stream_in=params['stream_in'],
+            stream_out=params['stream_out'],
+            anomaly_stream=params.get('anomaly_stream'),
+            learning_stream=params.get('learning_stream')
         )
         session.add(stream)
         session.commit()

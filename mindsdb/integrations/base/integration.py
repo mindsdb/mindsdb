@@ -1,8 +1,9 @@
-from mindsdb.streams import StreamController
 import os
 from threading import Thread
+from mindsdb.streams import StreamController
 
 from mindsdb.utilities.config import STOP_THREADS_EVENT
+from mindsdb.utilities.log import log
 import mindsdb.interfaces.storage.db as db
 
 
@@ -41,18 +42,17 @@ class StreamIntegration(Integration):
                 # Create or delete streams based on messages from control_stream
                 for dct in self._control_stream.read():
                     if 'action' not in dct:
-                        print('no action value')
-                        pass
+                        log.error('INTEGRATION %s: no action value found in control record - %s', self.name, dct)
                     else:
                         if dct['action'] == 'create':
                             for k in ['name', 'predictor', 'stream_in', 'stream_out']:
                                 if k not in dct:
                                     # Not all required parameters were provided (i.e. stream will not be created)
                                     # TODO: what's a good way to notify user about this?
-                                    print('not creating stream')
+                                    log.error('INTEGRATION %s: stream creating error. not enough data in control record - %s', self.name, dct)
                                     break
                             else:
-                                print('creating stream:', dct['name'])
+                                log.info('INTEGRATION %s: creating stream %s', self.name, dct['name'])
                                 if db.session.query(db.Stream).filter_by(name=dct['name'], company_id=self.company_id).first() is None:
                                     stream = db.Stream(
                                         company_id=self.company_id,
@@ -67,16 +67,16 @@ class StreamIntegration(Integration):
                                     db.session.add(stream)
                                     db.session.commit()
                                 else:
-                                    print('stream with this name already exists')
+                                    log.error('INTEGRATION %s: stream with this name already exists - %s', self.name, dct['name'])
                         elif dct['action'] == 'delete':
                             for k in ['name']:
                                 if k not in dct:
                                     # Not all required parameters were provided (i.e. stream will not be created)
                                     # TODO: what's a good way to notify user about this?
-                                    print('not deleting stream')
+                                    log.error('INTEGRATION %s: unable to delete stream - stream name is not provided', self.name)
                                     break
                             else:
-                                print('deleting stream:', dct['name'])
+                                log.error('INTEGRATION %s: deleting stream - %s', self.name, dct['name'])
                                 db.session.query(db.Stream).filter_by(
                                     company_id=self.company_id,
                                     integration=self.name,
@@ -85,8 +85,7 @@ class StreamIntegration(Integration):
                                 db.session.commit()
                         else:
                             # Bad action value
-                            print('bad action value')
-                            pass
+                            log.error('INTEGRATION %s: bad action value received - %s', self.name, dct)
                 
             stream_db_recs = db.session.query(db.Stream).filter_by(
                 company_id=self.company_id,
@@ -99,7 +98,7 @@ class StreamIntegration(Integration):
             indices_to_delete = []
             for i, s in enumerate(self._streams):
                 if s.name not in map(lambda x: x.name, stream_db_recs):
-                    print(f"Integration {self.name} - stopping stream: {s.name}")
+                    log.info("INTEGRATION %s: stopping stream - %s", self.name, s.name)
                     indices_to_delete.append(i)
                     self._streams[i].stop_event.set()
             self._streams = [s for i, s in enumerate(self._streams) if i not in indices_to_delete]

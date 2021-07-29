@@ -155,7 +155,6 @@ class StreamController:
 
                 with cache:
                     for gb_value in cache.keys():
-                        print(f"getting {gb_value}: {cache[gb_value]} - {type(cache[gb_value])}")
                         if len(cache[gb_value]) >= window:
                             cache[gb_value] = [*sorted(
                                 cache[gb_value],

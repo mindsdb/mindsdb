@@ -23,11 +23,15 @@ class KafkaConnectionChecker:
 class Kafka(StreamIntegration, KafkaConnectionChecker):
     def __init__(self, config, name, db_info):
         self.connection_info = db_info['connection']
-        self.control_stream = db_info.get('control_stream', None)
-        self.control_connection_info = deepcopy(self.connection_info)
 
-        # don't need to read all records from 'control stream' from the beginning
-        # since all active streams are saved in db
+        # Back compatibility with initial API version
+        self.control_stream = db_info.get('control_stream') or db_info.get('topic') or None
+        if 'advanced' in db_info:
+            self.connection_info['advanced'] = db_info['advanced']
+
+        self.control_connection_info = deepcopy(self.connection_info)
+        # don't need to read all records from the beginning of 'control stream'
+        # since all active streams are saved in db. Use 'latest' auto_offset_reset for control stream
         if 'advanced' in self.control_connection_info:
             if 'consumer' in self.control_connection_info['advanced']:
                 self.control_connection_info['advanced']['consumer']['auto_offset_reset'] = 'latest'

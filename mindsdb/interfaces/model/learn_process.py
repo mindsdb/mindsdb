@@ -1,12 +1,9 @@
 import os
-import logging
 import tempfile
 from pathlib import Path
 import torch.multiprocessing as mp
-from lightwood.api import predictor
-from lightwood.api.high_level import predictor_from_code
-from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.interfaces.model.model_interface import ModelInterface, ModelInterfaceWrapper
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.config import Config
@@ -58,6 +55,10 @@ def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
     predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
     predictor_record.dtype_dict = predictor.dtype_dict  # type: ignore
     session.commit()
+
+    dbw = DatabaseWrapper(predictor_record.company_id)
+    mi = ModelInterfaceWrapper(ModelInterface(), predictor_record.company_id)
+    dbw.register_predictors([mi.get_model_data(predictor_record.name, predictor_record.company_id)])
     delete_process_mark('learn')
 
 

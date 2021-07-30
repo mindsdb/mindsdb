@@ -1,7 +1,7 @@
 from contextlib import closing
 import pg8000
 
-from mindsdb.utilities.subtypes import DATA_SUBTYPES
+from lightwood import dtype
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
 
@@ -45,20 +45,20 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
 
     def _to_postgres_table(self, stats, predicted_cols, columns):
         subtype_map = {
-            DATA_SUBTYPES.INT: ' int8',
-            DATA_SUBTYPES.FLOAT: 'float8',
-            DATA_SUBTYPES.BINARY: 'bool',
-            DATA_SUBTYPES.DATE: 'date',
-            DATA_SUBTYPES.TIMESTAMP: 'timestamp',
-            DATA_SUBTYPES.SINGLE: 'text',
-            DATA_SUBTYPES.MULTIPLE: 'text',
-            DATA_SUBTYPES.TAGS: 'text',
-            DATA_SUBTYPES.IMAGE: 'text',
-            DATA_SUBTYPES.VIDEO: 'text',
-            DATA_SUBTYPES.AUDIO: 'text',
-            DATA_SUBTYPES.SHORT: 'text',
-            DATA_SUBTYPES.RICH: 'text',
-            DATA_SUBTYPES.ARRAY: 'text'
+            dtype.integer: ' int8',
+            dtype.float: 'float8',
+            dtype.binary: 'bool',
+            dtype.date: 'date',
+            dtype.datetime: 'timestamp',
+            dtype.binary: 'text',
+            dtype.categorical: 'text',
+            dtype.tags: 'text',
+            dtype.image: 'text',
+            dtype.video: 'text',
+            dtype.audio: 'text',
+            dtype.short_text: 'text',
+            dtype.rich_text: 'text',
+            dtype.array: 'text'
         }
 
         column_declaration = []
@@ -161,7 +161,7 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
-            data_analysis_v2 = model_meta['data_analysis_v2']
+            data_analysis_v2 = model_meta['data_analysis']
             columns_sql = ','.join(self._to_postgres_table(data_analysis_v2, model_meta['predict'], model_meta['columns']))
             columns_sql += ',"select_data_query" text'
             columns_sql += ',"external_datasource" text'

@@ -38,7 +38,7 @@ class ModelController():
         self.ray_based = ray_based
 
     def _invalidate_cached_predictors(self) -> None:
-        # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
+        # @TODO: Cache will become stale if the respective ModelInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
         for predictor_name in list(self.predictor_cache.keys()):
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
                 del self.predictor_cache[predictor_name]
@@ -174,6 +174,7 @@ class ModelController():
             db.session.commit()
 
         data = deepcopy(predictor_record.data)
+        data['data_anlaysis'] = linked_db_ds
         data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
         data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
         data['predict'] = predictor_record.to_predict[0]

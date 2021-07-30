@@ -6,7 +6,7 @@ import pandas as pd
 
 import mindsdb_datasources
 from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb_datasources import (
     FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS,
     SnowflakeDS, AthenaDS, CassandraDS, ScyllaDS
@@ -36,7 +36,7 @@ class DataStore():
         self.config = Config()
         self.fs_store = FsSotre()
         self.dir = self.config['paths']['datasources']
-        self.mindsdb_native = NativeInterface()
+        self.mindsdb_native = ModelInterface()
 
     def get_analysis(self, name, company_id=None):
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()

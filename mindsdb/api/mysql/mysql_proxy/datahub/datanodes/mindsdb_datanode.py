@@ -67,7 +67,7 @@ class MindsDBDataNode(DataNode):
         columns += model['columns']
         columns += [f'{x}_original' for x in model['predict']]
         for col in model['predict']:
-            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+            if model['data_analysis'][col]['typing']['data_type'] == 'Numeric':
                 columns += [f"{col}_min", f"{col}_max"]
             columns += [f"{col}_confidence"]
             columns += [f"{col}_explain"]
@@ -239,7 +239,7 @@ class MindsDBDataNode(DataNode):
                 for key in ele:
                     row[key] = ele[key]['predicted_value']
                     # FIXME prefer get int from model_interface in this case
-                    if model['data_analysis_v2'][key]['typing']['data_subtype'] == 'Int':
+                    if model['data_analysis'][key]['typing']['data_subtype'] == 'Int':
                         row[key] = int(row[key])
 
                 for k in fields:
@@ -259,7 +259,7 @@ class MindsDBDataNode(DataNode):
 
                 data.append(row)
 
-            field_types = {f: model['data_analysis_v2'][f]['typing']['data_subtype'] for f in fields if 'typing' in model['data_analysis_v2'][f]}
+            field_types = {f: model['data_analysis'][f]['typing']['data_subtype'] for f in fields if 'typing' in model['data_analysis'][f]}
             for row in data:
                 cast_row_types(row, field_types)
 
@@ -281,7 +281,7 @@ class MindsDBDataNode(DataNode):
             keys = [x for x in pred_dicts[0] if x in columns]
             min_max_keys = []
             for col in predicted_columns:
-                if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                if model['data_analysis'][col]['typing']['data_type'] == 'Numeric':
                     min_max_keys.append(col)
 
             data = []
@@ -291,8 +291,8 @@ class MindsDBDataNode(DataNode):
                 explains.append(explanations[i])
 
             field_types = {
-                f: model['data_analysis_v2'][f]['typing']['data_subtype']
-                for f in model['columns'] if 'typing' in model['data_analysis_v2'][f]
+                f: model['data_analysis'][f]['typing']['data_subtype']
+                for f in model['columns'] if 'typing' in model['data_analysis'][f]
             }
 
             for i, row in enumerate(data):

@@ -1,7 +1,7 @@
 import os
 from threading import Event
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.model.model_interface import ModelInterface as NativeInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 
 
 class StreamTypes:
@@ -17,7 +17,7 @@ class BaseStream:
         self.window = None
         self.gb = None
         self.dt = None
-        self.model_interface = NativeInterface()
+        self.model_interface = ModelInterface()
 
     @staticmethod
     def get_ts_settings(predict_record):

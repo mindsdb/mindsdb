@@ -226,7 +226,7 @@ class HTTPTest(unittest.TestCase):
 
     def test_12_generate_predictor(self):
         r = requests.put(
-            f'{root}/predictors/lwr/generate/lwr_{pred_name}',
+            f'{root}/predictors/generate/lwr_{pred_name}',
             json={
                 'problem_definition': {'target': 'rental_price'},
                 'data_source_name': ds_name
@@ -234,23 +234,23 @@ class HTTPTest(unittest.TestCase):
         )
         r.raise_for_status()
 
-    # def test_lwr_edit_json_ai(self):
+    # def test_edit_json_ai(self):
     #     r = requests.put(
-    #         f'{root}/predictors/lwr/jsonai/edit/lwr_{pred_name}',
+    #         f'{root}/predictors/lwr_{pred_name}/edit/json_ai',
     #         json={'json_ai': '?'}
     #     )
     #     r.raise_for_status()
 
-    # def test_lwr_edit_code(self):
+    # def test_edit_code(self):
     #     r = requests.put(
-    #         f'{root}/predictors/lwr/code/edit/lwr_{pred_name}',
+    #         f'{root}/predictors/lwr_{pred_name}/edit/code',
     #         json={'code': '?'}
     #     )
     #     r.raise_for_status()
 
     def test_13_train_predictor(self):
         r = requests.put(
-            f'{root}/predictors/lwr/train/lwr_{pred_name}',
+            f'{root}/predictors/lwr_{pred_name}/train',
             json={'data_source_name': ds_name}
         )
         r.raise_for_status()

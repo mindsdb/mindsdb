@@ -28,7 +28,7 @@ class Predictor(Resource):
     @ns_conf.doc('get_predictor')
     def get(self, name):
         try:
-            model = request.model_interface.get_model_data(name, db_fix=False)
+            model = request.model_interface.get_model_data(name)
         except Exception as e:
             abort(404, "")
 

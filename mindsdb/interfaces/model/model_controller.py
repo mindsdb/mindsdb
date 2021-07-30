@@ -18,7 +18,7 @@ import mindsdb_datasources
 from mindsdb import __version__ as mindsdb_version
 from lightwood import __version__ as lightwood_version
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.fs import create_directory, create_process_mark, delete_process_mark
+from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
@@ -192,7 +192,7 @@ class ModelController():
     def get_models(self, company_id: int):
         models = []
         for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id):
-            model_data = self.get_model_data(db_p.name, db_fix=False, company_id=company_id)
+            model_data = self.get_model_data(db_p.name, company_id=company_id)
             reduced_model_data = {}
 
             for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update', 'data_source_name']:
@@ -283,11 +283,6 @@ class ModelController():
         print(problem_definition, df)
         json_ai = lightwood.json_ai_from_problem(df, problem_definition)
         code = lightwood.code_from_json_ai(json_ai)
-
-        create_directory(os.path.join(
-            self.config['paths']['predictors'],
-            '{}@@@@@{}'.format(company_id, name)
-        ))
 
         db_p = db.Predictor(
             company_id=company_id,

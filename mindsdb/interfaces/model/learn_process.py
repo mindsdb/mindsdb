@@ -3,12 +3,19 @@ import logging
 import tempfile
 from pathlib import Path
 import torch.multiprocessing as mp
+from lightwood.api import predictor
+from lightwood.api.high_level import predictor_from_code
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
+import mindsdb.interfaces.storage.db as db
+import pandas as pd
+import torch
+import gc
+import lightwood
 
 
 ctx = mp.get_context('spawn')
@@ -27,76 +34,29 @@ def delete_learn_mark():
         if p.exists():
             p.unlink()
 
-
-def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, company_id, save):
-    import mindsdb_native
-    import mindsdb_datasources
-    import torch
-    import gc
-
-    if 'join_learn_process' in kwargs:
-        del kwargs['join_learn_process']
-
+def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
     create_process_mark('learn')
 
-    config = Config()
+    predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
+    assert predictor_record is not None
+
     fs_store = FsSotre()
-    mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
+    config = Config()
+    
+    predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
+    predictor.learn(df)
 
-    if save:
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
-        predictor_record.datasource_id = datasource_id
-        predictor_record.to_predict = to_predict
-        predictor_record.native_version = mindsdb_native.__version__
-        predictor_record.mindsdb_version = mindsdb_version
-        predictor_record.learn_args = {
-            'to_predict': to_predict,
-            'kwargs': kwargs
-        }
-        predictor_record.data = {
-            'name': db_name,
-            'status': 'training'
-        }
-        session.commit()
+    predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
+    assert predictor_record is not None
 
-    to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
-    data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'], **from_data['kwargs'])
-    try:
-        mdb.learn(
-            from_data=data_source,
-            to_predict=to_predict,
-            **kwargs
-        )
+    save_name = f'{predictor_record.company_id}@@@@@{predictor_record.name}'
+    pickle_path = os.path.join(config['paths']['predictors'], save_name)
+    predictor.save(pickle_path)
 
-    except Exception as e:
-        log = logging.getLogger('mindsdb.main')
-        log.error(f'Predictor learn error: {e}')
-        if save:
-            predictor_record.data = {
-                'name': db_name,
-                'status': 'error'
-            }
-            session.commit()
-        delete_process_mark('learn')
+    fs_store.put(save_name, save_name, config['paths']['predictors'])
 
-    if save:
-        fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', config['paths']['predictors'])
-
-    model_data = mindsdb_native.F.get_model_data(name)
-
-    try:
-        torch.cuda.empty_cache()
-    except Exception:
-        pass
-    gc.collect()
-
-    if save:
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
-        predictor_record.data = model_data
-        session.commit()
-
-    model_data['name'] = db_name
-    DatabaseWrapper(company_id).register_predictors([model_data])
+    predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
+    session.commit()
     delete_process_mark('learn')
 
 

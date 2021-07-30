@@ -1,4 +1,5 @@
 from copy import deepcopy
+from mindsdb.interfaces.model.learn_process import LearnProcess
 from lightwood.api import predictor
 from mindsdb.api.http.namespaces.predictor import Predictor
 from typing import Union, Dict, Any
@@ -214,12 +215,8 @@ class ModelController():
         db.session.delete(db_p)
         db.session.commit()
 
-        # NOTE: should this be name or original_name?
         DatabaseWrapper(company_id).unregister_predictor(name)
 
-        # delete locally
-        shutil.rmtree(os.path.join(self.config['paths']['predictors'], name))
-        
         # delete from s3
         self.fs_store.delete(f'predictor_{company_id}_{db_p.id}')
 
@@ -353,6 +350,9 @@ class ModelController():
         predictor_record.data = {'status': 'training', 'name': name}
         db.session.commit()
 
+        p = LearnProcess(predictor_record.id, df)
+        p.start()
+        
         try:
             lw_p = lightwood.predictor_from_code(predictor_record.code)
             print('before learn')

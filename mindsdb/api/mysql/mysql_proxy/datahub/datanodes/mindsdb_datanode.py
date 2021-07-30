@@ -114,7 +114,7 @@ class MindsDBDataNode(DataNode):
         ds_name = self.data_store.get_vacant_name('temp')
         self.data_store.save_datasource(ds_name, integration, {'query': query})
         dso = self.data_store.get_datasource_obj(ds_name, raw=True)
-        res = self.model_interface.predict(predictor_name, 'dict', when_data=dso)
+        res = self.model_interface.predict(predictor_name, dso, 'dict')
         self.data_store.delete_datasource(ds_name)
 
         keys_map = {}
@@ -214,7 +214,7 @@ class MindsDBDataNode(DataNode):
             else:
                 original_target_values[col + '_original'] = [None]
 
-        pred_dicts, explanations = self.model_interface.predict(table, 'dict&explain', when_data=where_data)
+        pred_dicts, explanations = self.model_interface.predict(table, where_data, 'dict&explain')
         # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
         if isinstance(where_data, list):
             for i in range(len(pred_dicts)):

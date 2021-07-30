@@ -130,16 +130,13 @@ class PredictorUpdate(Resource):
 class PredictorPredict(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
-        '''Queries predictor'''
-        data = request.json
-        when = data.get('when')
-        format_flag = data.get('format_flag', 'explain')
-        kwargs = data.get('kwargs', {})
+        '''Queries predictor'''x
+        when = request.json.get('when')
 
         if isinstance(when, dict) is False or len(when) == 0:
             return 'No data provided for the predictions', 400
 
-        results = request.model_interface.predict(name, format_flag, when_data=when, **kwargs)
+        results = request.model_interface.predict(name, when, 'explain')
 
         return results
 
@@ -159,7 +156,7 @@ class PredictorPredictFromDataSource(Resource):
         if from_data is None:
             abort(400, 'No valid datasource given')
 
-        results = request.model_interface.predict(name, format_flag, when_data=from_data, **kwargs)
+        results = request.model_interface.predict(name, from_data, 'explain')
         return results
 
 

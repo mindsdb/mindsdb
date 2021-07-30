@@ -204,7 +204,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/dummy_predictor')
         assert response.status_code == 404
 
-    def test_10_gui_is_served(self):
+    def test_91_gui_is_served(self):
         """
         GUI downloaded and available
         """
@@ -212,7 +212,7 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
 
-    def test__11_ds_from_unexist_integration(self):
+    def test__92_ds_from_unexist_integration(self):
         """
         Call telemetry enabled
         then check the response is status 200
@@ -224,7 +224,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.put(f'{root}/datasources/{ds_name}', json=data)
         assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
 
-    def test_12_generate_predictor(self):
+    def test_93_generate_predictor(self):
         r = requests.put(
             f'{root}/predictors/generate/lwr_{pred_name}',
             json={
@@ -248,7 +248,7 @@ class HTTPTest(unittest.TestCase):
     #     )
     #     r.raise_for_status()
 
-    def test_13_train_predictor(self):
+    def test_94_train_predictor(self):
         r = requests.put(
             f'{root}/predictors/lwr_{pred_name}/train',
             json={'data_source_name': ds_name}

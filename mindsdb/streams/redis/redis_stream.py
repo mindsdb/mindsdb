@@ -43,7 +43,7 @@ class RedisStream(Thread, BaseStream):
                     x['make_predictions'] = False
                 else:
                     x['make_predictions'] = True
-            result = self.model_interface.predict(self.predictor, self.format_flag, when_data=when_list)
+            result = self.model_interface.predict(self.predictor, when_list, self.format_flag)
             log.debug(f"TIMESERIES STREAM {self.stream_name}: got {result}")
             for res in result:
                 in_json = json.dumps(res)
@@ -60,7 +60,7 @@ class RedisStream(Thread, BaseStream):
             record_id = record[0]
             raw_when_data = record[1]
             when_data = self.decode(raw_when_data)
-            result = self.model_interface.predict(self.predictor, self.format_flag, when_data=when_data)
+            result = self.model_interface.predict(self.predictor, when_data, self.format_flag)
             log.debug(f"STREAM {self.stream_name}: got {result}")
             for res in result:
                 in_json = json.dumps(res)

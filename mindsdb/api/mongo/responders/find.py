@@ -80,7 +80,7 @@ class Responce(Responder):
             if isinstance(datasource, OrderedDict):
                 datasource = dict(datasource)
 
-            prediction = mindsdb_env['mindsdb_native'].predict(table, 'dict&explain', when_data=datasource)
+            prediction = mindsdb_env['mindsdb_native'].predict(table, datasource, 'dict&explain')
             if 'select_data_query' in where_data:
                 mindsdb_env['data_store'].delete_datasource(ds_name)
 

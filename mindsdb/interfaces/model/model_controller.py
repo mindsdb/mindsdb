@@ -95,7 +95,7 @@ class ModelController():
         # TODO: Should we support kwargs['join_learn_process'](?)
         self.fit_predictor(name, from_data, join_learn_process, company_id)
 
-    def predict(self, name: str, when_data: dict, backwards_compatible: bool, company_id: int):
+    def predict(self, name: str, when_data: dict, pred_format: str, company_id: int):
         create_process_mark('predict')
         original_name = name
         name = f'{company_id}@@@@@{name}'
@@ -134,6 +134,30 @@ class ModelController():
         delete_process_mark('predict')
 
         target = predictor_record.to_predict[0]
+
+        if pred_format in ('explain', 'dict', 'dict&explain'):
+            explain_arr = []
+            dict_arr = []
+            for _, row in predictions.iterrows():
+                explain_arr.append({
+                    '{}_confidence'.format(target): row['confidence'],
+                    '{}_lower_bound'.format(target): row['lower'],
+                    '{}_upper_bound'.format(target): row['upper'],
+                    '{}_anomaly'.format(target): row['anomaly'],
+                    '{}'.format(target): row['prediction'],
+                })
+                dict_arr.append({
+                    '{}'.format(target): row['prediction'],
+                })
+            if pred_format == 'explain':
+                return explain_arr
+            elif pred_format == 'dict':
+                return dict_arr
+            elif pred_format == 'dict&explain':
+                return dict_arr, explain_arr
+        # New format -- Try switching to this in 2-3 months for speed, for now above is ok
+        else:
+            return predictions
 
         if backwards_compatible:
             bc_predictions = []

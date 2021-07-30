@@ -92,5 +92,3 @@ if not is_ray_worker:
     else:
         print('\n ✓ telemetry enabled \n')
 
-
-    from mindsdb.interfaces.custom.model_interface import ModelInterface

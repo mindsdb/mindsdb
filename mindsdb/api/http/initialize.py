@@ -18,7 +18,6 @@ from flask.json import JSONEncoder
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
@@ -280,7 +279,6 @@ def initialize_flask(config, init_static_thread, no_studio):
 def initialize_interfaces(app):
     app.original_data_store = DataStore()
     app.original_model_interface = ModelInterface()
-    app.custom_models = CustomModels()
     config = Config()
     app.config_obj = config
 

@@ -26,28 +26,6 @@ class PredictorList(Resource):
         '''List all predictors'''
         return request.model_interface.get_models()
 
-
-@ns_conf.route('/custom/<name>')
-@ns_conf.param('name', 'The predictor identifier')
-@ns_conf.response(404, 'predictor not found')
-class CustomPredictor(Resource):
-    @ns_conf.doc('put_custom_predictor')
-    def put(self, name):
-        try:
-            trained_status = request.json['trained_status']
-        except Exception:
-            trained_status = 'untrained'
-
-        predictor_file = request.files['file']
-        fpath = os.path.join(ca.config_obj.paths['tmp'],  name + '.zip')
-        with open(fpath, 'wb') as f:
-            f.write(predictor_file.read())
-
-        request.custom_models.load_model(fpath, name, trained_status)
-
-        return f'Uploaded custom model {name}'
-
-
 @ns_conf.route('/<name>')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
@@ -138,28 +116,6 @@ class Predictor(Resource):
                 request.model_interface.rename_model(name, original_name)
             except Exception:
                 pass
-
-        return '', 200
-
-
-@ns_conf.route('/<name>/learn')
-@ns_conf.param('name', 'The predictor identifier')
-class PredictorLearn(Resource):
-    def post(self, name):
-        data = request.json
-        to_predict = data.get('to_predict')
-        kwargs = data.get('kwargs', None)
-
-        if not isinstance(kwargs, dict):
-            kwargs = {}
-
-        if 'advanced_args' not in kwargs:
-            kwargs['advanced_args'] = {}
-
-        ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
-        from_data = request.default_store.get_datasource_obj(ds_name, raw=True)
-
-        request.custom_models.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs)
 
         return '', 200
 

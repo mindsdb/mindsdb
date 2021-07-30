@@ -242,7 +242,7 @@ class PredictorGenerate(Resource):
             raw=True
         )
 
-        request.model_interface.generate_lightwood_predictor(
+        request.model_interface.generate_predictor(
             name,
             from_data,
             request.default_store.get_datasource(request.json['data_source_name'])['id'],

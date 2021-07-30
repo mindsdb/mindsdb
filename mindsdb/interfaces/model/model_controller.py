@@ -11,7 +11,6 @@ import shutil
 from contextlib import contextmanager
 from packaging import version
 import pandas as pd
-from sqlalchemy.sql.selectable import TableClause
 import lightwood
 import autopep8
 import mindsdb_datasources
@@ -87,7 +86,7 @@ class ModelController():
         if 'stop_training_in_x_seconds' in kwargs:
             problem_definition['stop_after'] = kwargs['stop_training_in_x_seconds']
 
-        self.generate_lightwood_predictor(name, from_data, datasource_id, problem_definition, company_id)
+        self.generate_predictor(name, from_data, datasource_id, problem_definition, company_id)
 
         # TODO: Should we support kwargs['join_learn_process'](?)
         self.fit_predictor(name, from_data, datasource_id, company_id)
@@ -152,7 +151,7 @@ class ModelController():
         else:
             return [dict(row) for _, row in predictions.iterrows()]
 
-    def analyse_dataset(self, ds: dict, company_id: int):
+    def analyse_dataset(self, ds: dict, company_id: int) -> lightwood.DataAnalysis:
         create_process_mark('analyse')
         ds_cls = getattr(mindsdb_datasources, ds['class'])
         df = ds_cls(*ds['args'], **ds['kwargs']).df
@@ -160,7 +159,7 @@ class ModelController():
         delete_process_mark('analyse')
         return analysis.to_dict()  # type: ignore
 
-    def get_model_data(self, name, db_fix=True, company_id=None):
+    def get_model_data(self, name, company_id: int):
         if '@@@@@' in name:
             sn = name.split('@@@@@')
             assert len(sn) < 3  # security
@@ -179,14 +178,6 @@ class ModelController():
             predictor_record.update_status = 'available'
             db.session.commit()
 
-        # Make some corrections for databases not to break when dealing with empty columns
-        if 'data_analysis_v2' in predictor_record.data and db_fix:
-            for column in predictor_record.data['columns']:
-                analysis = predictor_record.data['data_analysis_v2'].get(column)
-                if isinstance(analysis, dict):
-                    if len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False):
-                        predictor_record.data['data_analysis_v2'][column]['typing'] = {'data_subtype': 'Int'}
-
         data = deepcopy(predictor_record.data)
         data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
         data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
@@ -199,7 +190,7 @@ class ModelController():
 
         return data
 
-    def get_models(self, company_id=None):
+    def get_models(self, company_id: int):
         models = []
         for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id):
             model_data = self.get_model_data(db_p.name, db_fix=False, company_id=company_id)
@@ -221,7 +212,7 @@ class ModelController():
             models.append(reduced_model_data)
         return models
 
-    def delete_model(self, name, company_id=None):
+    def delete_model(self, name, company_id: int):
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
@@ -240,7 +231,7 @@ class ModelController():
 
         return 0
 
-    def update_model(self, name, company_id=None):
+    def update_model(self, name: str, company_id: int):
         from mindsdb_native import F
         from mindsdb_worker.updater.update_model import update_model
         from mindsdb.interfaces.storage.db import session, Predictor
@@ -276,7 +267,7 @@ class ModelController():
         
         return 'Updated successfully'
 
-    def generate_lightwood_predictor(self, name: str, from_data: dict, datasource_id, problem_definition: dict, company_id=None):
+    def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, company_id=None):
         print('generate predicrtor start')
         if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
             raise Exception('Predictor {} already exists'.format(name))
@@ -287,17 +278,14 @@ class ModelController():
         # Here for no particular reason, because we want to run this sometimes but not too often
         self._invalidate_cached_predictors()
 
-        problem_definition = lightwood.api.types.ProblemDefinition.from_dict(problem_definition)
+        problem_definition = lightwood.ProblemDefinition.from_dict(problem_definition_dict)
 
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
 
-        type_information = lightwood.data.infer_types(df, problem_definition.pct_invalid)
-        statistical_analysis = lightwood.data.statistical_analysis(df, type_information, problem_definition)
-        json_ai = lightwood.api.json_ai.generate_json_ai(type_information=type_information, statistical_analysis=statistical_analysis, problem_definition=problem_definition)
-        predictor_code = lightwood.api.high_level.code_from_json_ai(json_ai)
-        predictor_code = autopep8.fix_code(predictor_code)  # Note: ~3s overhead, might be more depending on source complexity, should try a few more examples and make a decision
+        json_ai = lightwood.json_ai_from_problem(df, problem_definition)
+        predictor_code = lightwood.code_from_json_ai(json_ai)
 
         create_directory(os.path.join(
             self.config['paths']['predictors'],

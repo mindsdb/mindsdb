@@ -42,8 +42,8 @@ class ModelInterfaceNativeImport():
     def update_model(self, *args, **kwargs):
         return self.controller.update_model(*args, **kwargs)
 
-    def generate_lightwood_predictor(self, *args, **kwargs):
-        return self.controller.generate_lightwood_predictor(*args, **kwargs)
+    def generate_predictor(self, *args, **kwargs):
+        return self.controller.generate_predictor(*args, **kwargs)
     
     def edit_json_ai(self, *args, **kwargs):
         return self.controller.edit_json_ai(*args, **kwargs)

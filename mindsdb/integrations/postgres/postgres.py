@@ -43,7 +43,7 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
         self.port = db_info.get('port')
         self.database = db_info.get('database', 'postgres')
 
-    def _to_postgres_table(self, stats, predicted_cols, columns):
+    def _to_postgres_table(self, dtype_dict, predicted_cols, columns):
         subtype_map = {
             dtype.integer: ' int8',
             dtype.float: 'float8',
@@ -64,7 +64,7 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
         column_declaration = []
         for name in columns:
             try:
-                col_subtype = stats[name]['typing']['data_subtype']
+                col_subtype = dtype_dict[name]
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' "{name}" {new_type} ')
                 if name in predicted_cols:
@@ -161,13 +161,12 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
-            data_analysis_v2 = model_meta['data_analysis']
-            columns_sql = ','.join(self._to_postgres_table(data_analysis_v2, model_meta['predict'], model_meta['columns']))
+            columns_sql = ','.join(self._to_postgres_table(model_meta['dtype_dict'], model_meta['predict'], model_meta['columns']))
             columns_sql += ',"select_data_query" text'
             columns_sql += ',"external_datasource" text'
             for col in model_meta['predict']:
                 columns_sql += f',"{col}_confidence" float8'
-                if data_analysis_v2[col]['typing']['data_type'] == 'Numeric':
+                if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns_sql += f',"{col}_min" float8'
                     columns_sql += f',"{col}_max" float8'
                 columns_sql += f',"{col}_explain" text'

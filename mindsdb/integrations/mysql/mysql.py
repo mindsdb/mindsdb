@@ -39,7 +39,7 @@ class MySQL(Integration, MySQLConnectionChecker):
         self.host = db_info.get('host')
         self.port = db_info.get('port')
 
-    def _to_mysql_table(self, stats, predicted_cols, columns):
+    def _to_mysql_table(self, dtype_dict, predicted_cols, columns):
         subtype_map = {
             dtype.integer: 'int',
             dtype.float: 'double',
@@ -60,7 +60,7 @@ class MySQL(Integration, MySQLConnectionChecker):
         column_declaration = []
         for name in columns:
             try:
-                col_subtype = stats[name]['typing']['data_subtype']
+                col_subtype = dtype_dict[name]
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
@@ -133,13 +133,13 @@ class MySQL(Integration, MySQLConnectionChecker):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
-            columns_sql = ','.join(self._to_mysql_table(model_meta['data_analysis'], model_meta['predict'], model_meta['columns']))
+            columns_sql = ','.join(self._to_mysql_table(model_meta['dtype_dict'], model_meta['predict'], model_meta['columns']))
             columns_sql += ',`when_data` varchar(500)'
             columns_sql += ',`select_data_query` varchar(500)'
             columns_sql += ',`external_datasource` varchar(500)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` double'
-                if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+                if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns_sql += f',`{col}_min` double'
                     columns_sql += f',`{col}_max` double'
                 columns_sql += f',`{col}_explain` varchar(500)'

@@ -30,7 +30,7 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         self.host = db_info.get('host')
         self.port = db_info.get('port')
 
-    def _to_clickhouse_table(self, stats, predicted_cols, columns):
+    def _to_clickhouse_table(self, dtype_dict, predicted_cols, columns):
         subtype_map = {
             dtype.integer: 'Nullable(Int64)',
             dtype.float: 'Nullable(Float64)',
@@ -51,7 +51,7 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         column_declaration = []
         for name in columns:
             try:
-                col_subtype = stats[name]['typing']['data_subtype']
+                col_subtype = dtype_dict[name]
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
@@ -114,14 +114,14 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         for model_meta in model_data_arr:
             name = self._escape_table_name(model_meta['name'])
 
-            columns_sql = ','.join(self._to_clickhouse_table(model_meta['data_analysis'], model_meta['predict'], model_meta['columns']))
+            columns_sql = ','.join(self._to_clickhouse_table(model_meta['dtype_dict'], model_meta['predict'], model_meta['columns']))
             columns_sql += ',`when_data` Nullable(String)'
             columns_sql += ',`select_data_query` Nullable(String)'
             columns_sql += ',`external_datasource` Nullable(String)'
             for col in model_meta['predict']:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
 
-                if model_meta['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+                if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns_sql += f',`{col}_min` Nullable(Float64)'
                     columns_sql += f',`{col}_max` Nullable(Float64)'
                 columns_sql += f',`{col}_explain` Nullable(String)'

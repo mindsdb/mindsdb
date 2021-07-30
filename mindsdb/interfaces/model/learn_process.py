@@ -56,6 +56,7 @@ def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
     fs_store.put(save_name, save_name, config['paths']['predictors'])
 
     predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
+    predictor_record.dtype_dict = predictor.dtype_dict  # type: ignore
     session.commit()
     delete_process_mark('learn')
 

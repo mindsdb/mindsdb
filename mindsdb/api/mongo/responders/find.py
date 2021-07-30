@@ -1,6 +1,6 @@
 from bson.int64 import Int64
 from collections import OrderedDict
-
+from lightwood import dtype
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.interfaces.database.integrations import get_db_integrations
@@ -32,7 +32,7 @@ class Responce(Responder):
             columns += model['columns']
             columns += [f'{x}_original' for x in model['predict']]
             for col in model['predict']:
-                if model['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+                if model['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns += [f"{col}_min", f"{col}_max"]
                 columns += [f"{col}_confidence"]
                 columns += [f"{col}_explain"]
@@ -92,7 +92,7 @@ class Responce(Responder):
             keys = [k for k in pred_dict_arr[0] if k in columns]
             min_max_keys = []
             for col in predicted_columns:
-                if model['data_analysis'][col]['typing']['data_type'] == 'Numeric':
+                if model['dtype_dict'][col] in (dtype.integer, dtype.float):
                     min_max_keys.append(col)
 
             for i in range(len(pred_dict_arr)):

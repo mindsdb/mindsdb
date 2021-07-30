@@ -11,6 +11,12 @@ from flask import current_app as ca
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
+from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
+    put_datasource_params
+)
+from mindsdb.api.http.namespaces.entitites.datasources.datasource_data import (
+    get_datasource_rows_params
+)
 from mindsdb.interfaces.database.integrations import get_db_integration
 
 

@@ -9,7 +9,10 @@ from flask import current_app as ca
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
-
+from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
+    predictor_query_params,
+    put_predictor_params
+)
 
 @ns_conf.route('/')
 class PredictorList(Resource):
@@ -42,7 +45,7 @@ class Predictor(Resource):
 
         return '', 200
 
-    @ns_conf.doc('put_predictor')
+    @ns_conf.doc('put_predictor', params=put_predictor_params)
     def put(self, name):
         '''Learning new predictor'''
         data = request.json

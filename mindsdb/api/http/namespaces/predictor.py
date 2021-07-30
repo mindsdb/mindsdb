@@ -130,7 +130,7 @@ class PredictorUpdate(Resource):
 class PredictorPredict(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
-        '''Queries predictor'''x
+        '''Queries predictor'''
         when = request.json.get('when')
 
         if isinstance(when, dict) is False or len(when) == 0:

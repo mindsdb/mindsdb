@@ -33,34 +33,42 @@ def delete_learn_mark():
 
 def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
     create_process_mark('learn')
-    print('\n\n\nUSING DATA:')
-    print(df)
-    predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
-    assert predictor_record is not None
 
-    fs_store = FsSotre()
-    config = Config()
-    
-    predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
-    predictor.learn(df)
+    try:
+        predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
+        assert predictor_record is not None
 
-    predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
-    assert predictor_record is not None
+        fs_store = FsSotre()
+        config = Config()
+        
+        predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
+        predictor.learn(df)
 
-    save_name = f'{predictor_record.company_id}@@@@@{predictor_record.name}'
-    pickle_path = os.path.join(config['paths']['predictors'], save_name)
-    predictor.save(pickle_path)
+        predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
+        assert predictor_record is not None
 
-    fs_store.put(save_name, save_name, config['paths']['predictors'])
+        save_name = f'{predictor_record.company_id}@@@@@{predictor_record.name}'
+        pickle_path = os.path.join(config['paths']['predictors'], save_name)
+        predictor.save(pickle_path)
 
-    predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
-    predictor_record.dtype_dict = predictor.dtype_dict  # type: ignore
-    session.commit()
+        fs_store.put(save_name, save_name, config['paths']['predictors'])
 
-    dbw = DatabaseWrapper(predictor_record.company_id)
-    mi = ModelInterfaceWrapper(ModelInterface(), predictor_record.company_id)
-    dbw.register_predictors([mi.get_model_data(predictor_record.name)])
-    delete_process_mark('learn')
+        predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
+        predictor_record.data['status'] = 'complete' # type: ignore
+        predictor_record.data['name'] = name
+        predictor_record.dtype_dict = predictor.dtype_dict  # type: ignore
+        session.commit()
+
+        dbw = DatabaseWrapper(predictor_record.company_id)
+        mi = ModelInterfaceWrapper(ModelInterface(), predictor_record.company_id)
+        dbw.register_predictors([mi.get_model_data(predictor_record.name)])
+        delete_process_mark('learn')
+    except Exception as e:
+        predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
+        assert predictor_record is not None
+        predictor_record.data = {'status': 'training', 'name': name}
+        session.commit()
+        raise e
 
 
 class LearnProcess(ctx.Process):

@@ -104,7 +104,7 @@ class Predictor(Base):
     update_status = Column(String, default='up_to_date')
 
     json_ai = Column(Json, nullable=True)
-    predictor_code = Column(String, nullable=True)
+    code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
 
 

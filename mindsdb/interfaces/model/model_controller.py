@@ -1,3 +1,6 @@
+from copy import deepcopy
+from lightwood.api import predictor
+from mindsdb.api.http.namespaces.predictor import Predictor
 from typing import Union, Dict, Any
 from dateutil.parser import parse as parse_datetime
 import psutil
@@ -72,7 +75,7 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
-    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int):
+    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
         create_process_mark('learn')
 
         problem_definition = {'target': to_predict}
@@ -94,58 +97,48 @@ class ModelController():
         ])
 
         delete_process_mark('learn')
-        return 0
 
-    def predict(self, name, pred_format, when_data=None, kwargs={}, bc=True, company_id=None):
+    def predict(self, name: str, when_data: dict, backwards_compatible: bool, company_id: int):
         create_process_mark('predict')
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        assert predictor_record is not None
+        fs_name = f'predictor_{company_id}_{predictor_record.id}'
 
         if name not in self.predictor_cache:
             # Clear the cache entirely if we have less than 1.2 GB left
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
-            if db_p.data['status'] == 'complete':
-                self.fs_store.get(name, f'predictor_{company_id}_{db_p.id}', self.config['paths']['predictors'])
+            if predictor_record.data['status'] == 'complete':
+                self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
-                    'predictor': lightwood.api.high_level.predictor_from_code(db_p.predictor_code),
+                    'predictor':
+                    lightwood.predictor_from_state(os.path.join(self.config['paths']['predictors'], fs_name)),
                     'created': datetime.datetime.now()
                 }
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
             ds_cls = getattr(mindsdb_datasources, when_data['class'])
-            ds = ds_cls(*when_data['args'], **when_data['kwargs'])
+            df = ds_cls(*when_data['args'], **when_data['kwargs']).df
         else:
             # @TODO: Replace with Datasource
             try:
-                ds = pd.DataFrame(when_data)
+                df = pd.DataFrame(when_data)
             except Exception:
-                ds = when_data
+                df = when_data
 
         predictor = self.predictor_cache[name]['predictor']
-        predictions = predictor.predict(ds.df)
+        predictions = predictor.predict(df)
         del self.predictor_cache[name]
-
-        if pred_format != 'dict':
-            raise ValueError('only dict is supported for "pred_format"')
-        # if pred_format == 'explain' or pred_format == 'new_explain':
-        #     predictions = [p.explain() for p in predictions]
-        # elif pred_format == 'dict':
-        #     predictions = [p.as_dict() for p in predictions]
-        # elif pred_format == 'dict&explain':
-        #     predictions = [[p.as_dict() for p in predictions], [p.explain() for p in predictions]]
-        # else:
-        #     delete_process_mark('predict')
-        #     raise Exception(f'Unkown predictions format: {pred_format}')
 
         delete_process_mark('predict')
 
-        target = db_p.to_predict[0]
+        target = predictor_record.to_predict[0]
 
-        if bc:
+        if backwards_compatible:
             bc_predictions = []
             for _, row in predictions.iterrows():
                 bc_predictions.append({
@@ -159,51 +152,52 @@ class ModelController():
         else:
             return [dict(row) for _, row in predictions.iterrows()]
 
-    def analyse_dataset(self, ds, company_id=None):
+    def analyse_dataset(self, ds: dict, company_id: int):
         create_process_mark('analyse')
         ds_cls = getattr(mindsdb_datasources, ds['class'])
-        ds = ds_cls(*ds['args'], **ds['kwargs'])
-        analysis = lightwood.api.high_level.analyze_dataset(ds.df)
+        df = ds_cls(*ds['args'], **ds['kwargs']).df
+        analysis = lightwood.analyze_dataset(df)
         delete_process_mark('analyse')
-        return analysis.to_dict()
+        return analysis.to_dict()  # type: ignore
 
     def get_model_data(self, name, db_fix=True, company_id=None):
         if '@@@@@' in name:
-            name = name.split('@@@@@')[1]
+            sn = name.split('@@@@@')
+            assert len(sn) < 3  # security
+            name = sn[1]
 
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
-        linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=db_p.datasource_id).first()
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        assert predictor_record is not None
+
+        linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=predictor_record.datasource_id).first()
 
         # check update availability
-        if version.parse(db_p.mindsdb_version) < version.parse(mindsdb_version):
-            db_p.update_status = 'available'
+        if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
+            predictor_record.update_status = 'available'
             db.session.commit()
 
         # Make some corrections for databases not to break when dealing with empty columns
-        if 'data_analysis_v2' in db_p.data and db_fix:
-            for column in db_p.data['columns']:
-                analysis = db_p.data['data_analysis_v2'].get(column)
+        if 'data_analysis_v2' in predictor_record.data and db_fix:
+            for column in predictor_record.data['columns']:
+                analysis = predictor_record.data['data_analysis_v2'].get(column)
                 if isinstance(analysis, dict):
                     if len(analysis) == 0 or analysis.get('empty', {}).get('is_empty', False):
-                        db_p.data['data_analysis_v2'][column]['typing'] = {'data_subtype': 'Int'}
-        
-        if 'analysis' in db_p.data:
-            if db_fix:
-                pass # TODO ???
+                        predictor_record.data['data_analysis_v2'][column]['typing'] = {'data_subtype': 'Int'}
 
-        db_p.data['created_at'] = str(parse_datetime(str(db_p.created_at).split('.')[0]))
-        db_p.data['updated_at'] = str(parse_datetime(str(db_p.updated_at).split('.')[0]))
-        db_p.data['predict'] = db_p.to_predict[0]
-        db_p.data['update'] = db_p.update_status
-        db_p.data['name'] = db_p.name
-        db_p.data['predictor_code'] = db_p.predictor_code
-        db_p.data['json_ai'] = db_p.json_ai
-        db_p.data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
+        data = deepcopy(predictor_record.data)
+        data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
+        data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
+        data['predict'] = predictor_record.to_predict[0]
+        data['update'] = predictor_record.update_status
+        data['name'] = predictor_record.name
+        data['code'] = predictor_record.code
+        data['json_ai'] = predictor_record.json_ai
+        data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
 
-        return db_p.data
+        return data
 
     def get_models(self, company_id=None):
         models = []
@@ -328,39 +322,40 @@ class ModelController():
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         """Edit an existing predictor's json_ai"""
 
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        assert predictor_record is not None
 
         try:
-            code = lightwood.api.generate_predictor_code(
-                lightwood.api.types.JsonAI.from_dict(json_ai)
-            )
+            json_ai: lightwood.JsonAI = lightwood.JsonAI.from_dict(json_ai)  # type: ignore
+            code = lightwood.code_from_json_ai(json_ai)
         except Exception as e:
             print(f'Failed to generate predictor from json_ai: {e}')
             return False
         else:
-            db_p.predictor_code = code
-            db_p.json_ai = json_ai
+            predictor_record.code = code
+            predictor_record.code = json_ai
             db.session.commit()
             return True
 
     def edit_code(self, name: str, code: str, company_id=None):
         """Edit an existing predictor's code"""
 
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        assert predictor_record is not None
         
         try:
             # TODO: make this safe from code injection (on lightwood side)
-            lightwood.api.high_level.predictor_from_code(code)
+            lightwood.predictor_from_code(code)
         except Exception as e:
             print(f'Failed to generate predictor from json_ai: {e}')
             return False
         else:
-            db_p.predictor_code = code
-            db_p.json_ai = None
+            predictor_record.code = code
+            predictor_record.json_ai = None
             db.session.commit()
             return True
 
-    def fit_predictor(self, name: str, from_data: dict, datasource_id, company_id=None):
+    def fit_predictor(self, name: str, from_data: dict, datasource_id: int, company_id: int):
         print('fit predicrtor start')
         """Train an existing predictor"""
 
@@ -368,39 +363,33 @@ class ModelController():
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
 
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        db_p.data = {'status': 'training', 'name': name}
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        assert predictor_record is not None
+        predictor_record.data = {'status': 'training', 'name': name}
         db.session.commit()
 
         try:
-            lw_p = lightwood.api.high_level.predictor_from_code(db_p.predictor_code)
+            lw_p = lightwood.predictor_from_code(predictor_record.code)
             print('before learn')
             lw_p.learn(df)
             print('after learn')
         except Exception:
-            db_p.data = {'status': 'error', 'name': name}
+            predictor_record.data = {'status': 'error', 'name': name}
             db.session.commit()
             print('fit predictor exception')
             import traceback
             traceback.print_exc()
         else:
-            db_p.data = {'status': 'trained', 'name': name, 'analysis': lw_p.model_analysis.to_dict()}
+            predictor_record.data = {'status': 'trained', 'name': name, 'analysis': lw_p.model_analysis.to_dict()}
             db.session.commit()
 
             # save predictor locally
             lw_p.save(os.path.join(self.config['paths']['predictors'], name))
             
             # save predictor to s3
-            self.fs_store.put(name, f'predictor_{company_id}_{db_p.id}', self.config['paths']['predictors'])
+            self.fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
             print('fit predictor NO exception')
         print('fit predicrtor end')
-
-    def code_from_json_ai(self, json_ai: dict, company_id=None):
-        json_ai = lightwood.api.types.JsonAI.from_dict(json_ai)
-        if lightwood.api.json_ai.validate_json_ai(json_ai):
-            return lightwood.api.high_level.code_from_json_ai(json_ai)
-        else:
-            return None
 
 
 '''

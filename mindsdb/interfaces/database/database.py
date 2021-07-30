@@ -78,7 +78,9 @@ class DatabaseWrapper():
             # FIXME
             # !!! Integrations from config.json add to db on each start!!!!
             if '@@@@@' in name:
-                name = name.split('@@@@@')[1]
+                sn = name.split('@@@@@')
+                assert len(sn) < 3  # security
+                name = sn[1]
             if integration.check_connection():
                 integration.unregister_predictor(name)
             else:

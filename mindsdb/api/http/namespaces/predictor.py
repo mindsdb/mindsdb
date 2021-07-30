@@ -9,19 +9,11 @@ from flask import current_app as ca
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
-from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
-    predictor_metadata,
-    predictor_query_params,
-    upload_predictor_params,
-    put_predictor_params
-)
-from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
 
 
 @ns_conf.route('/')
 class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
-    #@ns_conf.marshal_list_with(predictor_status, skip_none=True)
     def get(self):
         '''List all predictors'''
         return request.model_interface.get_models()
@@ -31,7 +23,6 @@ class PredictorList(Resource):
 @ns_conf.response(404, 'predictor not found')
 class Predictor(Resource):
     @ns_conf.doc('get_predictor')
-    #@ns_conf.marshal_with(predictor_metadata, skip_none=True)
     def get(self, name):
         try:
             model = request.model_interface.get_model_data(name, db_fix=False)

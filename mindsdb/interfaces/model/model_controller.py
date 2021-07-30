@@ -90,12 +90,6 @@ class ModelController():
 
         # TODO: Should we support kwargs['join_learn_process'](?)
         self.fit_predictor(name, from_data, datasource_id, company_id)
-        
-        DatabaseWrapper(company_id).register_predictors([
-            self.get_model_data(name, company_id=company_id)
-        ])
-
-        delete_process_mark('learn')
 
     def predict(self, name: str, when_data: dict, backwards_compatible: bool, company_id: int):
         create_process_mark('predict')
@@ -269,6 +263,7 @@ class ModelController():
 
     def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, company_id=None):
         print('generate predicrtor start')
+        create_process_mark('learn')
         if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
             raise Exception('Predictor {} already exists'.format(name))
 
@@ -305,6 +300,7 @@ class ModelController():
         )
         db.session.add(db_p)
         db.session.commit()
+        delete_process_mark('learn')
         print('generate predicrtor end')
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
@@ -344,6 +340,7 @@ class ModelController():
             return True
 
     def fit_predictor(self, name: str, from_data: dict, datasource_id: int, company_id: int):
+        create_process_mark('learn')
         print('fit predicrtor start')
         """Train an existing predictor"""
 

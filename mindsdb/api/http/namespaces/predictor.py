@@ -42,7 +42,7 @@ class Predictor(Resource):
 
         return '', 200
 
-    @ns_conf.doc('put_predictor', params=put_predictor_params)
+    @ns_conf.doc('put_predictor')
     def put(self, name):
         '''Learning new predictor'''
         data = request.json

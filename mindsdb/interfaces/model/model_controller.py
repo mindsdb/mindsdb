@@ -232,11 +232,9 @@ class ModelController():
         return 0
 
     def update_model(self, name: str, company_id: int):
-        from mindsdb_native import F
         from mindsdb_worker.updater.update_model import update_model
         from mindsdb.interfaces.storage.db import session, Predictor
         from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
-        from mindsdb_native import __version__ as native_version
         from mindsdb import __version__ as mindsdb_version
 
         original_name = name
@@ -244,16 +242,18 @@ class ModelController():
 
         try:
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+            assert predictor_record is not None
 
             predictor_record.update_status = 'updating'
 
             session.commit()
 
-            update_model(name, original_name, self.delete_model, F.rename_model, self.learn_for_update, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
+            # @TODO Fix this function to work with the new lightwood!
+            #update_model(name, original_name, self.delete_model, F.rename_model, self.learn_for_update, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
 
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
 
-            predictor_record.native_version = native_version
+            predictor_record.lightwood_version = lightwood.__version__
             predictor_record.mindsdb_version = mindsdb_version
             predictor_record.update_status = 'up_to_date'
 
@@ -261,7 +261,7 @@ class ModelController():
             
         except Exception as e:
             log.error(e)
-            predictor_record.update_status = 'update_failed'
+            predictor_record.update_status = 'update_failed'  # type: ignore
             session.commit()
             return str(e)
         

@@ -13,7 +13,7 @@ class ModelInterfaceWrapper(object):
         return wrapper
 
 
-class ModelInterfaceNativeImport():
+class ModelInterface():
     def __init__(self):
         from mindsdb.interfaces.model.model_controller import ModelController
         self.controller = ModelController(False)
@@ -59,7 +59,6 @@ class ModelInterfaceNativeImport():
 
 
 ray_based = False
-ModelInterface = ModelInterfaceNativeImport
 
 '''
 Notes: Remove ray from actors are getting stuck

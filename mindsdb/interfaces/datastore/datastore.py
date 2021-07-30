@@ -36,7 +36,7 @@ class DataStore():
         self.config = Config()
         self.fs_store = FsSotre()
         self.dir = self.config['paths']['datasources']
-        self.mindsdb_native = ModelInterface()
+        self.model_interface = ModelInterface()
 
     def get_analysis(self, name, company_id=None):
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
@@ -57,7 +57,7 @@ class DataStore():
         else:
             return
         try:
-            analysis = self.mindsdb_native.analyse_dataset(ds=self.get_datasource_obj(name, raw=True, company_id=company_id), company_id=company_id)
+            analysis = self.model_interface.analyse_dataset(ds=self.get_datasource_obj(name, raw=True, company_id=company_id), company_id=company_id)
             datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
             datasource_record.analysis = json.dumps(analysis)
             session.commit()

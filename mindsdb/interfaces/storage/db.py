@@ -106,6 +106,7 @@ class Predictor(Base):
     json_ai = Column(Json, nullable=True)
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
+    dtype_dict = Column(Json, nullable=True)
 
 
 class AITable(Base):

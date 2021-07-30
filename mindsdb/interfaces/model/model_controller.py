@@ -174,7 +174,7 @@ class ModelController():
             db.session.commit()
 
         data = deepcopy(predictor_record.data)
-        data['data_anlaysis'] = linked_db_ds
+        data['dtype_dict'] = predictor_record.dtype_dict
         data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
         data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
         data['predict'] = predictor_record.to_predict[0]
@@ -353,30 +353,6 @@ class ModelController():
 
         p = LearnProcess(predictor_record.id, df)
         p.start()
-        
-        try:
-            lw_p = lightwood.predictor_from_code(predictor_record.code)
-            print('before learn')
-            lw_p.learn(df)
-            print('after learn')
-        except Exception:
-            predictor_record.data = {'status': 'error', 'name': name}
-            db.session.commit()
-            print('fit predictor exception')
-            import traceback
-            traceback.print_exc()
-        else:
-            predictor_record.data = {'status': 'trained', 'name': name, 'analysis': lw_p.model_analysis.to_dict()}
-            db.session.commit()
-
-            # save predictor locally
-            lw_p.save(os.path.join(self.config['paths']['predictors'], name))
-            
-            # save predictor to s3
-            self.fs_store.put(name, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
-            print('fit predictor NO exception')
-        print('fit predicrtor end')
-
 
 '''
 Notes: Remove ray from actors are getting stuck

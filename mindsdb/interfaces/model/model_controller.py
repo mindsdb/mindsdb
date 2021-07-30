@@ -1,6 +1,5 @@
+from typing import Union, Dict, Any
 from dateutil.parser import parse as parse_datetime
-import pickle
-from pathlib import Path
 import psutil
 import datetime
 import time
@@ -8,13 +7,11 @@ import os
 import shutil
 from contextlib import contextmanager
 from packaging import version
-
 import pandas as pd
 from sqlalchemy.sql.selectable import TableClause
 import lightwood
 import autopep8
 import mindsdb_datasources
-
 from mindsdb import __version__ as mindsdb_version
 from lightwood import __version__ as lightwood_version
 import mindsdb.interfaces.storage.db as db
@@ -22,32 +19,37 @@ from mindsdb.utilities.fs import create_directory, create_process_mark, delete_p
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
-from mindsdb.utilities.log import Log
+from mindsdb.utilities.log import log
 
 
 class ModelController():
-    def __init__(self, ray_based):
+    config: Config
+    fs_store: FsSotre
+    predictor_cache: Dict[str, Dict[str, Union[Any]]]
+    ray_based: bool
+
+    def __init__(self, ray_based: bool) -> None:
         self.config = Config()
         self.fs_store = FsSotre()
         self.predictor_cache = {}
         self.ray_based = ray_based
 
-    def _invalidate_cached_predictors(self):
+    def _invalidate_cached_predictors(self) -> None:
         # @TODO: Cache will become stale if the respective NativeInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
         for predictor_name in list(self.predictor_cache.keys()):
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
                 del self.predictor_cache[predictor_name]
 
-    def _lock_predictor(self, id, mode='write', company_id=None):
+    def _lock_predictor(self, id: int, mode: str) -> None:
         from mindsdb.interfaces.storage.db import session, Semaphor
 
         while True:
-            semaphor_record = session.query(Semaphor).filter_by(company_id=company_id, entity_id=id, entity_type='predictor').first()
+            semaphor_record = session.query(Semaphor).filter_by(entity_id=id, entity_type='predictor').first()
             if semaphor_record is not None:
                 if mode == 'read' and semaphor_record.action == 'read':
                     return True
             try:
-                semaphor_record = Semaphor(company_id=company_id, entity_id=id, entity_type='predictor', action=mode)
+                semaphor_record = Semaphor(entity_id=id, entity_type='predictor', action=mode)
                 session.add(semaphor_record)
                 session.commit()
                 return True
@@ -55,52 +57,41 @@ class ModelController():
                 pass
             time.sleep(1)
 
-    def _unlock_predictor(self, id, company_id=None):
+    def _unlock_predictor(self, id: int) -> None:
         from mindsdb.interfaces.storage.db import session, Semaphor
-        semaphor_record = session.query(Semaphor).filter_by(company_id=company_id, entity_id=id, entity_type='predictor').first()
+        semaphor_record = session.query(Semaphor).filter_by(entity_id=id, entity_type='predictor').first()
         if semaphor_record is not None:
             session.delete(semaphor_record)
             session.commit()
 
     @contextmanager
-    def _lock_context(self, id, mode='write'):
+    def _lock_context(self, id, mode: str):
         try:
             self._lock_predictor(id, mode)
             yield True
         finally:
             self._unlock_predictor(id)
 
-    def learn(self, name, from_data, to_predict, datasource_id, kwargs={}, save=True, company_id=None):
+    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int):
         create_process_mark('learn')
-
-        if isinstance(to_predict, list):
-            to_predict, *ignored_targets = to_predict
-            print('Ignoring targets: {} (because lightwood only supports one target)'.format(ignored_targets))
-        elif isinstance(to_predict, str):
-            pass
-        else:
-            raise TypeError('to_predict must be a string or a list')
 
         problem_definition = {'target': to_predict}
 
-        # TODO add more important values from kwargs to problem_definition
+        # Adapt kwargs to problem definition
         if 'timeseries_settings' in kwargs:
             problem_definition['timeseries_settings'] = kwargs['timeseries_settings']
-        
-        # TODO add more important values from kwargs to problem_definition
+
         if 'stop_training_in_x_seconds' in kwargs:
             problem_definition['stop_after'] = kwargs['stop_training_in_x_seconds']
 
         self.generate_lightwood_predictor(name, from_data, datasource_id, problem_definition, company_id)
 
-        # TODO: support kwargs['join_learn_process']
+        # TODO: Should we support kwargs['join_learn_process'](?)
         self.fit_predictor(name, from_data, datasource_id, company_id)
         
-        # TODO: fix all register_predictors and unregister_predictor
-        # methods implementations according to new data types in lightwood
-        # DatabaseWrapper(company_id).register_predictors([
-        #     self.get_model_data(name, company_id=company_id)
-        # ])
+        DatabaseWrapper(company_id).register_predictors([
+            self.get_model_data(name, company_id=company_id)
+        ])
 
         delete_process_mark('learn')
         return 0

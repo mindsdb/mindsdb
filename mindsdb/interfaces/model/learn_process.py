@@ -33,7 +33,8 @@ def delete_learn_mark():
 
 def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
     create_process_mark('learn')
-
+    print('\n\n\nUSING DATA:')
+    print(df)
     predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
     assert predictor_record is not None
 

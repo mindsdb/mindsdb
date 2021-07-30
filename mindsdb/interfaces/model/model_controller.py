@@ -78,7 +78,10 @@ class ModelController():
     def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
         create_process_mark('learn')
 
-        problem_definition = {'target': to_predict}
+        problem_definition = {'target': to_predict if isinstance(to_predict, str) else to_predict[0]}
+        join_learn_process = kwargs.get('join_learn_process', False)
+        if 'join_learn_process' in kwargs:
+            del kwargs['join_learn_process']
 
         # Adapt kwargs to problem definition
         if 'timeseries_settings' in kwargs:
@@ -90,7 +93,7 @@ class ModelController():
         self.generate_predictor(name, from_data, datasource_id, problem_definition, company_id)
 
         # TODO: Should we support kwargs['join_learn_process'](?)
-        self.fit_predictor(name, from_data, datasource_id, company_id)
+        self.fit_predictor(name, from_data, join_learn_process, company_id)
 
     def predict(self, name: str, when_data: dict, backwards_compatible: bool, company_id: int):
         create_process_mark('predict')
@@ -277,8 +280,9 @@ class ModelController():
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
 
+        print(problem_definition, df)
         json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-        predictor_code = lightwood.code_from_json_ai(json_ai)
+        code = lightwood.code_from_json_ai(json_ai)
 
         create_directory(os.path.join(
             self.config['paths']['predictors'],
@@ -289,7 +293,7 @@ class ModelController():
             company_id=company_id,
             name=name,
             json_ai=json_ai.to_dict(),
-            predictor_code=predictor_code,
+            code=code,
             datasource_id=datasource_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
@@ -337,7 +341,7 @@ class ModelController():
             db.session.commit()
             return True
 
-    def fit_predictor(self, name: str, from_data: dict, datasource_id: int, company_id: int):
+    def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int):
         create_process_mark('learn')
         print('fit predicrtor start')
         """Train an existing predictor"""
@@ -353,6 +357,8 @@ class ModelController():
 
         p = LearnProcess(predictor_record.id, df)
         p.start()
+        if join_learn_process:
+            p.join()
 
 '''
 Notes: Remove ray from actors are getting stuck

@@ -59,7 +59,7 @@ def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
 
     dbw = DatabaseWrapper(predictor_record.company_id)
     mi = ModelInterfaceWrapper(ModelInterface(), predictor_record.company_id)
-    dbw.register_predictors([mi.get_model_data(predictor_record.name, predictor_record.company_id)])
+    dbw.register_predictors([mi.get_model_data(predictor_record.name)])
     delete_process_mark('learn')
 
 

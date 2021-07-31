@@ -54,8 +54,8 @@ def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
         fs_store.put(save_name, save_name, config['paths']['predictors'])
 
         predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
-        predictor_record.data['status'] = 'complete' # type: ignore
-        predictor_record.data['name'] = name
+        predictor_record.data['status'] = 'complete'  # type: ignore
+        predictor_record.data['name'] = predictor_record.name  # type: ignore
         predictor_record.dtype_dict = predictor.dtype_dict  # type: ignore
         session.commit()
 
@@ -66,7 +66,7 @@ def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
     except Exception as e:
         predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
         assert predictor_record is not None
-        predictor_record.data = {'status': 'training', 'name': name}
+        predictor_record.data = {'status': 'error', 'name': predictor_record.name}
         session.commit()
         raise e
 

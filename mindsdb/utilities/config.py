@@ -74,6 +74,7 @@ class Config():
         }
 
         self._default_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']
+        self._default_config['paths']['storage'] = os.path.join(self._default_config['paths']['root'], 'datasources')
         self._default_config['paths']['datasources'] = os.path.join(self._default_config['paths']['root'], 'datasources')
         self._default_config['paths']['predictors'] = os.path.join(self._default_config['paths']['root'], 'predictors')
         self._default_config['paths']['static'] = os.path.join(self._default_config['paths']['root'], 'static')

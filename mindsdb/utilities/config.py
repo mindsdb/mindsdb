@@ -74,14 +74,23 @@ class Config():
         }
 
         self._default_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']
+
         self._default_config['paths']['storage'] = os.path.join(self._default_config['paths']['root'], 'datasources')
+
         self._default_config['paths']['datasources'] = os.path.join(self._default_config['paths']['root'], 'datasources')
+
         self._default_config['paths']['predictors'] = os.path.join(self._default_config['paths']['root'], 'predictors')
+
         self._default_config['paths']['static'] = os.path.join(self._default_config['paths']['root'], 'static')
+
         self._default_config['paths']['tmp'] = os.path.join(self._default_config['paths']['root'], 'tmp')
+
         self._default_config['paths']['log'] = os.path.join(self._default_config['paths']['root'], 'log')
+
         self._default_config['paths']['storage_dir'] = self._default_config['paths']['root']
+
         self._default_config['paths']['cache'] = os.path.join(self._default_config['paths']['root'], 'cache')
+
         self._default_config['storage_dir'] = self._default_config['paths']['root']
 
         for path_name in self._default_config['paths']:

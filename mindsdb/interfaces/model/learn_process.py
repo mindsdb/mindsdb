@@ -46,11 +46,11 @@ def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
 
         session.refresh(predictor_record)
 
-        save_name = f'{predictor_record.company_id}@@@@@{predictor_record.name}'
-        pickle_path = os.path.join(config['paths']['predictors'], save_name)
+        fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
+        pickle_path = os.path.join(config['paths']['predictors'], fs_name)
         predictor.save(pickle_path)
 
-        fs_store.put(save_name, save_name, config['paths']['predictors'])
+        fs_store.put(fs_name, fs_name, config['paths']['predictors'])
 
         predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
         predictor_record.data['status'] = 'complete'  # type: ignore

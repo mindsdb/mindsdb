@@ -160,20 +160,6 @@ class ModelController():
         else:
             return predictions
 
-        if backwards_compatible:
-            bc_predictions = []
-            for _, row in predictions.iterrows():
-                bc_predictions.append({
-                    '{}_confidence'.format(target): row['confidence'],
-                    '{}_lower_bound'.format(target): row['lower'],
-                    '{}_upper_bound'.format(target): row['upper'],
-                    '{}_anomaly'.format(target): row['anomaly'],
-                    '{}'.format(target): row['prediction'],
-                })
-            return bc_predictions
-        else:
-            return [dict(row) for _, row in predictions.iterrows()]
-
     def analyse_dataset(self, ds: dict, company_id: int) -> lightwood.DataAnalysis:
         create_process_mark('analyse')
         ds_cls = getattr(mindsdb_datasources, ds['class'])

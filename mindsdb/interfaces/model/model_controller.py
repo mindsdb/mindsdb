@@ -1,19 +1,15 @@
 from copy import deepcopy
 from mindsdb.interfaces.model.learn_process import LearnProcess
-from lightwood.api import predictor
-from mindsdb.api.http.namespaces.predictor import Predictor
 from typing import Union, Dict, Any
 from dateutil.parser import parse as parse_datetime
 import psutil
 import datetime
 import time
 import os
-import shutil
 from contextlib import contextmanager
 from packaging import version
 import pandas as pd
 import lightwood
-import autopep8
 import mindsdb_datasources
 from mindsdb import __version__ as mindsdb_version
 from lightwood import __version__ as lightwood_version

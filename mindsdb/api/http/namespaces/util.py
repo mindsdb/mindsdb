@@ -82,5 +82,5 @@ class ValidateJsonAI(Resource):
     def post(self):
         json_ai = request.json.get('json_ai')
         if json_ai is None:
-            return abort(400, 'Please provide json_ai')
+            return 'Please provide json_ai', 400
         return {'code': request.model_interface.code_from_json_ai(json_ai)}

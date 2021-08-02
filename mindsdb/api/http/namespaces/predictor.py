@@ -175,25 +175,25 @@ class PredictorDownload(Resource):
         return f'Renamed model to {new_name}', 200
 
 
-@ns_conf.route('/<name>/generate')
+@ns_conf.route('/generate/<name>')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
 class PredictorGenerate(Resource):
     def put(self, name):
-        for param in ['data_source_name', 'problem_definition']:
-            if param not in request.json:
-                return abort(400, 'Please provide {}'.format(param))
+        problem_definition = request.json['problem_definition']
+        datasource_name = request.json['data_source_name']
 
         from_data = request.default_store.get_datasource_obj(
-            request.json['data_source_name'],
+            datasource_name,
             raw=True
         )
+        datasource = request.default_store.get_datasource(datasource_name)
 
         request.model_interface.generate_predictor(
             name,
             from_data,
-            request.default_store.get_datasource(request.json['data_source_name'])['id'],
-            request.json['problem_definition']
+            datasource['id'],
+            problem_definition
         )
 
         return '', 200
@@ -204,10 +204,6 @@ class PredictorGenerate(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorEditJsonAI(Resource):
     def put(self, name):
-        for param in ['json_ai']:
-            if param not in request.json:
-                return abort(400, 'Please provide {}'.format(param))
-
         request.model_interface.edit_json_ai(name, request.json['json_ai'])
         return '', 200
 
@@ -217,10 +213,6 @@ class PredictorEditJsonAI(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorEditCode(Resource):
     def put(self, name):
-        for param in ['code']:
-            if param not in request.json:
-                return abort(400, 'Please provide {}'.format(param))
-
         request.model_interface.edit_code(name, request.json['code'])
         return '', 200
     

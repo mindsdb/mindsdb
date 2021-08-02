@@ -321,34 +321,26 @@ class ModelController():
         db.session.add(db_p)
         db.session.commit()
         delete_process_mark('learn')
-        print('generate predicrtor end')
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
-        """Edit an existing predictor's json_ai"""
-
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
 
-        try:
-            json_ai: lightwood.JsonAI = lightwood.JsonAI.from_dict(json_ai)  # type: ignore
-            code = lightwood.code_from_json_ai(json_ai)
-        except Exception as e:
-            print(f'Failed to generate predictor from json_ai: {e}')
-            return False
-        else:
-            predictor_record.code = code
-            predictor_record.code = json_ai
-            db.session.commit()
-            return True
+        json_ai = lightwood.JsonAI.from_dict(json_ai)
+
+        predictor_record.json_ai = json_ai
+        predictor_record.code = lightwood.code_from_json_ai(json_ai)    
+        db.session.commit()
 
     def edit_code(self, name: str, code: str, company_id=None):
         """Edit an existing predictor's code"""
+        if self.config.get('cloud', False):
+            raise Exception('Code editing prohibited on cloud')
 
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
         
         try:
-            # TODO: make this safe from code injection (on lightwood side)
             lightwood.predictor_from_code(code)
         except Exception as e:
             print(f'Failed to generate predictor from json_ai: {e}')

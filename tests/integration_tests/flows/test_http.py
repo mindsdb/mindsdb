@@ -234,26 +234,71 @@ class HTTPTest(unittest.TestCase):
         )
         r.raise_for_status()
 
-    # def test_edit_json_ai(self):
-    #     r = requests.put(
-    #         f'{root}/predictors/lwr_{pred_name}/edit/json_ai',
-    #         json={'json_ai': '?'}
-    #     )
-    #     r.raise_for_status()
+    def test_94_edit_json_ai(self):
+        # Get the json ai
+        predictor_data = requests.get(f'{root}/predictors/lwr_{pred_name}')
 
-    # def test_edit_code(self):
-    #     r = requests.put(
-    #         f'{root}/predictors/lwr_{pred_name}/edit/code',
-    #         json={'code': '?'}
-    #     )
-    #     r.raise_for_status()
+        # Edit it
+        json_ai = predictor_data['json_ai']
+        json_ai['problem_definition']
+        models = json_ai['rental_price']['models']
+        keep_only = [x for x in models if x['module'] != 'Regression']
+        json_ai['rental_price']['models'] = keep_only
 
-    def test_94_train_predictor(self):
+        # Upload it
+        r = requests.put(
+            f'{root}/predictors/lwr_{pred_name}/edit/json_ai',
+            json={'json_ai': json_ai}
+        )
+        r.raise_for_status()
+
+    def test_95_validate_json_ai(self):
+        # Get the json ai
+        predictor_data = requests.get(f'{root}/predictors/lwr_{pred_name}')
+
+        # Edit it
+        json_ai = predictor_data['json_ai']
+
+        # Upload it
+        r = requests.post(
+            f'{root}/util/validate_json_ai',
+            json={'json_ai': json_ai}
+        )
+        r.raise_for_status()
+
+    def test_96_edit_code(self):
+        # Make sure json ai edits went through
+        predictor_data = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        assert 'Regression' not in predictor_data.code
+
+        # Change the code
+        new_code = predictor_data.code
+        new_code = new_code.split("""self.mode = 'predict'""")[0]
+        new_code += """\n        return pd.DataFrame([{'rental_price': 5555555}, {'rental_price': 8888888}])"""
+
+        r = requests.put(
+            f'{root}/predictors/lwr_{pred_name}/edit/code',
+            json={'code': code}
+        )
+        r.raise_for_status()
+
+    def test_97_train_predictor(self):
         r = requests.put(
             f'{root}/predictors/lwr_{pred_name}/train',
             json={'data_source_name': ds_name}
         )
         r.raise_for_status()
+    
+    def test_98_predict_modified_predictor(self):
+        params = {
+            'when': {'sqft': 500}
+        }
+        url = f'{root}/predictors/{pred_name}/predict'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+        pvs = res.json()
+        assert pvs[0]['rental_price']['predicted_value'] == 5555555
+        assert pvs[1]['rental_price']['predicted_value'] == 8888888
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

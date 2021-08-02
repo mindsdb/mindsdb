@@ -125,9 +125,9 @@ class ModelController():
                 when_data = [when_data]
             df = pd.DataFrame(when_data)
 
-        predictor = self.predictor_cache[name]['predictor']
-        predictions = predictor.predict(df)
-        del self.predictor_cache[name]
+        self.predictor_cache[name]['predictor'].predict(df)
+        # Bellow is useful for debugging caching and storage issues
+        # del self.predictor_cache[name]
 
         delete_process_mark('predict')
 
@@ -136,18 +136,20 @@ class ModelController():
         if pred_format in ('explain', 'dict', 'dict&explain'):
             explain_arr = []
             dict_arr = []
-            for _, row in predictions.iterrows():
+            for i, row in predictions.iterrows():
                 explain_arr.append({
-                    '{}'.format(target): row['prediction'],
-                    '{}_confidence'.format(target): row.get('confidence', None),
-                    '{}_lower_bound'.format(target): row.get('lower', None),
-                    '{}_upper_bound'.format(target): row.get('upper', None),
-                    '{}_anomaly'.format(target): row.get('anomaly', None),
-                    '{}'.format(target): row.get('prediction', None),
-                })
-                dict_arr.append({
-                    '{}'.format(target): row['prediction'],
-                })
+                    target: {
+                        'predicted_value': row['prediction'],
+                        'confidence': row.get('confidence', None),
+                        'confidence_lower_bound': row.get('lower', None),
+                        'confidence_upper_bound'.format(target): row.get('upper', None),
+                        'anomaly'.format(target): row.get('anomaly', None)
+                }})
+
+                td = {'predicted_value': row['prediction']}
+                for col in df.columns:
+                    td[col] = df.iloc[i][col]
+                dict_arr.append({target: td})
             if pred_format == 'explain':
                 return explain_arr
             elif pred_format == 'dict':

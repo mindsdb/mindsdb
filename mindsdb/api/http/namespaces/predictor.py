@@ -1,11 +1,7 @@
-import os
 import time
-
 from dateutil.parser import parse as parse_datetime
 from flask import request
 from flask_restx import Resource, abort
-from flask import current_app as ca
-
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
@@ -27,10 +23,7 @@ class PredictorList(Resource):
 class Predictor(Resource):
     @ns_conf.doc('get_predictor')
     def get(self, name):
-        try:
-            model = request.model_interface.get_model_data(name)
-        except Exception as e:
-            abort(404, "")
+        model = request.model_interface.get_model_data(name)
 
         for k in ['train_end_at', 'updated_at', 'created_at']:
             if k in model and model[k] is not None:
@@ -42,7 +35,6 @@ class Predictor(Resource):
     def delete(self, name):
         '''Remove predictor'''
         request.model_interface.delete_model(name)
-
         return '', 200
 
     @ns_conf.doc('put_predictor', params=put_predictor_params)
@@ -162,7 +154,6 @@ class PredictorPredictFromDataSource(Resource):
 class PredictorDownload(Resource):
     @ns_conf.doc('get_predictor_download')
     def get(self, name):
-        '''Export predictor to file'''
         try:
             new_name = request.args.get('new_name')
             request.model_interface.rename_model(name, new_name)

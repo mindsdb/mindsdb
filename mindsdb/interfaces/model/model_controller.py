@@ -95,7 +95,7 @@ class ModelController():
         # TODO: Should we support kwargs['join_learn_process'](?)
         self.fit_predictor(name, from_data, join_learn_process, company_id)
 
-    def predict(self, name: str, when_data: dict, pred_format: str, company_id: int):
+    def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
         create_process_mark('predict')
         original_name = name
         name = f'{company_id}@@@@@{name}'

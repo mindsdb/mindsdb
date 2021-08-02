@@ -146,7 +146,7 @@ class Datasource(Resource):
 def analyzing_thread(name, default_store):
     try:
         from mindsdb.interfaces.storage.db import session
-        analysis = default_store.start_analysis(name)
+        default_store.start_analysis(name)
         session.close()
     except Exception as e:
         log.error(e)

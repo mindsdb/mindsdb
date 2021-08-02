@@ -121,11 +121,9 @@ class ModelController():
             ds_cls = getattr(mindsdb_datasources, when_data['class'])
             df = ds_cls(*when_data['args'], **when_data['kwargs']).df
         else:
-            # @TODO: Replace with Datasource
-            try:
-                df = pd.DataFrame(when_data)
-            except Exception:
-                df = when_data
+            if isinstance(when_data, dict):
+                when_data = [when_data]
+            df = pd.DataFrame(when_data)
 
         predictor = self.predictor_cache[name]['predictor']
         predictions = predictor.predict(df)

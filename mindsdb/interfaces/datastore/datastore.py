@@ -163,7 +163,6 @@ class DataStore():
             )
             session.add(datasource_record)
             session.commit()
-            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
 
             ds_meta_dir = os.path.join(self.dir, f'{company_id}@@@@@{name}')
             os.mkdir(ds_meta_dir)

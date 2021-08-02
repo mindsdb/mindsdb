@@ -110,7 +110,6 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
     create_process_mark('learn')
     
     p = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
-    p.additional_datasource_ids.append(datasource_id)
     p.data['status'] = 'training'
     session.commit()
 

@@ -44,8 +44,7 @@ def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)
 
-        predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
-        assert predictor_record is not None
+        session.refresh(predictor_record)
 
         save_name = f'{predictor_record.company_id}@@@@@{predictor_record.name}'
         pickle_path = os.path.join(config['paths']['predictors'], save_name)
@@ -64,8 +63,7 @@ def run_learn(preidctor_id: int, df: pd.DataFrame) -> None:
         dbw.register_predictors([mi.get_model_data(predictor_record.name)])
         delete_process_mark('learn')
     except Exception as e:
-        predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
-        assert predictor_record is not None
+        session.refresh(predictor_record)
         predictor_record.data = {'status': 'error', 'name': predictor_record.name}
         session.commit()
         raise e

@@ -138,11 +138,12 @@ class ModelController():
             dict_arr = []
             for _, row in predictions.iterrows():
                 explain_arr.append({
-                    '{}_confidence'.format(target): row['confidence'],
-                    '{}_lower_bound'.format(target): row['lower'],
-                    '{}_upper_bound'.format(target): row['upper'],
-                    '{}_anomaly'.format(target): row['anomaly'],
                     '{}'.format(target): row['prediction'],
+                    '{}_confidence'.format(target): row.get('confidence', None),
+                    '{}_lower_bound'.format(target): row.get('lower', None),
+                    '{}_upper_bound'.format(target): row.get('upper', None),
+                    '{}_anomaly'.format(target): row.get('anomaly', None),
+                    '{}'.format(target): row.get('prediction', None),
                 })
                 dict_arr.append({
                     '{}'.format(target): row['prediction'],
@@ -285,7 +286,6 @@ class ModelController():
         return 'Updated successfully'
 
     def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, company_id=None):
-        print('generate predicrtor start')
         create_process_mark('learn')
         if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
             raise Exception('Predictor {} already exists'.format(name))
@@ -302,7 +302,6 @@ class ModelController():
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
 
-        print(problem_definition, df)
         json_ai = lightwood.json_ai_from_problem(df, problem_definition)
         code = lightwood.code_from_json_ai(json_ai)
 
@@ -360,7 +359,6 @@ class ModelController():
 
     def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int):
         create_process_mark('learn')
-        print('fit predicrtor start')
         """Train an existing predictor"""
 
         ds_cls = getattr(mindsdb_datasources, from_data['class'])

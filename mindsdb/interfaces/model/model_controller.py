@@ -113,7 +113,7 @@ class ModelController():
                 self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
                     'predictor':
-                    lightwood.predictor_from_state(os.path.join(self.config['paths']['predictors'], fs_name)),
+                    lightwood.predictor_from_state(os.path.join(self.config['paths']['predictors'], fs_name), predictor_record.code),
                     'created': datetime.datetime.now()
                 }
 

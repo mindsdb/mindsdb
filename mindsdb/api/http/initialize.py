@@ -8,6 +8,7 @@ from zipfile import ZipFile
 from pathlib import Path
 import traceback
 from datetime import datetime, date, timedelta
+import tempfile
 # import concurrent.futures
 
 from flask import Flask, url_for, make_response
@@ -54,14 +55,8 @@ def custom_output_json(data, code, headers=None):
     return resp
 
 
-def initialize_static(config):
-    ''' Update Scout files basing on compatible-config.json content.
-        Files will be downloaded and updated if new version of GUI > current.
-        Current GUI version stored in static/version.txt.
-    '''
+def get_last_compatible_gui_version() -> LooseVersion:
     log = get_log('http')
-    static_path = Path(config['paths']['static'])
-    static_path.mkdir(parents=True, exist_ok=True)
 
     try:
         res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json')
@@ -118,104 +113,139 @@ def initialize_static(config):
     except Exception as e:
         log.error(f'Error in compatible-config.json structure: {e}')
         return False
+    return gui_version_lv
+
+
+def get_current_gui_version() -> LooseVersion:
+    config = Config()
+    static_path = Path(config['paths']['static'])
+    version_txt_path = static_path.joinpath('version.txt')
 
     current_gui_version = None
-
-    version_txt_path = static_path.joinpath('version.txt')
     if version_txt_path.is_file():
         with open(version_txt_path, 'rt') as f:
             current_gui_version = f.readline()
-    if current_gui_version is not None:
-        current_gui_lv = LooseVersion(current_gui_version)
-        if current_gui_lv >= gui_version_lv:
-            return True
 
-    log.info(f'New version of GUI available ({gui_version_lv.vstring}). Downloading...')
+    current_gui_lv = None if current_gui_version is None else LooseVersion(current_gui_version)
 
-    shutil.rmtree(static_path)
-    static_path.mkdir(parents=True, exist_ok=True)
+    return current_gui_lv
+
+
+def download_gui(destignation, version):
+    if isinstance(destignation, str):
+        destignation = Path(destignation)
+    log = get_log('http')
+    css_zip_path = str(destignation.joinpath('css.zip'))
+    js_zip_path = str(destignation.joinpath('js.zip'))
+    media_zip_path = str(destignation.joinpath('media.zip'))
+    bucket = "https://mindsdb-web-builds.s3.amazonaws.com/"
+
+    resources = [{
+        'url': bucket + 'css-V' + version + '.zip',
+        'path': css_zip_path
+    }, {
+        'url': bucket + 'js-V' + version + '.zip',
+        'path': js_zip_path
+    }, {
+        'url': bucket + 'indexV' + version + '.html',
+        'path': str(destignation.joinpath('index.html'))
+    }, {
+        'url': bucket + 'favicon.ico',
+        'path': str(destignation.joinpath('favicon.ico'))
+    }, {
+        'url': bucket + 'media.zip',
+        'path': media_zip_path
+    }]
+
+    def get_resources(resource):
+        response = requests.get(resource['url'])
+        if response.status_code != requests.status_codes.codes.ok:
+            raise Exception(f"Error {response.status_code} GET {resource['url']}")
+        open(resource['path'], 'wb').write(response.content)
 
     try:
-        css_zip_path = str(static_path.joinpath('css.zip'))
-        js_zip_path = str(static_path.joinpath('js.zip'))
-        media_zip_path = str(static_path.joinpath('media.zip'))
-        bucket = "https://mindsdb-web-builds.s3.amazonaws.com/"
-
-        gui_version = gui_version_lv.vstring
-
-        resources = [
-            {
-                'url': bucket + 'css-V' + gui_version + '.zip',
-                'path': css_zip_path
-            }, {
-                'url': bucket + 'js-V' + gui_version + '.zip',
-                'path': js_zip_path
-            }, {
-                'url': bucket + 'indexV' + gui_version + '.html',
-                'path': str(static_path.joinpath('index.html'))
-            }, {
-                'url': bucket + 'favicon.ico',
-                'path': str(static_path.joinpath('favicon.ico'))
-            }, {
-                'url': bucket + 'media.zip',
-                'path': media_zip_path
-            }
-        ]
-
-        def get_resources(resource):
-            try:
-                response = requests.get(resource['url'])
-                if response.status_code != requests.status_codes.codes.ok:
-                    return Exception(f"Error {response.status_code} GET {resource['url']}")
-                open(resource['path'], 'wb').write(response.content)
-            except Exception as e:
-                return e
-            return None
-
         for r in resources:
             get_resources(r)
-
-        '''
-        # to make downloading faster download each resource in a separate thread
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            future_to_url = {executor.submit(get_resources, r): r for r in resources}
-            for future in concurrent.futures.as_completed(future_to_url):
-                res = future.result()
-                if res is not None:
-                    raise res
-        '''
-
     except Exception as e:
         log.error(f'Error during downloading files from s3: {e}')
-        session.close()
         return False
 
-    static_folder = static_path.joinpath('static')
-    static_folder.mkdir(parents=True, exist_ok=True)
-
-    # unzip process
     for zip_path, dir_name in [[js_zip_path, 'js'], [css_zip_path, 'css']]:
-        temp_dir = static_path.joinpath(f'temp_{dir_name}')
+        temp_dir = destignation.joinpath(f'temp_{dir_name}')
         temp_dir.mkdir(mode=0o777, exist_ok=True, parents=True)
         ZipFile(zip_path).extractall(temp_dir)
-        files_path = static_path.joinpath('static', dir_name)
+        files_path = destignation.joinpath('static', dir_name)
         if temp_dir.joinpath('build', 'static', dir_name).is_dir():
             shutil.move(temp_dir.joinpath('build', 'static', dir_name), files_path)
             shutil.rmtree(temp_dir)
         else:
             shutil.move(temp_dir, files_path)
 
+    static_folder = Path(destignation).joinpath('static')
+    static_folder.mkdir(parents=True, exist_ok=True)
     ZipFile(media_zip_path).extractall(static_folder)
 
     os.remove(js_zip_path)
     os.remove(css_zip_path)
     os.remove(media_zip_path)
 
+    version_txt_path = destignation.joinpath('version.txt')  # os.path.join(destignation, 'version.txt')
     with open(version_txt_path, 'wt') as f:
-        f.write(gui_version_lv.vstring)
+        f.write(version)
 
-    log.info(f'GUI version updated to {gui_version_lv.vstring}')
+    return True
+
+    '''
+    # to make downloading faster download each resource in a separate thread
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_url = {executor.submit(get_resources, r): r for r in resources}
+        for future in concurrent.futures.as_completed(future_to_url):
+            res = future.result()
+            if res is not None:
+                raise res
+    '''
+
+
+def initialize_static():
+    success = update_static()
     session.close()
+    return success
+
+
+def update_static():
+    ''' Update Scout files basing on compatible-config.json content.
+        Files will be downloaded and updated if new version of GUI > current.
+        Current GUI version stored in static/version.txt.
+    '''
+    config = Config()
+    log = get_log('http')
+    static_path = Path(config['paths']['static'])
+    # static_path.mkdir(parents=True, exist_ok=True)
+
+    last_gui_version_lv = get_last_compatible_gui_version()
+    current_gui_version_lv = get_current_gui_version()
+
+    if last_gui_version_lv is False:
+        return False
+
+    if current_gui_version_lv is not None:
+        if current_gui_version_lv >= last_gui_version_lv:
+            return True
+
+    log.info(f'New version of GUI available ({last_gui_version_lv.vstring}). Downloading...')
+
+    temp_dir = tempfile.mkdtemp(prefix='mindsdb_gui_files_')
+    success = download_gui(temp_dir, last_gui_version_lv.vstring)
+    if success is False:
+        shutil.rmtree(temp_dir)
+        return False
+
+    temp_dir_for_rm = tempfile.mkdtemp(prefix='mindsdb_gui_files_')
+    shutil.move(str(static_path), temp_dir_for_rm)
+    shutil.move(temp_dir, str(static_path))
+    shutil.rmtree(temp_dir_for_rm)
+
+    log.info(f'GUI version updated to {last_gui_version_lv.vstring}')
     return True
 
 

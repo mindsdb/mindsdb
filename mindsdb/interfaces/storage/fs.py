@@ -4,14 +4,14 @@ from mindsdb.utilities.config import Config
 
 
 def copy(src, dst):
-    shutil.rmtree(dst, ignore_errors=True)
-    try:
-        os.remove(dst)
-    except Exception:
-        pass
     if os.path.isdir(src):
+        shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(src, dst)
     else:
+        try:
+            os.remove(dst)
+        except Exception:
+            pass
         shutil.copy2(src, dst)
 
 try:

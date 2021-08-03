@@ -238,6 +238,7 @@ class HTTPTest(unittest.TestCase):
         # Get the json ai
         resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
         predictor_data = resp.json()
+
         # Edit it
         json_ai = predictor_data['json_ai']
         json_ai['problem_definition']
@@ -254,15 +255,13 @@ class HTTPTest(unittest.TestCase):
 
     def test_95_validate_json_ai(self):
         # Get the json ai
-        predictor_data = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        predictor_data = resp.json()
 
-        # Edit it
-        json_ai = predictor_data['json_ai']
-
-        # Upload it
+        # Check it
         r = requests.post(
             f'{root}/util/validate_json_ai',
-            json={'json_ai': json_ai}
+            json={'json_ai': predictor_data['json_ai']}
         )
         r.raise_for_status()
 

@@ -326,16 +326,11 @@ class ModelController():
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
         
-        try:
-            lightwood.predictor_from_code(code)
-        except Exception as e:
-            print(f'Failed to generate predictor from json_ai: {e}')
-            return False
-        else:
-            predictor_record.code = code
-            predictor_record.json_ai = None
-            db.session.commit()
-            return True
+        lightwood.predictor_from_code(code)
+        predictor_record.code = code
+        predictor_record.json_ai = None
+        print('New code for predictor: ', predictor_record.code)
+        db.session.commit()
 
     def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int):
         create_process_mark('learn')

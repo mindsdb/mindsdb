@@ -274,7 +274,7 @@ class HTTPTest(unittest.TestCase):
         # Change the code
         new_code = predictor_data['code']
         new_code = new_code.split("""self.mode = 'predict'""")[0]
-        new_code += """\n        return pd.DataFrame([{'rental_price': 5555555}, {'rental_price': 8888888}])"""
+        new_code += """\n        return pd.DataFrame([{'rental_price': 5555555}])"""
 
         r = requests.put(
             f'{root}/predictors/lwr_{pred_name}/edit/code',
@@ -298,7 +298,6 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         pvs = res.json()
         assert pvs[0]['rental_price']['predicted_value'] == 5555555
-        assert pvs[1]['rental_price']['predicted_value'] == 8888888
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

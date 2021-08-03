@@ -5,6 +5,10 @@ from mindsdb.utilities.config import Config
 
 def copy(src, dst):
     shutil.rmtree(dst, ignore_errors=True)
+    try:
+        os.remove(dst)
+    except Exception:
+        pass
     if os.path.isdir(src):
         shutil.copytree(src, dst)
     else:

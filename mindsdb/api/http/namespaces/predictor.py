@@ -219,5 +219,5 @@ class PredictorTrain(Resource):
             raw=True
         )
 
-        request.model_interface.fit_predictor(name, from_data)
+        request.model_interface.fit_predictor(name, from_data, False)
         return '', 200

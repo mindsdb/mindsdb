@@ -222,10 +222,16 @@ class MindsDBDataNode(DataNode):
         pred_dicts, explanations = self.model_interface.predict(table, where_data, 'dict&explain')
         # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
         if isinstance(where_data, list):
-            for i in range(len(pred_dicts)):
-                for col in where_data[i]:
-                    if col not in predicted_columns:
-                        pred_dicts[i][col] = where_data[i][col]
+            data = []
+            for row in pred_dicts:
+                new_row = {}
+                for key in row:
+                    new_row.update(row[key])
+                    predicted_value = new_row['predicted_value']
+                    del new_row['predicted_value']
+                    new_row[key] = predicted_value
+                data.append(new_row)
+            pred_dicts = data
 
         if isinstance(where_data, dict):
             for col in where_data:

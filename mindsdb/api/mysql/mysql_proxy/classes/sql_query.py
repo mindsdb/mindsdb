@@ -548,7 +548,7 @@ class SQLQuery():
                     self.ai_table = AITableStore()
 
                 if False and len(tables) == 1 and (
-                        tables[0].lower() in ['mindsdb.predictors', 'mindsdb.commands'] \
+                        tables[0].lower() in ['mindsdb.predictors', 'mindsdb.commands']
                         or db == 'mindsdb' and tables[0].lower() in ['predictors', 'commands']
                     ) is False and self.ai_table.is_ai_table(tables[0]) is False:
                     success = True

@@ -114,11 +114,19 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         for model_meta in model_data_arr:
             name = self._escape_table_name(model_meta['name'])
 
-            columns_sql = ','.join(self._to_clickhouse_table(model_meta['dtype_dict'], model_meta['predict'], model_meta['columns']))
+            predict = model_meta['predict']
+            if not isinstance(predict, list):
+                predict = [predict]
+
+            columns_sql = ','.join(self._to_clickhouse_table(
+                model_meta['dtype_dict'],
+                predict,
+                list(model_meta['dtype_dict'].keys())
+            ))
             columns_sql += ',`when_data` Nullable(String)'
             columns_sql += ',`select_data_query` Nullable(String)'
             columns_sql += ',`external_datasource` Nullable(String)'
-            for col in model_meta['predict']:
+            for col in predict:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
 
                 if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):

@@ -63,9 +63,12 @@ class MindsDBDataNode(DataNode):
     def _get_model_columns(self, table_name):
         model = self.model_interface.get_model_data(name=table_name)
         columns = []
-        columns += model['columns']
-        columns += [f'{x}_original' for x in model['predict']]
-        for col in model['predict']:
+        columns += list(model['dtype_dict'].keys())
+        predict = model['predict']
+        if not isinstance(predict, list):
+            predict = [predict]
+        columns += [f'{x}_original' for x in predict]
+        for col in predict:
             if model['dtype_dict'][col] in (dtype.integer, dtype.float):
                 columns += [f"{col}_min", f"{col}_max"]
             columns += [f"{col}_confidence"]
@@ -203,6 +206,8 @@ class MindsDBDataNode(DataNode):
         model = self.model_interface.get_model_data(name=table)
 
         predicted_columns = model['predict']
+        if not isinstance(predicted_columns, list):
+            predicted_columns = [predicted_columns]
 
         original_target_values = {}
         for col in predicted_columns:
@@ -239,7 +244,6 @@ class MindsDBDataNode(DataNode):
             data.append({key: el[key] for key in keys})
             explains.append(explanations[i])
 
-
         for i, row in enumerate(data):
             cast_row_types(row, model['dtype_dict'])
 
@@ -255,7 +259,7 @@ class MindsDBDataNode(DataNode):
                 row[key + '_confidence'] = explanation[key]['confidence']
                 row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
             for key in min_max_keys:
-                row[key + '_min'] = min(explanation[key]['confidence_interval'])
-                row[key + '_max'] = max(explanation[key]['confidence_interval'])
+                row[key + '_min'] = explanation[key]['confidence_lower_bound']
+                row[key + '_max'] = explanation[key]['confidence_upper_bound']
 
             return data

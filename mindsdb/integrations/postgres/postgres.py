@@ -161,10 +161,17 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
-            columns_sql = ','.join(self._to_postgres_table(model_meta['dtype_dict'], model_meta['predict'], model_meta['columns']))
+            predict = model_meta['predict']
+            if not isinstance(predict, list):
+                predict = [predict]
+            columns_sql = ','.join(self._to_postgres_table(
+                model_meta['dtype_dict'],
+                predict,
+                list(model_meta['dtype_dict'].keys())
+            ))
             columns_sql += ',"select_data_query" text'
             columns_sql += ',"external_datasource" text'
-            for col in model_meta['predict']:
+            for col in predict:
                 columns_sql += f',"{col}_confidence" float8'
                 if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns_sql += f',"{col}_min" float8'

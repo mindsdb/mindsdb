@@ -29,9 +29,12 @@ class Responce(Responder):
             model = mindsdb_env['mindsdb_native'].get_model_data(name=query['find'])
 
             columns = []
-            columns += model['columns']
-            columns += [f'{x}_original' for x in model['predict']]
-            for col in model['predict']:
+            columns += list(model['dtype_dict'].keys())
+            predict = model['predict']
+            if not isinstance(predict, list):
+                predict = [predict]
+            columns += [f'{x}_original' for x in predict]
+            for col in predict:
                 if model['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns += [f"{col}_min", f"{col}_max"]
                 columns += [f"{col}_confidence"]
@@ -87,6 +90,8 @@ class Responce(Responder):
             pred_dict_arr, explanations = prediction
 
             predicted_columns = model['predict']
+            if not isinstance(predicted_columns, list):
+                predicted_columns = [predicted_columns]
 
             data = []
             keys = [k for k in pred_dict_arr[0] if k in columns]
@@ -105,8 +110,8 @@ class Responce(Responder):
                     row[key + '_confidence'] = explanation[key]['confidence']
                     row[key + '_explain'] = explanation[key]
                 for key in min_max_keys:
-                    row[key + '_min'] = min(explanation[key]['confidence_interval'])
-                    row[key + '_max'] = max(explanation[key]['confidence_interval'])
+                    row[key + '_min'] = explanation[key]['confidence_lower_bound']
+                    row[key + '_max'] = explanation[key]['confidence_upper_bound']
                 data.append(row)
 
         else:

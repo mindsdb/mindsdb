@@ -219,5 +219,5 @@ class PredictorTrain(Resource):
             raw=True
         )
 
-        request.model_interface.fit_predictor(name, from_data, False)
+        request.model_interface.fit_predictor(name, from_data, request.json.get('join_learn_process', False))
         return '', 200

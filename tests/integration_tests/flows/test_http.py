@@ -285,7 +285,7 @@ class HTTPTest(unittest.TestCase):
     def test_97_train_predictor(self):
         r = requests.put(
             f'{root}/predictors/lwr_{pred_name}/train',
-            json={'data_source_name': ds_name}
+            json={'data_source_name': ds_name, 'join_learn_process': True}
         )
         r.raise_for_status()
     

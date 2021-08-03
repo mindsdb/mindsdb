@@ -15,7 +15,7 @@ from mindsdb.utilities.telemetry import (
     telemetry_file_exists,
     inject_telemetry_to_static
 )
-
+from mindsdb.api.http.initialize import update_static
 
 
 @ns_conf.route('/ping')
@@ -75,4 +75,12 @@ class Telemetry(Resource):
         else:
             disable_telemetry(ca.config_obj['storage_dir'])
         inject_telemetry_to_static(ca.config_obj.paths['static'])
+        return '', 200
+
+
+@ns_conf.route('/update-gui')
+class UpdateGui(Resource):
+    @ns_conf.doc('get_update_gui')
+    def get(self):
+        update_static()
         return '', 200

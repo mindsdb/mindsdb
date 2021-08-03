@@ -236,8 +236,8 @@ class HTTPTest(unittest.TestCase):
 
     def test_94_edit_json_ai(self):
         # Get the json ai
-        predictor_data = requests.get(f'{root}/predictors/lwr_{pred_name}')
-
+        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        predictor_data = resp.json()
         # Edit it
         json_ai = predictor_data['json_ai']
         json_ai['problem_definition']

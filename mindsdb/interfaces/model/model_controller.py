@@ -309,11 +309,15 @@ class ModelController():
         assert predictor_record is not None
 
         json_ai = lightwood.JsonAI.from_dict(json_ai)
-
-        predictor_record.json_ai = json_ai
-        predictor_record.code = lightwood.code_from_json_ai(json_ai)    
+        predictor_record.code = lightwood.code_from_json_ai(json_ai)   
+        predictor_record.json_ai = json_ai.to_dict()
         db.session.commit()
-
+    
+    def code_from_json_ai(self, json_ai: dict):
+        json_ai = lightwood.JsonAI.from_dict(json_ai)
+        code = lightwood.code_from_json_ai(json_ai)
+        return code
+          
     def edit_code(self, name: str, code: str, company_id=None):
         """Edit an existing predictor's code"""
         if self.config.get('cloud', False):

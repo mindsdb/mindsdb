@@ -274,7 +274,7 @@ class HTTPTest(unittest.TestCase):
         # Change the code
         new_code = predictor_data['code']
         new_code = new_code.split("""self.mode = 'predict'""")[0]
-        new_code += """\n        return pd.DataFrame([{'rental_price': 5555555}])"""
+        new_code += """\n        return pd.DataFrame([{'prediction': 5555555}])"""
 
         r = requests.put(
             f'{root}/predictors/lwr_{pred_name}/edit/code',

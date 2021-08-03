@@ -187,7 +187,7 @@ class PredictorGenerate(Resource):
         return '', 200
 
 
-@ns_conf.route('/<name>/edit/jsonai')
+@ns_conf.route('/<name>/edit/json_ai')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
 class PredictorEditJsonAI(Resource):

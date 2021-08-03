@@ -262,4 +262,4 @@ class MindsDBDataNode(DataNode):
                 row[key + '_min'] = explanation[key]['confidence_lower_bound']
                 row[key + '_max'] = explanation[key]['confidence_upper_bound']
 
-            return data
+        return data

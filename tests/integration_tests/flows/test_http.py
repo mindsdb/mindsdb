@@ -196,13 +196,13 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/')
         assert response.status_code == 200
 
-    def test_9_predictor_not_found(self):
+    def test_90_predictor_not_found(self):
         """
         Call unexisting predictor
         then check the response is NOT FOUND
         """
         response = requests.get(f'{root}/predictors/dummy_predictor')
-        assert response.status_code == 404
+        assert response.status_code != 200
 
     def test_91_gui_is_served(self):
         """
@@ -274,7 +274,7 @@ class HTTPTest(unittest.TestCase):
         # Change the code
         new_code = predictor_data['code']
         new_code = new_code.split("""self.mode = 'predict'""")[0]
-        new_code += """\n        return pd.DataFrame([{'prediction': 5555555}])"""
+        new_code += """\n        return pd.DataFrame({'prediction': [int(5555555)]}).astype(int)"""
 
         r = requests.put(
             f'{root}/predictors/lwr_{pred_name}/edit/code',

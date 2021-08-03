@@ -9,7 +9,7 @@ from pathlib import Path
 import traceback
 from datetime import datetime, date, timedelta
 # import concurrent.futures
-
+import numpy as np
 from flask import Flask, url_for, make_response
 from flask.json import dumps
 from flask_restx import Api
@@ -43,6 +43,8 @@ class CustomJSONEncoder(JSONEncoder):
             return obj.strftime("%Y-%m-%dT%H:%M:%S.%f")
         if isinstance(obj, timedelta):
             return str(obj)
+        if isinstance(obj, np.int_):
+            return int
 
         return JSONEncoder.default(self, obj)
 

@@ -129,7 +129,7 @@ class PredictorPredict(Resource):
             return 'No data provided for the predictions', 400
 
         results = request.model_interface.predict(name, when, 'explain')
-
+        print(results, type(results[0]['rental_price']['predicted_value']))
         return results
 
 

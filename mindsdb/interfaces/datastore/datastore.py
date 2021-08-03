@@ -163,7 +163,6 @@ class DataStore():
             )
             session.add(datasource_record)
             session.commit()
-            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
 
             ds_meta_dir = os.path.join(self.dir, f'{company_id}@@@@@{name}')
             os.mkdir(ds_meta_dir)
@@ -327,9 +326,20 @@ class DataStore():
                     'kwargs': {}
                 }
 
-            df = ds.df
+            if hasattr(ds, 'get_columns') and hasattr(ds, 'get_row_count'):
+                try:
+                    column_names = ds.get_columns()
+                    row_count = ds.get_row_count()
+                except Exception:
+                    df = ds.df
+                    column_names = list(df.keys())
+                    row_count = len(df)
+            else:
+                df = ds.df
+                column_names = list(df.keys())
+                row_count = len(df)
 
-            if '' in df.columns or len(df.columns) != len(set(df.columns)):
+            if '' in column_names or len(column_names) != len(set(column_names)):
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique non-empty name')
 
@@ -337,8 +347,8 @@ class DataStore():
             datasource_record.data = json.dumps({
                 'source_type': source_type,
                 'source': source,
-                'row_count': len(df),
-                'columns': [dict(name=x) for x in list(df.keys())]
+                'row_count': row_count,
+                'columns': [dict(name=x) for x in column_names]
             })
 
             self.fs_store.put(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)

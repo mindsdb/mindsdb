@@ -267,17 +267,18 @@ class HTTPTest(unittest.TestCase):
 
     def test_96_edit_code(self):
         # Make sure json ai edits went through
-        predictor_data = requests.get(f'{root}/predictors/lwr_{pred_name}')
-        assert 'Regression' not in predictor_data.code
+        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        predictor_data = resp.json()
+        assert 'Regression(' not in predictor_data['code']
 
         # Change the code
-        new_code = predictor_data.code
+        new_code = predictor_data['code']
         new_code = new_code.split("""self.mode = 'predict'""")[0]
         new_code += """\n        return pd.DataFrame([{'rental_price': 5555555}, {'rental_price': 8888888}])"""
 
         r = requests.put(
             f'{root}/predictors/lwr_{pred_name}/edit/code',
-            json={'code': code}
+            json={'code': new_code}
         )
         r.raise_for_status()
 

@@ -103,7 +103,7 @@ class DataStore():
         return {
             'data': data,
             'rowcount': len(ds),
-            'columns_names': filtered_ds.columns
+            'columns_names': list(data[0].keys())
         }
 
     def get_datasource(self, name, company_id=None):

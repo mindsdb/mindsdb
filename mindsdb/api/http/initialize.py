@@ -220,7 +220,6 @@ def update_static():
     config = Config()
     log = get_log('http')
     static_path = Path(config['paths']['static'])
-    # static_path.mkdir(parents=True, exist_ok=True)
 
     last_gui_version_lv = get_last_compatible_gui_version()
     current_gui_version_lv = get_current_gui_version()
@@ -241,8 +240,10 @@ def update_static():
         return False
 
     temp_dir_for_rm = tempfile.mkdtemp(prefix='mindsdb_gui_files_')
-    shutil.move(str(static_path), temp_dir_for_rm)
-    shutil.move(temp_dir, str(static_path))
+    shutil.rmtree(temp_dir_for_rm)
+    shutil.copytree(str(static_path), temp_dir_for_rm)
+    shutil.rmtree(str(static_path))
+    shutil.copytree(temp_dir, str(static_path))
     shutil.rmtree(temp_dir_for_rm)
 
     log.info(f'GUI version updated to {last_gui_version_lv.vstring}')

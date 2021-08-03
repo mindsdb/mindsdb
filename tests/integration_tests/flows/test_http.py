@@ -293,7 +293,7 @@ class HTTPTest(unittest.TestCase):
         params = {
             'when': {'sqft': 500}
         }
-        url = f'{root}/predictors/{pred_name}/predict'
+        url = f'{root}/predictors/lwr_{pred_name}/predict'
         res = requests.post(url, json=params)
         assert res.status_code == 200
         pvs = res.json()

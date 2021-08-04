@@ -14,7 +14,9 @@ from mindsdb.api.mongo.utilities import log
 
 from mindsdb.interfaces.storage.db import session as db_session
 from mindsdb.interfaces.datastore.datastore import DataStore
+from mindsdb.interfaces.datastore.datastore import DataStoreWrapper
 from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
 
 OP_REPLY = 1
 OP_UPDATE = 2001
@@ -291,9 +293,17 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self.mindsdb_env = {
             'config': config,
-            'data_store': DataStore(),
-            'mindsdb_native': ModelInterface()
+            'origin_data_store': DataStore(),
+            'origin_model_interface': ModelInterface()
         }
+        self.mindsdb_env['mindsdb_native'] = ModelInterfaceWrapper(
+            model_interface=self.mindsdb_env['origin_model_interface'],
+            company_id=None
+        )
+        self.mindsdb_env['data_store'] = DataStoreWrapper(
+            data_store=self.mindsdb_env['origin_data_store'],
+            company_id=None
+        )
 
         respondersCollection = RespondersCollection()
 

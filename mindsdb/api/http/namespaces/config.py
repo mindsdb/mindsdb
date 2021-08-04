@@ -85,7 +85,7 @@ class Integration(Resource):
         # params from FormData will be as text
         for key in ('publish', 'test', 'enabled'):
             if key in params:
-                if params[key].lower() in ('false', '0'):
+                if isinstance(params[key], str) and params[key].lower() in ('false', '0'):
                     params[key] = False
                 else:
                     params[key] = bool(params[key])

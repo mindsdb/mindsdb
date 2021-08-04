@@ -204,6 +204,7 @@ class MindsDBDataNode(DataNode):
             where_data = [new_where]
 
         model = self.model_interface.get_model_data(name=table)
+        columns = list(model['dtype_dict'].keys())
 
         predicted_columns = model['predict']
         if not isinstance(predicted_columns, list):
@@ -259,6 +260,10 @@ class MindsDBDataNode(DataNode):
 
             for k in original_target_values:
                 row[k] = original_target_values[k][i]
+
+            for column_name in columns:
+                if column_name not in row:
+                    row[column_name] = None
 
             explanation = explains[i]
             for key in predicted_columns:

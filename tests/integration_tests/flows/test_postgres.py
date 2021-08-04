@@ -26,12 +26,12 @@ DB_TYPES_MAP = {
 
 TO_PREDICT = {
     'enginesize': str,
-    'model': str
+    # 'model': str
 }
 CONDITION = {
-    'year': 2017,
+    'year': '2017',
     'transmission': 'Manual',
-    'mpg': 60.0
+    'mpg': '60.0'
 }
 # ---
 

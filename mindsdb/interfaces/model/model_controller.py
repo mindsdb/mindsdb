@@ -222,7 +222,7 @@ class ModelController():
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         db.session.delete(db_p)
         db.session.commit()
 
@@ -243,7 +243,7 @@ class ModelController():
         name = f'{company_id}@@@@@{name}'
 
         try:
-            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
             assert predictor_record is not None
 
             predictor_record.update_status = 'updating'
@@ -253,7 +253,7 @@ class ModelController():
             # @TODO Fix this function to work with the new lightwood!
             #update_model(name, original_name, self.delete_model, F.rename_model, self.learn_for_update, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
 
-            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name, is_custom=False).first()
+            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
 
             predictor_record.lightwood_version = lightwood.__version__
             predictor_record.mindsdb_version = mindsdb_version

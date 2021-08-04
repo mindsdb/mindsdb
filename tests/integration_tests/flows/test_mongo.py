@@ -21,8 +21,8 @@ DB_TYPES_MAP = {
 }
 
 TO_PREDICT = {
-    'concrete_strength': float,
-    'cement': float
+    'concrete_strength': float
+    # 'cement': float
 }
 CONDITION = {
     'water': 162.5,

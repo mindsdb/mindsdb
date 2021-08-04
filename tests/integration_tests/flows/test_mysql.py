@@ -25,8 +25,8 @@ DB_TYPES_MAP = {
 }
 
 TO_PREDICT = {
-    'GDP_per_capita_USD': int,
-    'Development_Index': str
+    'GDP_per_capita_USD': int
+    # 'Development_Index': str
 }
 CONDITION = {
     'Population': 2044147,

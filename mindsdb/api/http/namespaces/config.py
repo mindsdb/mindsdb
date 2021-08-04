@@ -82,6 +82,14 @@ class Integration(Resource):
         if len(params) == 0:
             abort(400, "type of 'params' must be dict")
 
+        # params from FormData will be as text
+        for key in ('publish', 'test', 'enabled'):
+            if key in params:
+                if isinstance(params[key], str) and params[key].lower() in ('false', '0'):
+                    params[key] = False
+                else:
+                    params[key] = bool(params[key])
+
         files = request.files
         temp_dir = None
         if files is not None:
@@ -117,16 +125,15 @@ class Integration(Resource):
                 del params['enabled']
             add_db_integration(name, params, request.company_id)
 
-            model_data_arr = []
-            for model in request.native_interface.get_models():
-                if model['status'] == 'complete':
-                    try:
-                        model_data_arr.append(request.native_interface.get_model_data(model['name']))
-                    except Exception:
-                        pass
-
-            DatabaseWrapper(request.company_id).setup_integration(name)
             if is_test is False and params.get('publish', False) is True:
+                model_data_arr = []
+                for model in request.native_interface.get_models():
+                    if model['status'] == 'complete':
+                        try:
+                            model_data_arr.append(request.native_interface.get_model_data(model['name']))
+                        except Exception:
+                            pass
+                DatabaseWrapper(request.company_id).setup_integration(name)
                 DatabaseWrapper(request.company_id).register_predictors(model_data_arr, name)
         except Exception as e:
             log.error(str(e))

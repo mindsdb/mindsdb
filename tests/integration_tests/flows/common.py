@@ -339,19 +339,26 @@ def check_prediction_values(row, to_predict):
     try:
         for field_name, field_type in to_predict.items():
             if field_type in [int, float]:
+                print(f'checking {field_name} is int or float')
                 assert isinstance(row[field_name], (int, float))
+                print('checking min bound')
                 assert isinstance(row[f'{field_name}_min'], (int, float))
+                print('checking max bound')
                 assert isinstance(row[f'{field_name}_max'], (int, float))
+                print('comparing the two')
                 assert row[f'{field_name}_max'] > row[f'{field_name}_min']
             elif field_type is str:
+                print(f'checking {field_name} is str')
                 assert isinstance(row[field_name], str)
             else:
                 assert False
 
+            print(f'checking confidence for {field_name}')
             assert isinstance(row[f'{field_name}_confidence'], (int, float))
+            print(f'checking explain for {field_name}')
             assert isinstance(row[f'{field_name}_explain'], (str, dict))
     except Exception as e:
-        print(f'Error {e} Wrong values in row:')
+        print(f'Error "{e}" | Wrong values in row:')
         print(row)
         return False
     return True

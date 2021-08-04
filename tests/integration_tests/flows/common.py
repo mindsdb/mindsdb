@@ -350,8 +350,8 @@ def check_prediction_values(row, to_predict):
 
             assert isinstance(row[f'{field_name}_confidence'], (int, float))
             assert isinstance(row[f'{field_name}_explain'], (str, dict))
-    except Exception:
-        print('Wrong values in row:')
+    except Exception as e:
+        print(f'Error {e} Wrong values in row:')
         print(row)
         return False
     return True

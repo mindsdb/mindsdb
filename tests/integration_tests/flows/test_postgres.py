@@ -18,12 +18,6 @@ from common import (
 # +++ define test data
 TEST_DATASET = 'used_car_price'
 
-DB_TYPES_MAP = {
-    int: 'int',
-    float: 'float',
-    str: 'text'
-}
-
 TO_PREDICT = {
     'enginesize': str,
     # 'model': str

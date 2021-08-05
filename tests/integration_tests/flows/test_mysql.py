@@ -18,15 +18,9 @@ from common import (
 # +++ define test data
 TEST_DATASET = 'hdi'
 
-DB_TYPES_MAP = {
-    int: 'int',
-    float: 'float',
-    str: 'varchar(255)'
-}
-
 TO_PREDICT = {
-    'GDP_per_capita_USD': int,
-    'Development_Index': str
+    'GDP_per_capita_USD': int
+    # 'Development_Index': str
 }
 CONDITION = {
     'Population': 2044147,

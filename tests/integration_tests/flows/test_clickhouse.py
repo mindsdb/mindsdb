@@ -15,15 +15,9 @@ from common import (
 # +++ define test data
 TEST_DATASET = 'home_rentals'
 
-DB_TYPES_MAP = {
-    int: 'Int32',
-    float: 'Float32',
-    str: 'String'
-}
-
 TO_PREDICT = {
-    'rental_price': float,
-    'location': str
+    'rental_price': float
+    # 'location': str
 }
 CONDITION = {
     'sqft': 1000,
@@ -217,15 +211,14 @@ class ClickhouseTest(unittest.TestCase):
 
         res = res[0]
 
-        self.assertTrue(res['rental_price'] is not None and res['rental_price'] != 'None')
-        self.assertTrue(res['location'] is not None and res['location'] != 'None')
+        self.assertTrue(res['rental_price'] not in (None, 'None'))
         # NOTE in current Clickhouse all int fields returns as strings
         self.assertTrue(res['sqft'] == '1000')
         self.assertIsInstance(res['rental_price_confidence'], float)
         self.assertTrue(isinstance(res['rental_price_min'], (int, float)))
         self.assertTrue(isinstance(res['rental_price_max'], (int, float)))
-        self.assertIsInstance(res['rental_price_explain'], str)
-        self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
+        self.assertTrue(isinstance(res['rental_price_explain'], (str, dict)))
+        self.assertTrue(res['number_of_rooms'] in ('None', None))
 
     def test_6_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
@@ -242,12 +235,11 @@ class ClickhouseTest(unittest.TestCase):
         print('check result')
         self.assertTrue(len(results) == 3)
         for res in results:
-            self.assertTrue(res['rental_price'] is not None and res['rental_price'] != 'None')
-            self.assertTrue(res['location'] is not None and res['location'] != 'None')
+            self.assertTrue(res['rental_price'] not in (None, 'None'))
             self.assertIsInstance(res['rental_price_confidence'], float)
             self.assertTrue(isinstance(res['rental_price_min'], (int, float)))
             self.assertTrue(isinstance(res['rental_price_max'], (int, float)))
-            self.assertIsInstance(res['rental_price_explain'], str)
+            self.assertTrue(isinstance(res['rental_price_explain'], (str, dict)))
 
     def test_7_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

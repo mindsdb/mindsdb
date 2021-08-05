@@ -13,11 +13,11 @@ class Responce(Responder):
 
         mindsdb_env['company_id'] = company_id
         mindsdb_env['data_store'] = DataStoreWrapper(
-            data_store=mindsdb_env['data_store'],
+            data_store=mindsdb_env['origin_data_store'],
             company_id=company_id
         )
         mindsdb_env['mindsdb_native'] = ModelInterfaceWrapper(
-            model_interface=mindsdb_env['mindsdb_native'],
+            model_interface=mindsdb_env['origin_model_interface'],
             company_id=company_id
         )
 

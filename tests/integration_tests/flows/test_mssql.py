@@ -24,8 +24,8 @@ DB_TYPES_MAP = {
 }
 
 TO_PREDICT = {
-    'rental_price': float,
-    'location': str
+    'rental_price': float
+    # 'location': str
 }
 CONDITION = {
     'sqft': 1000,

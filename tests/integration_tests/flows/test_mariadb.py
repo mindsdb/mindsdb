@@ -27,8 +27,8 @@ DB_TYPES_MAP = {
 }
 
 TO_PREDICT = {
-    'charges': float,
-    'smoker': str
+    'charges': float
+    # 'smoker': str
 }
 CONDITION = {
     'age': 20,

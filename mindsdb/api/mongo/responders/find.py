@@ -19,7 +19,7 @@ class Responce(Responder):
                 'name': x['name'],
                 'status': x['status'],
                 'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
-                'predict': ', '.join(x['predict']),
+                'predict': ', '.join(x['predict'] if isinstance(x['predict'], list) else [x['predict']]),
                 'select_data_query': '',
                 'external_datasource': '',
                 'training_options': ''
@@ -83,18 +83,17 @@ class Responce(Responder):
             if isinstance(datasource, OrderedDict):
                 datasource = dict(datasource)
 
-            prediction = mindsdb_env['mindsdb_native'].predict(table, datasource, 'dict&explain')
+            pred_dict_arr, explanations = mindsdb_env['mindsdb_native'].predict(table, datasource, 'dict&explain')
+
             if 'select_data_query' in where_data:
                 mindsdb_env['data_store'].delete_datasource(ds_name)
-
-            pred_dict_arr, explanations = prediction
 
             predicted_columns = model['predict']
             if not isinstance(predicted_columns, list):
                 predicted_columns = [predicted_columns]
 
             data = []
-            keys = [k for k in pred_dict_arr[0] if k in columns]
+            all_columns = list(model['dtype_dict'].keys())   # [k for k in pred_dict_arr[0] if k in columns]
             min_max_keys = []
             for col in predicted_columns:
                 if model['dtype_dict'][col] in (dtype.integer, dtype.float):
@@ -103,8 +102,16 @@ class Responce(Responder):
             for i in range(len(pred_dict_arr)):
                 row = {}
                 explanation = explanations[i]
-                for key in keys:
-                    row[key] = pred_dict_arr[i][key]
+
+                for value in pred_dict_arr[i].values():
+                    row.update(value)
+                if 'predicted_value' in row:
+                    del row['predicted_value']
+                for key in pred_dict_arr[i]:
+                    row[key] = pred_dict_arr[i][key]['predicted_value']
+                for key in all_columns:
+                    if key not in row:
+                        row[key] = None
 
                 for key in predicted_columns:
                     row[key + '_confidence'] = explanation[key]['confidence']

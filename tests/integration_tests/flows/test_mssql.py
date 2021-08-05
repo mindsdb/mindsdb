@@ -175,7 +175,6 @@ class MSSQLTest(unittest.TestCase):
         print('check result')
         self.assertTrue(len(res) > 0)
         self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
-        self.assertTrue(res[0]['location'] is not None and res[0]['location'] != 'None')
 
     def test_5_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
@@ -196,7 +195,6 @@ class MSSQLTest(unittest.TestCase):
         res = res[0]
 
         self.assertTrue(res['rental_price'] is not None and res['rental_price'] != 'None')
-        self.assertTrue(res['location'] is not None and res['location'] != 'None')
         self.assertTrue(res['sqft'] == '1000')
         self.assertIsInstance(res['rental_price_confidence'], str)
         self.assertIsInstance(res['rental_price_min'], str)
@@ -222,7 +220,6 @@ class MSSQLTest(unittest.TestCase):
         self.assertTrue(len(results) == 3)
         for res in results:
             self.assertTrue(res['rental_price'] is not None and res['rental_price'] != 'None')
-            self.assertTrue(res['location'] is not None and res['location'] != 'None')
             self.assertIsInstance(res['rental_price_confidence'], str)
             self.assertIsInstance(res['rental_price_min'], str)
             self.assertIsInstance(res['rental_price_max'], str)

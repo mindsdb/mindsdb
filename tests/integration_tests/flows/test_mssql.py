@@ -17,12 +17,6 @@ from common import (
 # +++ define test data
 TEST_DATASET = 'home_rentals'
 
-DB_TYPES_MAP = {
-    int: 'Int32',
-    float: 'Float32',
-    str: 'String'
-}
-
 TO_PREDICT = {
     'rental_price': float
     # 'location': str

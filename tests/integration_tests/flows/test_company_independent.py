@@ -102,7 +102,7 @@ class CompanyIndependentTest(unittest.TestCase):
 
         params = {
             'name': 'test_ds_a',
-            'query': 'select sqft, rental_price from test_data.home_rentals limit 20;',
+            'query': 'select sqft, rental_price from test_data.home_rentals limit 30;',
             'integration_id': 'test_integration_a'
         }
 
@@ -117,7 +117,7 @@ class CompanyIndependentTest(unittest.TestCase):
 
         params = {
             'name': 'test_ds_b',
-            'query': 'select sqft, rental_price from test_data.home_rentals limit 20;',
+            'query': 'select sqft, rental_price from test_data.home_rentals limit 30;',
             'integration_id': 'test_integration_b'
         }
 

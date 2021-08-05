@@ -14,12 +14,6 @@ from common import (
 # +++ define test data
 TEST_DATASET = 'concrete_strength'
 
-DB_TYPES_MAP = {
-    int: 'int',
-    float: 'float',
-    str: 'text'
-}
-
 TO_PREDICT = {
     'concrete_strength': float
     # 'cement': float

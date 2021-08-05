@@ -132,7 +132,7 @@ class ClickhouseTest(unittest.TestCase):
         print(f'\nExecuting {inspect.stack()[0].function}')
         params = {
             'name': EXTERNAL_DS_NAME,
-            'query': f'select * from test_data.{TEST_DATA_TABLE} limit 500',
+            'query': f'select * from test_data.{TEST_DATA_TABLE} limit 250',
             'integration_id': INTEGRATION_NAME
         }
 
@@ -142,7 +142,7 @@ class ClickhouseTest(unittest.TestCase):
         ds_data = res.json()
 
         self.assertTrue(ds_data['source_type'] == INTEGRATION_NAME)
-        self.assertTrue(ds_data['row_count'] == 500)
+        self.assertTrue(ds_data['row_count'] == 250)
 
         url = f'{HTTP_API_ROOT}/datasources'
         res = requests.get(url)
@@ -157,7 +157,7 @@ class ClickhouseTest(unittest.TestCase):
             (
                 '{TEST_PREDICTOR_NAME}',
                 '{','.join(to_predict_column_names)}',
-                'select * from test_data.{TEST_DATA_TABLE} limit 500',
+                'select * from test_data.{TEST_DATA_TABLE} limit 250',
                 '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
             );
         """)

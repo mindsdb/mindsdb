@@ -30,7 +30,7 @@ def start(verbose, no_studio):
     # start static initialization in a separate thread
     init_static_thread = None
     if not no_studio:
-        init_static_thread = threading.Thread(target=initialize_static, args=(config,))
+        init_static_thread = threading.Thread(target=initialize_static)
         init_static_thread.start()
 
     app, api = initialize_flask(config, init_static_thread, no_studio)

@@ -1,3 +1,4 @@
+import traceback
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb

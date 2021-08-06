@@ -62,7 +62,8 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
         session.commit()
 
     to_predict = to_predict if isinstance(to_predict, list) else [to_predict]
-    data_source = getattr(mindsdb_datasources, from_data['class'])(*from_data['args'], **from_data['kwargs'])
+    data_source_cls = getattr(mindsdb_datasources, from_data['class'])
+    data_source = data_source_cls(*from_data['args'], **from_data['kwargs'])
     try:
         mdb.learn(
             from_data=data_source,
@@ -102,6 +103,31 @@ def run_learn(name, db_name, from_data, to_predict, kwargs, datasource_id, compa
     delete_process_mark('learn')
 
 
+def run_adjust(name, db_name, from_data, datasource_id, company_id):
+    import mindsdb_native
+    import mindsdb_datasources
+
+    create_process_mark('learn')
+    
+    p = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
+    p.data['status'] = 'training'
+    session.commit()
+
+    data_source_cls = getattr(mindsdb_datasources, from_data['class'])
+    data_source = data_source_cls(*from_data['args'], **from_data['kwargs'])
+
+    mdb = mindsdb_native.Predictor(name=name, run_env={'trigger': 'mindsdb'})
+    try:
+        mdb.adjust(data_source)
+    except Exception as e:
+        logging.getLogger('mindsdb.main').error(f'Predictor adjust error: {e}')
+        delete_process_mark('learn')
+    
+    p = Predictor.query.filter_by(company_id=company_id, name=db_name).first()
+    p.data = mindsdb_native.F.get_model_data(name)
+    delete_process_mark('learn')
+
+
 class LearnProcess(ctx.Process):
     daemon = True
 
@@ -116,3 +142,19 @@ class LearnProcess(ctx.Process):
         this is work for celery worker here?
         '''
         run_learn(*self._args)
+
+
+class AdjustProcess(ctx.Process):
+    daemon = True
+
+    def __init__(self, *args):
+        super(AdjustProcess, self).__init__(args=args)
+
+    def run(self):
+        '''
+        running at subprocess due to
+        ValueError: signal only works in main thread
+
+        this is work for celery worker here?
+        '''
+        run_adjust(*self._args)

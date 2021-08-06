@@ -267,10 +267,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if password == b'\x00':
                 password = ''
             else:
-                if self.session.is_ssl:
-                    password = get_fast_auth_password()
-                else:
-                    password = switch_auth()
+                # FIXME https://github.com/mindsdb/mindsdb/issues/1374
+                # if self.session.is_ssl:
+                #     password = get_fast_auth_password()
+                # else:
+                password = switch_auth()
         elif 'mysql_native_password' in client_auth_plugin:
             log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                       'check auth using mysql_native_password')

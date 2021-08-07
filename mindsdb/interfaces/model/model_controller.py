@@ -102,8 +102,8 @@ class ModelController():
         p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
         p.start()
         if join_learn_process:
-            p.close()
             p.join()
+            p.close()
 
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
         create_process_mark('predict')
@@ -289,8 +289,8 @@ class ModelController():
         p = GenerateProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
         p.start()
         if join_learn_process:
-            p.close()
             p.join()
+            p.close()
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
@@ -329,8 +329,8 @@ class ModelController():
         p = FitProcess(predictor_record.id, df)
         p.start()
         if join_learn_process:
-            p.close()
             p.join()
+            p.close()
 
 '''
 Notes: Remove ray from actors are getting stuck

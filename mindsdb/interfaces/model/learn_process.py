@@ -56,8 +56,6 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, name: str
 
         db.session.add(predictor_record)
         db.session.commit()
-        session.refresh(predictor_record)
-        return predictor_record.id
     finally:
         delete_process_mark('learn')
 
@@ -101,8 +99,10 @@ def run_fit(preidctor_id: int, df: pd.DataFrame) -> None:
 
 
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, name: str, company_id: int, datasource_id: int) -> None:
-    predicotr_id = run_generate(df, problem_definition, name, company_id, datasource_id)
-    run_fit(predicotr_id, df)
+    run_generate(df, problem_definition, name, company_id, datasource_id)
+    predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+    assert predictor_record is not None
+    run_fit(predictor_record.id, df)
 
 
 class LearnProcess(ctx.Process):

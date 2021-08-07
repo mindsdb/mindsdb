@@ -84,7 +84,7 @@ class ModelController():
             problem_definition['timeseries_settings'] = kwargs['timeseries_settings']
 
         if 'stop_training_in_x_seconds' in kwargs:
-            problem_definition['stop_after'] = kwargs['stop_training_in_x_seconds']
+            problem_definition['time_aim'] = kwargs['stop_training_in_x_seconds']
 
         self.generate_predictor(name, from_data, datasource_id, problem_definition, company_id)
 

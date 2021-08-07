@@ -1,6 +1,7 @@
 from copy import deepcopy
-from mindsdb.interfaces.model.learn_process import LearnProcess
-from typing import Union, Dict, Any
+from lightwood.api.types import ProblemDefinition
+from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess
+from typing import Optional, Tuple, Union, Dict, Any
 from dateutil.parser import parse as parse_datetime
 import psutil
 import datetime
@@ -71,10 +72,12 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
-    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
-        create_process_mark('learn')
+    def _unpack_old_args(self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
+        if to_predict is not None:
+            problem_definition = {'target': to_predict if isinstance(to_predict, str) else to_predict[0]}
+        else:
+            problem_definition = kwargs
 
-        problem_definition = {'target': to_predict if isinstance(to_predict, str) else to_predict[0]}
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
@@ -86,10 +89,20 @@ class ModelController():
         if 'stop_training_in_x_seconds' in kwargs:
             problem_definition['time_aim'] = kwargs['stop_training_in_x_seconds']
 
-        self.generate_predictor(name, from_data, datasource_id, problem_definition, company_id)
+        ds_cls = getattr(mindsdb_datasources, from_data['class'])
+        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
+        df = ds.df
 
-        # TODO: Should we support kwargs['join_learn_process'](?)
-        self.fit_predictor(name, from_data, join_learn_process, company_id)
+        return df, problem_definition, join_learn_process
+
+    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
+        create_process_mark('learn')
+
+        df, problem_definition, join_learn_process = self._unpack_old_args(from_data, kwargs, to_predict)
+        p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
+        p.start()
+        if join_learn_process:
+            p.join()
 
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
         create_process_mark('predict')
@@ -269,40 +282,13 @@ class ModelController():
         
         return 'Updated successfully'
 
-    def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, company_id=None):
+    def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, join_learn_process: bool, company_id: int):
         create_process_mark('learn')
-        if db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first() is not None:
-            raise Exception('Predictor {} already exists'.format(name))
-
-        if name in self.predictor_cache:
-            del self.predictor_cache[name]
-
-        # Here for no particular reason, because we want to run this sometimes but not too often
-        self._invalidate_cached_predictors()
-
-        problem_definition = lightwood.ProblemDefinition.from_dict(problem_definition_dict)
-
-        ds_cls = getattr(mindsdb_datasources, from_data['class'])
-        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
-        df = ds.df
-
-        json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-        code = lightwood.code_from_json_ai(json_ai)
-
-        db_p = db.Predictor(
-            company_id=company_id,
-            name=name,
-            json_ai=json_ai.to_dict(),
-            code=code,
-            datasource_id=datasource_id,
-            mindsdb_version=mindsdb_version,
-            lightwood_version=lightwood_version,
-            to_predict=[problem_definition.target],
-            data={'status': 'untrained', 'name': name}
-        )
-        db.session.add(db_p)
-        db.session.commit()
-        delete_process_mark('learn')
+        df, problem_definition, join_learn_process = self._unpack_old_args(from_data, problem_definition_dict)
+        p = GenerateProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
+        p.start()
+        if join_learn_process:
+            p.join()
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
@@ -331,20 +317,14 @@ class ModelController():
         predictor_record.json_ai = None
         db.session.commit()
 
-    def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int):
+    def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int) -> None:
         create_process_mark('learn')
-        """Train an existing predictor"""
-
-        ds_cls = getattr(mindsdb_datasources, from_data['class'])
-        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
-        df = ds.df
 
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
-        predictor_record.data = {'status': 'training', 'name': name}
-        db.session.commit()
 
-        p = LearnProcess(predictor_record.id, df)
+        df, _, _ = self._unpack_old_args(from_data, {}, None)
+        p = FitProcess(predictor_record.id, df)
         p.start()
         if join_learn_process:
             p.join()

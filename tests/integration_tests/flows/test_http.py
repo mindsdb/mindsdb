@@ -229,7 +229,8 @@ class HTTPTest(unittest.TestCase):
             f'{root}/predictors/generate/lwr_{pred_name}',
             json={
                 'problem_definition': {'target': 'rental_price'},
-                'data_source_name': ds_name
+                'data_source_name': ds_name,
+                'join_learn_process': True
             }
         )
         r.raise_for_status()

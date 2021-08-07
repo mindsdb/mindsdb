@@ -13,7 +13,7 @@ from mindsdb_datasources import (
 )
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor
-from mindsdb.interfaces.storage.fs import FsSotre
+from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import get_db_integration
 
@@ -34,7 +34,7 @@ class DataStoreWrapper(object):
 class DataStore():
     def __init__(self):
         self.config = Config()
-        self.fs_store = FsSotre()
+        self.fs_store = FsStore()
         self.dir = self.config['paths']['datasources']
         self.model_interface = ModelInterface()
 

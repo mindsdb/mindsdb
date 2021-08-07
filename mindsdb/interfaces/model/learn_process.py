@@ -7,7 +7,7 @@ from lightwood.api.types import ProblemDefinition
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.model.model_interface import ModelInterface, ModelInterfaceWrapper
 from mindsdb.interfaces.storage.db import session, Predictor
-from mindsdb.interfaces.storage.fs import FsSotre
+from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 import mindsdb.interfaces.storage.db as db
@@ -66,7 +66,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         predictor_record = session.query(db.Predictor).filter_by(id=predictor_id).first()
         assert predictor_record is not None
 
-        fs_store = FsSotre()
+        fs_store = FsStore()
         config = Config()
 
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)

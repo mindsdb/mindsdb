@@ -21,7 +21,7 @@ except Exception:
     pass
 
 
-class FsSotre():
+class FsStore():
     def __init__(self):
         self.config = Config()
         self.location = self.config['permanent_storage']['location']

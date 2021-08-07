@@ -18,19 +18,19 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.fs import FsSotre
+from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 
 
 class ModelController():
     config: Config
-    fs_store: FsSotre
+    fs_store: FsStore
     predictor_cache: Dict[str, Dict[str, Union[Any]]]
     ray_based: bool
 
     def __init__(self, ray_based: bool) -> None:
         self.config = Config()
-        self.fs_store = FsSotre()
+        self.fs_store = FsStore()
         self.predictor_cache = {}
         self.ray_based = ray_based
 

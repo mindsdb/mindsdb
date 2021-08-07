@@ -102,7 +102,6 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, name: str, c
     run_generate(df, problem_definition, name, company_id, datasource_id)
     predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
     assert predictor_record is not None
-    session.refresh(predictor_record)
     run_fit(predictor_record.id, df)
 
 

@@ -102,7 +102,7 @@ def run_fit(preidctor_id: int, df: pd.DataFrame) -> None:
 
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, name: str, company_id: int, datasource_id: int) -> None:
     predicotr_id = run_generate(df, problem_definition, name, company_id, datasource_id)
-    run_learn(predicotr_id, df)
+    run_fit(predicotr_id, df)
 
 
 class LearnProcess(ctx.Process):

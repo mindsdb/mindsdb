@@ -181,7 +181,8 @@ class PredictorGenerate(Resource):
             name,
             from_data,
             datasource['id'],
-            problem_definition
+            problem_definition,
+            request.json.get('join_learn_process', False)
         )
 
         return '', 200

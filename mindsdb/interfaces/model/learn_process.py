@@ -60,10 +60,10 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, name: str
         delete_process_mark('learn')
 
 
-def run_fit(preidctor_id: int, df: pd.DataFrame) -> None:
+def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
     create_process_mark('learn')
     try:
-        predictor_record = session.query(db.Predictor).filter_by(id=preidctor_id).first()
+        predictor_record = session.query(db.Predictor).filter_by(id=predictor_id).first()
         assert predictor_record is not None
 
         fs_store = FsSotre()
@@ -102,6 +102,7 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, name: str, c
     run_generate(df, problem_definition, name, company_id, datasource_id)
     predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
     assert predictor_record is not None
+    session.refresh(predictor_record)
     run_fit(predictor_record.id, df)
 
 

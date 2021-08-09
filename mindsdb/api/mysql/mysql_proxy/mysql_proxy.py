@@ -932,6 +932,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def queryAnswer(self, sql):
+        # +++
+        subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)
+        if len(subquery) == 1:
+            sql = subquery[0]
+        # ---
         statement = SqlStatementParser(sql)
         sql = statement.sql
         sql_lower = sql.lower()
@@ -1007,10 +1012,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_show_index()
                 return
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
-            # elif 'show create table' in sql_lower:
-            #     # SHOW CREATE TABLE `MINDSDB`.`predictors`
-            #     table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
-            #     self.answer_show_create_table(table)
+            elif 'show create table' in sql_lower:
+                # SHOW CREATE TABLE `MINDSDB`.`predictors`
+                table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
+                self.answer_show_create_table(table)
+                return
 
         if keyword == 'start':
             # start transaction

@@ -101,7 +101,6 @@ class ModelController():
         df, problem_definition, join_learn_process = self._unpack_old_args(from_data, kwargs, to_predict)
         p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
         p.start()
-        print(f'\n\nLEARN GOT: {join_learn_process}\n\n')
         if join_learn_process:
             p.join()
             p.close()
@@ -289,7 +288,6 @@ class ModelController():
         df, problem_definition, _ = self._unpack_old_args(from_data, problem_definition_dict)
         p = GenerateProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
         p.start()
-        print(f'\n\nGENERATE GOT: {join_learn_process}\n\n')
         if join_learn_process:
             p.join()
             p.close()
@@ -329,7 +327,6 @@ class ModelController():
         df, _, _ = self._unpack_old_args(from_data, {}, None)
         p = FitProcess(predictor_record.id, df)
         p.start()
-        print(f'\n\nFIT GOT: {join_learn_process}\n\n')
         if join_learn_process:
             p.join()
             p.close()

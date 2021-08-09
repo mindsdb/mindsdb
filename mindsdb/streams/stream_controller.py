@@ -25,7 +25,7 @@ class StreamController:
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.stop_event = Event()
-        self.native_interface = ModelInterface()
+        self.model_interface = ModelInterface()
         self.data_store = DataStore()
         self.config = Config()
 
@@ -79,7 +79,7 @@ class StreamController:
         while not self.stop_event.wait(0.5):
             self._consider_learning()
             for when_data in self.stream_in.read():
-                for res in self.native_interface.predict(self.predictor, 'dict', when_data=when_data):
+                for res in self.model_interface.predict(self.predictor, 'dict', when_data=when_data):
                     if self.anomaly_stream is not None and self._is_anomaly(res):
                         self.anomaly_stream.write(res)
                     else:
@@ -118,7 +118,7 @@ class StreamController:
                             # WARNING: assuming wd[ob] is numeric
                             key=lambda wd: tuple(wd[ob] for ob in order_by)
                         )]
-                        res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[''][-window:])
+                        res_list = self.model_interface.predict(self.predictor, 'dict', when_data=cache[''][-window:])
                         if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                             self.anomaly_stream.write(res_list[-1])
                         else:
@@ -161,7 +161,7 @@ class StreamController:
                                 # WARNING: assuming wd[ob] is numeric
                                 key=lambda wd: tuple(wd[ob] for ob in order_by)
                             )]
-                            res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[gb_value][-window:])
+                            res_list = self.model_interface.predict(self.predictor, 'dict', when_data=cache[gb_value][-window:])
                             if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                                 self.anomaly_stream.write(res_list[-1])
                             else:

@@ -130,11 +130,11 @@ class PredictorAdjust(Resource):
         if from_data is None:
             return {'message': f'Can not find datasource: {ds_name}'}, 400
 
-        model_names = [x['name'] for x in request.native_interface.get_models()]
+        model_names = [x['name'] for x in request.model_interface.get_models()]
         if name not in model_names:
             return abort(404, f'Predictor "{name}" doesn\'t exist',)
 
-        request.native_interface.adjust(
+        request.model_interface.adjust(
             name,
             from_data,
             request.default_store.get_datasource(ds_name)['id']

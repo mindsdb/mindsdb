@@ -136,10 +136,10 @@ class Integration(Resource):
             DatabaseWrapper(request.company_id).setup_integration(name)
             if is_test is False and params.get('publish', False) is True:
                 model_data_arr = []
-                for model in request.native_interface.get_models():
+                for model in request.model_interface.get_models():
                     if model['status'] == 'complete':
                         try:
-                            model_data_arr.append(request.native_interface.get_model_data(model['name']))
+                            model_data_arr.append(request.model_interface.get_model_data(model['name']))
                         except Exception:
                             pass
                 DatabaseWrapper(request.company_id).setup_integration(name)

@@ -12,10 +12,10 @@ telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'fal
 
 if telemtry_enabled:
     import sentry_sdk
-    from sentry_sdk import capture_exception, capture_message, add_breadcrumb
+    from sentry_sdk import capture_message, add_breadcrumb
     sentry_sdk.init(
         "https://29e64dbdf325404ebf95473d5f4a54d3@o404567.ingest.sentry.io/5633566",
-        traces_sample_rate=0 #Set to `1` to experiment with performance metrics
+        traces_sample_rate=0  # Set to `1` to experiment with performance metrics
     )
 
 
@@ -49,8 +49,10 @@ class DbHandler(logging.Handler):
 
     def emit(self, record):
         self.format(record)
-        if len(record.message.strip(' \n')) == 0 \
-            or (record.threadName == 'ray_print_logs' and 'mindsdb-logger' not in record.message):
+        if (
+            len(record.message.strip(' \n')) == 0
+            or (record.threadName == 'ray_print_logs' and 'mindsdb-logger' not in record.message)
+        ):
             return
 
         log_type = record.levelname
@@ -67,7 +69,7 @@ class DbHandler(logging.Handler):
             #        level='info',
             #    )
             # Might be too much traffic if we send this for users with slow networks
-            #if log_type in ['DEBUG']:
+            # if log_type in ['DEBUG']:
             #    add_breadcrumb(
             #        category='auth',
             #        message=str(payload),
@@ -107,17 +109,20 @@ def fmt_log_record(log_record):
 
 
 def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit):
-    logs = session.query(Log).filter(Log.company_id==os.environ.get('MINDSDB_COMPANY_ID', None), Log.created_at>min_timestamp)
+    logs = session.query(Log).filter(
+        Log.company_id == os.environ.get('MINDSDB_COMPANY_ID', None),
+        Log.created_at > min_timestamp
+    )
 
     if max_timestamp is not None:
-        logs = logs.filter(Log.created_at<max_timestamp)
+        logs = logs.filter(Log.created_at < max_timestamp)
 
     if context is not None:
         # e.g. datasource/predictor and assoicated id
         pass
 
     if level is not None:
-        logs = logs.filter(Log.log_type==level)
+        logs = logs.filter(Log.log_type == level)
 
     if log_from is not None:
         # mindsdb/native/lightwood/all
@@ -128,6 +133,7 @@ def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit):
 
     logs = [fmt_log_record(x) for x in logs]
     return logs
+
 
 def initialize_log(config=global_config, logger_name='main', wrap_print=False):
     ''' Create new logger
@@ -144,10 +150,14 @@ def initialize_log(config=global_config, logger_name='main', wrap_print=False):
 
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-    ch = logging.StreamHandler()
-    ch.setLevel(config['log']['level']['console']) # that level will be in console
-    log.addHandler(ch)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(config['log']['level'].get('console', logging.INFO))
+    console_handler.setFormatter(formatter)
+    log.addHandler(console_handler)
+
     db_handler = DbHandler()
+    db_handler.setLevel(config['log']['level'].get('db', logging.WARNING))
+    db_handler.setFormatter(formatter)
     log.addHandler(db_handler)
 
     if wrap_print:

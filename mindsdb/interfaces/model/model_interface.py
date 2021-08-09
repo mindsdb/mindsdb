@@ -24,6 +24,9 @@ class ModelInterface():
     def learn(self, *args, **kwargs):
         return self.controller.learn(*args, **kwargs)
 
+    def adjust(self, *args, **kwargs):
+        return self.controller.adjust(*args, **kwargs)
+
     def predict(self, *args, **kwargs):
         return self.controller.predict(*args, **kwargs)
 

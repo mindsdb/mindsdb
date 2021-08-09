@@ -12,7 +12,7 @@ from mindsdb_datasources import (
     SnowflakeDS, AthenaDS, CassandraDS, ScyllaDS
 )
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.db import session, Datasource, Semaphor
+from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import get_db_integration
@@ -118,6 +118,10 @@ class DataStore():
 
     def delete_datasource(self, name, company_id=None):
         datasource_record = Datasource.query.filter_by(company_id=company_id, name=name).first()
+        if not Config()["force_datasource_removing"]:
+            linked_models = Predictor.query.filter_by(company_id=company_id, datasource_id=datasource_record.id).all()
+            if linked_models:
+                raise Exception("Can't delete {} datasource because there are next models linked to it: {}".format(name, [model.name for model in linked_models]))
         session.delete(datasource_record)
         session.commit()
         self.fs_store.delete(f'datasource_{company_id}_{datasource_record.id}')
@@ -158,7 +162,6 @@ class DataStore():
             )
             session.add(datasource_record)
             session.commit()
-            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
 
             ds_meta_dir = os.path.join(self.dir, f'{company_id}@@@@@{name}')
             os.mkdir(ds_meta_dir)
@@ -181,6 +184,7 @@ class DataStore():
                     'clickhouse': ClickhouseDS,
                     'mariadb': MariaDS,
                     'mysql': MySqlDS,
+                    'singlestore': MySqlDS,
                     'postgres': PostgresDS,
                     'mssql': MSSQLDS,
                     'mongodb': MongoDS,
@@ -212,7 +216,7 @@ class DataStore():
                     }
                     ds = dsClass(**creation_info['kwargs'])
 
-                elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql', 'cassandra', 'scylladb']:
+                elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
                     creation_info = {
                         'class': dsClass.__name__,
                         'args': [],
@@ -225,13 +229,40 @@ class DataStore():
                         }
                     }
 
+                    kwargs = creation_info['kwargs']
+
+                    integration_folder_name = f'integration_files_{company_id}_{integration["id"]}'
+                    if integration['type'] in ('mysql', 'mariadb'):
+                        kwargs['ssl'] = integration.get('ssl')
+                        kwargs['ssl_ca'] = integration.get('ssl_ca')
+                        kwargs['ssl_cert'] = integration.get('ssl_cert')
+                        kwargs['ssl_key'] = integration.get('ssl_key')
+                        for key in ['ssl_ca', 'ssl_cert', 'ssl_key']:
+                            if isinstance(kwargs[key], str) and len(kwargs[key]) > 0:
+                                kwargs[key] = os.path.join(
+                                    self.integrations_dir,
+                                    integration_folder_name,
+                                    kwargs[key]
+                                )
+                    elif integration['type'] in ('cassandra', 'scylla'):
+                        kwargs['secure_connect_bundle'] = integration.get('secure_connect_bundle')
+                        if (
+                            isinstance(kwargs['secure_connect_bundle'], str)
+                            and len(kwargs['secure_connect_bundle']) > 0
+                        ):
+                            kwargs['secure_connect_bundle'] = os.path.join(
+                                self.integrations_dir,
+                                integration_folder_name,
+                                kwargs['secure_connect_bundle']
+                            )
+
                     if 'database' in integration:
-                        creation_info['kwargs']['database'] = integration['database']
+                        kwargs['database'] = integration['database']
 
                     if 'database' in source:
-                        creation_info['kwargs']['database'] = source['database']
+                        kwargs['database'] = source['database']
 
-                    ds = dsClass(**creation_info['kwargs'])
+                    ds = dsClass(**kwargs)
 
                 elif integration['type'] == 'snowflake':
                     creation_info = {
@@ -294,9 +325,20 @@ class DataStore():
                     'kwargs': {}
                 }
 
-            df = ds.df
+            if hasattr(ds, 'get_columns') and hasattr(ds, 'get_row_count'):
+                try:
+                    column_names = ds.get_columns()
+                    row_count = ds.get_row_count()
+                except Exception:
+                    df = ds.df
+                    column_names = list(df.keys())
+                    row_count = len(df)
+            else:
+                df = ds.df
+                column_names = list(df.keys())
+                row_count = len(df)
 
-            if '' in df.columns or len(df.columns) != len(set(df.columns)):
+            if '' in column_names or len(column_names) != len(set(column_names)):
                 shutil.rmtree(ds_meta_dir)
                 raise Exception('Each column in datasource must have unique non-empty name')
 
@@ -304,8 +346,8 @@ class DataStore():
             datasource_record.data = json.dumps({
                 'source_type': source_type,
                 'source': source,
-                'row_count': len(df),
-                'columns': [dict(name=x) for x in list(df.keys())]
+                'row_count': row_count,
+                'columns': [dict(name=x) for x in column_names]
             })
 
             self.fs_store.put(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)

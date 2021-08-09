@@ -30,7 +30,7 @@ def start(verbose, no_studio):
     # start static initialization in a separate thread
     init_static_thread = None
     if not no_studio:
-        init_static_thread = threading.Thread(target=initialize_static, args=(config,))
+        init_static_thread = threading.Thread(target=initialize_static)
         init_static_thread.start()
 
     app, api = initialize_flask(config, init_static_thread, no_studio)
@@ -104,9 +104,9 @@ def start(verbose, no_studio):
         init_static_thread.join()
     if server.lower() == 'waitress':
         if host in ('', '0.0.0.0'):
-            serve(app, port=port, host='*')
+            serve(app, port=port, host='*', max_request_body_size=1073741824 * 10, inbuf_overflow=1073741824 * 10)
         else:
-            serve(app, port=port, host=host)
+            serve(app, port=port, host=host, max_request_body_size=1073741824 * 10, inbuf_overflow=1073741824 * 10)
     elif server.lower() == 'flask':
         # that will 'disable access' log in console
         log = logging.getLogger('werkzeug')
@@ -122,6 +122,9 @@ def start(verbose, no_studio):
 
         options = {
             'bind': f'{host}:{port}',
-            'workers': min(max(mp.cpu_count(), 2), 3)
+            'workers': min(max(mp.cpu_count(), 2), 3),
+            'timeout': 600,
+            'reuse_port': True,
+            'threads': 4
         }
         StandaloneApplication(app, options).run()

@@ -117,6 +117,32 @@ class PredictorUpdate(Resource):
         }
 
 
+@ns_conf.route('/<name>/adjust')
+@ns_conf.param('name', 'The predictor identifier')
+class PredictorAdjust(Resource):
+    @ns_conf.doc('post_predictor_adjust', params=predictor_query_params)
+    def post(self, name):
+        data = request.json
+
+        ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
+        from_data = request.default_store.get_datasource_obj(ds_name, raw=True)
+
+        if from_data is None:
+            return {'message': f'Can not find datasource: {ds_name}'}, 400
+
+        model_names = [x['name'] for x in request.native_interface.get_models()]
+        if name not in model_names:
+            return abort(404, f'Predictor "{name}" doesn\'t exist',)
+
+        request.native_interface.adjust(
+            name,
+            from_data,
+            request.default_store.get_datasource(ds_name)['id']
+        )
+
+        return '', 200
+
+
 @ns_conf.route('/<name>/predict')
 @ns_conf.param('name', 'The predictor identifier')
 class PredictorPredict(Resource):

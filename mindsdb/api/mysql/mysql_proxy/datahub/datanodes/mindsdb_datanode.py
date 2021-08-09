@@ -12,6 +12,8 @@ from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import get_db_integration
 
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+
 
 class NumpyJSONEncoder(json.JSONEncoder):
     """
@@ -133,7 +135,17 @@ class MindsDBDataNode(DataNode):
 
         return data
 
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
+    def select_query(self, query):
+        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+        moz_struct = to_moz_sql_struct(query)
+        data = self.select(
+            table=query.from_table.parts[-1],
+            columns=None,
+            where=moz_struct.get('where')
+        )
+        return data
+
+    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None, is_timeseries=False):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
         if table == 'predictors':
@@ -142,6 +154,11 @@ class MindsDBDataNode(DataNode):
             return []
         if self.ai_table.get_ai_table(table):
             return self._select_from_ai_table(table, columns, where)
+
+        # try:
+        #     where = plain_where_conditions(where)
+        # except Exception as e:
+        #     x = 1
 
         original_when_data = None
         if 'when_data' in where:

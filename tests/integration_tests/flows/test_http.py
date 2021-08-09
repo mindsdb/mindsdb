@@ -1,4 +1,4 @@
-import os
+import time
 import unittest
 from random import randint
 from pathlib import Path
@@ -56,7 +56,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         test_integration = res.json()
         print(test_integration)
-        assert len(test_integration) == 8
+        assert len(test_integration) == 9  # 8 + id field
 
         for k in test_integration_data:
             if k != 'password':

@@ -40,8 +40,8 @@ class Packet:
         self._length = len(body_string)
 
     def load_from_packet_string(self, packet_string):
-        len_header = struct.unpack('>i', struct.pack('1s', '') + packet_string[:3])[0]
-        count_header = struct.unpack('B', packet_string[3])[0]
+        len_header = struct.unpack('i', packet_string[:3] + b'\x00')[0]
+        count_header = int(packet_string[3])
         body = packet_string[4:]
         self.load_from_params(length=len_header, seq=count_header, body=body)
 

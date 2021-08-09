@@ -72,10 +72,6 @@ jobs:
 
           export USE_EXTERNAL_DB_SERVER="1"
 
-          if [ "$INSTALL_RAY" == "install_ray" ]; then
-            export USE_RAY="1"
-          fi
-
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"
           python tests/integration_tests/flows/test_company_independent.py
@@ -175,6 +171,7 @@ jobs:
 
   deploy_version_file:
     runs-on: ubuntu-latest
+    needs: test
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v2

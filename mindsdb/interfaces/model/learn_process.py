@@ -105,6 +105,10 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, name: str, c
     run_fit(predictor_record.id, df)
 
 
+def run_adjust(name, db_name, from_data, datasource_id, company_id):
+    # @TODO: Actually implement this
+    return 0
+
 class LearnProcess(ctx.Process):
     daemon = True
 
@@ -113,7 +117,6 @@ class LearnProcess(ctx.Process):
 
     def run(self):
         run_learn(*self._args)
-
 
 class GenerateProcess(ctx.Process):
     daemon = True
@@ -133,3 +136,18 @@ class FitProcess(ctx.Process):
 
     def run(self):
         run_fit(*self._args)
+
+class AdjustProcess(ctx.Process):
+    daemon = True
+
+    def __init__(self, *args):
+        super(AdjustProcess, self).__init__(args=args)
+
+    def run(self):
+        '''
+        running at subprocess due to
+        ValueError: signal only works in main thread
+
+        this is work for celery worker here?
+        '''
+        run_adjust(*self._args)

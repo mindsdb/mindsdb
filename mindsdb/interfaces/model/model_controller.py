@@ -22,6 +22,7 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 
 
+
 class ModelController():
     config: Config
     fs_store: FsStore

@@ -138,6 +138,7 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             msqyl_pass = self.config['api']['mysql']['password']
             msqyl_user = self._get_mysql_user()
 
+            self.unregister_predictor(model_meta['name'])
             q = f"""
                 CREATE TABLE {self.mindsdb_database}.{name}
                 ({columns_sql}
@@ -150,13 +151,3 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             drop table if exists {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
-
-    # def check_connection(self):
-    #     try:
-    #         res = requests.post(f"http://{self.host}:{self.port}",
-    #                             data="select 1;",
-    #                             params={'user': self.user, 'password': self.password})
-    #         connected = res.status_code == 200
-    #     except Exception:
-    #         connected = False
-    #     return connected

@@ -36,6 +36,7 @@ jobs:
         pip install boto3
         pip install git+https://github.com:/mindsdb/lightwood.git@the_big_refactor
         pip install --no-cache-dir .
+        pip install ray
         if [ "$INSTALL_RAY" == "install_ray" ]; then
           git clone https://${ACCESS_KEY}@github.com/mindsdb/worker.git;
           cd worker;

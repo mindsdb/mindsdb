@@ -97,11 +97,11 @@ class ModelController():
 
     def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
         create_process_mark('learn')
-        print(f'\n\nLEARN GOT: {}join_learn_process\n\n')
 
         df, problem_definition, join_learn_process = self._unpack_old_args(from_data, kwargs, to_predict)
         p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
         p.start()
+        print(f'\n\nLEARN GOT: {join_learn_process}\n\n')
         if join_learn_process:
             p.join()
             p.close()
@@ -286,10 +286,10 @@ class ModelController():
 
     def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, join_learn_process: bool, company_id: int):
         create_process_mark('learn')
-        print(f'\n\nGENERATE GOT: {}join_learn_process\n\n')
         df, problem_definition, _ = self._unpack_old_args(from_data, problem_definition_dict)
         p = GenerateProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
         p.start()
+        print(f'\n\nGENERATE GOT: {join_learn_process}\n\n')
         if join_learn_process:
             p.join()
             p.close()
@@ -323,14 +323,13 @@ class ModelController():
 
     def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int) -> None:
         create_process_mark('learn')
-        print(f'\n\nFIT GOT: {}join_learn_process\n\n')
-
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
 
         df, _, _ = self._unpack_old_args(from_data, {}, None)
         p = FitProcess(predictor_record.id, df)
         p.start()
+        print(f'\n\nFIT GOT: {join_learn_process}\n\n')
         if join_learn_process:
             p.join()
             p.close()

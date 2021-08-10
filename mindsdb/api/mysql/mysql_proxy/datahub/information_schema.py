@@ -10,8 +10,6 @@ def get_table_alias(table_obj):
 class InformationSchema(DataNode):
     type = 'INFORMATION_SCHEMA'
 
-    index = {}
-
     information_schema = {
         'SCHEMATA': ['schema_name', 'default_character_set_name', 'default_collation_name'],
         'TABLES': ['table_schema', 'table_name', 'table_type', 'table_rows'],
@@ -22,6 +20,7 @@ class InformationSchema(DataNode):
     }
 
     def __init__(self, dsObject=None):
+        self.index = {}
         if isinstance(dsObject, dict):
             self.add(dsObject)
 

@@ -18,3 +18,4 @@ flask-compress >= 1.0.0
 kafka-python >= 2.0.0
 appdirs >= 1.0.0
 mindsdb-sql >= 0.0.16
+checksumdir >= 1.2.0

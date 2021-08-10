@@ -1,21 +1,23 @@
 import shutil
 import os
 from mindsdb.utilities.config import Config
+from checksumdir import dirhash
+import hashlib
 
 
 def copy(src, dst):
-    try:
-        os.remove(dst)
-    except Exception:
-        pass
-    try:
-        shutil.rmtree(dst, ignore_errors=True)
-    except Exception:
-        pass
-
     if os.path.isdir(src):
+        if dirhash(src) == dirhash(dst):
+            return
+        shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(src, dst)
     else:
+        if hashlib.md5(open(src, 'rb').read()).hexdigest() == hashlib.md5(open(dst, 'rb').read()).hexdigest():
+            return
+        try:
+            os.remove(dst)
+        except Exception:
+            pass
         shutil.copy2(src, dst)
 
 

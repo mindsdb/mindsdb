@@ -51,6 +51,7 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, name: str
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=[problem_definition.target],
+            learn_args=problem_definition.to_dict(),
             data={'status': 'untrained', 'name': name}
         )
 

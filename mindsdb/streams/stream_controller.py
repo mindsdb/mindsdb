@@ -33,7 +33,7 @@ class StreamController:
         if p is None:
             raise Exception(f'Predictor {predictor} doesn\'t exist')
 
-        self.target = p.learn_args['to_predict'] if isinstance(p.learn_args['to_predict'], str) else p.learn_args['to_predict'][0]
+        self.target = p.to_predict[0]
 
         ts_settings = p.learn_args['kwargs'].get('timeseries_settings', None)
 

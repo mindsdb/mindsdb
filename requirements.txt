@@ -14,6 +14,8 @@ psutil
 sqlalchemy >= 1.3.0
 sentry-sdk
 walrus==0.8.2
+asn1crypto==1.3.0
+snowflake-connector-python[pandas]
 mindsdb_datasources == 1.3.2
 flask-compress >= 1.0.0
 kafka-python >= 2.0.0

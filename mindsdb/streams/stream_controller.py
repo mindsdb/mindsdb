@@ -35,7 +35,7 @@ class StreamController:
 
         self.target = p.to_predict[0]
 
-        ts_settings = p.learn_args['kwargs'].get('timeseries_settings', None)
+        ts_settings = p.learn_args.get('timeseries_settings', None)
 
         if ts_settings is None:
             self.thread = Thread(target=StreamController._make_predictions, args=(self,))

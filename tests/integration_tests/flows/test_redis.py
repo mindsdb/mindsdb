@@ -161,7 +161,6 @@ class RedisTest(unittest.TestCase):
     
     def test_4_create_redis_ts_stream(self):
         print(f"\nExecuting {self._testMethodName}")
-        self.upload_ds(DS_NAME)
         self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
 
         url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'

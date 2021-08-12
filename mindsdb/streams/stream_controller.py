@@ -81,7 +81,8 @@ class StreamController:
         while not self.stop_event.wait(0.5):
             self._consider_learning()
             for when_data in self.stream_in.read():
-                for res in self.model_interface.predict(self.predictor, pd.DataFrame(when_data), 'dict'):
+                print(when_data)
+                for res in self.model_interface.predict(self.predictor, when_data, 'dict'):
                     if self.anomaly_stream is not None and self._is_anomaly(res):
                         self.anomaly_stream.write(res)
                     else:
@@ -120,7 +121,7 @@ class StreamController:
                             # WARNING: assuming wd[ob] is numeric
                             key=lambda wd: tuple(wd[ob] for ob in order_by)
                         )]
-                        res_list = self.model_interface.predict(self.predictor, pd.DataFrame(cache[''][-window:]), 'dict')
+                        res_list = self.model_interface.predict(self.predictor, cache[''][-window:], 'dict')
                         if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                             self.anomaly_stream.write(res_list[-1])
                         else:
@@ -163,7 +164,7 @@ class StreamController:
                                 # WARNING: assuming wd[ob] is numeric
                                 key=lambda wd: tuple(wd[ob] for ob in order_by)
                             )]
-                            res_list = self.model_interface.predict(self.predictor, pd.DataFrame(cache[gb_value][-window:]), 'dict')
+                            res_list = self.model_interface.predict(self.predictor, cache[gb_value][-window:], 'dict')
                             if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                                 self.anomaly_stream.write(res_list[-1])
                             else:

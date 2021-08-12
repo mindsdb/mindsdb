@@ -87,7 +87,6 @@ class StreamController:
                     if self.anomaly_stream is not None and self._is_anomaly(res):
                         self.anomaly_stream.write(res)
                     else:
-                        print('1')
                         self.stream_out.write(res)
 
     def _make_ts_predictions(self):

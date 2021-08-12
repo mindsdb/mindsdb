@@ -120,7 +120,7 @@ class RedisTest(unittest.TestCase):
         url = f'{HTTP_API_ROOT}/predictors/{predictor_name}'
         res = requests.put(url, json=params)
         res.raise_for_status()
-
+    
     def test_1_create_integration(self):
         print(f"\nExecuting {self._testMethodName}")
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'

@@ -81,7 +81,6 @@ class StreamController:
         while not self.stop_event.wait(0.5):
             self._consider_learning()
             for when_data in self.stream_in.read():
-                print(when_data)
                 for res in self.model_interface.predict(self.predictor, when_data, 'dict'):
                     if self.anomaly_stream is not None and self._is_anomaly(res):
                         self.anomaly_stream.write(res)

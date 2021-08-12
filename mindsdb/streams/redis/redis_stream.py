@@ -2,7 +2,7 @@ import json
 import walrus
 
 from mindsdb.streams.base import BaseStream
-
+from mindsdb.api.http.initialize import CustomJSONEncoder
 
 class RedisStream(BaseStream):
     def __init__(self, stream, connection_info):
@@ -26,4 +26,4 @@ class RedisStream(BaseStream):
             self.stream.delete(k)
 
     def write(self, dct):
-        self.stream.add({'': json.dumps(dct)})
+        self.stream.add({'': json.dumps(dct, cls=CustomJSONEncoder)})

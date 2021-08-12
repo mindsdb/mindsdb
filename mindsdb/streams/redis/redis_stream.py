@@ -18,6 +18,7 @@ class RedisStream(BaseStream):
 
     def read(self):
         for k, when_data in self.stream.read():
+            print('READ:', when_data)
             try:
                 res = json.loads(when_data[b''])
             except KeyError:

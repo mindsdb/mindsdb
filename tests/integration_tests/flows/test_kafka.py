@@ -183,7 +183,7 @@ class KafkaTest(unittest.TestCase):
         time.sleep(10)
         for x in range(210, 221):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A', 'y': 3*x})
-            time.sleep(0.1)
+            time.sleep(5)
         time.sleep(10)
 
         self.assertEqual(len(list(stream_out.read())), 2)

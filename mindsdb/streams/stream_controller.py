@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 from threading import Event, Thread
 from time import time
@@ -121,7 +122,12 @@ class StreamController:
                             # WARNING: assuming wd[ob] is numeric
                             key=lambda wd: tuple(wd[ob] for ob in order_by)
                         )]
-                        res_list = self.model_interface.predict(self.predictor, cache[''][-window:], 'dict')
+
+                        ts_data = deepcopy(cache[''][-window:])
+                        for i in range(len(ts_data)):
+                            ts_data[i]['__mdb_make_predictions'] = False
+                            
+                        res_list = self.model_interface.predict(self.predictor, ts_data, 'dict')
                         if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                             self.anomaly_stream.write(res_list[-1])
                         else:
@@ -164,7 +170,12 @@ class StreamController:
                                 # WARNING: assuming wd[ob] is numeric
                                 key=lambda wd: tuple(wd[ob] for ob in order_by)
                             )]
-                            res_list = self.model_interface.predict(self.predictor, cache[gb_value][-window:], 'dict')
+
+                            ts_data = deepcopy(cache[gb_value][-window:])
+                            for i in range(len(ts_data)):
+                                ts_data[i]['__mdb_make_predictions'] = False
+
+                            res_list = self.model_interface.predict(self.predictor, ts_data, 'dict')
                             if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                                 self.anomaly_stream.write(res_list[-1])
                             else:

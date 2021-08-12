@@ -105,6 +105,7 @@ class RedisTest(unittest.TestCase):
             'data_source_name': ds_name,
             'to_predict': 'y',
             'kwargs': {
+                'time_aim': 50,
                 'use_gpu': False,
                 'join_learn_process': True,
                 'ignore_columns': None,
@@ -131,7 +132,7 @@ class RedisTest(unittest.TestCase):
 
         res = requests.put(url, json={"params": params})
         self.assertEqual(res.status_code, 200)
-
+    '''
     def test_2_create_redis_stream(self):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
@@ -157,9 +158,10 @@ class RedisTest(unittest.TestCase):
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)
-
+    '''
     def test_4_create_redis_ts_stream(self):
         print(f"\nExecuting {self._testMethodName}")
+        self.upload_ds(DS_NAME)
         self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
 
         url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
@@ -178,11 +180,12 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
-            time.sleep(5)
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A", 'y': 3*x})
+            time.sleep(0.2)
+        time.sleep(10)
 
         self.assertEqual(len(list(stream_out.read())), 2)
-
+    
     def test_6_create_stream_redis_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
@@ -221,7 +224,7 @@ class RedisTest(unittest.TestCase):
         })
 
         for x in range(1, 101):
-            learning_stream.write({'x1': x, 'x2': 2*x})
+            learning_stream.write({'x1': x, 'x2': 2*x, 'y': 3*x})
 
 
 if __name__ == "__main__":

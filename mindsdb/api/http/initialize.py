@@ -44,6 +44,8 @@ class CustomJSONEncoder(JSONEncoder):
             return obj.strftime("%Y-%m-%dT%H:%M:%S.%f")
         if isinstance(obj, timedelta):
             return str(obj)
+        if isinstance(obj, np.bool_):
+            return bool(obj)
         if isinstance(obj, np.int8) or isinstance(obj, np.int16) or isinstance(obj, np.int32) or isinstance(obj, np.int64):
             return int(obj)
         if isinstance(obj, np.float16) or isinstance(obj, np.float32) or isinstance(obj, np.float64) or isinstance(obj, np.float128):

@@ -4,7 +4,7 @@ from time import time
 
 import pandas as pd
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper, ModelInterface
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.cache import Cache
 from mindsdb.utilities.config import Config
@@ -25,7 +25,7 @@ class StreamController:
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.stop_event = Event()
-        self.model_interface = ModelInterface()
+        self.model_interface = ModelInterfaceWrapper(ModelInterface())
         self.data_store = DataStore()
         self.config = Config()
 

@@ -198,7 +198,12 @@ class ModelController():
         if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
             predictor_record.update_status = 'available'
             db.session.commit()
+        # DEBUG REMOVE!
+        log.error('DEBUG REMOVE THIS ASAP !!!')
+        predictor_record.update_status = 'available'
+        db.session.commit()        
 
+        print(f'Update status: {predictor_record.update_status}')
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
         data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
@@ -250,7 +255,6 @@ class ModelController():
         return 0
 
     def update_model(self, name: str, company_id: int):
-        from mindsdb_worker.updater.update_model import update_model
         from mindsdb.interfaces.storage.db import session, Predictor
         from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
         from mindsdb import __version__ as mindsdb_version
@@ -266,6 +270,7 @@ class ModelController():
 
             session.commit()
             ds = DataStoreWrapper(DataStore(), company_id).get_datasource_obj(None, raw=True, id=predictor_record.datasource_id)
+            print('\n\n\n', ds, '\n\n\n')
             
             tmp_name_db = original_name + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
             tmp_name_fs = f'{company_id}@@@@@{tmp_name_db}'

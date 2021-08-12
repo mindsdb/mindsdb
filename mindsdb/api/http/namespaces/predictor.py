@@ -15,7 +15,8 @@ class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
     def get(self):
         '''List all predictors'''
-        return request.model_interface.get_models()
+        models = request.model_interface.get_models()
+        return models
 
 @ns_conf.route('/<name>')
 @ns_conf.param('name', 'The predictor identifier')

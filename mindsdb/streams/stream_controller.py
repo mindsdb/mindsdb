@@ -82,7 +82,6 @@ class StreamController:
             self._consider_learning()
             for when_data in self.stream_in.read():
                 preds = self.model_interface.predict(self.predictor, when_data, 'dict')
-                print(when_data, preds)
                 for res in preds:
                     if self.anomaly_stream is not None and self._is_anomaly(res):
                         self.anomaly_stream.write(res)
@@ -126,7 +125,6 @@ class StreamController:
                         if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                             self.anomaly_stream.write(res_list[-1])
                         else:
-                            print('2')
                             self.stream_out.write(res_list[-1])
                         cache[''] = cache[''][1 - window:]
         else:
@@ -170,6 +168,5 @@ class StreamController:
                             if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                                 self.anomaly_stream.write(res_list[-1])
                             else:
-                                print('3')
                                 self.stream_out.write(res_list[-1])
                             cache[gb_value] = cache[gb_value][1 - window:]

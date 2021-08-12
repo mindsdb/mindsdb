@@ -18,7 +18,6 @@ class RedisStream(BaseStream):
 
     def read(self):
         for k, when_data in self.stream.read():
-            print(f'READING: {when_data} - FROM {self.stream.info} - WITH CONSUMER: {self.stream.consumers_info}')
             try:
                 res = json.loads(when_data[b''])
             except KeyError:
@@ -27,9 +26,4 @@ class RedisStream(BaseStream):
             self.stream.delete(k)
 
     def write(self, dct):
-        print(f'WRTING: {dct} - TO {self.stream.info} - WITH CONSUMER: {self.stream.consumers_info}')
-        try:
-            dump = json.dumps(dct)
-        except:
-            dump = json.dumps(json.dumps({'y': 1, 'x1': 1, 'x2': 2}))
-        self.stream.add({'': dump})
+        self.stream.add({'': json.dumps(dct, cls=CustomJSONEncoder)})

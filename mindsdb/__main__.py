@@ -80,6 +80,7 @@ if __name__ == '__main__':
 
     is_cloud = config.get('cloud', False)
     if not is_cloud:
+        
         for integration_name in get_db_integrations(COMPANY_ID, sensitive_info=True):
             print(f"Setting up integration: {integration_name}")
             if get_db_integration(integration_name, COMPANY_ID).get('publish', False):

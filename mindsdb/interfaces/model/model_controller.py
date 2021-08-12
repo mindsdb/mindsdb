@@ -20,7 +20,8 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
-
+import string
+import random
 
 
 class ModelController():
@@ -264,16 +265,21 @@ class ModelController():
             predictor_record.update_status = 'updating'
 
             session.commit()
-
-            # @TODO Fix this function to work with the new lightwood!
-            #update_model(name, original_name, self.delete_model, F.rename_model, self.learn_for_update, self._lock_context, company_id, self.config['paths']['predictors'], predictor_record, self.fs_store, DataStoreWrapper(DataStore(), company_id))
+            ds = DataStoreWrapper(DataStore(), company_id).get_datasource_obj(None, raw=True, id=predictor_record.datasource_id)
+            
+            tmp_name_db = original_name + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
+            tmp_name_fs = f'{company_id}@@@@@{tmp_name_db}'
+            kwargs = predictor_record.learn_args
+            kwargs['join_learn_process'] = True
+            self.learn(tmp_name_db, ds, predictor_record.to_predict[0], predictor_record.datasource_id, kwargs, company_id)
+            with self.lock_context(predictor_record.id, 'write') as _:
+                self.fs_store.put(tmp_name_fs, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
+                self.delete_model(tmp_name_db, company_id)
 
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
-
             predictor_record.lightwood_version = lightwood.__version__
             predictor_record.mindsdb_version = mindsdb_version
             predictor_record.update_status = 'up_to_date'
-
             session.commit()
             
         except Exception as e:

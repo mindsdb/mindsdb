@@ -174,7 +174,7 @@ class StreamController:
                             ts_data = deepcopy(cache[gb_value][-window:])
                             for i in range(len(ts_data)):
                                 ts_data[i]['__mdb_make_predictions'] = False
-
+                            print('\n\n Making a prediction ! \n\n')
                             res_list = self.model_interface.predict(self.predictor, ts_data, 'dict')
                             if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                                 self.anomaly_stream.write(res_list[-1])

@@ -185,9 +185,10 @@ class KafkaTest(unittest.TestCase):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A', 'y': 3*x})
             time.sleep(0.1)
         time.sleep(10)
-        
-        self.assertEqual(len(list(stream_out.read())), 2)
 
+        self.assertEqual(len(list(stream_out.read())), 2)
+    
+    '''
     def test_6_create_stream_kafka_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
@@ -226,7 +227,7 @@ class KafkaTest(unittest.TestCase):
 
         for x in range(1, 101):
             learning_stream.write({'x1': x, 'x2': 2*x})
-    
+    '''
 
 if __name__ == '__main__':
     try:

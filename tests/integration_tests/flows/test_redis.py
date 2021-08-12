@@ -40,7 +40,7 @@ STREAM_OUT_OL = f"test_stream_out_ol_{STREAM_SUFFIX}"
 DEFAULT_PREDICTOR = "redis_predictor"
 TS_PREDICTOR = "redis_ts_predictor"
 DS_NAME = "redis_test_ds"
-
+TS_DS_NAME = "ts_redis_test_ds"
 
 class RedisTest(unittest.TestCase):
     @classmethod
@@ -132,13 +132,13 @@ class RedisTest(unittest.TestCase):
 
         res = requests.put(url, json={"params": params})
         self.assertEqual(res.status_code, 200)
-    
+
     def test_2_create_redis_stream(self):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/normal_stream_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             "predictor": DEFAULT_PREDICTOR,
             "stream_in": STREAM_IN,
@@ -161,9 +161,10 @@ class RedisTest(unittest.TestCase):
     
     def test_4_create_redis_ts_stream(self):
         print(f"\nExecuting {self._testMethodName}")
-        self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
+        self.upload_ds(TS_DS_NAME)
+        self.train_ts_predictor(TS_DS_NAME, TS_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             "predictor": TS_PREDICTOR,
             "stream_in": STREAM_IN_TS,
@@ -181,7 +182,6 @@ class RedisTest(unittest.TestCase):
         for x in range(210, 221):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A", 'y': 3*x})
             time.sleep(5)
-        #time.sleep(10)
 
         self.assertEqual(len(list(stream_out.read())), 2)
     '''

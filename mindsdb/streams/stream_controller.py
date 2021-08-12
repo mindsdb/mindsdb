@@ -151,7 +151,7 @@ class StreamController:
                     # because cache doesn't work for tuples
                     # (raises Exception: tuple doesn't have "encode" attribute)
                     gb_value = str(gb_value)
-
+                    
                     with cache:
                         if gb_value not in cache:
                             cache[gb_value] = []

@@ -137,6 +137,7 @@ class ModelController():
                 when_data = [when_data]
             df = pd.DataFrame(when_data)
 
+        print(f'Predicting from dataframe {df} with predictor {name}')
         predictions = self.predictor_cache[name]['predictor'].predict(df)
         # Bellow is useful for debugging caching and storage issues
         # del self.predictor_cache[name]
@@ -273,12 +274,12 @@ class ModelController():
             print('\n\n\n', ds, '\n\n\n')
             
             tmp_name_db = original_name + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
-            tmp_name_fs = f'{company_id}@@@@@{tmp_name_db}'
             kwargs = predictor_record.learn_args
             kwargs['join_learn_process'] = True
             self.learn(tmp_name_db, ds, predictor_record.to_predict[0], predictor_record.datasource_id, kwargs, company_id)
+            tmp_predictor_record = Predictor.query.filter_by(company_id=company_id, name=tmp_name_db).first()
             with self.lock_context(predictor_record.id, 'write') as _:
-                self.fs_store.put(tmp_name_fs, f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
+                self.fs_store.put(f'predictor_{tmp_predictor_record.company_id}_{tmp_predictor_record.id}', f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
                 self.delete_model(tmp_name_db, company_id)
 
             predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()

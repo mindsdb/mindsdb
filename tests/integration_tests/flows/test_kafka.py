@@ -139,7 +139,7 @@ class KafkaTest(unittest.TestCase):
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/normal_stream_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             "predictor": DEFAULT_PREDICTOR,
             "stream_in": STREAM_IN,
@@ -165,7 +165,7 @@ class KafkaTest(unittest.TestCase):
         print(f"\nExecuting {self._testMethodName}")
         self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             'predictor': TS_PREDICTOR,
             'stream_in': STREAM_IN_TS,
@@ -185,8 +185,7 @@ class KafkaTest(unittest.TestCase):
         for x in range(210, 221):
             stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A', 'y': 3*x})
             time.sleep(5)
-        time.sleep(10)
-
+            
         self.assertEqual(len(list(stream_out.read())), 2)
     
     '''

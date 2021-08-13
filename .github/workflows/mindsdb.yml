@@ -34,7 +34,6 @@ jobs:
         #python -m pip install --upgrade pip==21.0.1
         pip install 'pymssql >= 2.1.4'
         pip install boto3
-        pip install git+https://github.com:/mindsdb/lightwood.git@staging
         pip install --no-cache-dir .
         pip install ray
         if [ "$INSTALL_RAY" == "install_ray" ]; then

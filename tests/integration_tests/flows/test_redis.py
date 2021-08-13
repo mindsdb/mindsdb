@@ -135,7 +135,7 @@ class RedisTest(unittest.TestCase):
 
         res = requests.put(url, json={"params": params})
         self.assertEqual(res.status_code, 200)
-
+    '''
     def test_2_create_redis_stream(self):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
@@ -161,7 +161,7 @@ class RedisTest(unittest.TestCase):
         time.sleep(10)
 
         self.assertEqual(len(list(stream_out.read())), 2)
-    
+    '''
     def test_4_create_redis_ts_stream(self):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(TS_DS_NAME)
@@ -230,7 +230,7 @@ class RedisTest(unittest.TestCase):
         for x in range(1, 101):
             learning_stream.write({'x1': x, 'x2': 2*x, 'y': 3*x})
     '''
-    
+
 if __name__ == "__main__":
     try:
         unittest.main(failfast=True)

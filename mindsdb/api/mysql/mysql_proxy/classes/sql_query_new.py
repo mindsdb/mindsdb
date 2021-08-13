@@ -33,8 +33,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
-from mindsdb.utilities.subtypes import DATA_TYPES
-
+from lightwood import dtype
 
 class SQLQuery():
     raw = ''
@@ -363,6 +362,6 @@ class SQLQuery():
                 'alias': column_record[4] or column_record[3],
                 # NOTE all work with text-type, but if/when wanted change types to real,
                 # it will need to check all types casts in BinaryResultsetRowPacket
-                'type': TYPES.MYSQL_TYPE_VAR_STRING if field_type != DATA_TYPES.DATE else TYPES.MYSQL_TYPE_DATETIME
+                'type': TYPES.MYSQL_TYPE_VAR_STRING if field_type not in (dtype.date, dtype.datetime) else TYPES.MYSQL_TYPE_DATETIME
             })
         return result

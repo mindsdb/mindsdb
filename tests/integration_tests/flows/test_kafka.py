@@ -188,7 +188,8 @@ class KafkaTest(unittest.TestCase):
             time.sleep(0.001)
         time.sleep(10)
         self.assertEqual(len(list(stream_out.read())), 2)
-    
+
+    '''
     def test_6_create_stream_kafka_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
@@ -211,7 +212,6 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    '''
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)

@@ -126,7 +126,9 @@ class ModelController():
                 self.predictor_cache[name] = {
                     'predictor':
                     lightwood.predictor_from_state(os.path.join(self.config['paths']['predictors'], fs_name), predictor_record.code),
-                    'created': datetime.datetime.now()
+                    'created': datetime.datetime.now(),
+                    'code': predictor_record.code,
+                    'pickle': fs_name
                 }
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
@@ -137,10 +139,11 @@ class ModelController():
                 when_data = [when_data]
             df = pd.DataFrame(when_data)
 
-        print(f'Predicting from dataframe {df} with predictor {name}')
+        print(name)
+        print(self.predictor_cache[name])
         predictions = self.predictor_cache[name]['predictor'].predict(df)
         # Bellow is useful for debugging caching and storage issues
-        # del self.predictor_cache[name]
+        del self.predictor_cache[name]
 
         delete_process_mark('predict')
 
@@ -204,7 +207,6 @@ class ModelController():
         predictor_record.update_status = 'available'
         db.session.commit()        
 
-        print(f'Update status: {predictor_record.update_status}')
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
         data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
@@ -271,7 +273,6 @@ class ModelController():
 
             session.commit()
             ds = DataStoreWrapper(DataStore(), company_id).get_datasource_obj(None, raw=True, id=predictor_record.datasource_id)
-            print('\n\n\n', ds, '\n\n\n')
             
             tmp_name_db = original_name + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
             kwargs = predictor_record.learn_args

@@ -37,8 +37,8 @@ TS_STREAM_IN_NATIVE = 'TS_' + STREAM_IN_NATIVE
 TS_STREAM_OUT_NATIVE = 'TS_' + STREAM_OUT_NATIVE
 STREAM_IN_OL = f"test_stream_in_ol_{STREAM_SUFFIX}"
 STREAM_OUT_OL = f"test_stream_out_ol_{STREAM_SUFFIX}"
-DEFAULT_PREDICTOR = "redis_predictor"
-TS_PREDICTOR = "redis_ts_predictor"
+DEFAULT_PREDICTOR = "redis_predictorr"
+TS_PREDICTOR = "redis_ts_predictorr"
 DS_NAME = "redis_test_ds"
 TS_DS_NAME = "ts_redis_test_ds"
 

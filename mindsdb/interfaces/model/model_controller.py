@@ -128,7 +128,7 @@ class ModelController():
                     lightwood.predictor_from_state(os.path.join(self.config['paths']['predictors'], fs_name), predictor_record.code),
                     'created': datetime.datetime.now(),
                     'code': predictor_record.code,
-                    'pickle': fs_name
+                    'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
                 }
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
@@ -140,10 +140,11 @@ class ModelController():
             df = pd.DataFrame(when_data)
 
         print(name)
-        print(self.predictor_cache[name])
+        # <A2JDXXBL9A1E.Predictor object at 0x7f5e380b1f70
+        print(self.predictor_cache[name]['predictor'].problem_definition, self.predictor_cache[name]['predictor'], self.predictor_cache[name]['predictor'].predict)
         predictions = self.predictor_cache[name]['predictor'].predict(df)
         # Bellow is useful for debugging caching and storage issues
-        del self.predictor_cache[name]
+        # del self.predictor_cache[name]
 
         delete_process_mark('predict')
 

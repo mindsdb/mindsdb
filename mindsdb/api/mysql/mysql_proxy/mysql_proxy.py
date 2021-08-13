@@ -933,8 +933,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def queryAnswer(self, sql):
         # +++
+        outer_query = None
         subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)
         if len(subquery) == 1:
+            outer_query = sql.replace(f'({subquery[0]})', 'dataframe')
             sql = subquery[0]
         # ---
         statement = SqlStatementParser(sql)
@@ -1186,7 +1188,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql,
                 integration=self.session.integration,
                 database=self.session.database,
-                datahub=self.session.datahub
+                datahub=self.session.datahub,
+                outer_query=outer_query
             )
             self.selectAnswer(query)
         elif keyword == 'rollback':

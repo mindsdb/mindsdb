@@ -20,4 +20,4 @@ kafka-python >= 2.0.0
 pyarrow >= 4.00
 appdirs >= 1.0.0
 mindsdb-sql == 0.0.16
-dfsql == 0.4.1
+dfsql == 0.4.2

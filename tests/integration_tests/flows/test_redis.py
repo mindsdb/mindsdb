@@ -158,7 +158,7 @@ class RedisTest(unittest.TestCase):
 
         for x in range(1, 3):
             stream_in.write({'x1': x, 'x2': 2*x})
-            time.sleep(5)
+        time.sleep(10)
 
         self.assertEqual(len(list(stream_out.read())), 2)
     
@@ -183,32 +183,9 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A", 'y': 3*x})
-            time.sleep(5)
-
-        self.assertEqual(len(list(stream_out.read())), 2)
-
-    def test_9_making_ts_stream_prediction_no_group(self):
-        print(f"\nExecuting {self._testMethodName}")
-        PREDICTOR_NAME = TS_PREDICTOR + "_no_group"
-
-        self.train_ts_predictor(TS_DS_NAME, PREDICTOR_NAME, with_gb=False)
-
-        url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}'
-        res = requests.put(url, json={
-            "predictor": PREDICTOR_NAME,
-            "stream_in": STREAM_IN_TS,
-            "stream_out": STREAM_OUT_TS,
-            "integration": INTEGRATION_NAME,
-        })
-
-        self.assertEqual(res.status_code, 200)
-        stream_in = RedisStream(STREAM_IN_TS + 'no_group', CONNECTION_PARAMS)
-        stream_out = RedisStream(STREAM_OUT_TS + 'no_group', CONNECTION_PARAMS)
-
-        for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'y': 3*x})
-            time.sleep(5)
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
+            time.sleep(0.01)
+        time.sleep(10)
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
@@ -235,6 +212,7 @@ class RedisTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
+    '''
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
@@ -251,7 +229,8 @@ class RedisTest(unittest.TestCase):
 
         for x in range(1, 101):
             learning_stream.write({'x1': x, 'x2': 2*x, 'y': 3*x})
-
+    '''
+    
 if __name__ == "__main__":
     try:
         unittest.main(failfast=True)

@@ -116,7 +116,7 @@ class StreamController:
                 # because cache doesn't work for tuples
                 # (raises Exception: tuple doesn't have "encode" attribute)
                 gb_value = str(gb_value)
-                
+
                 with cache:
                     if gb_value not in cache:
                         cache[gb_value] = []
@@ -137,11 +137,7 @@ class StreamController:
                         )]
 
                         while len(cache[gb_value]) >= window:
-                            ts_data = deepcopy(cache[gb_value][:window])
-                            for i in range(len(ts_data)):
-                                ts_data[i]['__mdb_make_predictions'] = False
-                            
-                            res_list = self.model_interface.predict(self.predictor, ts_data, 'dict')
+                            res_list = self.native_interface.predict(self.predictor, cache[gb_value][:window], 'dict')
                             if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                                 self.anomaly_stream.write(res_list[-1])
                             else:

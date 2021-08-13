@@ -17,9 +17,14 @@ class SnowflakeConnectionChecker:
         try:
             ds = SnowflakeDS('SELECT 1;', self.host, self.user, self.password, self.account, self.warehouse, self.database, self.schema, self.protocol, self.port)
             assert len(ds.df) == 1
-
             connected = True
         except Exception as e:
-            print(e)
-            connected = False
-        return connected
+            try:
+                print(e)
+                connected = False
+            finally:
+                e = None
+                del e
+
+        else:
+            return connected

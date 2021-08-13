@@ -10,6 +10,8 @@
 """
 
 import re
+import dfsql
+import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
@@ -31,6 +33,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+from mindsdb.utilities.subtypes import DATA_TYPES
 
 
 class SQLQuery():
@@ -38,7 +41,7 @@ class SQLQuery():
     struct = {}
     result = None
 
-    def __init__(self, sql, integration=None, database=None, datahub=None):
+    def __init__(self, sql, integration=None, database=None, datahub=None, outer_query=None):
         self.integration = integration
         if not database:
             self.database = 'mindsdb'
@@ -52,6 +55,8 @@ class SQLQuery():
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<2> ', sql, flags=re.IGNORECASE)
 
         self.raw = sql
+        self.model_types = {}
+        self.outer_query = outer_query
         self._parse_query(sql)
 
     def fetch(self, datahub, view='list'):
@@ -105,6 +110,7 @@ class SQLQuery():
         predictor_metadata = {}
         for model_name in (set(model_names) & set(all_tables)):
             model_meta = mindsdb_datanode.model_interface.get_model_data(name=model_name)
+            self.model_types.update(model_meta.get('data_analysis_v2', {}))
             window = model_meta.get('timeseries', {}).get('user_settings', {}).get('window')
             predictor_metadata[model_meta['name']] = {'timeseries': False}
             if window is not None:
@@ -251,7 +257,66 @@ class SQLQuery():
                 data = step_data
             steps_data.append(data)
 
-        self.fetched_data = steps_data[-1]
+        if self.outer_query is not None:
+            data = []
+            # # main_key = None
+            # for row in steps_data[-1]:
+            #     new_row = {}
+            #     for key in row:
+            #         new_row.update(row[key])
+            #         # main_key = key
+            #     data.append(new_row)
+            # +++
+            result = []
+            for row in steps_data[-1]:
+                data_row = {}
+                for column_record in self.columns_list:
+                    table_name = column_record[:3]
+                    column_name = column_record[3]
+                    data_row[column_record[4] or column_record[3]] = row[table_name][column_name]
+                result.append(data_row)
+            # ---
+            data = self._make_list_result_view(result)
+            df = pd.DataFrame(data)
+            # result = dfsql.sql_query(self.outer_query, virtual_table=df)
+            result = dfsql.sql_query(self.outer_query, dataframe=df)
+
+            # data = []
+            # for row in result:
+            #     result[]
+            try:
+                self.columns_list = [
+                    ('', '', '', x, x) for x in result.columns
+                ]
+            except Exception:
+                # !!!
+                self.columns_list = [
+                    ('', '', '', result.name, result.name)
+                ]
+
+            if isinstance(result, pd.core.series.Series):
+                result = result.to_frame()
+
+            # +++ make list result view
+            new_result = []
+            for row in result.to_dict(orient='records'):
+                data_row = []
+                for column_record in self.columns_list:
+                    column_name = column_record[4] or column_record[3]
+                    data_row.append(row.get(column_name))
+                new_result.append(data_row)
+            result = new_result
+            # ---
+
+            # result = result.to_dict(orient='records')
+            # for row in result:
+            #     for column in self.columns_list:
+            #         if (column[4] or column[3]) not in row:
+            #             row[column[4] or column[3]] = None
+            self.fetched_data = result
+
+        else:
+            self.fetched_data = steps_data[-1]
 
     def _apply_where_filter(self, row, where):
         if isinstance(where, Identifier):
@@ -270,6 +335,8 @@ class SQLQuery():
         return result
 
     def _make_list_result_view(self, data):
+        if self.outer_query is not None:
+            return data
         result = []
         for row in data:
             data_row = []
@@ -284,6 +351,10 @@ class SQLQuery():
     def columns(self):
         result = []
         for column_record in self.columns_list:
+            try:
+                field_type = self.model_types.get(column_record[3], {}).get('typing', {}).get('data_type')
+            except Exception:
+                field_type = None
             result.append({
                 'database': column_record[0] or self.database,
                 #  TODO add 'original_table'
@@ -292,6 +363,6 @@ class SQLQuery():
                 'alias': column_record[4] or column_record[3],
                 # NOTE all work with text-type, but if/when wanted change types to real,
                 # it will need to check all types casts in BinaryResultsetRowPacket
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
+                'type': TYPES.MYSQL_TYPE_VAR_STRING if field_type != DATA_TYPES.DATE else TYPES.MYSQL_TYPE_DATETIME
             })
         return result

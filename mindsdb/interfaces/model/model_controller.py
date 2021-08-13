@@ -138,10 +138,7 @@ class ModelController():
             if isinstance(when_data, dict):
                 when_data = [when_data]
             df = pd.DataFrame(when_data)
-
-        print(name)
-        # <A2JDXXBL9A1E.Predictor object at 0x7f5e380b1f70
-        print(self.predictor_cache[name]['predictor'].problem_definition, self.predictor_cache[name]['predictor'], self.predictor_cache[name]['predictor'].predict)
+            
         predictions = self.predictor_cache[name]['predictor'].predict(df)
         # Bellow is useful for debugging caching and storage issues
         # del self.predictor_cache[name]

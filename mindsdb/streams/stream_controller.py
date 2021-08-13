@@ -137,7 +137,7 @@ class StreamController:
                         )]
 
                         while len(cache[gb_value]) >= window:
-                            res_list = self.native_interface.predict(self.predictor, cache[gb_value][:window], 'dict')
+                            res_list = self.model_interface.predict(self.predictor, cache[gb_value][:window], 'dict')
                             if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                                 self.anomaly_stream.write(res_list[-1])
                             else:

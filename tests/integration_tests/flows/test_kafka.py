@@ -133,7 +133,7 @@ class KafkaTest(unittest.TestCase):
                   "control_stream": CONTROL_STREAM}
         res = requests.put(url, json={'params': params})
         self.assertEqual(res.status_code, 200)
-
+    '''
     def test_2_create_kafka_stream(self):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
@@ -160,6 +160,7 @@ class KafkaTest(unittest.TestCase):
             time.sleep(5)
         time.sleep(10)
         self.assertEqual(len(list(stream_out.read())), 2)
+    '''
 
     def test_4_create_kafka_ts_stream(self):
         print(f"\nExecuting {self._testMethodName}")
@@ -183,7 +184,7 @@ class KafkaTest(unittest.TestCase):
         # wait when the integration launches created stream
         time.sleep(10)
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A'})
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A', 'y': 3*x})
             time.sleep(0.001)
         time.sleep(10)
         self.assertEqual(len(list(stream_out.read())), 2)
@@ -209,7 +210,7 @@ class KafkaTest(unittest.TestCase):
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)
-        
+
     '''
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")

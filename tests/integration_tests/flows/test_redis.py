@@ -183,7 +183,7 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A", 'y': 3*x})
             time.sleep(0.01)
         time.sleep(10)
 

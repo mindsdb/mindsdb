@@ -133,7 +133,7 @@ class KafkaTest(unittest.TestCase):
                   "control_stream": CONTROL_STREAM}
         res = requests.put(url, json={'params': params})
         self.assertEqual(res.status_code, 200)
-    '''
+
     def test_2_create_kafka_stream(self):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
@@ -160,7 +160,6 @@ class KafkaTest(unittest.TestCase):
             time.sleep(5)
         time.sleep(10)
         self.assertEqual(len(list(stream_out.read())), 2)
-    '''
 
     def test_4_create_kafka_ts_stream(self):
         print(f"\nExecuting {self._testMethodName}")

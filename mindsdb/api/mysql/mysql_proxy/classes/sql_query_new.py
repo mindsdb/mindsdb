@@ -278,7 +278,8 @@ class SQLQuery():
             # ---
             data = self._make_list_result_view(result)
             df = pd.DataFrame(data)
-            result = dfsql.sql_query(self.outer_query, virtual_table=df)
+            # result = dfsql.sql_query(self.outer_query, virtual_table=df)
+            result = dfsql.sql_query(self.outer_query, dataframe=df)
 
             # data = []
             # for row in result:

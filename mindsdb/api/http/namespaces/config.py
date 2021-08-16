@@ -167,7 +167,10 @@ class Integration(Resource):
 
     @ns_conf.doc('modify_integration')
     def post(self, name):
-        params = request.json.get('params')
+        params = {}
+        params.update((request.json or {}).get('params', {}))
+        params.update(request.form or {})
+
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
         integration = get_db_integration(name, request.company_id)

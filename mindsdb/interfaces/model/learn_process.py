@@ -7,16 +7,16 @@ from lightwood.api.types import ProblemDefinition
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.model.model_interface import ModelInterface, ModelInterfaceWrapper
 from mindsdb.interfaces.storage.db import session, Predictor
+from mindsdb import __version__ as mindsdb_version
+from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 import mindsdb.interfaces.storage.db as db
 import pandas as pd
-import torch
-import gc
 import lightwood
-from mindsdb import __version__ as mindsdb_version
 from lightwood import __version__ as lightwood_version
+from mindsdb.utilities.log import log
 
 
 ctx = mp.get_context('spawn')
@@ -110,6 +110,61 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
     # @TODO: Actually implement this
     return 0
 
+
+def run_update(name: str, company_id: int):
+    original_name = name
+    name = f'{company_id}@@@@@{name}'
+
+    fs_store = FsStore()
+    config = Config()
+    data_store = DataStoreWrapper(DataStore(), company_id)
+
+    try:
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
+        assert predictor_record is not None
+
+        predictor_record.update_status = 'updating'
+
+        session.commit()
+        ds = data_store.get_datasource_obj(None, raw=True, id=predictor_record.datasource_id)
+        df = ds.df
+        
+        problem_definition = predictor_record.learn_args
+        if 'join_learn_process' in problem_definition:
+            del problem_definition['join_learn_process']
+
+        # Adapt kwargs to problem definition
+        if 'timeseries_settings' in problem_definition:
+            problem_definition['timeseries_settings'] = problem_definition['timeseries_settings']
+
+        if 'stop_training_in_x_seconds' in problem_definition:
+            problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
+
+        predictor_record.json_ai = lightwood.json_ai_from_problem(df, problem_definition)
+        predictor_record.code = lightwood.code_from_json_ai(predictor_record.json_ai)
+        session.commit()
+        predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
+        predictor.learn(df)
+
+        fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
+        pickle_path = os.path.join(config['paths']['predictors'], fs_name)
+        predictor.save(pickle_path)
+        fs_store.put(fs_name, fs_name, config['paths']['predictors'])
+        predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
+        session.commit()
+
+        predictor_record.lightwood_version = lightwood.__version__
+        predictor_record.mindsdb_version = mindsdb_version
+        predictor_record.update_status = 'up_to_date'
+        session.commit()
+       
+    except Exception as e:
+        log.error(e)
+        predictor_record.update_status = 'update_failed'  # type: ignore
+        session.commit()
+        return str(e)
+
+
 class LearnProcess(ctx.Process):
     daemon = True
 
@@ -118,6 +173,7 @@ class LearnProcess(ctx.Process):
 
     def run(self):
         run_learn(*self._args)
+
 
 class GenerateProcess(ctx.Process):
     daemon = True
@@ -138,6 +194,7 @@ class FitProcess(ctx.Process):
     def run(self):
         run_fit(*self._args)
 
+
 class AdjustProcess(ctx.Process):
     daemon = True
 
@@ -152,3 +209,13 @@ class AdjustProcess(ctx.Process):
         this is work for celery worker here?
         '''
         run_adjust(*self._args)
+
+
+class UpdateProcess(ctx.Process):
+    daemon = True
+
+    def __init__(self, *args):
+        super(UpdateProcess, self).__init__(args=args)
+
+    def run(self):
+        run_update(*self._args)

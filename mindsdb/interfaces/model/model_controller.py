@@ -1,6 +1,6 @@
 from copy import deepcopy
 from lightwood.api.types import ProblemDefinition
-from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess
+from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess
 from typing import Optional, Tuple, Union, Dict, Any
 from dateutil.parser import parse as parse_datetime
 import psutil
@@ -13,15 +13,12 @@ import pandas as pd
 import lightwood
 import mindsdb_datasources
 from mindsdb import __version__ as mindsdb_version
-from lightwood import __version__ as lightwood_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
-import string
-import random
 
 
 class ModelController():
@@ -256,44 +253,10 @@ class ModelController():
         return 0
 
     def update_model(self, name: str, company_id: int):
-        from mindsdb.interfaces.storage.db import session, Predictor
-        from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
-        from mindsdb import __version__ as mindsdb_version
-
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        try:
-            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
-            assert predictor_record is not None
-
-            predictor_record.update_status = 'updating'
-
-            session.commit()
-            ds = DataStoreWrapper(DataStore(), company_id).get_datasource_obj(None, raw=True, id=predictor_record.datasource_id)
-            
-            tmp_name_db = original_name + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(12))
-            kwargs = predictor_record.learn_args
-            kwargs['join_learn_process'] = True
-            self.learn(tmp_name_db, ds, predictor_record.to_predict[0], predictor_record.datasource_id, kwargs, company_id)
-            tmp_predictor_record = Predictor.query.filter_by(company_id=company_id, name=tmp_name_db).first()
-            with self.lock_context(predictor_record.id, 'write') as _:
-                self.fs_store.put(f'predictor_{tmp_predictor_record.company_id}_{tmp_predictor_record.id}', f'predictor_{company_id}_{predictor_record.id}', self.config['paths']['predictors'])
-                self.delete_model(tmp_name_db, company_id)
-
-            predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
-            predictor_record.lightwood_version = lightwood.__version__
-            predictor_record.mindsdb_version = mindsdb_version
-            predictor_record.update_status = 'up_to_date'
-            session.commit()
-            
-        except Exception as e:
-            log.error(e)
-            predictor_record.update_status = 'update_failed'  # type: ignore
-            session.commit()
-            return str(e)
-        
-        return 'Updated successfully'
+        # TODO: Add version check here once we're done debugging
+        p = UpdateProcess(name, company_id)
+        p.start()
+        return 'Updated in progress'
 
     def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, join_learn_process: bool, company_id: int):
         create_process_mark('learn')

@@ -271,7 +271,7 @@ class DataStore():
                         'class': dsClass.__name__,
                         'args': [],
                         'kwargs': {
-                            'query': source['query'],
+                            'query': source['query'].replace('"', "'"),
                             'schema': source.get('schema', integration['schema']),
                             'warehouse': source.get('warehouse', integration['warehouse']),
                             'database': source.get('database', integration['database']),

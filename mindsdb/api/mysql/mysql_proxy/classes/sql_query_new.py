@@ -170,6 +170,11 @@ class SQLQuery():
                 if is_timeseries:
                     for row in where_data:
                         row['make_predictions'] = False
+                
+                for row in where_data:
+                    for key in row:
+                        if row[key] is not None:
+                            row[key] = str(row[key])
 
                 data = dn.select(
                     table=step.predictor,

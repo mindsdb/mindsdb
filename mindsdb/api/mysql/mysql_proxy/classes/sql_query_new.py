@@ -109,6 +109,7 @@ class SQLQuery():
         models = mindsdb_datanode.model_interface.get_models()
         model_names = [m['name'] for m in models]
         predictor_metadata = {}
+        potential_ts_predictor = False
         for model_name in (set(model_names) & set(all_tables)):
             model_meta = mindsdb_datanode.model_interface.get_model_data(name=model_name)
             self.model_types.update(model_meta.get('data_analysis_v2', {}))
@@ -117,6 +118,7 @@ class SQLQuery():
             if window is not None:
                 order_by = model_meta.get('timeseries', {}).get('user_settings', {}).get('order_by')[0]
                 group_by = model_meta.get('timeseries', {}).get('user_settings', {}).get('group_by')[0]
+                potential_ts_predictor = True
                 predictor_metadata[model_meta['name']] = {
                     'timeseries': True,
                     'window': window,
@@ -124,6 +126,8 @@ class SQLQuery():
                     'group_by_column': group_by
                 }
 
+        if potential_ts_predictor is True:
+            mindsdb_sql_struct.limit = None
         plan = plan_query(
             mindsdb_sql_struct,
             integrations=integrations_names,
@@ -285,6 +289,8 @@ class SQLQuery():
             data = self._make_list_result_view(result)
             df = pd.DataFrame(data)
             # result = dfsql.sql_query(self.outer_query, virtual_table=df)
+            df.columns= df.columns.str.lower()
+            self.outer_query = self.outer_query.lower()
             result = dfsql.sql_query(self.outer_query, dataframe=df)
 
             # data = []

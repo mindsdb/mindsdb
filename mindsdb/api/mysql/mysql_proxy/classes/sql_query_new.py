@@ -12,6 +12,7 @@
 import re
 import dfsql
 import pandas as pd
+import datetime
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
@@ -173,7 +174,7 @@ class SQLQuery():
                 
                 for row in where_data:
                     for key in row:
-                        if row[key] is not None:
+                        if isinstance(row[key], datetime.date):
                             row[key] = str(row[key])
 
                 data = dn.select(

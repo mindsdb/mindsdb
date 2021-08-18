@@ -2,11 +2,12 @@ import os
 import sys
 import json
 
-from mindsdb.__about__ import __version__
-from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb.utilities.fs import get_or_create_data_dir, create_dirs_recursive
-from mindsdb.utilities.functions import args_parse, is_notebook
-from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
+from .__about__ import __version__
+from .__about__ import __version__ as mindsdb_version
+from .utilities.fs import get_or_create_data_dir, create_dirs_recursive
+from .utilities.functions import args_parse, is_notebook
+from .utilities.telemetry import telemetry_file_exists, disable_telemetry
+
 
 is_ray_worker = False
 if sys.argv[0].endswith('ray/workers/default_worker.py'):
@@ -75,7 +76,7 @@ if not is_ray_worker:
     elif os.environ.get('MINDSDB_DB_CON', '') == '':
         os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
-    from mindsdb.utilities.config import Config
+    from .utilities.config import Config
     mindsdb_config = Config()
     create_dirs_recursive(mindsdb_config['paths'])
 
@@ -93,4 +94,4 @@ if not is_ray_worker:
         print('\n ✓ telemetry enabled \n')
 
 
-    from mindsdb.interfaces.custom.model_interface import ModelInterface
+    from .interfaces.custom.model_interface import ModelInterface

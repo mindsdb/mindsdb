@@ -3,6 +3,7 @@ import json
 import datetime
 
 import numpy as np
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, orm, types, UniqueConstraint
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -14,9 +15,11 @@ if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
     engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
 else:
     engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
-Base = declarative_base()
+# Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine, autoflush=True))
-Base.query = session.query_property()
+# Base.query = session.query_property()
+
+db = SQLAlchemy()
 
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
@@ -59,7 +62,7 @@ class Json(types.TypeDecorator):
         return json.loads(value) if value is not None else None
 
 
-class Semaphor(Base):
+class Semaphor(db.Model):
     __tablename__ = 'semaphor'
 
     id = Column(Integer, primary_key=True)
@@ -72,7 +75,7 @@ class Semaphor(Base):
     uniq_const = UniqueConstraint('entity_type', 'entity_id')
 
 
-class Datasource(Base):
+class Datasource(db.Model):
     __tablename__ = 'datasource'
 
     id = Column(Integer, primary_key=True)
@@ -88,7 +91,7 @@ class Datasource(Base):
     integration_id = Column(Integer)
 
 
-class Predictor(Base):
+class Predictor(db.Model):
     __tablename__ = 'predictor'
 
     id = Column(Integer, primary_key=True)
@@ -106,7 +109,7 @@ class Predictor(Base):
     update_status = Column(String, default='up_to_date')
 
 
-class AITable(Base):
+class AITable(db.Model):
     __tablename__ = 'ai_table'
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
@@ -120,7 +123,7 @@ class AITable(Base):
     company_id = Column(Integer)
 
 
-class Log(Base):
+class Log(db.Model):
     __tablename__ = 'log'
 
     id = Column(Integer, primary_key=True)
@@ -132,7 +135,7 @@ class Log(Base):
     created_at_index = Index("some_index", "created_at_index")
 
 
-class Integration(Base):
+class Integration(db.Model):
     __tablename__ = 'integration'
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
@@ -140,9 +143,10 @@ class Integration(Base):
     name = Column(String, nullable=False, unique=True)
     data = Column(Json)
     company_id = Column(Integer)
+    # migration_test = Column(String)
 
 
-class Stream(Base):
+class Stream(db.Model):
     __tablename__ = 'stream'
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, unique=True)
@@ -155,7 +159,8 @@ class Stream(Base):
     company_id = Column(Integer)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
+    # migration_test = Column(String)
 
 
-Base.metadata.create_all(engine)
-orm.configure_mappers()
+# Base.metadata.create_all(engine)
+# orm.configure_mappers()

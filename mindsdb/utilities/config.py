@@ -3,7 +3,7 @@ import json
 from copy import deepcopy
 from threading import Event
 
-from mindsdb.utilities.fs import create_directory
+from .fs import create_directory
 
 
 STOP_THREADS_EVENT = Event()

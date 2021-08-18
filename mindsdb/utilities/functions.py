@@ -10,7 +10,9 @@ def args_parse():
     parser.add_argument('--no_studio', action='store_true')
     parser.add_argument('-v', '--version', action='store_true')
     parser.add_argument('--ray', action='store_true', default=None)
-    return parser.parse_args()
+    # return parser.parse_args()
+    args, _ = parser.parse_known_args()
+    return args
 
 
 def cast_row_types(row, field_types):

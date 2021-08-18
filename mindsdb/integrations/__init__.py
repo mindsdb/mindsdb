@@ -6,6 +6,7 @@ from .mysql.mysql import MySQLConnectionChecker
 from .postgres.postgres import PostgreSQLConnectionChecker
 from .redis.redisdb import RedisConnectionChecker
 from .kafka.kafkadb import KafkaConnectionChecker
+from .snowflake.snowflake import SnowflakeConnectionChecker
 
 
 try:
@@ -21,15 +22,18 @@ except ImportError:
 
 
 CHECKERS = {
-        "clickhouse": ClickhouseConnectionChecker,
-        "mariadb": MariadbConnectionChecker,
-        "mongodb": MongoConnectionChecker,
-        "mssql": MSSQLConnectionChecker,
-        "mysql": MySQLConnectionChecker,
-        "postgres": PostgreSQLConnectionChecker,
-        "redis": RedisConnectionChecker,
-        "kafka": KafkaConnectionChecker
-        }
+    "clickhouse": ClickhouseConnectionChecker,
+    "mariadb": MariadbConnectionChecker,
+    "mongodb": MongoConnectionChecker,
+    "mssql": MSSQLConnectionChecker,
+    "mysql": MySQLConnectionChecker,
+    "singlestore": MySQLConnectionChecker,
+    "postgres": PostgreSQLConnectionChecker,
+    "cockroachdb": PostgreSQLConnectionChecker,
+    "redis": RedisConnectionChecker,
+    "kafka": KafkaConnectionChecker,
+    "snowflake": SnowflakeConnectionChecker
+}
 
 
 if ScyllaDBConnectionChecker is not None:

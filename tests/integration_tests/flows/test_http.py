@@ -4,6 +4,7 @@ from random import randint
 from pathlib import Path
 from uuid import uuid1
 import json
+import lightwood
 
 import requests
 
@@ -132,9 +133,10 @@ class HTTPTest(unittest.TestCase):
 
     def test_3_analyze(self):
         response = requests.get(f'{root}/datasources/{ds_name}/analyze')
+        print(response)
         assert response.status_code == 200
 
-    def test_3_put_predictor(self):
+    def test_4_put_predictor(self):
         # PUT predictor
         params = {
             'data_source_name': ds_name,
@@ -157,20 +159,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
-        # Adjust predictor
-        params = {'data_source_name': ds_name,}
-        url = f'{root}/predictors/{pred_name}/adjust'
-        res = requests.post(url, json=params)
-        assert res.status_code == 200
-
-        # POST predictions
-        params = {'when': {'sqft': 500}}
-        url = f'{root}/predictors/{pred_name}/predict'
-        res = requests.post(url, json=params)
-        assert res.status_code == 200
-        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
-
-    def test_4_datasources(self):
+    def test_5_datasources(self):
         """
         Call list datasources endpoint
         THEN check the response is success
@@ -178,7 +167,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/datasources/')
         assert response.status_code == 200
 
-    def test_5_datasource_not_found(self):
+    def test_6_datasource_not_found(self):
         """
         Call unexisting datasource
         then check the response is NOT FOUND
@@ -186,7 +175,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/datasources/dummy_source')
         assert response.status_code == 404
 
-    def test_6_utils(self):
+    def test_7_utils(self):
         """
         Call utilities ping endpoint
         THEN check the response is success
@@ -199,7 +188,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/config/vars')
         assert response.status_code == 200
 
-    def test_7_predictors(self):
+    def test_8_predictors(self):
         """
         Call list predictors endpoint
         THEN check the response is success
@@ -207,15 +196,15 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/')
         assert response.status_code == 200
 
-    def test_8_predictor_not_found(self):
+    def test_90_predictor_not_found(self):
         """
         Call unexisting predictor
         then check the response is NOT FOUND
         """
         response = requests.get(f'{root}/predictors/dummy_predictor')
-        assert response.status_code == 404
+        assert response.status_code != 200
 
-    def test_9_gui_is_served(self):
+    def test_91_gui_is_served(self):
         """
         GUI downloaded and available
         """
@@ -223,7 +212,7 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
 
-    def test__10_ds_from_unexist_integration(self):
+    def test__92_ds_from_unexist_integration(self):
         """
         Call telemetry enabled
         then check the response is status 200
@@ -235,6 +224,81 @@ class HTTPTest(unittest.TestCase):
         response = requests.put(f'{root}/datasources/{ds_name}', json=data)
         assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
 
+    def test_93_generate_predictor(self):
+        r = requests.put(
+            f'{root}/predictors/generate/lwr_{pred_name}',
+            json={
+                'problem_definition': {'target': 'rental_price'},
+                'data_source_name': ds_name,
+                'join_learn_process': True
+            }
+        )
+        r.raise_for_status()
+
+    def test_94_edit_json_ai(self):
+        # Get the json ai
+        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        predictor_data = resp.json()
+
+        # Edit it
+        json_ai = predictor_data['json_ai']
+        json_ai['problem_definition']
+        models = json_ai['outputs']['rental_price']['models']
+        keep_only = [x for x in models if x['module'] != 'Regression']
+        json_ai['outputs']['rental_price']['models'] = keep_only
+
+        # Upload it
+        r = requests.put(
+            f'{root}/predictors/lwr_{pred_name}/edit/json_ai',
+            json={'json_ai': json_ai}
+        )
+        r.raise_for_status()
+
+    def test_95_validate_json_ai(self):
+        # Get the json ai
+        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        predictor_data = resp.json()
+
+        # Check it
+        r = requests.post(
+            f'{root}/util/validate_json_ai',
+            json={'json_ai': predictor_data['json_ai']}
+        )
+        r.raise_for_status()
+
+    def test_96_edit_code(self):
+        # Make sure json ai edits went through
+        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        predictor_data = resp.json()
+        assert 'Regression(' not in predictor_data['code']
+
+        # Change the code
+        new_code = predictor_data['code']
+        new_code = new_code.split("""self.mode = 'predict'""")[0]
+        new_code += """\n        return pd.DataFrame({'prediction': [int(5555555)]}).astype(int)"""
+
+        r = requests.put(
+            f'{root}/predictors/lwr_{pred_name}/edit/code',
+            json={'code': new_code}
+        )
+        r.raise_for_status()
+
+    def test_97_train_predictor(self):
+        r = requests.put(
+            f'{root}/predictors/lwr_{pred_name}/train',
+            json={'data_source_name': ds_name, 'join_learn_process': True}
+        )
+        r.raise_for_status()
+    
+    def test_98_predict_modified_predictor(self):
+        params = {
+            'when': {'sqft': 500}
+        }
+        url = f'{root}/predictors/lwr_{pred_name}/predict'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+        pvs = res.json()
+        assert pvs[0]['rental_price']['predicted_value'] == 5555555
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

@@ -9,7 +9,6 @@
  *******************************************************
 """
 
-from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
 from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
 from mindsdb.interfaces.datastore.datastore import DataStoreWrapper
@@ -48,10 +47,9 @@ class SessionController():
             model_interface=original_model_interface,
             company_id=company_id
         )
-        self.custom_models = CustomModels(company_id=company_id)
+
         self.datahub = init_datahub(
             model_interface=self.model_interface,
-            custom_models=self.custom_models,
             ai_table=self.ai_table,
             data_store=self.data_store,
             company_id=company_id

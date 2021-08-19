@@ -408,7 +408,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
         model_interface = self.session.model_interface
-        custom_models = self.session.custom_models
         data_store = self.session.data_store
 
         for key in insert.keys():
@@ -481,10 +480,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     data_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
-        if insert['name'] in [x['name'] for x in custom_models.get_models()]:
-            custom_models.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
-        else:
-            model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs)
+        model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs)
 
         self.packet(OkPacket).send()
 

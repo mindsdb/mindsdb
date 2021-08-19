@@ -5,7 +5,7 @@ import tempfile
 from contextlib import closing
 import mysql.connector
 
-from mindsdb.utilities.subtypes import DATA_SUBTYPES
+from lightwood import dtype
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
 
@@ -60,28 +60,28 @@ class MySQL(Integration, MySQLConnectionChecker):
         self.ssl_cert = db_info.get('ssl_cert')
         self.ssl_key = db_info.get('ssl_key')
 
-    def _to_mysql_table(self, stats, predicted_cols, columns):
+    def _to_mysql_table(self, dtype_dict, predicted_cols, columns):
         subtype_map = {
-            DATA_SUBTYPES.INT: 'int',
-            DATA_SUBTYPES.FLOAT: 'double',
-            DATA_SUBTYPES.BINARY: 'bool',
-            DATA_SUBTYPES.DATE: 'Date',
-            DATA_SUBTYPES.TIMESTAMP: 'Datetime',
-            DATA_SUBTYPES.SINGLE: 'VARCHAR(500)',
-            DATA_SUBTYPES.MULTIPLE: 'VARCHAR(500)',
-            DATA_SUBTYPES.TAGS: 'VARCHAR(500)',
-            DATA_SUBTYPES.IMAGE: 'VARCHAR(500)',
-            DATA_SUBTYPES.VIDEO: 'VARCHAR(500)',
-            DATA_SUBTYPES.AUDIO: 'VARCHAR(500)',
-            DATA_SUBTYPES.SHORT: 'VARCHAR(500)',
-            DATA_SUBTYPES.RICH: 'VARCHAR(500)',
-            DATA_SUBTYPES.ARRAY: 'VARCHAR(500)'
+            dtype.integer: 'int',
+            dtype.float: 'double',
+            dtype.binary: 'bool',
+            dtype.date: 'Date',
+            dtype.datetime: 'Datetime',
+            dtype.binary: 'VARCHAR(500)',
+            dtype.categorical: 'VARCHAR(500)',
+            dtype.tags: 'VARCHAR(500)',
+            dtype.image: 'VARCHAR(500)',
+            dtype.video: 'VARCHAR(500)',
+            dtype.audio: 'VARCHAR(500)',
+            dtype.short_text: 'VARCHAR(500)',
+            dtype.rich_text: 'VARCHAR(500)',
+            dtype.array: 'VARCHAR(500)'
         }
 
         column_declaration = []
         for name in columns:
             try:
-                col_subtype = stats[name]['typing']['data_subtype']
+                col_subtype = dtype_dict[name]
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
@@ -154,13 +154,20 @@ class MySQL(Integration, MySQLConnectionChecker):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
-            columns_sql = ','.join(self._to_mysql_table(model_meta['data_analysis_v2'], model_meta['predict'], model_meta['columns']))
+            predict = model_meta['predict']
+            if not isinstance(predict, list):
+                predict = [predict]
+            columns_sql = ','.join(self._to_mysql_table(
+                model_meta['dtype_dict'],
+                predict,
+                list(model_meta['dtype_dict'].keys())
+            ))
             columns_sql += ',`when_data` varchar(500)'
             columns_sql += ',`select_data_query` varchar(500)'
             columns_sql += ',`external_datasource` varchar(500)'
-            for col in model_meta['predict']:
+            for col in predict:
                 columns_sql += f',`{col}_confidence` double'
-                if model_meta['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns_sql += f',`{col}_min` double'
                     columns_sql += f',`{col}_max` double'
                 columns_sql += f',`{col}_explain` varchar(500)'

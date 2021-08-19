@@ -15,19 +15,10 @@ from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
 from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
-    datasource_metadata,
     put_datasource_params
 )
 from mindsdb.api.http.namespaces.entitites.datasources.datasource_data import (
-    get_datasource_rows_params,
-    datasource_rows_metadata
-)
-from mindsdb.api.http.namespaces.entitites.datasources.datasource_files import (
-    put_datasource_file_params
-)
-from mindsdb.api.http.namespaces.entitites.datasources.datasource_missed_files import (
-    datasource_missed_files_metadata,
-    get_datasource_missed_files_params
+    get_datasource_rows_params
 )
 from mindsdb.interfaces.database.integrations import get_db_integration
 
@@ -56,7 +47,6 @@ def parse_filter(key, value):
 @ns_conf.route('/')
 class DatasourcesList(Resource):
     @ns_conf.doc('get_datasources_list')
-    @ns_conf.marshal_list_with(datasource_metadata)
     def get(self):
         '''List all datasources'''
         return request.default_store.get_datasources()
@@ -66,7 +56,6 @@ class DatasourcesList(Resource):
 @ns_conf.param('name', 'Datasource name')
 class Datasource(Resource):
     @ns_conf.doc('get_datasource')
-    @ns_conf.marshal_with(datasource_metadata)
     def get(self, name):
         '''return datasource metadata'''
         ds = request.default_store.get_datasource(name)
@@ -86,7 +75,6 @@ class Datasource(Resource):
         return '', 200
 
     @ns_conf.doc('put_datasource', params=put_datasource_params)
-    @ns_conf.marshal_with(datasource_metadata)
     def put(self, name):
         '''add new datasource'''
         data = {}
@@ -180,7 +168,7 @@ class Datasource(Resource):
 def analyzing_thread(name, default_store):
     try:
         from mindsdb.interfaces.storage.db import session
-        analysis = default_store.start_analysis(name)
+        default_store.start_analysis(name)
         session.close()
     except Exception as e:
         log.error(e)
@@ -228,7 +216,6 @@ class Analyze2(Resource):
 @ns_conf.param('name', 'Datasource name')
 class DatasourceData(Resource):
     @ns_conf.doc('get_datasource_data', params=get_datasource_rows_params)
-    @ns_conf.marshal_with(datasource_rows_metadata)
     def get(self, name):
         '''return data rows'''
         ds = request.default_store.get_datasource(name)
@@ -252,6 +239,7 @@ class DatasourceData(Resource):
                 where.append(param)
 
         data_dict = request.default_store.get_data(name, where, params['page[size]'], params['page[offset]'])
+        
         return data_dict, 200
 
 

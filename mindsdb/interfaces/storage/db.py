@@ -101,9 +101,14 @@ class Predictor(Base):
     mindsdb_version = Column(String)
     native_version = Column(String)
     datasource_id = Column(Integer)
-    is_custom = Column(Boolean)
+    is_custom = Column(Boolean)     # to del
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
+
+    json_ai = Column(Json, nullable=True)
+    code = Column(String, nullable=True)
+    lightwood_version = Column(String, nullable=True)
+    dtype_dict = Column(Json, nullable=True)
 
 
 class AITable(Base):

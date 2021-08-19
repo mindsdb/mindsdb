@@ -342,8 +342,8 @@ class SqlStatementParser():
         elif isinstance(using, list):
             new_using = {}
             for el in using:
-                if el['name'] == 'stop_after':
-                    new_using['stop_training_in_x_seconds'] = el['value']
+                if el['name'] == 'stop_training_in_x_seconds':
+                    new_using['time_aim'] = el['value']
                 else:
                     new_using[el['name']] = el['value']
             r['using'] = new_using

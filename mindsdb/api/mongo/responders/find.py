@@ -1,6 +1,6 @@
 from bson.int64 import Int64
 from collections import OrderedDict
-
+from lightwood import dtype
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.interfaces.database.integrations import get_db_integrations
@@ -19,7 +19,7 @@ class Responce(Responder):
                 'name': x['name'],
                 'status': x['status'],
                 'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
-                'predict': ', '.join(x['predict']),
+                'predict': ', '.join(x['predict'] if isinstance(x['predict'], list) else [x['predict']]),
                 'select_data_query': '',
                 'external_datasource': '',
                 'training_options': ''
@@ -29,10 +29,13 @@ class Responce(Responder):
             model = mindsdb_env['mindsdb_native'].get_model_data(name=query['find'])
 
             columns = []
-            columns += model['columns']
-            columns += [f'{x}_original' for x in model['predict']]
-            for col in model['predict']:
-                if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+            columns += list(model['dtype_dict'].keys())
+            predict = model['predict']
+            if not isinstance(predict, list):
+                predict = [predict]
+            columns += [f'{x}_original' for x in predict]
+            for col in predict:
+                if model['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns += [f"{col}_min", f"{col}_max"]
                 columns += [f"{col}_confidence"]
                 columns += [f"{col}_explain"]
@@ -80,33 +83,42 @@ class Responce(Responder):
             if isinstance(datasource, OrderedDict):
                 datasource = dict(datasource)
 
-            prediction = mindsdb_env['mindsdb_native'].predict(table, 'dict&explain', when_data=datasource)
+            pred_dict_arr, explanations = mindsdb_env['mindsdb_native'].predict(table, datasource, 'dict&explain')
+
             if 'select_data_query' in where_data:
                 mindsdb_env['data_store'].delete_datasource(ds_name)
 
-            pred_dict_arr, explanations = prediction
-
             predicted_columns = model['predict']
+            if not isinstance(predicted_columns, list):
+                predicted_columns = [predicted_columns]
 
             data = []
-            keys = [k for k in pred_dict_arr[0] if k in columns]
+            all_columns = list(model['dtype_dict'].keys())   # [k for k in pred_dict_arr[0] if k in columns]
             min_max_keys = []
             for col in predicted_columns:
-                if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                if model['dtype_dict'][col] in (dtype.integer, dtype.float):
                     min_max_keys.append(col)
 
             for i in range(len(pred_dict_arr)):
                 row = {}
                 explanation = explanations[i]
-                for key in keys:
-                    row[key] = pred_dict_arr[i][key]
+
+                for value in pred_dict_arr[i].values():
+                    row.update(value)
+                if 'predicted_value' in row:
+                    del row['predicted_value']
+                for key in pred_dict_arr[i]:
+                    row[key] = pred_dict_arr[i][key]['predicted_value']
+                for key in all_columns:
+                    if key not in row:
+                        row[key] = None
 
                 for key in predicted_columns:
                     row[key + '_confidence'] = explanation[key]['confidence']
                     row[key + '_explain'] = explanation[key]
                 for key in min_max_keys:
-                    row[key + '_min'] = min(explanation[key]['confidence_interval'])
-                    row[key + '_max'] = max(explanation[key]['confidence_interval'])
+                    row[key + '_min'] = explanation[key]['confidence_lower_bound']
+                    row[key + '_max'] = explanation[key]['confidence_upper_bound']
                 data.append(row)
 
         else:

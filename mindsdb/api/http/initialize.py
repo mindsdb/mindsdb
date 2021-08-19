@@ -26,6 +26,7 @@ from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
 from mindsdb.interfaces.storage.db import session
+import mindsdb.interfaces.storage.db as db
 
 
 class Swagger_Api(Api):
@@ -267,10 +268,14 @@ def initialize_flask(config, init_static_thread, no_studio):
             static_folder=static_path
         )
 
-    migrate = Migrate(app)
-
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['MINDSDB_DB_CON']
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
+
+    # db.init_app(app)
+    migrate = Migrate(app, db, render_as_batch=True)
+
     app.json_encoder = CustomJSONEncoder
 
     authorizations = {

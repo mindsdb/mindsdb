@@ -273,7 +273,6 @@ def initialize_flask(config, init_static_thread, no_studio):
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
 
-    # db.init_app(app)
     migrate = Migrate(app, db, render_as_batch=True)
 
     app.json_encoder = CustomJSONEncoder

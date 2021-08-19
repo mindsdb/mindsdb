@@ -212,6 +212,7 @@ class ModelController():
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
         data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
+        data['problem_definition'] = predictor_record.learn_args
 
         return data
 

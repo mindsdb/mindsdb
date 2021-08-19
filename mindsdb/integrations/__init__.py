@@ -29,6 +29,7 @@ CHECKERS = {
     "mysql": MySQLConnectionChecker,
     "singlestore": MySQLConnectionChecker,
     "postgres": PostgreSQLConnectionChecker,
+    "cockroachdb": PostgreSQLConnectionChecker,
     "redis": RedisConnectionChecker,
     "kafka": KafkaConnectionChecker,
     "snowflake": SnowflakeConnectionChecker

@@ -186,6 +186,7 @@ class DataStore():
                     'mysql': MySqlDS,
                     'singlestore': MySqlDS,
                     'postgres': PostgresDS,
+                    'cockroachdb': PostgresDS,
                     'mssql': MSSQLDS,
                     'mongodb': MongoDS,
                     'snowflake': SnowflakeDS,
@@ -216,7 +217,7 @@ class DataStore():
                     }
                     ds = dsClass(**creation_info['kwargs'])
 
-                elif integration['type'] in ['mssql', 'postgres', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
+                elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
                     creation_info = {
                         'class': dsClass.__name__,
                         'args': [],
@@ -269,10 +270,10 @@ class DataStore():
                         'class': dsClass.__name__,
                         'args': [],
                         'kwargs': {
-                            'query': source['query'],
-                            'schema': source['schema'],
-                            'warehouse': source['warehouse'],
-                            'database': source['database'],
+                            'query': source['query'].replace('"', "'"),
+                            'schema': source.get('schema', integration['schema']),
+                            'warehouse': source.get('warehouse', integration['warehouse']),
+                            'database': source.get('database', integration['database']),
                             'host': integration['host'],
                             'password': integration['password'],
                             'user': integration['user'],

@@ -929,6 +929,34 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def queryAnswer(self, sql):
         # +++
+        # if query not for mindsdb then process that query in integration db
+        if isinstance(self.session.database, str) and self.session.database.lower() != 'mindsdb' and sql.lower().startswith('select'):
+            datanode = self.session.datahub.get(self.session.database)
+            if datanode is None:
+                raise Exception('datanode is none')
+            result = datanode.select_query(sql)
+
+            columns = []
+            data = []
+            if len(result) > 0:
+                columns = [{
+                    'table_name': '',
+                    'name': x,
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                } for x in result[0].keys()]
+                data = [[str(value) for key, value in x.items()] for x in result]
+
+            packages = []
+            packages += self.getTabelPackets(
+                columns=columns,
+                data=data
+            )
+            packages.append(self.packet(OkPacket, eof=True))
+            self.sendPackageGroup(packages)
+            return
+        # ---
+
+        # +++
         outer_query = None
         subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)
         if len(subquery) == 1:

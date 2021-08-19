@@ -238,23 +238,45 @@ class MindsDBDataNode(DataNode):
                 original_target_values[col + '_original'] = [None]
 
         pred_dicts, explanations = self.model_interface.predict(table, where_data, 'dict&explain')
-        # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
-        if isinstance(where_data, list):
-            data = []
-            for row in pred_dicts:
-                new_row = {}
-                for key in row:
-                    new_row.update(row[key])
-                    predicted_value = new_row['predicted_value']
-                    del new_row['predicted_value']
-                    new_row[key] = predicted_value
-                data.append(new_row)
-            pred_dicts = data
 
-        if isinstance(where_data, dict):
-            for col in where_data:
-                if col not in predicted_columns:
-                    pred_dicts[0][col] = where_data[col]
+        if not model['problem_definition']['timeseries_settings']['is_timeseries']:
+            # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
+            if isinstance(where_data, list):
+                data = []
+                for row in pred_dicts:
+                    new_row = {}
+                    for key in row:
+                        new_row.update(row[key])
+                        predicted_value = new_row['predicted_value']
+                        del new_row['predicted_value']
+                        new_row[key] = predicted_value
+                    data.append(new_row)
+                pred_dicts = data
+
+            if isinstance(where_data, dict):
+                for col in where_data:
+                    if col not in predicted_columns:
+                        pred_dicts[0][col] = where_data[col]
+
+        else:
+            pred_dict = pred_dicts[0]
+            new_pred_dicts = []
+            predict = model['predict'][0]
+            data_column = model['problem_definition']['timeseries_settings']['order_by'][0]
+            predictions = pred_dict[predict]
+            if isinstance(predictions, list) is False:
+                predictions = [predictions]
+            data_values = pred_dict[data_column]
+            if isinstance(data_values, list) is False:
+                data_values = [data_values]
+            for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
+                nd = {}
+                nd.update(pred_dict)
+                new_pred_dicts.append(nd)
+                nd[predict] = predictions[i]
+                nd[data_column] = data_values[i]
+            pred_dicts = new_pred_dicts
+
 
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []

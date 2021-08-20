@@ -3,7 +3,6 @@ import json
 import datetime
 
 import numpy as np
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, orm, types, UniqueConstraint
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -18,11 +17,6 @@ else:
 Base = declarative_base()
 session = scoped_session(sessionmaker(bind=engine, autoflush=True))
 Base.query = session.query_property()
-
-db = SQLAlchemy()
-
-def get_engine():
-    return engine
 
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
@@ -170,5 +164,8 @@ class Stream(Base):
 
 Base.metadata.create_all(engine)
 orm.configure_mappers()
-
 metadata = Base.metadata
+
+
+def get_engine():
+    return engine

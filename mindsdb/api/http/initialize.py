@@ -24,7 +24,6 @@ from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
 from mindsdb.interfaces.storage.db import session
-import mindsdb.interfaces.storage.db as db
 
 
 class Swagger_Api(Api):
@@ -274,7 +273,6 @@ def initialize_flask(config, init_static_thread, no_studio):
 
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
-
     app.json_encoder = CustomJSONEncoder
 
     authorizations = {

@@ -5,6 +5,7 @@ import os
 import time
 import asyncio
 import signal
+import subprocess
 
 import torch.multiprocessing as mp
 
@@ -117,6 +118,11 @@ if __name__ == '__main__':
             'started': False
         } for api in api_arr
     }
+
+    if not is_cloud:
+        print('running migrations:')
+        p = subprocess.Popen(["python3 mindsdb/run_migrations.py"], shell=True)
+        p.wait()
 
     start_functions = {
         'http': start_http,

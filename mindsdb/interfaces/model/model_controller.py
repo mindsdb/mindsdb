@@ -19,6 +19,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
+import numpy as np
 
 
 class ModelController():
@@ -197,10 +198,6 @@ class ModelController():
         if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
             predictor_record.update_status = 'available'
             db.session.commit()
-        # DEBUG REMOVE!
-        # log.error('DEBUG REMOVE THIS ASAP !!!')
-        # predictor_record.update_status = 'available'
-        # db.session.commit()        
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -214,6 +211,9 @@ class ModelController():
         data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
         data['problem_definition'] = predictor_record.learn_args
 
+        if data.get('accuracies', None) is not None:
+            if len(data['accuracies']) > 0:
+                data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
         return data
 
     def get_models(self, company_id: int):

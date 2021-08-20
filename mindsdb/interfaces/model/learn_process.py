@@ -126,7 +126,7 @@ def run_update(name: str, company_id: int):
         predictor_record.update_status = 'updating'
 
         session.commit()
-        ds = data_store.get_datasource_obj(None, raw=True, id=predictor_record.datasource_id)
+        ds = data_store.get_datasource_obj(None, raw=False, id=predictor_record.datasource_id)
         df = ds.df
         
         problem_definition = predictor_record.learn_args
@@ -140,8 +140,9 @@ def run_update(name: str, company_id: int):
         if 'stop_training_in_x_seconds' in problem_definition:
             problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
 
-        predictor_record.json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-        predictor_record.code = lightwood.code_from_json_ai(predictor_record.json_ai)
+        json_ai = lightwood.json_ai_from_problem(df, problem_definition)
+        predictor_record.json_ai = json_ai.to_dict()
+        predictor_record.code = lightwood.code_from_json_ai(json_ai)
         session.commit()
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)

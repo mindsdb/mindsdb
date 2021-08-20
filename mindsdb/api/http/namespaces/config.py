@@ -224,8 +224,8 @@ class Vars(Resource):
         else:
             mongo = True
 
-        cloud = ca.config_obj.get('cloud', False)
-
+        #cloud = ca.config_obj.get('cloud', False)
+        cloud = True
         local_time = datetime.datetime.now(tzlocal())
         local_timezone = local_time.tzname()
 

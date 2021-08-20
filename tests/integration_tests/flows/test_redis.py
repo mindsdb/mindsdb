@@ -37,10 +37,10 @@ TS_STREAM_IN_NATIVE = 'TS_' + STREAM_IN_NATIVE
 TS_STREAM_OUT_NATIVE = 'TS_' + STREAM_OUT_NATIVE
 STREAM_IN_OL = f"test_stream_in_ol_{STREAM_SUFFIX}"
 STREAM_OUT_OL = f"test_stream_out_ol_{STREAM_SUFFIX}"
-DEFAULT_PREDICTOR = "redis_predictor"
-TS_PREDICTOR = "redis_ts_predictor"
+DEFAULT_PREDICTOR = "redis_predictorr"
+TS_PREDICTOR = "redis_ts_predictorr"
 DS_NAME = "redis_test_ds"
-
+TS_DS_NAME = "ts_redis_test_ds"
 
 class RedisTest(unittest.TestCase):
     @classmethod
@@ -100,7 +100,17 @@ class RedisTest(unittest.TestCase):
         res = requests.put(url, json=params)
         res.raise_for_status()
 
-    def train_ts_predictor(self, ds_name, predictor_name):
+    def train_ts_predictor(self, ds_name, predictor_name, with_gb=True):
+        ts_settings = {
+            "order_by": ["order"],
+            "nr_predictions": 1,
+            "use_previous_target": True,
+            "window": 10}
+
+        if with_gb:
+            ts_settings["group_by"] = ["group"]
+        else:
+            ts_settings["group_by"] = []
         params = {
             'data_source_name': ds_name,
             'to_predict': 'y',
@@ -108,19 +118,13 @@ class RedisTest(unittest.TestCase):
                 'use_gpu': False,
                 'join_learn_process': True,
                 'ignore_columns': None,
-                'timeseries_settings': {
-                    "order_by": ["order"],
-                    "group_by": ["group"],
-                    "nr_predictions": 1,
-                    "use_previous_target": True,
-                    "window": 10
-                },
+                'timeseries_settings': ts_settings,
             }
         }
         url = f'{HTTP_API_ROOT}/predictors/{predictor_name}'
         res = requests.put(url, json=params)
         res.raise_for_status()
-
+    
     def test_1_create_integration(self):
         print(f"\nExecuting {self._testMethodName}")
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
@@ -131,13 +135,13 @@ class RedisTest(unittest.TestCase):
 
         res = requests.put(url, json={"params": params})
         self.assertEqual(res.status_code, 200)
-
+    
     def test_2_create_redis_stream(self):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/normal_stream_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             "predictor": DEFAULT_PREDICTOR,
             "stream_in": STREAM_IN,
@@ -160,9 +164,10 @@ class RedisTest(unittest.TestCase):
 
     def test_4_create_redis_ts_stream(self):
         print(f"\nExecuting {self._testMethodName}")
-        self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
+        self.upload_ds(TS_DS_NAME)
+        self.train_ts_predictor(TS_DS_NAME, TS_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             "predictor": TS_PREDICTOR,
             "stream_in": STREAM_IN_TS,
@@ -178,12 +183,13 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A"})
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A", 'y': 3*x})
             time.sleep(0.01)
         time.sleep(10)
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
+    '''
     def test_6_create_stream_redis_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
@@ -207,6 +213,7 @@ class RedisTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
+
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
@@ -222,8 +229,8 @@ class RedisTest(unittest.TestCase):
         })
 
         for x in range(1, 101):
-            learning_stream.write({'x1': x, 'x2': 2*x})
-
+            learning_stream.write({'x1': x, 'x2': 2*x, 'y': 3*x})
+    '''
 
 if __name__ == "__main__":
     try:

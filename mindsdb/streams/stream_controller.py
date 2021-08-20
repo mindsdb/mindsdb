@@ -1,10 +1,11 @@
+from copy import deepcopy
 import os
 from threading import Event, Thread
 from time import time
 
 import pandas as pd
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper, ModelInterface
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.cache import Cache
 from mindsdb.utilities.config import Config
@@ -25,7 +26,7 @@ class StreamController:
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.stop_event = Event()
-        self.native_interface = ModelInterface()
+        self.model_interface = ModelInterfaceWrapper(ModelInterface())
         self.data_store = DataStore()
         self.config = Config()
 
@@ -33,9 +34,11 @@ class StreamController:
         if p is None:
             raise Exception(f'Predictor {predictor} doesn\'t exist')
 
-        self.target = p.learn_args['to_predict'] if isinstance(p.learn_args['to_predict'], str) else p.learn_args['to_predict'][0]
+        self.target = p.to_predict[0]
 
-        ts_settings = p.learn_args['kwargs'].get('timeseries_settings', None)
+        ts_settings = p.learn_args.get('timeseries_settings', None)
+        if not ts_settings['is_timeseries']:
+            ts_settings = None
 
         if ts_settings is None:
             self.thread = Thread(target=StreamController._make_predictions, args=(self,))
@@ -79,7 +82,8 @@ class StreamController:
         while not self.stop_event.wait(0.5):
             self._consider_learning()
             for when_data in self.stream_in.read():
-                for res in self.native_interface.predict(self.predictor, 'dict', when_data=when_data):
+                preds = self.model_interface.predict(self.predictor, when_data, 'dict')
+                for res in preds:
                     if self.anomaly_stream is not None and self._is_anomaly(res):
                         self.anomaly_stream.write(res)
                     else:
@@ -133,7 +137,7 @@ class StreamController:
                         )]
 
                         while len(cache[gb_value]) >= window:
-                            res_list = self.native_interface.predict(self.predictor, 'dict', when_data=cache[gb_value][:window])
+                            res_list = self.model_interface.predict(self.predictor, cache[gb_value][:window], 'dict')
                             if self.anomaly_stream is not None and self._is_anomaly(res_list[-1]):
                                 self.anomaly_stream.write(res_list[-1])
                             else:

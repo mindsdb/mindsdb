@@ -1,64 +1,30 @@
-import os
 import time
-
 from dateutil.parser import parse as parse_datetime
 from flask import request
 from flask_restx import Resource, abort
-from flask import current_app as ca
-
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
-    predictor_metadata,
     predictor_query_params,
-    upload_predictor_params,
     put_predictor_params
 )
-from mindsdb.api.http.namespaces.entitites.predictor_status import predictor_status
-
 
 @ns_conf.route('/')
 class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
-    @ns_conf.marshal_list_with(predictor_status, skip_none=True)
     def get(self):
         '''List all predictors'''
-        return request.native_interface.get_models()
-
-
-@ns_conf.route('/custom/<name>')
-@ns_conf.param('name', 'The predictor identifier')
-@ns_conf.response(404, 'predictor not found')
-class CustomPredictor(Resource):
-    @ns_conf.doc('put_custom_predictor')
-    def put(self, name):
-        try:
-            trained_status = request.json['trained_status']
-        except Exception:
-            trained_status = 'untrained'
-
-        predictor_file = request.files['file']
-        fpath = os.path.join(ca.config_obj.paths['tmp'],  name + '.zip')
-        with open(fpath, 'wb') as f:
-            f.write(predictor_file.read())
-
-        request.custom_models.load_model(fpath, name, trained_status)
-
-        return f'Uploaded custom model {name}'
-
+        models = request.model_interface.get_models()
+        return models
 
 @ns_conf.route('/<name>')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
 class Predictor(Resource):
     @ns_conf.doc('get_predictor')
-    @ns_conf.marshal_with(predictor_metadata, skip_none=True)
     def get(self, name):
-        try:
-            model = request.native_interface.get_model_data(name, db_fix=False)
-        except Exception as e:
-            abort(404, "")
+        model = request.model_interface.get_model_data(name)
 
         for k in ['train_end_at', 'updated_at', 'created_at']:
             if k in model and model[k] is not None:
@@ -69,8 +35,7 @@ class Predictor(Resource):
     @ns_conf.doc('delete_predictor')
     def delete(self, name):
         '''Remove predictor'''
-        request.native_interface.delete_model(name)
-
+        request.model_interface.delete_model(name)
         return '', 200
 
     @ns_conf.doc('put_predictor', params=put_predictor_params)
@@ -115,7 +80,7 @@ class Predictor(Resource):
             original_name = name
             name = name + '_retrained'
 
-        model_names = [x['name'] for x in request.native_interface.get_models()]
+        model_names = [x['name'] for x in request.model_interface.get_models()]
         if name in model_names:
             return http_error(
                 409,
@@ -123,53 +88,31 @@ class Predictor(Resource):
                 f"Predictor with name '{name}' already exists. Each predictor must have unique name."
             )
 
-        request.native_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
+        request.model_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
         for i in range(20):
             try:
                 # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
-                request.native_interface.get_model_data(name)
+                request.model_interface.get_model_data(name)
                 break
             except Exception:
                 time.sleep(1)
 
         if retrain is True:
             try:
-                request.native_interface.delete_model(original_name)
-                request.native_interface.rename_model(name, original_name)
+                request.model_interface.delete_model(original_name)
+                request.model_interface.rename_model(name, original_name)
             except Exception:
                 pass
 
         return '', 200
 
 
-@ns_conf.route('/<name>/learn')
-@ns_conf.param('name', 'The predictor identifier')
-class PredictorLearn(Resource):
-    def post(self, name):
-        data = request.json
-        to_predict = data.get('to_predict')
-        kwargs = data.get('kwargs', None)
-
-        if not isinstance(kwargs, dict):
-            kwargs = {}
-
-        if 'advanced_args' not in kwargs:
-            kwargs['advanced_args'] = {}
-
-        ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
-        from_data = request.default_store.get_datasource_obj(ds_name, raw=True)
-
-        request.custom_models.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs)
-
-        return '', 200
-
-
 @ns_conf.route('/<name>/update')
 @ns_conf.param('name', 'Update predictor')
-class PredictorPredict(Resource):
+class PredictorUpdate(Resource):
     @ns_conf.doc('Update predictor')
     def get(self, name):
-        msg = request.native_interface.update_model(name)
+        msg = request.model_interface.update_model(name)
         return {
             'message': msg
         }
@@ -188,11 +131,11 @@ class PredictorAdjust(Resource):
         if from_data is None:
             return {'message': f'Can not find datasource: {ds_name}'}, 400
 
-        model_names = [x['name'] for x in request.native_interface.get_models()]
+        model_names = [x['name'] for x in request.model_interface.get_models()]
         if name not in model_names:
             return abort(404, f'Predictor "{name}" doesn\'t exist',)
 
-        request.native_interface.adjust(
+        request.model_interface.adjust(
             name,
             from_data,
             request.default_store.get_datasource(ds_name)['id']
@@ -203,20 +146,16 @@ class PredictorAdjust(Resource):
 
 @ns_conf.route('/<name>/predict')
 @ns_conf.param('name', 'The predictor identifier')
-class PredictorPredict2(Resource):
+class PredictorPredict(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
         '''Queries predictor'''
-        data = request.json
-        when = data.get('when')
-        format_flag = data.get('format_flag', 'explain')
-        kwargs = data.get('kwargs', {})
+        when = request.json.get('when')
 
-        if len(when) == 0:
+        if isinstance(when, dict) is False or len(when) == 0:
             return 'No data provided for the predictions', 400
 
-        results = request.native_interface.predict(name, format_flag, when_data=when, **kwargs)
-
+        results = request.model_interface.predict(name, when, 'explain')
         return results
 
 
@@ -226,16 +165,13 @@ class PredictorPredictFromDataSource(Resource):
     @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
     def post(self, name):
         data = request.json
-        format_flag = data.get('format_flag', 'explain')
-        kwargs = data.get('kwargs', {})
-
         use_raw = False
 
         from_data = request.default_store.get_datasource_obj(data.get('data_source_name'), raw=use_raw)
         if from_data is None:
             abort(400, 'No valid datasource given')
 
-        results = request.native_interface.predict(name, format_flag, when_data=from_data, **kwargs)
+        results = request.model_interface.predict(name, from_data, 'explain')
         return results
 
 
@@ -244,11 +180,71 @@ class PredictorPredictFromDataSource(Resource):
 class PredictorDownload(Resource):
     @ns_conf.doc('get_predictor_download')
     def get(self, name):
-        '''Export predictor to file'''
         try:
             new_name = request.args.get('new_name')
-            request.native_interface.rename_model(name, new_name)
+            request.model_interface.rename_model(name, new_name)
         except Exception as e:
             return str(e), 400
 
         return f'Renamed model to {new_name}', 200
+
+
+@ns_conf.route('/generate/<name>')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class PredictorGenerate(Resource):
+    def put(self, name):
+        problem_definition = request.json['problem_definition']
+        datasource_name = request.json['data_source_name']
+
+        from_data = request.default_store.get_datasource_obj(
+            datasource_name,
+            raw=True
+        )
+        datasource = request.default_store.get_datasource(datasource_name)
+
+        request.model_interface.generate_predictor(
+            name,
+            from_data,
+            datasource['id'],
+            problem_definition,
+            request.json.get('join_learn_process', False)
+        )
+
+        return '', 200
+
+
+@ns_conf.route('/<name>/edit/json_ai')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class PredictorEditJsonAI(Resource):
+    def put(self, name):
+        request.model_interface.edit_json_ai(name, request.json['json_ai'])
+        return '', 200
+
+
+@ns_conf.route('/<name>/edit/code')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class PredictorEditCode(Resource):
+    def put(self, name):
+        request.model_interface.edit_code(name, request.json['code'])
+        return '', 200
+    
+
+@ns_conf.route('/<name>/train')
+@ns_conf.param('name', 'The predictor identifier')
+@ns_conf.response(404, 'predictor not found')
+class PredictorTrain(Resource):
+    def put(self, name):
+        for param in ['data_source_name']:
+            if param not in request.json:
+                return abort(400, 'Please provide {}'.format(param))
+
+        from_data = request.default_store.get_datasource_obj(
+            request.json['data_source_name'],
+            raw=True
+        )
+
+        request.model_interface.fit_predictor(name, from_data, request.json.get('join_learn_process', False))
+        return '', 200

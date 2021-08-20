@@ -1,9 +1,3 @@
-import time
-import pickle
-import os
-
-from mindsdb.utilities.log import log
-import pyarrow.flight as fl
 
 
 class ModelInterfaceWrapper(object):
@@ -19,7 +13,7 @@ class ModelInterfaceWrapper(object):
         return wrapper
 
 
-class ModelInterfaceNativeImport():
+class ModelInterface():
     def __init__(self):
         from mindsdb.interfaces.model.model_controller import ModelController
         self.controller = ModelController(False)
@@ -51,9 +45,23 @@ class ModelInterfaceNativeImport():
     def update_model(self, *args, **kwargs):
         return self.controller.update_model(*args, **kwargs)
 
+    def generate_predictor(self, *args, **kwargs):
+        return self.controller.generate_predictor(*args, **kwargs)
+    
+    def edit_json_ai(self, *args, **kwargs):
+        return self.controller.edit_json_ai(*args, **kwargs)
+    
+    def edit_code(self, *args, **kwargs):
+        return self.controller.edit_code(*args, **kwargs)
+    
+    def fit_predictor(self, *args, **kwargs):
+        return self.controller.fit_predictor(*args, **kwargs)
+
+    def code_from_json_ai(self, *args, **kwargs):
+        return self.controller.code_from_json_ai(*args, **kwargs)
+
 
 ray_based = False
-ModelInterface = ModelInterfaceNativeImport
 
 '''
 Notes: Remove ray from actors are getting stuck

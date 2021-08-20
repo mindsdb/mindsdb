@@ -18,20 +18,14 @@ from common import (
 # +++ define test data
 TEST_DATASET = 'used_car_price'
 
-DB_TYPES_MAP = {
-    int: 'int',
-    float: 'float',
-    str: 'text'
-}
-
 TO_PREDICT = {
-    'enginesize': float,
-    'model': str
+    'enginesize': str,
+    # 'model': str
 }
 CONDITION = {
-    'year': 2017,
+    'year': '2017',
     'transmission': 'Manual',
-    'mpg': 60.0
+    'mpg': '60.0'
 }
 # ---
 

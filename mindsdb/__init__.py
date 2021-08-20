@@ -92,6 +92,3 @@ if not is_ray_worker:
         print('\n x telemetry disabled \n')
     else:
         print('\n ✓ telemetry enabled \n')
-
-
-    from .interfaces.custom.model_interface import ModelInterface

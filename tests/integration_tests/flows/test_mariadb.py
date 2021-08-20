@@ -20,15 +20,9 @@ from common import (
 # +++ define test data
 TEST_DATASET = 'us_health_insurance'
 
-DB_TYPES_MAP = {
-    int: 'int',
-    float: 'float',
-    str: 'varchar(255)'
-}
-
 TO_PREDICT = {
-    'charges': float,
-    'smoker': str
+    'charges': float
+    # 'smoker': str
 }
 CONDITION = {
     'age': 20,

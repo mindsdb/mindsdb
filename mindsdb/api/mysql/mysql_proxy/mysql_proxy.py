@@ -408,7 +408,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
         model_interface = self.session.model_interface
-        custom_models = self.session.custom_models
         data_store = self.session.data_store
 
         for key in insert.keys():
@@ -481,10 +480,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     data_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
-        if insert['name'] in [x['name'] for x in custom_models.get_models()]:
-            custom_models.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
-        else:
-            model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs)
+        model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs)
 
         self.packet(OkPacket).send()
 
@@ -932,6 +928,34 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def queryAnswer(self, sql):
+        # +++
+        # if query not for mindsdb then process that query in integration db
+        if isinstance(self.session.database, str) and self.session.database.lower() != 'mindsdb' and sql.lower().startswith('select'):
+            datanode = self.session.datahub.get(self.session.database)
+            if datanode is None:
+                raise Exception('datanode is none')
+            result = datanode.select_query(sql)
+
+            columns = []
+            data = []
+            if len(result) > 0:
+                columns = [{
+                    'table_name': '',
+                    'name': x,
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                } for x in result[0].keys()]
+                data = [[str(value) for key, value in x.items()] for x in result]
+
+            packages = []
+            packages += self.getTabelPackets(
+                columns=columns,
+                data=data
+            )
+            packages.append(self.packet(OkPacket, eof=True))
+            self.sendPackageGroup(packages)
+            return
+        # ---
+
         # +++
         outer_query = None
         subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)

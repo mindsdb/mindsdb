@@ -2,7 +2,6 @@ from mindsdb_datasources import SnowflakeDS
 
 
 class SnowflakeConnectionChecker:
-
     def __init__(self, **kwargs):
         self.host = kwargs.get('host')
         self.user = kwargs.get('user')

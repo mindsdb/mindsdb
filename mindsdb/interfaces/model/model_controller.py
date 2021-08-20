@@ -198,10 +198,6 @@ class ModelController():
         if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
             predictor_record.update_status = 'available'
             db.session.commit()
-        # DEBUG REMOVE!
-        log.error('DEBUG REMOVE THIS ASAP !!!')
-        predictor_record.update_status = 'available'
-        db.session.commit()        
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict

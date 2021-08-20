@@ -214,9 +214,10 @@ class ModelController():
         data['json_ai'] = predictor_record.json_ai
         data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
         data['problem_definition'] = predictor_record.learn_args
-        if data.get('score_dict', None) is not None:
-            if len(data['score_dict']) > 0:
-                data['accuracy'] = float(np.mean(list(data['score_dict'].values())))
+        print(data, data.get('accuracies', None))
+        if data.get('accuracies', None) is not None:
+            if len(data['accuracies']) > 0:
+                data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
         return data
 
     def get_models(self, company_id: int):

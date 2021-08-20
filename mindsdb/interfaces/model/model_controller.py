@@ -19,6 +19,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
+import numpy as np
 
 
 class ModelController():
@@ -213,7 +214,7 @@ class ModelController():
         data['json_ai'] = predictor_record.json_ai
         data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
         data['problem_definition'] = predictor_record.learn_args
-
+        data['accuracy'] = float(np.mean(list(data['score_dict'].values())))
         return data
 
     def get_models(self, company_id: int):

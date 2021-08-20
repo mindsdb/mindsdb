@@ -128,8 +128,11 @@ def run_update(name: str, company_id: int):
         session.commit()
         ds = data_store.get_datasource_obj(None, raw=False, id=predictor_record.datasource_id)
         df = ds.df
-        
+
         problem_definition = predictor_record.learn_args
+
+        problem_definition['target'] = predictor_record.predict if isinstance(predictor_record.predict, str) else predictor_record.predict[0]
+
         if 'join_learn_process' in problem_definition:
             del problem_definition['join_learn_process']
 

@@ -15,7 +15,6 @@ from flask import Flask, url_for, make_response
 from flask.json import dumps
 from flask_restx import Api
 from flask.json import JSONEncoder
-from flask_migrate import Migrate
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -268,12 +267,8 @@ def initialize_flask(config, init_static_thread, no_studio):
             static_folder=static_path
         )
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['MINDSDB_DB_CON']
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
-
-    migrate = Migrate(app, db, render_as_batch=True)
 
     app.json_encoder = CustomJSONEncoder
 

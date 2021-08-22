@@ -16,7 +16,7 @@ import datetime
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
-from mindsdb_sql.parser.ast import Join, Identifier, Operation, Constant, UnaryOperation, BinaryOperation, OrderBy
+from mindsdb_sql.parser.ast import Join, Identifier, Operation, Constant, UnaryOperation, BinaryOperation, OrderBy, Star
 from mindsdb_sql.planner.steps import (
     FetchDataframeStep,
     ApplyPredictorStep,
@@ -74,7 +74,7 @@ class SQLQuery():
 
     def _parse_query(self, sql):
         def get_preditor_alias(step, mindsdb_database):
-            return (mindsdb_database, step.predictor, step.alias)
+            return (mindsdb_database, '.'.join(step.predictor.parts), '.'.join(step.predictor.alias.parts))
 
         def get_table_alias(table_obj, default_db_name):
             # (database, table, alias)
@@ -84,7 +84,7 @@ class SQLQuery():
                 name = (default_db_name, table_obj.parts[0])
             else:
                 name = tuple(table_obj.parts)
-            name = name + (table_obj.alias,)
+            name = name + ('.'.join(table_obj.alias.parts),)
             return name
 
         def get_all_tables(from_stmt):
@@ -148,10 +148,11 @@ class SQLQuery():
                 table_alias = get_table_alias(step.query.from_table, self.database)
                 data = [{table_alias: x} for x in data]
             elif isinstance(step, ApplyPredictorRowStep):
+                predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get(self.database)
                 where_data = step.row_dict
                 data = dn.select(
-                    table=step.predictor,
+                    table=predictor,
                     columns=None,
                     where_data=where_data,
                     where={}
@@ -159,6 +160,7 @@ class SQLQuery():
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, ApplyPredictorStep):
                 dn = self.datahub.get(self.database)
+                predictor = '.'.join(step.predictor.parts)
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]:
                     new_row = {}
@@ -171,7 +173,7 @@ class SQLQuery():
                         new_row.update(row[table_name])
                     where_data.append(new_row)
 
-                is_timeseries = predictor_metadata[step.predictor]['timeseries']
+                is_timeseries = predictor_metadata[predictor]['timeseries']
                 if is_timeseries:
                     for row in where_data:
                         row['__mdb_make_predictions'] = False
@@ -182,7 +184,7 @@ class SQLQuery():
                             row[key] = str(row[key])
 
                 data = dn.select(
-                    table=step.predictor,
+                    table=predictor,
                     columns=None,
                     where_data=where_data,
                     where={},
@@ -222,13 +224,13 @@ class SQLQuery():
                 columns_list = []
                 for column_full_name in step.columns:
                     table_name = None
-                    if column_full_name != '*':
-                        column_name_parts = column_full_name.split('.')
+                    if isinstance(column_full_name, Star) is False:
+                        column_name_parts = column_full_name.parts
+                        column_alias = None if column_full_name.alias is None else '.'.join(column_full_name.alias.parts)
                         if len(column_name_parts) > 2:
-                            raise Exception(f'Column name must contain no more than 2 parts. Got name: {column_full_name}')
+                            raise Exception(f'Column name must contain no more than 2 parts. Got name: {".".join(column_full_name)}')
                         elif len(column_name_parts) == 1:
                             column_name = column_name_parts[0]
-                            column_alias = step.aliases.get(column_full_name)
 
                             appropriate_table = None
                             for table_name, table_columns in tables_columns.items():
@@ -243,7 +245,6 @@ class SQLQuery():
                         elif len(column_name_parts) == 2:
                             table_name_or_alias = column_name_parts[0]
                             column_name = column_name_parts[1]
-                            column_alias = step.aliases.get(column_full_name)
 
                             appropriate_table = None
                             for table_name, table_columns in tables_columns.items():
@@ -288,20 +289,14 @@ class SQLQuery():
             # ---
             data = self._make_list_result_view(result)
             df = pd.DataFrame(data)
-            # result = dfsql.sql_query(self.outer_query, virtual_table=df)
-            df.columns= df.columns.str.lower()
-            self.outer_query = self.outer_query.lower()
+            # result = dfsql.sql_query(self.outer_query, virtual_table=df)      # make an issue about it
             result = dfsql.sql_query(self.outer_query, dataframe=df)
 
-            # data = []
-            # for row in result:
-            #     result[]
             try:
                 self.columns_list = [
                     ('', '', '', x, x) for x in result.columns
                 ]
             except Exception:
-                # !!!
                 self.columns_list = [
                     ('', '', '', result.name, result.name)
                 ]

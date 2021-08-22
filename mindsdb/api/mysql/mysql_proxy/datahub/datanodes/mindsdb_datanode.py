@@ -96,12 +96,11 @@ class MindsDBDataNode(DataNode):
 
     def _select_predictors(self):
         models = self.model_interface.get_models()
-        # TODO add custom models
         return [{
             'name': x['name'],
             'status': x['status'],
             'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
-            'predict': ', '.join(x['predict']),
+            'predict': ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
             'select_data_query': '',
             'external_datasource': '',  # TODO
             'training_options': ''  # TODO ?

@@ -260,22 +260,35 @@ class MindsDBDataNode(DataNode):
         else:
             pred_dict = pred_dicts[0]
             new_pred_dicts = []
-            predict = model['predict'][0]
+            predict = model['predict']
             data_column = model['problem_definition']['timeseries_settings']['order_by'][0]
-            predictions = pred_dict[predict]
+            predictions = pred_dict[predict]['predicted_value']
             if isinstance(predictions, list) is False:
                 predictions = [predictions]
-            data_values = pred_dict[data_column]
+            data_values = pred_dict[predict][data_column]
             if isinstance(data_values, list) is False:
                 data_values = [data_values]
             for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
                 nd = {}
-                nd.update(pred_dict)
+                nd.update(pred_dict[predict])
                 new_pred_dicts.append(nd)
                 nd[predict] = predictions[i]
-                nd[data_column] = data_values[i]
+                if 'predicted_value' in nd:
+                    del nd['predicted_value']
+                nd[data_column] = data_values[i] if len(data_values) > i else None
             pred_dicts = new_pred_dicts
 
+            new_explanations = []
+            explanaion = explanations[0][predict]
+            for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
+                nd = {}
+                for key in explanaion:
+                    if key not in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                        nd[key] = explanaion[key]
+                for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                    nd[key] = explanaion[key][i]
+                new_explanations.append({predict: nd})
+            explanations = new_explanations
 
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []

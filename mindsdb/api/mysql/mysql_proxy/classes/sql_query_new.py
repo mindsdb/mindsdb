@@ -22,6 +22,7 @@ from mindsdb_sql.planner.steps import (
     ApplyPredictorStep,
     ApplyPredictorRowStep,
     JoinStep,
+    UnionStep,
     ProjectStep,
     FilterStep
 )
@@ -147,6 +148,10 @@ class SQLQuery():
                 )
                 table_alias = get_table_alias(step.query.from_table, self.database)
                 data = [{table_alias: x} for x in data]
+            elif isinstance(step, UnionStep):
+                left_data = steps_data[step.left.step_num]
+                right_data = steps_data[step.right.step_num]
+                data = left_data + right_data
             elif isinstance(step, ApplyPredictorRowStep):
                 predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get(self.database)

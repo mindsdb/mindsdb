@@ -26,10 +26,7 @@ class IntegrationDataNode(DataNode):
     def select_query(self, query):
         sql_query = str(query)
 
-        ds_name = self.data_store.get_vacant_name('temp')
-        self.data_store.save_datasource(ds_name, self.integration_name, {'query': sql_query})
-        dso = self.data_store.get_datasource_obj(ds_name)
-
+        dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': sql_query})
         data = dso.df.to_dict(orient='records')
 
         for column_name in dso.df.columns:
@@ -37,8 +34,6 @@ class IntegrationDataNode(DataNode):
                 pass_data = dso.df[column_name].dt.to_pydatetime()
                 for i, rec in enumerate(data):
                     rec[column_name] = pass_data[i].timestamp()
-
-        self.data_store.delete_datasource(ds_name)
 
         return data
 

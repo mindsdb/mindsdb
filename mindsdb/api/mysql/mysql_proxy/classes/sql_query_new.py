@@ -52,7 +52,7 @@ class SQLQuery():
         self.ai_table = None
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
-        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<2> ', sql, flags=re.IGNORECASE)
+        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<2> offset \g<1> ', sql, flags=re.IGNORECASE)
 
         self.raw = sql
         self.model_types = {}
@@ -111,12 +111,13 @@ class SQLQuery():
         potential_ts_predictor = False
         for model_name in (set(model_names) & set(all_tables)):
             model_meta = mindsdb_datanode.model_interface.get_model_data(name=model_name)
-            self.model_types.update(model_meta.get('data_analysis_v2', {}))
-            window = model_meta.get('timeseries', {}).get('user_settings', {}).get('window')
-            predictor_metadata[model_meta['name']] = {'timeseries': False}
-            if window is not None:
-                order_by = model_meta.get('timeseries', {}).get('user_settings', {}).get('order_by')[0]
-                group_by = model_meta.get('timeseries', {}).get('user_settings', {}).get('group_by')[0]
+            self.model_types.update(model_meta.get('dtypes', {}))
+
+            ts_settings = model_meta.get('problem_definition', {}).get('timeseries_settings', {})
+            if ts_settings.get('is_timeseries') is True:
+                window = ts_settings.get('window')
+                order_by = ts_settings.get('order_by')[0]
+                group_by = ts_settings.get('group_by')[0]
                 potential_ts_predictor = True
                 predictor_metadata[model_meta['name']] = {
                     'timeseries': True,
@@ -363,7 +364,7 @@ class SQLQuery():
         result = []
         for column_record in self.columns_list:
             try:
-                field_type = self.model_types.get(column_record[3], {}).get('typing', {}).get('data_type')
+                field_type = self.model_types.get(column_record[3])
             except Exception:
                 field_type = None
             result.append({

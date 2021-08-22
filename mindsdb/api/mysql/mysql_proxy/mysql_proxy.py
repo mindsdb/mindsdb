@@ -549,7 +549,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         model_interface.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs=kwargs)
 
         if is_temp_ds:
-            data_store.delete_datasource(ds_name)
+            try:
+                data_store.delete_datasource(ds_name)
+            except Exception:
+                pass
 
         self.packet(OkPacket).send()
 

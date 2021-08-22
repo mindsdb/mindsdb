@@ -930,7 +930,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def queryAnswer(self, sql):
         # +++
         # if query not for mindsdb then process that query in integration db
-        if isinstance(self.session.database, str) and self.session.database.lower() != 'mindsdb' and sql.lower().startswith('select'):
+        if (
+            isinstance(self.session.database, str)
+            and len(self.session.database) > 0
+            and self.session.database.lower() != 'mindsdb'
+            and not sql.lower().startswith('use')
+        ):
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:
                 raise Exception('datanode is none')

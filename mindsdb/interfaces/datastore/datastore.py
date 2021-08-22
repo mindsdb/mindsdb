@@ -145,6 +145,168 @@ class DataStore():
                 return candidate
         raise Exception(f"Can not find appropriate name for datasource '{base}'")
 
+    def create_datasource(self, source_type, source, file_path=None, company_id=None, ds_meta_dir=None):
+        if source_type == 'file':
+            source = os.path.join(ds_meta_dir, source)
+            shutil.move(file_path, source)
+            ds = FileDS(source)
+
+            creation_info = {
+                'class': 'FileDS',
+                'args': [source],
+                'kwargs': {}
+            }
+
+        elif get_db_integration(source_type, company_id) is not None:
+            integration = get_db_integration(source_type, company_id)
+
+            ds_class_map = {
+                'clickhouse': ClickhouseDS,
+                'mariadb': MariaDS,
+                'mysql': MySqlDS,
+                'singlestore': MySqlDS,
+                'postgres': PostgresDS,
+                'cockroachdb': PostgresDS,
+                'mssql': MSSQLDS,
+                'mongodb': MongoDS,
+                'snowflake': SnowflakeDS,
+                'athena': AthenaDS,
+                'cassandra': CassandraDS,
+                'scylladb': ScyllaDS
+            }
+
+            try:
+                dsClass = ds_class_map[integration['type']]
+            except KeyError:
+                raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
+
+            if dsClass is None:
+                raise Exception(f'Unsupported datasource: {source_type}, please install required dependencies!')
+
+            if integration['type'] in ['clickhouse']:
+                creation_info = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source['query'],
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port']
+                    }
+                }
+                ds = dsClass(**creation_info['kwargs'])
+
+            elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
+                creation_info = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source['query'],
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port']
+                    }
+                }
+
+                kwargs = creation_info['kwargs']
+
+                integration_folder_name = f'integration_files_{company_id}_{integration["id"]}'
+                if integration['type'] in ('mysql', 'mariadb'):
+                    kwargs['ssl'] = integration.get('ssl')
+                    kwargs['ssl_ca'] = integration.get('ssl_ca')
+                    kwargs['ssl_cert'] = integration.get('ssl_cert')
+                    kwargs['ssl_key'] = integration.get('ssl_key')
+                    for key in ['ssl_ca', 'ssl_cert', 'ssl_key']:
+                        if isinstance(kwargs[key], str) and len(kwargs[key]) > 0:
+                            kwargs[key] = os.path.join(
+                                self.integrations_dir,
+                                integration_folder_name,
+                                kwargs[key]
+                            )
+                elif integration['type'] in ('cassandra', 'scylla'):
+                    kwargs['secure_connect_bundle'] = integration.get('secure_connect_bundle')
+                    if (
+                        isinstance(kwargs['secure_connect_bundle'], str)
+                        and len(kwargs['secure_connect_bundle']) > 0
+                    ):
+                        kwargs['secure_connect_bundle'] = os.path.join(
+                            self.integrations_dir,
+                            integration_folder_name,
+                            kwargs['secure_connect_bundle']
+                        )
+
+                if 'database' in integration:
+                    kwargs['database'] = integration['database']
+
+                if 'database' in source:
+                    kwargs['database'] = source['database']
+
+                ds = dsClass(**kwargs)
+
+            elif integration['type'] == 'snowflake':
+                creation_info = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source['query'].replace('"', "'"),
+                        'schema': source.get('schema', integration['schema']),
+                        'warehouse': source.get('warehouse', integration['warehouse']),
+                        'database': source.get('database', integration['database']),
+                        'host': integration['host'],
+                        'password': integration['password'],
+                        'user': integration['user'],
+                        'account': integration['account']
+                    }
+                }
+
+                ds = dsClass(**creation_info['kwargs'])
+
+            elif integration['type'] == 'mongodb':
+                if isinstance(source['find'], str):
+                    source['find'] = json.loads(source['find'])
+                creation_info = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'database': source['database'],
+                        'collection': source['collection'],
+                        'query': source['find'],
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port']
+                    }
+                }
+
+                ds = dsClass(**creation_info['kwargs'])
+
+            elif integration['type'] == 'athena':
+                creation_info = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source['query'],
+                        'staging_dir': source['staging_dir'],
+                        'database': source['database'],
+                        'access_key': source['access_key'],
+                        'secret_key': source['secret_key'],
+                        'region_name': source['region_name']
+                    }
+                }
+
+                ds = dsClass(**creation_info['kwargs'])
+        else:
+            # This probably only happens for urls
+            ds = FileDS(source)
+            creation_info = {
+                'class': 'FileDS',
+                'args': [source],
+                'kwargs': {}
+            }
+        return ds, creation_info
+
     def save_datasource(self, name, source_type, source, file_path=None, company_id=None):
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
@@ -166,165 +328,7 @@ class DataStore():
             ds_meta_dir = os.path.join(self.dir, f'{company_id}@@@@@{name}')
             os.mkdir(ds_meta_dir)
 
-            if source_type == 'file':
-                source = os.path.join(ds_meta_dir, source)
-                shutil.move(file_path, source)
-                ds = FileDS(source)
-
-                creation_info = {
-                    'class': 'FileDS',
-                    'args': [source],
-                    'kwargs': {}
-                }
-
-            elif get_db_integration(source_type, company_id) is not None:
-                integration = get_db_integration(source_type, company_id)
-
-                ds_class_map = {
-                    'clickhouse': ClickhouseDS,
-                    'mariadb': MariaDS,
-                    'mysql': MySqlDS,
-                    'singlestore': MySqlDS,
-                    'postgres': PostgresDS,
-                    'cockroachdb': PostgresDS,
-                    'mssql': MSSQLDS,
-                    'mongodb': MongoDS,
-                    'snowflake': SnowflakeDS,
-                    'athena': AthenaDS,
-                    'cassandra': CassandraDS,
-                    'scylladb': ScyllaDS
-                }
-
-                try:
-                    dsClass = ds_class_map[integration['type']]
-                except KeyError:
-                    raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
-
-                if dsClass is None:
-                    raise Exception(f'Unsupported datasource: {source_type}, please install required dependencies!')
-
-                if integration['type'] in ['clickhouse']:
-                    creation_info = {
-                        'class': dsClass.__name__,
-                        'args': [],
-                        'kwargs': {
-                            'query': source['query'],
-                            'user': integration['user'],
-                            'password': integration['password'],
-                            'host': integration['host'],
-                            'port': integration['port']
-                        }
-                    }
-                    ds = dsClass(**creation_info['kwargs'])
-
-                elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
-                    creation_info = {
-                        'class': dsClass.__name__,
-                        'args': [],
-                        'kwargs': {
-                            'query': source['query'],
-                            'user': integration['user'],
-                            'password': integration['password'],
-                            'host': integration['host'],
-                            'port': integration['port']
-                        }
-                    }
-
-                    kwargs = creation_info['kwargs']
-
-                    integration_folder_name = f'integration_files_{company_id}_{integration["id"]}'
-                    if integration['type'] in ('mysql', 'mariadb'):
-                        kwargs['ssl'] = integration.get('ssl')
-                        kwargs['ssl_ca'] = integration.get('ssl_ca')
-                        kwargs['ssl_cert'] = integration.get('ssl_cert')
-                        kwargs['ssl_key'] = integration.get('ssl_key')
-                        for key in ['ssl_ca', 'ssl_cert', 'ssl_key']:
-                            if isinstance(kwargs[key], str) and len(kwargs[key]) > 0:
-                                kwargs[key] = os.path.join(
-                                    self.integrations_dir,
-                                    integration_folder_name,
-                                    kwargs[key]
-                                )
-                    elif integration['type'] in ('cassandra', 'scylla'):
-                        kwargs['secure_connect_bundle'] = integration.get('secure_connect_bundle')
-                        if (
-                            isinstance(kwargs['secure_connect_bundle'], str)
-                            and len(kwargs['secure_connect_bundle']) > 0
-                        ):
-                            kwargs['secure_connect_bundle'] = os.path.join(
-                                self.integrations_dir,
-                                integration_folder_name,
-                                kwargs['secure_connect_bundle']
-                            )
-
-                    if 'database' in integration:
-                        kwargs['database'] = integration['database']
-
-                    if 'database' in source:
-                        kwargs['database'] = source['database']
-
-                    ds = dsClass(**kwargs)
-
-                elif integration['type'] == 'snowflake':
-                    creation_info = {
-                        'class': dsClass.__name__,
-                        'args': [],
-                        'kwargs': {
-                            'query': source['query'].replace('"', "'"),
-                            'schema': source.get('schema', integration['schema']),
-                            'warehouse': source.get('warehouse', integration['warehouse']),
-                            'database': source.get('database', integration['database']),
-                            'host': integration['host'],
-                            'password': integration['password'],
-                            'user': integration['user'],
-                            'account': integration['account']
-                        }
-                    }
-
-                    ds = dsClass(**creation_info['kwargs'])
-
-                elif integration['type'] == 'mongodb':
-                    if isinstance(source['find'], str):
-                        source['find'] = json.loads(source['find'])
-                    creation_info = {
-                        'class': dsClass.__name__,
-                        'args': [],
-                        'kwargs': {
-                            'database': source['database'],
-                            'collection': source['collection'],
-                            'query': source['find'],
-                            'user': integration['user'],
-                            'password': integration['password'],
-                            'host': integration['host'],
-                            'port': integration['port']
-                        }
-                    }
-
-                    ds = dsClass(**creation_info['kwargs'])
-
-                elif integration['type'] == 'athena':
-                    creation_info = {
-                        'class': dsClass.__name__,
-                        'args': [],
-                        'kwargs': {
-                            'query': source['query'],
-                            'staging_dir': source['staging_dir'],
-                            'database': source['database'],
-                            'access_key': source['access_key'],
-                            'secret_key': source['secret_key'],
-                            'region_name': source['region_name']
-                        }
-                    }
-
-                    ds = dsClass(**creation_info['kwargs'])
-            else:
-                # This probably only happens for urls
-                ds = FileDS(source)
-                creation_info = {
-                    'class': 'FileDS',
-                    'args': [source],
-                    'kwargs': {}
-                }
+            ds, creation_info = self.create_datasource(source_type, source, file_path, company_id, ds_meta_dir)
 
             if hasattr(ds, 'get_columns') and hasattr(ds, 'get_row_count'):
                 try:

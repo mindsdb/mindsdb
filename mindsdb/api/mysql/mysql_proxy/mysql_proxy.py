@@ -535,7 +535,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         predict = [x['name'] for x in struct['predict']]
 
         timeseries_settings = {}
-        for w in ['order_by', 'group_by', 'window']:
+        for w in ['order_by', 'group_by', 'window', 'nr_predictions']:
             if w in struct:
                 timeseries_settings[w] = struct.get(w)
 
@@ -549,7 +549,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         model_interface.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs=kwargs)
 
         if is_temp_ds:
-            data_store.delete_datasource(ds_name)
+            try:
+                data_store.delete_datasource(ds_name)
+            except Exception:
+                pass
 
         self.packet(OkPacket).send()
 
@@ -930,7 +933,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def queryAnswer(self, sql):
         # +++
         # if query not for mindsdb then process that query in integration db
-        if isinstance(self.session.database, str) and self.session.database.lower() != 'mindsdb' and sql.lower().startswith('select'):
+        if (
+            isinstance(self.session.database, str)
+            and len(self.session.database) > 0
+            and self.session.database.lower() != 'mindsdb'
+            and not sql.lower().startswith('use')
+        ):
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:
                 raise Exception('datanode is none')

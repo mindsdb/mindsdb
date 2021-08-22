@@ -174,8 +174,8 @@ class SQLQuery():
                 is_timeseries = predictor_metadata[step.predictor]['timeseries']
                 if is_timeseries:
                     for row in where_data:
-                        row['make_predictions'] = False
-                
+                        row['__mdb_make_predictions'] = False
+
                 for row in where_data:
                     for key in row:
                         if isinstance(row[key], datetime.date):

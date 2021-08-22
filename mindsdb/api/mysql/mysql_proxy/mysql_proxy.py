@@ -535,7 +535,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         predict = [x['name'] for x in struct['predict']]
 
         timeseries_settings = {}
-        for w in ['order_by', 'group_by', 'window']:
+        for w in ['order_by', 'group_by', 'window', 'nr_predictions']:
             if w in struct:
                 timeseries_settings[w] = struct.get(w)
 

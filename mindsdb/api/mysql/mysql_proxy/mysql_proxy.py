@@ -20,6 +20,7 @@ import json
 import atexit
 import tempfile
 import datetime
+import time
 import socket
 import struct
 from collections import OrderedDict
@@ -1216,17 +1217,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # endregion
 
             if ' left join ' not in sql_lower and ' join ' in sql_lower:
-                query_class = SQLQuery_new
+                query = SQLQuery_new(
+                    sql,
+                    session=self.session,
+                    outer_query=outer_query
+                )
             else:
-                query_class = SQLQuery
-            # query_class = SQLQuery_new
-            query = query_class(
-                sql,
-                integration=self.session.integration,
-                database=self.session.database,
-                datahub=self.session.datahub,
-                outer_query=outer_query
-            )
+                query = SQLQuery(
+                    sql,
+                    integration=self.session.integration,
+                    database=self.session.database,
+                    datahub=self.session.datahub,
+                    outer_query=outer_query
+                )
             self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()
@@ -1694,7 +1697,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'charset': self.charset_text_type
             }],
             data=[
-                [None]
+                [self.session.database]
             ]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0000))

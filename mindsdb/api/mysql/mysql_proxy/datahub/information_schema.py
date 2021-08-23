@@ -116,7 +116,6 @@ class InformationSchema(DataNode):
                 if '$in' in where['table_type']:
                     types += [x.upper() for x in where['table_type']['$in']]
                 filtered_tables = [x for x in filtered_tables if x['table_type'] in types]
-
             return filtered_tables
         if tn == 'COLUMNS':
             # SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='CSV_DS' AND TABLE_NAME='part' ORDER BY ORDINAL_POSITION

@@ -3,7 +3,7 @@ import sys
 
 
 os.system('mkdir -p dist')
-installer_version = '1.5'
+installer_version = '1.6'
 
 with open('Dockerfile.template', 'r') as fp:
     content = fp.read()

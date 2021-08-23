@@ -29,7 +29,7 @@ jobs:
           echo "Building AMIs for $MINDSDB_VERSION"
           sudo packer build -var "mindsdb_version=$MINDSDB_VERSION" -var "acces_key=$ACCESS_KEY" -var "aws_acces_key=$AWS_ACCESS_KEY" -var "aws_secret_key=$AWS_SECRET_KEY" config.json
 
-  deploy_version_file:
+  create_version_file:
     runs-on: ubuntu-latest
     needs: build_amis_packer
     steps:

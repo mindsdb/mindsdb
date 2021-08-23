@@ -1,5 +1,7 @@
 import json
 import numpy as np
+from datetime import datetime
+
 from lightwood.api.dtype import dtype
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
@@ -11,8 +13,7 @@ from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import get_db_integration
-
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -135,7 +136,7 @@ class MindsDBDataNode(DataNode):
         return data
 
     def select_query(self, query):
-        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
         moz_struct = to_moz_sql_struct(query)
         data = self.select(
             table=query.from_table.parts[-1],
@@ -153,11 +154,6 @@ class MindsDBDataNode(DataNode):
             return []
         if self.ai_table.get_ai_table(table):
             return self._select_from_ai_table(table, columns, where)
-
-        # try:
-        #     where = plain_where_conditions(where)
-        # except Exception as e:
-        #     x = 1
 
         original_when_data = None
         if 'when_data' in where:
@@ -277,6 +273,15 @@ class MindsDBDataNode(DataNode):
                     del nd['predicted_value']
                 nd[data_column] = data_values[i] if len(data_values) > i else None
             pred_dicts = new_pred_dicts
+
+            if model['dtypes'][data_column] == dtype.date:
+                for row in pred_dicts:
+                    if isinstance(row[data_column], (int, float)):
+                        row[data_column] = str(datetime.fromtimestamp(row[data_column]).date())
+            elif model['dtypes'][data_column] == dtype.datetime:
+                for row in pred_dicts:
+                    if isinstance(row[data_column], (int, float)):
+                        row[data_column] = str(datetime.fromtimestamp(row[data_column]))
 
             new_explanations = []
             explanaion = explanations[0][predict]

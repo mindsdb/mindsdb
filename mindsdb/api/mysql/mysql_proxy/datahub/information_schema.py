@@ -56,7 +56,7 @@ class InformationSchema(DataNode):
         ]
 
     def select_query(self, query):
-        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
         sql_query = str(query)
         moz_struct = to_moz_sql_struct(sql_query)
         data = self.select(

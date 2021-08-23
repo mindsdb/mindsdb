@@ -137,11 +137,17 @@ class SQLQuery():
         )
         steps_data = []
 
+        is_between = False
+
         for i, step in enumerate(plan.steps):
             data = []
             if isinstance(step, FetchDataframeStep):
                 dn = self.datahub.get(step.integration)
                 query = step.query
+
+                # FIXME temp FIX for https://github.com/mindsdb/mindsdb_sql/issues/29
+                if i == 1 and len(plan.steps) > 1 and isinstance(plan.steps[0], FetchDataframeStep):
+                    query.limit = None
 
                 data = dn.select_query(
                     query=query
@@ -150,8 +156,16 @@ class SQLQuery():
                 data = [{table_alias: x} for x in data]
             elif isinstance(step, UnionStep):
                 left_data = steps_data[step.left.step_num]
+                # TODO atm assumes that it is 'between' prediction
+                for row in left_data:
+                    for key in row:
+                        row[key]['__mdb_make_predictions'] = False
                 right_data = steps_data[step.right.step_num]
+                for row in right_data:
+                    for key in row:
+                        row[key]['__mdb_make_predictions'] = True
                 data = left_data + right_data
+                is_between = True
             elif isinstance(step, ApplyPredictorRowStep):
                 predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get(self.database)
@@ -181,7 +195,8 @@ class SQLQuery():
                 is_timeseries = predictor_metadata[predictor]['timeseries']
                 if is_timeseries:
                     for row in where_data:
-                        row['__mdb_make_predictions'] = False
+                        if '__mdb_make_predictions' not in row:
+                            row['__mdb_make_predictions'] = False
 
                 for row in where_data:
                     for key in row:
@@ -193,7 +208,7 @@ class SQLQuery():
                     columns=None,
                     where_data=where_data,
                     where={},
-                    is_timeseries=is_timeseries
+                    is_timeseries=is_timeseries is True and is_between is False
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, JoinStep):

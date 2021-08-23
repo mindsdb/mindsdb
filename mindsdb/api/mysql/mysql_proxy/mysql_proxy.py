@@ -937,7 +937,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             isinstance(self.session.database, str)
             and len(self.session.database) > 0
             and self.session.database.lower() != 'mindsdb'
-            and not sql.lower().startswith('use')
+            and '@@' not in sql.lower()
+            and (
+                sql.lower().startswith('select')
+                or sql.lower().startswith('show')
+            )
         ):
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:

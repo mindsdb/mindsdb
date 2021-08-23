@@ -145,10 +145,6 @@ class SQLQuery():
                 dn = self.datahub.get(step.integration)
                 query = step.query
 
-                # FIXME temp FIX for https://github.com/mindsdb/mindsdb_sql/issues/29
-                if i == 1 and len(plan.steps) > 1 and isinstance(plan.steps[0], FetchDataframeStep):
-                    query.limit = None
-
                 data = dn.select_query(
                     query=query
                 )

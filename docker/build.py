@@ -14,7 +14,7 @@ with open('dist/Dockerfile', 'w') as fp:
 
 if sys.argv[1] == 'release':
     container_name = 'mindsdb'
-else:
+elif sys.argv[1] == 'beta':
     container_name = 'mindsdb_beta'
 print(f"""
         Build, tag publish:

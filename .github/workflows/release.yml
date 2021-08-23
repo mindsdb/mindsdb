@@ -21,7 +21,7 @@ jobs:
           curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
           sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
           sudo apt-get install packer
-          python deploy_version.py release
+          python create_version_file.py release
           mdb_version=`cat distributions/ver/dist/stable_version.txt`
           export MINDSDB_VERSION="$mdb_version"
           git clone https://${ACCESS_KEY}@github.com/mindsdb/mindsdb_gateway
@@ -38,11 +38,11 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.7'
-    - name: Deploy version files
+    - name: Create version files
       run: |
-        python deploy_version.py release
+        python create_version_file.py release
 
-    - name: Sync linux sh installer to s3
+    - name: Sync version file to s3
       uses: jakejarvis/s3-sync-action@master
       with:
         args: --acl public-read --follow-symlinks

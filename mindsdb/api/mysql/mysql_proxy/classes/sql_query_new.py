@@ -34,7 +34,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct, plain_where_conditions
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
 from lightwood import dtype
 
 class SQLQuery():
@@ -341,7 +341,6 @@ class SQLQuery():
             #         if (column[4] or column[3]) not in row:
             #             row[column[4] or column[3]] = None
             self.fetched_data = result
-
         else:
             self.fetched_data = steps_data[-1]
 
@@ -390,6 +389,6 @@ class SQLQuery():
                 'alias': column_record[4] or column_record[3],
                 # NOTE all work with text-type, but if/when wanted change types to real,
                 # it will need to check all types casts in BinaryResultsetRowPacket
-                'type': TYPES.MYSQL_TYPE_VAR_STRING if field_type not in (dtype.date, dtype.datetime) else TYPES.MYSQL_TYPE_DATETIME
+                'type': TYPES.MYSQL_TYPE_VAR_STRING if field_type not in (dtype.date, dtype.datetime) else TYPES.MYSQL_TYPE_TIMESTAMP
             })
         return result

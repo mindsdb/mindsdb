@@ -263,7 +263,16 @@ class SQLQuery():
                                     else:
                                         appropriate_table = table_name
                             if appropriate_table is None:
-                                raise Exception(f'Can not find approproate table for column {column_name}')
+                                # it is probably constaint
+                                column_name = column_name.strip("'")
+                                name_or_alias = column_name or column_alias
+                                column_alias = name_or_alias
+                                # appropriate_table = ''
+                                for row in step_data:
+                                    for table in row:
+                                        row[table][name_or_alias] = column_name
+                                appropriate_table = list(step_data[0].keys())[0]
+                                # raise Exception(f'Can not find approproate table for column {column_name}')
                             columns_list.append(appropriate_table + (column_name, column_alias))
                         elif len(column_name_parts) == 2:
                             table_name_or_alias = column_name_parts[0]

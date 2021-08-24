@@ -987,6 +987,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 i2 = s1.find('(')
                 if i2 > 0:
                     s2 = s1[i2 + 1:]
+                    s2 = s2[:s2.rfind('virtual_table')]
                     subquery = s2[:s2.rfind(')')]
                     outer_query = sql.replace(subquery, 'dataframe')
                     outer_query = outer_query.replace('(dataframe)', 'dataframe')

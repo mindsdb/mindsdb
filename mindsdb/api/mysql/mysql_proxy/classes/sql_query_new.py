@@ -160,27 +160,28 @@ class SQLQuery():
 
         all_tables = get_all_tables(mindsdb_sql_struct)
 
-        models = mindsdb_datanode.model_interface.get_models()
-        model_names = [m['name'] for m in models]
+        # models = mindsdb_datanode.model_interface.get_models()
+        # model_names = [m['name'] for m in models]
         predictor_metadata = {}
         potential_ts_predictor = False
-        for model_name in (set(model_names) & set(all_tables)):
-            predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
+        predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
+        for model_name in set(all_tables):
             for p in predictors:
-                if isinstance(p.data, dict) and p.data.get('status') == 'complete':
-                    ts_settings = p.learn_args.get('timeseries_settings', {})
-                    if ts_settings.get('is_timeseries') is True:
-                        window = ts_settings.get('window')
-                        order_by = ts_settings.get('order_by')[0]
-                        group_by = ts_settings.get('group_by')[0]
-                        potential_ts_predictor = True
-                        predictor_metadata[model_name] = {
-                            'timeseries': True,
-                            'window': window,
-                            'order_by_column': order_by,
-                            'group_by_column': group_by
-                        }
-                    self.model_types[model_name] = p.data.get('dtypes', {})
+                if p.name == model_name:
+                    if isinstance(p.data, dict) and p.data.get('status') == 'complete':
+                        ts_settings = p.learn_args.get('timeseries_settings', {})
+                        if ts_settings.get('is_timeseries') is True:
+                            window = ts_settings.get('window')
+                            order_by = ts_settings.get('order_by')[0]
+                            group_by = ts_settings.get('group_by')[0]
+                            potential_ts_predictor = True
+                            predictor_metadata[model_name] = {
+                                'timeseries': True,
+                                'window': window,
+                                'order_by_column': order_by,
+                                'group_by_column': group_by
+                            }
+                        self.model_types.update(p.data.get('dtypes', {}))
 
         if potential_ts_predictor is True:
             mindsdb_sql_struct.limit = None

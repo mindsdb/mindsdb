@@ -954,7 +954,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:
                 raise Exception('datanode is none')
-            result = datanode.select_query(sql)
+            result = datanode.select_query(sql.replace('`', ''))
 
             columns = []
             data = []

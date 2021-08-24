@@ -989,6 +989,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     s2 = s1[i2 + 1:]
                     subquery = s2[:s2.rfind(')')]
                     outer_query = sql.replace(subquery, 'dataframe')
+                    outer_query = outer_query.replace('(dataframe)', 'dataframe')
                     sql = subquery
 
         # if len(subquery) == 1:

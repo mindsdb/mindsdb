@@ -934,14 +934,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def queryAnswer(self, sql):
         # +++
         # if query not for mindsdb then process that query in integration db
+        # TODO redirect only select data queries
         if (
             isinstance(self.session.database, str)
             and len(self.session.database) > 0
             and self.session.database.lower() != 'mindsdb'
             and '@@' not in sql.lower()
             and (
-                sql.lower().startswith('select')
-                or sql.lower().startswith('show')
+                (
+                    sql.lower().startswith('select')
+                    and 'from' in sql.lower()
+                )
+                or (sql.lower().startswith('show')
+                    # and 'databases' in sql.lower()
+                    and 'tables' in sql.lower()
+                )
             )
         ):
             datanode = self.session.datahub.get(self.session.database)
@@ -1005,6 +1012,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 struct = statement.struct
             elif 'show variables' in sql_lower:
                 variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
+            elif "show variables like" in sql_lower:
+                # for superset
+                variables = re.findall(r"show variables like '([a-zA-Z_]*)'", sql_lower)
                 self.answer_show_variables(variables)
                 return
             elif "show session variables like" in sql_lower:

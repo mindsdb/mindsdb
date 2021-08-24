@@ -26,12 +26,15 @@ from mindsdb_sql.parser.ast import (
     UnaryOperation,
     BinaryOperation,
     OrderBy,
-    Star
+    Star,
+    Union,
+    Select
 )
 from mindsdb_sql.planner.steps import (
     FetchDataframeStep,
     ApplyPredictorStep,
     ApplyPredictorRowStep,
+    # MapReduceStep,
     JoinStep,
     UnionStep,
     ProjectStep,
@@ -90,7 +93,19 @@ class SQLQuery():
             name = name + ('.'.join(table_obj.alias.parts),)
             return name
 
-        def get_all_tables(from_stmt):
+        def get_all_tables(stmt):
+            if isinstance(stmt, Union):
+                left = get_all_tables(stmt.left)
+                right = get_all_tables(stmt.right)
+                return left + right
+
+            if isinstance(stmt, Select):
+                from_stmt = stmt.from_table
+            elif isinstance(stmt, (Identifier, Join)):
+                from_stmt = stmt
+            else:
+                raise Exception(f'Unknown type of identifier: {stmt}')
+
             result = []
             if isinstance(from_stmt, Identifier):
                 result.append(from_stmt.parts[-1])
@@ -106,7 +121,7 @@ class SQLQuery():
 
         mindsdb_datanode = self.datahub.get(self.database)
 
-        all_tables = get_all_tables(mindsdb_sql_struct.from_table)
+        all_tables = get_all_tables(mindsdb_sql_struct)
 
         models = mindsdb_datanode.model_interface.get_models()
         model_names = [m['name'] for m in models]

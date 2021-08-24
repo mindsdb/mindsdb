@@ -8,7 +8,8 @@ on:
 
 jobs:
   matrix_prep:
-    runs-on: ubuntu-latest
+      # runs-on: [macos-latest, ubuntu-latest]
+    runs-on: macos-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:

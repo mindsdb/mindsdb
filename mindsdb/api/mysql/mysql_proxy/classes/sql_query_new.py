@@ -265,7 +265,7 @@ class SQLQuery():
                             if appropriate_table is None:
                                 # it is probably constaint
                                 column_name = column_name.strip("'")
-                                name_or_alias = column_name or column_alias
+                                name_or_alias = column_alias or column_name
                                 column_alias = name_or_alias
                                 # appropriate_table = ''
                                 for row in step_data:

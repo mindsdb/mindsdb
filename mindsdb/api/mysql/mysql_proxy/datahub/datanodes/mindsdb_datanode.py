@@ -325,6 +325,8 @@ class MindsDBDataNode(DataNode):
             for key in predicted_columns:
                 row[key + '_confidence'] = explanation[key]['confidence']
                 row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
+                if 'anomaly' in explanation[key]:
+                    row[key + '_anomaly'] = explanation[key]['anomaly']
             for key in min_max_keys:
                 row[key + '_min'] = explanation[key]['confidence_lower_bound']
                 row[key + '_max'] = explanation[key]['confidence_upper_bound']

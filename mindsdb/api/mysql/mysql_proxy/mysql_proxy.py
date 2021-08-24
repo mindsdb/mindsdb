@@ -2029,7 +2029,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             company_id = self.request.recv(4)
             company_id = struct.unpack('I', company_id)[0]
 
-            database_name_len = self.request.recv(4)
+            database_name_len = self.request.recv(2)
             database_name_len = struct.unpack('H', database_name_len)[0]
 
             database_name = ''

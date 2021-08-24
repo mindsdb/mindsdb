@@ -154,8 +154,9 @@ class ModelController():
                         'predicted_value': row['prediction'],
                         'confidence': row.get('confidence', None),
                         'confidence_lower_bound': row.get('lower', None),
-                        'confidence_upper_bound'.format(target): row.get('upper', None),
-                        'anomaly'.format(target): row.get('anomaly', None)
+                        'confidence_upper_bound': row.get('upper', None),
+                        'anomaly': row.get('anomaly', None),
+                        'truth': row.get('truth', None)
                 }})
 
                 td = {'predicted_value': row['prediction']}

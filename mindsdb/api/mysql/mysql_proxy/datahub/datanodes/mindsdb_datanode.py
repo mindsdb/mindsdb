@@ -257,6 +257,7 @@ class MindsDBDataNode(DataNode):
         else:
             predict = model['predict']
             data_column = model['problem_definition']['timeseries_settings']['order_by'][0]
+            nr_predictions = model['problem_definition']['timeseries_settings']['nr_predictions']
             new_pred_dicts = []
             if _mdb_make_predictions is False:
                 pred_dict = pred_dicts[0]
@@ -266,7 +267,7 @@ class MindsDBDataNode(DataNode):
                 data_values = pred_dict[predict][data_column]
                 if isinstance(data_values, list) is False:
                     data_values = [data_values]
-                for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
+                for i in range(nr_predictions):
                     nd = {}
                     nd.update(pred_dict[predict])
                     new_pred_dicts.append(nd)
@@ -277,7 +278,9 @@ class MindsDBDataNode(DataNode):
 
                 new_explanations = []
                 explanaion = explanations[0][predict]
-                for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
+                original_target_values = {f'{predict}_original': [None] * nr_predictions}
+                original_target_values[f'{predict}_original'][0] = explanaion.get('truth', None)
+                for i in range(nr_predictions):
                     nd = {}
                     for key in explanaion:
                         if key not in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
@@ -287,7 +290,7 @@ class MindsDBDataNode(DataNode):
                     new_explanations.append({predict: nd})
                 explanations = new_explanations
             else:
-                pred_dicts.reverse()
+                # pred_dicts.reverse()
                 for row in pred_dicts:
                     new_row = {}
                     new_row.update(row[predict])
@@ -303,13 +306,16 @@ class MindsDBDataNode(DataNode):
                 for row in new_pred_dicts:
                     if 'predicted_value' in row:
                         del row['predicted_value']
-                pred_dicts.reverse()
-                new_pred_dicts.reverse()
+                # pred_dicts.reverse()
+                # new_pred_dicts.reverse()
 
                 new_explanations = []
-                explanations.reverse()
+                # explanations.reverse()
+                original_values = []
+                original_target_values = {f'{predict}_original': original_values}
                 for expl in explanations:
                     explanaion = expl[predict]
+                    original_values.append(explanaion.get('truth', None))
                     nd = {}
                     for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
                         nd[key] = explanaion[key][0]
@@ -319,24 +325,25 @@ class MindsDBDataNode(DataNode):
                 explanaion = expl[predict]
                 for i in range(1, model['problem_definition']['timeseries_settings']['nr_predictions']):
                     nd = {}
+                    original_values.append(None)
                     for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
                         nd[key] = explanaion[key][i]
                     new_explanations.append(nd)
-                explanations.reverse()
-                new_explanations.reverse()
+                # explanations.reverse()
+                # new_explanations.reverse()
+                # original_values.reverse()
                 new_explanations = [{predict: x} for x in new_explanations]
-                
 
-                    # # explanaion = explanations[0][predict]
-                    # for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
-                    #     nd = {}
-                    #     for key in explanaion:
-                    #         if key not in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
-                    #             nd[key] = explanaion[key]
-                    #     for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
-                    #         nd[key] = explanaion[key][i]
-                    #     new_explanations.append({predict: nd})
-                    # explanations = new_explanations
+                # # explanaion = explanations[0][predict]
+                # for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
+                #     nd = {}
+                #     for key in explanaion:
+                #         if key not in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                #             nd[key] = explanaion[key]
+                #     for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                #         nd[key] = explanaion[key][i]
+                #     new_explanations.append({predict: nd})
+                # explanations = new_explanations
 
             pred_dicts = new_pred_dicts
             explanations = new_explanations

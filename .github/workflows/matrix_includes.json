@@ -21,7 +21,7 @@
       "runs_on": "macos-latest",
       "python-version": 3.7,
       "token": "not_install_ray",
-      "runOn": "refs/heads/stable"
+      "runOn": "always"
     },
 
     {
@@ -34,7 +34,7 @@
       "runs_on": "macos-latest",
       "python-version": 3.8,
       "token": "not_install_ray",
-      "runOn": "refs/heads/stable"
+      "runOn": "always"
     },
     {
       "runs_on": "ubuntu-latest",

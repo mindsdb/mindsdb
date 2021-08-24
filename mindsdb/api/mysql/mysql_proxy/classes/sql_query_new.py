@@ -14,9 +14,20 @@ import dfsql
 import pandas as pd
 import datetime
 
+from lightwood import dtype
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
-from mindsdb_sql.parser.ast import Join, Identifier, Operation, Constant, UnaryOperation, BinaryOperation, OrderBy, Star
+from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
+from mindsdb_sql.parser.ast import (
+    Join,
+    Identifier,
+    Operation,
+    Constant,
+    UnaryOperation,
+    BinaryOperation,
+    OrderBy,
+    Star
+)
 from mindsdb_sql.planner.steps import (
     FetchDataframeStep,
     ApplyPredictorStep,
@@ -26,30 +37,21 @@ from mindsdb_sql.planner.steps import (
     ProjectStep,
     FilterStep
 )
-from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators_new import operator_map as new_operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
+import mindsdb.interfaces.storage.db as db
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
-from lightwood import dtype
 
 class SQLQuery():
-    raw = ''
-    struct = {}
-    result = None
-
-    def __init__(self, sql, integration=None, database=None, datahub=None, outer_query=None):
-        self.integration = integration
-        if not database:
-            self.database = 'mindsdb'
-        else:
-            self.database = database
-        self.datahub = datahub
-
+    def __init__(self, sql, session, outer_query=None):
+        self.session = session
+        self.integration = session.integration
+        self.database = session.database or 'mindsdb'
+        self.datahub = session.datahub
         self.ai_table = None
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
@@ -111,6 +113,11 @@ class SQLQuery():
         predictor_metadata = {}
         potential_ts_predictor = False
         for model_name in (set(model_names) & set(all_tables)):
+            # predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
+            # for p in predictors:
+            #     if isinstance(p.data, dict) and p.data.get('status') == 'complete':
+            #         ts_settings = p.learn_args.get('learn_args', {}).get('timeseries_settings', {})
+
             model_meta = mindsdb_datanode.model_interface.get_model_data(name=model_name)
             self.model_types.update(model_meta.get('dtypes', {}))
 
@@ -286,13 +293,6 @@ class SQLQuery():
 
         if self.outer_query is not None:
             data = []
-            # # main_key = None
-            # for row in steps_data[-1]:
-            #     new_row = {}
-            #     for key in row:
-            #         new_row.update(row[key])
-            #         # main_key = key
-            #     data.append(new_row)
             # +++
             result = []
             for row in steps_data[-1]:

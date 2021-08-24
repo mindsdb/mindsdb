@@ -20,6 +20,7 @@ import json
 import atexit
 import tempfile
 import datetime
+import time
 import socket
 import struct
 from collections import OrderedDict
@@ -933,14 +934,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def queryAnswer(self, sql):
         # +++
         # if query not for mindsdb then process that query in integration db
+        # TODO redirect only select data queries
         if (
             isinstance(self.session.database, str)
             and len(self.session.database) > 0
             and self.session.database.lower() != 'mindsdb'
             and '@@' not in sql.lower()
             and (
-                sql.lower().startswith('select')
-                or sql.lower().startswith('show')
+                (
+                    sql.lower().startswith('select')
+                    and 'from' in sql.lower()
+                )
+                or (sql.lower().startswith('show')
+                    # and 'databases' in sql.lower()
+                    and 'tables' in sql.lower()
+                )
             )
         ):
             datanode = self.session.datahub.get(self.session.database)
@@ -1004,6 +1012,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 struct = statement.struct
             elif 'show variables' in sql_lower:
                 variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
+            elif "show variables like" in sql_lower:
+                # for superset
+                variables = re.findall(r"show variables like '([a-zA-Z_]*)'", sql_lower)
                 self.answer_show_variables(variables)
                 return
             elif "show session variables like" in sql_lower:
@@ -1216,17 +1229,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # endregion
 
             if ' left join ' not in sql_lower and ' join ' in sql_lower:
-                query_class = SQLQuery_new
+                query = SQLQuery_new(
+                    sql,
+                    session=self.session,
+                    outer_query=outer_query
+                )
             else:
-                query_class = SQLQuery
-            # query_class = SQLQuery_new
-            query = query_class(
-                sql,
-                integration=self.session.integration,
-                database=self.session.database,
-                datahub=self.session.datahub,
-                outer_query=outer_query
-            )
+                query = SQLQuery(
+                    sql,
+                    integration=self.session.integration,
+                    database=self.session.database,
+                    datahub=self.session.datahub,
+                    outer_query=outer_query
+                )
             self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()
@@ -1694,7 +1709,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'charset': self.charset_text_type
             }],
             data=[
-                [None]
+                [self.session.database]
             ]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0000))

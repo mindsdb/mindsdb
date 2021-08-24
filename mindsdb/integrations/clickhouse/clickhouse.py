@@ -1,56 +1,74 @@
 import requests
-
-from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
+from lightwood import dtype
 from mindsdb.integrations.base import Integration
+from mindsdb.utilities.log import log
 
 
-class Clickhouse(Integration):
-    def _to_clickhouse_table(self, stats, predicted_cols):
+class ClickhouseConnectionChecker:
+    def __init__(self, **kwargs):
+        self.host = kwargs.get("host")
+        self.port = kwargs.get("port")
+        self.user = kwargs.get("user")
+        self.password = kwargs.get("password")
+
+    def check_connection(self):
+        try:
+            res = requests.post(f"http://{self.host}:{self.port}",
+                                data="select 1;",
+                                params={'user': self.user, 'password': self.password})
+            connected = res.status_code == 200
+        except Exception:
+            connected = False
+        return connected
+
+
+class Clickhouse(Integration, ClickhouseConnectionChecker):
+    def __init__(self, config, name, db_info):
+        super().__init__(config, name)
+        self.user = db_info.get('user', 'default')
+        self.password = db_info.get('password', None)
+        self.host = db_info.get('host')
+        self.port = db_info.get('port')
+
+    def _to_clickhouse_table(self, dtype_dict, predicted_cols, columns):
         subtype_map = {
-            DATA_SUBTYPES.INT: 'Nullable(Int64)',
-            DATA_SUBTYPES.FLOAT: 'Nullable(Float64)',
-            DATA_SUBTYPES.BINARY: 'Nullable(UInt8)',
-            DATA_SUBTYPES.DATE: 'Nullable(Date)',
-            DATA_SUBTYPES.TIMESTAMP: 'Nullable(Datetime)',
-            DATA_SUBTYPES.SINGLE: 'Nullable(String)',
-            DATA_SUBTYPES.MULTIPLE: 'Nullable(String)',
-            DATA_SUBTYPES.TAGS: 'Nullable(String)',
-            DATA_SUBTYPES.IMAGE: 'Nullable(String)',
-            DATA_SUBTYPES.VIDEO: 'Nullable(String)',
-            DATA_SUBTYPES.AUDIO: 'Nullable(String)',
-            DATA_SUBTYPES.SHORT: 'Nullable(String)',
-            DATA_SUBTYPES.RICH: 'Nullable(String)',
-            DATA_SUBTYPES.ARRAY: 'Nullable(String)'
+            dtype.integer: 'Nullable(Int64)',
+            dtype.float: 'Nullable(Float64)',
+            dtype.binary: 'Nullable(UInt8)',
+            dtype.date: 'Nullable(Date)',
+            dtype.datetime: 'Nullable(Datetime)',
+            dtype.binary: 'Nullable(String)',
+            dtype.categorical: 'Nullable(String)',
+            dtype.tags: 'Nullable(String)',
+            dtype.image: 'Nullable(String)',
+            dtype.video: 'Nullable(String)',
+            dtype.audio: 'Nullable(String)',
+            dtype.short_text: 'Nullable(String)',
+            dtype.rich_text: 'Nullable(String)',
+            dtype.array: 'Nullable(String)'
         }
 
         column_declaration = []
-        for name in stats['columns']:
+        for name in columns:
             try:
-                col_subtype = stats[name]['typing']['data_subtype']
+                col_subtype = dtype_dict[name]
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception as e:
-                print(e)
-                print(f'Error: cant convert type {col_subtype} of column {name} to clickhouse type')
+                log.error(f'Error: can not determine clickhouse data type for column {name}: {e}')
 
         return column_declaration
 
     def _query(self, query):
-        params = {'user': 'default'}
-        try:
-            params['user'] = self.config['integrations'][self.name]['user']
-        except Exception:
-            pass
+        params = {'user': self.user}
 
-        try:
-            params['password'] = self.config['integrations'][self.name]['password']
-        except Exception:
-            pass
+        if self.password is not None:
+            params['password'] = self.password
 
-        host = self.config['integrations'][self.name]['host']
-        port = self.config['integrations'][self.name]['port']
+        host = self.host
+        port = self.port
 
         response = requests.post(f'http://{host}:{port}', data=query, params=params)
 
@@ -95,16 +113,23 @@ class Clickhouse(Integration):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = self._escape_table_name(model_meta['name'])
-            stats = model_meta['data_analysis_v2']
 
-            columns_sql = ','.join(self._to_clickhouse_table(stats, model_meta['predict']))
+            predict = model_meta['predict']
+            if not isinstance(predict, list):
+                predict = [predict]
+
+            columns_sql = ','.join(self._to_clickhouse_table(
+                model_meta['dtype_dict'],
+                predict,
+                list(model_meta['dtype_dict'].keys())
+            ))
             columns_sql += ',`when_data` Nullable(String)'
             columns_sql += ',`select_data_query` Nullable(String)'
             columns_sql += ',`external_datasource` Nullable(String)'
-            for col in model_meta['predict']:
+            for col in predict:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
 
-                if model_meta['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns_sql += f',`{col}_min` Nullable(Float64)'
                     columns_sql += f',`{col}_max` Nullable(Float64)'
                 columns_sql += f',`{col}_explain` Nullable(String)'
@@ -113,6 +138,7 @@ class Clickhouse(Integration):
             msqyl_pass = self.config['api']['mysql']['password']
             msqyl_user = self._get_mysql_user()
 
+            self.unregister_predictor(model_meta['name'])
             q = f"""
                 CREATE TABLE {self.mindsdb_database}.{name}
                 ({columns_sql}
@@ -125,11 +151,3 @@ class Clickhouse(Integration):
             drop table if exists {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
-
-    def check_connection(self):
-        try:
-            res = self._query('select 1;')
-            connected = res.status_code == 200
-        except Exception:
-            connected = False
-        return connected

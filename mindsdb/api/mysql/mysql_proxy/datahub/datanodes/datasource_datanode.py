@@ -1,14 +1,11 @@
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.interfaces.datastore.datastore import DataStore
 
 
 class DataSourceDataNode(DataNode):
     type = 'mindsdb-datasource'
 
-    def __init__(self, config):
-        self.config = config
-        self.datastore = DataStore(config)
-        # self.mindsdb_native = NativeInterface(config)
+    def __init__(self, data_store):
+        self.datastore = data_store
 
     def getTables(self):
         dss = self.datastore.get_datasources()

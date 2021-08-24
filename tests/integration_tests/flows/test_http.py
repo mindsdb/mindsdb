@@ -1,20 +1,16 @@
-import os
 import time
 import unittest
-import importlib.util
 from random import randint
 from pathlib import Path
 from uuid import uuid1
+import json
+import lightwood
 
 import requests
 
-from mindsdb.utilities.config import Config
-from mindsdb.utilities.ps import net_connections
-
 from common import (
-    run_environment,
-    TEST_CONFIG,
-    MINDSDB_DATABASE
+    CONFIG_PATH,
+    run_environment
 )
 
 rand = randint(0, pow(10, 12))
@@ -26,61 +22,47 @@ root = 'http://localhost:47334/api'
 class HTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config = Config(TEST_CONFIG)
-        cls.initial_integrations_names = list(cls.config['integrations'].keys())
-
-        mdb, datastore = run_environment(
-            cls.config,
+        run_environment(
             apis=['http'],
-            override_integration_config={
-                'default_mariadb': {
-                    'publish': True
-                },
-                'default_clickhouse': {
-                    'publish': True
+            override_config={
+                'integrations': {
+                    'default_mariadb': {
+                        'publish': True
+                    },
+                    'default_clickhouse': {
+                        'publish': True
+                    }
                 }
-            },
-            mindsdb_database=MINDSDB_DATABASE
+            }
         )
-        cls.mdb = mdb
 
-    @classmethod
-    def tearDownClass(cls):
-        try:
-            conns = net_connections()
-            pid = [x.pid for x in conns if x.status == 'LISTEN' and x.laddr[1] == 47334 and x.pid is not None]
-            if len(pid) > 0:
-                os.kill(pid[0], 9)
-        except Exception:
-            pass
+        cls.config = json.loads(
+            Path(CONFIG_PATH).read_text()
+        )
+
+        cls.initial_integrations_names = list(cls.config['integrations'].keys())
 
     def test_1_config(self):
         res = requests.get(f'{root}/config/integrations')
         assert res.status_code == 200
-        integration_names = res.json()
-        for integration_name in integration_names['integrations']:
-            assert integration_name in self.initial_integrations_names
+        res = res.json()
+        assert isinstance(res['integrations'], list)
 
-        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse'}
+        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse', 'port': 8123, 'user': 'default', 'password': '123'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
         assert res.status_code == 200
 
         res = requests.get(f'{root}/config/integrations/test_integration')
         assert res.status_code == 200
         test_integration = res.json()
-        print(test_integration, len(test_integration))
-        assert len(test_integration) == 6
-
-        res = requests.delete(f'{root}/config/integrations/test_integration')
-        assert res.status_code == 200
-
-        res = requests.get(f'{root}/config/integrations/test_integration')
-        assert res.status_code != 200
+        print(test_integration)
+        assert len(test_integration) == 9  # 8 + id field
 
         for k in test_integration_data:
-            assert test_integration[k] == test_integration_data[k]
+            if k != 'password':
+                assert test_integration[k] == test_integration_data[k]
 
-        for name in ['default_mariadb', 'default_clickhouse']:
+        for name in ['test_integration']:
             # Get the original
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
@@ -89,7 +71,7 @@ class HTTPTest(unittest.TestCase):
             for k in ['publish', 'host', 'port', 'type', 'user']:
                 assert k in integration
                 assert integration[k] is not None
-            assert integration['password'] is None
+            assert integration.get('password') is None
 
             # Modify it
             res = requests.post(
@@ -100,6 +82,7 @@ class HTTPTest(unittest.TestCase):
             res = requests.get(f'{root}/config/integrations/{name}')
             assert res.status_code == 200
             modified_integration = res.json()
+
             assert modified_integration['password'] is None
             assert modified_integration['user'] == 'dr.Who'
             for k in integration:
@@ -115,6 +98,12 @@ class HTTPTest(unittest.TestCase):
             for k in integration:
                 if k != 'date_last_update':
                     assert modified_integration[k] == integration[k]
+
+        res = requests.delete(f'{root}/config/integrations/test_integration')
+        assert res.status_code == 200
+
+        res = requests.get(f'{root}/config/integrations/test_integration')
+        assert res.status_code != 200
 
     def test_2_put_ds(self):
         # PUT datasource
@@ -138,20 +127,22 @@ class HTTPTest(unittest.TestCase):
         res = requests.put(url, json=params)
         assert res.status_code == 200
         ds_data = res.json()
+
         assert ds_data['source_type'] == 'default_clickhouse'
         assert ds_data['row_count'] == 3 * 8
 
     def test_3_analyze(self):
         response = requests.get(f'{root}/datasources/{ds_name}/analyze')
+        print(response)
         assert response.status_code == 200
 
-    def test_3_put_predictor(self):
+    def test_4_put_predictor(self):
         # PUT predictor
         params = {
             'data_source_name': ds_name,
             'to_predict': 'rental_price',
             'kwargs': {
-                'stop_training_in_x_seconds': 5,
+                'stop_training_in_x_seconds': 20,
                 'join_learn_process': True
             }
         }
@@ -165,10 +156,10 @@ class HTTPTest(unittest.TestCase):
         }
         url = f'{root}/predictors/{pred_name}/predict'
         res = requests.post(url, json=params)
-        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
         assert res.status_code == 200
+        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
-    def test_4_datasources(self):
+    def test_5_datasources(self):
         """
         Call list datasources endpoint
         THEN check the response is success
@@ -176,7 +167,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/datasources/')
         assert response.status_code == 200
 
-    def test_5_datasource_not_found(self):
+    def test_6_datasource_not_found(self):
         """
         Call unexisting datasource
         then check the response is NOT FOUND
@@ -184,30 +175,20 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/datasources/dummy_source')
         assert response.status_code == 404
 
-    def test_6_utils(self):
+    def test_7_utils(self):
         """
         Call utilities ping endpoint
         THEN check the response is success
-
-        Call utilities report_uuid endpoint
-        THEN check the response is success
-        THEN check if the report_uuid is present in the report json and well fromated
-        THEN Call the endpoint again and check that the two report_uuids returned match
         """
 
         response = requests.get(f'{root}/util/ping')
         assert response.status_code == 200
 
-        response = requests.get(f'{root}/util/report_uuid')
+
+        response = requests.get(f'{root}/config/vars')
         assert response.status_code == 200
-        report_uuid = response.json()['report_uuid']
-        assert report_uuid == 'no_report'
 
-        # Make sure the uuid doesn't change on subsequent requests
-        response = requests.get(f'{root}/util/report_uuid')
-        assert report_uuid == response.json()['report_uuid']
-
-    def test_7_predictors(self):
+    def test_8_predictors(self):
         """
         Call list predictors endpoint
         THEN check the response is success
@@ -215,28 +196,23 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/')
         assert response.status_code == 200
 
-    def test_8_predictor_not_found(self):
+    def test_90_predictor_not_found(self):
         """
         Call unexisting predictor
         then check the response is NOT FOUND
         """
         response = requests.get(f'{root}/predictors/dummy_predictor')
-        assert response.status_code == 404
+        assert response.status_code != 200
 
-    def test_9_gui_is_served(self):
+    def test_91_gui_is_served(self):
         """
         GUI downloaded and available
         """
-        start_time = time.time()
-        index = Path(self.config.paths['static']).joinpath('index.html')
-        while index.is_file() is False and (time.time() - start_time) > 30:
-            time.sleep(1)
-        assert index.is_file()
         response = requests.get('http://localhost:47334/')
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
 
-    def test_10_ds_from_unexist_integration(self):
+    def test__92_ds_from_unexist_integration(self):
         """
         Call telemetry enabled
         then check the response is status 200
@@ -247,6 +223,82 @@ class HTTPTest(unittest.TestCase):
                 "query": "select * from test_data.any_data limit 100;"}
         response = requests.put(f'{root}/datasources/{ds_name}', json=data)
         assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
+
+    def test_93_generate_predictor(self):
+        r = requests.put(
+            f'{root}/predictors/generate/lwr_{pred_name}',
+            json={
+                'problem_definition': {'target': 'rental_price'},
+                'data_source_name': ds_name,
+                'join_learn_process': True
+            }
+        )
+        r.raise_for_status()
+
+    def test_94_edit_json_ai(self):
+        # Get the json ai
+        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        predictor_data = resp.json()
+
+        # Edit it
+        json_ai = predictor_data['json_ai']
+        json_ai['problem_definition']
+        models = json_ai['outputs']['rental_price']['models']
+        keep_only = [x for x in models if x['module'] != 'Regression']
+        json_ai['outputs']['rental_price']['models'] = keep_only
+
+        # Upload it
+        r = requests.put(
+            f'{root}/predictors/lwr_{pred_name}/edit/json_ai',
+            json={'json_ai': json_ai}
+        )
+        r.raise_for_status()
+
+    def test_95_validate_json_ai(self):
+        # Get the json ai
+        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        predictor_data = resp.json()
+
+        # Check it
+        r = requests.post(
+            f'{root}/util/validate_json_ai',
+            json={'json_ai': predictor_data['json_ai']}
+        )
+        r.raise_for_status()
+
+    def test_96_edit_code(self):
+        # Make sure json ai edits went through
+        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+        predictor_data = resp.json()
+        assert 'Regression(' not in predictor_data['code']
+
+        # Change the code
+        new_code = predictor_data['code']
+        new_code = new_code.split("""self.mode = 'predict'""")[0]
+        new_code += """\n        return pd.DataFrame({'prediction': [int(5555555)]}).astype(int)"""
+
+        r = requests.put(
+            f'{root}/predictors/lwr_{pred_name}/edit/code',
+            json={'code': new_code}
+        )
+        r.raise_for_status()
+
+    def test_97_train_predictor(self):
+        r = requests.put(
+            f'{root}/predictors/lwr_{pred_name}/train',
+            json={'data_source_name': ds_name, 'join_learn_process': True}
+        )
+        r.raise_for_status()
+    
+    def test_98_predict_modified_predictor(self):
+        params = {
+            'when': {'sqft': 500}
+        }
+        url = f'{root}/predictors/lwr_{pred_name}/predict'
+        res = requests.post(url, json=params)
+        assert res.status_code == 200
+        pvs = res.json()
+        assert pvs[0]['rental_price']['predicted_value'] == 5555555
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

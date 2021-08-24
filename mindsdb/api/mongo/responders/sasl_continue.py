@@ -23,8 +23,9 @@ class Responce(Responder):
                 'payload': responce,
                 'ok': 1
             }
-        except Exception:
+        except Exception as e:
             res = {
+                'errmsg': str(e),
                 'ok': 0
             }
         return res

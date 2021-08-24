@@ -12,8 +12,11 @@ from mindsdb.api.mongo.responders import responders
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.utilities import log
 
+from mindsdb.interfaces.storage.db import session as db_session
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.native.native import NativeInterface
+from mindsdb.interfaces.datastore.datastore import DataStoreWrapper
+from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
 
 OP_REPLY = 1
 OP_UPDATE = 2001
@@ -60,12 +63,6 @@ class OperationResponder():
     @abstractmethod
     def to_bytes(self, response, request_id):
         pass
-
-    def get_match_responder(self, query):
-        for responder in self.responders:
-            if responder['match'](query):
-                return responder['response']
-        raise Exception('is no responder')
 
 
 # NOTE probably, it need only for mongo version < 3.6
@@ -237,7 +234,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         log.debug('connect')
         log.debug(str(self.server.socket))
 
-        self.session = Session(self.server.mindsdb_env['config'])
+        self.session = Session(self.server.mindsdb_env)
 
         first_byte = self.request.recv(1, socket.MSG_PEEK)
         if first_byte == b'\x16':
@@ -256,15 +253,19 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             log.debug(f'GET length={length} id={request_id} opcode={opcode}')
             msg_bytes = self._read_bytes(length - pos)
             answer = self.get_answer(request_id, opcode, msg_bytes)
-            self.request.send(answer)
+            if answer is not None:
+                self.request.send(answer)
+
+        db_session.close()
 
     def get_answer(self, request_id, opcode, msg_bytes):
         if opcode not in self.server.operationsHandlersMap:
             raise NotImplementedError(f'Unknown opcode {opcode}')
         responder = self.server.operationsHandlersMap[opcode]
         assert responder is not None, 'error'
-        response = responder.handle(msg_bytes, request_id, self.server.mindsdb_env, self.session)
-        assert response is not None, 'error'
+        response = responder.handle(msg_bytes, request_id, self.session.mindsdb_env, self.session)
+        if response is None:
+            return None
         return responder.to_bytes(response, request_id)
 
     def _read_bytes(self, length):
@@ -292,9 +293,17 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self.mindsdb_env = {
             'config': config,
-            'data_store': DataStore(config),
-            'mindsdb_native': NativeInterface(config)
+            'origin_data_store': DataStore(),
+            'origin_model_interface': ModelInterface()
         }
+        self.mindsdb_env['mindsdb_native'] = ModelInterfaceWrapper(
+            model_interface=self.mindsdb_env['origin_model_interface'],
+            company_id=None
+        )
+        self.mindsdb_env['data_store'] = DataStoreWrapper(
+            data_store=self.mindsdb_env['origin_data_store'],
+            company_id=None
+        )
 
         respondersCollection = RespondersCollection()
 

@@ -2,17 +2,42 @@ import pytds
 from mindsdb.integrations.base import Integration
 
 
-class MSSQL(Integration):
+class MSSQLConnectionChecker:
+    def __init__(self, **kwargs):
+        self.host = kwargs.get('host')
+        self.port = kwargs.get('port')
+        self.user = kwargs.get('user')
+        self.password = kwargs.get('password')
+
     def _get_connnection(self):
-        integration = self.config['integrations'][self.name]
         return pytds.connect(
-            user=integration['user'],
-            password=integration['password'],
-            dsn=integration['host'],
-            port=integration['port'],
+            user=self.user,
+            password=self.password,
+            dsn=self.host,
+            port=self.port,
             as_dict=True,
             autocommit=True  # .commit() doesn't work
         )
+
+    def check_connection(self):
+        try:
+            conn = self._get_connnection()
+            conn.close()
+            connected = True
+        except Exception:
+            connected = False
+
+        return connected
+
+
+class MSSQL(Integration, MSSQLConnectionChecker):
+    def __init__(self, config, name, db_info):
+        super().__init__(config, name)
+        self.db_info = db_info
+        self.user = db_info.get('user')
+        self.password = db_info.get('password', None)
+        self.host = db_info.get('host')
+        self.port = db_info.get('port')
 
     def _query(self, query, fetch=False):
         conn = self._get_connnection()
@@ -26,7 +51,7 @@ class MSSQL(Integration):
         return res
 
     def setup(self):
-        integration = self.config['integrations'][self.name]
+        integration = self.db_info
         driver_name = integration.get('odbc_driver_name', 'MySQL ODBC 8.0 Unicode Driver')
         servers = self._query('exec sp_linkedservers;', fetch=True)
         servers = [x['SRV_NAME'] for x in servers]
@@ -52,12 +77,3 @@ class MSSQL(Integration):
 
     def unregister_predictor(self, name):
         pass
-
-    def check_connection(self):
-        try:
-            conn = self._get_connnection()
-            conn.close()
-            connected = True
-        except Exception:
-            connected = False
-        return connected

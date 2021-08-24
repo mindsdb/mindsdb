@@ -1,86 +1,159 @@
 import json
-import pandas
+import numpy as np
+from datetime import datetime
+
+from lightwood.api.dtype import dtype
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.interfaces.native.native import NativeInterface
-from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
 from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
-from mindsdb_native.libs.helpers.general_helpers import NumpyJSONEncoder
+from mindsdb.utilities.config import Config
+from mindsdb.interfaces.database.integrations import get_db_integration
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
+
+
+class NumpyJSONEncoder(json.JSONEncoder):
+    """
+    Use this encoder to avoid
+    "TypeError: Object of type float32 is not JSON serializable"
+
+    Example:
+    x = np.float32(5)
+    json.dumps(x, cls=NumpyJSONEncoder)
+    """
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (np.float, np.float32, np.float64)):
+            return float(obj)
+        else:
+            return super().default(obj)
 
 
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, config):
-        self.config = config
-        self.mindsdb_native = NativeInterface(config)
-        self.custom_models = CustomModels(config)
+    def __init__(self, model_interface, ai_table, data_store, company_id):
+        self.config = Config()
+        self.company_id = company_id
+        self.model_interface = model_interface
+        self.ai_table = ai_table
+        self.data_store = data_store
 
     def getTables(self):
-        models = self.mindsdb_native.get_models()
+        models = self.model_interface.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
         models += ['predictors', 'commands']
-        models += [x['name'] for x in self.custom_models.get_models()]
+
+        ai_tables = self.ai_table.get_ai_tables()
+        models += [x['name'] for x in ai_tables]
         return models
 
     def hasTable(self, table):
         return table in self.getTables()
 
-    def getTableColumns(self, table):
-        try:
-            columns = self.custom_models.get_model_data(table)['data_analysis_v2']['columns']
-            columns += ['external_datasource', 'select_data_query', 'when_data']
-            return columns
-        except Exception:
-            pass
+    def _get_ai_table_columns(self, table_name):
+        aitable_record = self.ai_table.get_ai_table(table_name)
+        columns = (
+            [x['name'] for x in aitable_record.query_fields] + [x['name'] for x in aitable_record.predictor_columns]
+        )
+        return columns
 
+    def _get_model_columns(self, table_name):
+        model = self.model_interface.get_model_data(name=table_name)
+        columns = []
+        columns += list(model['dtype_dict'].keys())
+        predict = model['predict']
+        if not isinstance(predict, list):
+            predict = [predict]
+        columns += [f'{x}_original' for x in predict]
+        for col in predict:
+            if model['dtype_dict'][col] in (dtype.integer, dtype.float):
+                columns += [f"{col}_min", f"{col}_max"]
+            columns += [f"{col}_confidence"]
+            columns += [f"{col}_explain"]
+        return columns
+
+    def getTableColumns(self, table):
         if table == 'predictors':
             return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
         if table == 'commands':
             return ['command']
 
-        model = self.mindsdb_native.get_model_data(name=table)
         columns = []
-        columns += model['data_analysis_v2']['columns']
-        columns += [f'{x}_original' for x in model['predict']]
-        for col in model['predict']:
-            if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
-                columns += [f"{col}_min", f"{col}_max"]
-            columns += [f"{col}_confidence"]
-            columns += [f"{col}_explain"]
 
-        # TODO this should be added just for clickhouse queries
-        columns += ['when_data', 'select_data_query', 'external_datasource']
+        ai_tables = self.ai_table.get_ai_table(table)
+        if ai_tables is not None:
+            columns = self._get_ai_table_columns(table)
+        elif table in [x['name'] for x in self.model_interface.get_models()]:
+            columns = self._get_model_columns(table)
+            columns += ['when_data', 'select_data_query', 'external_datasource']
+
         return columns
 
     def _select_predictors(self):
-        models = self.mindsdb_native.get_models()
-        # TODO add custom models
+        models = self.model_interface.get_models()
         return [{
             'name': x['name'],
             'status': x['status'],
             'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
-            'predict': ', '.join(x['predict']),
+            'predict': ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
             'select_data_query': '',
             'external_datasource': '',  # TODO
             'training_options': ''  # TODO ?
         } for x in models]
 
     def delete_predictor(self, name):
-        self.mindsdb_native.delete_model(name)
+        self.model_interface.delete_model(name)
 
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
+    def _select_from_ai_table(self, table, columns, where):
+        aitable_record = self.ai_table.get_ai_table(table)
+        integration = aitable_record.integration_name
+        query = aitable_record.integration_query
+        predictor_name = aitable_record.predictor_name
+
+        ds_name = self.data_store.get_vacant_name('temp')
+        self.data_store.save_datasource(ds_name, integration, {'query': query})
+        dso = self.data_store.get_datasource_obj(ds_name, raw=True)
+        res = self.model_interface.predict(predictor_name, dso, 'dict')
+        self.data_store.delete_datasource(ds_name)
+
+        keys_map = {}
+        for f in aitable_record.predictor_columns:
+            keys_map[f['value']] = f['name']
+        for f in aitable_record.query_fields:
+            keys_map[f['name']] = f['name']
+        keys = list(keys_map.keys())
+
+        data = []
+        for i, el in enumerate(res):
+            data.append({keys_map[key]: el[key] for key in keys})
+
+        return data
+
+    def select_query(self, query):
+        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
+        moz_struct = to_moz_sql_struct(query)
+        data = self.select(
+            table=query.from_table.parts[-1],
+            columns=None,
+            where=moz_struct.get('where')
+        )
+        return data
+
+    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None, is_timeseries=False):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
         if table == 'predictors':
             return self._select_predictors()
         if table == 'commands':
             return []
+        if self.ai_table.get_ai_table(table):
+            return self._select_from_ai_table(table, columns, where)
 
         original_when_data = None
         if 'when_data' in where:
@@ -93,7 +166,6 @@ class MindsDBDataNode(DataNode):
                     where_data = [where_data]
             except Exception:
                 raise ValueError(f'''Error while parse 'when_data'="{where_data}"''')
-
         external_datasource = None
         if 'external_datasource' in where:
             external_datasource = where['external_datasource']['$eq']
@@ -104,22 +176,23 @@ class MindsDBDataNode(DataNode):
             select_data_query = where['select_data_query']['$eq']
             del where['select_data_query']
 
-            dbtype = self.config['integrations'][came_from]['type']
+            integration_data = get_db_integration(came_from, self.company_id)
+            dbtype = integration_data['type']
             if dbtype == 'clickhouse':
-                ch = Clickhouse(self.config, came_from)
+                ch = Clickhouse(self.config, came_from, integration_data)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')
                 data = res.json()['data']
             elif dbtype == 'mariadb':
-                maria = Mariadb(self.config, came_from)
+                maria = Mariadb(self.config, came_from, integration_data)
                 data = maria._query(select_data_query)
             elif dbtype == 'mysql':
-                mysql = MySQL(self.config, came_from)
+                mysql = MySQL(self.config, came_from, integration_data)
                 data = mysql._query(select_data_query)
             elif dbtype == 'postgres':
-                mysql = PostgreSQL(self.config, came_from)
+                mysql = PostgreSQL(self.config, came_from, integration_data)
                 data = mysql._query(select_data_query)
             elif dbtype == 'mssql':
-                mssql = MSSQL(self.config, came_from)
+                mssql = MSSQL(self.config, came_from, integration_data)
                 data = mssql._query(select_data_query, fetch=True)
             else:
                 raise Exception(f'Unknown database type: {dbtype}')
@@ -130,9 +203,7 @@ class MindsDBDataNode(DataNode):
                 where_data += data
 
         new_where = {}
-        if where_data is not None:
-            where_data = pandas.DataFrame(where_data)
-        else:
+        if where_data is None:
             for key, value in where.items():
                 if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
                     # TODO value should be just string or number
@@ -144,12 +215,12 @@ class MindsDBDataNode(DataNode):
 
             where_data = [new_where]
 
-        try:
-            model = self.custom_models.get_model_data(name=table)
-        except Exception:
-            model = self.mindsdb_native.get_model_data(name=table)
+        model = self.model_interface.get_model_data(name=table)
+        columns = list(model['dtype_dict'].keys())
 
         predicted_columns = model['predict']
+        if not isinstance(predicted_columns, list):
+            predicted_columns = [predicted_columns]
 
         original_target_values = {}
         for col in predicted_columns:
@@ -161,81 +232,101 @@ class MindsDBDataNode(DataNode):
             else:
                 original_target_values[col + '_original'] = [None]
 
-        if table in [x['name'] for x in self.custom_models.get_models()]:
-            res = self.custom_models.predict(name=table, when_data=where_data)
+        pred_dicts, explanations = self.model_interface.predict(table, where_data, 'dict&explain')
 
-            data = []
-            fields = model['data_analysis_v2']['columns']
-            for i, ele in enumerate(res):
-                row = {}
-                row['select_data_query'] = select_data_query
-                row['external_datasource'] = external_datasource
-                row['when_data'] = original_when_data
+        if not model['problem_definition']['timeseries_settings']['is_timeseries']:
+            # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
+            if isinstance(where_data, list):
+                data = []
+                for row in pred_dicts:
+                    new_row = {}
+                    for key in row:
+                        new_row.update(row[key])
+                        predicted_value = new_row['predicted_value']
+                        del new_row['predicted_value']
+                        new_row[key] = predicted_value
+                    data.append(new_row)
+                pred_dicts = data
 
-                for key in ele:
-                    row[key] = ele[key]['predicted_value']
-                    # FIXME prefer get int from mindsdb_native in this case
-                    if model['data_analysis_v2'][key]['typing']['data_subtype'] == 'Int':
-                        row[key] = int(row[key])
+            if isinstance(where_data, dict):
+                for col in where_data:
+                    if col not in predicted_columns:
+                        pred_dicts[0][col] = where_data[col]
 
-                for k in fields:
-                    if k not in ele:
-                        if isinstance(where_data, list):
-                            if k in where_data[i]:
-                                row[k] = where_data[i][k]
-                            else:
-                                row[k] = None
-                        elif k in where_data.columns:
-                            row[k] = where_data[k].iloc[i]
-                        else:
-                            row[k] = None
-
-                for k in original_target_values:
-                    row[k] = original_target_values[k][i]
-
-                data.append(row)
-
-            field_types = {f: model['data_analysis_v2'][f]['typing']['data_subtype'] for f in fields if 'typing' in model['data_analysis_v2'][f]}
-            for row in data:
-                cast_row_types(row, field_types)
-
-            return data
         else:
-            res = self.mindsdb_native.predict(name=table, when_data=where_data)
+            pred_dict = pred_dicts[0]
+            new_pred_dicts = []
+            predict = model['predict']
+            data_column = model['problem_definition']['timeseries_settings']['order_by'][0]
+            predictions = pred_dict[predict]['predicted_value']
+            if isinstance(predictions, list) is False:
+                predictions = [predictions]
+            data_values = pred_dict[predict][data_column]
+            if isinstance(data_values, list) is False:
+                data_values = [data_values]
+            for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
+                nd = {}
+                nd.update(pred_dict[predict])
+                new_pred_dicts.append(nd)
+                nd[predict] = predictions[i]
+                if 'predicted_value' in nd:
+                    del nd['predicted_value']
+                nd[data_column] = data_values[i] if len(data_values) > i else None
+            pred_dicts = new_pred_dicts
 
-            keys = [x for x in list(res._data.keys()) if x in columns]
-            min_max_keys = []
-            for col in predicted_columns:
-                if model['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
-                    min_max_keys.append(col)
+            if model['dtypes'][data_column] == dtype.date:
+                for row in pred_dicts:
+                    if isinstance(row[data_column], (int, float)):
+                        row[data_column] = str(datetime.fromtimestamp(row[data_column]).date())
+            elif model['dtypes'][data_column] == dtype.datetime:
+                for row in pred_dicts:
+                    if isinstance(row[data_column], (int, float)):
+                        row[data_column] = str(datetime.fromtimestamp(row[data_column]))
 
-            data = []
-            explains = []
-            for i, el in enumerate(res):
-                data.append({key: el[key] for key in keys})
-                explains.append(el.explain())
+            new_explanations = []
+            explanaion = explanations[0][predict]
+            for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
+                nd = {}
+                for key in explanaion:
+                    if key not in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                        nd[key] = explanaion[key]
+                for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                    nd[key] = explanaion[key][i]
+                new_explanations.append({predict: nd})
+            explanations = new_explanations
 
-            field_types = {
-                f: model['data_analysis_v2'][f]['typing']['data_subtype']
-                for f in model['data_analysis_v2']['columns'] if 'typing' in model['data_analysis_v2'][f]
-            }
+        keys = [x for x in pred_dicts[0] if x in columns]
+        min_max_keys = []
+        for col in predicted_columns:
+            if model['dtype_dict'][col] in (dtype.integer, dtype.float):
+                min_max_keys.append(col)
 
-            for row in data:
-                cast_row_types(row, field_types)
+        data = []
+        explains = []
+        for i, el in enumerate(pred_dicts):
+            data.append({key: el[key] for key in keys})
+            explains.append(explanations[i])
 
-                row['select_data_query'] = select_data_query
-                row['external_datasource'] = external_datasource
-                row['when_data'] = original_when_data
+        for i, row in enumerate(data):
+            cast_row_types(row, model['dtype_dict'])
 
-                for k in original_target_values:
-                    row[k] = original_target_values[k][i]
+            row['select_data_query'] = select_data_query
+            row['external_datasource'] = external_datasource
+            row['when_data'] = original_when_data
 
-                explanation = explains[i]
-                for key in predicted_columns:
-                    row[key + '_confidence'] = explanation[key]['confidence']
-                    row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder)
-                for key in min_max_keys:
-                    row[key + '_min'] = min(explanation[key]['confidence_interval'])
-                    row[key + '_max'] = max(explanation[key]['confidence_interval'])
+            for k in original_target_values:
+                row[k] = original_target_values[k][i]
 
-            return data
+            for column_name in columns:
+                if column_name not in row:
+                    row[column_name] = None
+
+            explanation = explains[i]
+            for key in predicted_columns:
+                row[key + '_confidence'] = explanation[key]['confidence']
+                row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
+            for key in min_max_keys:
+                row[key + '_min'] = explanation[key]['confidence_lower_bound']
+                row[key + '_max'] = explanation[key]['confidence_upper_bound']
+
+        return data

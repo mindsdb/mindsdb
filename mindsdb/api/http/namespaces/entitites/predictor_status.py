@@ -10,6 +10,7 @@ predictor_status = ns_conf.model('PredictorStatus', {
     # other attributes
     'is_active': fields.Boolean(required=False, description='Only one predictor by public_name can be active'),
     'data_source': fields.String(required=False, description='The data source it\'s learning from'),
+    'data_source_name': fields.String(required=False, description='The name of the datasource it\'s learning from'),
     'predict': fields.List(fields.String, required=False, description='The list of columns/fields to be predicted'),
     'accuracy': fields.Float(description='The current accuracy of the model'),
     'status': fields.String(required=False, description='The current model status', enum=['training', 'complete', 'error']),
@@ -17,9 +18,9 @@ predictor_status = ns_conf.model('PredictorStatus', {
     'train_end_at': fields.DateTime(required=False, description='The time the predictor finished training'),
     'updated_at': fields.DateTime(required=False, description='The time the predictor was last updated at'),
     'created_at': fields.DateTime(required=False, description='The time the predictor was created at'),
-    'is_custom': fields.Boolean(default=False),
     'stack_trace_on_error': fields.String(required=False, description='Why it failed, if it did'),
-    'error_explanation': fields.String(required=False, description='Why it failed, if it did, short version')
+    'error_explanation': fields.String(required=False, description='Why it failed, if it did, short version'),
+    'update': fields.String(required=False)
 })
 
 

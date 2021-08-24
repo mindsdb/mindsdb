@@ -8,11 +8,9 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-
-import logging
-
 import math
 import struct
+
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ONE_BYTE_ENC, TWO_BYTE_ENC, THREE_BYTE_ENC, NULL_VALUE, DEFAULT_CAPABILITIES
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 
@@ -31,7 +29,6 @@ class Datum():
         self.value = value
 
     def setFromBuff(self, buff):
-        val = ''
         start = 0
 
         if self.var_len == 'lenenc':
@@ -110,7 +107,7 @@ class Datum():
 
     def toStringPacket(self):
         if self.type == 'string<packet>':
-            return self.value.getPacketString()
+            return self.value.get_packet_string()
 
         if self.type in ['string<EOF>', 'byte<EOF>']:
             length = int(len(self.value))
@@ -141,7 +138,10 @@ class Datum():
                 return self.lenencInt(self.value)
 
             if self.var_type in ['byte', 'string']:
-                val_len = len(self.value)
+                if isinstance(self.value, str):
+                    val_len = len(self.value.encode('utf8'))
+                else:
+                    val_len = len(self.value)
                 byte_count = int(math.ceil(math.log((val_len + 1), 2) / 8))
                 if val_len < NULL_VALUE[0]:
                     return self.lenencInt(val_len) + bytes(self.value, 'utf-8')
@@ -156,7 +156,6 @@ class Datum():
 def test():
     import pprint
 
-    logging.basicConfig(level=10)
     u = Datum('int<8>', DEFAULT_CAPABILITIES >> 16)
     pprint.pprint(u.toStringPacket())
 

@@ -1,8 +1,8 @@
 class Responder():
     def __init__(self, when=None, result=None):
-        if when:
+        if when is not None:
             self.when = when
-        if result:
+        if result is not None:
             self.result = result
         if not hasattr(self, 'when') or (not isinstance(self.when, dict) and not callable(self.when)):
             raise ValueError("Responder attr 'when' must be dict or function.")

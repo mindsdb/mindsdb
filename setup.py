@@ -9,6 +9,7 @@ with open("mindsdb/__about__.py") as fp:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+
 with open('requirements.txt') as req_file:
     requirements = req_file.read().splitlines()
 
@@ -25,9 +26,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     install_requires=requirements,
-    classifiers=(
+    classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
-    ),
+    ],
     python_requires=">=3.6"
 )

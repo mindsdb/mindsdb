@@ -9,7 +9,12 @@
  *******************************************************
 """
 
+from mindsdb.interfaces.ai_table.ai_table import AITableStore
+from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
+from mindsdb.interfaces.datastore.datastore import DataStoreWrapper
+from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.utilities import log
+from mindsdb.utilities.config import Config
 
 
 class SessionController():
@@ -17,21 +22,44 @@ class SessionController():
     This class manages the server session
     '''
 
-    def __init__(self) -> object:
+    def __init__(self, original_model_interface, original_data_store, company_id=None) -> object:
         """
         Initialize the session
-        :param socket:
+        :param company_id:
         """
 
         self.username = None
         self.auth = False
+        self.company_id = company_id
         self.logging = log
 
         self.integration = None
         self.integration_type = None
         self.database = None
 
+        self.config = Config()
+        self.ai_table = AITableStore(company_id=company_id)
+        self.data_store = DataStoreWrapper(
+            data_store=original_data_store,
+            company_id=company_id
+        )
+        self.model_interface = ModelInterfaceWrapper(
+            model_interface=original_model_interface,
+            company_id=company_id
+        )
+
+        self.datahub = init_datahub(
+            model_interface=self.model_interface,
+            ai_table=self.ai_table,
+            data_store=self.data_store,
+            company_id=company_id
+        )
+
         self.prepared_stmts = {}
+        self.packet_sequence_number = 0
+
+    def inc_packet_sequence_number(self):
+        self.packet_sequence_number = (self.packet_sequence_number + 1) % 256
 
     def register_stmt(self, statement):
         i = 1

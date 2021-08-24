@@ -9,8 +9,6 @@
  *******************************************************
 """
 
-import logging
-
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS, TYPES
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
@@ -88,8 +86,7 @@ class ColumnDefenitionPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        logging.basicConfig(level=10)
-        pprint.pprint(str(ColumnDefenitionPacket().getPacketString()))
+        pprint.pprint(str(ColumnDefenitionPacket().get_packet_string()))
 
 
 # only run the test if this file is called from debugger

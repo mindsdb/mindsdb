@@ -93,6 +93,7 @@ class COMMANDS(object):
     COM_STMT_EXECUTE = int('0x17', 0)
     COM_STMT_FETCH = int('0x1c', 0)
     COM_STMT_CLOSE = int('0x19', 0)
+    COM_FIELD_LIST = int('0x04', 0)  # deprecated
 
 
 COMMANDS = COMMANDS()
@@ -974,6 +975,12 @@ SERVER_VARIABLES = {
     '@@wait_timeout': (28800, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
 
     '@@session.tx_read_only': ('0', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+
+    '@@version_comment': ('(MindsDB)', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+    '@@version': ('0.1', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+
+    '@@collation_connection': ('utf8_general_ci', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+    '@@performance_schema': (1, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary'])
 }
 
 class SESSION_TRACK(object):

@@ -11,7 +11,7 @@
 
 
 import os
-import random
+import sys
 import socketserver as SocketServer
 import ssl
 import re
@@ -20,25 +20,31 @@ import json
 import atexit
 import tempfile
 import datetime
+import time
+import socket
+import struct
 from collections import OrderedDict
+from functools import partial
+import select
+import base64
 
 import moz_sql_parser as sql_parser
 
 from mindsdb.utilities.wizards import make_ssl_cert
-
+from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
 from mindsdb.api.mysql.mysql_proxy.utilities import log
-
+from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
     NotImplementedError,
     SqlError
 )
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query_new import SQLQuery as SQLQuery_new
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
@@ -72,22 +78,59 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 )
 
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.native.native import NativeInterface
-from mindsdb.interfaces.custom.custom_models import CustomModels
-
+from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.database.integrations import get_db_integrations, get_db_integration
 
 connection_id = 0
 
-ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-HARDCODED_USER = None
-HARDCODED_PASSWORD = None
-CERT_PATH = None
-default_store = None
-mdb = None
-custom_models = None
-datahub = None
-config = None
+def check_auth(username, password, scramble_func, salt, company_id, config):
+    '''
+    '''
+    try:
+        hardcoded_user = config['api']['mysql']['user']
+        hardcoded_password = config['api']['mysql']['password']
+        hardcoded_password_hash = scramble_func(hardcoded_password, salt)
+        hardcoded_password = hardcoded_password.encode()
+
+        if password is None:
+            password = ''
+        if isinstance(password, str):
+            password = password.encode()
+
+        integration = None
+        integration_type = None
+        extracted_username = username
+        integrations_names = get_db_integrations(company_id).keys()
+        for integration_name in integrations_names:
+            if username == f'{hardcoded_user}_{integration_name}':
+                extracted_username = hardcoded_user
+                integration = integration_name
+                integration_type = get_db_integration(integration, company_id)['type']
+
+        if extracted_username != hardcoded_user:
+            log.warning(f'Check auth, user={username}: user mismatch')
+            return {
+                'success': False
+            }
+
+        if password != hardcoded_password and password != hardcoded_password_hash:
+            log.warning(f'check auth, user={username}: password mismatch')
+            return {
+                'success': False
+            }
+
+        log.info(f'Check auth, user={username}: Ok')
+        return {
+            'success': True,
+            'username': extracted_username,
+            'integration': integration,
+            'integration_type': integration_type
+        }
+    except Exception as e:
+        log.error(f'Check auth, user={username}: ERROR')
+        log.error(e)
+        log.error(traceback.format_exc())
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):
@@ -107,70 +150,61 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def server_close(srv):
         srv.server_close()
 
-    def initSession(self):
-        global connection_id, ALPHABET
-        log.info('New connection [{ip}:{port}]'.format(
+    def init_session(self, company_id=None):
+        global connection_id
+        log.debug('New connection [{ip}:{port}]'.format(
             ip=self.client_address[0], port=self.client_address[1]))
         log.debug(self.__dict__)
 
-        connection_id += 1
+        if self.server.connection_id >= 65025:
+            self.server.connection_id = 0
+        self.server.connection_id += 1
+        self.connection_id = self.server.connection_id
+        self.session = SessionController(
+            self.server.original_model_interface,
+            self.server.original_data_store,
+            company_id=company_id
+        )
 
-        self.session = SessionController()
-        self.salt = ''.join([random.choice(ALPHABET) for i in range(20)])
+        if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
+            self.salt = self.server.salt
+        else:
+            self.salt = base64.b64encode(os.urandom(15)).decode()
+
         self.socket = self.request
-        self.count = 0  # next packet number
-        self.connection_id = connection_id
         self.logging = log
 
         self.current_transaction = None
 
         log.debug('session salt: {salt}'.format(salt=self.salt))
 
-    def isAuthOk(self, user, orig_user, password, orig_password):
-        try:
-            if user != orig_user:
-                log.warning(f'Check auth, user={user}: user mismatch')
-                return False
-            if password != orig_password:
-                log.warning(f'check auth, user={user}: password mismatch')
-                return False
-
-            self.session.username = user
-            self.session.auth = True
-            log.info(f'Check auth, user={user}: Ok')
-            return True
-        except Exception:
-            log.error(f'Check auth, user={user}: ERROR')
-            log.error(traceback.format_exc())
-
     def handshake(self):
-        global HARDCODED_PASSWORD, HARDCODED_USER, CERT_PATH, config
-
         def switch_auth(method='mysql_native_password'):
             self.packet(SwitchOutPacket, seed=self.salt, method=method).send()
             switch_out_answer = self.packet(SwitchOutResponse)
             switch_out_answer.get()
             password = switch_out_answer.password
             if method == 'mysql_native_password' and len(password) == 0:
-                password = handshake_resp.scramble_func('', self.salt)
+                password = scramble_func('', self.salt)
             return password
 
         def get_fast_auth_password():
-            log.info('Asking for fast auth password')
+            log.debug('Asking for fast auth password')
             self.packet(FastAuthFail).send()
             password_answer = self.packet(PasswordAnswer)
             password_answer.get()
             try:
                 password = password_answer.password.value.decode()
             except Exception:
-                log.info('error: no password in Fast Auth answer')
+                log.warning('error: no password in Fast Auth answer')
                 self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='Is not password in connection query.').send()
                 return None
             return password
 
-        if self.session is None:
-            self.initSession()
-        log.info('send HandshakePacket')
+        username = None
+        password = None
+
+        log.debug('send HandshakePacket')
         self.packet(HandshakePacket).send()
 
         handshake_resp = self.packet(HandshakeResponsePacket)
@@ -183,20 +217,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         client_auth_plugin = handshake_resp.client_auth_plugin.value.decode()
 
-        orig_username = HARDCODED_USER
-        orig_password = HARDCODED_PASSWORD
-        orig_password_hash = handshake_resp.scramble_func(HARDCODED_PASSWORD, self.salt)
-        username = None
-        password = None
-
         self.session.is_ssl = False
 
         if handshake_resp.type == 'SSLRequest':
-            log.info('switch to SSL')
+            log.debug('switch to SSL')
             self.session.is_ssl = True
 
             ssl_context = ssl.SSLContext()
-            ssl_context.load_cert_chain(CERT_PATH)
+            ssl_context.load_cert_chain(self.server.cert_path)
             ssl_socket = ssl_context.wrap_socket(
                 self.socket,
                 server_side=True,
@@ -209,76 +237,133 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             client_auth_plugin = handshake_resp.client_auth_plugin.value.decode()
 
         username = handshake_resp.username.value.decode()
-        # if connect come from 'integration', then username will be like username_dbname
-        integration = ''
-        prefix = orig_username + '_'
-        if username.startswith(prefix):
-            integration = username[len(prefix):]
-        if len(integration) > 0 and integration in config['integrations']:
-            self.session.integration = integration
-            self.session.integration_type = config['integrations'][integration]['type']
-            username = orig_username
 
         if client_auth_plugin != DEFAULT_AUTH_METHOD:
-            if client_auth_plugin == 'mysql_native_password' and \
-                    orig_password == '' and len(handshake_resp.enc_password.value) == 0:
-                switch_auth('mysql_native_password')
-                password = ''
+            if client_auth_plugin == 'mysql_native_password':
+                password = switch_auth('mysql_native_password')
             else:
                 new_method = 'caching_sha2_password' if client_auth_plugin == 'caching_sha2_password' else 'mysql_native_password'
 
                 if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
-                    log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                             'error: cant switch to caching_sha2_password without SSL')
+                    log.warning(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                                'error: cant switch to caching_sha2_password without SSL')
                     self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='caching_sha2_password without SSL not supported').send()
                     return False
 
-                log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                         f'switch auth method to {new_method}')
+                log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                          f'switch auth method to {new_method}')
                 password = switch_auth(new_method)
 
                 if new_method == 'caching_sha2_password':
-                    password = get_fast_auth_password()
-                else:
-                    orig_password = orig_password_hash
-        elif orig_username == username and HARDCODED_PASSWORD == '':
-            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                     'empty password')
-            password = ''
+                    if password == b'\x00':
+                        password = ''
+                    else:
+                        password = get_fast_auth_password()
         elif 'caching_sha2_password' in client_auth_plugin:
-            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                     'check auth using caching_sha2_password')
-            password = get_fast_auth_password()
-            orig_password = HARDCODED_PASSWORD
-        elif 'mysql_native_password' in client_auth_plugin:
-            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                     'check auth using mysql_native_password')
+            log.debug(
+                f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                'check auth using caching_sha2_password'
+            )
             password = handshake_resp.enc_password.value
-            orig_password = orig_password_hash
+            if password == b'\x00':
+                password = ''
+            else:
+                # FIXME https://github.com/mindsdb/mindsdb/issues/1374
+                # if self.session.is_ssl:
+                #     password = get_fast_auth_password()
+                # else:
+                password = switch_auth()
+        elif 'mysql_native_password' in client_auth_plugin:
+            log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                      'check auth using mysql_native_password')
+            password = handshake_resp.enc_password.value
         else:
-            log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                     'unknown method, possible ERROR. Try to switch to mysql_native_password')
+            log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                      'unknown method, possible ERROR. Try to switch to mysql_native_password')
             password = switch_auth('mysql_native_password')
-            orig_password = orig_password_hash
 
         try:
             self.session.database = handshake_resp.database.value.decode()
         except Exception:
             self.session.database = None
-        log.info(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                 f'connecting to database {self.session.database}')
+        log.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                  f'connecting to database {self.session.database}')
 
-        if self.isAuthOk(username, orig_username, password, orig_password):
+        auth_data = self.server.check_auth(username, password, scramble_func, self.salt, self.session.company_id)
+        if auth_data['success']:
+            self.session.username = auth_data['username']
+            self.session.auth = True
+            self.session.integration = auth_data['integration']
+            self.session.integration_type = auth_data['integration_type']
             self.packet(OkPacket).send()
             return True
         else:
             self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'Access denied for user {username}').send()
-            log.warning('AUTH FAIL')
+            log.warning(f'Access denied for user {username}')
             return False
 
     def sendPackageGroup(self, packages):
         string = b''.join([x.accum() for x in packages])
         self.socket.sendall(string)
+
+    def answer_version(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'version()',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=['0.1']
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+
+    def answer_current_user(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'current_user()',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=['mindsdb']
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+
+    def answer_show_variables(self, variables):
+        data = []
+        for variable_name in variables:
+            variable_data = SERVER_VARIABLES.get(f'@@{variable_name}')
+            if variable_data is None:
+                variable_data = ['']
+            data.append([variable_name, variable_data[0]])
+
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': 'session_variables',
+                'name': 'Variable_name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': 'session_variables',
+                'name': 'Value',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=data
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
 
     def answerVersionComment(self):
         packages = []
@@ -323,7 +408,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             Parameters:
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
-        global mdb, default_store, config, custom_models
+        model_interface = self.session.model_interface
+        data_store = self.session.data_store
 
         for key in insert.keys():
             if insert[key] is SQL_DEFAULT:
@@ -347,7 +433,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ).send()
             return
 
-        models = mdb.get_models()
+        models = model_interface.get_models()
         if insert['name'] in [x['name'] for x in models]:
             self.packet(
                 ErrPacket,
@@ -379,35 +465,110 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
             insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-            ds, ds_name = default_store.save_datasource(insert['name'], integration, {'query': insert['select_data_query']})
+            ds_name = data_store.get_vacant_name(insert['name'])
+            ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})
         elif is_external_datasource:
-            ds = default_store.get_datasource_obj(insert['external_datasource'], raw=True)
+            ds = data_store.get_datasource_obj(insert['external_datasource'], raw=True)
             ds_name = insert['external_datasource']
 
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
-        ds_columns = [x['name'] for x in default_store.get_datasource(ds_name)['columns']]
+        ds_data = data_store.get_datasource(ds_name)
+        ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
             if col not in ds_columns:
                 if is_select_data_query:
-                    default_store.delete_datasource(ds_name)
+                    data_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
-        if insert['name'] in [x['name'] for x in custom_models.get_models()]:
-            custom_models.learn(insert['name'], ds, insert['predict'], kwargs)
-        else:
-            mdb.learn(insert['name'], ds, insert['predict'], kwargs)
+        model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs)
+
+        self.packet(OkPacket).send()
+
+    def answer_create_ai_table(self, struct):
+        ai_table = self.session.ai_table
+        model_interface = self.session.model_interface
+        company_id = self.session.company_id
+
+        table = ai_table.get_ai_table(struct['ai_table_name'])
+        if table is not None:
+            raise Exception(f"AT Table with name {struct['ai_table_name']} already exists")
+
+        # check predictor exists
+        models = model_interface.get_models()
+        models_names = [x['name'] for x in models]
+        if struct['predictor_name'] not in models_names:
+            raise Exception(f"Predictor with name {struct['predictor_name']} not exists")
+
+        # check integration exists
+        if get_db_integration(struct['integration_name'], company_id) is None:
+            raise Exception(f"Integration with name {struct['integration_name']} not exists")
+
+        ai_table.add(
+            name=struct['ai_table_name'],
+            integration_name=struct['integration_name'],
+            integration_query=struct['integration_query'],
+            query_fields=struct['query_fields'],
+            predictor_name=struct['predictor_name'],
+            predictor_fields=struct['predictor_fields']
+        )
+
+        self.packet(OkPacket).send()
+
+    def answer_create_predictor(self, struct):
+        model_interface = self.session.model_interface
+        data_store = self.session.data_store
+        company_id = self.session.company_id
+
+        if get_db_integration(struct['integration_name'], company_id) is None:
+            struct['integration_name'] = list(get_db_integrations(company_id).keys())[0]
+
+        is_temp_ds = False
+        ds_name = struct.get('datasource_name')
+        if ds_name is None:
+            ds_name = data_store.get_vacant_name('temp')
+            is_temp_ds = True
+
+        ds = data_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
+        ds_data = data_store.get_datasource(ds_name)
+
+        # TODO add alias here
+        predict = [x['name'] for x in struct['predict']]
+
+        timeseries_settings = {}
+        for w in ['order_by', 'group_by', 'window', 'nr_predictions']:
+            if w in struct:
+                timeseries_settings[w] = struct.get(w)
+
+        kwargs = struct.get('using', {})
+        if len(timeseries_settings) > 0:
+            if 'timeseries_settings' not in kwargs:
+                kwargs['timeseries_settings'] = timeseries_settings
+            else:
+                kwargs['timeseries_settings'].update(timeseries_settings)
+
+        model_interface.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs=kwargs)
+
+        if is_temp_ds:
+            try:
+                data_store.delete_datasource(ds_name)
+            except Exception:
+                pass
 
         self.packet(OkPacket).send()
 
     def delete_predictor_sql(self, sql):
-        global datahub
-
         fake_sql = sql.strip(' ')
         fake_sql = 'select name ' + fake_sql[len('delete '):]
-        query = SQLQuery(fake_sql, integration=self.session.integration, database=self.session.database)
+        query = SQLQuery(
+            fake_sql,
+            integration=self.session.integration,
+            database=self.session.database
+        )
 
-        result = query.fetch(datahub)
+        result = query.fetch(
+            self.session.datahub
+        )
 
         if result['success'] is False:
             self.packet(
@@ -423,7 +584,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise NotImplementedError('nothing to delete')
 
         for predictor_name in predictors_names:
-            datahub['mindsdb'].delete_predictor(predictor_name)
+            self.session.datahub['mindsdb'].delete_predictor(predictor_name)
 
     def handle_custom_command(self, command):
         command = command.strip(' ;').split()
@@ -613,13 +774,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise NotImplementedError(f"Unknown statement type: {prepared_stmt['type']}")
 
     def answer_stmt_fetch(self, stmt_id, limit=100000):
-        global datahub
         prepared_stmt = self.session.prepared_stmts[stmt_id]
         sql = prepared_stmt['statement'].sql
         fetched = prepared_stmt['fetched']
         query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
 
-        result = query.fetch(datahub)
+        result = query.fetch(
+            self.session.datahub
+        )
 
         if result['success'] is False:
             self.packet(
@@ -770,29 +932,142 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def queryAnswer(self, sql):
-        statement = SqlStatementParser(sql)
+        # +++
+        # if query not for mindsdb then process that query in integration db
+        # TODO redirect only select data queries
+        if (
+            isinstance(self.session.database, str)
+            and len(self.session.database) > 0
+            and self.session.database.lower() != 'mindsdb'
+            and '@@' not in sql.lower()
+            and (
+                (
+                    sql.lower().startswith('select')
+                    and 'from' in sql.lower()
+                )
+                or (sql.lower().startswith('show')
+                    # and 'databases' in sql.lower()
+                    and 'tables' in sql.lower()
+                )
+            )
+        ):
+            datanode = self.session.datahub.get(self.session.database)
+            if datanode is None:
+                raise Exception('datanode is none')
+            result = datanode.select_query(sql)
 
-        sql_lower = statement.sql.lower()
+            columns = []
+            data = []
+            if len(result) > 0:
+                columns = [{
+                    'table_name': '',
+                    'name': x,
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                } for x in result[0].keys()]
+                data = [[str(value) for key, value in x.items()] for x in result]
+
+            packages = []
+            packages += self.getTabelPackets(
+                columns=columns,
+                data=data
+            )
+            packages.append(self.packet(OkPacket, eof=True))
+            self.sendPackageGroup(packages)
+            return
+        # ---
+
+        # +++
+        outer_query = None
+        subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)
+        if len(subquery) == 1:
+            outer_query = sql.replace(f'({subquery[0]})', 'dataframe')
+            sql = subquery[0]
+        # ---
+        statement = SqlStatementParser(sql)
+        sql = statement.sql
+        sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')
 
         keyword = statement.keyword
         struct = statement.struct
 
-        # TODO show tables from {name}
-        if keyword == 'show' and 'show databases' in sql_lower:
-            sql = 'select schema_name as Database from information_schema.SCHEMATA;'
-            statement = SqlStatementParser(sql)
-            sql_lower = statement.sql.lower()
-            keyword = statement.keyword
-            struct = statement.struct
-        if keyword == 'show' and 'show full tables from' in sql_lower:
-            schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
-            sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
-            statement = SqlStatementParser(sql)
-            sql_lower = statement.sql.lower()
-            keyword = statement.keyword
-            struct = statement.struct
-        # TODO show tables;
+        if keyword == 'show':
+            if 'show databases' in sql_lower or 'show schemas' in sql_lower:
+                sql = 'select schema_name as Database from information_schema.SCHEMATA'
+                statement = SqlStatementParser(sql)
+                sql_lower = statement.sql.lower()
+                keyword = statement.keyword
+                struct = statement.struct
+            elif 'tables' in sql_lower:
+                if sql_lower == 'show tables':
+                    schema = 'mindsdb'
+                elif 'show tables from' in sql_lower:
+                    schema = re.findall(r'show\s+tables\s+from\s+(\S*)', sql_lower)[0]
+                elif 'show full tables from' in sql_lower:
+                    schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
+                sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
+                statement = SqlStatementParser(sql)
+                sql_lower = statement.sql.lower()
+                keyword = statement.keyword
+                struct = statement.struct
+            elif 'show variables' in sql_lower:
+                variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
+            elif "show variables like" in sql_lower:
+                # for superset
+                variables = re.findall(r"show variables like '([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
+            elif "show session variables like" in sql_lower:
+                # for workbench
+                variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
+            elif 'show session status like' in sql_lower:
+                # for workbench
+                variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
+            elif "show status like 'ssl_version'" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': 'session_variables',
+                        'name': 'Variable_name',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': 'session_variables',
+                        'name': 'Value',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=[['Ssl_version', 'TLSv1.1']]   # FIX
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            elif (
+                sql_lower.startswith("show function status where db = 'mindsdb'")
+                or sql_lower.startswith("show procedure status where db = 'mindsdb'")
+            ):
+                # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB';
+                # SHOW PROCEDURE STATUS WHERE Db = 'MINDSDB'
+                # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB' AND Name LIKE '%';
+                self.answer_function_status()
+                return
+            elif 'show index from' in sql_lower:
+                # SHOW INDEX FROM `ny_output` FROM `data`;
+                self.answer_show_index()
+                return
+            # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
+            elif 'show create table' in sql_lower:
+                # SHOW CREATE TABLE `MINDSDB`.`predictors`
+                table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
+                self.answer_show_create_table(table)
+                return
 
         if keyword == 'start':
             # start transaction
@@ -819,6 +1094,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'use':
             self.session.database = sql_lower.split()[1].strip(' ;')
             self.packet(OkPacket).send()
+        elif keyword == 'create_ai_table':
+            self.answer_create_ai_table(struct)
+        elif keyword == 'create_predictor':
+            self.answer_create_predictor(struct)
         elif 'show warnings' in sql_lower:
             self.answerShowWarnings()
         elif 'show engines' in sql_lower:
@@ -860,6 +1139,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             self.packet(OkPacket).send()
         elif keyword == 'select':
+            if 'connection_id()' in sql_lower:
+                self.answer_connection_id(sql)
+                return
             if '@@' in sql_lower:
                 self.answerVariables(sql)
                 return
@@ -869,7 +1151,97 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'database()' in sql_lower:
                 self.answerSelectDatabase()
                 return
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+            if 'current_user()' in sql_lower:
+                self.answer_current_user()
+                return
+            if 'version()' in sql_lower:
+                self.answer_version()
+                return
+
+            # region apache superset
+            if "select 'test plain returns' as anon_1" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'anon_1',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['test plain returns']
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            if "select 'test unicode returns' as anon_1" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'anon_1',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['test unicode returns']
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            # endregion
+
+            # region DataGrip
+            if 'select user()' in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'USER()',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['mindsdb']    # TODO set here actual user
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            if "select 'keep alive'" in sql_lower:
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'keep alive',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=['keep alive']
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            # endregion
+
+            if ' left join ' not in sql_lower and ' join ' in sql_lower:
+                query = SQLQuery_new(
+                    sql,
+                    session=self.session,
+                    outer_query=outer_query
+                )
+            else:
+                query = SQLQuery(
+                    sql,
+                    integration=self.session.integration,
+                    database=self.session.database,
+                    datahub=self.session.datahub,
+                    outer_query=outer_query
+                )
             self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()
@@ -878,7 +1250,261 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'explain':
             self.answer_explain_table(sql)
         else:
+            print(sql)
             raise NotImplementedError('Action not implemented')
+
+    def answer_show_create_table(self, table):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'Table',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'Create Table',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=[[table, f'create table {table} ()']]
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+        return
+
+    def answer_show_index(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'database': 'mysql',
+                'table_name': 'tables',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Table',
+                'alias': 'Table',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Non_unique',
+                'alias': 'Non_unique',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Key_name',
+                'alias': 'Key_name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'index_column_usage',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Seq_in_index',
+                'alias': 'Seq_in_index',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Column_name',
+                'alias': 'Column_name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Collation',
+                'alias': 'Collation',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Cardinality',
+                'alias': 'Cardinality',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Sub_part',
+                'alias': 'Sub_part',
+                'type': TYPES.MYSQL_TYPE_LONGLONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': '',
+                'name': '',
+                'alias': 'Packed',
+                'type': TYPES.MYSQL_TYPE_NULL,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Null',
+                'alias': 'Null',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Index_type',
+                'alias': 'Index_type',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Comment',
+                'alias': 'Comment',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'indexes',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Index_comment',
+                'alias': 'Index_comment',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'indexes',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Visible',
+                'alias': 'Visible',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': '',
+                'table_name': '',
+                'table_alias': 'SHOW_STATISTICS',
+                'name': 'Expression',
+                'alias': 'Expression',
+                'type': TYPES.MYSQL_TYPE_BLOB,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }],
+            data=[]
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+
+    def answer_function_status(self):
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'database': 'mysql',
+                'table_name': 'schemata',
+                'table_alias': 'ROUTINES',
+                'name': 'Db',
+                'alias': 'Db',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'name',
+                'alias': 'name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Type',
+                'alias': 'Type',
+                'type': TYPES.MYSQL_TYPE_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Definer',
+                'alias': 'Definer',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Modified',
+                'alias': 'Modified',
+                'type': TYPES.MYSQL_TYPE_TIMESTAMP,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Created',
+                'alias': 'Created',
+                'type': TYPES.MYSQL_TYPE_TIMESTAMP,
+                'charset': CHARSET_NUMBERS['binary']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Security_type',
+                'alias': 'Security_type',
+                'type': TYPES.MYSQL_TYPE_STRING,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'routines',
+                'table_alias': 'ROUTINES',
+                'name': 'Comment',
+                'alias': 'Comment',
+                'type': TYPES.MYSQL_TYPE_BLOB,
+                'charset': CHARSET_NUMBERS['utf8_bin']
+            }, {
+                'database': 'mysql',
+                'table_name': 'character_sets',
+                'table_alias': 'ROUTINES',
+                'name': 'character_set_client',
+                'alias': 'character_set_client',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'collations',
+                'table_alias': 'ROUTINES',
+                'name': 'collation_connection',
+                'alias': 'collation_connection',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }, {
+                'database': 'mysql',
+                'table_name': 'collations',
+                'table_alias': 'ROUTINES',
+                'name': 'Database Collation',
+                'alias': 'Database Collation',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING,
+                'charset': self.charset_text_type
+            }],
+            data=[]
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
 
     def answer_show_table_status(self, sql):
         # NOTE at this moment parsed statement only like `SHOW TABLE STATUS LIKE 'table'`.
@@ -1083,7 +1709,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'charset': self.charset_text_type
             }],
             data=[
-                [None]
+                [self.session.database]
             ]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0000))
@@ -1249,6 +1875,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
         self.sendPackageGroup(packages)
 
+    def answer_connection_id(self, sql):
+        packages = self.getTabelPackets(
+            columns=[{
+                'database': '',
+                'table_name': '',
+                'name': 'conn_id',
+                'alias': 'conn_id',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }],
+            data=[[self.connection_id]]
+        )
+        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        self.sendPackageGroup(packages)
+
     def answerVariables(self, sql):
         if '@@version_comment' in sql.lower():
             self.answerVersionComment()
@@ -1284,8 +1925,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def selectAnswer(self, query):
-        global datahub
-        result = query.fetch(datahub)
+        result = query.fetch(
+            self.session.datahub
+        )
 
         if result['success'] is False:
             self.packet(
@@ -1357,14 +1999,72 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ).send()
             raise
 
+    def is_cloud_connection(self):
+        ''' Determine source of connection. Must be call before handshake.
+            Idea based on: real mysql connection does not send anything before server handshake, so
+            soket should be in 'out' state. In opposite, clout connection sends '0000' right after
+            connection. '0000' selected because in real mysql connection it should be lenght of package,
+            and it can not be 0.
+        '''
+        if sys.platform != 'linux':
+            return {
+                'is_cloud': False
+            }
+
+        read_poller = select.poll()
+        read_poller.register(self.request, select.POLLIN)
+        events = read_poller.poll(0)
+
+        if len(events) == 0:
+            return {
+                'is_cloud': False
+            }
+
+        first_byte = self.request.recv(4, socket.MSG_PEEK)
+        if first_byte == b'\x00\x00\x00\x00':
+            self.request.recv(4)
+            client_capabilities = self.request.recv(8)
+            client_capabilities = struct.unpack('L', client_capabilities)[0]
+
+            company_id = self.request.recv(4)
+            company_id = struct.unpack('I', company_id)[0]
+
+            database_name_len = self.request.recv(4)
+            database_name_len = struct.unpack('H', database_name_len)[0]
+
+            database_name = ''
+            if database_name_len > 0:
+                database_name = self.request.recv(database_name_len).decode()
+
+            return {
+                'is_cloud': True,
+                'client_capabilities': client_capabilities,
+                'company_id': company_id,
+                'database': database_name
+            }
+
+        return {
+            'is_cloud': False
+        }
+
     def handle(self):
         """
         Handle new incoming connections
         :return:
         """
-        log.info('handle new incoming connection')
-        if self.handshake() is False:
-            return
+        log.debug('handle new incoming connection')
+        cloud_connection = self.is_cloud_connection()
+        self.init_session(company_id=cloud_connection.get('company_id'))
+        if cloud_connection['is_cloud'] is False:
+            if self.handshake() is False:
+                return
+        else:
+            self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
+            self.session.database = cloud_connection['database']
+            self.session.username = 'cloud'
+            self.session.auth = True
+            self.session.integration = None
+            self.session.integration_type = None
 
         while True:
             log.debug('Got a new packet')
@@ -1373,30 +2073,28 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             try:
                 success = p.get()
             except Exception:
-                log.warning('Session closed, on packet read error')
+                log.error('Session closed, on packet read error')
                 log.error(traceback.format_exc())
-                # self.server.shutdown()
                 return
 
             if success is False:
-                log.info('Session closed by client')
-                # self.server.shutdown()
+                log.debug('Session closed by client')
                 return
 
-            log.info('Command TYPE: {type}'.format(
+            log.debug('Command TYPE: {type}'.format(
                 type=getConstName(COMMANDS, p.type.value)))
 
             try:
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser(sql).sql
-                    log.info(f'COM_QUERY: {sql}')
+                    log.debug(f'COM_QUERY: {sql}')
                     self.queryAnswer(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
                     sql = self.decode_utf(p.sql.value)
                     statement = SqlStatementParser(sql)
-                    log.info(f'COM_STMT_PREPARE: {statement.sql}')
+                    log.debug(f'COM_STMT_PREPARE: {statement.sql}')
                     self.answer_stmt_prepare(statement)
                 elif p.type.value == COMMANDS.COM_STMT_EXECUTE:
                     self.answer_stmt_execute(p.stmt_id.value, p.parameters)
@@ -1405,7 +2103,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 elif p.type.value == COMMANDS.COM_STMT_CLOSE:
                     self.answer_stmt_close(p.stmt_id.value)
                 elif p.type.value == COMMANDS.COM_QUIT:
-                    log.info('Session closed, on client disconnect')
+                    log.debug('Session closed, on client disconnect')
                     self.session = None
                     break
                 elif p.type.value == COMMANDS.COM_INIT_DB:
@@ -1415,8 +2113,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     if new_database != 'null':
                         self.session.database = new_database
                     self.packet(OkPacket).send()
+                elif p.type.value == COMMANDS.COM_FIELD_LIST:
+                    # this command is deprecated, but console client still use it.
+                    self.packet(OkPacket).send()
                 else:
-                    log.info('Command has no specific handler, return OK msg')
+                    log.warning('Command has no specific handler, return OK msg')
                     log.debug(str(p))
                     # p.pprintPacket() TODO: Make a version of print packet
                     # that sends it to debug isntead
@@ -1442,42 +2143,32 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         :param kwargs:
         :return:
         """
-        p = packetClass(socket=self.socket, seq=self.count, session=self.session, proxy=self, **kwargs)
-        self.count = (self.count + 1) % 256
+        p = packetClass(
+            socket=self.socket,
+            session=self.session,
+            proxy=self,
+            **kwargs
+        )
+        self.session.inc_packet_sequence_number()
         return p
 
     @staticmethod
-    def startProxy(_config):
-        global HARDCODED_USER
-        global HARDCODED_PASSWORD
-        global CERT_PATH
-        global default_store
-        global mdb
-        global datahub
-        global config
-        global custom_models
+    def startProxy():
         """
         Create a server and wait for incoming connections until Ctrl-C
         """
-        config = _config
+        config = Config()
 
-        HARDCODED_USER = config['api']['mysql']['user']
-        HARDCODED_PASSWORD = config['api']['mysql']['password']
-        CERT_PATH = config['api']['mysql'].get('certificate_path')
-        if CERT_PATH is None or CERT_PATH == '':
-            CERT_PATH = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
-            make_ssl_cert(CERT_PATH)
-            atexit.register(lambda: os.remove(CERT_PATH))
+        cert_path = config['api']['mysql'].get('certificate_path')
+        if cert_path is None or cert_path == '':
+            cert_path = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
+            make_ssl_cert(cert_path)
+            atexit.register(lambda: os.remove(cert_path))
 
         server_capabilities.set(
             CAPABILITIES.CLIENT_SSL,
             config['api']['mysql']['ssl']
         )
-
-        default_store = DataStore(config)
-        mdb = NativeInterface(config)
-        custom_models = CustomModels(config)
-        datahub = init_datahub(config)
 
         host = config['api']['mysql']['host']
         port = int(config['api']['mysql']['port'])
@@ -1486,6 +2177,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         SocketServer.TCPServer.allow_reuse_address = True
         server = SocketServer.ThreadingTCPServer((host, port), MysqlProxy)
+        server.mindsdb_config = config
+        server.check_auth = partial(check_auth, config=config)
+        server.cert_path = cert_path
+        server.connection_id = 0
+
+        server.original_model_interface = ModelInterface()
+        server.original_data_store = DataStore()
 
         atexit.register(MysqlProxy.server_close, srv=server)
 

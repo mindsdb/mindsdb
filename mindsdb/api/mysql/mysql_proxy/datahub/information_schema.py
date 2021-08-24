@@ -1,20 +1,26 @@
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 
+
+def get_table_alias(table_obj):
+    if table_obj.alias is not None:
+        return table_obj.alias
+    return '.'.join(table_obj.parts)
+
+
 class InformationSchema(DataNode):
     type = 'INFORMATION_SCHEMA'
 
-    index = {}
-
     information_schema = {
         'SCHEMATA': ['schema_name', 'default_character_set_name', 'default_collation_name'],
-        'TABLES': ['table_schema', 'table_name', 'table_type'],
-        'COLUMNS': ['table_schema', 'table_name', 'ordinal_position'],
+        'TABLES': ['table_schema', 'table_name', 'table_type', 'table_rows'],
+        'COLUMNS': ['table_schema', 'table_name', 'ordinal_position', 'column_name', 'data_type'],
         'EVENTS': ['event_schema', 'event_name'],
         'ROUTINES': ['routine_schema', 'specific_name', 'routine_type'],
         'TRIGGERS': ['trigger_schema', 'trigger_name']
     }
 
     def __init__(self, dsObject=None):
+        self.index = {}
         if isinstance(dsObject, dict):
             self.add(dsObject)
 
@@ -44,6 +50,24 @@ class InformationSchema(DataNode):
             return self.information_schema[tn]
         raise Exception()
 
+    def get_integrations_names(self):
+        return [
+            x.lower() for x in self.index if x.lower() not in ['mindsdb', 'datasource']
+        ]
+
+    def select_query(self, query):
+        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
+        sql_query = str(query)
+        moz_struct = to_moz_sql_struct(sql_query)
+        data = self.select(
+            table=query.from_table.parts[-1],
+            columns=None,
+            where=moz_struct.get('where')
+        )
+
+        self.select(table=get_table_alias(query.from_table))
+        return data
+
     def select(self, columns=None, table=None, where=None, order_by=None, group_by=None, came_from=None):
         tn = table.upper()
         if tn == 'SCHEMATA':
@@ -51,10 +75,10 @@ class InformationSchema(DataNode):
             # SELECT schema_name as name FROM INFORMATION_SCHEMA.SCHEMATA;
             # SELECT default_character_set_name as CharacterSetName, default_collation_name as CollationName FROM INFORMATION_SCHEMA.SCHEMATA WHERE schema_name = 'information_schema';
             if len(columns) == 1 and columns[0] == 'schema_name':
-                data = [{'schema_name': 'information_schema'}]
+                data = [{'schema_name': 'INFORMATION_SCHEMA'}]
                 for key in self.index:
                     data.append({
-                        'schema_name': key
+                        'schema_name': key.upper()
                     })
                 return data
             elif len(columns) == 3 and where is not None and 'schema_name' in where:
@@ -67,17 +91,18 @@ class InformationSchema(DataNode):
             # query examples:
             # SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'information_schema' AND table_type in ('BASE TABLE', 'SYSTEM VIEW');
             # SELECT table_name as name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'information_schema' AND table_type = 'VIEW';
+            # TODO add real table rows
             tables = [
                 # at least this tables should be returned for GUI clients
-                {'table_name': 'SCHEMATA', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
-                {'table_name': 'TABLES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
-                {'table_name': 'EVENTS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
-                {'table_name': 'ROUTINES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
-                {'table_name': 'TRIGGERS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW'},
+                {'table_name': 'SCHEMATA', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
+                {'table_name': 'TABLES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
+                {'table_name': 'EVENTS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
+                {'table_name': 'ROUTINES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
+                {'table_name': 'TRIGGERS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': []},
             ]
             for dsName, ds in self.index.items():
                 t = ds.getTables()
-                tables += [{'table_name': x, 'table_schema': dsName, 'table_type': 'BASE TABLE'} for x in t]
+                tables += [{'table_name': x, 'table_schema': dsName, 'table_type': 'BASE TABLE', 'table_rows': []} for x in t]
 
             filtered_tables = tables
             if isinstance(where, dict) and 'table_schema' in where:
@@ -91,7 +116,6 @@ class InformationSchema(DataNode):
                 if '$in' in where['table_type']:
                     types += [x.upper() for x in where['table_type']['$in']]
                 filtered_tables = [x for x in filtered_tables if x['table_type'] in types]
-
             return filtered_tables
         if tn == 'COLUMNS':
             # SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='CSV_DS' AND TABLE_NAME='part' ORDER BY ORDINAL_POSITION

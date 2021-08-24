@@ -18,7 +18,7 @@ def disable_telemetry(storage_dir):
         pass
 
 
-def is_telemetry_file_exists(storage_dir):
+def telemetry_file_exists(storage_dir):
     path = os.path.join(storage_dir, TELEMETRY_FILE)
     return os.path.exists(path)
 

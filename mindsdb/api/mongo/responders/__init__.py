@@ -14,6 +14,9 @@ from .db_stats import responder as responder_db_stats
 from .coll_stats import responder as responder_coll_stats
 from .count import responder as responder_count
 from .aggregate import responder as responder_aggregate
+from .get_free_monitoring_status import responder as responder_get_free_monitoring_status
+from .end_sessions import responder as responder_end_sessions
+from .ping import responder as responder_ping
 
 from .list_indexes import responder as responder_list_indexes
 from .list_collections import responder as responder_list_collections
@@ -25,6 +28,9 @@ from .delete import responder as responder_delete
 
 from .sasl_start import responder as sasl_start
 from .sasl_continue import responder as sasl_continue
+
+from .company_id import responder as responder_company_id
+
 
 responders = [
     # service queries
@@ -44,6 +50,9 @@ responders = [
     responder_coll_stats,
     responder_count,
     responder_aggregate,
+    responder_get_free_monitoring_status,
+    responder_end_sessions,
+    responder_ping,
     # user queries
     responder_list_indexes,
     responder_list_collections,
@@ -53,5 +62,7 @@ responders = [
     responder_delete,
     # auth
     sasl_start,
-    sasl_continue
+    sasl_continue,
+    # cloud
+    responder_company_id
 ]

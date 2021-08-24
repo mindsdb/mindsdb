@@ -9,7 +9,6 @@
  *******************************************************
 """
 
-import logging
 import struct
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
@@ -99,8 +98,7 @@ class OkPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        logging.basicConfig(level=10)
-        pprint.pprint(str(OkPacket(state_track=[['character_set_client', 'utf8'], ['character_set_connection', 'utf8'], ['character_set_results', 'utf8']]).getPacketString()))
+        pprint.pprint(str(OkPacket(state_track=[['character_set_client', 'utf8'], ['character_set_connection', 'utf8'], ['character_set_results', 'utf8']]).get_packet_string()))
 
 
 # only run the test if this file is called from debugger

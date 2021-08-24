@@ -1,5 +1,7 @@
 from mindsdb.api.mongo.classes import Responder
+from mindsdb.interfaces.storage.db import session, Datasource
 import mindsdb.api.mongo.functions as helpers
+from mindsdb.interfaces.database.integrations import get_db_integrations
 
 
 class Responce(Responder):
@@ -69,7 +71,7 @@ class Responce(Responder):
             kwargs = doc.get('training_options', {})
 
             if is_select_data_query:
-                integrations = mindsdb_env['config']['integrations'].keys()
+                integrations = get_db_integrations(mindsdb_env['company_id']).keys()
                 connection = doc.get('connection')
                 if connection is None:
                     if 'default_mongodb' in integrations:
@@ -83,13 +85,13 @@ class Responce(Responder):
                 if connection is None:
                     raise Exception("Can't find connection for data source")
 
-                ds, ds_name = mindsdb_env['data_store'].save_datasource(
-                    name=doc['name'],
+                ds_name = mindsdb_env['data_store'].get_vacant_name(doc['name'])
+                mindsdb_env['data_store'].save_datasource(
+                    name=ds_name,
                     source_type=connection,
-                    source=doc['select_data_query']
+                    source=dict(doc['select_data_query'])
                 )
             elif is_external_datasource:
-                ds = mindsdb_env['data_store'].get_datasource_obj(doc['external_datasource'], raw=True)
                 ds_name = doc['external_datasource']
 
             predict = doc['predict']
@@ -103,7 +105,14 @@ class Responce(Responder):
                         mindsdb_env['data_store'].delete_datasource(ds_name)
                     raise Exception(f"Column '{col}' not exists")
 
-            mindsdb_env['mindsdb_native'].learn(doc['name'], ds, predict, kwargs)
+            datasource_record = session.query(Datasource).filter_by(company_id=mindsdb_env['company_id'], name=ds_name).first()
+            mindsdb_env['mindsdb_native'].learn(
+                doc['name'],
+                mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True),
+                predict,
+                datasource_record.id,
+                kwargs=dict(kwargs)
+            )
 
         result = {
             "n": len(query['documents']),

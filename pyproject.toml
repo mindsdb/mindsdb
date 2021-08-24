@@ -1,0 +1,7 @@
+[build-system]
+
+# @TODO: We should figure out version limitations for these
+requires = [
+    "setuptools",
+    "wheel",
+]

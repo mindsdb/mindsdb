@@ -9,7 +9,6 @@
  *******************************************************
 """
 
-import logging
 import struct
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
@@ -87,9 +86,8 @@ class BinaryResultsetRowPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        logging.basicConfig(level=10)
         pprint.pprint(
-            str(BinaryResultsetRowPacket().getPacketString())
+            str(BinaryResultsetRowPacket().get_packet_string())
         )
 
 

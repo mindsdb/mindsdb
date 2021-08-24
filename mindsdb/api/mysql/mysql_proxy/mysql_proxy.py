@@ -2029,10 +2029,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             company_id = self.request.recv(4)
             company_id = struct.unpack('I', company_id)[0]
 
+            database_name_len = self.request.recv(4)
+            database_name_len = struct.unpack('H', database_name_len)[0]
+
+            database_name = ''
+            if database_name_len > 0:
+                database_name = self.request.recv(database_name_len).decode()
+
             return {
                 'is_cloud': True,
                 'client_capabilities': client_capabilities,
-                'company_id': company_id
+                'company_id': company_id,
+                'database': database_name
             }
 
         return {
@@ -2052,6 +2060,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
         else:
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
+            self.session.database = cloud_connection['database']
             self.session.username = 'cloud'
             self.session.auth = True
             self.session.integration = None

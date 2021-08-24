@@ -35,8 +35,18 @@ jobs:
         pip install 'pymssql >= 2.1.4'
         pip install boto3
         pip install --no-cache-dir .
-        pip install ray
+        if [ "$RUNNER_OS" == "macOS" ]; then
+            pip uninstall lightgbm;
+            git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM;
+            export CXX=g++-8 CC=gcc-8;
+            mkdir build ; cd build;
+            cmake ..;
+            make -j4;
+            pip install --no-binary :all: lightgbm;
+            cd ..;
+        fi
         if [ "$INSTALL_RAY" == "install_ray" ]; then
+          pip install ray;
           git clone https://${ACCESS_KEY}@github.com/mindsdb/worker.git;
           cd worker;
           pip install --no-cache-dir .;

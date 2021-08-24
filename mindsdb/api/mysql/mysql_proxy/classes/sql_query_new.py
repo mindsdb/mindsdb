@@ -273,7 +273,9 @@ class SQLQuery():
                                         row[table][name_or_alias] = column_name
                                 appropriate_table = list(step_data[0].keys())[0]
                                 # raise Exception(f'Can not find approproate table for column {column_name}')
-                            columns_list.append(appropriate_table + (column_name, column_alias))
+                                columns_list.append(appropriate_table + (column_alias, column_alias))
+                            else:
+                                columns_list.append(appropriate_table + (column_name, column_alias))
                         elif len(column_name_parts) == 2:
                             table_name_or_alias = column_name_parts[0]
                             column_name = column_name_parts[1]

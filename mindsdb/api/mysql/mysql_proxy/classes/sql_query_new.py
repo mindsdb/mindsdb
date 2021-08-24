@@ -180,6 +180,7 @@ class SQLQuery():
                             'order_by_column': order_by,
                             'group_by_column': group_by
                         }
+                    self.model_types[model_name] = p.data.get('dtypes', {})
 
         if potential_ts_predictor is True:
             mindsdb_sql_struct.limit = None

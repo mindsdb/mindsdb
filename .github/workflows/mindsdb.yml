@@ -36,7 +36,7 @@ jobs:
         pip install boto3
         pip install --no-cache-dir .
         if [ "$RUNNER_OS" == "macOS" ]; then
-            pip uninstall lightgbm;
+            pip uninstall -y lightgbm;
             git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM;
             export CXX=g++-8 CC=gcc-8;
             mkdir build ; cd build;

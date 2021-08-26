@@ -35,9 +35,9 @@ jobs:
         pip install 'pymssql >= 2.1.4'
         pip install boto3
         pip install --no-cache-dir .
-        # if [ "$RUNNER_OS" == "macOS" ]; then
-        #     brew install libomp;
-        # fi
+        #if [ "$RUNNER_OS" == "macOS" ]; then
+        #    brew install libomp;
+        #fi
         if [ "$INSTALL_RAY" == "install_ray" ]; then
           pip install ray;
           git clone https://${ACCESS_KEY}@github.com/mindsdb/worker.git;

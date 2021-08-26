@@ -131,18 +131,9 @@ jobs:
           # echo -e "\n===============\ntest user flow 2\n===============\n"
           # python tests/integration_tests/flows/test_user_flow_2.py
 
-<<<<<<< HEAD
-          # # There are some issues with stopping the ray-based version
-          # if [ "$INSTALL_RAY" == "not_install_ray" ]; then
-          #   # flow with mistakes
-          #   echo -e "\n===============\nflow with mistakes\n===============\n"
-          #   python tests/integration_tests/flows/test_mistakes.py
-          # fi
-=======
-          # flow with mistakes
-          echo -e "\n===============\nflow with mistakes\n===============\n"
-          python tests/integration_tests/flows/test_mistakes.py
->>>>>>> staging
+          # # flow with mistakes
+          # echo -e "\n===============\nflow with mistakes\n===============\n"
+          # python tests/integration_tests/flows/test_mistakes.py
         fi
       shell: bash
       env:

@@ -35,16 +35,8 @@ jobs:
         pip install 'pymssql >= 2.1.4'
         pip install boto3
         pip install --no-cache-dir .
-        pip install ray
-        if [ "$INSTALL_RAY" == "install_ray" ]; then
-          git clone https://${ACCESS_KEY}@github.com/mindsdb/worker.git;
-          cd worker;
-          pip install --no-cache-dir .;
-          cd ..;
-        fi
       shell: bash
       env:
-        INSTALL_RAY: ${{ matrix.token }}
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Install dependencies Windows
@@ -125,12 +117,9 @@ jobs:
           echo -e "\n===============\ntest user flow 2\n===============\n"
           python tests/integration_tests/flows/test_user_flow_2.py
 
-          # There are some issues with stopping the ray-based version
-          if [ "$INSTALL_RAY" == "not_install_ray" ]; then
-            # flow with mistakes
-            echo -e "\n===============\nflow with mistakes\n===============\n"
-            python tests/integration_tests/flows/test_mistakes.py
-          fi
+          # flow with mistakes
+          echo -e "\n===============\nflow with mistakes\n===============\n"
+          python tests/integration_tests/flows/test_mistakes.py
         fi
       shell: bash
       env:
@@ -140,7 +129,6 @@ jobs:
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-        INSTALL_RAY: ${{ matrix.token }}
 
   deploy_to_pypi:
     runs-on: ubuntu-latest

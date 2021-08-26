@@ -26,12 +26,16 @@ from mindsdb_sql.parser.ast import (
     UnaryOperation,
     BinaryOperation,
     OrderBy,
-    Star
+    Star,
+    Union,
+    Select,
+    Constant
 )
 from mindsdb_sql.planner.steps import (
     FetchDataframeStep,
     ApplyPredictorStep,
     ApplyPredictorRowStep,
+    MapReduceStep,
     JoinStep,
     UnionStep,
     ProjectStep,
@@ -44,6 +48,66 @@ from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
 import mindsdb.interfaces.storage.db as db
+
+
+def get_preditor_alias(step, mindsdb_database):
+    return (mindsdb_database, '.'.join(step.predictor.parts), '.'.join(step.predictor.alias.parts))
+
+
+def get_table_alias(table_obj, default_db_name):
+    # (database, table, alias)
+    if len(table_obj.parts) > 2:
+        raise Exception(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
+    elif len(table_obj.parts) == 1:
+        name = (default_db_name, table_obj.parts[0])
+    else:
+        name = tuple(table_obj.parts)
+    name = name + ('.'.join(table_obj.alias.parts),)
+    return name
+
+
+def get_all_tables(stmt):
+    if isinstance(stmt, Union):
+        left = get_all_tables(stmt.left)
+        right = get_all_tables(stmt.right)
+        return left + right
+
+    if isinstance(stmt, Select):
+        from_stmt = stmt.from_table
+    elif isinstance(stmt, (Identifier, Join)):
+        from_stmt = stmt
+    else:
+        raise Exception(f'Unknown type of identifier: {stmt}')
+
+    result = []
+    if isinstance(from_stmt, Identifier):
+        result.append(from_stmt.parts[-1])
+    elif isinstance(from_stmt, Join):
+        result.extend(get_all_tables(from_stmt.left))
+        result.extend(get_all_tables(from_stmt.right))
+    return result
+
+
+def markQueryVar(where):
+    if isinstance(where, BinaryOperation):
+        markQueryVar(where.args[0])
+        markQueryVar(where.args[1])
+    elif isinstance(where, UnaryOperation):
+        markQueryVar(where.args[0])
+    elif isinstance(where, Constant):
+        if where.value == '$var':
+            where.is_var = True
+
+
+def replaceQueryVar(where, val):
+    if isinstance(where, BinaryOperation):
+        replaceQueryVar(where.args[0], val)
+        replaceQueryVar(where.args[1], val)
+    elif isinstance(where, UnaryOperation):
+        replaceQueryVar(where.args[0], val)
+    elif isinstance(where, Constant):
+        if hasattr(where, 'is_var') and where.is_var is True:
+            where.value = val
 
 
 class SQLQuery():
@@ -75,30 +139,18 @@ class SQLQuery():
             'result': self.result
         }
 
+    def fetchDataframeStep(self, step):
+        dn = self.datahub.get(step.integration)
+        query = step.query
+
+        data = dn.select_query(
+            query=query
+        )
+        table_alias = get_table_alias(step.query.from_table, self.database)
+        data = [{table_alias: x} for x in data]
+        return data
+
     def _parse_query(self, sql):
-        def get_preditor_alias(step, mindsdb_database):
-            return (mindsdb_database, '.'.join(step.predictor.parts), '.'.join(step.predictor.alias.parts))
-
-        def get_table_alias(table_obj, default_db_name):
-            # (database, table, alias)
-            if len(table_obj.parts) > 2:
-                raise Exception(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
-            elif len(table_obj.parts) == 1:
-                name = (default_db_name, table_obj.parts[0])
-            else:
-                name = tuple(table_obj.parts)
-            name = name + ('.'.join(table_obj.alias.parts),)
-            return name
-
-        def get_all_tables(from_stmt):
-            result = []
-            if isinstance(from_stmt, Identifier):
-                result.append(from_stmt.parts[-1])
-            elif isinstance(from_stmt, Join):
-                result.extend(get_all_tables(from_stmt.left))
-                result.extend(get_all_tables(from_stmt.right))
-            return result
-
         mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
         integrations_names = self.datahub.get_integrations_names()
@@ -106,33 +158,30 @@ class SQLQuery():
 
         mindsdb_datanode = self.datahub.get(self.database)
 
-        all_tables = get_all_tables(mindsdb_sql_struct.from_table)
+        all_tables = get_all_tables(mindsdb_sql_struct)
 
-        models = mindsdb_datanode.model_interface.get_models()
-        model_names = [m['name'] for m in models]
+        # models = mindsdb_datanode.model_interface.get_models()
+        # model_names = [m['name'] for m in models]
         predictor_metadata = {}
         potential_ts_predictor = False
-        for model_name in (set(model_names) & set(all_tables)):
-            # predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
-            # for p in predictors:
-            #     if isinstance(p.data, dict) and p.data.get('status') == 'complete':
-            #         ts_settings = p.learn_args.get('learn_args', {}).get('timeseries_settings', {})
-
-            model_meta = mindsdb_datanode.model_interface.get_model_data(name=model_name)
-            self.model_types.update(model_meta.get('dtypes', {}))
-
-            ts_settings = model_meta.get('problem_definition', {}).get('timeseries_settings', {})
-            if ts_settings.get('is_timeseries') is True:
-                window = ts_settings.get('window')
-                order_by = ts_settings.get('order_by')[0]
-                group_by = ts_settings.get('group_by')[0]
-                potential_ts_predictor = True
-                predictor_metadata[model_meta['name']] = {
-                    'timeseries': True,
-                    'window': window,
-                    'order_by_column': order_by,
-                    'group_by_column': group_by
-                }
+        predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
+        for model_name in set(all_tables):
+            for p in predictors:
+                if p.name == model_name:
+                    if isinstance(p.data, dict) and p.data.get('status') == 'complete':
+                        ts_settings = p.learn_args.get('timeseries_settings', {})
+                        if ts_settings.get('is_timeseries') is True:
+                            window = ts_settings.get('window')
+                            order_by = ts_settings.get('order_by')[0]
+                            group_by = ts_settings.get('group_by')[0]
+                            potential_ts_predictor = True
+                            predictor_metadata[model_name] = {
+                                'timeseries': True,
+                                'window': window,
+                                'order_by_column': order_by,
+                                'group_by_column': group_by
+                            }
+                        self.model_types.update(p.data.get('dtypes', {}))
 
         if potential_ts_predictor is True:
             mindsdb_sql_struct.limit = None
@@ -149,26 +198,32 @@ class SQLQuery():
         for i, step in enumerate(plan.steps):
             data = []
             if isinstance(step, FetchDataframeStep):
-                dn = self.datahub.get(step.integration)
-                query = step.query
-
-                data = dn.select_query(
-                    query=query
-                )
-                table_alias = get_table_alias(step.query.from_table, self.database)
-                data = [{table_alias: x} for x in data]
+                data = self.fetchDataframeStep(step)
             elif isinstance(step, UnionStep):
                 left_data = steps_data[step.left.step_num]
                 # TODO atm assumes that it is 'between' prediction
-                for row in left_data:
-                    for key in row:
-                        row[key]['__mdb_make_predictions'] = False
-                right_data = steps_data[step.right.step_num]
-                for row in right_data:
-                    for key in row:
-                        row[key]['__mdb_make_predictions'] = True
+                # for row in left_data:
+                #     for key in row:
+                #         row[key]['__mdb_make_predictions'] = False
+                # right_data = steps_data[step.right.step_num]
+                # for row in right_data:
+                #     for key in row:
+                #         row[key]['__mdb_make_predictions'] = True
                 data = left_data + right_data
                 is_between = True
+            elif isinstance(step, MapReduceStep):
+                step_data = steps_data[step.values.step_num]
+                values = []
+                for row in step_data:
+                    for row_data in row.values():
+                        for v in row_data.values():
+                            values.append(v)
+                data = []
+                query = step.step.query
+                markQueryVar(query.where)
+                for value in values:
+                    replaceQueryVar(query.where, value)
+                    data.extend(self.fetchDataframeStep(step.step))
             elif isinstance(step, ApplyPredictorRowStep):
                 predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get(self.database)
@@ -196,10 +251,15 @@ class SQLQuery():
                     where_data.append(new_row)
 
                 is_timeseries = predictor_metadata[predictor]['timeseries']
+                _mdb_make_predictions = None
                 if is_timeseries:
+                    if 'LATEST' in self.raw:
+                        _mdb_make_predictions = False
+                    else:
+                        _mdb_make_predictions = True
                     for row in where_data:
                         if '__mdb_make_predictions' not in row:
-                            row['__mdb_make_predictions'] = False
+                            row['__mdb_make_predictions'] = _mdb_make_predictions
 
                 for row in where_data:
                     for key in row:
@@ -211,12 +271,14 @@ class SQLQuery():
                     columns=None,
                     where_data=where_data,
                     where={},
-                    is_timeseries=is_timeseries is True and is_between is False
+                    is_timeseries=_mdb_make_predictions  #is_timeseries is True and is_between is False
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, JoinStep):
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
+                # ld =  [list(x.values())[0] for x in left_data]
+                # rd =  [list(x.values())[0] for x in right_data]
                 if step.query.condition is None:
                     # line-to-line join
                     if len(left_data) != len(right_data):
@@ -263,8 +325,19 @@ class SQLQuery():
                                     else:
                                         appropriate_table = table_name
                             if appropriate_table is None:
-                                raise Exception(f'Can not find approproate table for column {column_name}')
-                            columns_list.append(appropriate_table + (column_name, column_alias))
+                                # it is probably constaint
+                                column_name = column_name.strip("'")
+                                name_or_alias = column_alias or column_name
+                                column_alias = name_or_alias
+                                # appropriate_table = ''
+                                for row in step_data:
+                                    for table in row:
+                                        row[table][name_or_alias] = column_name
+                                appropriate_table = list(step_data[0].keys())[0]
+                                # raise Exception(f'Can not find approproate table for column {column_name}')
+                                columns_list.append(appropriate_table + (column_alias, column_alias))
+                            else:
+                                columns_list.append(appropriate_table + (column_name, column_alias))
                         elif len(column_name_parts) == 2:
                             table_name_or_alias = column_name_parts[0]
                             column_name = column_name_parts[1]

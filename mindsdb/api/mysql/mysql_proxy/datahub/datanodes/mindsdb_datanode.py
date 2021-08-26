@@ -148,6 +148,7 @@ class MindsDBDataNode(DataNode):
     def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None, is_timeseries=False):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
+        _mdb_make_predictions = is_timeseries
         if table == 'predictors':
             return self._select_predictors()
         if table == 'commands':
@@ -254,25 +255,98 @@ class MindsDBDataNode(DataNode):
                         pred_dicts[0][col] = where_data[col]
 
         else:
-            pred_dict = pred_dicts[0]
-            new_pred_dicts = []
             predict = model['predict']
             data_column = model['problem_definition']['timeseries_settings']['order_by'][0]
-            predictions = pred_dict[predict]['predicted_value']
-            if isinstance(predictions, list) is False:
-                predictions = [predictions]
-            data_values = pred_dict[predict][data_column]
-            if isinstance(data_values, list) is False:
-                data_values = [data_values]
-            for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
-                nd = {}
-                nd.update(pred_dict[predict])
-                new_pred_dicts.append(nd)
-                nd[predict] = predictions[i]
-                if 'predicted_value' in nd:
-                    del nd['predicted_value']
-                nd[data_column] = data_values[i] if len(data_values) > i else None
+            nr_predictions = model['problem_definition']['timeseries_settings']['nr_predictions']
+            new_pred_dicts = []
+            if _mdb_make_predictions is False:
+                pred_dict = pred_dicts[0]
+                predictions = pred_dict[predict]['predicted_value']
+                if isinstance(predictions, list) is False:
+                    predictions = [predictions]
+                data_values = pred_dict[predict][data_column]
+                if isinstance(data_values, list) is False:
+                    data_values = [data_values]
+                for i in range(nr_predictions):
+                    nd = {}
+                    nd.update(pred_dict[predict])
+                    new_pred_dicts.append(nd)
+                    nd[predict] = predictions[i]
+                    if 'predicted_value' in nd:
+                        del nd['predicted_value']
+                    nd[data_column] = data_values[i] if len(data_values) > i else None
+
+                new_explanations = []
+                explanaion = explanations[0][predict]
+                original_target_values = {f'{predict}_original': [None] * nr_predictions}
+                original_target_values[f'{predict}_original'][0] = explanaion.get('truth', None)
+                for i in range(nr_predictions):
+                    nd = {}
+                    for key in explanaion:
+                        if key not in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                            nd[key] = explanaion[key]
+                    for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                        nd[key] = explanaion[key][i]
+                    new_explanations.append({predict: nd})
+                explanations = new_explanations
+            else:
+                # pred_dicts.reverse()
+                for row in pred_dicts:
+                    new_row = {}
+                    new_row.update(row[predict])
+                    new_row[predict] = row[predict]['predicted_value'][0]
+                    new_row[data_column] = row[predict][data_column][0]
+                    new_pred_dicts.append(new_row)
+                for i in range(1, len(pred_dicts[-1][predict]['predicted_value'])):
+                    new_row = {}
+                    new_row.update(pred_dicts[-1][predict])
+                    new_row[predict] = pred_dicts[-1][predict]['predicted_value'][i]
+                    new_row[data_column] = pred_dicts[-1][predict][data_column][i]
+                    new_pred_dicts.append(new_row)
+                for row in new_pred_dicts:
+                    if 'predicted_value' in row:
+                        del row['predicted_value']
+                # pred_dicts.reverse()
+                # new_pred_dicts.reverse()
+
+                new_explanations = []
+                # explanations.reverse()
+                original_values = []
+                original_target_values = {f'{predict}_original': original_values}
+                for expl in explanations:
+                    explanaion = expl[predict]
+                    original_values.append(explanaion.get('truth', None))
+                    nd = {}
+                    for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                        nd[key] = explanaion[key][0]
+                    new_explanations.append(nd)
+
+                expl = explanations[-1]
+                explanaion = expl[predict]
+                for i in range(1, model['problem_definition']['timeseries_settings']['nr_predictions']):
+                    nd = {}
+                    original_values.append(None)
+                    for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                        nd[key] = explanaion[key][i]
+                    new_explanations.append(nd)
+                # explanations.reverse()
+                # new_explanations.reverse()
+                # original_values.reverse()
+                new_explanations = [{predict: x} for x in new_explanations]
+
+                # # explanaion = explanations[0][predict]
+                # for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
+                #     nd = {}
+                #     for key in explanaion:
+                #         if key not in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                #             nd[key] = explanaion[key]
+                #     for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
+                #         nd[key] = explanaion[key][i]
+                #     new_explanations.append({predict: nd})
+                # explanations = new_explanations
+
             pred_dicts = new_pred_dicts
+            explanations = new_explanations
 
             if model['dtypes'][data_column] == dtype.date:
                 for row in pred_dicts:
@@ -282,18 +356,6 @@ class MindsDBDataNode(DataNode):
                 for row in pred_dicts:
                     if isinstance(row[data_column], (int, float)):
                         row[data_column] = str(datetime.fromtimestamp(row[data_column]))
-
-            new_explanations = []
-            explanaion = explanations[0][predict]
-            for i in range(model['problem_definition']['timeseries_settings']['nr_predictions']):
-                nd = {}
-                for key in explanaion:
-                    if key not in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
-                        nd[key] = explanaion[key]
-                for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
-                    nd[key] = explanaion[key][i]
-                new_explanations.append({predict: nd})
-            explanations = new_explanations
 
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []
@@ -315,7 +377,10 @@ class MindsDBDataNode(DataNode):
             row['when_data'] = original_when_data
 
             for k in original_target_values:
-                row[k] = original_target_values[k][i]
+                try:
+                    row[k] = original_target_values[k][i]
+                except Exception:
+                    row[k] = None
 
             for column_name in columns:
                 if column_name not in row:
@@ -325,6 +390,8 @@ class MindsDBDataNode(DataNode):
             for key in predicted_columns:
                 row[key + '_confidence'] = explanation[key]['confidence']
                 row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
+                if 'anomaly' in explanation[key]:
+                    row[key + '_anomaly'] = explanation[key]['anomaly']
             for key in min_max_keys:
                 row[key + '_min'] = explanation[key]['confidence_lower_bound']
                 row[key + '_max'] = explanation[key]['confidence_upper_bound']

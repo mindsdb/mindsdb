@@ -954,7 +954,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:
                 raise Exception('datanode is none')
-            result = datanode.select_query(sql)
+            result = datanode.select_query(sql.replace('`', ''))
 
             columns = []
             data = []
@@ -978,10 +978,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         # +++
         outer_query = None
-        subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)
-        if len(subquery) == 1:
-            outer_query = sql.replace(f'({subquery[0]})', 'dataframe')
-            sql = subquery[0]
+        # subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)
+        subquery = None
+        if 'as virtual_table' in sql.lower():
+            i1 = sql.lower().find('from')
+            if i1 > 0:
+                s1 = sql[i1:]
+                i2 = s1.find('(')
+                if i2 > 0:
+                    s2 = s1[i2 + 1:]
+                    s2 = s2[:s2.rfind('virtual_table')]
+                    subquery = s2[:s2.rfind(')')]
+                    outer_query = sql.replace(subquery, 'dataframe')
+                    outer_query = outer_query.replace('(dataframe)', 'dataframe')
+                    sql = subquery
+
+        # if len(subquery) == 1:
+        #     outer_query = sql.replace(f'({subquery[0]})', 'dataframe')
+        #     sql = subquery[0]
         # ---
         statement = SqlStatementParser(sql)
         sql = statement.sql
@@ -2029,7 +2043,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             company_id = self.request.recv(4)
             company_id = struct.unpack('I', company_id)[0]
 
-            database_name_len = self.request.recv(4)
+            database_name_len = self.request.recv(2)
             database_name_len = struct.unpack('H', database_name_len)[0]
 
             database_name = ''

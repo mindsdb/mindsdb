@@ -154,24 +154,20 @@ class ModelController():
                         'predicted_value': row['prediction'],
                         'confidence': row.get('confidence', None),
                         'confidence_lower_bound': row.get('lower', None),
-                        'confidence_upper_bound'.format(target): row.get('upper', None),
-                        'anomaly'.format(target): row.get('anomaly', None)
+                        'confidence_upper_bound': row.get('upper', None),
+                        'anomaly': row.get('anomaly', None),
+                        'truth': row.get('truth', None)
                 }})
 
                 td = {'predicted_value': row['prediction']}
-                print(row, type(row))
                 for col in df.columns:
                     if col in row:
-                        print(1, col)
                         td[col] = row[col]
                     elif f'order_{col}' in row:
-                        print(2, col)
                         td[col] = row[f'order_{col}']
                     elif f'group_{col}' in row:
-                        print(3, col)
                         td[col] = row[f'group_{col}']
                     else:
-                        print(4, col)
                         td[col] = df.iloc[i][col]
                 dict_arr.append({target: td})
             if pred_format == 'explain':

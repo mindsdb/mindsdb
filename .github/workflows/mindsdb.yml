@@ -35,9 +35,9 @@ jobs:
         pip install 'pymssql >= 2.1.4'
         pip install boto3
         pip install --no-cache-dir .
-        if [ "$RUNNER_OS" == "macOS" ]; then
-            brew install libomp;
-        fi
+        # if [ "$RUNNER_OS" == "macOS" ]; then
+        #     brew install libomp;
+        # fi
         if [ "$INSTALL_RAY" == "install_ray" ]; then
           pip install ray;
           git clone https://${ACCESS_KEY}@github.com/mindsdb/worker.git;
@@ -47,7 +47,6 @@ jobs:
         fi
       shell: bash
       env:
-        INSTALL_RAY: ${{ matrix.token }}
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Install dependencies Windows
@@ -132,12 +131,18 @@ jobs:
           # echo -e "\n===============\ntest user flow 2\n===============\n"
           # python tests/integration_tests/flows/test_user_flow_2.py
 
+<<<<<<< HEAD
           # # There are some issues with stopping the ray-based version
           # if [ "$INSTALL_RAY" == "not_install_ray" ]; then
           #   # flow with mistakes
           #   echo -e "\n===============\nflow with mistakes\n===============\n"
           #   python tests/integration_tests/flows/test_mistakes.py
           # fi
+=======
+          # flow with mistakes
+          echo -e "\n===============\nflow with mistakes\n===============\n"
+          python tests/integration_tests/flows/test_mistakes.py
+>>>>>>> staging
         fi
       shell: bash
       env:
@@ -147,7 +152,6 @@ jobs:
         DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-        INSTALL_RAY: ${{ matrix.token }}
 
   deploy_to_pypi:
     runs-on: ubuntu-latest

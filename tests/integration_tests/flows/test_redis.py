@@ -36,8 +36,8 @@ TS_STREAM_IN_NATIVE = 'TS_' + STREAM_IN_NATIVE
 TS_STREAM_OUT_NATIVE = 'TS_' + STREAM_OUT_NATIVE
 STREAM_IN_OL = f"test_stream_in_ol_{STREAM_SUFFIX}"
 STREAM_OUT_OL = f"test_stream_out_ol_{STREAM_SUFFIX}"
-DEFAULT_PREDICTOR = "redis_predictorr"
-TS_PREDICTOR = "redis_ts_predictorr"
+DEFAULT_PREDICTOR = "redis_predictor"
+TS_PREDICTOR = "redis_ts_predictor"
 DS_NAME = "redis_test_ds"
 TS_DS_NAME = "ts_redis_test_ds"
 
@@ -141,6 +141,11 @@ class RedisTest(unittest.TestCase):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
+
+        print(f"check that preidctor {DEFAULT_PREDICTOR} exists")
+        url = f'{HTTP_API_ROOT}/predictors/{DEFAULT_PREDICTOR}'
+        res = requests.get(url)
+        res.raise_for_status()
 
         url = f'{HTTP_API_ROOT}/streams/normal_stream_{STREAM_SUFFIX}'
         res = requests.put(url, json={

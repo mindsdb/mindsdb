@@ -210,16 +210,6 @@ def stop_mindsdb(sp=None):
         sp.kill()
         time.sleep(2)
         #sp.kill()
-    try:
-        os.system('ray stop --force')
-    except Exception as e:
-        print(e)
-        pass
-    try:
-        os.system('sudo ray stop --force')
-    except Exception as e:
-        print(e)
-        pass
 
     mdb_ports = (47334, 47335, 47336, 8273, 8274, 8275)
     procs = [[x.pid,x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
@@ -260,14 +250,6 @@ def run_environment(apis, override_config={}):
 
     os.environ['CHECK_FOR_UPDATES'] = '0'
     print('Starting mindsdb process!')
-    try:
-        os.system('ray stop --force')
-    except Exception:
-        pass
-    try:
-        os.system('sudo ray stop --force')
-    except Exception:
-        pass
     sp = subprocess.Popen(
         ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={CONFIG_PATH}', '--verbose'],
         close_fds=True,

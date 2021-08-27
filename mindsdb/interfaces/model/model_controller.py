@@ -136,8 +136,9 @@ class ModelController():
             if isinstance(when_data, dict):
                 when_data = [when_data]
             df = pd.DataFrame(when_data)
-            
+
         predictions = self.predictor_cache[name]['predictor'].predict(df)
+        predictions = predictions.to_dict(orient='records')
         # Bellow is useful for debugging caching and storage issues
         # del self.predictor_cache[name]
 
@@ -147,7 +148,7 @@ class ModelController():
         if pred_format in ('explain', 'dict', 'dict&explain'):
             explain_arr = []
             dict_arr = []
-            for i, row in predictions.iterrows():
+            for i, row in enumerate(predictions):
                 explain_arr.append({
                     target: {
                         'predicted_value': row['prediction'],

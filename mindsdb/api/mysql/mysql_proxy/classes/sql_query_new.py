@@ -50,6 +50,9 @@ from mindsdb.interfaces.ai_table.ai_table import AITableStore
 import mindsdb.interfaces.storage.db as db
 
 
+superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
+
+
 def get_preditor_alias(step, mindsdb_database):
     return (mindsdb_database, '.'.join(step.predictor.parts), '.'.join(step.predictor.alias.parts))
 
@@ -62,7 +65,10 @@ def get_table_alias(table_obj, default_db_name):
         name = (default_db_name, table_obj.parts[0])
     else:
         name = tuple(table_obj.parts)
-    name = name + ('.'.join(table_obj.alias.parts),)
+    if table_obj.alias is not None:
+        name = name + ('.'.join(table_obj.alias.parts),)
+    else:
+        name = name + (None,)
     return name
 
 
@@ -111,19 +117,28 @@ def replaceQueryVar(where, val):
 
 
 class SQLQuery():
-    def __init__(self, sql, session, outer_query=None):
+    def __init__(self, sql, session):
         self.session = session
         self.integration = session.integration
         self.database = session.database or 'mindsdb'
         self.datahub = session.datahub
         self.ai_table = None
+        self.outer_query = None
+
+        # +++ workaround for subqueries in superset
+        if 'as virtual_table' in sql.lower():
+            subquery = re.findall(superset_subquery, sql)
+            if isinstance(subquery, list) and len(subquery) == 1:
+                subquery = subquery[0]
+                self.outer_query = sql.replace(subquery, 'dataframe')
+                sql = subquery.strip('()')
+        # ---
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<2> offset \g<1> ', sql, flags=re.IGNORECASE)
 
         self.raw = sql
         self.model_types = {}
-        self.outer_query = outer_query
         self._parse_query(sql)
 
     def fetch(self, datahub, view='list'):
@@ -143,10 +158,11 @@ class SQLQuery():
         dn = self.datahub.get(step.integration)
         query = step.query
 
+        table_alias = get_table_alias(step.query.from_table, self.database)
+
         data = dn.select_query(
             query=query
         )
-        table_alias = get_table_alias(step.query.from_table, self.database)
         data = [{table_alias: x} for x in data]
         return data
 
@@ -155,13 +171,10 @@ class SQLQuery():
 
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
-
-        mindsdb_datanode = self.datahub.get(self.database)
+        integrations_names.append('information_schema')
 
         all_tables = get_all_tables(mindsdb_sql_struct)
 
-        # models = mindsdb_datanode.model_interface.get_models()
-        # model_names = [m['name'] for m in models]
         predictor_metadata = {}
         potential_ts_predictor = False
         predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
@@ -412,6 +425,9 @@ class SQLQuery():
             self.fetched_data = result
         else:
             self.fetched_data = steps_data[-1]
+
+        # TODO if self.columns_list is None
+        # that possible if only one fetchData step in paln
 
     def _apply_where_filter(self, row, where):
         if isinstance(where, Identifier):

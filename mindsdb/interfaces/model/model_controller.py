@@ -221,7 +221,7 @@ class ModelController():
 
         if predictor_record.json_ai is None:
             data['status'] = 'generating'
-        elif predictor_record.data is None or len(predictor_record.data) < 2:
+        elif predictor_record.data is None:
             data['status'] = 'editable'
         elif 'training_log' in predictor_record.data:
             data['status'] = 'training'

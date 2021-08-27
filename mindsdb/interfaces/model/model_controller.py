@@ -219,6 +219,17 @@ class ModelController():
         data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
         data['problem_definition'] = predictor_record.learn_args
 
+        if predictor_record.json_ai is None:
+            data['status'] = 'generating'
+        elif predictor_record.data is None or len(predictor_record.data) < 2:
+            data['status'] = 'editable'
+        elif 'training_log' in predictor_record.data:
+            data['status'] = 'training'
+        elif 'error' not in predictor_record.data:
+            data['status'] = 'complete'
+        else:
+            data['status'] = 'error'
+                
         if data.get('accuracies', None) is not None:
             if len(data['accuracies']) > 0:
                 data['accuracy'] = float(np.mean(list(data['accuracies'].values())))

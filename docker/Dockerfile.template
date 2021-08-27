@@ -45,5 +45,5 @@ RUN echo '{' \
     '}' \
 '}' > /root/mindsdb_config.json
 
-CMD bash -c 'if [ -n "$MDB_CONFIG_CONTENT" ]; then echo "$MDB_CONFIG_CONTENT" > /root/mindsdb_config.json; fi; pip install mindsdb==$(curl https://public.api.mindsdb.com/installer/@@beta_or_release/docker___started___None) && curl https://public.api.mindsdb.com/installer/@@beta_or_release/docker___success___None && python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongo'
+CMD bash -c 'if [ -n "$MDB_CONFIG_CONTENT" ]; then echo "$MDB_CONFIG_CONTENT" > /root/mindsdb_config.json; fi; pip install mindsdb==$(curl https://public.api.mindsdb.com/installer/@@beta_or_release/docker___started___None) && curl https://public.api.mindsdb.com/installer/@@beta_or_release/docker___success___None && python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb'
 

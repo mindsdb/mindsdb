@@ -144,7 +144,6 @@ class ModelController():
         delete_process_mark('predict')
 
         target = predictor_record.to_predict[0]
-
         if pred_format in ('explain', 'dict', 'dict&explain'):
             explain_arr = []
             dict_arr = []

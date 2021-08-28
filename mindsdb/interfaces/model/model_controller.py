@@ -112,6 +112,7 @@ class ModelController():
 
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         assert predictor_record is not None
+        predictor_data = self.get_model_data(name, company_id)
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
 
         if name not in self.predictor_cache:
@@ -119,7 +120,7 @@ class ModelController():
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
-            if predictor_record.data['status'] == 'complete':
+            if predictor_data['status'] == 'complete':
                 self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
                     'predictor':

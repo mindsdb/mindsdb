@@ -129,6 +129,8 @@ class ModelController():
                     'code': predictor_record.code,
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
                 }
+            else:
+                raise Exception(f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}')
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
             ds_cls = getattr(mindsdb_datasources, when_data['class'])
@@ -220,7 +222,7 @@ class ModelController():
         data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
         data['problem_definition'] = predictor_record.learn_args
 
-        if predictor_record.json_ai is None:
+        if predictor_record.json_ai is None and predictor_record.code is None:
             data['status'] = 'generating'
         elif predictor_record.data is None:
             data['status'] = 'editable'

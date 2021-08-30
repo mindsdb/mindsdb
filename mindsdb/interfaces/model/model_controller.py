@@ -1,17 +1,20 @@
-from copy import deepcopy
-from lightwood.api.types import ProblemDefinition
-from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess
-from typing import Optional, Tuple, Union, Dict, Any
-from dateutil.parser import parse as parse_datetime
+import sys
 import psutil
 import datetime
 import time
 import os
+from copy import deepcopy
+from typing import Optional, Tuple, Union, Dict, Any
+from dateutil.parser import parse as parse_datetime
+
+from lightwood.api.types import ProblemDefinition
+import numpy as np
 from contextlib import contextmanager
 from packaging import version
 import pandas as pd
 import lightwood
 import mindsdb_datasources
+
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
@@ -19,7 +22,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
-import numpy as np
+from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess
 
 
 class ModelController():
@@ -103,7 +106,8 @@ class ModelController():
         p.start()
         if join_learn_process:
             p.join()
-            p.close()
+            if sys.version_info[1] > 6:
+                p.close()
 
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
         create_process_mark('predict')
@@ -288,7 +292,8 @@ class ModelController():
         p.start()
         if join_learn_process:
             p.join()
-            p.close()
+            if sys.version_info[1] > 6:
+                p.close()
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
@@ -327,7 +332,8 @@ class ModelController():
         p.start()
         if join_learn_process:
             p.join()
-            p.close()
+            if sys.version_info[1] > 6:
+                p.close()
 
 '''
 Notes: Remove ray from actors are getting stuck

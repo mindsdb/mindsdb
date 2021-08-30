@@ -1,7 +1,7 @@
 from copy import deepcopy
 from lightwood.api.types import ProblemDefinition
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess
-from typing import Optional, Tuple, Union, Dict, Any
+from typing import List, Optional, Tuple, Union, Dict, Any
 from dateutil.parser import parse as parse_datetime
 import psutil
 import datetime
@@ -191,57 +191,68 @@ class ModelController():
         delete_process_mark('analyse')
         return analysis.to_dict()  # type: ignore
 
-    def get_model_data(self, name, company_id: int):
-        if '@@@@@' in name:
-            sn = name.split('@@@@@')
-            assert len(sn) < 3  # security
-            name = sn[1]
-
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
-        assert predictor_record is not None
-
-        linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=predictor_record.datasource_id).first()
-
-        # check update availability
-        if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
-            predictor_record.update_status = 'available'
-            db.session.commit()
-
-        data = deepcopy(predictor_record.data)
-        data['dtype_dict'] = predictor_record.dtype_dict
-        data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
-        data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
-        data['predict'] = predictor_record.to_predict[0]
-        data['update'] = predictor_record.update_status
-        data['name'] = predictor_record.name
-        data['code'] = predictor_record.code
-        data['json_ai'] = predictor_record.json_ai
-        data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
-        data['problem_definition'] = predictor_record.learn_args
-
-        if predictor_record.json_ai is None and predictor_record.code is None:
-            data['status'] = 'generating'
-        elif predictor_record.data is None:
-            data['status'] = 'editable'
-        elif 'training_log' in predictor_record.data:
-            data['status'] = 'training'
-        elif 'error' not in predictor_record.data:
-            data['status'] = 'complete'
+    def _get_models(self, names: Optional[List[str]], company_id: int):
+        if names is not None:
+            for i in range(len(names)):
+                if '@@@@@' in names[i]:
+                    sn = names[i].split('@@@@@')
+                    assert len(sn) < 3  # security
+                    names[i] = sn[1]
+        
+        if names is None:
+            predictor_records = db.session.query(db.Predictor).filter(company_id=company_id).all()
         else:
-            data['status'] = 'error'
-                
-        if data.get('accuracies', None) is not None:
-            if len(data['accuracies']) > 0:
-                data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
-        return data
+            predictor_records = db.session.query(db.Predictor).filter(company_id=company_id).filter(db.Predictor.name.in_(names)).all()
+
+        datasource_ids = [x.datasource_id for x in predictor_records]
+        linked_db_datasources = db.session.query(db.Datasource).filter(company_id=company_id).filter(db.Datasource.id.in_(datasource_ids)).all()
+
+        data_arr = []
+        for predictor_record in predictor_records:
+            # check update availability
+            if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
+                predictor_record.update_status = 'available'
+                db.session.commit()
+
+            data = deepcopy(predictor_record.data)
+            data['dtype_dict'] = predictor_record.dtype_dict
+            data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
+            data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
+            data['predict'] = predictor_record.to_predict[0]
+            data['update'] = predictor_record.update_status
+            data['name'] = predictor_record.name
+            data['code'] = predictor_record.code
+            data['json_ai'] = predictor_record.json_ai
+            linked_datasource = [x for x in linked_db_datasources if x.id == predictor_record.datasource_id]
+            linked_datasource = linked_datasource[0] if len(linked_datasource) > 1 else None
+            data['data_source_name'] = linked_datasource.name
+            data['problem_definition'] = predictor_record.learn_args
+
+            if predictor_record.json_ai is None and predictor_record.code is None:
+                data['status'] = 'generating'
+            elif predictor_record.data is None:
+                data['status'] = 'editable'
+            elif 'training_log' in predictor_record.data:
+                data['status'] = 'training'
+            elif 'error' not in predictor_record.data:
+                data['status'] = 'complete'
+            else:
+                data['status'] = 'error'
+                    
+            if data.get('accuracies', None) is not None:
+                if len(data['accuracies']) > 0:
+                    data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
+            data_arr.append(data)
+
+        return data_arr
+
+
+    def get_model_data(self, name, company_id: int):
+        return self._get_models([name], company_id)[0]
 
     def get_models(self, company_id: int):
         models = []
-        for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id):
-            model_data = self.get_model_data(db_p.name, company_id=company_id)
+        for model_data in self._get_models(None, company_id):
             reduced_model_data = {}
 
             for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update', 'data_source_name']:

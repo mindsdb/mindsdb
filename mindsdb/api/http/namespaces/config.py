@@ -125,12 +125,20 @@ class Integration(Resource):
                 del params['enabled']
             add_db_integration(name, params, request.company_id)
 
+            model_data_arr = []
+            for model in request.model_interface.get_models():
+                if model['status'] == 'complete':
+                    try:
+                        model_data_arr.append(request.model_interface.get_model_data(model['name']))
+                    except Exception:
+                        pass
+
             if is_test is False and params.get('publish', False) is True:
                 model_data_arr = []
-                for model in request.native_interface.get_models():
+                for model in request.model_interface.get_models():
                     if model['status'] == 'complete':
                         try:
-                            model_data_arr.append(request.native_interface.get_model_data(model['name']))
+                            model_data_arr.append(request.model_interface.get_model_data(model['name']))
                         except Exception:
                             pass
                 DatabaseWrapper(request.company_id).setup_integration(name)
@@ -159,7 +167,10 @@ class Integration(Resource):
 
     @ns_conf.doc('modify_integration')
     def post(self, name):
-        params = request.json.get('params')
+        params = {}
+        params.update((request.json or {}).get('params', {}))
+        params.update(request.form or {})
+
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
         integration = get_db_integration(name, request.company_id)
@@ -213,8 +224,8 @@ class Vars(Resource):
         else:
             mongo = True
 
-        cloud = ca.config_obj.get('cloud', False)
-
+        #cloud = ca.config_obj.get('cloud', False)
+        cloud = True
         local_time = datetime.datetime.now(tzlocal())
         local_timezone = local_time.tzname()
 

@@ -6,6 +6,7 @@ from .mysql.mysql import MySQLConnectionChecker
 from .postgres.postgres import PostgreSQLConnectionChecker
 from .redis.redisdb import RedisConnectionChecker
 from .kafka.kafkadb import KafkaConnectionChecker
+from .snowflake.snowflake import SnowflakeConnectionChecker
 
 
 try:
@@ -28,8 +29,10 @@ CHECKERS = {
     "mysql": MySQLConnectionChecker,
     "singlestore": MySQLConnectionChecker,
     "postgres": PostgreSQLConnectionChecker,
+    "cockroachdb": PostgreSQLConnectionChecker,
     "redis": RedisConnectionChecker,
-    "kafka": KafkaConnectionChecker
+    "kafka": KafkaConnectionChecker,
+    "snowflake": SnowflakeConnectionChecker
 }
 
 

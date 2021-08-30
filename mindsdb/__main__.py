@@ -9,7 +9,7 @@ import signal
 import torch.multiprocessing as mp
 
 from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
-from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
+from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface, ModelInterfaceWrapper
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     # @TODO Backwards compatibiltiy for tests, remove later
     from mindsdb.interfaces.database.integrations import add_db_integration, get_db_integration, remove_db_integration
     dbw = DatabaseWrapper(COMPANY_ID)
-    model_interface = ModelInterface()
+    model_interface = ModelInterfaceWrapper(ModelInterface(), COMPANY_ID)
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []
     for model in raw_model_data_arr:
@@ -80,6 +80,7 @@ if __name__ == '__main__':
 
     is_cloud = config.get('cloud', False)
     if not is_cloud:
+        
         for integration_name in get_db_integrations(COMPANY_ID, sensitive_info=True):
             print(f"Setting up integration: {integration_name}")
             if get_db_integration(integration_name, COMPANY_ID).get('publish', False):

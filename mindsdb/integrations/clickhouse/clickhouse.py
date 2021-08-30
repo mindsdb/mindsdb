@@ -1,6 +1,5 @@
 import requests
-
-from mindsdb.utilities.subtypes import DATA_SUBTYPES
+from lightwood import dtype
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
 
@@ -31,28 +30,28 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         self.host = db_info.get('host')
         self.port = db_info.get('port')
 
-    def _to_clickhouse_table(self, stats, predicted_cols, columns):
+    def _to_clickhouse_table(self, dtype_dict, predicted_cols, columns):
         subtype_map = {
-            DATA_SUBTYPES.INT: 'Nullable(Int64)',
-            DATA_SUBTYPES.FLOAT: 'Nullable(Float64)',
-            DATA_SUBTYPES.BINARY: 'Nullable(UInt8)',
-            DATA_SUBTYPES.DATE: 'Nullable(Date)',
-            DATA_SUBTYPES.TIMESTAMP: 'Nullable(Datetime)',
-            DATA_SUBTYPES.SINGLE: 'Nullable(String)',
-            DATA_SUBTYPES.MULTIPLE: 'Nullable(String)',
-            DATA_SUBTYPES.TAGS: 'Nullable(String)',
-            DATA_SUBTYPES.IMAGE: 'Nullable(String)',
-            DATA_SUBTYPES.VIDEO: 'Nullable(String)',
-            DATA_SUBTYPES.AUDIO: 'Nullable(String)',
-            DATA_SUBTYPES.SHORT: 'Nullable(String)',
-            DATA_SUBTYPES.RICH: 'Nullable(String)',
-            DATA_SUBTYPES.ARRAY: 'Nullable(String)'
+            dtype.integer: 'Nullable(Int64)',
+            dtype.float: 'Nullable(Float64)',
+            dtype.binary: 'Nullable(UInt8)',
+            dtype.date: 'Nullable(Date)',
+            dtype.datetime: 'Nullable(Datetime)',
+            dtype.binary: 'Nullable(String)',
+            dtype.categorical: 'Nullable(String)',
+            dtype.tags: 'Nullable(String)',
+            dtype.image: 'Nullable(String)',
+            dtype.video: 'Nullable(String)',
+            dtype.audio: 'Nullable(String)',
+            dtype.short_text: 'Nullable(String)',
+            dtype.rich_text: 'Nullable(String)',
+            dtype.array: 'Nullable(String)'
         }
 
         column_declaration = []
         for name in columns:
             try:
-                col_subtype = stats[name]['typing']['data_subtype']
+                col_subtype = dtype_dict[name]
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
@@ -115,14 +114,22 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         for model_meta in model_data_arr:
             name = self._escape_table_name(model_meta['name'])
 
-            columns_sql = ','.join(self._to_clickhouse_table(model_meta['data_analysis_v2'], model_meta['predict'], model_meta['columns']))
+            predict = model_meta['predict']
+            if not isinstance(predict, list):
+                predict = [predict]
+
+            columns_sql = ','.join(self._to_clickhouse_table(
+                model_meta['dtype_dict'],
+                predict,
+                list(model_meta['dtype_dict'].keys())
+            ))
             columns_sql += ',`when_data` Nullable(String)'
             columns_sql += ',`select_data_query` Nullable(String)'
             columns_sql += ',`external_datasource` Nullable(String)'
-            for col in model_meta['predict']:
+            for col in predict:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
 
-                if model_meta['data_analysis_v2'][col]['typing']['data_type'] == 'Numeric':
+                if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns_sql += f',`{col}_min` Nullable(Float64)'
                     columns_sql += f',`{col}_max` Nullable(Float64)'
                 columns_sql += f',`{col}_explain` Nullable(String)'

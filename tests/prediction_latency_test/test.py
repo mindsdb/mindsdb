@@ -108,7 +108,7 @@ if __name__ == '__main__':
     os.environ["MINDSDB_STORAGE_PATH"] = get_predictors_dir(args.config_path)
     os.environ["DATASETS_PATH"] = args.datasets_path
 
-    from mindsdb_native import Predictor, ClickhouseDS
+    from mindsdb_datasources import ClickhouseDS
     from prepare import query, datasets, prepare_env
 
     prepare_env(prepare_data=not args.skip_datasource,

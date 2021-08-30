@@ -1,7 +1,7 @@
 from contextlib import closing
 import pg8000
 
-from mindsdb.utilities.subtypes import DATA_SUBTYPES
+from lightwood import dtype
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
 
@@ -43,28 +43,28 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
         self.port = db_info.get('port')
         self.database = db_info.get('database', 'postgres')
 
-    def _to_postgres_table(self, stats, predicted_cols, columns):
+    def _to_postgres_table(self, dtype_dict, predicted_cols, columns):
         subtype_map = {
-            DATA_SUBTYPES.INT: ' int8',
-            DATA_SUBTYPES.FLOAT: 'float8',
-            DATA_SUBTYPES.BINARY: 'bool',
-            DATA_SUBTYPES.DATE: 'date',
-            DATA_SUBTYPES.TIMESTAMP: 'timestamp',
-            DATA_SUBTYPES.SINGLE: 'text',
-            DATA_SUBTYPES.MULTIPLE: 'text',
-            DATA_SUBTYPES.TAGS: 'text',
-            DATA_SUBTYPES.IMAGE: 'text',
-            DATA_SUBTYPES.VIDEO: 'text',
-            DATA_SUBTYPES.AUDIO: 'text',
-            DATA_SUBTYPES.SHORT: 'text',
-            DATA_SUBTYPES.RICH: 'text',
-            DATA_SUBTYPES.ARRAY: 'text'
+            dtype.integer: ' int8',
+            dtype.float: 'float8',
+            dtype.binary: 'bool',
+            dtype.date: 'date',
+            dtype.datetime: 'timestamp',
+            dtype.binary: 'text',
+            dtype.categorical: 'text',
+            dtype.tags: 'text',
+            dtype.image: 'text',
+            dtype.video: 'text',
+            dtype.audio: 'text',
+            dtype.short_text: 'text',
+            dtype.rich_text: 'text',
+            dtype.array: 'text'
         }
 
         column_declaration = []
         for name in columns:
             try:
-                col_subtype = stats[name]['typing']['data_subtype']
+                col_subtype = dtype_dict[name]
                 new_type = subtype_map[col_subtype]
                 column_declaration.append(f' "{name}" {new_type} ')
                 if name in predicted_cols:
@@ -161,13 +161,19 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
     def register_predictors(self, model_data_arr):
         for model_meta in model_data_arr:
             name = model_meta['name']
-            data_analysis_v2 = model_meta['data_analysis_v2']
-            columns_sql = ','.join(self._to_postgres_table(data_analysis_v2, model_meta['predict'], model_meta['columns']))
+            predict = model_meta['predict']
+            if not isinstance(predict, list):
+                predict = [predict]
+            columns_sql = ','.join(self._to_postgres_table(
+                model_meta['dtype_dict'],
+                predict,
+                list(model_meta['dtype_dict'].keys())
+            ))
             columns_sql += ',"select_data_query" text'
             columns_sql += ',"external_datasource" text'
-            for col in model_meta['predict']:
+            for col in predict:
                 columns_sql += f',"{col}_confidence" float8'
-                if data_analysis_v2[col]['typing']['data_type'] == 'Numeric':
+                if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
                     columns_sql += f',"{col}_min" float8'
                     columns_sql += f',"{col}_max" float8'
                 columns_sql += f',"{col}_explain" text'

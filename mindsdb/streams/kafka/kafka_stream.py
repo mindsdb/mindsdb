@@ -2,6 +2,7 @@ import json
 from copy import deepcopy
 import kafka
 
+from mindsdb.api.http.initialize import CustomJSONEncoder
 from mindsdb.streams.base.base_stream import BaseStream
 
 
@@ -29,7 +30,7 @@ class KafkaStream(BaseStream):
             yield json.loads(msg.value)
 
     def write(self, dct):
-        self.producer.send(self.topic, json.dumps(dct).encode('utf-8'))
+        self.producer.send(self.topic, json.dumps(dct, cls=CustomJSONEncoder).encode('utf-8'))
         self.producer.flush()
 
     def __del__(self):

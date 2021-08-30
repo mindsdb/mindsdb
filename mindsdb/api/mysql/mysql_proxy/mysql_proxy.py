@@ -20,6 +20,7 @@ import json
 import atexit
 import tempfile
 import datetime
+import time
 import socket
 import struct
 from collections import OrderedDict
@@ -408,7 +409,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
         model_interface = self.session.model_interface
-        custom_models = self.session.custom_models
         data_store = self.session.data_store
 
         for key in insert.keys():
@@ -481,10 +481,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     data_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
-        if insert['name'] in [x['name'] for x in custom_models.get_models()]:
-            custom_models.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs)
-        else:
-            model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs)
+        model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs)
 
         self.packet(OkPacket).send()
 
@@ -539,7 +536,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         predict = [x['name'] for x in struct['predict']]
 
         timeseries_settings = {}
-        for w in ['order_by', 'group_by', 'window']:
+        for w in ['order_by', 'group_by', 'window', 'nr_predictions']:
             if w in struct:
                 timeseries_settings[w] = struct.get(w)
 
@@ -553,7 +550,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         model_interface.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs=kwargs)
 
         if is_temp_ds:
-            data_store.delete_datasource(ds_name)
+            try:
+                data_store.delete_datasource(ds_name)
+            except Exception:
+                pass
 
         self.packet(OkPacket).send()
 
@@ -932,6 +932,71 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.sendPackageGroup(packages)
 
     def queryAnswer(self, sql):
+        # +++
+        # if query not for mindsdb then process that query in integration db
+        # TODO redirect only select data queries
+        if (
+            isinstance(self.session.database, str)
+            and len(self.session.database) > 0
+            and self.session.database.lower() != 'mindsdb'
+            and '@@' not in sql.lower()
+            and (
+                (
+                    sql.lower().startswith('select')
+                    and 'from' in sql.lower()
+                )
+                or (sql.lower().startswith('show')
+                    # and 'databases' in sql.lower()
+                    and 'tables' in sql.lower()
+                )
+            )
+        ):
+            datanode = self.session.datahub.get(self.session.database)
+            if datanode is None:
+                raise Exception('datanode is none')
+            result = datanode.select_query(sql.replace('`', ''))
+
+            columns = []
+            data = []
+            if len(result) > 0:
+                columns = [{
+                    'table_name': '',
+                    'name': x,
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                } for x in result[0].keys()]
+                data = [[str(value) for key, value in x.items()] for x in result]
+
+            packages = []
+            packages += self.getTabelPackets(
+                columns=columns,
+                data=data
+            )
+            packages.append(self.packet(OkPacket, eof=True))
+            self.sendPackageGroup(packages)
+            return
+        # ---
+
+        # +++
+        outer_query = None
+        # subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)
+        subquery = None
+        if 'as virtual_table' in sql.lower():
+            i1 = sql.lower().find('from')
+            if i1 > 0:
+                s1 = sql[i1:]
+                i2 = s1.find('(')
+                if i2 > 0:
+                    s2 = s1[i2 + 1:]
+                    s2 = s2[:s2.rfind('virtual_table')]
+                    subquery = s2[:s2.rfind(')')]
+                    outer_query = sql.replace(subquery, 'dataframe')
+                    outer_query = outer_query.replace('(dataframe)', 'dataframe')
+                    sql = subquery
+
+        # if len(subquery) == 1:
+        #     outer_query = sql.replace(f'({subquery[0]})', 'dataframe')
+        #     sql = subquery[0]
+        # ---
         statement = SqlStatementParser(sql)
         sql = statement.sql
         sql_lower = sql.lower()
@@ -961,6 +1026,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 struct = statement.struct
             elif 'show variables' in sql_lower:
                 variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
+                self.answer_show_variables(variables)
+                return
+            elif "show variables like" in sql_lower:
+                # for superset
+                variables = re.findall(r"show variables like '([a-zA-Z_]*)'", sql_lower)
                 self.answer_show_variables(variables)
                 return
             elif "show session variables like" in sql_lower:
@@ -1007,10 +1077,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_show_index()
                 return
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
-            # elif 'show create table' in sql_lower:
-            #     # SHOW CREATE TABLE `MINDSDB`.`predictors`
-            #     table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
-            #     self.answer_show_create_table(table)
+            elif 'show create table' in sql_lower:
+                # SHOW CREATE TABLE `MINDSDB`.`predictors`
+                table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
+                self.answer_show_create_table(table)
+                return
 
         if keyword == 'start':
             # start transaction
@@ -1172,16 +1243,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # endregion
 
             if ' left join ' not in sql_lower and ' join ' in sql_lower:
-                query_class = SQLQuery_new
+                query = SQLQuery_new(
+                    sql,
+                    session=self.session,
+                    outer_query=outer_query
+                )
             else:
-                query_class = SQLQuery
-            # query_class = SQLQuery_new
-            query = query_class(
-                sql,
-                integration=self.session.integration,
-                database=self.session.database,
-                datahub=self.session.datahub
-            )
+                query = SQLQuery(
+                    sql,
+                    integration=self.session.integration,
+                    database=self.session.database,
+                    datahub=self.session.datahub,
+                    outer_query=outer_query
+                )
             self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()
@@ -1649,7 +1723,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'charset': self.charset_text_type
             }],
             data=[
-                [None]
+                [self.session.database]
             ]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0000))
@@ -1969,10 +2043,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             company_id = self.request.recv(4)
             company_id = struct.unpack('I', company_id)[0]
 
+            database_name_len = self.request.recv(2)
+            database_name_len = struct.unpack('H', database_name_len)[0]
+
+            database_name = ''
+            if database_name_len > 0:
+                database_name = self.request.recv(database_name_len).decode()
+
             return {
                 'is_cloud': True,
                 'client_capabilities': client_capabilities,
-                'company_id': company_id
+                'company_id': company_id,
+                'database': database_name
             }
 
         return {
@@ -1992,6 +2074,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
         else:
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
+            self.session.database = cloud_connection['database']
             self.session.username = 'cloud'
             self.session.auth = True
             self.session.integration = None

@@ -49,7 +49,7 @@ class SQLQuery():
     struct = {}
     result = None
 
-    def __init__(self, sql, integration=None, database=None, datahub=None):
+    def __init__(self, sql, integration=None, database=None, datahub=None, outer_query=None):
         # parse
         self.integration = integration
         self.database = database
@@ -57,7 +57,7 @@ class SQLQuery():
         self.ai_table = None
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
-        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<1> offset \g<2> ', sql, flags=re.IGNORECASE)
+        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<2> offset \g<1> ', sql, flags=re.IGNORECASE)
 
         self.raw = sql
         self._parseQuery(sql)
@@ -548,7 +548,7 @@ class SQLQuery():
                     self.ai_table = AITableStore()
 
                 if False and len(tables) == 1 and (
-                        tables[0].lower() in ['mindsdb.predictors', 'mindsdb.commands'] \
+                        tables[0].lower() in ['mindsdb.predictors', 'mindsdb.commands']
                         or db == 'mindsdb' and tables[0].lower() in ['predictors', 'commands']
                     ) is False and self.ai_table.is_ai_table(tables[0]) is False:
                     success = True

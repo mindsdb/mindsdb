@@ -92,8 +92,6 @@ class StreamIntegration(Integration):
                 integration=self.name
             ).all()
 
-            # print('db streams:', [s.name for s in stream_db_recs])
-
             # Stop streams that weren't found in DB
             indices_to_delete = []
             for i, s in enumerate(self._streams):

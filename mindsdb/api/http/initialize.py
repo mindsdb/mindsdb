@@ -10,7 +10,7 @@ import traceback
 from datetime import datetime, date, timedelta
 import tempfile
 # import concurrent.futures
-
+import numpy as np
 from flask import Flask, url_for, make_response
 from flask.json import dumps
 from flask_restx import Api
@@ -19,7 +19,6 @@ from flask.json import JSONEncoder
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from mindsdb.interfaces.custom.custom_models import CustomModels
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
@@ -45,6 +44,12 @@ class CustomJSONEncoder(JSONEncoder):
             return obj.strftime("%Y-%m-%dT%H:%M:%S.%f")
         if isinstance(obj, timedelta):
             return str(obj)
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+        if isinstance(obj, np.int8) or isinstance(obj, np.int16) or isinstance(obj, np.int32) or isinstance(obj, np.int64):
+            return int(obj)
+        if isinstance(obj, np.float16) or isinstance(obj, np.float32) or isinstance(obj, np.float64) or isinstance(obj, np.float128):
+            return float(obj)
 
         return JSONEncoder.default(self, obj)
 
@@ -311,7 +316,6 @@ def initialize_flask(config, init_static_thread, no_studio):
 def initialize_interfaces(app):
     app.original_data_store = DataStore()
     app.original_model_interface = ModelInterface()
-    app.custom_models = CustomModels()
     config = Config()
     app.config_obj = config
 

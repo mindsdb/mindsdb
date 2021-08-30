@@ -12,8 +12,6 @@ import kafka
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
 
-from mindsdb.streams import KafkaStream
-
 
 INTEGRATION_NAME = 'test_kafka'
 kafka_creds = {}
@@ -52,6 +50,7 @@ class KafkaTest(unittest.TestCase):
 
     def test_length(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import KafkaStream
         stream = KafkaStream(f'test_stream_length_{STREAM_SUFFIX}', CONNECTION_PARAMS)
 
         self.assertEqual(len(list(stream.read())), 0)
@@ -108,6 +107,7 @@ class KafkaTest(unittest.TestCase):
             'data_source_name': ds_name,
             'to_predict': 'y',
             'kwargs': {
+                'time_aim': 20,
                 'use_gpu': False,
                 'join_learn_process': True,
                 'ignore_columns': None,
@@ -138,7 +138,7 @@ class KafkaTest(unittest.TestCase):
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/normal_stream_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             "predictor": DEFAULT_PREDICTOR,
             "stream_in": STREAM_IN,
@@ -150,6 +150,7 @@ class KafkaTest(unittest.TestCase):
 
     def test_3_making_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import KafkaStream
         stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS, mode='w')
         stream_out = KafkaStream(STREAM_OUT, CONNECTION_PARAMS, mode='r')
         # wait when the integration launches created stream
@@ -164,7 +165,7 @@ class KafkaTest(unittest.TestCase):
         print(f"\nExecuting {self._testMethodName}")
         self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/{self._testMethodName}_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}'
         res = requests.put(url, json={
             'predictor': TS_PREDICTOR,
             'stream_in': STREAM_IN_TS,
@@ -176,19 +177,21 @@ class KafkaTest(unittest.TestCase):
 
     def test_5_making_ts_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import KafkaStream
         stream_in = KafkaStream(STREAM_IN_TS, CONNECTION_PARAMS)
         stream_out = KafkaStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
         # wait when the integration launches created stream
         time.sleep(10)
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A'})
-            time.sleep(5)
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A', 'y': 3*x})
+            time.sleep(0.001)
         time.sleep(10)
         self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_6_create_stream_kafka_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import KafkaStream
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -209,8 +212,10 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
+    '''
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import KafkaStream
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
         learning_stream = KafkaStream(LEARNING_STREAM, CONNECTION_PARAMS)
 
@@ -225,7 +230,8 @@ class KafkaTest(unittest.TestCase):
 
         for x in range(1, 101):
             learning_stream.write({'x1': x, 'x2': 2*x})
-    
+    '''
+
 
 if __name__ == '__main__':
     try:

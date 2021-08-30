@@ -77,6 +77,17 @@ class Telemetry(Resource):
         inject_telemetry_to_static(ca.config_obj.paths['static'])
         return '', 200
 
+@ns_conf.route('/validate_json_ai')
+class ValidateJsonAI(Resource):
+    def post(self):
+        json_ai = request.json.get('json_ai')
+        if json_ai is None:
+            return 'Please provide json_ai', 400
+        try:
+            code = request.model_interface.code_from_json_ai(json_ai)
+        except Exception as e:
+            return {'error': str(e)}
+        return {'code': code}
 
 @ns_conf.route('/update-gui')
 class UpdateGui(Resource):

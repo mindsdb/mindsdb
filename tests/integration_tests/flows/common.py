@@ -210,16 +210,6 @@ def stop_mindsdb(sp=None):
         sp.kill()
         time.sleep(2)
         #sp.kill()
-    try:
-        os.system('ray stop --force')
-    except Exception as e:
-        print(e)
-        pass
-    try:
-        os.system('sudo ray stop --force')
-    except Exception as e:
-        print(e)
-        pass
 
     mdb_ports = (47334, 47335, 47336, 8273, 8274, 8275)
     procs = [[x.pid,x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
@@ -260,14 +250,6 @@ def run_environment(apis, override_config={}):
 
     os.environ['CHECK_FOR_UPDATES'] = '0'
     print('Starting mindsdb process!')
-    try:
-        os.system('ray stop --force')
-    except Exception:
-        pass
-    try:
-        os.system('sudo ray stop --force')
-    except Exception:
-        pass
     sp = subprocess.Popen(
         ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={CONFIG_PATH}', '--verbose'],
         close_fds=True,
@@ -339,19 +321,27 @@ def check_prediction_values(row, to_predict):
     try:
         for field_name, field_type in to_predict.items():
             if field_type in [int, float]:
+                print(f'checking {field_name} is int or float')
+                print(row[field_name], type(row[field_name]))
                 assert isinstance(row[field_name], (int, float))
+                print('checking min bound')
                 assert isinstance(row[f'{field_name}_min'], (int, float))
+                print('checking max bound')
                 assert isinstance(row[f'{field_name}_max'], (int, float))
+                print('comparing the two')
                 assert row[f'{field_name}_max'] > row[f'{field_name}_min']
             elif field_type is str:
+                print(f'checking {field_name} is str')
                 assert isinstance(row[field_name], str)
             else:
                 assert False
 
+            print(f'checking confidence for {field_name}')
             assert isinstance(row[f'{field_name}_confidence'], (int, float))
+            print(f'checking explain for {field_name}')
             assert isinstance(row[f'{field_name}_explain'], (str, dict))
-    except Exception:
-        print('Wrong values in row:')
+    except Exception as e:
+        print(f'Error "{e}" | Wrong values in row:')
         print(row)
         return False
     return True

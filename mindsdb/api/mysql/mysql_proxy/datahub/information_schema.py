@@ -1,3 +1,7 @@
+import dfsql
+import pandas as pd
+
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query_new import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 
 
@@ -55,7 +59,23 @@ class InformationSchema(DataNode):
             x.lower() for x in self.index if x.lower() not in ['mindsdb', 'datasource']
         ]
 
+    def _get_tables(self):
+        # return TABLES
+        tables = [
+            # at least this tables should be returned for GUI clients
+            {'table_name': 'SCHEMATA', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
+            {'table_name': 'TABLES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
+            {'table_name': 'EVENTS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
+            {'table_name': 'ROUTINES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
+            {'table_name': 'TRIGGERS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
+        ]
+        for dsName, ds in self.index.items():
+            t = ds.getTables()
+            tables += [{'table_name': x, 'table_schema': dsName, 'table_type': 'BASE TABLE', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'} for x in t]
+        return tables
+
     def select_query(self, query):
+        # TODO remove it
         from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
         sql_query = str(query)
         moz_struct = to_moz_sql_struct(sql_query)
@@ -67,6 +87,24 @@ class InformationSchema(DataNode):
 
         self.select(table=get_table_alias(query.from_table))
         return data
+
+    # def select_query(self, query):
+    # new version, uncomment after tests
+    #     query_tables = get_all_tables(query)
+    #     if len(query_tables) != 1:
+    #         raise Exception(f'Only one table can be used in query to information_schema: {query}')
+    #     table = query_tables[0].upper()
+    #     if table == 'TABLES':
+    #         data = self._get_tables()
+    #         table_name = query.from_table.parts[-1]
+    #         dataframe = pd.DataFrame(data)
+    #         query.where = None
+    #         data = dfsql.sql_query(str(query), **{table_name: dataframe})
+    #     else:
+    #         raise Exception('Information schema: Not implemented.')
+    #     if isinstance(data, pd.core.series.Series):
+    #         result = data.to_frame()
+    #     return result.to_dict(orient='records')
 
     def select(self, columns=None, table=None, where=None, order_by=None, group_by=None, came_from=None):
         tn = table.upper()

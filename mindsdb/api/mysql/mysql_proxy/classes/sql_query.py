@@ -49,7 +49,7 @@ class SQLQuery():
     struct = {}
     result = None
 
-    def __init__(self, sql, integration=None, database=None, datahub=None, outer_query=None):
+    def __init__(self, sql, integration=None, database=None, datahub=None):
         # parse
         self.integration = integration
         self.database = database

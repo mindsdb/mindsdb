@@ -338,7 +338,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(EofPacket))
         self.sendPackageGroup(packages)
 
-    def answer_show_variables(self, variables):
+    def answer_show_variables(self, sql):
+        sql_lower = sql.lower()
+        if 'show variables' in sql_lower:
+            variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
+        elif "show variables like" in sql_lower:
+            variables = re.findall(r"show variables like '([a-zA-Z_]*)'", sql_lower)
+        elif "show session variables like" in sql_lower:
+            variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+        elif 'show session status like' in sql_lower:
+            variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+
         data = []
         for variable_name in variables:
             variable_data = SERVER_VARIABLES.get(f'@@{variable_name}')
@@ -610,6 +620,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_stmt_prepare(self, statement):
         sql = statement.sql
+        sql_lower = sql.lower()
         stmt_id = self.session.register_stmt(statement)
         prepared_stmt = self.session.prepared_stmts[stmt_id]
 
@@ -676,13 +687,41 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     charset=CHARSET_NUMBERS['utf8_general_ci'],
                     flags=sum([FIELD_FLAG.BINARY_COLLATION])
                 ))
-
+        elif statement.keyword == 'select' and 'connection_id()' in sql.lower():
+            prepared_stmt['type'] = 'select'
+            num_columns = 1
+            num_params = 0
+            columns_def = [{
+                'database': '',
+                'table_name': '',
+                'name': 'conn_id',
+                'alias': 'conn_id',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }]
         elif statement.keyword == 'select':
             prepared_stmt['type'] = 'select'
             query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
             num_columns = len(query.columns)
             num_params = 0
             columns_def = query.columns
+        elif (
+            'show variables' in sql_lower
+            or 'show session variables' in sql_lower
+            or 'show session status' in sql_lower
+        ):
+            prepared_stmt['type'] = 'show variables'
+            num_columns = 2
+            num_params = 0
+            columns_def = [{
+                'table_name': '',
+                'name': 'Variable_name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'Value',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }]
         else:
             raise SqlError(f"Only 'SELECT' and 'INSERT' statements supported. Got: {sql}")
 
@@ -709,6 +748,39 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
         if prepared_stmt['type'] == 'select':
             sql = prepared_stmt['statement'].sql
+
+            # +++
+            if sql.lower() == 'select connection_id()':
+                self.answer_connection_id(sql)
+                return
+            # ---
+
+            # +++
+            if "SELECT `table_name`, `column_name`" in sql:
+                # TABLEAU
+                # SELECT `table_name`, `column_name`
+                # FROM `information_schema`.`columns`
+                # WHERE `data_type`='enum' AND `table_schema`='mindsdb'
+                packages = self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'TABLE_NAME',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'COLUMN_NAME',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=[]
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            # ---
+
             query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
 
             columns = query.columns
@@ -770,6 +842,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql = sql[:sql.find('?')] + f"'{parameters[0]}'"
             self.delete_predictor_sql(sql)
             self.packet(OkPacket, affected_rows=1).send()
+        elif prepared_stmt['type'] == 'show variables':
+            sql = prepared_stmt['statement'].sql
+            self.answer_show_variables(sql)
         else:
             raise NotImplementedError(f"Unknown statement type: {prepared_stmt['type']}")
 
@@ -976,27 +1051,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         # ---
 
-        # +++
-        outer_query = None
-        # subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)
-        subquery = None
-        if 'as virtual_table' in sql.lower():
-            i1 = sql.lower().find('from')
-            if i1 > 0:
-                s1 = sql[i1:]
-                i2 = s1.find('(')
-                if i2 > 0:
-                    s2 = s1[i2 + 1:]
-                    s2 = s2[:s2.rfind('virtual_table')]
-                    subquery = s2[:s2.rfind(')')]
-                    outer_query = sql.replace(subquery, 'dataframe')
-                    outer_query = outer_query.replace('(dataframe)', 'dataframe')
-                    sql = subquery
-
-        # if len(subquery) == 1:
-        #     outer_query = sql.replace(f'({subquery[0]})', 'dataframe')
-        #     sql = subquery[0]
-        # ---
         statement = SqlStatementParser(sql)
         sql = statement.sql
         sql_lower = sql.lower()
@@ -1024,24 +1078,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql_lower = statement.sql.lower()
                 keyword = statement.keyword
                 struct = statement.struct
-            elif 'show variables' in sql_lower:
-                variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
-                self.answer_show_variables(variables)
-                return
-            elif "show variables like" in sql_lower:
-                # for superset
-                variables = re.findall(r"show variables like '([a-zA-Z_]*)'", sql_lower)
-                self.answer_show_variables(variables)
-                return
-            elif "show session variables like" in sql_lower:
-                # for workbench
-                variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
-                self.answer_show_variables(variables)
-                return
-            elif 'show session status like' in sql_lower:
-                # for workbench
-                variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
-                self.answer_show_variables(variables)
+            elif (
+                'show variables' in sql_lower
+                or 'show session variables' in sql_lower
+                or 'show session status' in sql_lower
+            ):
+                self.answer_show_variables(sql)
                 return
             elif "show status like 'ssl_version'" in sql_lower:
                 packages = []
@@ -1171,6 +1213,43 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'version()' in sql_lower:
                 self.answer_version()
                 return
+            if "table_name,table_comment,if(table_type='base table', 'table', table_type)" in sql_lower:
+                # TABLEAU
+                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA LIKE 'mindsdb' AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
+                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
+                packages = []
+                if "table_schema like 'mindsdb'" in sql_lower:
+                    data = [
+                        ['predictors', '', 'TABLE', 'mindsdb']
+                    ]
+                else:
+                    data = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'TABLE_NAME',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'TABLE_COMMENT',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': "IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE)",
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'TABLE_SCHEMA',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=data
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
 
             # region apache superset
             if "select 'test plain returns' as anon_1" in sql_lower:
@@ -1245,16 +1324,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if ' left join ' not in sql_lower and ' join ' in sql_lower:
                 query = SQLQuery_new(
                     sql,
-                    session=self.session,
-                    outer_query=outer_query
+                    session=self.session
                 )
             else:
                 query = SQLQuery(
                     sql,
                     integration=self.session.integration,
                     database=self.session.database,
-                    datahub=self.session.datahub,
-                    outer_query=outer_query
+                    datahub=self.session.datahub
                 )
             self.selectAnswer(query)
         elif keyword == 'rollback':

@@ -24,6 +24,8 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess
 
+IS_PY36 = sys.version_info[1] <= 6
+
 
 class ModelController():
     config: Config
@@ -106,7 +108,7 @@ class ModelController():
         p.start()
         if join_learn_process:
             p.join()
-            if sys.version_info[1] > 6:
+            if not IS_PY36:
                 p.close()
 
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
@@ -292,7 +294,7 @@ class ModelController():
         p.start()
         if join_learn_process:
             p.join()
-            if sys.version_info[1] > 6:
+            if not IS_PY36:
                 p.close()
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
@@ -332,7 +334,7 @@ class ModelController():
         p.start()
         if join_learn_process:
             p.join()
-            if sys.version_info[1] > 6:
+            if not IS_PY36:
                 p.close()
 
 '''

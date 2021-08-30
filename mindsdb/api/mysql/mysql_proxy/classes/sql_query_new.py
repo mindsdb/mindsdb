@@ -176,7 +176,7 @@ class SQLQuery():
         all_tables = get_all_tables(mindsdb_sql_struct)
 
         predictor_metadata = {}
-        potential_ts_predictor = False
+        # potential_ts_predictor = False
         predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
         for model_name in set(all_tables):
             for p in predictors:
@@ -187,7 +187,7 @@ class SQLQuery():
                             window = ts_settings.get('window')
                             order_by = ts_settings.get('order_by')[0]
                             group_by = ts_settings.get('group_by')[0]
-                            potential_ts_predictor = True
+                            # potential_ts_predictor = True
                             predictor_metadata[model_name] = {
                                 'timeseries': True,
                                 'window': window,
@@ -196,8 +196,8 @@ class SQLQuery():
                             }
                         self.model_types.update(p.data.get('dtypes', {}))
 
-        if potential_ts_predictor is True:
-            mindsdb_sql_struct.limit = None
+        # if potential_ts_predictor is True:
+        #     mindsdb_sql_struct.limit = None
         plan = plan_query(
             mindsdb_sql_struct,
             integrations=integrations_names,

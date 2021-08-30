@@ -181,7 +181,7 @@ class SQLQuery():
         for model_name in set(all_tables):
             for p in predictors:
                 if p.name == model_name:
-                    if isinstance(p.data, dict) and p.data.get('status') == 'complete':
+                    if isinstance(p.data, dict) and 'error' not in p.data:
                         ts_settings = p.learn_args.get('timeseries_settings', {})
                         if ts_settings.get('is_timeseries') is True:
                             window = ts_settings.get('window')

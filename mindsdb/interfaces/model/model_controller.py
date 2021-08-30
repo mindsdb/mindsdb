@@ -112,6 +112,7 @@ class ModelController():
 
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         assert predictor_record is not None
+        predictor_data = self.get_model_data(name, company_id)
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
 
         if name not in self.predictor_cache:
@@ -119,7 +120,7 @@ class ModelController():
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
-            if predictor_record.data['status'] == 'complete':
+            if predictor_data['status'] == 'complete':
                 self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
                     'predictor':
@@ -128,6 +129,8 @@ class ModelController():
                     'code': predictor_record.code,
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
                 }
+            else:
+                raise Exception(f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}')
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
             ds_cls = getattr(mindsdb_datasources, when_data['class'])
@@ -145,7 +148,6 @@ class ModelController():
         delete_process_mark('predict')
 
         target = predictor_record.to_predict[0]
-
         if pred_format in ('explain', 'dict', 'dict&explain'):
             explain_arr = []
             dict_arr = []
@@ -220,6 +222,17 @@ class ModelController():
         data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
         data['problem_definition'] = predictor_record.learn_args
 
+        if predictor_record.json_ai is None and predictor_record.code is None:
+            data['status'] = 'generating'
+        elif predictor_record.data is None:
+            data['status'] = 'editable'
+        elif 'training_log' in predictor_record.data:
+            data['status'] = 'training'
+        elif 'error' not in predictor_record.data:
+            data['status'] = 'complete'
+        else:
+            data['status'] = 'error'
+                
         if data.get('accuracies', None) is not None:
             if len(data['accuracies']) > 0:
                 data['accuracy'] = float(np.mean(list(data['accuracies'].values())))

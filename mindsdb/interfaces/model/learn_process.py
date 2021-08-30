@@ -1,4 +1,5 @@
 import os
+import traceback
 import tempfile
 from pathlib import Path
 from pandas.core.frame import DataFrame
@@ -52,7 +53,7 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, name: str
             lightwood_version=lightwood_version,
             to_predict=[problem_definition.target],
             learn_args=problem_definition.to_dict(),
-            data={'status': 'untrained', 'name': name}
+            data={'name': name}
         )
 
         db.session.add(predictor_record)
@@ -70,6 +71,8 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         fs_store = FsStore()
         config = Config()
 
+        predictor_record.data = {'training_log': 'training'}
+        session.commit()
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)
 
@@ -81,10 +84,8 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
         fs_store.put(fs_name, fs_name, config['paths']['predictors'])
 
-        predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
-        predictor_record.data['status'] = 'complete'  # type: ignore
-        predictor_record.data['name'] = predictor_record.name  # type: ignore
-        predictor_record.dtype_dict = predictor.dtype_dict  # type: ignore
+        predictor_record.data = predictor.model_analysis.to_dict()
+        predictor_record.dtype_dict = predictor.dtype_dict
         session.commit()
 
         dbw = DatabaseWrapper(predictor_record.company_id)
@@ -92,7 +93,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         dbw.register_predictors([mi.get_model_data(predictor_record.name)])
     except Exception as e:
         session.refresh(predictor_record)
-        predictor_record.data = {'status': 'error', 'name': predictor_record.name}
+        predictor_record.data = {'error': f'{traceback.format_exc()}\nMain error: {e}'}
         session.commit()
         raise e
     finally:
@@ -146,6 +147,7 @@ def run_update(name: str, company_id: int):
         json_ai = lightwood.json_ai_from_problem(df, problem_definition)
         predictor_record.json_ai = json_ai.to_dict()
         predictor_record.code = lightwood.code_from_json_ai(json_ai)
+        predictor_record.data = {'training_log': 'training'}
         session.commit()
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)

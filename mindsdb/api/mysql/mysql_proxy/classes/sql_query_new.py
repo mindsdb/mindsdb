@@ -19,35 +19,37 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
 from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
 from mindsdb_sql.parser.ast import (
-    Join,
+    BinaryOperation,
+    UnaryOperation,
     Identifier,
     Operation,
     Constant,
-    UnaryOperation,
-    BinaryOperation,
     OrderBy,
-    Star,
-    Union,
     Select,
-    Constant
+    Union,
+    Join,
+    Star
 )
 from mindsdb_sql.planner.steps import (
+    ApplyPredictorRowStep,
     FetchDataframeStep,
     ApplyPredictorStep,
-    ApplyPredictorRowStep,
     MapReduceStep,
-    JoinStep,
-    UnionStep,
+    MultipleSteps,
     ProjectStep,
-    FilterStep
+    FilterStep,
+    UnionStep,
+    JoinStep
 )
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators_new import operator_map as new_operator_map
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
 from mindsdb.api.mysql.mysql_proxy.utilities import log
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
 import mindsdb.interfaces.storage.db as db
+
+
+superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 
 
 def get_preditor_alias(step, mindsdb_database):
@@ -62,7 +64,10 @@ def get_table_alias(table_obj, default_db_name):
         name = (default_db_name, table_obj.parts[0])
     else:
         name = tuple(table_obj.parts)
-    name = name + ('.'.join(table_obj.alias.parts),)
+    if table_obj.alias is not None:
+        name = name + ('.'.join(table_obj.alias.parts),)
+    else:
+        name = name + (None,)
     return name
 
 
@@ -111,19 +116,28 @@ def replaceQueryVar(where, val):
 
 
 class SQLQuery():
-    def __init__(self, sql, session, outer_query=None):
+    def __init__(self, sql, session):
         self.session = session
         self.integration = session.integration
         self.database = session.database or 'mindsdb'
         self.datahub = session.datahub
         self.ai_table = None
+        self.outer_query = None
+
+        # +++ workaround for subqueries in superset
+        if 'as virtual_table' in sql.lower():
+            subquery = re.findall(superset_subquery, sql)
+            if isinstance(subquery, list) and len(subquery) == 1:
+                subquery = subquery[0]
+                self.outer_query = sql.replace(subquery, 'dataframe')
+                sql = subquery.strip('()')
+        # ---
 
         # 'offset x, y' - specific just for mysql, parser dont understand it
         sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<2> offset \g<1> ', sql, flags=re.IGNORECASE)
 
         self.raw = sql
         self.model_types = {}
-        self.outer_query = outer_query
         self._parse_query(sql)
 
     def fetch(self, datahub, view='list'):
@@ -139,31 +153,54 @@ class SQLQuery():
             'result': self.result
         }
 
-    def fetchDataframeStep(self, step):
+    def _fetch_dataframe_step(self, step):
         dn = self.datahub.get(step.integration)
         query = step.query
+
+        table_alias = get_table_alias(step.query.from_table, self.database)
 
         data = dn.select_query(
             query=query
         )
-        table_alias = get_table_alias(step.query.from_table, self.database)
         data = [{table_alias: x} for x in data]
         return data
+
+    def _multiple_steps(self, step):
+        data = []
+        for substep in step.steps:
+            data.append(self._fetch_dataframe_step(substep))
+        return data
+
+    def _multiple_steps_reduce(self, step, values):
+        if step.reduce != 'union':
+            raise Exception(f'Unknown MultipleSteps type: {step.reduce}')
+
+        result = []
+
+        for substep in step.steps:
+            if isinstance(substep, FetchDataframeStep) is False:
+                raise Exception(f'Wrong step type for MultipleSteps: {step}')
+            markQueryVar(substep.query.where)
+
+        for v in values:
+            for substep in step.steps:
+                replaceQueryVar(substep.query.where, v)
+            data = self._multiple_steps(step)
+            for part in data:
+                result.extend(part)
+
+        return result
 
     def _parse_query(self, sql):
         mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
-
-        mindsdb_datanode = self.datahub.get(self.database)
+        integrations_names.append('information_schema')
 
         all_tables = get_all_tables(mindsdb_sql_struct)
 
-        # models = mindsdb_datanode.model_interface.get_models()
-        # model_names = [m['name'] for m in models]
         predictor_metadata = {}
-        potential_ts_predictor = False
         predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
         for model_name in set(all_tables):
             for p in predictors:
@@ -174,17 +211,18 @@ class SQLQuery():
                             window = ts_settings.get('window')
                             order_by = ts_settings.get('order_by')[0]
                             group_by = ts_settings.get('group_by')[0]
-                            potential_ts_predictor = True
                             predictor_metadata[model_name] = {
                                 'timeseries': True,
                                 'window': window,
                                 'order_by_column': order_by,
                                 'group_by_column': group_by
                             }
+                        else:
+                            predictor_metadata[model_name] = {
+                                'timeseries': False
+                            }
                         self.model_types.update(p.data.get('dtypes', {}))
 
-        if potential_ts_predictor is True:
-            mindsdb_sql_struct.limit = None
         plan = plan_query(
             mindsdb_sql_struct,
             integrations=integrations_names,
@@ -193,37 +231,37 @@ class SQLQuery():
         )
         steps_data = []
 
-        is_between = False
-
         for i, step in enumerate(plan.steps):
             data = []
             if isinstance(step, FetchDataframeStep):
-                data = self.fetchDataframeStep(step)
+                data = self._fetch_dataframe_step(step)
             elif isinstance(step, UnionStep):
                 left_data = steps_data[step.left.step_num]
-                # TODO atm assumes that it is 'between' prediction
-                # for row in left_data:
-                #     for key in row:
-                #         row[key]['__mdb_make_predictions'] = False
-                # right_data = steps_data[step.right.step_num]
-                # for row in right_data:
-                #     for key in row:
-                #         row[key]['__mdb_make_predictions'] = True
+                right_data = steps_data[step.right.step_num]
                 data = left_data + right_data
-                is_between = True
             elif isinstance(step, MapReduceStep):
+                if step.reduce != 'union':
+                    raise Exception(f'Unknown MapReduceStep type: {step.reduce}')
+
                 step_data = steps_data[step.values.step_num]
                 values = []
                 for row in step_data:
                     for row_data in row.values():
                         for v in row_data.values():
                             values.append(v)
+
                 data = []
-                query = step.step.query
-                markQueryVar(query.where)
-                for value in values:
-                    replaceQueryVar(query.where, value)
-                    data.extend(self.fetchDataframeStep(step.step))
+                substep = step.step
+                if isinstance(substep, FetchDataframeStep):
+                    query = substep.query
+                    markQueryVar(query.where)
+                    for value in values:
+                        replaceQueryVar(query.where, value)
+                        data.extend(self._fetch_dataframe_step(substep))
+                elif isinstance(substep, MultipleSteps):
+                    data = self._multiple_steps_reduce(substep, values)
+                else:
+                    raise Exception(f'Unknown step type: {step.step}')
             elif isinstance(step, ApplyPredictorRowStep):
                 predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get(self.database)
@@ -271,15 +309,30 @@ class SQLQuery():
                     columns=None,
                     where_data=where_data,
                     where={},
-                    is_timeseries=_mdb_make_predictions  #is_timeseries is True and is_between is False
+                    is_timeseries=_mdb_make_predictions
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, JoinStep):
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
-                # ld =  [list(x.values())[0] for x in left_data]
-                # rd =  [list(x.values())[0] for x in right_data]
-                if step.query.condition is None:
+
+                # if join predictor and data used for predictions, then pass that step
+                is_left_predictions = isinstance(plan.steps[step.left.step_num], ApplyPredictorStep)
+                is_right_predictions = isinstance(plan.steps[step.right.step_num], ApplyPredictorStep)
+                if (
+                    (
+                        is_left_predictions
+                        and plan.steps[step.left.step_num].dataframe.step_num == step.right.step_num
+                        and predictor_metadata[plan.steps[step.left.step_num].predictor.parts[0]]['timeseries'] is True
+                    ) or (
+                        is_right_predictions
+                        and plan.steps[step.right.step_num].dataframe.step_num == step.left.step_num
+                        and predictor_metadata[plan.steps[step.right.step_num].predictor.parts[0]]['timeseries'] is True
+                    )
+                ):
+                    data = left_data if is_left_predictions else right_data
+                    steps_data.append(data)
+                elif step.query.condition is None:
                     # line-to-line join
                     if len(left_data) != len(right_data):
                         raise Exception('wrong data length')
@@ -412,6 +465,9 @@ class SQLQuery():
             self.fetched_data = result
         else:
             self.fetched_data = steps_data[-1]
+
+        # TODO if self.columns_list is None
+        # that possible if only one fetchData step in paln
 
     def _apply_where_filter(self, row, where):
         if isinstance(where, Identifier):

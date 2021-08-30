@@ -206,24 +206,14 @@ class SQLQuery():
         )
         steps_data = []
 
-        is_between = False
-
         for i, step in enumerate(plan.steps):
             data = []
             if isinstance(step, FetchDataframeStep):
                 data = self.fetchDataframeStep(step)
             elif isinstance(step, UnionStep):
                 left_data = steps_data[step.left.step_num]
-                # TODO atm assumes that it is 'between' prediction
-                # for row in left_data:
-                #     for key in row:
-                #         row[key]['__mdb_make_predictions'] = False
-                # right_data = steps_data[step.right.step_num]
-                # for row in right_data:
-                #     for key in row:
-                #         row[key]['__mdb_make_predictions'] = True
+                right_data = steps_data[step.right.step_num]
                 data = left_data + right_data
-                is_between = True
             elif isinstance(step, MapReduceStep):
                 step_data = steps_data[step.values.step_num]
                 values = []
@@ -284,7 +274,7 @@ class SQLQuery():
                     columns=None,
                     where_data=where_data,
                     where={},
-                    is_timeseries=_mdb_make_predictions  #is_timeseries is True and is_between is False
+                    is_timeseries=_mdb_make_predictions
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, JoinStep):

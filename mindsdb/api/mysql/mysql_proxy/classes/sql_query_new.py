@@ -278,6 +278,9 @@ class SQLQuery():
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, JoinStep):
+                # if join predictor and data used for predictions, then pass that step
+                # if isinstance(plan.steps[step.left.step_num], ApplyPredictorStep) and plan.steps[step.left.step_num].dataframe.step_num == 
+
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
                 # ld =  [list(x.values())[0] for x in left_data]

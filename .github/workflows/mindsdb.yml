@@ -153,7 +153,7 @@ jobs:
         twine upload dist/*
     - name: Install latest version from pypi to see that all is working
       run: |
-        sleep 20
+        sleep 90
         pip install mindsdb
 
   create_version_file:

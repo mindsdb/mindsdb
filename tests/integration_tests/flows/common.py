@@ -154,11 +154,12 @@ if USE_EXTERNAL_DB_SERVER:
 
     close_all_ssh_tunnels()
 
-    for _ in range(10):
+    for _ in range(20):
         r = requests.get('http://127.0.0.1:5005/port')
         if r.status_code != 200:
             raise Exception('Cant get port to run mindsdb')
         mindsdb_port = r.content.decode()
+        print(f'Trying port forwarding on {mindsdb_port}')
         status = open_ssh_tunnel(mindsdb_port, 'R')
         if status == 0:
             break
@@ -166,6 +167,7 @@ if USE_EXTERNAL_DB_SERVER:
         raise Exception('Cant get empty port to run mindsdb')
 
     print(f'use mindsdb port={mindsdb_port}')
+    wait_port(mindsdb_port, timeout=10)
     config_json['api']['mysql']['port'] = mindsdb_port
     config_json['api']['mongodb']['port'] = mindsdb_port
 
@@ -212,15 +214,17 @@ def stop_mindsdb(sp=None):
         #sp.kill()
 
     mdb_ports = (47334, 47335, 47336, 8273, 8274, 8275)
-    procs = [[x.pid,x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
+    procs = [[x.pid, x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
+    print(f'Found {len(procs)} MindsDB processes')
 
     for proc in procs:
         try:
             os.kill(proc[0], 9)
             pport = proc[1]
+            print(f'Killing mindsdb process with port = {pport}')
             # I think this is what they call "defensive coding"...
             os.system(f'sudo fuser -k {pport}/tcp')
-        # process may be killed by OS due to some reasons in that moment
+            # process may be killed by OS due to some reasons in that moment
         except Exception as e:
             pass
 
@@ -241,6 +245,7 @@ def override_recursive(a, b):
 
 
 def run_environment(apis, override_config={}):
+    stop_mindsdb()
     api_str = ','.join(apis)
 
     override_recursive(config_json, override_config)

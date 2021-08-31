@@ -535,6 +535,13 @@ class SQLQuery():
                 field_type = self.model_types.get(column_record[3])
             except Exception:
                 field_type = None
+
+            column_type = TYPES.MYSQL_TYPE_VAR_STRING
+            if field_type == dtype.date:
+                column_type = TYPES.MYSQL_TYPE_DATE
+            elif field_type == dtype.datetime:
+                column_type = TYPES.MYSQL_TYPE_DATETIME
+
             result.append({
                 'database': column_record[0] or self.database,
                 #  TODO add 'original_table'
@@ -543,6 +550,6 @@ class SQLQuery():
                 'alias': column_record[4] or column_record[3],
                 # NOTE all work with text-type, but if/when wanted change types to real,
                 # it will need to check all types casts in BinaryResultsetRowPacket
-                'type': TYPES.MYSQL_TYPE_VAR_STRING if field_type not in (dtype.date, dtype.datetime) else TYPES.MYSQL_TYPE_TIMESTAMP
+                'type': column_type
             })
         return result

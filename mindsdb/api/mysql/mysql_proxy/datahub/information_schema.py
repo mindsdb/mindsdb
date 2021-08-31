@@ -75,36 +75,22 @@ class InformationSchema(DataNode):
         return tables
 
     def select_query(self, query):
-        # TODO remove it
-        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
-        sql_query = str(query)
-        moz_struct = to_moz_sql_struct(sql_query)
-        data = self.select(
-            table=query.from_table.parts[-1],
-            columns=None,
-            where=moz_struct.get('where')
-        )
+        # new version, uncomment after tests
+        query_tables = get_all_tables(query)
+        if len(query_tables) != 1:
+            raise Exception(f'Only one table can be used in query to information_schema: {query}')
+        table = query_tables[0].upper()
+        if table == 'TABLES':
+            data = self._get_tables()
+            table_name = query.from_table.parts[-1]
+            dataframe = pd.DataFrame(data)
+            data = dfsql.sql_query(str(query), **{table_name: dataframe})
+        else:
+            raise Exception('Information schema: Not implemented.')
 
-        self.select(table=get_table_alias(query.from_table))
-        return data
-
-    # def select_query(self, query):
-    # new version, uncomment after tests
-    #     query_tables = get_all_tables(query)
-    #     if len(query_tables) != 1:
-    #         raise Exception(f'Only one table can be used in query to information_schema: {query}')
-    #     table = query_tables[0].upper()
-    #     if table == 'TABLES':
-    #         data = self._get_tables()
-    #         table_name = query.from_table.parts[-1]
-    #         dataframe = pd.DataFrame(data)
-    #         query.where = None
-    #         data = dfsql.sql_query(str(query), **{table_name: dataframe})
-    #     else:
-    #         raise Exception('Information schema: Not implemented.')
-    #     if isinstance(data, pd.core.series.Series):
-    #         result = data.to_frame()
-    #     return result.to_dict(orient='records')
+        if isinstance(data, pd.core.series.Series):
+            data = data.to_frame()
+        return data.to_dict(orient='records')
 
     def select(self, columns=None, table=None, where=None, order_by=None, group_by=None, came_from=None):
         tn = table.upper()

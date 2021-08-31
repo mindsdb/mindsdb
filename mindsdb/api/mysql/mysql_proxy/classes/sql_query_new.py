@@ -159,6 +159,7 @@ class SQLQuery():
         query = step.query
 
         table_alias = get_table_alias(step.query.from_table, self.database)
+        # TODO for information_schema we have 'database' = 'mindsdb'
 
         data = dn.select_query(
             query=query
@@ -486,17 +487,19 @@ class SQLQuery():
             result = new_result
             # ---
 
-            # result = result.to_dict(orient='records')
-            # for row in result:
-            #     for column in self.columns_list:
-            #         if (column[4] or column[3]) not in row:
-            #             row[column[4] or column[3]] = None
             self.fetched_data = result
         else:
             self.fetched_data = steps_data[-1]
 
-        # TODO if self.columns_list is None
-        # that possible if only one fetchData step in paln
+        if hasattr(self, 'columns_list') is False:
+            self.columns_list = []
+            for row in self.fetched_data:
+                for table_key in row:
+                    for column_name in row[table_key]:
+                        if (table_key + (column_name, column_name)) not in self.columns_list:
+                            self.columns_list.append((table_key + (column_name, column_name)))
+
+        self.columns_list = [x for x in self.columns_list if x[3] != '__mindsdb_row_id']
 
     def _apply_where_filter(self, row, where):
         if isinstance(where, Identifier):

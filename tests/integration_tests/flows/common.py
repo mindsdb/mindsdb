@@ -154,11 +154,12 @@ if USE_EXTERNAL_DB_SERVER:
 
     close_all_ssh_tunnels()
 
-    for _ in range(10):
+    for _ in range(20):
         r = requests.get('http://127.0.0.1:5005/port')
         if r.status_code != 200:
             raise Exception('Cant get port to run mindsdb')
         mindsdb_port = r.content.decode()
+        print(f'Trying port forwarding on {mindsdb_port}')
         status = open_ssh_tunnel(mindsdb_port, 'R')
         if status == 0:
             continue

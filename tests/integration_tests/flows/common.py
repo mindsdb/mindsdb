@@ -159,8 +159,8 @@ def stop_mindsdb(sp=None):
             # I think this is what they call "defensive coding"...
             os.system(f'sudo fuser -k {pport}/tcp')
             # process may be killed by OS due to some reasons in that moment
-        except Exception:
-            pass
+        except Exception as e:
+            print(f'Can not kill process: {e}')
 
     waited_for = 0
     while len([x for x in net_connections() if x.laddr[1] in mdb_ports]):

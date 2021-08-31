@@ -141,6 +141,34 @@ def open_ssh_tunnel(port, direction='R'):
     return status
 
 
+def stop_mindsdb(sp=None):
+    if sp is not None:
+        # os.kill(sp.pid, signal.SIGTERM) #SIGINT
+        sp.kill()
+        time.sleep(2)
+
+    mdb_ports = (47334, 47335, 47336, 8273, 8274, 8275)
+    procs = [[x.pid, x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
+    print(f'Found {len(procs)} MindsDB processes')
+
+    for proc in procs:
+        try:
+            os.kill(proc[0], 9)
+            pport = proc[1]
+            print(f'Killing mindsdb process with port = {pport}')
+            # I think this is what they call "defensive coding"...
+            os.system(f'sudo fuser -k {pport}/tcp')
+            # process may be killed by OS due to some reasons in that moment
+        except Exception:
+            pass
+
+    waited_for = 0
+    while len([x for x in net_connections() if x.laddr[1] in mdb_ports]):
+        print(f'\nSome mindsdb ports are yet to die, waiting for them to do so! Waited for a total of: {waited_for} seconds\n')
+        time.sleep(2)
+        waited_for += 2
+
+
 def is_mssql_test():
     for x in sys.argv:
         if 'test_mssql.py' in x:
@@ -153,8 +181,9 @@ if USE_EXTERNAL_DB_SERVER:
     wait_port(5005, timeout=10)
 
     close_all_ssh_tunnels()
+    stop_mindsdb()
 
-    for _ in range(20):
+    for _ in range(10):
         r = requests.get('http://127.0.0.1:5005/port')
         if r.status_code != 200:
             raise Exception('Cant get port to run mindsdb')
@@ -206,34 +235,6 @@ def make_test_csv(name, data):
     return str(test_csv_path)
 
 
-def stop_mindsdb(sp=None):
-    if sp:
-        #os.kill(sp.pid, signal.SIGTERM) #SIGINT
-        sp.kill()
-        time.sleep(2)
-        #sp.kill()
-
-    mdb_ports = (47334, 47335, 47336, 8273, 8274, 8275)
-    procs = [[x.pid, x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
-    print(f'Found {len(procs)} MindsDB processes')
-
-    for proc in procs:
-        try:
-            os.kill(proc[0], 9)
-            pport = proc[1]
-            print(f'Killing mindsdb process with port = {pport}')
-            # I think this is what they call "defensive coding"...
-            os.system(f'sudo fuser -k {pport}/tcp')
-            # process may be killed by OS due to some reasons in that moment
-        except Exception as e:
-            pass
-
-    waited_for = 0
-    while len([x for x in net_connections() if x.laddr[1] in mdb_ports]):
-        print(f'\nSome mindsdb ports are yet to die, waiting for them to do so! Waited for a total of: {waited_for} seconds\n')
-        time.sleep(2)
-        waited_for += 2
-
 def override_recursive(a, b):
     for key in b:
         if isinstance(b[key], dict) is False:
@@ -245,7 +246,6 @@ def override_recursive(a, b):
 
 
 def run_environment(apis, override_config={}):
-    stop_mindsdb()
     api_str = ','.join(apis)
 
     override_recursive(config_json, override_config)

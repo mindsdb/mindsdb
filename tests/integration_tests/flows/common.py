@@ -214,15 +214,17 @@ def stop_mindsdb(sp=None):
         #sp.kill()
 
     mdb_ports = (47334, 47335, 47336, 8273, 8274, 8275)
-    procs = [[x.pid,x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
+    procs = [[x.pid, x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
+    print(f'Found {len(procs)} MindsDB processes')
 
     for proc in procs:
         try:
             os.kill(proc[0], 9)
             pport = proc[1]
+            print(f'Killing mindsdb process with port = {pport}')
             # I think this is what they call "defensive coding"...
             os.system(f'sudo fuser -k {pport}/tcp')
-        # process may be killed by OS due to some reasons in that moment
+            # process may be killed by OS due to some reasons in that moment
         except Exception as e:
             pass
 
@@ -243,6 +245,7 @@ def override_recursive(a, b):
 
 
 def run_environment(apis, override_config={}):
+    stop_mindsdb()
     api_str = ','.join(apis)
 
     override_recursive(config_json, override_config)

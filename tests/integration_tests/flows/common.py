@@ -217,6 +217,7 @@ def stop_mindsdb(sp=None):
     procs = [[x.pid,x.laddr[1]] for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
 
     for proc in procs:
+        print('killing mindsdb process')
         try:
             os.kill(proc[0], 9)
             pport = proc[1]
@@ -243,6 +244,7 @@ def override_recursive(a, b):
 
 
 def run_environment(apis, override_config={}):
+    stop_mindsdb()
     api_str = ','.join(apis)
 
     override_recursive(config_json, override_config)

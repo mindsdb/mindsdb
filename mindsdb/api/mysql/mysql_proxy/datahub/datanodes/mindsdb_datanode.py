@@ -365,8 +365,9 @@ class MindsDBDataNode(DataNode):
 
         data = []
         explains = []
+        keys_to_save = [*keys, '__mindsdb_row_id']
         for i, el in enumerate(pred_dicts):
-            data.append({key: el[key] for key in keys})
+            data.append({key: el[key] for key in keys_to_save})
             explains.append(explanations[i])
 
         for i, row in enumerate(data):

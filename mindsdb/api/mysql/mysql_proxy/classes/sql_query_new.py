@@ -123,6 +123,7 @@ class SQLQuery():
         self.datahub = session.datahub
         self.ai_table = None
         self.outer_query = None
+        self.row_id = 0
 
         # +++ workaround for subqueries in superset
         if 'as virtual_table' in sql.lower():
@@ -162,6 +163,11 @@ class SQLQuery():
         data = dn.select_query(
             query=query
         )
+
+        for i, row in enumerate(data):
+            row['__mindsdb_row_id'] = self.row_id + i
+        self.row_id = self.row_id + len(data)
+
         data = [{table_alias: x} for x in data]
         return data
 
@@ -316,40 +322,63 @@ class SQLQuery():
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
 
-                # if join predictor and data used for predictions, then pass that step
-                is_left_predictions = isinstance(plan.steps[step.left.step_num], ApplyPredictorStep)
-                is_right_predictions = isinstance(plan.steps[step.right.step_num], ApplyPredictorStep)
-                if (
-                    (
-                        is_left_predictions
-                        and plan.steps[step.left.step_num].dataframe.step_num == step.right.step_num
-                        and predictor_metadata[plan.steps[step.left.step_num].predictor.parts[0]]['timeseries'] is True
-                    ) or (
-                        is_right_predictions
-                        and plan.steps[step.right.step_num].dataframe.step_num == step.left.step_num
-                        and predictor_metadata[plan.steps[step.right.step_num].predictor.parts[0]]['timeseries'] is True
-                    )
-                ):
-                    data = left_data if is_left_predictions else right_data
-                    steps_data.append(data)
-                elif step.query.condition is None:
-                    # line-to-line join
-                    if len(left_data) != len(right_data):
-                        raise Exception('wrong data length')
-                    data = []
-                    # +++ temp fix while we have only 1 to 1 join
-                    if len(left_data) > 0:
-                        left_alias = list(left_data[0].keys())[0]
-                    if len(left_data) > 0:
-                        right_alias = list(right_data[0].keys())[0]
-                    # ---
-                    for i in range(len(left_data)):
-                        data.append({
-                            left_alias: left_data[i][left_alias],
-                            right_alias: right_data[i][right_alias]
-                        })
+                if len(left_data) == 0 and len(right_data) == 0:
+                    return []
+                if len(left_data) == 0:
+                    return right_data
+                if len(right_data) == 0:
+                    return left_data
+
+                left_keys = left_data[0].keys()
+                right_keys = right_data[0].keys()
+
+                if len(left_keys) != 1 or len(right_keys) != 1:
+                    raise Exception('At this moment supported only one JOIN supported')
+                if step.query.condition is not None:
+                    raise Exception('At this moment supported only JOIN without conditions')
+
+                left_key = list(left_keys)[0]
+                right_key = list(right_keys)[0]
+
+                data = []
+                if step.query.join_type == 'LEFT JOIN':
+                    for left_row in left_data:
+                        left_row_data = left_row[left_key]
+                        for right_row in right_data:
+                            right_row_data = right_row[right_key]
+                            if left_row_data['__mindsdb_row_id'] == right_row_data['__mindsdb_row_id']:
+                                data.append({
+                                    left_key: left_row_data,
+                                    right_key: right_row_data
+                                })
+                                break
+                        else:
+                            data.append({
+                                left_key: left_row_data,
+                                right_key: {}
+                            })
+                elif step.query.join_type == 'JOIN':
+                    right_used_ids = []
+                    for left_row in left_data:
+                        left_row_data = left_row[left_key]
+                        for right_row in right_data:
+                            right_row_data = right_row[right_key]
+                            if left_row_data['__mindsdb_row_id'] == right_row_data['__mindsdb_row_id']:
+                                data.append({
+                                    left_key: left_row_data,
+                                    right_key: right_row_data
+                                })
+                                right_used_ids.append(right_row_data['__mindsdb_row_id'])
+                                break
+                    for right_row in right_data:
+                        right_row_data = right_row[right_key]
+                        if right_row_data['__mindsdb_row_id'] not in right_used_ids:
+                            data.append({
+                                left_key: {},
+                                right_key: right_row_data
+                            })
                 else:
-                    raise Exception('Unknown join type')
+                    raise Exception(f'Unknown JOIN type: {step.query.join_type}')
             elif isinstance(step, FilterStep):
                 raise Exception('FilterStep not implemented')
             elif isinstance(step, ProjectStep):

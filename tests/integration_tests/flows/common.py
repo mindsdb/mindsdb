@@ -161,7 +161,7 @@ if USE_EXTERNAL_DB_SERVER:
         mindsdb_port = r.content.decode()
         status = open_ssh_tunnel(mindsdb_port, 'R')
         if status == 0:
-            break
+            continue
     else:
         raise Exception('Cant get empty port to run mindsdb')
 

@@ -167,6 +167,7 @@ if USE_EXTERNAL_DB_SERVER:
         raise Exception('Cant get empty port to run mindsdb')
 
     print(f'use mindsdb port={mindsdb_port}')
+    wait_port(mindsdb_port, timeout=10)
     config_json['api']['mysql']['port'] = mindsdb_port
     config_json['api']['mongodb']['port'] = mindsdb_port
 

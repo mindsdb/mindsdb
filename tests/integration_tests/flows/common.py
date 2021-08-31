@@ -162,7 +162,7 @@ if USE_EXTERNAL_DB_SERVER:
         print(f'Trying port forwarding on {mindsdb_port}')
         status = open_ssh_tunnel(mindsdb_port, 'R')
         if status == 0:
-            continue
+            break
     else:
         raise Exception('Cant get empty port to run mindsdb')
 

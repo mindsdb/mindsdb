@@ -119,7 +119,7 @@ class SQLQuery():
     def __init__(self, sql, session):
         self.session = session
         self.integration = session.integration
-        self.database = session.database or 'mindsdb'
+        self.database = session.database.lower() or 'mindsdb'
         self.datahub = session.datahub
         self.ai_table = None
         self.outer_query = None
@@ -201,6 +201,46 @@ class SQLQuery():
     def _parse_query(self, sql):
         mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
+        # is it query with only constants?
+        if (
+            mindsdb_sql_struct.from_table is None
+            and mindsdb_sql_struct.where is None
+            and set(isinstance(x, Constant) for x in mindsdb_sql_struct.targets) == set([True])
+        ):
+            table_name = (None, None, None)
+            self.fetched_data = [{table_name: {}}]
+            self.columns_list = []
+            for column in mindsdb_sql_struct.targets:
+                alias = '.'.join(column.alias.parts) if column.alias is not None else column.value
+                self.fetched_data[0][table_name][alias] = column.value
+                self.columns_list.append(table_name + (alias, alias))
+            return
+
+        # is it query to 'predictors'?
+        if (
+            isinstance(mindsdb_sql_struct.from_table, Identifier)
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
+            and (
+                self.database == 'mindsdb'
+                or mindsdb_sql_struct.from_table[0].lower() == 'mindsdb'
+            )
+        ):
+            dn = self.datahub.get('mindsdb')
+            result = dn.get_predictors(mindsdb_sql_struct)
+            table_name = ('mindsdb', 'predictors', 'predictors')
+            # self.fetched_data = [{table_name: {}}]
+            self.fetched_data = []
+            self.columns_list = []
+            # TODO replace NA type
+            if len(result) == 0:
+                return
+            # TODO make columns and results lists
+
+            # for column in mindsdb_sql_struct.targets:
+            #     alias = '.'.join(column.alias.parts) if column.alias is not None else column.value
+            #     self.fetched_data[0][table_name][alias] = column.value
+            #     self.columns_list.append(table_name + (alias, alias))
+
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
         integrations_names.append('information_schema')
@@ -238,7 +278,7 @@ class SQLQuery():
         )
         steps_data = []
 
-        for i, step in enumerate(plan.steps):
+        for step in plan.steps:
             data = []
             if isinstance(step, FetchDataframeStep):
                 data = self._fetch_dataframe_step(step)
@@ -271,7 +311,7 @@ class SQLQuery():
                     raise Exception(f'Unknown step type: {step.step}')
             elif isinstance(step, ApplyPredictorRowStep):
                 predictor = '.'.join(step.predictor.parts)
-                dn = self.datahub.get(self.database)
+                dn = self.datahub.get('mindsdb')
                 where_data = step.row_dict
                 data = dn.select(
                     table=predictor,
@@ -281,7 +321,7 @@ class SQLQuery():
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, ApplyPredictorStep):
-                dn = self.datahub.get(self.database)
+                dn = self.datahub.get('mindsdb')
                 predictor = '.'.join(step.predictor.parts)
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]:

@@ -1201,9 +1201,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if '@@' in sql_lower:
                 self.answerVariables(sql)
                 return
-            if 'select 1' in sql_lower:
-                self.answerSelect1(sql)
-                return
             if 'database()' in sql_lower:
                 self.answerSelectDatabase()
                 return
@@ -1251,41 +1248,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.sendPackageGroup(packages)
                 return
 
-            # region apache superset
-            if "select 'test plain returns' as anon_1" in sql_lower:
-                packages = []
-                packages += self.getTabelPackets(
-                    columns=[{
-                        'table_name': '',
-                        'name': 'anon_1',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }],
-                    data=['test plain returns']
-                )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
-                self.sendPackageGroup(packages)
-                return
-            if "select 'test unicode returns' as anon_1" in sql_lower:
-                packages = []
-                packages += self.getTabelPackets(
-                    columns=[{
-                        'table_name': '',
-                        'name': 'anon_1',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }],
-                    data=['test unicode returns']
-                )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
-                self.sendPackageGroup(packages)
-                return
-            # endregion
-
             # region DataGrip
             if 'select user()' in sql_lower:
                 packages = []
@@ -1303,25 +1265,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     packages.append(self.packet(EofPacket))
                 self.sendPackageGroup(packages)
                 return
-            if "select 'keep alive'" in sql_lower:
-                packages = []
-                packages += self.getTabelPackets(
-                    columns=[{
-                        'table_name': '',
-                        'name': 'keep alive',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }],
-                    data=['keep alive']
-                )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
-                self.sendPackageGroup(packages)
-                return
-            # endregion
 
-            if ' left join ' not in sql_lower and ' join ' in sql_lower:
+            if ' left join ' not in sql_lower and ' join ' in sql_lower or 'information_schema.tables' in sql_lower:
                 query = SQLQuery_new(
                     sql,
                     session=self.session
@@ -1947,21 +1892,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'charset': self.charset_text_type
             }],
             data=[['InnoDB', 'DEFAULT', 'Supports transactions, row-level locking, and foreign keys', 'YES', 'YES', 'YES']]
-        )
-        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
-        self.sendPackageGroup(packages)
-
-    def answerSelect1(self, sql):
-        packages = []
-        packages += self.getTabelPackets(
-            columns=[{
-                'table_name': '',
-                'name': '',
-                'alias': '1',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }],
-            data=[[1]]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
         self.sendPackageGroup(packages)

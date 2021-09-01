@@ -1,8 +1,10 @@
 import json
-import numpy as np
 from datetime import datetime
 
 from lightwood.api.dtype import dtype
+import pandas as pd
+import numpy as np
+import dfsql
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
@@ -135,8 +137,16 @@ class MindsDBDataNode(DataNode):
 
         return data
 
+    def get_predictors(self, mindsdb_sql_query):
+        predictors = self._select_predictors()
+        dataframe = pd.DataFrame(predictors)
+        mindsdb_sql_query.from_table.parts = ['predictors']
+        data = dfsql.sql_query(str(mindsdb_sql_query), predictors=dataframe)
+        if isinstance(data, pd.core.series.Series):
+            data = data.to_frame()
+        return data.to_dict(orient='records')
+
     def select_query(self, query):
-        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
         moz_struct = to_moz_sql_struct(query)
         data = self.select(
             table=query.from_table.parts[-1],

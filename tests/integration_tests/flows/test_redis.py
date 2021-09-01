@@ -40,6 +40,8 @@ DEFAULT_PREDICTOR = "redis_predictorr"
 TS_PREDICTOR = "redis_ts_predictorr"
 DS_NAME = "redis_test_ds"
 TS_DS_NAME = "ts_redis_test_ds"
+NORMAL_STREAM_NAME = f'normal_stream_{STREAM_SUFFIX}'
+
 
 class RedisTest(unittest.TestCase):
     @classmethod
@@ -142,7 +144,7 @@ class RedisTest(unittest.TestCase):
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/normal_stream_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/{NORMAL_STREAM_NAME}'
         res = requests.put(url, json={
             "predictor": DEFAULT_PREDICTOR,
             "stream_in": STREAM_IN,
@@ -263,6 +265,17 @@ class RedisTest(unittest.TestCase):
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)
+
+    def test_delete_stream_http_api(self):
+        print(f"\nExecuting {self._testMethodName}")
+        url = f'{HTTP_API_ROOT}/streams/{NORMAL_STREAM_NAME}'
+        res = requests.delete(url)
+        self.assertEqual(res.status_code,
+                         200,
+                         f"fail to delete {NORMAL_STREAM_NAME} stream: {res.text}")
+
+        res = requests.get(url)
+        self.assertNotEqual(res.status_code, 200, f"stream {NORMAL_STREAM_NAME} still exist")
 
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ def get_streams():
 class StreamList(Resource):
     @ns_conf.doc("get_streams")
     def get(self):
-        return {'streams': get_streams()}
+        return get_streams()
 
 
 @ns_conf.route('/<name>')
@@ -97,8 +97,7 @@ class Stream(Resource):
         stream = db.session.query(db.Stream).filter_by(company_id=request.company_id, name=name).first()
         if stream is None:
             return abort(404, 'Stream "{}" doesn\'t exist'.format(name))
-
-        stream.delete()
+        db.session.delete(stream)
         db.session.commit()
 
         return {"success": True}, 200

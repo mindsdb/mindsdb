@@ -155,11 +155,13 @@ class Stream(Base):
     stream_out = Column(String, nullable=False)
     anomaly_stream = Column(String)
     learning_stream = Column(String)
-    integration = Column(String, ForeignKey('integration.name', ondelete='CASCADE'), nullable=False)
+    integration = Column(String, ForeignKey('integration.name', ondelete='CASCADE'), nullable=True)
     predictor = Column(String, ForeignKey('predictor.name', ondelete='CASCADE'), nullable=False)
     company_id = Column(Integer)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
+    type = Column(String, default='unknown')
+    connection_info = Column(Json, default={})
 
 
 Base.metadata.create_all(engine)

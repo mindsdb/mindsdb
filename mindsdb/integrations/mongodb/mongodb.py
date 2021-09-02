@@ -9,7 +9,7 @@ from mindsdb.integrations.base import Integration
 class MongoConnectionChecker:
     def __init__(self, **kwargs):
         self.host = kwargs.get("host")
-        self.port = kwargs.get("port", 27017)
+        self.port = int(kwargs.get("port") or 27017)
         self.user = kwargs.get("username")
         self.password = kwargs.get("password")
 

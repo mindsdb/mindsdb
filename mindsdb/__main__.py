@@ -5,6 +5,7 @@ import os
 import time
 import asyncio
 import signal
+import psutil
 
 import torch.multiprocessing as mp
 
@@ -41,6 +42,8 @@ def close_api_gracefully(apis):
             os.system('ray stop --force')
     except KeyboardInterrupt:
         sys.exit(0)
+    except psutil.NoSuchProcess:
+        pass
 
 
 if __name__ == '__main__':
@@ -80,7 +83,6 @@ if __name__ == '__main__':
 
     is_cloud = config.get('cloud', False)
     if not is_cloud:
-        
         for integration_name in get_db_integrations(COMPANY_ID, sensitive_info=True):
             print(f"Setting up integration: {integration_name}")
             if get_db_integration(integration_name, COMPANY_ID).get('publish', False):

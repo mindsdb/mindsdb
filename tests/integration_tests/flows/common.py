@@ -163,6 +163,8 @@ def stop_mindsdb():
                 p = psutil.Process(pid)
                 print(f'Send SIGINT to {pid}/{[port]}')
                 p.send_signal(signal.SIGINT)
+            except psutil.NoSuchProcess:
+                pass
             except Exception as e:
                 print(f'Can not interrupt process {pid}: {e}')
 

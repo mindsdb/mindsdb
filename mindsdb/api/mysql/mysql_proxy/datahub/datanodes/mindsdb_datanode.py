@@ -144,6 +144,9 @@ class MindsDBDataNode(DataNode):
         data = dfsql.sql_query(str(mindsdb_sql_query), predictors=dataframe)
         if isinstance(data, pd.core.series.Series):
             data = data.to_frame()
+        elif isinstance(data, pd.DataFrame) is False:
+            data = pd.DataFrame([{mindsdb_sql_query.targets[0].parts[0]: data}])
+
         return data.to_dict(orient='records')
 
     def select_query(self, query):

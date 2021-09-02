@@ -90,6 +90,9 @@ class InformationSchema(DataNode):
 
         if isinstance(data, pd.core.series.Series):
             data = data.to_frame()
+        elif isinstance(data, pd.DataFrame) is False:
+            data = pd.DataFrame([{query.targets[0].parts[0]: data}])
+
         return data.to_dict(orient='records')
 
     def select(self, columns=None, table=None, where=None, order_by=None, group_by=None, came_from=None):

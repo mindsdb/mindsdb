@@ -234,6 +234,10 @@ class SQLQuery():
             # TODO replace NA type
             if len(result) == 0:
                 return
+            for key in result[0]:
+                self.columns_list.append(table_name + (key, key))
+            self.fetched_data = [{table_name: x} for x in result]
+            return
             # TODO make columns and results lists
 
             # for column in mindsdb_sql_struct.targets:
@@ -515,6 +519,9 @@ class SQLQuery():
 
             if isinstance(result, pd.core.series.Series):
                 result = result.to_frame()
+            # TODO ?!
+            # elif isinstance(result, pd.DataFrame) is False:
+            #     result = pd.DataFrame([{mindsdb_sql_query.targets[0].parts[0]: result}])
 
             # +++ make list result view
             new_result = []

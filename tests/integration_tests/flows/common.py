@@ -273,8 +273,8 @@ def run_environment(apis, override_config={}):
         stdout=OUTPUT,
         stderr=OUTPUT
     )
-    atexit.register(stop_mindsdb)
     atexit.register(close_ssh_tunnel, port=mindsdb_port)
+    atexit.register(stop_mindsdb)
 
     print('Waiting on ports!')
     async def wait_port_async(port, timeout):

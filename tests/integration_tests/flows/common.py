@@ -108,12 +108,15 @@ def close_all_ssh_tunnels():
             sp.wait()
 
 
-def close_ssh_tunnel(sp, port):
-    sp.kill()
+def close_ssh_tunnel(port, sp=None):
+    if sp is not None:
+        sp.kill()
     # NOTE line below will close connection in ALL test instances.
     # sp = subprocess.Popen(f'for pid in $(lsof -i :{port} -t); do kill -9 $pid; done', shell=True)
-    sp = subprocess.Popen(f'ssh -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -O exit ubuntu@3.220.66.106', shell=True)
-    sp.wait()
+    if port is not None:
+        print(f'Closing ssh tunnel at port {port}')
+        sp = subprocess.Popen(f'ssh -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -O exit ubuntu@3.220.66.106', shell=True)
+        sp.wait()
 
 
 def open_ssh_tunnel(port, direction='R'):
@@ -136,8 +139,6 @@ def open_ssh_tunnel(port, direction='R'):
         status = 1
         sp.kill()
 
-    if status == 0:
-        atexit.register(close_ssh_tunnel, sp=sp, port=port)
     return status
 
 
@@ -185,6 +186,7 @@ def is_mssql_test():
             return True
     return False
 
+mindsdb_port = None
 
 if USE_EXTERNAL_DB_SERVER:
     open_ssh_tunnel(5005, 'L')
@@ -272,6 +274,7 @@ def run_environment(apis, override_config={}):
         stderr=OUTPUT
     )
     atexit.register(stop_mindsdb)
+    atexit.register(close_ssh_tunnel, port=mindsdb_port)
 
     print('Waiting on ports!')
     async def wait_port_async(port, timeout):

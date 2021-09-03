@@ -60,54 +60,83 @@ class InformationSchema(DataNode):
         ]
 
     def _get_tables(self):
-        # return TABLES
-        tables = [
-            # at least this tables should be returned for GUI clients
-            {'table_name': 'SCHEMATA', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
-            {'table_name': 'TABLES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
-            {'table_name': 'EVENTS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
-            {'table_name': 'ROUTINES', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
-            {'table_name': 'TRIGGERS', 'table_schema': 'information_schema', 'table_type': 'SYSTEM VIEW', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'},
+        # TODO change to upper case when dfsql will support it
+        columns = ['table_name', 'table_schema', 'table_type', 'table_rows', 'table_collation']
+        data = [
+            ['SCHEMATA', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
+            ['TABLES', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
+            ['EVENTS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
+            ['ROUTINES', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
+            ['TRIGGERS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci']
         ]
+
         for dsName, ds in self.index.items():
-            t = ds.getTables()
-            tables += [{'table_name': x, 'table_schema': dsName, 'table_type': 'BASE TABLE', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'} for x in t]
-        return tables
+            ds_tables = ds.getTables()
+            data += [[x, dsName, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
 
     def _get_schemata(self):
         # FIXME change to upper case when dfsql will be not case sensitive
-        schemata = [
-            # {'CATALOG_NAME': 'def', 'SCHEMA_NAME': 'information_schema', 'DEFAULT_CHARACTER_SET_NAME': 'utf8', 'DEFAULT_COLLATION_NAME': 'utf8_general_ci', 'SQL_PATH': None}
-            {'catalog_name': 'def', 'schema_name': 'information_schema', 'default_character_set_name': 'utf8', 'default_collation_name': 'utf8_general_ci', 'sql_path': None}
+        # columns = ['CATALOG_NAME', 'SCHEMA_NAME', 'DEFAULT_CHARACTER_SET_NAME', 'DEFAULT_COLLATION_NAME', 'SQL_PATH']
+        columns = ['catalog_name', 'schema_name', 'default_character_set_name', 'default_collation_name', 'sql_path']
+        data = [
+            ['def', 'information_schema', 'utf8', 'utf8_general_ci', None]
         ]
-        # default_row = {'CATALOG_NAME': 'def', 'SCHEMA_NAME': '', 'DEFAULT_CHARACTER_SET_NAME': 'utf8mb4', 'DEFAULT_COLLATION_NAME': 'utf8mb4_0900_ai_ci', 'SQL_PATH': None}
-        default_row = {'catalog_name': 'def', 'schema_name': '', 'default_character_set_name': 'utf8mb4', 'default_collation_name': 'utf8mb4_0900_ai_ci', 'sql_path': None}
+
         for database_name in self.index:
-            row = {}
-            row.update(default_row)
-            # row['SCHEMA_NAME'] = database_name
-            row['schema_name'] = database_name
-            schemata.append(row)
-        return schemata
+            data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_events(self):
+        # columns = ['EVENT_CATALOG', 'EVENT_SCHEMA', 'EVENT_NAME', 'DEFINER', 'TIME_ZONE', 'EVENT_BODY', 'EVENT_DEFINITION', 'EVENT_TYPE', 'EXECUTE_AT', 'INTERVAL_VALUE', 'INTERVAL_FIELD', 'SQL_MODE', 'STARTS', 'ENDS', 'STATUS', 'ON_COMPLETION', 'CREATED', 'LAST_ALTERED', 'LAST_EXECUTED', 'EVENT_COMMENT', 'ORIGINATOR', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION']
+        columns = ['event_catalog', 'event_schema', 'event_name', 'definer', 'time_zone', 'event_body', 'event_definition', 'event_type', 'execute_at', 'interval_value', 'interval_field', 'sql_mode', 'starts', 'ends', 'status', 'on_completion', 'created', 'last_altered', 'last_executed', 'event_comment', 'originator', 'character_set_client', 'collation_connection', 'database_collation']
+        data = []
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_routines(self):
+        # columns = ['SPECIFIC_NAME', 'ROUTINE_CATALOG', 'ROUTINE_SCHEMA', 'ROUTINE_NAME', 'ROUTINE_TYPE', 'DATA_TYPE', 'CHARACTER_MAXIMUM_LENGTH', 'CHARACTER_OCTET_LENGTH', 'NUMERIC_PRECISION', 'NUMERIC_SCALE', 'DATETIME_PRECISION', 'CHARACTER_SET_NAME', 'COLLATION_NAME', 'DTD_IDENTIFIER', 'ROUTINE_BODY', 'ROUTINE_DEFINITION', 'EXTERNAL_NAME', 'EXTERNAL_LANGUAGE', 'PARAMETER_STYLE', 'IS_DETERMINISTIC', 'SQL_DATA_ACCESS', 'SQL_PATH', 'SECURITY_TYPE', 'CREATED', 'LAST_ALTERED', 'SQL_MODE', 'ROUTINE_COMMENT', 'DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION']
+        columns = ['specific_name', 'routine_catalog', 'routine_schema', 'routine_name', 'routine_type', 'data_type', 'character_maximum_length', 'character_octet_length', 'numeric_precision', 'numeric_scale', 'datetime_precision', 'character_set_name', 'collation_name', 'dtd_identifier', 'routine_body', 'routine_definition', 'external_name', 'external_language', 'parameter_style', 'is_deterministic', 'sql_data_access', 'sql_path', 'security_type', 'created', 'last_altered', 'sql_mode', 'routine_comment', 'definer', 'character_set_client', 'collation_connection', 'database_collation']
+        data = []
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_triggers(self):
+        # columns = ['TRIGGER_CATALOG', 'TRIGGER_SCHEMA', 'TRIGGER_NAME', 'EVENT_MANIPULATION', 'EVENT_OBJECT_CATALOG', 'EVENT_OBJECT_SCHEMA', 'EVENT_OBJECT_TABLE', 'ACTION_ORDER', 'ACTION_CONDITION', 'ACTION_STATEMENT', 'ACTION_ORIENTATION', 'ACTION_TIMING', 'ACTION_REFERENCE_OLD_TABLE', 'ACTION_REFERENCE_NEW_TABLE', 'ACTION_REFERENCE_OLD_ROW', 'ACTION_REFERENCE_NEW_ROW', 'CREATED', 'SQL_MODE','DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION']
+        columns = ['trigger_catalog', 'trigger_schema', 'trigger_name', 'event_manipulation', 'event_object_catalog', 'event_object_schema', 'event_object_table', 'action_order', 'action_condition', 'action_statement', 'action_orientation', 'action_timing', 'action_reference_old_table', 'action_reference_new_table', 'action_reference_old_row', 'action_reference_new_row', 'created', 'sql_mode','definer', 'character_set_client', 'collation_connection', 'database_collation']
+        data = []
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
 
     def select_query(self, query):
-        # new version, uncomment after tests
         query_tables = get_all_tables(query)
+
         if len(query_tables) != 1:
             raise Exception(f'Only one table can be used in query to information_schema: {query}')
+
         table = query_tables[0].upper()
         if table == 'TABLES':
-            data = self._get_tables()
-            table_name = query.from_table.parts[-1]
-            dataframe = pd.DataFrame(data)
-            data = dfsql.sql_query(str(query), **{table_name: dataframe})
+            dataframe = self._get_tables()
         elif table == 'SCHEMATA':
-            data = self._get_schemata()
-            table_name = query.from_table.parts[-1]
-            dataframe = pd.DataFrame(data)
-            data = dfsql.sql_query(str(query), **{table_name: dataframe})
+            dataframe = self._get_schemata()
+        elif table == 'EVENTS':
+            dataframe = self._get_events()
+        elif table == 'ROUTINES':
+            dataframe = self._get_routines()
+        elif table == 'TRIGGERS':
+            dataframe = self._get_triggers()
         else:
             raise Exception('Information schema: Not implemented.')
+
+        table_name = query.from_table.parts[-1]
+        data = dfsql.sql_query(str(query), **{table_name: dataframe})
 
         if isinstance(data, pd.core.series.Series):
             data = data.to_frame()

@@ -348,6 +348,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
         elif 'show session status like' in sql_lower:
             variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+        elif 'show global variables' in sql_lower:
+            variables = [x for x in SERVER_VARIABLES if x.startswith('@@session.') is False]
 
         data = []
         for variable_name in variables:
@@ -1082,6 +1084,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'show variables' in sql_lower
                 or 'show session variables' in sql_lower
                 or 'show session status' in sql_lower
+                or 'show global variables' in sql_lower
             ):
                 self.answer_show_variables(sql)
                 return

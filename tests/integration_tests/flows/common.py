@@ -142,8 +142,10 @@ def open_ssh_tunnel(port, direction='R'):
     return status
 
 
-def stop_mindsdb():
-    mdb_ports = (47334, 47335, 47336)
+def stop_mindsdb(ports=None):
+    mdb_ports = [47334, 47335, 47336]
+    if isinstance(ports, list):
+        mdb_ports = mdb_ports + ports
     procs = [x for x in net_connections() if x.pid is not None and x.laddr[1] in mdb_ports]
     print(f'Found {len(procs)} MindsDB processes')
 
@@ -185,6 +187,7 @@ def is_mssql_test():
         if 'test_mssql.py' in x:
             return True
     return False
+
 
 mindsdb_port = None
 
@@ -274,9 +277,10 @@ def run_environment(apis, override_config={}):
         stderr=OUTPUT
     )
     atexit.register(close_ssh_tunnel, port=mindsdb_port)
-    atexit.register(stop_mindsdb)
+    atexit.register(stop_mindsdb, ports=[mindsdb_port])
 
     print('Waiting on ports!')
+
     async def wait_port_async(port, timeout):
         start_time = time.time()
         started = is_port_in_use(port)

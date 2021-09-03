@@ -74,6 +74,22 @@ class InformationSchema(DataNode):
             tables += [{'table_name': x, 'table_schema': dsName, 'table_type': 'BASE TABLE', 'table_rows': [], 'table_collation': 'utf8mb4_0900_ai_ci'} for x in t]
         return tables
 
+    def _get_schemata(self):
+        # FIXME change to upper case when dfsql will be not case sensitive
+        schemata = [
+            # {'CATALOG_NAME': 'def', 'SCHEMA_NAME': 'information_schema', 'DEFAULT_CHARACTER_SET_NAME': 'utf8', 'DEFAULT_COLLATION_NAME': 'utf8_general_ci', 'SQL_PATH': None}
+            {'catalog_name': 'def', 'schema_name': 'information_schema', 'default_character_set_name': 'utf8', 'default_collation_name': 'utf8_general_ci', 'sql_path': None}
+        ]
+        # default_row = {'CATALOG_NAME': 'def', 'SCHEMA_NAME': '', 'DEFAULT_CHARACTER_SET_NAME': 'utf8mb4', 'DEFAULT_COLLATION_NAME': 'utf8mb4_0900_ai_ci', 'SQL_PATH': None}
+        default_row = {'catalog_name': 'def', 'schema_name': '', 'default_character_set_name': 'utf8mb4', 'default_collation_name': 'utf8mb4_0900_ai_ci', 'sql_path': None}
+        for database_name in self.index:
+            row = {}
+            row.update(default_row)
+            # row['SCHEMA_NAME'] = database_name
+            row['schema_name'] = database_name
+            schemata.append(row)
+        return schemata
+
     def select_query(self, query):
         # new version, uncomment after tests
         query_tables = get_all_tables(query)
@@ -82,6 +98,11 @@ class InformationSchema(DataNode):
         table = query_tables[0].upper()
         if table == 'TABLES':
             data = self._get_tables()
+            table_name = query.from_table.parts[-1]
+            dataframe = pd.DataFrame(data)
+            data = dfsql.sql_query(str(query), **{table_name: dataframe})
+        elif table == 'SCHEMATA':
+            data = self._get_schemata()
             table_name = query.from_table.parts[-1]
             dataframe = pd.DataFrame(data)
             data = dfsql.sql_query(str(query), **{table_name: dataframe})

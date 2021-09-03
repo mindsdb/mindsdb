@@ -53,7 +53,9 @@ superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_tabl
 
 
 def get_preditor_alias(step, mindsdb_database):
-    return (mindsdb_database, '.'.join(step.predictor.parts), '.'.join(step.predictor.alias.parts))
+    predictor_name = '.'.join(step.predictor.parts)
+    predictor_alias = '.'.join(step.predictor.alias.parts) if step.predictor.alias is not None else predictor_name
+    return (mindsdb_database, predictor_name, predictor_alias)
 
 
 def get_table_alias(table_obj, default_db_name):

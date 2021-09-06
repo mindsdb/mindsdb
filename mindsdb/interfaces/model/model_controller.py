@@ -146,7 +146,12 @@ class ModelController():
                 when_data = [when_data]
             df = pd.DataFrame(when_data)
 
+        print(df)
         predictions = self.predictor_cache[name]['predictor'].predict(df)
+        print('---------------')
+        for i in range(len(predictions)):
+            print(predictions.iloc[i])
+        print('---------------')
         predictions = predictions.to_dict(orient='records')
         # Bellow is useful for debugging caching and storage issues
         # del self.predictor_cache[name]
@@ -179,6 +184,7 @@ class ModelController():
                     else:
                         td[col] = df.iloc[i][col]
                 dict_arr.append({target: td})
+            print(dict_arr)
             if pred_format == 'explain':
                 return explain_arr
             elif pred_format == 'dict':
@@ -187,6 +193,7 @@ class ModelController():
                 return dict_arr, explain_arr
         # New format -- Try switching to this in 2-3 months for speed, for now above is ok
         else:
+            print("HERE!!")
             return predictions
 
     def analyse_dataset(self, ds: dict, company_id: int) -> lightwood.DataAnalysis:
@@ -228,7 +235,10 @@ class ModelController():
         data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
         data['problem_definition'] = predictor_record.learn_args
 
-        if predictor_record.json_ai is None and predictor_record.code is None:
+        # assume older models are complete, only temporary
+        if predictor_record.update_status == 'available':
+            data['status'] = 'complete'
+        elif predictor_record.json_ai is None and predictor_record.code is None:
             data['status'] = 'generating'
         elif predictor_record.data is None:
             data['status'] = 'editable'

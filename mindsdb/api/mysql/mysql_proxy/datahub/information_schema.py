@@ -139,14 +139,9 @@ class InformationSchema(DataNode):
         data = dfsql.sql_query(
             str(query),
             ds_kwargs={'case_sensitive': False},
-            reduce_output=True,
+            reduce_output=False,
             **{table_name: dataframe}
         )
-
-        if isinstance(data, pd.core.series.Series):
-            data = data.to_frame()
-        elif isinstance(data, pd.DataFrame) is False:
-            data = pd.DataFrame([{query.targets[0].parts[0]: data}])
 
         return data.to_dict(orient='records')
 

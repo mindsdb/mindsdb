@@ -141,11 +141,12 @@ class MindsDBDataNode(DataNode):
         predictors = self._select_predictors()
         dataframe = pd.DataFrame(predictors)
         mindsdb_sql_query.from_table.parts = ['predictors']
-        data = dfsql.sql_query(str(mindsdb_sql_query), predictors=dataframe)
-        if isinstance(data, pd.core.series.Series):
-            data = data.to_frame()
-        elif isinstance(data, pd.DataFrame) is False:
-            data = pd.DataFrame([{mindsdb_sql_query.targets[0].parts[0]: data}])
+        data = dfsql.sql_query(
+            str(mindsdb_sql_query),
+            ds_kwargs={'case_sensitive': False},
+            reduce_output=False,
+            predictors=dataframe
+        )
 
         return data.to_dict(orient='records')
 

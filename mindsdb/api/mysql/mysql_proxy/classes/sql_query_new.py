@@ -240,12 +240,6 @@ class SQLQuery():
                 self.columns_list.append(table_name + (key, key))
             self.fetched_data = [{table_name: x} for x in result]
             return
-            # TODO make columns and results lists
-
-            # for column in mindsdb_sql_struct.targets:
-            #     alias = '.'.join(column.alias.parts) if column.alias is not None else column.value
-            #     self.fetched_data[0][table_name][alias] = column.value
-            #     self.columns_list.append(table_name + (alias, alias))
 
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
@@ -507,8 +501,12 @@ class SQLQuery():
             # ---
             data = self._make_list_result_view(result)
             df = pd.DataFrame(data)
-            # result = dfsql.sql_query(self.outer_query, virtual_table=df)      # make an issue about it
-            result = dfsql.sql_query(self.outer_query, dataframe=df)
+            result = dfsql.sql_query(
+                self.outer_query,
+                ds_kwargs={'case_sensitive': False},
+                reduce_output=False,
+                dataframe=df
+            )
 
             try:
                 self.columns_list = [
@@ -518,12 +516,6 @@ class SQLQuery():
                 self.columns_list = [
                     ('', '', '', result.name, result.name)
                 ]
-
-            if isinstance(result, pd.core.series.Series):
-                result = result.to_frame()
-            # TODO ?!
-            # elif isinstance(result, pd.DataFrame) is False:
-            #     result = pd.DataFrame([{mindsdb_sql_query.targets[0].parts[0]: result}])
 
             # +++ make list result view
             new_result = []

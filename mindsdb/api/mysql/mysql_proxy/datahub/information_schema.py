@@ -60,8 +60,7 @@ class InformationSchema(DataNode):
         ]
 
     def _get_tables(self):
-        # TODO change to upper case when dfsql will support it
-        columns = ['table_name', 'table_schema', 'table_type', 'table_rows', 'table_collation']
+        columns = ['TABLE_NAME', 'TABLE_SCHEMA', 'TABLE_TYPE', 'TABLE_ROWS', 'TABLE_COLLATION']
         data = [
             ['SCHEMATA', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
             ['TABLES', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
@@ -77,10 +76,12 @@ class InformationSchema(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
+    def _get_columns(self):
+        # TODO
+        pass
+
     def _get_schemata(self):
-        # FIXME change to upper case when dfsql will be not case sensitive
-        # columns = ['CATALOG_NAME', 'SCHEMA_NAME', 'DEFAULT_CHARACTER_SET_NAME', 'DEFAULT_COLLATION_NAME', 'SQL_PATH']
-        columns = ['catalog_name', 'schema_name', 'default_character_set_name', 'default_collation_name', 'sql_path']
+        columns = ['CATALOG_NAME', 'SCHEMA_NAME', 'DEFAULT_CHARACTER_SET_NAME', 'DEFAULT_COLLATION_NAME', 'SQL_PATH']
         data = [
             ['def', 'information_schema', 'utf8', 'utf8_general_ci', None]
         ]
@@ -92,24 +93,21 @@ class InformationSchema(DataNode):
         return df
 
     def _get_events(self):
-        # columns = ['EVENT_CATALOG', 'EVENT_SCHEMA', 'EVENT_NAME', 'DEFINER', 'TIME_ZONE', 'EVENT_BODY', 'EVENT_DEFINITION', 'EVENT_TYPE', 'EXECUTE_AT', 'INTERVAL_VALUE', 'INTERVAL_FIELD', 'SQL_MODE', 'STARTS', 'ENDS', 'STATUS', 'ON_COMPLETION', 'CREATED', 'LAST_ALTERED', 'LAST_EXECUTED', 'EVENT_COMMENT', 'ORIGINATOR', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION']
-        columns = ['event_catalog', 'event_schema', 'event_name', 'definer', 'time_zone', 'event_body', 'event_definition', 'event_type', 'execute_at', 'interval_value', 'interval_field', 'sql_mode', 'starts', 'ends', 'status', 'on_completion', 'created', 'last_altered', 'last_executed', 'event_comment', 'originator', 'character_set_client', 'collation_connection', 'database_collation']
+        columns = ['EVENT_CATALOG', 'EVENT_SCHEMA', 'EVENT_NAME', 'DEFINER', 'TIME_ZONE', 'EVENT_BODY', 'EVENT_DEFINITION', 'EVENT_TYPE', 'EXECUTE_AT', 'INTERVAL_VALUE', 'INTERVAL_FIELD', 'SQL_MODE', 'STARTS', 'ENDS', 'STATUS', 'ON_COMPLETION', 'CREATED', 'LAST_ALTERED', 'LAST_EXECUTED', 'EVENT_COMMENT', 'ORIGINATOR', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION']
         data = []
 
         df = pd.DataFrame(data, columns=columns)
         return df
 
     def _get_routines(self):
-        # columns = ['SPECIFIC_NAME', 'ROUTINE_CATALOG', 'ROUTINE_SCHEMA', 'ROUTINE_NAME', 'ROUTINE_TYPE', 'DATA_TYPE', 'CHARACTER_MAXIMUM_LENGTH', 'CHARACTER_OCTET_LENGTH', 'NUMERIC_PRECISION', 'NUMERIC_SCALE', 'DATETIME_PRECISION', 'CHARACTER_SET_NAME', 'COLLATION_NAME', 'DTD_IDENTIFIER', 'ROUTINE_BODY', 'ROUTINE_DEFINITION', 'EXTERNAL_NAME', 'EXTERNAL_LANGUAGE', 'PARAMETER_STYLE', 'IS_DETERMINISTIC', 'SQL_DATA_ACCESS', 'SQL_PATH', 'SECURITY_TYPE', 'CREATED', 'LAST_ALTERED', 'SQL_MODE', 'ROUTINE_COMMENT', 'DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION']
-        columns = ['specific_name', 'routine_catalog', 'routine_schema', 'routine_name', 'routine_type', 'data_type', 'character_maximum_length', 'character_octet_length', 'numeric_precision', 'numeric_scale', 'datetime_precision', 'character_set_name', 'collation_name', 'dtd_identifier', 'routine_body', 'routine_definition', 'external_name', 'external_language', 'parameter_style', 'is_deterministic', 'sql_data_access', 'sql_path', 'security_type', 'created', 'last_altered', 'sql_mode', 'routine_comment', 'definer', 'character_set_client', 'collation_connection', 'database_collation']
+        columns = ['SPECIFIC_NAME', 'ROUTINE_CATALOG', 'ROUTINE_SCHEMA', 'ROUTINE_NAME', 'ROUTINE_TYPE', 'DATA_TYPE', 'CHARACTER_MAXIMUM_LENGTH', 'CHARACTER_OCTET_LENGTH', 'NUMERIC_PRECISION', 'NUMERIC_SCALE', 'DATETIME_PRECISION', 'CHARACTER_SET_NAME', 'COLLATION_NAME', 'DTD_IDENTIFIER', 'ROUTINE_BODY', 'ROUTINE_DEFINITION', 'EXTERNAL_NAME', 'EXTERNAL_LANGUAGE', 'PARAMETER_STYLE', 'IS_DETERMINISTIC', 'SQL_DATA_ACCESS', 'SQL_PATH', 'SECURITY_TYPE', 'CREATED', 'LAST_ALTERED', 'SQL_MODE', 'ROUTINE_COMMENT', 'DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION']
         data = []
 
         df = pd.DataFrame(data, columns=columns)
         return df
 
     def _get_triggers(self):
-        # columns = ['TRIGGER_CATALOG', 'TRIGGER_SCHEMA', 'TRIGGER_NAME', 'EVENT_MANIPULATION', 'EVENT_OBJECT_CATALOG', 'EVENT_OBJECT_SCHEMA', 'EVENT_OBJECT_TABLE', 'ACTION_ORDER', 'ACTION_CONDITION', 'ACTION_STATEMENT', 'ACTION_ORIENTATION', 'ACTION_TIMING', 'ACTION_REFERENCE_OLD_TABLE', 'ACTION_REFERENCE_NEW_TABLE', 'ACTION_REFERENCE_OLD_ROW', 'ACTION_REFERENCE_NEW_ROW', 'CREATED', 'SQL_MODE','DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION']
-        columns = ['trigger_catalog', 'trigger_schema', 'trigger_name', 'event_manipulation', 'event_object_catalog', 'event_object_schema', 'event_object_table', 'action_order', 'action_condition', 'action_statement', 'action_orientation', 'action_timing', 'action_reference_old_table', 'action_reference_new_table', 'action_reference_old_row', 'action_reference_new_row', 'created', 'sql_mode','definer', 'character_set_client', 'collation_connection', 'database_collation']
+        columns = ['TRIGGER_CATALOG', 'TRIGGER_SCHEMA', 'TRIGGER_NAME', 'EVENT_MANIPULATION', 'EVENT_OBJECT_CATALOG', 'EVENT_OBJECT_SCHEMA', 'EVENT_OBJECT_TABLE', 'ACTION_ORDER', 'ACTION_CONDITION', 'ACTION_STATEMENT', 'ACTION_ORIENTATION', 'ACTION_TIMING', 'ACTION_REFERENCE_OLD_TABLE', 'ACTION_REFERENCE_NEW_TABLE', 'ACTION_REFERENCE_OLD_ROW', 'ACTION_REFERENCE_NEW_ROW', 'CREATED', 'SQL_MODE','DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION']
         data = []
 
         df = pd.DataFrame(data, columns=columns)
@@ -124,6 +122,8 @@ class InformationSchema(DataNode):
         table = query_tables[0].upper()
         if table == 'TABLES':
             dataframe = self._get_tables()
+        elif table == 'COLUMNS':
+            dataframe = self._get_columns()
         elif table == 'SCHEMATA':
             dataframe = self._get_schemata()
         elif table == 'EVENTS':
@@ -136,7 +136,12 @@ class InformationSchema(DataNode):
             raise Exception('Information schema: Not implemented.')
 
         table_name = query.from_table.parts[-1]
-        data = dfsql.sql_query(str(query), **{table_name: dataframe})
+        data = dfsql.sql_query(
+            str(query),
+            ds_kwargs={'case_sensitive': False},
+            reduce_output=True,
+            **{table_name: dataframe}
+        )
 
         if isinstance(data, pd.core.series.Series):
             data = data.to_frame()

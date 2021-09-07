@@ -20,6 +20,8 @@ def get_streams():
             'integration': s.integration,
             'stream_in': s.stream_in,
             'stream_out': s.stream_out,
+            'type': s.type,
+            'connection': s.connection_info
         })
     return streams_as_dicts
 

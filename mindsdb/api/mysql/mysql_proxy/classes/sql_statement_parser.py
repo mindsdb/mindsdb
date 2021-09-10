@@ -539,14 +539,14 @@ class SqlStatementParser():
 
         tests = [[
             '''
-            CREATE PREDICTor debt_model_1
-            FROM integration_name (select whatever) as ds_name
-            PREDICT f1 as f1_alias, f2, f3 as f3_alias
-            order by f_order_1 ASK, f_order_2, f_order_3 DESC
-            group by f_group_1, f_group_2
-            window 100
-            HORIZON 7
-            using {"x": 1, "y": "a"}
+                CREATE PREDICTor debt_model_1
+                FROM integration_name (select whatever) as ds_name
+                PREDICT f1 as f1_alias, f2, f3 as f3_alias
+                order by f_order_1 ASK, f_order_2, f_order_3 DESC
+                group by f_group_1, f_group_2
+                window 100
+                HORIZON 7
+                using {"x": 1, "y": "a"}
             ''', {
                 'predictor_name': 'debt_model_1',
                 'integration_name': 'integration_name',

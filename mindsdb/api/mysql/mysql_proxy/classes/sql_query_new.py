@@ -224,7 +224,7 @@ class SQLQuery():
             and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
             and (
                 self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table[0].lower() == 'mindsdb'
+                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
             )
         ):
             dn = self.datahub.get('mindsdb')

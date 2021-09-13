@@ -102,15 +102,16 @@ class MindsDBDataNode(DataNode):
 
     def _select_predictors(self):
         models = self.model_interface.get_models()
-        return [{
-            'name': x['name'],
-            'status': x['status'],
-            'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
-            'predict': ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
-            'select_data_query': '',
-            'external_datasource': '',  # TODO
-            'training_options': ''  # TODO ?
-        } for x in models]
+        columns = ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
+        return pd.DataFrame([[
+            x['name'],
+            x['status'],
+            str(x['accuracy']) if x['accuracy'] is not None else None,
+            ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
+            '',
+            '',  # TODO
+            ''  # TODO ?
+        ] for x in models], columns=columns)
 
     def delete_predictor(self, name):
         self.model_interface.delete_model(name)
@@ -141,14 +142,13 @@ class MindsDBDataNode(DataNode):
         return data
 
     def get_predictors(self, mindsdb_sql_query):
-        predictors = self._select_predictors()
-        dataframe = pd.DataFrame(predictors)
+        predictors_df = self._select_predictors()
         mindsdb_sql_query.from_table.parts = ['predictors']
         data = dfsql.sql_query(
             str(mindsdb_sql_query),
             ds_kwargs={'case_sensitive': False},
             reduce_output=False,
-            predictors=dataframe
+            predictors=predictors_df
         )
 
         return data.to_dict(orient='records')
@@ -163,6 +163,7 @@ class MindsDBDataNode(DataNode):
         return data
 
     def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None, is_timeseries=False):
+        # TODEL
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
         _mdb_make_predictions = is_timeseries

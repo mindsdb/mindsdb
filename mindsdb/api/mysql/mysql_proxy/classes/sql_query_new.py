@@ -121,7 +121,7 @@ class SQLQuery():
     def __init__(self, sql, session):
         self.session = session
         self.integration = session.integration
-        self.database = session.database.lower() or 'mindsdb'
+        self.database = None if session.database == '' else session.database.lower()
         self.datahub = session.datahub
         self.ai_table = None
         self.outer_query = None
@@ -274,7 +274,8 @@ class SQLQuery():
             mindsdb_sql_struct,
             integrations=integrations_names,
             predictor_namespace=self.database,
-            predictor_metadata=predictor_metadata
+            predictor_metadata=predictor_metadata,
+            default_namespace=self.database
         )
         steps_data = []
 

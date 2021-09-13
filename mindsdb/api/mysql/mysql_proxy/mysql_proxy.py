@@ -1269,18 +1269,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.sendPackageGroup(packages)
                 return
 
-            if ' left join ' not in sql_lower and ' join ' in sql_lower or 'information_schema.tables' in sql_lower:
-                query = SQLQuery_new(
-                    sql,
-                    session=self.session
-                )
-            else:
-                query = SQLQuery(
-                    sql,
-                    integration=self.session.integration,
-                    database=self.session.database,
-                    datahub=self.session.datahub
-                )
+            query = SQLQuery_new(
+                sql,
+                session=self.session
+            )
             self.selectAnswer(query)
         elif keyword == 'rollback':
             self.packet(OkPacket).send()

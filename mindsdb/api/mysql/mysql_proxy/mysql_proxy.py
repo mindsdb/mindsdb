@@ -533,7 +533,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         company_id = self.session.company_id
 
         if get_db_integration(struct['integration_name'], company_id) is None:
-            struct['integration_name'] = list(get_db_integrations(company_id).keys())[0]
+            raise Exception(f"Unknown integration: {struct['integration_name']}")
 
         is_temp_ds = False
         ds_name = struct.get('datasource_name')

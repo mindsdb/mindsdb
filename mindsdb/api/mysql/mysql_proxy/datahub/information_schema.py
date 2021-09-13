@@ -78,9 +78,40 @@ class InformationSchema(DataNode):
 
     def _get_columns(self):
         columns = self.information_schema['COLUMNS']
-        data = []
-        # TODO
-        pass
+
+        # NOTE there is a lot of types in mysql, but listed below should be enough for our purposes
+        row_templates = {
+            'text': ['def', 'SCHEMA_NAME', 'TABLE_NAME', 'COLUMN_NAME', 'COL_INDEX', None, 'YES', 'varchar', 1024, 3072, None, None, None, 'utf8', 'utf8_bin', 'varchar(1024)', None, None, 'select', None, None],
+            'timestamp': ['def', 'SCHEMA_NAME', 'TABLE_NAME', 'COLUMN_NAME', 'COL_INDEX', 'CURRENT_TIMESTAMP', 'YES', 'timestamp', None, None, None, None, 0, None, None, 'timestamp', None, None, 'select', None, None],
+            'bigint': ['def', 'SCHEMA_NAME', 'TABLE_NAME', 'COLUMN_NAME', 'COL_INDEX', None, 'YES', 'bigint', None, None, 20, 0, None, None, None, 'bigint unsigned', None, None, 'select', None, None],
+            'float': ['def', 'SCHEMA_NAME', 'TABLE_NAME', 'COLUMN_NAME', 'COL_INDEX', None, 'YES', 'float', None, None, 12, 0, None, None, None, 'float', None, None, 'select', None, None]
+        }
+
+        result = []
+
+        for table_name in self.information_schema:
+            table_columns = self.information_schema[table_name]
+            for i, column_name in enumerate(table_columns):
+                result_row = row_templates['text'].copy()
+                result_row[1] = 'information_schema'
+                result_row[2] = table_name
+                result_row[3] = column_name
+                result_row[4] = i
+                result.append(result_row)
+
+        mindsb_dn = self.index['MINDSDB']
+        for table_name in mindsb_dn.getTables():
+            table_columns = mindsb_dn.getTableColumns(table_name)
+            for i, column_name in enumerate(table_columns):
+                result_row = row_templates['text'].copy()
+                result_row[1] = 'mindsdb'
+                result_row[2] = table_name
+                result_row[3] = column_name
+                result_row[4] = i
+                result.append(result_row)
+
+        df = pd.DataFrame(result, columns=columns)
+        return df
 
     def _get_schemata(self):
         columns = self.information_schema['SCHEMATA']

@@ -67,14 +67,17 @@ class MindsDBDataNode(DataNode):
 
     def _get_model_columns(self, table_name):
         model = self.model_interface.get_model_data(name=table_name)
+        dtype_dict = model.get('dtype_dict')
+        if isinstance(dtype_dict, dict) is False:
+            return []
         columns = []
-        columns += list(model['dtype_dict'].keys())
+        columns += list(dtype_dict.keys())
         predict = model['predict']
         if not isinstance(predict, list):
             predict = [predict]
         columns += [f'{x}_original' for x in predict]
         for col in predict:
-            if model['dtype_dict'][col] in (dtype.integer, dtype.float):
+            if dtype_dict[col] in (dtype.integer, dtype.float):
                 columns += [f"{col}_min", f"{col}_max"]
             columns += [f"{col}_confidence"]
             columns += [f"{col}_explain"]

@@ -139,10 +139,11 @@ class Datum():
 
             if self.var_type in ['byte', 'string']:
                 value = self.value.decode() if isinstance(self.value, bytes) else self.value
-                if isinstance(value, str):
-                    val_len = len(value.encode('utf8'))
-                else:
-                    val_len = len(value)
+                if isinstance(value, str) is False and value is not None:
+                    value = str(value)
+
+                val_len = len(value.encode('utf8'))
+
                 byte_count = int(math.ceil(math.log((val_len + 1), 2) / 8))
                 if val_len < NULL_VALUE[0]:
                     return self.lenencInt(val_len) + bytes(value, 'utf-8')

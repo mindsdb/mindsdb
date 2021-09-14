@@ -572,10 +572,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def delete_predictor_sql(self, sql):
         fake_sql = sql.strip(' ')
         fake_sql = 'select name ' + fake_sql[len('delete '):]
-        query = SQLQuery(
+        query = SQLQuery_new(
             fake_sql,
-            integration=self.session.integration,
-            database=self.session.database
+            session=self.session
         )
 
         result = query.fetch(
@@ -634,10 +633,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise Exception("Only parametrized insert into 'predictors' or 'commands' supported at this moment")
 
             columns_str = ','.join([f'`{col}`' for col in struct['columns']])
-            query = SQLQuery(
+            query = SQLQuery_new(
                 f'select {columns_str} from mindsdb.{struct["table"]}',
-                integration=self.session.integration,
-                database=self.session.database
+                session=self.session
             )
             num_params = struct['values'].count(SQL_PARAMETER)
             num_columns = len(struct['values']) - num_params
@@ -662,7 +660,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # and after it send prepare for delete query.
             prepared_stmt['type'] = 'lock'
             statement.cut_from_tail('for update')
-            query = SQLQuery(statement.sql, integration=self.session.integration, database=self.session.database)
+            query = SQLQuery_new(statement.sql, session=self.session)
             num_columns = len(query.columns)
             num_params = 0
             columns_def = query.columns
@@ -674,7 +672,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             fake_sql = sql.replace('?', '"?"')
             fake_sql = 'select name ' + fake_sql[len('delete '):]
-            query = SQLQuery(fake_sql, integration=self.session.integration, database=self.session.database)
+            query = SQLQuery_new(fake_sql, session=self.session)
             num_columns = 0
             num_params = sql.count('?')
             columns_def = []
@@ -703,7 +701,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }]
         elif statement.keyword == 'select':
             prepared_stmt['type'] = 'select'
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+            query = SQLQuery_new(sql, session=self.session)
             num_columns = len(query.columns)
             num_params = 0
             columns_def = query.columns
@@ -783,7 +781,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             # ---
 
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+            query = SQLQuery_new(sql, session=self.session)
 
             columns = query.columns
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
@@ -821,7 +819,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise NotImplementedError("Only 'insert into predictors' and 'insert into commands' implemented")
         elif prepared_stmt['type'] == 'lock':
             sql = prepared_stmt['statement'].sql
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+            query = SQLQuery_new(sql, session=self.session)
 
             columns = query.columns
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
@@ -854,7 +852,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
         sql = prepared_stmt['statement'].sql
         fetched = prepared_stmt['fetched']
-        query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+        query = SQLQuery_new(sql, session=self.session)
 
         result = query.fetch(
             self.session.datahub

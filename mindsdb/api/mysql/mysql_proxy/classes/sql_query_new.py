@@ -10,6 +10,7 @@
 """
 
 import re
+import copy
 import dfsql
 import pandas as pd
 import datetime
@@ -148,8 +149,10 @@ class SQLQuery():
 
         if view == 'list':
             self.result = self._make_list_result_view(data)
+        elif view == 'dict':
+            self.result = self._make_dict_result_view(data)
         else:
-            raise Exception('Only "list" view supported atm')
+            raise Exception('Only "list" and "dict" views supported atm')
 
         return {
             'success': True,
@@ -228,22 +231,35 @@ class SQLQuery():
             )
         ):
             dn = self.datahub.get('mindsdb')
-            result = dn.get_predictors(mindsdb_sql_struct)
+            data, columns = dn.get_predictors(mindsdb_sql_struct)
             table_name = ('mindsdb', 'predictors', 'predictors')
-            # self.fetched_data = [{table_name: {}}]
+            self.fetched_data = [
+                {table_name: row}
+                for row in data
+            ]
+            self.columns_list = [
+                (table_name + (column_name, column_name))
+                for column_name in columns
+            ]
+            return
+
+        # is it query to 'commands'?
+        if (
+            isinstance(mindsdb_sql_struct.from_table, Identifier)
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
+            and (
+                self.database == 'mindsdb'
+                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+            )
+        ):
             self.fetched_data = []
             self.columns_list = []
-            # TODO replace NA type
-            if len(result) == 0:
-                return
-            for key in result[0]:
-                self.columns_list.append(table_name + (key, key))
-            self.fetched_data = [{table_name: x} for x in result]
             return
 
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
         integrations_names.append('information_schema')
+        integrations_names.append('datasource')
 
         all_tables = get_all_tables(mindsdb_sql_struct)
 
@@ -273,7 +289,7 @@ class SQLQuery():
         plan = plan_query(
             mindsdb_sql_struct,
             integrations=integrations_names,
-            predictor_namespace=self.database,
+            predictor_namespace='mindsdb',
             predictor_metadata=predictor_metadata,
             default_namespace=self.database
         )
@@ -314,11 +330,28 @@ class SQLQuery():
                 predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get('mindsdb')
                 where_data = step.row_dict
+
+                # +++ external datasource
+                if 'external_datasource' in where_data:
+                    external_datasource_sql = where_data['external_datasource']
+                    if 'select ' not in external_datasource_sql.lower():
+                        external_datasource_sql = f'select * from {external_datasource_sql}'
+                    temp_session = copy.copy(self.session)
+                    temp_session.database = 'datasource'
+                    query = SQLQuery(external_datasource_sql, session=temp_session)
+                    result = query.fetch(self.datahub, view='dict')
+                    if result['success'] is False:
+                        raise Exception(f"Something wrong with getting data from {where_data['external_datasource']}")
+                    where_data = result['result']
+                # ---
+
                 data = dn.select(
                     table=predictor,
                     columns=None,
                     where_data=where_data,
-                    where={}
+                    integration_name=self.session.integration,
+                    integration_type=self.session.integration_type,
+                    # where={}
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, ApplyPredictorStep):
@@ -356,7 +389,8 @@ class SQLQuery():
                     table=predictor,
                     columns=None,
                     where_data=where_data,
-                    where={},
+                    integration_name=self.session.integration,
+                    integration_type=self.session.integration_type,
                     is_timeseries=_mdb_make_predictions
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
@@ -569,6 +603,15 @@ class SQLQuery():
                 table_name = column_record[:3]
                 column_name = column_record[3]
                 data_row.append(row[table_name][column_name])
+            result.append(data_row)
+        return result
+
+    def _make_dict_result_view(self, data):
+        result = []
+        for row in data:
+            data_row = {}
+            for table_name in row:
+                data_row.update(row[table_name])
             result.append(data_row)
         return result
 

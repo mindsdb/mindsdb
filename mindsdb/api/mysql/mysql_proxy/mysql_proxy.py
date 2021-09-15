@@ -1321,7 +1321,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             # endregion
 
-            if ' left join ' not in sql_lower and ' join ' in sql_lower:
+            if ' left join ' not in sql_lower.replace('\n', ' ') and ' join ' in sql_lower.replace('\n', ' '):
                 query = SQLQuery_new(
                     sql,
                     session=self.session

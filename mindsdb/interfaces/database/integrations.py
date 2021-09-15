@@ -151,7 +151,14 @@ def _get_integration_record_data(integration_record, sensitive_info=True):
         )
 
     if not sensitive_info:
-        data['password'] = None
+        if 'password' in data:
+            data['password'] = None
+        if (
+            data.get('type') == 'redis'
+            and isinstance(data.get('connection'), dict)
+            and 'password' in data['connection']
+        ):
+            data['connection'] = None
 
     data['id'] = integration_record.id
 

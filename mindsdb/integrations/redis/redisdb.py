@@ -1,3 +1,5 @@
+import json
+
 import walrus
 
 from mindsdb.integrations.base import StreamIntegration
@@ -10,6 +12,8 @@ class RedisConnectionChecker:
         self.connection_info = params['connection']
 
     def check_connection(self):
+        if isinstance(self.connection_info, str):
+            self.connection_info = json.loads(self.connection_info)
         try:
             client = walrus.Database(**self.connection_info)
             client.dbsize()

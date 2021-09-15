@@ -1,11 +1,15 @@
 import json
+
 import walrus
 
 from mindsdb.streams.base import BaseStream
 from mindsdb.api.http.initialize import CustomJSONEncoder
 
+
 class RedisStream(BaseStream):
     def __init__(self, stream, connection_info):
+        if isinstance(connection_info, str):
+            connection_info = json.loads(connection_info)
         self.client = walrus.Database(**connection_info)
         self.stream = self.client.Stream(stream)
 

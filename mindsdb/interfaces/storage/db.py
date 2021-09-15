@@ -4,7 +4,7 @@ import datetime
 
 import numpy as np
 from sqlalchemy import create_engine, orm, types, UniqueConstraint
-from sqlalchemy.orm import scoped_session, sessionmaker, relationship
+from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from sqlalchemy.sql.expression import null
@@ -110,7 +110,6 @@ class Predictor(Base):
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
-    streams = relationship("Stream", cascade="all, delete")
 
 
 class AITable(Base):
@@ -147,7 +146,6 @@ class Integration(Base):
     name = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
-    streams = relationship("Stream", cascade="all, delete")
 
 
 class Stream(Base):
@@ -158,8 +156,8 @@ class Stream(Base):
     stream_out = Column(String, nullable=False)
     anomaly_stream = Column(String)
     learning_stream = Column(String)
-    integration = Column(String, ForeignKey(Integration.name))
-    predictor = Column(String, ForeignKey(Predictor.name), nullable=False)
+    integration = Column(String)
+    predictor = Column(String, nullable=False)
     company_id = Column(Integer)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)

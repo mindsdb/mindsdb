@@ -10,6 +10,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.schema import ForeignKey
 
+
 if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
     engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
 else:
@@ -94,7 +95,7 @@ class Predictor(Base):
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    name = Column(String, unique=True)
+    name = Column(String)
     data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
     company_id = Column(Integer)
@@ -143,7 +144,7 @@ class Integration(Base):
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    name = Column(String, nullable=False, unique=True)
+    name = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
     streams = relationship("Stream", cascade="all, delete")
@@ -152,7 +153,7 @@ class Integration(Base):
 class Stream(Base):
     __tablename__ = 'stream'
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False, unique=True)
+    name = Column(String, nullable=False)
     stream_in = Column(String, nullable=False)
     stream_out = Column(String, nullable=False)
     anomaly_stream = Column(String)

@@ -2,9 +2,15 @@ import os
 import traceback
 import tempfile
 from pathlib import Path
+
+import pandas as pd
 from pandas.core.frame import DataFrame
 import torch.multiprocessing as mp
+import lightwood
 from lightwood.api.types import ProblemDefinition
+from lightwood import __version__ as lightwood_version
+
+import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.model.model_interface import ModelInterface, ModelInterfaceWrapper
 from mindsdb.interfaces.storage.db import session, Predictor
@@ -12,11 +18,7 @@ from mindsdb import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.fs import create_process_mark, delete_process_mark
-import mindsdb.interfaces.storage.db as db
-import pandas as pd
-import lightwood
-from lightwood import __version__ as lightwood_version
+from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
 
 
@@ -37,33 +39,30 @@ def delete_learn_mark():
             p.unlink()
 
 
+@mark_process(name='learn')
 def run_generate(df: DataFrame, problem_definition: ProblemDefinition, name: str, company_id: int, datasource_id: int) -> int:
-    create_process_mark('learn')
-    try:
-        json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-        code = lightwood.code_from_json_ai(json_ai)
+    json_ai = lightwood.json_ai_from_problem(df, problem_definition)
+    code = lightwood.code_from_json_ai(json_ai)
 
-        predictor_record = db.Predictor(
-            company_id=company_id,
-            name=name,
-            json_ai=json_ai.to_dict(),
-            code=code,
-            datasource_id=datasource_id,
-            mindsdb_version=mindsdb_version,
-            lightwood_version=lightwood_version,
-            to_predict=[problem_definition.target],
-            learn_args=problem_definition.to_dict(),
-            data={'name': name}
-        )
+    predictor_record = db.Predictor(
+        company_id=company_id,
+        name=name,
+        json_ai=json_ai.to_dict(),
+        code=code,
+        datasource_id=datasource_id,
+        mindsdb_version=mindsdb_version,
+        lightwood_version=lightwood_version,
+        to_predict=[problem_definition.target],
+        learn_args=problem_definition.to_dict(),
+        data={'name': name}
+    )
 
-        db.session.add(predictor_record)
-        db.session.commit()
-    finally:
-        delete_process_mark('learn')
+    db.session.add(predictor_record)
+    db.session.commit()
 
 
+@mark_process(name='learn')
 def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
-    create_process_mark('learn')
     try:
         predictor_record = session.query(db.Predictor).filter_by(id=predictor_id).first()
         assert predictor_record is not None
@@ -96,8 +95,6 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         predictor_record.data = {'error': f'{traceback.format_exc()}\nMain error: {e}'}
         session.commit()
         raise e
-    finally:
-        delete_process_mark('learn')
 
 
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, name: str, company_id: int, datasource_id: int) -> None:
@@ -163,7 +160,7 @@ def run_update(name: str, company_id: int):
         predictor_record.mindsdb_version = mindsdb_version
         predictor_record.update_status = 'up_to_date'
         session.commit()
-       
+
     except Exception as e:
         log.error(e)
         predictor_record.update_status = 'update_failed'  # type: ignore

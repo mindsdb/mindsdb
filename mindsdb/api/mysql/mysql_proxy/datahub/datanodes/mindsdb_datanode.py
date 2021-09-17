@@ -184,10 +184,6 @@ class MindsDBDataNode(DataNode):
                     where_data = [where_data]
             except Exception:
                 raise ValueError(f'''Error while parse 'when_data'="{where_data}"''')
-        external_datasource = None
-        if 'external_datasource' in where_data:
-            external_datasource = where_data['external_datasource']
-            del where_data['external_datasource']
 
         select_data_query = None
         if integration_name is not None and 'select_data_query' in where_data:
@@ -378,7 +374,7 @@ class MindsDBDataNode(DataNode):
 
         data = []
         explains = []
-        keys_to_save = [*keys, '__mindsdb_row_id']
+        keys_to_save = [*keys, '__mindsdb_row_id', 'external_datasource', 'select_data_query', 'when_data']
         for i, el in enumerate(pred_dicts):
             data.append({key: el.get(key) for key in keys_to_save})
             explains.append(explanations[i])
@@ -387,7 +383,6 @@ class MindsDBDataNode(DataNode):
             cast_row_types(row, model['dtype_dict'])
 
             row['select_data_query'] = select_data_query
-            row['external_datasource'] = external_datasource
             row['when_data'] = original_when_data
 
             for k in original_target_values:

@@ -1020,7 +1020,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     sql.lower().startswith('select')
                     and 'from' in sql.lower()
                 )
-                or (sql.lower().startswith('show')
+                or (
+                    sql.lower().startswith('show')
                     # and 'databases' in sql.lower()
                     and 'tables' in sql.lower()
                 )

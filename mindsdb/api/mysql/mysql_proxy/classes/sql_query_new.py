@@ -128,6 +128,8 @@ class SQLQuery():
         self.outer_query = None
         self.row_id = 0
 
+        self.mindsdb_database_name = 'mindsdb'
+
         # +++ workaround for subqueries in superset
         if 'as virtual_table' in sql.lower():
             subquery = re.findall(superset_subquery, sql)
@@ -230,7 +232,7 @@ class SQLQuery():
                 or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
             )
         ):
-            dn = self.datahub.get('mindsdb')
+            dn = self.datahub.get(self.mindsdb_database_name)
             data, columns = dn.get_predictors(mindsdb_sql_struct)
             table_name = ('mindsdb', 'predictors', 'predictors')
             self.fetched_data = [
@@ -289,7 +291,7 @@ class SQLQuery():
         plan = plan_query(
             mindsdb_sql_struct,
             integrations=integrations_names,
-            predictor_namespace='mindsdb',
+            predictor_namespace=self.mindsdb_database_name,
             predictor_metadata=predictor_metadata,
             default_namespace=self.database
         )
@@ -328,7 +330,7 @@ class SQLQuery():
                     raise Exception(f'Unknown step type: {step.step}')
             elif isinstance(step, ApplyPredictorRowStep):
                 predictor = '.'.join(step.predictor.parts)
-                dn = self.datahub.get('mindsdb')
+                dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
 
                 # +++ external datasource
@@ -342,6 +344,8 @@ class SQLQuery():
                     result = query.fetch(self.datahub, view='dict')
                     if result['success'] is False:
                         raise Exception(f"Something wrong with getting data from {where_data['external_datasource']}")
+                    for row in result['result']:
+                        row.update(where_data)
                     where_data = result['result']
                 # ---
 
@@ -355,7 +359,7 @@ class SQLQuery():
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, ApplyPredictorStep):
-                dn = self.datahub.get('mindsdb')
+                dn = self.datahub.get(self.mindsdb_database_name)
                 predictor = '.'.join(step.predictor.parts)
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]:

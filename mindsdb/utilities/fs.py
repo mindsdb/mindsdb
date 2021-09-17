@@ -1,7 +1,8 @@
-import inspect
 import os
-from pathlib import Path
 import tempfile
+import threading
+from pathlib import Path
+
 from appdirs import user_data_dir
 
 
@@ -41,15 +42,23 @@ def create_dirs_recursive(path):
         raise ValueError(f'Wrong path: {path}')
 
 
+def _get_process_mark_id():
+    return f'{os.getpid()}-{threading.get_ident()}'
+
+
 def create_process_mark(folder='learn'):
     if os.name == 'posix':
         p = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{folder}/')
         p.mkdir(parents=True, exist_ok=True)
-        p.joinpath(f'{os.getpid()}').touch()
+        p.joinpath(_get_process_mark_id()).touch()
 
 
 def delete_process_mark(folder='learn'):
     if os.name == 'posix':
-        p = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{folder}/').joinpath(f'{os.getpid()}')
+        p = (
+            Path(tempfile.gettempdir())
+            .joinpath(f'mindsdb/processes/{folder}/')
+            .joinpath(_get_process_mark_id())
+        )
         if p.exists():
             p.unlink()

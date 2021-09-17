@@ -246,23 +246,20 @@ class MindsDBDataNode(DataNode):
 
         if not model['problem_definition']['timeseries_settings']['is_timeseries']:
             # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
-            if isinstance(where_data, list):
-                data = []
-                for row in pred_dicts:
-                    new_row = {}
-                    for key in row:
-                        new_row.update(row[key])
-                        predicted_value = new_row['predicted_value']
-                        del new_row['predicted_value']
-                        new_row[key] = predicted_value
-                    data.append(new_row)
-                pred_dicts = data
-
             if isinstance(where_data, dict):
-                for col in where_data:
-                    if col not in predicted_columns:
-                        pred_dicts[0][col] = where_data[col]
-
+                where_data = [where_data]
+            if isinstance(where_data, list) is False:
+                raise Exception('"where_data" must be list or dict')
+            data = []
+            for row in pred_dicts:
+                new_row = {}
+                for predicted_key in row:
+                    new_row.update(row[predicted_key])
+                    predicted_value = new_row['predicted_value']
+                    del new_row['predicted_value']
+                    new_row[predicted_key] = predicted_value
+                data.append(new_row)
+            pred_dicts = data
         else:
             predict = model['predict']
             data_column = model['problem_definition']['timeseries_settings']['order_by'][0]

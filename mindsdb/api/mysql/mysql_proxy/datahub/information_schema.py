@@ -1,7 +1,7 @@
 import dfsql
 import pandas as pd
 
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query_new import get_all_tables
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 
 

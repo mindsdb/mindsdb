@@ -206,6 +206,15 @@ class SQLQuery():
         return result
 
     def _parse_query(self, sql):
+        # +++ FIXME https://github.com/mindsdb/mindsdb_sql/issues/53
+        is_crutch = False
+        if 'where 1 = 0' in sql.lower():
+            sql = sql[:sql.lower().find('where 1 = 0')] + ' limit 0'
+            is_crutch = True
+        elif 'where 1=0' in sql.lower():
+            sql = sql[:sql.lower().find('where 1=0')] + ' limit 0'
+            is_crutch = True
+        # ---
         mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
         # is it query with only constants?
@@ -255,7 +264,7 @@ class SQLQuery():
             )
         ):
             self.fetched_data = []
-            self.columns_list = []
+            self.columns_list = [('mindsdb', 'commands', 'commands', 'command', 'command')]
             return
 
         integrations_names = self.datahub.get_integrations_names()
@@ -287,6 +296,11 @@ class SQLQuery():
                                 'timeseries': False
                             }
                         self.model_types.update(p.data.get('dtypes', {}))
+
+        # FIXME https://github.com/mindsdb/mindsdb_sql/issues/53
+        if is_crutch is True:
+            sql = sql[:sql.lower().find(' limit 0')] + " where when_data = '{}' limit 0"
+            mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
         plan = plan_query(
             mindsdb_sql_struct,

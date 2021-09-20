@@ -169,12 +169,24 @@ class InformationSchema(DataNode):
             raise Exception('Information schema: Not implemented.')
 
         table_name = query.from_table.parts[-1]
-        data = dfsql.sql_query(
-            str(query),
-            ds_kwargs={'case_sensitive': False},
-            reduce_output=False,
-            **{table_name: dataframe}
-        )
+        # +++ FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
+        if ' 1 = 0' in str(query):
+            q = str(query)
+            q = q[:q.lower().find('where')] + ' limit 0'
+            data = dfsql.sql_query(
+                q,
+                ds_kwargs={'case_sensitive': False},
+                reduce_output=False,
+                **{table_name: dataframe}
+            )
+        else:
+            # ---
+            data = dfsql.sql_query(
+                str(query),
+                ds_kwargs={'case_sensitive': False},
+                reduce_output=False,
+                **{table_name: dataframe}
+            )
 
         return data.to_dict(orient='records')
 

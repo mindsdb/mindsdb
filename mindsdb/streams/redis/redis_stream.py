@@ -3,7 +3,7 @@ import json
 import walrus
 
 from mindsdb.streams.base import BaseStream
-from mindsdb.api.http.initialize import CustomJSONEncoder
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
 class RedisStream(BaseStream):

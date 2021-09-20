@@ -1,8 +1,9 @@
 import json
 from copy import deepcopy
+
 import kafka
 
-from mindsdb.api.http.initialize import CustomJSONEncoder
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.streams.base.base_stream import BaseStream
 
 

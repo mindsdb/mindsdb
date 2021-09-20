@@ -1,23 +1,23 @@
+import os
 import sys
+import time
 import psutil
 import datetime
-import time
-import os
 from copy import deepcopy
-from typing import Optional, Tuple, Union, Dict, Any
-from dateutil.parser import parse as parse_datetime
-
-from lightwood.api.types import ProblemDefinition
-import numpy as np
 from contextlib import contextmanager
-from packaging import version
-import pandas as pd
+from dateutil.parser import parse as parse_datetime
+from typing import Optional, Tuple, Union, Dict, Any
+
 import lightwood
+from lightwood.api.types import ProblemDefinition
+from packaging import version
+import numpy as np
+import pandas as pd
 import mindsdb_datasources
 
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.fs import create_process_mark, delete_process_mark
+from mindsdb.utilities.functions import mark_process
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
@@ -100,9 +100,8 @@ class ModelController():
 
         return df, problem_definition, join_learn_process
 
+    @mark_process(name='learn')
     def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
-        create_process_mark('learn')
-
         df, problem_definition, join_learn_process = self._unpack_old_args(from_data, kwargs, to_predict)
         p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
         p.start()
@@ -111,8 +110,8 @@ class ModelController():
             if not IS_PY36:
                 p.close()
 
+    @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
-        create_process_mark('predict')
         original_name = name
         name = f'{company_id}@@@@@{name}'
 
@@ -151,8 +150,6 @@ class ModelController():
         # Bellow is useful for debugging caching and storage issues
         # del self.predictor_cache[name]
 
-        delete_process_mark('predict')
-
         target = predictor_record.to_predict[0]
         if pred_format in ('explain', 'dict', 'dict&explain'):
             explain_arr = []
@@ -166,7 +163,8 @@ class ModelController():
                         'confidence_upper_bound': row.get('upper', None),
                         'anomaly': row.get('anomaly', None),
                         'truth': row.get('truth', None)
-                }})
+                    }
+                })
 
                 td = {'predicted_value': row['prediction']}
                 for col in df.columns:
@@ -189,12 +187,11 @@ class ModelController():
         else:
             return predictions
 
+    @mark_process(name='analyse')
     def analyse_dataset(self, ds: dict, company_id: int) -> lightwood.DataAnalysis:
-        create_process_mark('analyse')
         ds_cls = getattr(mindsdb_datasources, ds['class'])
         df = ds_cls(*ds['args'], **ds['kwargs']).df
         analysis = lightwood.analyze_dataset(df)
-        delete_process_mark('analyse')
         return analysis.to_dict()  # type: ignore
 
     def get_model_data(self, name, company_id: int):
@@ -241,7 +238,7 @@ class ModelController():
             data['status'] = 'complete'
         else:
             data['status'] = 'error'
-                
+
         if data.get('accuracies', None) is not None:
             if len(data['accuracies']) > 0:
                 data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
@@ -290,8 +287,8 @@ class ModelController():
         p.start()
         return 'Updated in progress'
 
+    @mark_process(name='learn')
     def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, join_learn_process: bool, company_id: int):
-        create_process_mark('learn')
         df, problem_definition, _ = self._unpack_old_args(from_data, problem_definition_dict)
         p = GenerateProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
         p.start()
@@ -308,7 +305,7 @@ class ModelController():
         predictor_record.code = lightwood.code_from_json_ai(json_ai)   
         predictor_record.json_ai = json_ai.to_dict()
         db.session.commit()
-    
+
     def code_from_json_ai(self, json_ai: dict, company_id=None):
         json_ai = lightwood.JsonAI.from_dict(json_ai)
         code = lightwood.code_from_json_ai(json_ai)
@@ -321,14 +318,14 @@ class ModelController():
 
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
-        
+
         lightwood.predictor_from_code(code)
         predictor_record.code = code
         predictor_record.json_ai = None
         db.session.commit()
 
+    @mark_process(name='learn')
     def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int) -> None:
-        create_process_mark('learn')
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
 

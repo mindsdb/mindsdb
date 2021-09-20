@@ -171,6 +171,9 @@ class UserFlowTest_1(unittest.TestCase):
 
             check_predictor_exists(predictior_name)
 
+            import time
+            time.sleep(10)
+
             wait_predictor_learn(predictior_name)
 
             res = requests.post(

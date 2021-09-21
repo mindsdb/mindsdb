@@ -135,7 +135,7 @@ class MSSQLTest(unittest.TestCase):
 
         print('predictor record in mindsdb.predictors')
         res = query(f"""
-            exec ('SELECT status FROM predictors where name = ''{TEST_PREDICTOR_NAME}''') AT {MINDSDB_DATABASE};
+            exec ('SELECT status FROM mindsdb.predictors where name = ''{TEST_PREDICTOR_NAME}''') AT {MINDSDB_DATABASE};
         """, as_dict=True, fetch=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
@@ -156,7 +156,7 @@ class MSSQLTest(unittest.TestCase):
 
         print('predictor record in mindsdb.predictors')
         res = query(f"""
-            exec ('SELECT status FROM predictors where name = ''{name}''') AT {MINDSDB_DATABASE};
+            exec ('SELECT status FROM mindsdb.predictors where name = ''{name}''') AT {MINDSDB_DATABASE};
         """, as_dict=True, fetch=True)
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
@@ -245,7 +245,7 @@ class MSSQLTest(unittest.TestCase):
         name = f'{TEST_PREDICTOR_NAME}_external'
 
         query(f"""
-            exec ('delete from predictors where name=''{name}'' ') at {MINDSDB_DATABASE};
+            exec ('delete from mindsdb.predictors where name=''{name}'' ') at {MINDSDB_DATABASE};
         """)
 
         predictors = fetch(f'''

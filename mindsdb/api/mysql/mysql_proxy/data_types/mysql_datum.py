@@ -138,19 +138,21 @@ class Datum():
                 return self.lenencInt(self.value)
 
             if self.var_type in ['byte', 'string']:
-                if isinstance(self.value, str):
-                    val_len = len(self.value.encode('utf8'))
-                else:
-                    val_len = len(self.value)
+                value = self.value.decode() if isinstance(self.value, bytes) else self.value
+                if isinstance(value, str) is False and value is not None:
+                    value = str(value)
+
+                val_len = len(value.encode('utf8'))
+
                 byte_count = int(math.ceil(math.log((val_len + 1), 2) / 8))
                 if val_len < NULL_VALUE[0]:
-                    return self.lenencInt(val_len) + bytes(self.value, 'utf-8')
+                    return self.lenencInt(val_len) + bytes(value, 'utf-8')
                 if val_len >= NULL_VALUE[0] and byte_count <= 2:
-                    return TWO_BYTE_ENC + struct.pack('i', val_len)[:2] + bytes(self.value, 'utf-8')
+                    return TWO_BYTE_ENC + struct.pack('i', val_len)[:2] + bytes(value, 'utf-8')
                 if byte_count <= 3:
-                    return THREE_BYTE_ENC + struct.pack('i', val_len)[:3] + bytes(self.value, 'utf-8')
+                    return THREE_BYTE_ENC + struct.pack('i', val_len)[:3] + bytes(value, 'utf-8')
                 if byte_count <= 8:
-                    return THREE_BYTE_ENC + struct.pack('Q', val_len)[:8] + bytes(self.value, 'utf-8')
+                    return THREE_BYTE_ENC + struct.pack('Q', val_len)[:8] + bytes(value, 'utf-8')
 
 
 def test():

@@ -1,8 +1,10 @@
 import json
-import numpy as np
 from datetime import datetime
 
 from lightwood.api.dtype import dtype
+import pandas as pd
+import numpy as np
+import dfsql
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
@@ -65,14 +67,17 @@ class MindsDBDataNode(DataNode):
 
     def _get_model_columns(self, table_name):
         model = self.model_interface.get_model_data(name=table_name)
+        dtype_dict = model.get('dtype_dict')
+        if isinstance(dtype_dict, dict) is False:
+            return []
         columns = []
-        columns += list(model['dtype_dict'].keys())
+        columns += list(dtype_dict.keys())
         predict = model['predict']
         if not isinstance(predict, list):
             predict = [predict]
         columns += [f'{x}_original' for x in predict]
         for col in predict:
-            if model['dtype_dict'][col] in (dtype.integer, dtype.float):
+            if dtype_dict[col] in (dtype.integer, dtype.float):
                 columns += [f"{col}_min", f"{col}_max"]
             columns += [f"{col}_confidence"]
             columns += [f"{col}_explain"]
@@ -97,15 +102,16 @@ class MindsDBDataNode(DataNode):
 
     def _select_predictors(self):
         models = self.model_interface.get_models()
-        return [{
-            'name': x['name'],
-            'status': x['status'],
-            'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
-            'predict': ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
-            'select_data_query': '',
-            'external_datasource': '',  # TODO
-            'training_options': ''  # TODO ?
-        } for x in models]
+        columns = ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
+        return pd.DataFrame([[
+            x['name'],
+            x['status'],
+            str(x['accuracy']) if x['accuracy'] is not None else None,
+            ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
+            '',
+            '',  # TODO
+            ''  # TODO ?
+        ] for x in models], columns=columns)
 
     def delete_predictor(self, name):
         self.model_interface.delete_model(name)
@@ -135,8 +141,48 @@ class MindsDBDataNode(DataNode):
 
         return data
 
+    def get_predictors(self, mindsdb_sql_query):
+        predictors_df = self._select_predictors()
+        mindsdb_sql_query.from_table.parts = ['predictors']
+
+        # +++ FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
+        if ' 1 = 0' in str(mindsdb_sql_query):
+            q = str(mindsdb_sql_query)
+            q = q[:q.lower().find('where')] + ' limit 0'
+            result_df = dfsql.sql_query(
+                q,
+                ds_kwargs={'case_sensitive': False},
+                reduce_output=False,
+                predictors=predictors_df
+            )
+        elif 'AND (1 = 1)' in str(mindsdb_sql_query):
+            q = str(mindsdb_sql_query)
+            q = q.replace('AND (1 = 1)', ' ')
+            result_df = dfsql.sql_query(
+                q,
+                ds_kwargs={'case_sensitive': False},
+                reduce_output=False,
+                predictors=predictors_df
+            )
+        else:
+            # ---
+            try:
+                result_df = dfsql.sql_query(
+                    str(mindsdb_sql_query),
+                    ds_kwargs={'case_sensitive': False},
+                    reduce_output=False,
+                    predictors=predictors_df
+                )
+            except Exception:
+                # FIXME https://github.com/mindsdb/dfsql/issues/38
+                result_df = predictors_df
+
+        # FIXME https://github.com/mindsdb/dfsql/issues/38
+        result_df = result_df.where(pd.notnull(result_df), '')
+
+        return result_df.to_dict(orient='records'), list(result_df.columns)
+
     def select_query(self, query):
-        from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
         moz_struct = to_moz_sql_struct(query)
         data = self.select(
             table=query.from_table.parts[-1],
@@ -145,7 +191,7 @@ class MindsDBDataNode(DataNode):
         )
         return data
 
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None, is_timeseries=False):
+    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None, is_timeseries=False):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
         _mdb_make_predictions = is_timeseries
@@ -157,55 +203,47 @@ class MindsDBDataNode(DataNode):
             return self._select_from_ai_table(table, columns, where)
 
         original_when_data = None
-        if 'when_data' in where:
-            if len(where) > 1:
+        if 'when_data' in where_data:
+            if len(where_data) > 1:
                 raise ValueError("Should not be used any other keys in 'where', if 'when_data' used")
             try:
-                original_when_data = where['when_data']['$eq']
-                where_data = json.loads(where['when_data']['$eq'])
+                original_when_data = where_data['when_data']
+                where_data = json.loads(where_data['when_data'])
                 if isinstance(where_data, list) is False:
                     where_data = [where_data]
             except Exception:
                 raise ValueError(f'''Error while parse 'when_data'="{where_data}"''')
-        external_datasource = None
-        if 'external_datasource' in where:
-            external_datasource = where['external_datasource']['$eq']
-            del where['external_datasource']
 
         select_data_query = None
-        if came_from is not None and 'select_data_query' in where:
-            select_data_query = where['select_data_query']['$eq']
-            del where['select_data_query']
+        if integration_name is not None and 'select_data_query' in where_data:
+            select_data_query = where_data['select_data_query']
+            del where_data['select_data_query']
 
-            integration_data = get_db_integration(came_from, self.company_id)
-            dbtype = integration_data['type']
-            if dbtype == 'clickhouse':
-                ch = Clickhouse(self.config, came_from, integration_data)
+            integration_data = get_db_integration(integration_name, self.company_id)
+            if integration_type == 'clickhouse':
+                ch = Clickhouse(self.config, integration_name, integration_data)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')
                 data = res.json()['data']
-            elif dbtype == 'mariadb':
-                maria = Mariadb(self.config, came_from, integration_data)
+            elif integration_type == 'mariadb':
+                maria = Mariadb(self.config, integration_name, integration_data)
                 data = maria._query(select_data_query)
-            elif dbtype == 'mysql':
-                mysql = MySQL(self.config, came_from, integration_data)
+            elif integration_type == 'mysql':
+                mysql = MySQL(self.config, integration_name, integration_data)
                 data = mysql._query(select_data_query)
-            elif dbtype == 'postgres':
-                mysql = PostgreSQL(self.config, came_from, integration_data)
+            elif integration_type == 'postgres':
+                mysql = PostgreSQL(self.config, integration_name, integration_data)
                 data = mysql._query(select_data_query)
-            elif dbtype == 'mssql':
-                mssql = MSSQL(self.config, came_from, integration_data)
+            elif integration_type == 'mssql':
+                mssql = MSSQL(self.config, integration_name, integration_data)
                 data = mssql._query(select_data_query, fetch=True)
             else:
-                raise Exception(f'Unknown database type: {dbtype}')
+                raise Exception(f'Unknown database type: {integration_type}')
 
-            if where_data is None:
-                where_data = data
-            else:
-                where_data += data
+            where_data = data
 
         new_where = {}
         if where_data is None:
-            for key, value in where.items():
+            for key, value in where_data.items():
                 if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
                     # TODO value should be just string or number
                     raise Exception()
@@ -237,23 +275,20 @@ class MindsDBDataNode(DataNode):
 
         if not model['problem_definition']['timeseries_settings']['is_timeseries']:
             # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
-            if isinstance(where_data, list):
-                data = []
-                for row in pred_dicts:
-                    new_row = {}
-                    for key in row:
-                        new_row.update(row[key])
-                        predicted_value = new_row['predicted_value']
-                        del new_row['predicted_value']
-                        new_row[key] = predicted_value
-                    data.append(new_row)
-                pred_dicts = data
-
             if isinstance(where_data, dict):
-                for col in where_data:
-                    if col not in predicted_columns:
-                        pred_dicts[0][col] = where_data[col]
-
+                where_data = [where_data]
+            if isinstance(where_data, list) is False:
+                raise Exception('"where_data" must be list or dict')
+            data = []
+            for row in pred_dicts:
+                new_row = {}
+                for predicted_key in row:
+                    new_row.update(row[predicted_key])
+                    predicted_value = new_row['predicted_value']
+                    del new_row['predicted_value']
+                    new_row[predicted_key] = predicted_value
+                data.append(new_row)
+            pred_dicts = data
         else:
             predict = model['predict']
             data_column = model['problem_definition']['timeseries_settings']['order_by'][0]
@@ -365,15 +400,15 @@ class MindsDBDataNode(DataNode):
 
         data = []
         explains = []
+        keys_to_save = [*keys, '__mindsdb_row_id', 'external_datasource', 'select_data_query', 'when_data']
         for i, el in enumerate(pred_dicts):
-            data.append({key: el[key] for key in keys})
+            data.append({key: el.get(key) for key in keys_to_save})
             explains.append(explanations[i])
 
         for i, row in enumerate(data):
             cast_row_types(row, model['dtype_dict'])
 
             row['select_data_query'] = select_data_query
-            row['external_datasource'] = external_datasource
             row['when_data'] = original_when_data
 
             for k in original_target_values:

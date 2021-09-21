@@ -443,7 +443,7 @@ class SQLQuery():
                 right_key = list(right_keys)[0]
 
                 data = []
-                if step.query.join_type == 'LEFT JOIN':
+                if step.query.join_type.upper() == 'LEFT JOIN':
                     for left_row in left_data:
                         left_row_data = left_row[left_key]
                         for right_row in right_data:
@@ -459,7 +459,7 @@ class SQLQuery():
                                 left_key: left_row_data,
                                 right_key: {}
                             })
-                elif step.query.join_type == 'JOIN':
+                elif step.query.join_type.upper() == 'JOIN':
                     right_used_ids = []
                     for left_row in left_data:
                         left_row_data = left_row[left_key]

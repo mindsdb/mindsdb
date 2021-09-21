@@ -18,6 +18,6 @@ mindsdb_datasources == 1.5.0
 flask-compress >= 1.0.0
 kafka-python >= 2.0.0
 appdirs >= 1.0.0
-mindsdb-sql @ git+https://github.com/mindsdb/mindsdb_sql@planner
+mindsdb-sql == 0.0.27
 dfsql == 0.6.6
 checksumdir >= 1.2.0

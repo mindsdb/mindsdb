@@ -87,7 +87,7 @@ class StreamIntegration(Integration):
                         else:
                             # Bad action value
                             log.error('INTEGRATION %s: bad action value received - %s', self.name, dct)
-                
+
             stream_db_recs = db.session.query(db.Stream).filter_by(
                 company_id=self.company_id,
                 integration=self.name

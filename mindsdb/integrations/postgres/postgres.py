@@ -1,7 +1,7 @@
 from contextlib import closing
 import pg8000
 
-from lightwood import dtype
+from lightwood.api import dtype
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
 

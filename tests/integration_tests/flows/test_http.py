@@ -243,9 +243,9 @@ class HTTPTest(unittest.TestCase):
         # Edit it
         json_ai = predictor_data['json_ai']
         json_ai['problem_definition']
-        models = json_ai['outputs']['rental_price']['models']
-        keep_only = [x for x in models if x['module'] != 'Regression']
-        json_ai['outputs']['rental_price']['models'] = keep_only
+        mixers = json_ai['outputs']['rental_price']['mixers']
+        keep_only = [x for x in mixers if x['module'] != 'Regression']
+        json_ai['outputs']['rental_price']['mixers'] = keep_only
 
         # Upload it
         r = requests.put(
@@ -274,7 +274,7 @@ class HTTPTest(unittest.TestCase):
 
         # Change the code
         new_code = predictor_data['code']
-        new_code = new_code.split("""self.mode = 'predict'""")[0]
+        new_code = new_code.split('''self.mode = "predict"''')[0]
         new_code += """\n        return pd.DataFrame({'prediction': [int(5555555)]}).astype(int)"""
 
         r = requests.put(
@@ -289,7 +289,7 @@ class HTTPTest(unittest.TestCase):
             json={'data_source_name': ds_name, 'join_learn_process': True}
         )
         r.raise_for_status()
-    
+
     def test_98_predict_modified_predictor(self):
         params = {
             'when': {'sqft': 500}

@@ -15,7 +15,7 @@ import dfsql
 import pandas as pd
 import datetime
 
-from lightwood import dtype
+from lightwood.api import dtype
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
 from mindsdb_sql.parser.dialects.mindsdb.latest import Latest

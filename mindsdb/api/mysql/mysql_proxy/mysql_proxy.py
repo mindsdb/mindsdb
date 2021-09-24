@@ -20,7 +20,6 @@ import json
 import atexit
 import tempfile
 import datetime
-import time
 import socket
 import struct
 from collections import OrderedDict
@@ -531,16 +530,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         data_store = self.session.data_store
         company_id = self.session.company_id
 
-        if get_db_integration(struct['integration_name'], company_id) is None:
-            raise Exception(f"Unknown integration: {struct['integration_name']}")
+        predictor_name = struct['predictor_name']
+        integration_name = struct['integration_name']
 
-        is_temp_ds = False
+        if get_db_integration(integration_name, company_id) is None:
+            raise Exception(f"Unknown integration: {integration_name}")
+
         ds_name = struct.get('datasource_name')
         if ds_name is None:
-            ds_name = data_store.get_vacant_name('temp')
-            is_temp_ds = True
+            ds_name = data_store.get_vacant_name(predictor_name)
 
-        ds = data_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
+        ds = data_store.save_datasource(ds_name, integration_name, {'query': struct['select']})
         ds_data = data_store.get_datasource(ds_name)
 
         # TODO add alias here
@@ -558,13 +558,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-        model_interface.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs=kwargs)
-
-        if is_temp_ds:
-            try:
-                data_store.delete_datasource(ds_name)
-            except Exception:
-                pass
+        model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs)
 
         self.packet(OkPacket).send()
 

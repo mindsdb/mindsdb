@@ -136,8 +136,8 @@ class DataStore():
         '''
         if base is None:
             base = 'datasource'
-        datasources = session.query(Datasource).filter_by(company_id=company_id).all()
-        datasources_names = [x.name for x in datasources]
+        datasources = session.query(Datasource.name).filter_by(company_id=company_id).all()
+        datasources_names = [x[0] for x in datasources]
         if base not in datasources_names:
             return base
         for i in range(1, 1000):

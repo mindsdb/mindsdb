@@ -1,4 +1,5 @@
 import json
+import copy
 from datetime import datetime
 
 from lightwood.api.dtype import dtype
@@ -273,97 +274,95 @@ class MindsDBDataNode(DataNode):
 
         pred_dicts, explanations = self.model_interface.predict(table, where_data, 'dict&explain')
 
-        if not model['problem_definition']['timeseries_settings']['is_timeseries']:
-            # Fix since for some databases we *MUST* return the same value for the columns originally specified in the `WHERE`
-            if isinstance(where_data, dict):
-                where_data = [where_data]
-            if isinstance(where_data, list) is False:
-                raise Exception('"where_data" must be list or dict')
-            data = []
+        # transform predictions to more convenient view
+        new_pred_dicts = []
+        for row in pred_dicts:
+            new_row = {}
+            for key in row:
+                new_row.update(row[key])
+                new_row[key] = new_row['predicted_value']
+            del new_row['predicted_value']
+            new_pred_dicts.append(new_row)
+        pred_dicts = new_pred_dicts
+
+        timeseries_settings = model['problem_definition']['timeseries_settings']
+
+        if timeseries_settings['is_timeseries'] is True:
+            group_by = timeseries_settings['group_by']
+            groups = set()
             for row in pred_dicts:
-                new_row = {}
-                for predicted_key in row:
-                    new_row.update(row[predicted_key])
-                    predicted_value = new_row['predicted_value']
-                    del new_row['predicted_value']
-                    new_row[predicted_key] = predicted_value
-                data.append(new_row)
-            pred_dicts = data
-        else:
+                groups.add(
+                    tuple([row[x] for x in group_by])
+                )
+
+            # split rows by groups
+            rows_by_groups = {}
+            for group in groups:
+                rows_by_groups[group] = {
+                    'rows': [],
+                    'explanations': []
+                }
+                for row_index, row in enumerate(pred_dicts):
+                    is_wrong_group = False
+                    for i, group_by_key in enumerate(group_by):
+                        if row[group_by_key] != group[i]:
+                            is_wrong_group = True
+                            break
+                    if not is_wrong_group:
+                        rows_by_groups[group]['rows'].append(row)
+                        rows_by_groups[group]['explanations'].append(explanations[row_index])
+
             predict = model['predict']
-            data_column = model['problem_definition']['timeseries_settings']['order_by'][0]
-            nr_predictions = model['problem_definition']['timeseries_settings']['nr_predictions']
-            new_pred_dicts = []
-            new_explanations = []
-            if _mdb_make_predictions is False:
-                original_target_values = {f'{predict}_original': []}
-                for group_index, pred_dict in enumerate(pred_dicts):
-                    explanaion = explanations[group_index][predict]
-                    predictions = pred_dict[predict]['predicted_value']
+            data_column = timeseries_settings['order_by'][0]
+            nr_predictions = timeseries_settings['nr_predictions']
+
+            for group, data in rows_by_groups.items():
+                rows = data['rows']
+                explanations = data['explanations']
+
+                if len(rows) == 0:
+                    break
+
+                for row in rows:
+                    predictions = row[predict]
                     if isinstance(predictions, list) is False:
                         predictions = [predictions]
-                    data_values = pred_dict[predict][data_column]
-                    if isinstance(data_values, list) is False:
-                        data_values = [data_values]
-                    for i in range(nr_predictions):
-                        nd = {}
-                        nd.update(pred_dict[predict])
-                        new_pred_dicts.append(nd)
-                        nd[predict] = predictions[i]
-                        if 'predicted_value' in nd:
-                            del nd['predicted_value']
-                        nd[data_column] = data_values[i] if len(data_values) > i else None
 
-                    original_target_values_array = [None] * nr_predictions
-                    original_target_values_array[0] = explanaion.get('truth', None)
-                    original_target_values[f'{predict}_original'].extend(original_target_values_array)
-                    for i in range(nr_predictions):
-                        nd = {}
-                        for key in explanaion:
-                            if key not in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
-                                nd[key] = explanaion[key]
-                        for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
-                            nd[key] = explanaion[key][i]
-                        new_explanations.append({predict: nd})
-            else:
-                for row in pred_dicts:
-                    new_row = {}
-                    new_row.update(row[predict])
-                    new_row[predict] = row[predict]['predicted_value'][0]
-                    new_row[data_column] = row[predict][data_column][0]
-                    new_pred_dicts.append(new_row)
-                for i in range(1, len(pred_dicts[-1][predict]['predicted_value'])):
-                    new_row = {}
-                    new_row.update(pred_dicts[-1][predict])
-                    new_row[predict] = pred_dicts[-1][predict]['predicted_value'][i]
-                    new_row[data_column] = pred_dicts[-1][predict][data_column][i]
-                    new_pred_dicts.append(new_row)
-                for row in new_pred_dicts:
-                    if 'predicted_value' in row:
-                        del row['predicted_value']
+                    date_values = row[data_column]
+                    if isinstance(date_values, list) is False:
+                        date_values = [date_values]
 
-                original_values = []
-                original_target_values = {f'{predict}_original': original_values}
-                for expl in explanations:
-                    explanaion = expl[predict]
-                    original_values.append(explanaion.get('truth', None))
-                    nd = {}
-                    for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
-                        nd[key] = explanaion[key][0]
-                    new_explanations.append(nd)
+                for i in range(len(rows) - 1):
+                    rows[i][predict] = rows[i][predict][0]
+                    rows[i][data_column] = rows[i][data_column][0]
+                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        explanations[i][predict][col] = explanations[i][predict][col][0]
 
-                expl = explanations[-1]
-                explanaion = expl[predict]
-                for i in range(1, model['problem_definition']['timeseries_settings']['nr_predictions']):
-                    nd = {}
-                    original_values.append(None)
-                    for key in ('predicted_value', 'confidence', 'confidence_upper_bound', 'confidence_lower_bound'):
-                        nd[key] = explanaion[key][i]
-                    new_explanations.append(nd)
-                new_explanations = [{predict: x} for x in new_explanations]
+                last_row = rows.pop()
+                last_explanation = explanations.pop()
+                for i in range(nr_predictions):
+                    new_row = copy.deepcopy(last_row)
+                    new_row[predict] = new_row[predict][i]
+                    new_row[data_column] = new_row[data_column][i]
+                    rows.append(new_row)
 
-            pred_dicts = new_pred_dicts
-            explanations = new_explanations
+                    new_explanation = copy.deepcopy(last_explanation)
+                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        new_explanation[predict][col] = new_explanation[predict][col][i]
+                    if i != 0:
+                        new_explanation[predict]['anomaly'] = None
+                        new_explanation[predict]['truth'] = None
+                    explanations.append(new_explanation)
+
+            pred_dicts = []
+            explanations = []
+            for group, data in rows_by_groups.items():
+                pred_dicts.extend(data['rows'])
+                explanations.extend(data['explanations'])
+
+            original_target_values[f'{predict}_original'] = []
+            for i in range(len(pred_dicts)):
+                original_target_values[f'{predict}_original'].append(explanations[i][predict].get('truth', None))
 
             if model['dtypes'][data_column] == dtype.date:
                 for row in pred_dicts:

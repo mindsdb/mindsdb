@@ -209,7 +209,8 @@ class ModelController():
         linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=predictor_record.datasource_id).first()
 
         # check update availability
-        if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
+        is_cloud = self.config.get('cloud', False)
+        if is_cloud is False and version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
             predictor_record.update_status = 'available'
             db.session.commit()
 

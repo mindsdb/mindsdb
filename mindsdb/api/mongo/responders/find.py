@@ -1,6 +1,6 @@
 from bson.int64 import Int64
 from collections import OrderedDict
-from lightwood import dtype
+from lightwood.api import dtype
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.interfaces.database.integrations import get_db_integrations

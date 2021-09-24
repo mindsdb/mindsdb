@@ -2,7 +2,7 @@ import json
 import copy
 from datetime import datetime
 
-from lightwood.api.dtype import dtype
+from lightwood.api import dtype
 import pandas as pd
 import numpy as np
 import dfsql

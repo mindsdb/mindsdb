@@ -92,6 +92,10 @@ class StreamIntegration(Integration):
                 company_id=self.company_id,
                 integration=self.name
             ).all()
+            stream_db_recs = [
+                x for x in stream_db_recs
+                if x.json_ai is None and x.code is None and 'error' not in x.data
+            ]
 
             # Stop streams that weren't found in DB
             indices_to_delete = []

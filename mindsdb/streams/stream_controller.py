@@ -1,4 +1,3 @@
-from copy import deepcopy
 import os
 from threading import Event, Thread
 from time import time
@@ -19,7 +18,7 @@ class StreamController:
         self.stream_in = stream_in
         self.stream_out = stream_out
         self.anomaly_stream = anomaly_stream
-        
+
         self.learning_stream = learning_stream
         self.learning_threshold = learning_threshold
         self.learning_data = []
@@ -37,7 +36,7 @@ class StreamController:
         self.target = p.to_predict[0]
 
         ts_settings = p.learn_args.get('timeseries_settings', None)
-        if not ts_settings['is_timeseries']:
+        if ts_settings.get('is_timeseries', False) is False:
             ts_settings = None
 
         if ts_settings is None:

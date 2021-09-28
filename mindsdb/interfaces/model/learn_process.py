@@ -40,31 +40,20 @@ def delete_learn_mark():
 
 
 @mark_process(name='learn')
-def run_generate(df: DataFrame, problem_definition: ProblemDefinition, name: str, company_id: int, datasource_id: int) -> int:
+def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int) -> int:
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
     code = lightwood.code_from_json_ai(json_ai)
 
-    predictor_record = db.Predictor(
-        company_id=company_id,
-        name=name,
-        json_ai=json_ai.to_dict(),
-        code=code,
-        datasource_id=datasource_id,
-        mindsdb_version=mindsdb_version,
-        lightwood_version=lightwood_version,
-        to_predict=[problem_definition.target],
-        learn_args=problem_definition.to_dict(),
-        data={'name': name}
-    )
-
-    db.session.add(predictor_record)
+    predictor_record = Predictor.query.get(predictor_id)
+    predictor_record.json_ai = json_ai.to_dict()
+    predictor_record.code = code
     db.session.commit()
 
 
 @mark_process(name='learn')
 def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
     try:
-        predictor_record = session.query(db.Predictor).filter_by(id=predictor_id).first()
+        predictor_record = Predictor.query.get(predictor_id)
         assert predictor_record is not None
 
         fs_store = FsStore()
@@ -97,11 +86,9 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         raise e
 
 
-def run_learn(df: DataFrame, problem_definition: ProblemDefinition, name: str, company_id: int, datasource_id: int) -> None:
-    run_generate(df, problem_definition, name, company_id, datasource_id)
-    predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-    assert predictor_record is not None
-    run_fit(predictor_record.id, df)
+def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int) -> None:
+    run_generate(df, problem_definition, predictor_id)
+    run_fit(predictor_id, df)
 
 
 def run_adjust(name, db_name, from_data, datasource_id, company_id):
@@ -156,7 +143,7 @@ def run_update(name: str, company_id: int):
         predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
         session.commit()
 
-        predictor_record.lightwood_version = lightwood.__version__
+        predictor_record.lightwood_version = lightwood_version
         predictor_record.mindsdb_version = mindsdb_version
         predictor_record.update_status = 'up_to_date'
         session.commit()

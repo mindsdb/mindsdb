@@ -10,6 +10,7 @@ from typing import Optional, Tuple, Union, Dict, Any
 
 import lightwood
 from lightwood.api.types import ProblemDefinition
+from lightwood import __version__ as lightwood_version
 from packaging import version
 import numpy as np
 import pandas as pd
@@ -103,7 +104,23 @@ class ModelController():
     @mark_process(name='learn')
     def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
         df, problem_definition, join_learn_process = self._unpack_old_args(from_data, kwargs, to_predict)
-        p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
+
+        predictor_record = db.Predictor(
+            company_id=company_id,
+            name=name,
+            datasource_id=datasource_id,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=lightwood_version,
+            to_predict=[problem_definition['target']],
+            learn_args=problem_definition,
+            data={'name': name}
+        )
+
+        db.session.add(predictor_record)
+        db.session.commit()
+        predictor_id = predictor_record.id
+
+        p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, predictor_id)
         p.start()
         if join_learn_process:
             p.join()

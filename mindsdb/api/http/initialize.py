@@ -7,14 +7,11 @@ import webbrowser
 from zipfile import ZipFile
 from pathlib import Path
 import traceback
-from datetime import datetime, date, timedelta
 import tempfile
 # import concurrent.futures
-import numpy as np
 from flask import Flask, url_for, make_response
 from flask.json import dumps
 from flask_restx import Api
-from flask.json import JSONEncoder
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
@@ -24,6 +21,7 @@ from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
 from mindsdb.interfaces.storage.db import session
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
 class Swagger_Api(Api):
@@ -34,24 +32,6 @@ class Swagger_Api(Api):
     @property
     def specs_url(self):
         return url_for(self.endpoint("specs"), _external=False)
-
-
-class CustomJSONEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, date):
-            return obj.strftime("%Y-%m-%d")
-        if isinstance(obj, datetime):
-            return obj.strftime("%Y-%m-%dT%H:%M:%S.%f")
-        if isinstance(obj, timedelta):
-            return str(obj)
-        if isinstance(obj, np.bool_):
-            return bool(obj)
-        if isinstance(obj, np.int8) or isinstance(obj, np.int16) or isinstance(obj, np.int32) or isinstance(obj, np.int64):
-            return int(obj)
-        if isinstance(obj, np.float16) or isinstance(obj, np.float32) or isinstance(obj, np.float64) or isinstance(obj, np.float128):
-            return float(obj)
-
-        return JSONEncoder.default(self, obj)
 
 
 def custom_output_json(data, code, headers=None):

@@ -6,6 +6,7 @@ import time
 import asyncio
 import signal
 import subprocess
+import psutil
 
 import torch.multiprocessing as mp
 
@@ -42,6 +43,8 @@ def close_api_gracefully(apis):
             os.system('ray stop --force')
     except KeyboardInterrupt:
         sys.exit(0)
+    except psutil.NoSuchProcess:
+        pass
 
 
 if __name__ == '__main__':
@@ -65,6 +68,13 @@ if __name__ == '__main__':
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config['paths']['root']}")
 
+    is_cloud = config.get('cloud', False)
+    if not is_cloud:
+        print('running migrations:')
+        run_migration_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "run_migrations.py")
+        p = subprocess.Popen([f"python3 {run_migration_path}"], shell=True)
+        p.wait()
+
     # @TODO Backwards compatibiltiy for tests, remove later
     from mindsdb.interfaces.database.integrations import add_db_integration, get_db_integration, remove_db_integration
     dbw = DatabaseWrapper(COMPANY_ID)
@@ -79,9 +89,7 @@ if __name__ == '__main__':
             except Exception:
                 pass
 
-    is_cloud = config.get('cloud', False)
     if not is_cloud:
-        
         for integration_name in get_db_integrations(COMPANY_ID, sensitive_info=True):
             print(f"Setting up integration: {integration_name}")
             if get_db_integration(integration_name, COMPANY_ID).get('publish', False):
@@ -118,11 +126,6 @@ if __name__ == '__main__':
             'started': False
         } for api in api_arr
     }
-
-    if not is_cloud:
-        print('running migrations:')
-        p = subprocess.Popen(["python3 mindsdb/run_migrations.py"], shell=True)
-        p.wait()
 
     start_functions = {
         'http': start_http,

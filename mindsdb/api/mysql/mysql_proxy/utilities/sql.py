@@ -36,28 +36,6 @@ def where_to_dict(root):
         raise Exception(f'unknown type in "where": {root}')
 
 
-def plain_where_conditions(self, condition):
-    ''' Transform current tree view of 'where' conditions to plain dict.
-        All oprations must be 'equal', and must be joined via 'AND'.
-    '''
-    conditions = {}
-    # condition = self.mindsdb_sql_struct.where
-    if condition is None:
-        return conditions
-    if condition.op not in ['AND', '=']:
-        raise Exception('must be only AND and =')
-    if isinstance(condition.args[0], Operation):
-        add_condition = self._plain_where_conditions(condition.args[0])
-        conditions.update(add_condition)
-        add_condition = self._plain_where_conditions(condition.args[1])
-        conditions.update(add_condition)
-    elif isinstance(condition.args[0], Identifier):
-        if isinstance(condition.args[1], Constant) is False:
-            raise Exception('must be = to constant')
-        conditions[condition.args[0].value] = condition.args[1].value
-    return conditions
-
-
 def to_moz_sql_struct(mp):
     res = {
         'select': [],

@@ -43,15 +43,16 @@ class PingNative(Resource):
         }
 
         for process_type in response:
-            p = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{process_type}/')
-            if not p.is_dir():
+            processes_dir = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{process_type}/')
+            if not processes_dir.is_dir():
                 continue
-            pids = [int(x.name) for x in p.iterdir()]
-            for pid in pids:
+            process_marks = [x.name for x in processes_dir.iterdir()]
+            for p_mark in process_marks:
+                pid = int(p_mark.split('-')[0])
                 try:
                     psutil.Process(pid)
                 except Exception:
-                    p.joinpath(str(pid)).unlink()
+                    processes_dir.joinpath(p_mark).unlink()
                 else:
                     response[process_type] = True
 

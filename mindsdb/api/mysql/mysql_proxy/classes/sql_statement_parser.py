@@ -298,8 +298,8 @@ class SqlStatementParser():
         return res
 
     def parse_as_create_predictor(self) -> dict:
-        CREATE, PREDICTOR, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, USING, ASK, DESC = map(
-            CaselessKeyword, "CREATE PREDICTOR FROM WHERE PREDICT AS ORDER GROUP BY WINDOW USING ASK DESC".split()
+        CREATE, PREDICTOR, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, HORIZON, USING, ASK, DESC = map(
+            CaselessKeyword, "CREATE PREDICTOR FROM WHERE PREDICT AS ORDER GROUP BY WINDOW HORIZON USING ASK DESC".split()
         )
         ORDER_BY = ORDER + BY
         GROUP_BY = GROUP + BY
@@ -322,6 +322,7 @@ class SqlStatementParser():
             + Optional(ORDER_BY + delimitedList(order_item, delim=',')('order_by'))
             + Optional(GROUP_BY + delimitedList(word, delim=',')('group_by'))
             + Optional(WINDOW + s_int('window'))
+            + Optional(HORIZON + s_int('nr_predictions'))
             + Optional(
                 (USING + delimitedList(using_item, delim=',')('using'))
                 | (USING + originalTextFor(nestedExpr('{', '}'))('using'))
@@ -538,13 +539,14 @@ class SqlStatementParser():
 
         tests = [[
             '''
-            CREATE PREDICTor debt_model_1
-            FROM integration_name (select whatever) as ds_name
-            PREDICT f1 as f1_alias, f2, f3 as f3_alias
-            order by f_order_1 ASK, f_order_2, f_order_3 DESC
-            group by f_group_1, f_group_2
-            window 100
-            using {"x": 1, "y": "a"}
+                CREATE PREDICTor debt_model_1
+                FROM integration_name (select whatever) as ds_name
+                PREDICT f1 as f1_alias, f2, f3 as f3_alias
+                order by f_order_1 ASK, f_order_2, f_order_3 DESC
+                group by f_group_1, f_group_2
+                window 100
+                HORIZON 7
+                using {"x": 1, "y": "a"}
             ''', {
                 'predictor_name': 'debt_model_1',
                 'integration_name': 'integration_name',
@@ -555,6 +557,7 @@ class SqlStatementParser():
                 'order_by': ['f_order_1', 'f_order_2', 'f_order_3'],
                 'group_by': ['f_group_1', 'f_group_2'],
                 'window': 100,
+                'nr_predictions': 7,
                 'using': {'x': 1, 'y': 'a'}
             }
         ], [

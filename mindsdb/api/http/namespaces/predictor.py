@@ -49,7 +49,7 @@ class Predictor(Resource):
         except Exception:
             kwargs = None
 
-        if type(kwargs) != type({}):
+        if isinstance(kwargs, dict) is False:
             kwargs = {}
 
         if 'equal_accuracy_for_all_output_categories' not in kwargs:
@@ -152,7 +152,8 @@ class PredictorPredict(Resource):
         '''Queries predictor'''
         when = request.json.get('when')
 
-        if isinstance(when, dict) is False or len(when) == 0:
+        # list is a required type for TS prediction
+        if isinstance(when, (dict, list)) is False or len(when) == 0:
             return 'No data provided for the predictions', 400
 
         results = request.model_interface.predict(name, when, 'explain')

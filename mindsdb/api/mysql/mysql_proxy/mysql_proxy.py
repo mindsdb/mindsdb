@@ -43,7 +43,6 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     NotImplementedError,
     SqlError
 )
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query_new import SQLQuery as SQLQuery_new
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
@@ -337,7 +336,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(EofPacket))
         self.sendPackageGroup(packages)
 
-    def answer_show_variables(self, variables):
+    def answer_show_variables(self, sql):
+        sql_lower = sql.lower()
+        if 'show variables' in sql_lower:
+            variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
+        elif "show variables like" in sql_lower:
+            variables = re.findall(r"show variables like '([a-zA-Z_]*)'", sql_lower)
+        elif "show session variables like" in sql_lower:
+            variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+        elif 'show session status like' in sql_lower:
+            variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
+        elif 'show global variables' in sql_lower:
+            variables = [x for x in SERVER_VARIABLES if x.startswith('@@session.') is False]
+
         data = []
         for variable_name in variables:
             variable_data = SERVER_VARIABLES.get(f'@@{variable_name}')
@@ -519,23 +530,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         data_store = self.session.data_store
         company_id = self.session.company_id
 
-        if get_db_integration(struct['integration_name'], company_id) is None:
-            struct['integration_name'] = list(get_db_integrations(company_id).keys())[0]
+        predictor_name = struct['predictor_name']
+        integration_name = struct['integration_name']
 
-        is_temp_ds = False
+        if get_db_integration(integration_name, company_id) is None:
+            raise Exception(f"Unknown integration: {integration_name}")
+
         ds_name = struct.get('datasource_name')
         if ds_name is None:
-            ds_name = data_store.get_vacant_name('temp')
-            is_temp_ds = True
+            ds_name = data_store.get_vacant_name(predictor_name)
 
-        ds = data_store.save_datasource(ds_name, struct['integration_name'], {'query': struct['select']})
+        ds = data_store.save_datasource(ds_name, integration_name, {'query': struct['select']})
         ds_data = data_store.get_datasource(ds_name)
 
         # TODO add alias here
         predict = [x['name'] for x in struct['predict']]
 
         timeseries_settings = {}
-        for w in ['order_by', 'group_by', 'window']:
+        for w in ['order_by', 'group_by', 'window', 'nr_predictions']:
             if w in struct:
                 timeseries_settings[w] = struct.get(w)
 
@@ -546,10 +558,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-        model_interface.learn(struct['predictor_name'], ds, predict, ds_data['id'], kwargs=kwargs)
-
-        if is_temp_ds:
-            data_store.delete_datasource(ds_name)
+        model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs)
 
         self.packet(OkPacket).send()
 
@@ -558,8 +567,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         fake_sql = 'select name ' + fake_sql[len('delete '):]
         query = SQLQuery(
             fake_sql,
-            integration=self.session.integration,
-            database=self.session.database
+            session=self.session
         )
 
         result = query.fetch(
@@ -606,6 +614,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_stmt_prepare(self, statement):
         sql = statement.sql
+        sql_lower = sql.lower()
         stmt_id = self.session.register_stmt(statement)
         prepared_stmt = self.session.prepared_stmts[stmt_id]
 
@@ -619,8 +628,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             columns_str = ','.join([f'`{col}`' for col in struct['columns']])
             query = SQLQuery(
                 f'select {columns_str} from mindsdb.{struct["table"]}',
-                integration=self.session.integration,
-                database=self.session.database
+                session=self.session
             )
             num_params = struct['values'].count(SQL_PARAMETER)
             num_columns = len(struct['values']) - num_params
@@ -645,7 +653,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # and after it send prepare for delete query.
             prepared_stmt['type'] = 'lock'
             statement.cut_from_tail('for update')
-            query = SQLQuery(statement.sql, integration=self.session.integration, database=self.session.database)
+            query = SQLQuery(statement.sql, session=self.session)
             num_columns = len(query.columns)
             num_params = 0
             columns_def = query.columns
@@ -657,7 +665,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             fake_sql = sql.replace('?', '"?"')
             fake_sql = 'select name ' + fake_sql[len('delete '):]
-            query = SQLQuery(fake_sql, integration=self.session.integration, database=self.session.database)
+            query = SQLQuery(fake_sql, session=self.session)
             num_columns = 0
             num_params = sql.count('?')
             columns_def = []
@@ -672,13 +680,41 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     charset=CHARSET_NUMBERS['utf8_general_ci'],
                     flags=sum([FIELD_FLAG.BINARY_COLLATION])
                 ))
-
+        elif statement.keyword == 'select' and 'connection_id()' in sql.lower():
+            prepared_stmt['type'] = 'select'
+            num_columns = 1
+            num_params = 0
+            columns_def = [{
+                'database': '',
+                'table_name': '',
+                'name': 'conn_id',
+                'alias': 'conn_id',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }]
         elif statement.keyword == 'select':
             prepared_stmt['type'] = 'select'
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+            query = SQLQuery(sql, session=self.session)
             num_columns = len(query.columns)
             num_params = 0
             columns_def = query.columns
+        elif (
+            'show variables' in sql_lower
+            or 'show session variables' in sql_lower
+            or 'show session status' in sql_lower
+        ):
+            prepared_stmt['type'] = 'show variables'
+            num_columns = 2
+            num_params = 0
+            columns_def = [{
+                'table_name': '',
+                'name': 'Variable_name',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'Value',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }]
         else:
             raise SqlError(f"Only 'SELECT' and 'INSERT' statements supported. Got: {sql}")
 
@@ -705,7 +741,40 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
         if prepared_stmt['type'] == 'select':
             sql = prepared_stmt['statement'].sql
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+
+            # +++
+            if sql.lower() == 'select connection_id()':
+                self.answer_connection_id(sql)
+                return
+            # ---
+
+            # +++
+            if "SELECT `table_name`, `column_name`" in sql:
+                # TABLEAU
+                # SELECT `table_name`, `column_name`
+                # FROM `information_schema`.`columns`
+                # WHERE `data_type`='enum' AND `table_schema`='mindsdb'
+                packages = self.getTabelPackets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'TABLE_NAME',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'COLUMN_NAME',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=[]
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
+                return
+            # ---
+
+            query = SQLQuery(sql, session=self.session)
 
             columns = query.columns
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
@@ -743,7 +812,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise NotImplementedError("Only 'insert into predictors' and 'insert into commands' implemented")
         elif prepared_stmt['type'] == 'lock':
             sql = prepared_stmt['statement'].sql
-            query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+            query = SQLQuery(sql, session=self.session)
 
             columns = query.columns
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
@@ -766,6 +835,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql = sql[:sql.find('?')] + f"'{parameters[0]}'"
             self.delete_predictor_sql(sql)
             self.packet(OkPacket, affected_rows=1).send()
+        elif prepared_stmt['type'] == 'show variables':
+            sql = prepared_stmt['statement'].sql
+            self.answer_show_variables(sql)
         else:
             raise NotImplementedError(f"Unknown statement type: {prepared_stmt['type']}")
 
@@ -773,7 +845,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
         sql = prepared_stmt['statement'].sql
         fetched = prepared_stmt['fetched']
-        query = SQLQuery(sql, integration=self.session.integration, database=self.session.database)
+        query = SQLQuery(sql, session=self.session)
 
         result = query.fetch(
             self.session.datahub
@@ -930,11 +1002,28 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def queryAnswer(self, sql):
         # +++
         # if query not for mindsdb then process that query in integration db
-        if isinstance(self.session.database, str) and self.session.database.lower() != 'mindsdb' and sql.lower().startswith('select'):
+        # TODO redirect only select data queries
+        if (
+            isinstance(self.session.database, str)
+            and len(self.session.database) > 0
+            and self.session.database.lower() != 'mindsdb'
+            and '@@' not in sql.lower()
+            and (
+                (
+                    sql.lower().startswith('select')
+                    and 'from' in sql.lower()
+                )
+                or (
+                    sql.lower().startswith('show')
+                    # and 'databases' in sql.lower()
+                    and 'tables' in sql.lower()
+                )
+            )
+        ):
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:
                 raise Exception('datanode is none')
-            result = datanode.select_query(sql)
+            result = datanode.select_query(sql.replace('`', ''))
 
             columns = []
             data = []
@@ -956,13 +1045,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         # ---
 
-        # +++
-        outer_query = None
-        subquery = re.findall(r'.*\((.+)\) as virtual_table', sql, flags=re.IGNORECASE | re.MULTILINE | re.S)
-        if len(subquery) == 1:
-            outer_query = sql.replace(f'({subquery[0]})', 'dataframe')
-            sql = subquery[0]
-        # ---
         statement = SqlStatementParser(sql)
         sql = statement.sql
         sql_lower = sql.lower()
@@ -990,19 +1072,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql_lower = statement.sql.lower()
                 keyword = statement.keyword
                 struct = statement.struct
-            elif 'show variables' in sql_lower:
-                variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
-                self.answer_show_variables(variables)
-                return
-            elif "show session variables like" in sql_lower:
-                # for workbench
-                variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
-                self.answer_show_variables(variables)
-                return
-            elif 'show session status like' in sql_lower:
-                # for workbench
-                variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
-                self.answer_show_variables(variables)
+            elif (
+                'show variables' in sql_lower
+                or 'show session variables' in sql_lower
+                or 'show session status' in sql_lower
+                or 'show global variables' in sql_lower
+            ):
+                self.answer_show_variables(sql)
                 return
             elif "show status like 'ssl_version'" in sql_lower:
                 packages = []
@@ -1120,9 +1196,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if '@@' in sql_lower:
                 self.answerVariables(sql)
                 return
-            if 'select 1' in sql_lower:
-                self.answerSelect1(sql)
-                return
             if 'database()' in sql_lower:
                 self.answerSelectDatabase()
                 return
@@ -1132,17 +1205,36 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'version()' in sql_lower:
                 self.answer_version()
                 return
-
-            # region apache superset
-            if "select 'test plain returns' as anon_1" in sql_lower:
+            if "table_name,table_comment,if(table_type='base table', 'table', table_type)" in sql_lower:
+                # TABLEAU
+                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA LIKE 'mindsdb' AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
+                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
                 packages = []
+                if "table_schema like 'mindsdb'" in sql_lower:
+                    data = [
+                        ['predictors', '', 'TABLE', 'mindsdb']
+                    ]
+                else:
+                    data = []
                 packages += self.getTabelPackets(
                     columns=[{
                         'table_name': '',
-                        'name': 'anon_1',
+                        'name': 'TABLE_NAME',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'TABLE_COMMENT',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': "IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE)",
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'TABLE_SCHEMA',
                         'type': TYPES.MYSQL_TYPE_VAR_STRING
                     }],
-                    data=['test plain returns']
+                    data=data
                 )
                 if self.client_capabilities.DEPRECATE_EOF is True:
                     packages.append(self.packet(OkPacket, eof=True))
@@ -1150,23 +1242,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     packages.append(self.packet(EofPacket))
                 self.sendPackageGroup(packages)
                 return
-            if "select 'test unicode returns' as anon_1" in sql_lower:
-                packages = []
-                packages += self.getTabelPackets(
-                    columns=[{
-                        'table_name': '',
-                        'name': 'anon_1',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }],
-                    data=['test unicode returns']
-                )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
-                self.sendPackageGroup(packages)
-                return
-            # endregion
 
             # region DataGrip
             if 'select user()' in sql_lower:
@@ -1185,35 +1260,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     packages.append(self.packet(EofPacket))
                 self.sendPackageGroup(packages)
                 return
-            if "select 'keep alive'" in sql_lower:
-                packages = []
-                packages += self.getTabelPackets(
-                    columns=[{
-                        'table_name': '',
-                        'name': 'keep alive',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }],
-                    data=['keep alive']
-                )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
-                self.sendPackageGroup(packages)
-                return
-            # endregion
 
-            if ' left join ' not in sql_lower and ' join ' in sql_lower:
-                query_class = SQLQuery_new
-            else:
-                query_class = SQLQuery
-            # query_class = SQLQuery_new
-            query = query_class(
+            query = SQLQuery(
                 sql,
-                integration=self.session.integration,
-                database=self.session.database,
-                datahub=self.session.datahub,
-                outer_query=outer_query
+                session=self.session
             )
             self.selectAnswer(query)
         elif keyword == 'rollback':
@@ -1682,7 +1732,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'charset': self.charset_text_type
             }],
             data=[
-                [None]
+                [self.session.database]
             ]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0000))
@@ -1829,21 +1879,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'charset': self.charset_text_type
             }],
             data=[['InnoDB', 'DEFAULT', 'Supports transactions, row-level locking, and foreign keys', 'YES', 'YES', 'YES']]
-        )
-        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
-        self.sendPackageGroup(packages)
-
-    def answerSelect1(self, sql):
-        packages = []
-        packages += self.getTabelPackets(
-            columns=[{
-                'table_name': '',
-                'name': '',
-                'alias': '1',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }],
-            data=[[1]]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
         self.sendPackageGroup(packages)
@@ -2002,10 +2037,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             company_id = self.request.recv(4)
             company_id = struct.unpack('I', company_id)[0]
 
+            database_name_len = self.request.recv(2)
+            database_name_len = struct.unpack('H', database_name_len)[0]
+
+            database_name = ''
+            if database_name_len > 0:
+                database_name = self.request.recv(database_name_len).decode()
+
             return {
                 'is_cloud': True,
                 'client_capabilities': client_capabilities,
-                'company_id': company_id
+                'company_id': company_id,
+                'database': database_name
             }
 
         return {
@@ -2025,6 +2068,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
         else:
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
+            self.session.database = cloud_connection['database']
             self.session.username = 'cloud'
             self.session.auth = True
             self.session.integration = None

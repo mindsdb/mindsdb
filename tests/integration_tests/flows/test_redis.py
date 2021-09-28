@@ -9,7 +9,6 @@ import pandas as pd
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
 
-from mindsdb.streams import RedisStream
 
 INTEGRATION_NAME = 'test_redis'
 redis_creds = {}
@@ -41,6 +40,8 @@ DEFAULT_PREDICTOR = "redis_predictorr"
 TS_PREDICTOR = "redis_ts_predictorr"
 DS_NAME = "redis_test_ds"
 TS_DS_NAME = "ts_redis_test_ds"
+NORMAL_STREAM_NAME = f'normal_stream_{STREAM_SUFFIX}'
+
 
 class RedisTest(unittest.TestCase):
     @classmethod
@@ -49,6 +50,8 @@ class RedisTest(unittest.TestCase):
 
     def test_length(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import RedisStream
+
         stream = RedisStream(f'test_stream_length_{STREAM_SUFFIX}', CONNECTION_PARAMS)
 
         self.assertEqual(len(list(stream.read())), 0)
@@ -141,7 +144,7 @@ class RedisTest(unittest.TestCase):
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/normal_stream_{STREAM_SUFFIX}'
+        url = f'{HTTP_API_ROOT}/streams/{NORMAL_STREAM_NAME}'
         res = requests.put(url, json={
             "predictor": DEFAULT_PREDICTOR,
             "stream_in": STREAM_IN,
@@ -153,6 +156,8 @@ class RedisTest(unittest.TestCase):
 
     def test_3_making_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import RedisStream
+
         stream_in = RedisStream(STREAM_IN, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
 
@@ -179,6 +184,7 @@ class RedisTest(unittest.TestCase):
 
     def test_5_making_ts_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import RedisStream
         stream_in = RedisStream(STREAM_IN_TS, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
@@ -189,9 +195,9 @@ class RedisTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    '''
     def test_6_create_stream_redis_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import RedisStream
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -213,9 +219,10 @@ class RedisTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-
+    '''
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import RedisStream
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
         learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
 
@@ -230,7 +237,46 @@ class RedisTest(unittest.TestCase):
 
         for x in range(1, 101):
             learning_stream.write({'x1': x, 'x2': 2*x, 'y': 3*x})
-    '''
+   '''
+
+    def test_9_making_ts_stream_prediction_no_group(self):
+        print(f"\nExecuting {self._testMethodName}")
+        from mindsdb.streams import RedisStream
+        PREDICTOR_NAME = TS_PREDICTOR + "_no_group"
+        STREAM_IN = STREAM_IN_TS + 'no_group'
+        STREAM_OUT = STREAM_OUT_TS + 'no_group'
+
+        self.train_ts_predictor(TS_DS_NAME, PREDICTOR_NAME, with_gb=False)
+
+        url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}_no_group'
+        res = requests.put(url, json={
+            "predictor": PREDICTOR_NAME,
+            "stream_in": STREAM_IN,
+            "stream_out": STREAM_OUT,
+            "integration": INTEGRATION_NAME,
+        })
+
+        self.assertEqual(res.status_code, 200)
+        stream_in = RedisStream(STREAM_IN, CONNECTION_PARAMS)
+        stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
+
+        for x in range(210, 221):
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'y': 3*x})
+            time.sleep(5)
+
+        self.assertEqual(len(list(stream_out.read())), 2)
+
+    def test_delete_stream_http_api(self):
+        print(f"\nExecuting {self._testMethodName}")
+        url = f'{HTTP_API_ROOT}/streams/{NORMAL_STREAM_NAME}'
+        res = requests.delete(url)
+        self.assertEqual(res.status_code,
+                         200,
+                         f"fail to delete {NORMAL_STREAM_NAME} stream: {res.text}")
+
+        res = requests.get(url)
+        self.assertNotEqual(res.status_code, 200, f"stream {NORMAL_STREAM_NAME} still exist")
+
 
 if __name__ == "__main__":
     try:

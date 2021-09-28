@@ -76,6 +76,7 @@ if not is_ray_worker:
     elif os.environ.get('MINDSDB_DB_CON', '') == '':
         os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
+    # relative import for migrations support
     from .utilities.config import Config
     mindsdb_config = Config()
     create_dirs_recursive(mindsdb_config['paths'])

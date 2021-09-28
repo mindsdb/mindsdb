@@ -1,8 +1,10 @@
-from copy import deepcopy
 import os
 import shutil
-from pathlib import Path
 import tempfile
+from pathlib import Path
+from copy import deepcopy
+
+from sqlalchemy import func
 
 from mindsdb.interfaces.storage.db import session
 from mindsdb.interfaces.storage.db import Integration
@@ -149,15 +151,28 @@ def _get_integration_record_data(integration_record, sensitive_info=True):
         )
 
     if not sensitive_info:
-        data['password'] = None
+        if 'password' in data:
+            data['password'] = None
+        if (
+            data.get('type') == 'redis'
+            and isinstance(data.get('connection'), dict)
+            and 'password' in data['connection']
+        ):
+            data['connection'] = None
 
     data['id'] = integration_record.id
 
     return data
 
 
-def get_db_integration(name, company_id, sensitive_info=True):
-    integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+def get_db_integration(name, company_id, sensitive_info=True, case_sensitive=False):
+    if case_sensitive:
+        integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+    else:
+        integration_record = session.query(Integration).filter(
+            (Integration.company_id == company_id)
+            & (func.lower(Integration.name) == func.lower(name))
+        ).first()
     return _get_integration_record_data(integration_record, sensitive_info)
 
 

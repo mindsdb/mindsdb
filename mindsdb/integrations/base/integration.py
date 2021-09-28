@@ -37,6 +37,7 @@ class StreamIntegration(Integration):
         Thread(target=StreamIntegration._loop, args=(self,)).start()
 
     def _loop(self):
+        log.info("INTEGRATION %s: starting", self.name)
         while not STOP_THREADS_EVENT.wait(1.0):
             if self._control_stream is not None:
                 # Create or delete streams based on messages from control_stream
@@ -86,7 +87,7 @@ class StreamIntegration(Integration):
                         else:
                             # Bad action value
                             log.error('INTEGRATION %s: bad action value received - %s', self.name, dct)
-                
+
             stream_db_recs = db.session.query(db.Stream).filter_by(
                 company_id=self.company_id,
                 integration=self.name
@@ -104,8 +105,10 @@ class StreamIntegration(Integration):
             # Start new streams found in DB
             for s in stream_db_recs:
                 if s.name not in map(lambda x: x.name, self._streams):
+                    log.info("INTEGRATION %s: starting stream - %s", self.name, s.name)
                     self._streams.append(self._make_stream(s))
 
+        log.info("INTEGRATION %s: stopping", self.name)
         for s in self._streams:
             s.stop_event.set()
 

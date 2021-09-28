@@ -3,6 +3,7 @@ import json
 from copy import deepcopy
 from threading import Event
 
+# relative import for migrations support
 from .fs import create_directory
 
 

@@ -120,7 +120,7 @@ class ModelController():
         db.session.commit()
         predictor_id = predictor_record.id
 
-        p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, predictor_id)
+        p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), predictor_id)
         p.start()
         if join_learn_process:
             p.join()

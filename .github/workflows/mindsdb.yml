@@ -68,8 +68,8 @@ jobs:
           export USE_EXTERNAL_DB_SERVER="1"
 
           # Redis Stream
-          echo -e "\n===============\ntest Redis Stream Integration\n===============\n"
-          python tests/integration_tests/flows/test_redis.py
+          # echo -e "\n===============\ntest Redis Stream Integration\n===============\n"
+          # python tests/integration_tests/flows/test_redis.py
 
           # Kafka Stream
           # echo -e "\n===============\ntest Kafka Stream Integration\n===============\n"

@@ -76,7 +76,6 @@ if not is_ray_worker:
         os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
 
-
     from mindsdb.utilities.config import Config
     mindsdb_config = Config()
     create_dirs_recursive(mindsdb_config['paths'])
@@ -93,4 +92,3 @@ if not is_ray_worker:
         print('\n x telemetry disabled \n')
     else:
         print('\n ✓ telemetry enabled \n')
-

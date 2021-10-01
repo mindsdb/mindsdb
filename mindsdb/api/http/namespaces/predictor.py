@@ -49,7 +49,7 @@ class Predictor(Resource):
         except Exception:
             kwargs = None
 
-        if type(kwargs) != type({}):
+        if isinstance(kwargs, dict) is False:
             kwargs = {}
 
         if 'equal_accuracy_for_all_output_categories' not in kwargs:

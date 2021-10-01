@@ -16,6 +16,7 @@ from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predict
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import get_db_integration
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
 class DataStoreWrapper(object):
@@ -59,7 +60,7 @@ class DataStore():
         try:
             analysis = self.model_interface.analyse_dataset(ds=self.get_datasource_obj(name, raw=True, company_id=company_id), company_id=company_id)
             datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
-            datasource_record.analysis = json.dumps(analysis)
+            datasource_record.analysis = json.dumps(analysis, cls=CustomJSONEncoder)
             session.commit()
         except Exception as e:
             log.error(e)
@@ -135,8 +136,8 @@ class DataStore():
         '''
         if base is None:
             base = 'datasource'
-        datasources = session.query(Datasource).filter_by(company_id=company_id).all()
-        datasources_names = [x.name for x in datasources]
+        datasources = session.query(Datasource.name).filter_by(company_id=company_id).all()
+        datasources_names = [x[0] for x in datasources]
         if base not in datasources_names:
             return base
         for i in range(1, 1000):

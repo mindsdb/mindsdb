@@ -1,5 +1,8 @@
 import argparse
 import datetime
+from functools import wraps
+
+from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 
 
 def args_parse():
@@ -44,3 +47,16 @@ def is_notebook():
             return False  # Other type (?)
     except NameError:
         return False      # Probably standard Python interpreter
+
+
+def mark_process(name):
+    def mark_process_wrapper(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            create_process_mark(name)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                delete_process_mark(name)
+        return wrapper
+    return mark_process_wrapper

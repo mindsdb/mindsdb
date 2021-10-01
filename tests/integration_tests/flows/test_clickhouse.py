@@ -96,8 +96,8 @@ class ClickhouseTest(unittest.TestCase):
                     INTEGRATION_NAME: {
                         'publish': True
                     }
-                }
-                ,'permanent_storage': {
+                },
+                'permanent_storage': {
                     'location': 'local'
                 }
             }

@@ -169,7 +169,14 @@ class UserFlowTest_1(unittest.TestCase):
             res = requests.put(f'{HTTP_API_ROOT}/predictors/{predictior_name}', json=data)
             assert res.status_code == 200
 
+            # wait for https://github.com/mindsdb/mindsdb/issues/1459
+            import time
+            time.sleep(5)
+
             check_predictor_exists(predictior_name)
+
+            import time
+            time.sleep(10)
 
             wait_predictor_learn(predictior_name)
 

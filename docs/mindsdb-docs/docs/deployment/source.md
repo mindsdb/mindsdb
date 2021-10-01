@@ -7,7 +7,7 @@ This section describes how to deploy MindsDB from the source code. This is the p
 !!! warning "Python 3.9"
     Currently, some of our dependencies have issues with the latest versions of Python 3.9.x. For now, our suggestion is to use Python 3.7.x, or 3.8.x versions.
 
-* [Python version](https://www.python.org/downloads/) >=3.6 (64 bit) and pip version >= 19.3.
+* [Python version](https://www.python.org/downloads/) >=3.7 (64 bit) and pip version >= 19.3.
 * [Pip](https://pip.pypa.io/en/stable/installing/) (is usually pre-installed with the latest Python versions).
 * [Git](https://git-scm.com/).
 

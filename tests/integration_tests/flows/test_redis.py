@@ -143,7 +143,7 @@ class RedisTest(unittest.TestCase):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
-        time.sleep(15)
+        time.sleep(30)
 
         url = f'{HTTP_API_ROOT}/streams/{NORMAL_STREAM_NAME}'
         res = requests.put(url, json={
@@ -163,7 +163,7 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
 
         for x in range(1, 3):
-            stream_in.write({'x1': x, 'x2': 2*x})
+            stream_in.write({'x1': x, 'x2': 2 * x})
         time.sleep(10)
 
         self.assertEqual(len(list(stream_out.read())), 2)

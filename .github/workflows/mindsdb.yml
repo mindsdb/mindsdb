@@ -5,6 +5,9 @@ on:
   pull_request:
     branches:
       - stable
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
 
 jobs:
   matrix_prep:

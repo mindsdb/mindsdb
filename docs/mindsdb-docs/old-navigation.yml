@@ -1,0 +1,78 @@
+ - Old Navigation:
+    - Install:
+      - Getting started: index.md
+      - Docker: installation/docker.md
+      - Windows: installation/windows.md
+      - Linux: installation/linux.md
+      - MacOS:  installation/macos.md
+      - From source: installation/source.md
+    - Connect your data:
+      - MySQL: datasources/mysql.md
+      - PostgreSQL: datasources/postgresql.md
+      - MariaDB: datasources/mariadb.md
+      - ClickHouse: datasources/clickhouse.md
+      - Microsoft SQL Server: datasources/mssql.md
+      - MongoDB: datasources/mongodb.md
+      - Remote URL: datasources/remote.md
+      - Local dataset: datasources/local.md
+      - Snowflake: datasources/snowflake.md
+    - Train a model:
+      - Create and train from Studio: model/train.md
+      - Train from the Database:
+        - MySQL: model/mysql.md
+        - PostgreSQL: model/postgresql.md
+        - MariaDB: model/mariadb.md
+        - ClickHouse: model/clickhouse.md
+        - Microsoft SQL Server: model/mssql.mdiwguesspass
+        - MongoDB: model/mongodb.md
+    - Evaluate model quality:
+      - Evaluate from Studio: model/quality.md
+    - Query model:
+      - Query from the Database: 
+        - MySQL: model/query/mysql.md
+        - PostgreSQL: model/query/postgresql.md
+        - MariaDB: model/query/mariadb.md
+        - ClickHouse: model/query/clickhouse.md
+        - Microsoft SQL Server: model/query/mssql.md
+        - MongoDB: model/query/mongodb.md
+      - Query from Studio: model/query/studio.md
+    - Tutorials:
+      - AI Tables in MySQL: tutorials/mysql.md
+      - AI Tables in MariaDB: tutorials/mariadb.md
+      - AI Tables in PostgreSQL: tutorials/postgresql.md
+      - AI Tables in ClickHouse: tutorials/clickhouse.md
+      - AI Tables in Microsoft SQL Server: tutorials/microsoft-sql-server.md
+    - MindsDB for Developers:
+      - Python native:
+        - Starter Example: tutorials/BasicExample.md
+        - Running on Google Colab: GoogleColab.md
+        - Running on Jupyter Notebook: JupyterNotebook.md
+        - Predictor Interface: PredictorInterface.md
+        - Functional Interface: FunctionalInterface.md
+        - Advanced usecases: tutorials/AdvancedExamples.md
+        - Timeseries Data: tutorials/Timeseries.md
+        - Data sources: features/DataSources.md
+        - Configuration Settings: Config.md
+        - Introduction to Lightwood: lightwood/info.md
+        - Comparison with other Libraries: comparisons/ComparsionWithOtherLibraries.md
+        - Use Cases:
+          - High-Tech & Manufacturing:
+            - Predictive Maintenance: tutorials/PredictiveMaintenance.md
+          - Financial Services:
+            - Credit Scoring: tutorials/CreditScoring.md
+          - Retail & Online:
+            - Custiner Lifetime Value Optimization: tutorials/CustomerLifetimeValue.md
+            - Fraud Detection: tutorials/FraudDetection.md
+          - Health Care:
+            - Patient Health: tutorials/PatientHealthOutcomes.md
+            - Medical Diagnosis: tutorials/MedicalDiagnosis.md
+          - Travel:
+            - Hotel Booking Demand: tutorials/HotelBooking.md
+          - Telecomunications:
+            - Customer Churn Reduction: tutorials/ChurnReduction.md
+      - MindsDB SDK: server/SDKs.md
+    - Contribution and Community:
+      - How to contribute: contribute.md
+      - Join our community: community.md
+      - FAQ: faq.md
+      - Inside MindsDB: InsideMindsDB.md

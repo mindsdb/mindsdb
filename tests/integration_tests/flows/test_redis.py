@@ -143,6 +143,7 @@ class RedisTest(unittest.TestCase):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
+        time.sleep(15)
 
         url = f'{HTTP_API_ROOT}/streams/{NORMAL_STREAM_NAME}'
         res = requests.put(url, json={

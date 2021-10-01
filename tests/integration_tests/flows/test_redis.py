@@ -214,7 +214,7 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
 
         for x in range(1, 3):
-            stream_in.write({'x1': x, 'x2': 2*x})
+            stream_in.write({'x1': x, 'x2': 2 * x})
             time.sleep(5)
         time.sleep(30)
 
@@ -262,7 +262,7 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
 
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'y': 3*x})
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'y': 3 * x})
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)

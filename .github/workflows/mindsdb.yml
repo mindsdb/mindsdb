@@ -50,10 +50,10 @@ jobs:
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-    # - name: Install lightwood/staging if it's not mindsdb/stable or mindsdb/staging
-    #   if: ${{ github.ref != 'refs/heads/stable' && github.ref != 'refs/heads/staging' }}
-    #   run: |
-    #       pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+    - name: Install lightwood/staging if it's not mindsdb/stable or mindsdb/staging
+      if: ${{ github.ref != 'refs/heads/stable' && github.ref != 'refs/heads/staging' }}
+      run: |
+          pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then

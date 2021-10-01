@@ -3,6 +3,9 @@ name: MindsDB workflow
 on:
   release:
     types: [published]
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
 
 jobs:
 

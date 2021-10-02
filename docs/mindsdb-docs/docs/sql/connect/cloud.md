@@ -10,11 +10,11 @@ MindsDB Cloud provides a powerful MySQL API that allows cloud users to connect t
 Open mysql client and run:
 
 ```
-mysql -h cloud-mysql.mindsdb.com --port 3306 -u cloudusername@mail.com -p
+mysql --port 3306 -u cloudusername@mail.com -p
 ```
 The required parameters are:
 
-* -h: Host name of mindsdbs mysql api (cloud-mysql.mindsdb.com)	
+* -h: Host name of mindsdbs mysql api (by default takes cloud-mysql.mindsdb.com if not specified)	
 * --port: TCP/IP port number for connection(3306)	
 * -u: MindsDB Cloud username
 * -p:  MindsDB Cloud password

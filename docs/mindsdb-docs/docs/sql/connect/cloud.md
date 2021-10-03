@@ -14,7 +14,7 @@ mysql --port 3306 -u cloudusername@mail.com -p
 ```
 The required parameters are:
 
-* -h: Host name of mindsdbs mysql api (by default takes cloud-mysql.mindsdb.com if not specified)	
+* -h: Host name of mindsdbs mysql api (by default takes cloud.mindsdb.com if not specified)	
 * --port: TCP/IP port number for connection(3306)	
 * -u: MindsDB Cloud username
 * -p:  MindsDB Cloud password

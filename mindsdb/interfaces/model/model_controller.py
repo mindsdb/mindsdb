@@ -126,6 +126,7 @@ class ModelController():
             p.join()
             if not IS_PY36:
                 p.close()
+        db.session.refresh(predictor_record)
 
     @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):

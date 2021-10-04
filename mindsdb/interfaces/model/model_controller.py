@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import mindsdb_datasources
 
+from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.functions import mark_process
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -302,12 +303,29 @@ class ModelController():
     @mark_process(name='learn')
     def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, join_learn_process: bool, company_id: int):
         df, problem_definition, _ = self._unpack_old_args(from_data, problem_definition_dict)
-        p = GenerateProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
+
+        predictor_record = db.Predictor(
+            company_id=company_id,
+            name=name,
+            datasource_id=datasource_id,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=lightwood_version,
+            to_predict=[problem_definition['target']],
+            learn_args=problem_definition,
+            data={'name': name}
+        )
+
+        db.session.add(predictor_record)
+        db.session.commit()
+        predictor_id = predictor_record.id
+
+        p = GenerateProcess(df, ProblemDefinition.from_dict(problem_definition), predictor_id)
         p.start()
         if join_learn_process:
             p.join()
             if not IS_PY36:
                 p.close()
+        db.session.refresh(predictor_record)
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()

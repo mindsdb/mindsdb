@@ -10,12 +10,10 @@ from typing import Optional, Tuple, Union, Dict, Any
 
 import lightwood
 from lightwood.api.types import ProblemDefinition
-from packaging import version
 import numpy as np
 import pandas as pd
 import mindsdb_datasources
 
-from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.functions import mark_process
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -207,11 +205,6 @@ class ModelController():
         assert predictor_record is not None
 
         linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=predictor_record.datasource_id).first()
-
-        # check update availability
-        if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
-            predictor_record.update_status = 'available'
-            db.session.commit()
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict

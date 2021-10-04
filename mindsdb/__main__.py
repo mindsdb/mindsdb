@@ -8,6 +8,7 @@ import signal
 import psutil
 
 import torch.multiprocessing as mp
+from packaging import version
 
 from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
 from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface, ModelInterfaceWrapper
@@ -15,9 +16,10 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.utilities.functions import args_parse
+from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.log import log
+import mindsdb.interfaces.storage.db as db
 
 from mindsdb.interfaces.database.integrations import get_db_integrations
 
@@ -83,6 +85,28 @@ if __name__ == '__main__':
 
     is_cloud = config.get('cloud', False)
     if not is_cloud:
+        # region Mark old predictors as outdated
+        is_modified = False
+        predictor_records = db.session.query(db.Predictor).all()
+        if len(predictor_records) > 0:
+            sucess, compatible_versions = get_versions_where_predictors_become_obsolete()
+            if sucess is True:
+                compatible_versions = [version.parse(x) for x in compatible_versions]
+                mindsdb_version_parsed = version.parse(mindsdb_version)
+                compatible_versions = [x for x in compatible_versions if x <= mindsdb_version_parsed]
+                if len(compatible_versions) > 0:
+                    last_compatible_version = compatible_versions[-1]
+                    for predictor_record in predictor_records:
+                        if (
+                            isinstance(predictor_record.mindsdb_version, str) is not None
+                            and version.parse(predictor_record.mindsdb_version) < last_compatible_version
+                        ):
+                            predictor_record.update_status = 'available'
+                            is_modified = True
+        if is_modified is True:
+            db.session.commit()
+        # endregion
+
         for integration_name in get_db_integrations(COMPANY_ID, sensitive_info=True):
             print(f"Setting up integration: {integration_name}")
             if get_db_integration(integration_name, COMPANY_ID).get('publish', False):

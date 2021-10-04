@@ -128,6 +128,21 @@ class ModelController():
                 p.close()
         db.session.refresh(predictor_record)
 
+        data = {}
+        if predictor_record.update_status == 'available':
+            data['status'] = 'complete'
+        elif predictor_record.json_ai is None and predictor_record.code is None:
+            data['status'] = 'generating'
+        elif predictor_record.data is None:
+            data['status'] = 'editable'
+        elif 'training_log' in predictor_record.data:
+            data['status'] = 'training'
+        elif 'error' not in predictor_record.data:
+            data['status'] = 'complete'
+        else:
+            data['status'] = 'error'
+        print(f'!!!!===== {name} learn finished status={ data["status"]}')
+
     @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
         original_name = name
@@ -153,6 +168,7 @@ class ModelController():
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
                 }
             else:
+                print(f'===== {name} predict={ predictor_record.data is None}')
                 raise Exception(f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}')
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:

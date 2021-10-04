@@ -123,6 +123,9 @@ class DataStore():
             linked_models = Predictor.query.filter_by(company_id=company_id, datasource_id=datasource_record.id).all()
             if linked_models:
                 raise Exception("Can't delete {} datasource because there are next models linked to it: {}".format(name, [model.name for model in linked_models]))
+        session.query(Semaphor).filter_by(
+            company_id=company_id, entity_id=datasource_record.id, entity_type='datasource'
+        ).delete()
         session.delete(datasource_record)
         session.commit()
         self.fs_store.delete(f'datasource_{company_id}_{datasource_record.id}')

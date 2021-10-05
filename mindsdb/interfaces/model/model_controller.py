@@ -92,6 +92,9 @@ class ModelController():
         if 'stop_training_in_x_seconds' in kwargs:
             problem_definition['time_aim'] = kwargs['stop_training_in_x_seconds']
 
+        if 'ignore_columns' in kwargs:
+            problem_definition['ignore_features'] = kwargs['ignore_columns']
+
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df

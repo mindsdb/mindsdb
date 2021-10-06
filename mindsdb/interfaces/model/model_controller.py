@@ -105,14 +105,15 @@ class ModelController():
     def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
         df, problem_definition, join_learn_process = self._unpack_old_args(from_data, kwargs, to_predict)
 
+        problem_definition = ProblemDefinition.from_dict(problem_definition)
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
             datasource_id=datasource_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
-            to_predict=[problem_definition['target']],
-            learn_args=problem_definition,
+            to_predict=problem_definition.target,
+            learn_args=problem_definition.to_dict(),
             data={'name': name}
         )
 
@@ -120,7 +121,7 @@ class ModelController():
         db.session.commit()
         predictor_id = predictor_record.id
 
-        p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), predictor_id)
+        p = LearnProcess(df, problem_definition, predictor_id)
         p.start()
         if join_learn_process:
             p.join()
@@ -320,14 +321,16 @@ class ModelController():
     def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, join_learn_process: bool, company_id: int):
         df, problem_definition, _ = self._unpack_old_args(from_data, problem_definition_dict)
 
+        problem_definition = ProblemDefinition.from_dict(problem_definition)
+
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
             datasource_id=datasource_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
-            to_predict=[problem_definition['target']],
-            learn_args=problem_definition,
+            to_predict=problem_definition.target,
+            learn_args=problem_definition.to_dict(),
             data={'name': name}
         )
 
@@ -335,7 +338,7 @@ class ModelController():
         db.session.commit()
         predictor_id = predictor_record.id
 
-        p = GenerateProcess(df, ProblemDefinition.from_dict(problem_definition), predictor_id)
+        p = GenerateProcess(df, problem_definition, predictor_id)
         p.start()
         if join_learn_process:
             p.join()

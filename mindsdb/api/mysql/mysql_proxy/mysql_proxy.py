@@ -2198,4 +2198,5 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # Activate the server; this will keep running until you
         # interrupt the program with Ctrl-C
         log.info('Waiting for incoming connections...')
+        log.info(f'Access Mysql Proxy on : mysql -h {host} --port {port} -u mindsdb -p')
         server.serve_forever()

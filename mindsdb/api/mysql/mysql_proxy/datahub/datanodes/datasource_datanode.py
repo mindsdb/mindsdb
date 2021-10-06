@@ -26,7 +26,8 @@ class DataSourceDataNode(DataNode):
             raise Exception(f'Only one table can be used in query to information_schema: {query}')
 
         data = self.datastore.get_data(query_tables[0], where=None, limit=None, offset=None)
-        return data['data']
+        column_names = None
+        return data['data'], column_names
 
     def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
         data = self.datastore.get_data(table, where=None, limit=None, offset=None)

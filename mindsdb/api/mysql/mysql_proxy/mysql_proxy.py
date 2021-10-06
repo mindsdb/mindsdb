@@ -28,6 +28,16 @@ import select
 import base64
 
 import moz_sql_parser as sql_parser
+from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast import (
+    Select,
+    Star,
+    Show,
+    Identifier,
+    BinaryOperation,
+    Identifier,
+    Constant
+)
 
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
@@ -1023,7 +1033,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:
                 raise Exception('datanode is none')
-            result = datanode.select_query(sql.replace('`', ''))
+            result, _column_names = datanode.select(sql.replace('`', ''))
 
             columns = []
             data = []
@@ -1054,12 +1064,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         struct = statement.struct
 
         if keyword == 'show':
-            if 'show databases' in sql_lower or 'show schemas' in sql_lower:
-                sql = 'select schema_name as Database from information_schema.SCHEMATA'
-                statement = SqlStatementParser(sql)
-                sql_lower = statement.sql.lower()
-                keyword = statement.keyword
-                struct = statement.struct
+            statement = parse_sql(sql)
+            if isinstance(statement, Show) is False:
+                raise Exception('Something wrong with "show"')
+
+            if statement.category in ('databases', 'schemas'):
+                new_statement = Select(
+                    targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
+                    from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
+                )
+                if statement.condition == 'like':
+                    new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), statement.expression])
+                elif statement.condition is not None:
+                    raise Exception(f'Not implemented: {sql}')
+                statement = new_statement
+
+                sql = str(statement)
+                sql_lower = sql.lower()
+                keyword = 'select'
             elif 'tables' in sql_lower:
                 if sql_lower == 'show tables':
                     schema = 'mindsdb'

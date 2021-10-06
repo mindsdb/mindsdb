@@ -176,9 +176,14 @@ class SQLQuery():
         table_alias = get_table_alias(step.query.from_table, self.database)
         # TODO for information_schema we have 'database' = 'mindsdb'
 
-        data = dn.select_query(
+        data, column_names = dn.select(
             query=query
         )
+
+        self.columns_list = [
+            table_alias + (column_name, column_name)
+            for column_name in column_names
+        ]
 
         for i, row in enumerate(data):
             row['__mindsdb_row_id'] = self.row_id + i

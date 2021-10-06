@@ -183,19 +183,9 @@ class MindsDBDataNode(DataNode):
 
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def select_query(self, query):
-        moz_struct = to_moz_sql_struct(query)
-        data = self.select(
-            table=query.from_table.parts[-1],
-            columns=None,
-            where=moz_struct.get('where')
-        )
-        return data
-
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None, is_timeseries=False):
+    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
-        _mdb_make_predictions = is_timeseries
         if table == 'predictors':
             return self._select_predictors()
         if table == 'commands':

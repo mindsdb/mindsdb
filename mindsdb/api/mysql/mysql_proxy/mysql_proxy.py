@@ -1068,7 +1068,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if isinstance(statement, Show) is False:
                 raise Exception('Something wrong with "show"')
 
-            if statement.category in ('databases', 'schemas'):
+            if statement.category.lower() in ('databases', 'schemas'):
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
                     from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
@@ -1082,18 +1082,27 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql = str(statement)
                 sql_lower = sql.lower()
                 keyword = 'select'
-            elif 'tables' in sql_lower:
-                if sql_lower == 'show tables':
-                    schema = 'mindsdb'
-                elif 'show tables from' in sql_lower:
-                    schema = re.findall(r'show\s+tables\s+from\s+(\S*)', sql_lower)[0]
-                elif 'show full tables from' in sql_lower:
-                    schema = re.findall(r'show\s+full\s+tables\s+from\s+(\S*)', sql_lower)[0]
-                sql = f"select table_name as Tables_in_{schema} from INFORMATION_SCHEMA.TABLES WHERE table_schema = '{schema.upper()}' and table_type = 'BASE TABLE'"
-                statement = SqlStatementParser(sql)
-                sql_lower = statement.sql.lower()
-                keyword = statement.keyword
-                struct = statement.struct
+            elif statement.category.lower() in ('tables', 'full tables'):
+                schema = self.session.database or 'mindsdb'
+                if statement.condition == 'from':
+                    schema = statement.expression.parts[0]
+                elif statement.condition is not None:
+                    raise Exception(f'Unknown condition in query: {statement}')
+
+                new_statement = Select(
+                    targets=[Identifier(parts=["table_name"], alias=Identifier(f'Tables_in_{schema}'))],
+                    from_table=Identifier(parts=['information_schema', 'TABLES']),
+                    where=BinaryOperation('and', args=[
+                        BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema.upper())]),
+                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                    ])
+                )
+
+                statement = new_statement
+
+                sql = str(statement)
+                sql_lower = sql.lower()
+                keyword = 'select'
             elif (
                 'show variables' in sql_lower
                 or 'show session variables' in sql_lower

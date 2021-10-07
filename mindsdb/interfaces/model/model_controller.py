@@ -97,6 +97,8 @@ class ModelController():
 
         if 'ignore_columns' in kwargs:
             problem_definition['ignore_features'] = kwargs['ignore_columns']
+            if isinstance(problem_definition['ignore_features'], list) is False:
+                problem_definition['ignore_features'] = [problem_definition['ignore_features']]
 
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
@@ -145,7 +147,6 @@ class ModelController():
             data['status'] = 'complete'
         else:
             data['status'] = 'error'
-        print(f'!!!!===== {name} learn finished status={ data["status"]}')
 
     @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
@@ -172,7 +173,6 @@ class ModelController():
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
                 }
             else:
-                print(f'===== {name} predict={ predictor_record.data is None}')
                 raise Exception(f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}')
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:

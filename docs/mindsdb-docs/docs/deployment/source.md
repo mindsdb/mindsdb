@@ -50,6 +50,7 @@ python -m mindsdb
 
 * To access MindsDB APIs, visit `http://127.0.0.1:47334/api`.
 * To access MindsDB Studio, visit  `http://127.0.0.1:47334/`
+* To access MindsDB Studio using mysql: `mysql -h 127.0.0.1 --port 3306 -u mindsdb -p `
 
 
 ## Installation troubleshooting

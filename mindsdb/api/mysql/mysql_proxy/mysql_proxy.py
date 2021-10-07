@@ -1009,7 +1009,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.sendPackageGroup(packages)
 
-    def queryAnswer(self, sql):
+    def query_answer(self, sql):
         # +++
         # if query not for mindsdb then process that query in integration db
         # TODO redirect only select data queries
@@ -2119,7 +2119,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser(sql).sql
                     log.debug(f'COM_QUERY: {sql}')
-                    self.queryAnswer(sql)
+                    self.query_answer(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
                     sql = self.decode_utf(p.sql.value)

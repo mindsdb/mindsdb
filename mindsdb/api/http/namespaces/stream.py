@@ -66,8 +66,11 @@ class Stream(Resource):
                 ))
 
         else:
+            # cloud
             if 'type' not in params_keys:
                 return abort(404, "'type' parameter is required in case of cloud.")
+            #because '_' is not allowed in pod name - replace it.
+            name=name.replace('_', '-')
 
         if db.session.query(db.Stream).filter_by(company_id=request.company_id, name=name).first() is not None:
             return abort(404, 'Stream "{}" already exists'.format(name))

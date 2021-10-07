@@ -14,60 +14,83 @@
     <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
 	
   <h3 align="center">
-    <a href="https://www.mindsdb.com/">Website</a>
+    <a href="https://www.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Website</a>
     <span> | </span>
-    <a href="https://docs.mindsdb.com/">Docs</a>
+    <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     <span> | </span>
     <a href="https://apidocs.mindsdb.com/">API Docs</a>
     <span> | </span>
     <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">Community Slack</a>
+    <span> | </span>
+    <a href="https://github.com/mindsdb/mindsdb/issues?q=is%3Aopen+is%3Aissue+label%3Ahacktoberfest">Hacktoberfest</a>
   </h3>
   
 </div>
 
-[MindsDB](https://mindsdb.com/) is an open-source predictive layer for existing databases that enables rapid prototyping & deployment of ML Models from your database. Significantly reducing the time and cost of machine learning workflows. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is a predictive platform that makes databases intelligent and machine learning easy to use. It allows data analysts to build and visualize forecasts in BI dashboards without going through the complexity of ML pipelines, all through SQL. It also helps data scientists to streamline MLOps by providing advanced instruments for in-database machine learning and optimize ML workflows through a declarative JSON-AI syntax. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20inside%20Databases%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
+
+----------------------------------------
+
+[Installation](https://github.com/mindsdb/mindsdb#installation) - [Overview](https://github.com/mindsdb/mindsdb#overview) - [Features](https://github.com/mindsdb/mindsdb#features) - [Database Integrations](https://github.com/mindsdb/mindsdb#database-integrations) - [Quickstart](https://github.com/mindsdb/mindsdb#quickstart) - [Documentation](https://github.com/mindsdb/mindsdb#documentation) - [Support](https://github.com/mindsdb/mindsdb#support) - [Contributing](https://github.com/mindsdb/mindsdb#contribution) - [Mailing lists](https://github.com/mindsdb/mindsdb#mailing-lists) - [License](https://github.com/mindsdb/mindsdb#license)
+
+----------------------------
 
 <h2 align="center">
-   Machine Learning in Database using SQL
+   Machine Learning using SQL
    <br/>
    <br/>
   <img width="600" src="https://mindsdb-resources.s3.amazonaws.com/MindsDB+Glue.png" alt="MindsDB">	
 
 </h2>
 
+## Installation
+
+To install the latest version of MindsDB please pull the following Docker image:
+
+```
+docker pull mindsdb/mindsdb
+```
+
+Or, use PyPI:
+
+```
+pip install mindsdb
+```
+## Overview
+
+MindsDB automates and abstracts machine learning through virtual AI Tables in databases - all through SQL (MongoDB query syntax is also supported).
+
+You can get forecasts from complex multivariate time-series data or detect anomalies in real-time without building & maintaining ETL pipelines, ML workflows and API integrations.
+
+#### How it works:
+
+1. Let MindsDB connect to your database.
+
+2. Make MindsDB learn from historical data automatically by training a predictor using a single SQL statement. (if you'd rather configure some of your models manually or bring your own, MindsDB supports that too via declarative JSON-AI syntax). 
+
+3. Make predictions immediately by querying MindsDB virtual AI Tables. There’s no need to deploy models.
+
+4. Visualize forecasts in your BI dashboards, all through standard SQL. AI Tables behave the same way as normal database tables. 
+
+Check our [docs](https://docs.mindsdb.com/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) and [blog](https://mindsdb.com/blog/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) for tutorials and use case examples.
+
 
 ## Features
 
-* **Prototype AutoML**. With MindsDB built-in Automated Machine Learning you can quickly generate the right machine learning model.
-* **Model Tune(JSON AI)**. Optimize the model quickly and easily through the auto-generated JSON-type configuration file.
-* **Bring your own models**. Build your models in any framework and import into MindsDB
-* **AI Tables**. Move your models instantly to production, reduce resources, and overhead costs with AI Tables that deliver the results as database tables.
-* **Explainable AI**. Use MindsDB Studio to interpret predictions made by the model. Identify potential data biases, evaluate and visualize model accuracy using the Explainable AI.
+* Automatic data pre-processing, feature engineering and encoding.
+* Classification, regression, time-series tasks.
+* Automatic model deployment through virtual AI Tables.
+* Data quality check for potential biases & outliers.
+* Model accuracy scoring and confidence intervals for each prediction.
+* Batch predictions by joining predictor with other tables.
+* Anomaly detection.
+* Model explainability analysis with graphical user interface.
+* GPU support for faster model training.
+* Tune model internals with declarative JSON-AI syntax.
+* Import your own models.
+* HTTP API available
 
-
-
-
-## Try it out
-
-* [Getting started](https://docs.mindsdb.com/)
-* [Install MindsDB](https://docs.mindsdb.com/Installing/)
-	* [Docker](https://docs.mindsdb.com/installation/docker/)
-	* [Linux](https://docs.mindsdb.com/installation/Linux/)
-	* [Windows](https://docs.mindsdb.com/installation/Windows/)
-	* [MacOS](https://docs.mindsdb.com/installation/MacOS/)
-	* [From source](https://docs.mindsdb.com/installation/source/)
-* [Tutorials](https://docs.mindsdb.com/databases/)
-	* [AI Tables in MariaDB](https://docs.mindsdb.com/tutorials/mysql/)
-	* [AI Tables in ClickHouse](https://docs.mindsdb.com/tutorials/clickhouse/)
-	* [AI Tables in MySQL](https://docs.mindsdb.com/tutorials/mysql/)
-	* [AI Tables in PostgreSQL](https://docs.mindsdb.com/tutorials/postgresql/)
-	* [AI Tables in Microsoft SQL Server](https://docs.mindsdb.com/tutorials/microsoft-sql-server/)
-
-
-## Integrations
-
-
-AI Tables - Get the predictions you need as simple tables in your database.
+## Database Integrations
 
 | Connect your Data |
 |-|
@@ -82,13 +105,39 @@ AI Tables - Get the predictions you need as simple tables in your database.
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/redis-%23DD0031.svg?&style=for-the-badge&logo=redis&logoColor=white" alt="Connect Redis"></a> |
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Microsoft%20SQL%20Sever-CC2927?style=for-the-badge&logo=microsoft%20sql%20server&logoColor=white" alt="Connect SQL Server"></a> |
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Singlestore-5f07b4?style=for-the-badge&logo=singlestore&logoColor=white" alt="Connect Singlestore"></a> |
+| <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/ScyllaDB-53CADD?style=for-the-badge&logo=scylladbb&logoColor=white" alt="Connect ScyllaDB"></a> |
+| <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/CockroachDB-426EDF?style=for-the-badge&logo=cockroachdb&logoColor=white" alt="Connect CockroachDB"></a> |
 
 [:question: :wave: Missing integration?](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=&template=feature-mindsdb-request.md)
 
+## Quickstart
+
+To get your hands on MindsDB, we recommend using the [Docker image](https://docs.mindsdb.com/deployment/docker/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) or simply sign up for a [free cloud account](https://cloud.mindsdb.com/signup?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+Feel free to browse [documentation](https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) for other installation methods and tutorials.
+
+## Documentation
+
+You can find the complete documentation of MindsDB at [docs.mindsdb.com](https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+Documentation for our HTTP API can be found at [apidocs.mindsdb.com](https://apidocs.mindsdb.com/).
+
+## Support
+
+If you found a bug, please submit an [issue on Github](https://github.com/mindsdb/mindsdb/issues).
+
+To get community support, you can:
+* Post at MindsDB [Slack community](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+* Ask for help at our [Github Discussions](https://github.com/mindsdb/mindsdb/discussions).
+* Ask a question at [Stackoverflow](https://stackoverflow.com/questions/tagged/mindsdb) with a MindsDB tag.
+
+If you need commercial support, please [contact](https://mindsdb.com/contact/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) the MindsDB team.
+
 ## Contributing
 
-* To contribute to MindsDB, please check out [Contribution docs](https://docs.mindsdb.com/contribute/).
-* Welcome to our awesome community, please check out [Community docs](https://docs.mindsdb.com/community/).
+Being part of the core team is accessible to anyone who is motivated and wants to be part of that journey!
+
+If you'd like to contribute to the project, refer to the [contributing documentation](https://docs.mindsdb.com/contribute/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+
+Please note that this project is released with a [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/stable/CODE_OF_CONDUCT.md). By participating in this project, you agree to abide by its terms.
 
 ### Current contributors
 
@@ -98,10 +147,12 @@ AI Tables - Get the predictions you need as simple tables in your database.
 
 Made with [contributors-img](https://contributors-img.web.app).
 
-## Report Issues
+## Mailing lists
 
-Please help us by [reporting any issues](https://github.com/mindsdb/mindsdb/issues/new/choose) you may have while using MindsDB.
+Subscribe to MindsDB Monthly [Community Newsletter](https://mindsdb.com/newsletter/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) to get general announcements, release notes, information about MindsDB events, and the latest blog posts.
+You may also join our [beta-users](https://mindsdb.com/beta-tester/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) group, and get access to new beta features.
+
 
 ## License
 
-* [MindsDB License](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)
+MindsDB is licensed under [GNU General Public License v3.0](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)

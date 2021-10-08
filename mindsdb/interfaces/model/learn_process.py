@@ -92,9 +92,9 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
     try:
         run_generate(df, problem_definition, predictor_id)
         run_fit(predictor_id, df)
-    except Exception:
+    except Exception as e:
+        predictor_record = Predictor.query.with_for_update().get(predictor_id)
         if delete_ds_on_fail is True:
-            predictor_record = Predictor.query.with_for_update().get(predictor_id)
             linked_db_ds = Datasource.query.filter_by(id=predictor_record.datasource_id).first()
             if linked_db_ds is not None:
                 predictors_with_ds = Predictor.query.filter(
@@ -103,7 +103,8 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
                 if len(predictors_with_ds) == 0:
                     session.delete(linked_db_ds)
                     predictor_record.datasource_id = None
-            session.commit()
+        predictor_record.data = {"error": str(e)}
+        session.commit()
 
 
 def run_adjust(name, db_name, from_data, datasource_id, company_id):

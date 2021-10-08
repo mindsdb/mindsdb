@@ -558,7 +558,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-        model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs)
+        model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True)
 
         self.packet(OkPacket).send()
 

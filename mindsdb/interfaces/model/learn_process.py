@@ -2,6 +2,7 @@ import os
 import traceback
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 from pandas.core.frame import DataFrame
@@ -13,7 +14,7 @@ from lightwood import __version__ as lightwood_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.model.model_interface import ModelInterface, ModelInterfaceWrapper
-from mindsdb.interfaces.storage.db import session, Predictor
+from mindsdb.interfaces.storage.db import session, Predictor, Datasource
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
 from mindsdb.interfaces.storage.fs import FsStore
@@ -44,7 +45,7 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
     code = lightwood.code_from_json_ai(json_ai)
 
-    predictor_record = Predictor.query.get(predictor_id)
+    predictor_record = Predictor.query.with_for_update().get(predictor_id)
     predictor_record.json_ai = json_ai.to_dict()
     predictor_record.code = code
     db.session.commit()
@@ -53,7 +54,7 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
 @mark_process(name='learn')
 def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
     try:
-        predictor_record = Predictor.query.get(predictor_id)
+        predictor_record = Predictor.query.with_for_update().get(predictor_id)
         assert predictor_record is not None
 
         fs_store = FsStore()
@@ -86,9 +87,23 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         raise e
 
 
-def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int) -> None:
-    run_generate(df, problem_definition, predictor_id)
-    run_fit(predictor_id, df)
+def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
+              delete_ds_on_fail: Optional[bool] = False) -> None:
+    try:
+        run_generate(df, problem_definition, predictor_id)
+        run_fit(predictor_id, df)
+    except Exception:
+        if delete_ds_on_fail is True:
+            predictor_record = Predictor.query.with_for_update().get(predictor_id)
+            linked_db_ds = Datasource.query.filter_by(id=predictor_record.datasource_id).first()
+            if linked_db_ds is not None:
+                predictors_with_ds = Predictor.query.filter(
+                    (Predictor.id != predictor_id) & (Predictor.datasource_id == linked_db_ds.id)
+                ).all()
+                if len(predictors_with_ds) == 0:
+                    session.delete(linked_db_ds)
+                    predictor_record.datasource_id = None
+            session.commit()
 
 
 def run_adjust(name, db_name, from_data, datasource_id, company_id):

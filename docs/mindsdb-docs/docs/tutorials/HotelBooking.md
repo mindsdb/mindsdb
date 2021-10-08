@@ -17,7 +17,7 @@ This [data set](https://www.kaggle.com/jessemostipak/hotel-booking-demand) conta
 
 
 <details>
-  <summary>Click to expand Features Informations:</summary>
+  <summary>Click to expand Features Information:</summary>
 
 ```
 1. hotel Hotel (H1 = Resort Hotel or H2 = City Hotel)

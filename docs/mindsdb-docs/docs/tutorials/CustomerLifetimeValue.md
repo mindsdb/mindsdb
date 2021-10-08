@@ -15,7 +15,7 @@ title: Customer Lifetime Value Optimization
 
 This is a [dataset](http://ai.stanford.edu/~amaas/data/sentiment/) for binary sentiment classification containing a set of 25,000 highly popular movie reviews for training, and 25,000 for testing. There is additional unlabeled data for use as well. Raw text and already processed bag of words formats are provided.
 
-## Features informations
+## Features information
 * review
 * sentiment
 

@@ -241,7 +241,7 @@ The model has been trained successfully. It was quite simple because we didn’t
 
 To get the prediction from the model is as easy as executing the SELECT statement where we will select the price and price confidence. The main idea is to predict the used car’s price depending on the different features.
 
-The first thing that comes to mind when looking for the used car is the car model, fuel type, mileage, the year when the car was produced etc. We should include in the WHERE clause all of this informations and leave it to MindsDB to make the predictions for them e.g:
+The first thing that comes to mind when looking for the used car is the car model, fuel type, mileage, the year when the car was produced etc. We should include in the WHERE clause all of this information and leave it to MindsDB to make the predictions for them e.g:
 
 ```sql
 SELECT price            AS predicted, 

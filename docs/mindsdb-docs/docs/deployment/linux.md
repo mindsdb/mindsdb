@@ -61,7 +61,7 @@ You will need <a href="https://www.anaconda.com/products/individual" target="_bl
 
 ## Troubleshooting
 
-If the installation fails, don't worry, simply follow the below bellow instruction which should fix most issues. If none of this works, try using the [docker container]() and create an issue with the installation errors you got on our [Github repository](https://github.com/mindsdb/mindsdb/issues). We'll try to review the issue and give you response within a few hours.
+If the installation fails, don't worry, simply follow the below below instruction which should fix most issues. If none of this works, try using the [docker container]() and create an issue with the installation errors you got on our [Github repository](https://github.com/mindsdb/mindsdb/issues). We'll try to review the issue and give you response within a few hours.
 
 
 !!! failure "`No module named mindsdb`"

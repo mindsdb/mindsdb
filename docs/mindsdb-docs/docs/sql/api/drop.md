@@ -26,7 +26,7 @@ DROP TABLE home_rentals_model;
 The `DROP DATABASE` statement is used to delete datasource integration database:
 
 ```
-DROP DATABSE integration_name
+DROP DATABASE integration_name
 ```
 
 ### DROP DATABASE example

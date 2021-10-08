@@ -263,7 +263,9 @@ class ModelController():
         data['problem_definition'] = predictor_record.learn_args
 
         # assume older models are complete, only temporary
-        if predictor_record.update_status == 'available':
+        if 'error' in predictor_record.data:
+            data['status'] = 'error'
+        elif predictor_record.update_status == 'available':
             data['status'] = 'complete'
         elif predictor_record.json_ai is None and predictor_record.code is None:
             data['status'] = 'generating'

@@ -106,7 +106,8 @@ class ModelController():
         return df, problem_definition, join_learn_process
 
     @mark_process(name='learn')
-    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
+    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict,
+              company_id: int, delete_ds_on_fail: Optional[bool] = False) -> None:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is not None:
             raise Exception('Predictor name must be unique.')
@@ -129,7 +130,7 @@ class ModelController():
         db.session.commit()
         predictor_id = predictor_record.id
 
-        p = LearnProcess(df, problem_definition, predictor_id)
+        p = LearnProcess(df, problem_definition, predictor_id, delete_ds_on_fail)
         p.start()
         if join_learn_process:
             p.join()

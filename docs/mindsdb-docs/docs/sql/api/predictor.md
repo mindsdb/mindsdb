@@ -32,7 +32,7 @@ PREDICT rental_price as price;
 
 After you run the `CREATE Predictor` statement, you can check the status of the training model, by selecting from `mindsdb.predictors` table:
 
-```
+```sql
 SELECT * FROM mindsdb.predictors WHERE name='predictor_name';
 ```
 
@@ -40,7 +40,7 @@ SELECT * FROM mindsdb.predictors WHERE name='predictor_name';
 
 To check the training status for the `home_rentals_model` run:
 
-```
+```sql
 SELECT * FROM mindsdb.predictors WHERE name='home_rentals_model';
 ```
 

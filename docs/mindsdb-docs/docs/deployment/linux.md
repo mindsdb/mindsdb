@@ -3,7 +3,7 @@
 !!! warning "Python 3.9"
     Currently, some of our dependencies have issues with the latest versions of Python 3.9.x. For now, our suggestion is to use Python 3.7.x, or 3.8.x versions.
 
-We suggest you to install MindsDB in a virtual environment when using **pip** to avoid dependency issues. Make sure your Python version is **>=3.7** and pip version is **>=19.3**.
+We suggest you to install MindsDB in a virtual environment when using **pip** to avoid dependency issues. Make sure your Python version is **```>=3.7```** and pip version is ***```>=19.3.```***
 
 1. Create and activate venv:
 

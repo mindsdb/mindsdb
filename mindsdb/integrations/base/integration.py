@@ -26,6 +26,9 @@ class Integration:
     def unregister_predictor(self, name):
         raise NotImplementedError
 
+    def get_row_count(self, query):
+        return len(self._query(query))
+
 
 class StreamIntegration(Integration):
     def __init__(self, config, name, control_stream=None):

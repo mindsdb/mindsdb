@@ -192,3 +192,6 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
             DROP FOREIGN TABLE IF EXISTS {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
+
+    def get_row_count(self, query):
+        return len(self._query(query))

@@ -25,7 +25,7 @@
   
 </div>
 
-[MindsDB](https://mindsdb.com/) is an open-source predictive layer for existing databases that enables rapid prototyping & deployment of ML Models from your database. Significantly reducing the time and cost of machine learning workflows. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
+[MindsDB](https://mindsdb.com/) is an open-source predictive layer for existing databases that enables rapid prototyping & deployment of ML Models from your database. Significantly reducing the time and cost of Machine Learning workflows. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20in%20one%20line%20of%20code%21&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks)
 
 <h2 align="center">
    Machine Learning in Database using SQL

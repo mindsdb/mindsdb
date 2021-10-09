@@ -6,21 +6,21 @@ MindsDB provides a powerful MySQL API that allows users to connect to it using t
 python3 -m mindsdb --api=mysql
 ```
 
-This will start MySQL API on a `127.0.0.1:47335` with `mindsdb` as default user and create a `mindsdb` database. To change the deafult parameters you need to extend the MindsDBs `config.json` or create another config and send it as a parameter to the serve start command as:
+This will start MySQL API on a `127.0.0.1:47335` with `mindsdb` as default user and create a `mindsdb` database. To change the default parameters you need to extend the MindsDBs `config.json` or create another config and send it as a parameter to the serve start command as:
 
 ```
 python3 -m mindsdb --api=mysql --config=config.json
 ```
 
 In case you are using Docker, visit the [Docker extend config docs](/deployment/docker/#extend-configjson).
-To read more about avaiable config.json options check the [configuration docs](/datasources/configuration/#extending-default-configuration).
+To read more about available config.json options check the [configuration docs](/datasources/configuration/#extending-default-configuration).
 
 ## Connect
 
 !!! tip "Connecting to the localhost"
     Make sure you always use 127.0.0.1 locally instead of localhost as a hostname.
 
-Connecting to MySQL API is the same as connecting to a MySQL database. You can use one of the bellow clients to connect:
+Connecting to MySQL API is the same as connecting to a MySQL database. You can use one of the below clients to connect:
 
 * [MySQL Command-Line Client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html) 
 * [DBeaver](https://dbeaver.io/)

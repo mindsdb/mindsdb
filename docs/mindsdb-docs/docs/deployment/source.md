@@ -1,6 +1,6 @@
 # Deploy from the source code
 
-This section describes how to deploy MindsDB from the source code. This is the prefered way to use MindsDB if you want to contribute to our code or simply to debug MindsDB.
+This section describes how to deploy MindsDB from the source code. This is the preferred way to use MindsDB if you want to contribute to our code or simply to debug MindsDB.
 
 ## Prerequisite
 

@@ -2,6 +2,7 @@ import os
 import traceback
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 from pandas.core.frame import DataFrame
@@ -13,7 +14,7 @@ from lightwood import __version__ as lightwood_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.model.model_interface import ModelInterface, ModelInterfaceWrapper
-from mindsdb.interfaces.storage.db import session, Predictor
+from mindsdb.interfaces.storage.db import session, Predictor, Datasource
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
 from mindsdb.interfaces.storage.fs import FsStore
@@ -40,31 +41,20 @@ def delete_learn_mark():
 
 
 @mark_process(name='learn')
-def run_generate(df: DataFrame, problem_definition: ProblemDefinition, name: str, company_id: int, datasource_id: int) -> int:
+def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int) -> int:
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
     code = lightwood.code_from_json_ai(json_ai)
 
-    predictor_record = db.Predictor(
-        company_id=company_id,
-        name=name,
-        json_ai=json_ai.to_dict(),
-        code=code,
-        datasource_id=datasource_id,
-        mindsdb_version=mindsdb_version,
-        lightwood_version=lightwood_version,
-        to_predict=[problem_definition.target],
-        learn_args=problem_definition.to_dict(),
-        data={'name': name}
-    )
-
-    db.session.add(predictor_record)
+    predictor_record = Predictor.query.with_for_update().get(predictor_id)
+    predictor_record.json_ai = json_ai.to_dict()
+    predictor_record.code = code
     db.session.commit()
 
 
 @mark_process(name='learn')
 def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
     try:
-        predictor_record = session.query(db.Predictor).filter_by(id=predictor_id).first()
+        predictor_record = Predictor.query.with_for_update().get(predictor_id)
         assert predictor_record is not None
 
         fs_store = FsStore()
@@ -97,11 +87,24 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         raise e
 
 
-def run_learn(df: DataFrame, problem_definition: ProblemDefinition, name: str, company_id: int, datasource_id: int) -> None:
-    run_generate(df, problem_definition, name, company_id, datasource_id)
-    predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-    assert predictor_record is not None
-    run_fit(predictor_record.id, df)
+def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
+              delete_ds_on_fail: Optional[bool] = False) -> None:
+    try:
+        run_generate(df, problem_definition, predictor_id)
+        run_fit(predictor_id, df)
+    except Exception as e:
+        predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        if delete_ds_on_fail is True:
+            linked_db_ds = Datasource.query.filter_by(id=predictor_record.datasource_id).first()
+            if linked_db_ds is not None:
+                predictors_with_ds = Predictor.query.filter(
+                    (Predictor.id != predictor_id) & (Predictor.datasource_id == linked_db_ds.id)
+                ).all()
+                if len(predictors_with_ds) == 0:
+                    session.delete(linked_db_ds)
+                    predictor_record.datasource_id = None
+        predictor_record.data = {"error": str(e)}
+        session.commit()
 
 
 def run_adjust(name, db_name, from_data, datasource_id, company_id):
@@ -156,7 +159,7 @@ def run_update(name: str, company_id: int):
         predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
         session.commit()
 
-        predictor_record.lightwood_version = lightwood.__version__
+        predictor_record.lightwood_version = lightwood_version
         predictor_record.mindsdb_version = mindsdb_version
         predictor_record.update_status = 'up_to_date'
         session.commit()

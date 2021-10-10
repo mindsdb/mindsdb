@@ -558,7 +558,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-        model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs)
+        model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True)
 
         self.packet(OkPacket).send()
 
@@ -1119,6 +1119,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
                 self.answer_show_create_table(table)
                 return
+            elif 'show character set where charset =' in sql_lower:
+                # show character set where charset = 'utf8mb4';
+                charset = sql_lower.replace('show character set where charset = ', '').strip("'")
+                self.answer_show_charset(charset)
+                return
+
+
 
         if keyword == 'start':
             # start transaction
@@ -1275,6 +1282,37 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         else:
             print(sql)
             raise NotImplementedError('Action not implemented')
+
+    def answer_show_charset(self, charset):
+        # TODO answer based on 'charset' arg
+        packages = []
+        packages += self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'Charset',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'Description',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'Default collation',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'Default Maxlen',
+                'type': TYPES.MYSQL_TYPE_LONG,
+                'charset': CHARSET_NUMBERS['binary']
+            }],
+            data=[['utf8mb4', 'UTF-8 Unicode', 'utf8mb4_general_ci', 4]]
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+        return
 
     def answer_show_create_table(self, table):
         packages = []

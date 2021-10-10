@@ -30,7 +30,7 @@ All of the html files and assets will be pushed to the [gh-pages](https://github
 The mindsdb-docs layout is as follows:
 
 ```
-docs                                   # Containes documentation source files
+docs                                   # Contains documentation source files
 |__assets/                             # Image and icons used in pages
 |__.md                                 # All of the markdown files used as pages
 overrides

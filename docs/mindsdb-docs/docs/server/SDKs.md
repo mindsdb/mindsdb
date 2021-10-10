@@ -46,7 +46,7 @@ df = pd.read_csv('datasets/insurance.csv') # read the dataset
 datasources['health_insurance'] = {'df': df} # create new datasource
 ```
 
-To check that the datasource was succesfully created, you can call the `list_info()` method from datasources:
+To check that the datasource was successfully created, you can call the `list_info()` method from datasources:
 
 ```python
 datasources.list_info()

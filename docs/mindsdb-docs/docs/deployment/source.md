@@ -1,6 +1,6 @@
 # Deploy from the source code
 
-This section describes how to deploy MindsDB from the source code. This is the prefered way to use MindsDB if you want to contribute to our code or simply to debug MindsDB.
+This section describes how to deploy MindsDB from the source code. This is the preferred way to use MindsDB if you want to contribute to our code or simply to debug MindsDB.
 
 ## Prerequisite
 
@@ -50,6 +50,7 @@ python -m mindsdb
 
 * To access MindsDB APIs, visit `http://127.0.0.1:47334/api`.
 * To access MindsDB Studio, visit  `http://127.0.0.1:47334/`
+* To access MindsDB Studio using mysql: `mysql -h 127.0.0.1 --port 3306 -u mindsdb -p `
 
 
 ## Installation troubleshooting

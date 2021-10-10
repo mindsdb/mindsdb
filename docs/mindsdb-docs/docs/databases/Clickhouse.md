@@ -18,7 +18,7 @@ You will need MindsDB version >= 2.0.0 and ClickHouse installed.
     MindsDB will try to use the default configuration(hosts, ports, usernames) for each of the database integrations. If you want to extend that or you are
     using different parameters create a new config.json file.
 
-The avaiable configuration options are:
+The available configuration options are:
 
 * api['http] -- This key is used for starting the MindsDB http server by providing:
     * host(default 0.0.0.0.) - The mindsdb server address.
@@ -131,7 +131,7 @@ You should get a similar response from MindsDB as:
 
 | price  | predicted | info   |
 |----------------|------------|------|
-| 0.001156540079952395 | 0.9869 | Check JSON bellow  |
+| 0.001156540079952395 | 0.9869 | Check JSON below  |
 
 
 ```json

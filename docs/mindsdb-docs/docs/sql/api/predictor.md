@@ -60,7 +60,7 @@ CREATE PREDICTOR predictor_name
 FROM integration_name 
 (SELECT column_name, column_name2 FROM table_name) as ds_name
 PREDICT column_name as column_alias
-USING {"ignore_columns": "column_name3"}
+USING {"ignore_columns": "column_name3"};
 ```
 
 ## USING example
@@ -72,7 +72,7 @@ CREATE PREDICTOR home_rentals_model
 FROM db_integration 
 (SELECT * FROM house_rentals_data) as rentals
 PREDICT rental_price as price
-USING {"ignore_columns": "number_of_bathrooms"}
+USING {"ignore_columns": "number_of_bathrooms"};
 ```
 
 ## Time Series keywords
@@ -90,7 +90,7 @@ PREDICT column_name as column_alias
 GROUP BY column_name
 WINDOW 10
 HORIZON 7;
-USING {"is_timeseries": "Yes"}
+USING {"is_timeseries": "Yes"};
 ```
 
 ## ORDER BY keyword

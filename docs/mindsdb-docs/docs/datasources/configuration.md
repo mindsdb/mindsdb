@@ -111,7 +111,7 @@ All of the options that should be added to the `config.json` file are:
 ```       
 </details>
 
-All of the avaiable settings that should be added to the `config.json` file are:
+All of the available settings that should be added to the `config.json` file are:
 
 * [x] api['http'] -- This key is used for starting the MindsDB HTTP server by providing:
     * host(default 127.0.0.1) - The mindsDB server address.

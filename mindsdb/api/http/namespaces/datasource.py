@@ -71,7 +71,11 @@ class Datasource(Resource):
             request.default_store.delete_datasource(name)
         except Exception as e:
             log.error(e)
-            abort(400, str(e))
+            return http_error(
+                400,
+                f"Error deleting datasource",
+                f"There was an error while tring to delete datasource with name '{name}'"
+            )
         return '', 200
 
     @ns_conf.doc('put_datasource', params=put_datasource_params)

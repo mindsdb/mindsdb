@@ -50,6 +50,6 @@ mdb = mindsdb.Predictor(name='real_estate_model')
 # use the model to make predictions
 result = mdb.predict(when_data={'number_of_rooms': 2,'number_of_bathrooms':1, 'sqft': 1190})
 
-# The result will be an array containing predictions for each data point (in this case only one), a confidence for said prediction and a few other extra informations
+# The result will be an array containing predictions for each data point (in this case only one), a confidence for said prediction and a few other extra information
 print('The predicted price is ${price} with {conf} confidence'.format(price=result[0]['rental_price'], conf=result[0]['rental_price_confidence']))
 ```

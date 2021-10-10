@@ -49,6 +49,12 @@ class MySQLConnectionChecker:
 
 
 class MySQL(Integration, MySQLConnectionChecker):
+    
+    def get_row_count(self, query):
+        result = conn.execute(query)
+        return len(query)
+
+
     def __init__(self, config, name, db_info):
         super().__init__(config, name)
         self.user = db_info.get('user')

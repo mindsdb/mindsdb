@@ -22,6 +22,9 @@ class PostgreSQLConnectionChecker:
             host=self.host,
             port=self.port
         )
+    def get_row_count(self, query):
+    result = conn.execute(query)
+    return len(query)
 
     def check_connection(self):
         try:

@@ -59,11 +59,10 @@ Why the bear? Who *doesn't* like bears! Anyway, a bear for UC Berkeley where thi
 
 
 ### What is the difference between AI and Machine Learning?
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/yn3OouYjvzA" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/yn3OouYjvzA/maxresdefault.jpg)](https://youtu.be/yn3OouYjvzA)
 
 
 ### What is XAI?
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/Yjm7diITMXA" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/Yjm7diITMXA/maxresdefault.jpg)](https://youtu.be/Yjm7diITMXA)
 

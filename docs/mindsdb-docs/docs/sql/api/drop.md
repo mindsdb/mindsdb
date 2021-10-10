@@ -9,7 +9,7 @@ The `DROP` statement is used to delete an existing model table or delete datasou
 
 The `DROP TABLE` statement is used to delete the model table:
 
-```
+```sql
 DROP TABLE table_name;
 ```
 
@@ -17,7 +17,7 @@ DROP TABLE table_name;
 
 The following SQL statement drops the model table called `home_rentals_model`:
 
-```
+```sql
 DROP TABLE home_rentals_model;
 ```
 
@@ -25,7 +25,7 @@ DROP TABLE home_rentals_model;
 
 The `DROP DATABASE` statement is used to delete datasource integration database:
 
-```
+```sql
 DROP DATABSE integration_name
 ```
 
@@ -33,6 +33,6 @@ DROP DATABSE integration_name
 
 The following SQL statement drops the integration database called `psql_rentals`:
 
-```
+```sql
 DROP TABLE psql_rentals;
 ```

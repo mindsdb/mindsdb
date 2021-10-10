@@ -52,7 +52,7 @@ All of the newly trained machine learning models will be visible as a new record
 * name - The name of the model.
 * status - Training status(training, complete, error).
 * accuracy - The model accuracy.
-* predict - The name of the target varaibale.
+* predict - The name of the target variable.
 * select_data_query - SQL select query to create the datasource.
 * external_datasource - Name of the pre-existing datasource created from GUI.
 * training options - Additional training parameters. The full list can be found at [Predictor Interface docs](/PredictorInterface/#learn).

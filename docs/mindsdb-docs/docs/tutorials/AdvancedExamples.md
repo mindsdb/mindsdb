@@ -25,7 +25,9 @@ mdb.learn(
 
 
 ## Multimedia inputs (images, audio and video)
-<iframe width="560" height="315" src="https://www.youtube.com/embed/2S-x6KfgJwE" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+[![Watch the video](https://img.youtube.com/vi/2S-x6KfgJwE/maxresdefault.jpg)](https://youtu.be/2S-x6KfgJwE)
+<a href="https://youtu.be/2S-x6KfgJwE"><h1>Watch Video</h1></a>
 
 Currently, we only support images as inputs into models. We are working on support audio, you can check [this issue](https://github.com/mindsdb/mindsdb/issues/124) to track the progress. Video input support is not yet planned.
 

@@ -74,7 +74,7 @@ On startup the mindsdb database will contain 2 tables `predictors` and `commands
 All of the newly trained machine learning models will be visible as a new record inside the `predictors` table. The `predictors` columns contains information about each model as:
 
 * name - The name of the model.
-* status - Training stauts(training, complete, error).
+* status - Training status(training, complete, error).
 * accuracy - The model accuracy.
 * predict - The name of the target variable.
 * select_data_query - SQL select query to create the datasource.

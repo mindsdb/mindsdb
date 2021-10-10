@@ -8,37 +8,35 @@ title: Getting started
 There are a few options to deploy MindsDB on different operating systems. To find the one that works the best for you, check out the below links.
 
 !!! tip "Recommended"
-    Our suggestion is to always use Docker as the most stable and easy way because it encapsulates all of the dependencies that MindsDB Server needs.
+Our suggestion is to always use Docker as the most stable and easy way because it encapsulates all of the dependencies that MindsDB Server needs.
 
-=== "Docker"
+## "Docker"
+!!! info "Deployment"  
+Follow the [Docker deployment](/deployment/docker) instructions.
 
-    !!! info "Deployment"
-        Follow the [Docker deployment](/deployment/docker) instructions.
+## MindsDB Cloud
+!!! info "Deployment"  
+Follow the [MindsDB cloud](/deployment/cloud) instructions.
 
-=== "MindsDB Cloud"
+## Windows
 
-    !!! info "Deployment"
-        Follow the [MindsDB cloud](/deployment/cloud) instructions.
+!!! info "Deployment"  
+Follow the [Windows deployment](/deployment/windows) instructions.
 
-=== "Windows"
+## Linux
 
-    !!! info "Deployment"
-        Follow the [Windows deployment](/deployment/windows) instructions.
+!!! info "Deployment"  
+Follow the [Linux deployment](/deployment/linux) instructions.
 
-=== "Linux"
+## MacOS
 
-    !!! info "Deployment"
-        Follow the [Linux deployment](/deployment/linux) instructions.
+!!! info "Deployment"  
+Follow the [macOS deployment](/deployment/macos) instructions.
 
-=== "MacOS"
+## Source
 
-    !!! info "Deployment"
-        Follow the [macOS deployment](/deployment/macos) instructions.
-
-=== "Source"
-
-    !!! info "Deployment"
-        Follow the from [source deployment](/deployment/source) instructions.
+!!! info "Deployment"  
+Follow the from [source deployment](/deployment/source) instructions.
 
 
 ## Tutorials

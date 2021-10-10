@@ -20,11 +20,10 @@ Data is the single most important ingredient in machine learning, and your data 
 
 !!! info "As a quick example, let's consider a database that stores the SqFt and Price of Home Rentals:"
 
-    ```sql
-    SELECT sqft, price FROM home_rentals_table;
-    ```
-
-    ![SQFT vs Price](/assets/info/sqft-price.png)
+```sql
+SELECT sqft, price FROM home_rentals_table;
+```
+![SQFT vs Price](/assets/info/sqft-price.png)
 
 !!! note "You query the database for information in this table and if your search criteria generates a match: you get results:"
     
@@ -37,28 +36,28 @@ Data is the single most important ingredient in machine learning, and your data 
 
 !!! note "If your search criteria do not generate a match - your results will be empty:"
 
-    ```sql
-    SELECT sqft, price FROM home_rentals_table WHERE sqft = 800;
-    ```
+```sql
+SELECT sqft, price FROM home_rentals_table WHERE sqft = 800;
+```
 
-    ![SELECT FROM Table No Results](/assets/info/selectm.png)
+![SELECT FROM Table No Results](/assets/info/selectm.png)
 
 !!! tip "An ML model can be fitted to the data in the home rentals table."
 
-    ```sql
-    CREATE PREDICTOR  home_rentals_model FROM home_rentals_table PREDICT price;   
-    ```
+```sql
+CREATE PREDICTOR  home_rentals_model FROM home_rentals_table PREDICT price;   
+```
 
-    ![Model](/assets/info/model.png)
+![Model](/assets/info/model.png)
 
 !!! success "An ML model can provide approximate answers for searches where there is no exact match in the income table:"
     
 
-    ```sql
-    SELECT sqft, price FROM home_rentals_model WHERE sqft = 800;
-    ```
+```sql
+SELECT sqft, price FROM home_rentals_model WHERE sqft = 800;
+```
 
-    ![Query model](/assets/info/query.png)
+![Query model](/assets/info/query.png)
 
 
 ## Getting Started

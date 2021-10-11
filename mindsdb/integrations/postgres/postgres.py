@@ -95,6 +95,9 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
             con.commit()
 
         return res
+    def get_row_count(self, query):
+        res = self._query(query)
+        return len(res)
 
     def setup(self):
         user = f"{self.config['api']['mysql']['user']}_{self.name}"

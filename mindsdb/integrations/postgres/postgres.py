@@ -198,4 +198,4 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
             SELECT COUNT(*) 
             FROM ({query}) as query;"""
         result = self._query(q)
-        return query[0][0]
+        return result[0][0]

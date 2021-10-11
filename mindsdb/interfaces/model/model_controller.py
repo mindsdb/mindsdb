@@ -11,7 +11,6 @@ from typing import Optional, Tuple, Union, Dict, Any
 import lightwood
 from lightwood.api.types import ProblemDefinition
 from lightwood import __version__ as lightwood_version
-from packaging import version
 import numpy as np
 import pandas as pd
 import mindsdb_datasources
@@ -97,6 +96,8 @@ class ModelController():
 
         if 'ignore_columns' in kwargs:
             problem_definition['ignore_features'] = kwargs['ignore_columns']
+            if isinstance(problem_definition['ignore_features'], list) is False:
+                problem_definition['ignore_features'] = [problem_definition['ignore_features']]
 
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
@@ -105,7 +106,12 @@ class ModelController():
         return df, problem_definition, join_learn_process
 
     @mark_process(name='learn')
-    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
+    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict,
+              company_id: int, delete_ds_on_fail: Optional[bool] = False) -> None:
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        if predictor_record is not None:
+            raise Exception('Predictor name must be unique.')
+
         df, problem_definition, join_learn_process = self._unpack_old_args(from_data, kwargs, to_predict)
 
         problem_definition = ProblemDefinition.from_dict(problem_definition)
@@ -124,7 +130,7 @@ class ModelController():
         db.session.commit()
         predictor_id = predictor_record.id
 
-        p = LearnProcess(df, problem_definition, predictor_id)
+        p = LearnProcess(df, problem_definition, predictor_id, delete_ds_on_fail)
         p.start()
         if join_learn_process:
             p.join()
@@ -145,7 +151,6 @@ class ModelController():
             data['status'] = 'complete'
         else:
             data['status'] = 'error'
-        print(f'!!!!===== {name} learn finished status={ data["status"]}')
 
     @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
@@ -172,7 +177,6 @@ class ModelController():
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
                 }
             else:
-                print(f'===== {name} predict={ predictor_record.data is None}')
                 raise Exception(f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}')
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
@@ -259,7 +263,9 @@ class ModelController():
         data['problem_definition'] = predictor_record.learn_args
 
         # assume older models are complete, only temporary
-        if predictor_record.update_status == 'available':
+        if 'error' in predictor_record.data:
+            data['status'] = 'error'
+        elif predictor_record.update_status == 'available':
             data['status'] = 'complete'
         elif predictor_record.json_ai is None and predictor_record.code is None:
             data['status'] = 'generating'
@@ -321,7 +327,12 @@ class ModelController():
         return 'Updated in progress'
 
     @mark_process(name='learn')
-    def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, join_learn_process: bool, company_id: int):
+    def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict,
+                           join_learn_process: bool, company_id: int):
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        if predictor_record is not None:
+            raise Exception('Predictor name must be unique.')
+
         df, problem_definition, _ = self._unpack_old_args(from_data, problem_definition_dict)
 
         problem_definition = ProblemDefinition.from_dict(problem_definition)
@@ -388,6 +399,7 @@ class ModelController():
             p.join()
             if not IS_PY36:
                 p.close()
+
 
 '''
 Notes: Remove ray from actors are getting stuck

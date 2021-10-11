@@ -17,7 +17,7 @@ This dataset contains force and torque measurements on a robot after failure det
 {{ read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/others/robotic_failure/dataset/test.csv', nrows=7) }}
 
 <details>
-  <summary>Click to expand Features Informations:</summary>
+  <summary>Click to expand Features Information:</summary>
 
 ```
 id

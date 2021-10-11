@@ -78,7 +78,7 @@ The `--api` parameter specifies the type of API to use -- in this case HTTP and 
 
 ![Start MindsDB with config](/assets/data/start-config.gif)
 
-After starting the server, you can run a `SELECT` query from your SQL client to make sure integration has been successful. Please make sure to use `exec` or `openquery` as the examples bellow.
+After starting the server, you can run a `SELECT` query from your SQL client to make sure integration has been successful. Please make sure to use `exec` or `openquery` as the examples below.
 
 ```sql
 exec ('SELECT * FROM mindsdb.predictors') AT mindsdb_db;

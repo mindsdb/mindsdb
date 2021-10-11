@@ -12,7 +12,7 @@ Using SQL to perform machine learning at the data layer will bring you many bene
 
 ## Pre-requisites
 
-First, make sure you have succesfully installed MindsDB. Check out the installation guide for [Docker](/deployment/docker/) or [PyPi](/deployment/source/) install. Second, you will need to have mysql-client or DBeaver, MySQL WOrkbench etc installed locally to connect to MySQL API.
+First, make sure you have successfully installed MindsDB. Check out the installation guide for [Docker](/deployment/docker/) or [PyPi](/deployment/source/) install. Second, you will need to have mysql-client or DBeaver, MySQL WOrkbench etc installed locally to connect to MySQL API.
 
 ## Database Connection
 
@@ -35,7 +35,7 @@ Then, click on CONNECT. The next step is to use the MySQL client to connect to M
 I will use a mysql command line client in the next part of the tutorial but you can follow up with the one that works the best for you, like Dbeaver. The first step is to use the MindsDB Cloud user to connect to the MySQL API:
 
 ```
-mysql -h cloud-mysql.mindsdb.com --port 3306 -u theusername@mail.com -p
+mysql -h cloud.mindsdb.com --port 3306 -u theusername@mail.com -p
 ```
 
 In the above command, we specify the hostname and user name explicitly, as well as a password for connecting.

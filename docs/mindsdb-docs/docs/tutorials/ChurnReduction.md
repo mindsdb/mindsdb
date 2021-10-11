@@ -17,7 +17,7 @@ Customer churn or customer turnover is the loss of clients or customers. Telecom
 
 
 <details>
-  <summary>Click to expand Features Informations:</summary>
+  <summary>Click to expand Features Information:</summary>
 
 ```
 1. customerIDCustomer ID
@@ -85,6 +85,6 @@ if __name__ == '__main__':
 ## Mindsdb accuracy
 
 
-| Accuraccy       | Backend  | Last run | MindsDB Version | Latest Version|
+| Accuracy       | Backend  | Last run | MindsDB Version | Latest Version|
 |----------------|-------------------|----------------------|-----------------|--------------|
 | 0.7659574468085106 | Lightwood | 17 April 2020 | [![MindsDB](https://img.shields.io/badge/pypi--package-1.16.1-green)](https://pypi.org/project/MindsDB/1.16.1/)|   <a href="https://pypi.org/project/MindsDB/"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>|

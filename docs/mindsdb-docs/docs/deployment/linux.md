@@ -3,7 +3,7 @@
 !!! warning "Python 3.9"
     Currently, some of our dependencies have issues with the latest versions of Python 3.9.x. For now, our suggestion is to use Python 3.7.x, or 3.8.x versions.
 
-We suggest you to install MindsDB in a virtual environment when using **pip** to avoid dependency issues. Make sure your Python version is **>=3.6**.
+We suggest you to install MindsDB in a virtual environment when using **pip** to avoid dependency issues. Make sure your Python version is **>=3.7** and pip version is **>=19.3**.
 
 1. Create and activate venv:
 
@@ -61,7 +61,7 @@ You will need <a href="https://www.anaconda.com/products/individual" target="_bl
 
 ## Troubleshooting
 
-If the installation fails, don't worry, simply follow the below bellow instruction which should fix most issues. If none of this works, try using the [docker container]() and create an issue with the installation errors you got on our [Github repository](https://github.com/mindsdb/mindsdb/issues). We'll try to review the issue and give you response within a few hours.
+If the installation fails, don't worry, simply follow the below below instruction which should fix most issues. If none of this works, try using the [docker container]() and create an issue with the installation errors you got on our [Github repository](https://github.com/mindsdb/mindsdb/issues). We'll try to review the issue and give you response within a few hours.
 
 
 !!! failure "`No module named mindsdb`"

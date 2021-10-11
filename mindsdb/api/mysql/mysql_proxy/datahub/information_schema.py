@@ -36,7 +36,6 @@ class InformationSchema(DataNode):
             self.index[key.upper()] = val
 
     def get(self, name):
-        # INFORMATION_SCHEMA.SCHEMATA
         if name.upper() == 'INFORMATION_SCHEMA':
             return self
         ds = self.index.get(name.upper())
@@ -170,7 +169,7 @@ class InformationSchema(DataNode):
             raise Exception('Information schema: Not implemented.')
 
         table_name = query.from_table.parts[-1]
-        # +++ FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
+        # region FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
         if ' 1 = 0' in str(query):
             q = str(query)
             q = q[:q.lower().find('where')] + ' limit 0'
@@ -180,6 +179,7 @@ class InformationSchema(DataNode):
                 reduce_output=False,
                 **{table_name: dataframe}
             )
+        # endregion
         else:
             # ---
             try:

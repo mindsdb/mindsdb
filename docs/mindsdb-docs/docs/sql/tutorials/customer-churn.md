@@ -102,7 +102,7 @@ To train the model that will predict customer churn run:
 
 ```sql
 CREATE PREDICTOR churn_model FROM demo (SELECT * FROM CustomerChurnData)
-PREDICT Churn as customer_churn USING {"ignore_columns": "gender"};
+PREDICT Churn as customer_churn USING {"ignore_columns": ["gender"]};
 ```
 
 ![INSERT query](/assets/sql/tutorials/insert.png)

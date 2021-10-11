@@ -1175,7 +1175,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
 
 
-
         if keyword == 'start':
             # start transaction
             self.packet(OkPacket).send()

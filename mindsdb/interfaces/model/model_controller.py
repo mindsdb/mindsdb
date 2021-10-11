@@ -177,7 +177,9 @@ class ModelController():
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
                 }
             else:
-                raise Exception(f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}')
+                raise Exception(
+                    f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}. Error is {predictor_data.get("error", "unknown")}'
+                )
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
             ds_cls = getattr(mindsdb_datasources, when_data['class'])

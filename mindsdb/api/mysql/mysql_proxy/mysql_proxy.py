@@ -27,6 +27,8 @@ from functools import partial
 import select
 import base64
 
+import pandas as pd
+import dfsql
 import moz_sql_parser as sql_parser
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
@@ -339,45 +341,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'type': TYPES.MYSQL_TYPE_VAR_STRING
             }],
             data=['mindsdb']
-        )
-        if self.client_capabilities.DEPRECATE_EOF is True:
-            packages.append(self.packet(OkPacket, eof=True))
-        else:
-            packages.append(self.packet(EofPacket))
-        self.sendPackageGroup(packages)
-
-    def answer_show_variables(self, sql):
-        sql_lower = sql.lower()
-        if 'show variables' in sql_lower:
-            variables = re.findall(r"variable_name='([a-zA-Z_]*)'", sql_lower)
-        elif "show variables like" in sql_lower:
-            variables = re.findall(r"show variables like '([a-zA-Z_]*)'", sql_lower)
-        elif "show session variables like" in sql_lower:
-            variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
-        elif 'show session status like' in sql_lower:
-            variables = re.findall(r"show session variables like '([a-zA-Z_]*)'", sql_lower)
-        elif 'show global variables' in sql_lower:
-            variables = [x for x in SERVER_VARIABLES if x.startswith('@@session.') is False]
-
-        data = []
-        for variable_name in variables:
-            variable_data = SERVER_VARIABLES.get(f'@@{variable_name}')
-            if variable_data is None:
-                variable_data = ['']
-            data.append([variable_name, variable_data[0]])
-
-        packages = []
-        packages += self.getTabelPackets(
-            columns=[{
-                'table_name': 'session_variables',
-                'name': 'Variable_name',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': 'session_variables',
-                'name': 'Value',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }],
-            data=data
         )
         if self.client_capabilities.DEPRECATE_EOF is True:
             packages.append(self.packet(OkPacket, eof=True))
@@ -1074,7 +1037,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
                 )
                 if statement.condition == 'like':
-                    new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), statement.expression])
+                    new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), statement.expression])   # !!!
                 elif statement.condition is not None:
                     raise Exception(f'Not implemented: {sql}')
                 statement = new_statement
@@ -1090,7 +1053,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     raise Exception(f'Unknown condition in query: {statement}')
 
                 new_statement = Select(
-                    targets=[Identifier(parts=["table_name"], alias=Identifier(f'Tables_in_{schema}'))],
+                    targets=[Identifier(parts=['table_name'], alias=Identifier(f'Tables_in_{schema}'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
                     where=BinaryOperation('and', args=[
                         BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema.upper())]),
@@ -1109,7 +1072,62 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 or 'show session status' in sql_lower
                 or 'show global variables' in sql_lower
             ):
-                self.answer_show_variables(sql)
+                # category = variables | session variables | session status | global variables
+                category = statement.category.lower()
+                condition = statement.condition
+                expression = statement.expression
+
+                new_statement = Select(
+                    targets=[Identifier(parts=['Variable_name']), Identifier(parts=['Value'])],
+                    from_table=Identifier(parts=['dataframe']),
+                )
+
+                if condition == 'like':
+                    new_statement.where = BinaryOperation('like', args=[Identifier('Variable_name'), expression])
+                elif condition == 'where':
+                    new_statement.where = expression
+                elif condition is not None:
+                    raise Exception(f'Unknown condition in query: {statement}')
+
+                data = {}
+                is_session = 'session' in category
+                for var_name, var_data in SERVER_VARIABLES.items():
+                    var_name = var_name.replace('@@', '')
+                    if is_session and var_name.startswith('session.') is False:
+                        continue
+                    if var_name.startswith('session.') or var_name.startswith('GLOBAL.'):
+                        name = var_name.replace('session.', '').replace('GLOBAL.', '')
+                        data[name] = var_data[0]
+                    elif var_name not in data:
+                        data[var_name] = var_data[0]
+
+                df = pd.DataFrame(data.items(), columns=['Variable_name', 'Value'])
+                data = dfsql.sql_query(
+                    str(new_statement),
+                    ds_kwargs={'case_sensitive': False},
+                    reduce_output=False,
+                    **{'dataframe': df}
+                )
+                data = data.values.tolist()
+
+                packages = []
+                packages += self.getTabelPackets(
+                    columns=[{
+                        'table_name': 'session_variables',
+                        'name': 'Variable_name',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': 'session_variables',
+                        'name': 'Value',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=data
+                )
+                if self.client_capabilities.DEPRECATE_EOF is True:
+                    packages.append(self.packet(OkPacket, eof=True))
+                else:
+                    packages.append(self.packet(EofPacket))
+                self.sendPackageGroup(packages)
                 return
             elif "show status like 'ssl_version'" in sql_lower:
                 packages = []

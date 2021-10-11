@@ -195,7 +195,7 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
 
     def get_row_count(self, query):
         q = f""" 
-            SELECT COUNT(*) 
+            SELECT COUNT(*) as count
             FROM ({query}) as query;"""
         result = self._query(q)
-        return result[0][0]
+        return result[0]['count']

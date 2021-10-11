@@ -43,7 +43,8 @@ plugins:
             'databases/MariaDB': 'tutorials/mariadb.md'
             'installation/Linux/': 'installation/linux.md'
             'installation/Windows/': 'installation/windows.md'
-            'installation/MacOS/': 'installation/macos.md'
+            'installation/macos/': '/deployment/macos.md'
+
     - table-reader
 
 markdown_extensions:

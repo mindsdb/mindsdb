@@ -73,7 +73,7 @@ In this tutorial, we will use the customer churn data-set. Each row represents a
 
 ## Using SQL Statements to train/query models
 
-Now, we will train a new machine learning model from the datasource we have created using MindsDB Studio. 
+Now, we will train a new machine learning model from the datasource we have created using MindsDB Studio.
 Switch back to mysql-client and run:
 
 ```
@@ -87,7 +87,7 @@ You will notice there are 2 tables available inside the MindsDB database. To tra
 
 ```sql
 CREATE PREDICTOR predictor_name
-FROM integration_name 
+FROM integration_name
 (SELECT column_name, column_name2 FROM table_name)
 PREDICT column_name as column_alias;
 ```
@@ -102,7 +102,7 @@ To train the model that will predict customer churn run:
 
 ```sql
 CREATE PREDICTOR churn_model FROM demo (SELECT * FROM CustomerChurnData)
-PREDICT Churn as customer_churn USING {"ignore_columns": "gender"};
+PREDICT Churn as customer_churn USING {"ignore_columns": ["gender"]};
 ```
 
 ![INSERT query](/assets/sql/tutorials/insert.png)
@@ -113,7 +113,7 @@ What we did here was to create a predictor called `customer_churn `to predict th
 SELECT * FROM predictors WHERE name='churn_model';
 ```
 
-The complete status means that the model training has successfully finished. 
+The complete status means that the model training has successfully finished.
 
 ![SELECT status](/assets/sql/tutorials/status.png)
 

@@ -32,9 +32,9 @@ Then, click on CONNECT. The next step is to use the MySQL client to connect to M
 
 ## Connect to MindsDB’s MySQL API
 
-I will use a mysql command line client in the next part of the tutorial but you can follow up with the one that works the best for you, like Dbeaver. The first step is to use the MindsDB Cloud user to connect to the MySQL API:
+I will use a mysql command line client in the next part of the tutorial but you can follow up with the one that works the best for you, like DBeaver. The first step is to use the MindsDB Cloud user to connect to the MySQL API:
 
-```
+```console
 mysql -h cloud.mindsdb.com --port 3306 -u theusername@mail.com -p
 ```
 
@@ -67,7 +67,7 @@ In this tutorial, we will use the customer churn data-set. Each row represents a
 * Contract - The contract term of the customer (Month-to-month, One year, Two year)
 * PaperlessBilling - Whether the customer has paperless billing or not (Yes, No)
 * PaymentMethod - The customer’s payment method (Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic))
-* MonthlyCharges - The monthly charge amount
+* MonthlyCharges - The monthly charged amount
 * TotalCharges - The total amount charged to the customer
 * Churn - Whether the customer churned or not (Yes or No). This is what we want to predict.
 
@@ -94,7 +94,7 @@ PREDICT column_name as column_alias;
 
 The required values that we need to provide are:
 
-* predictor_name (string) - The name of the model
+* predictor_name (string) - The name of the model.
 * integration_name (string) - The name of connection to your database.
 * column_name (string) - The feature you want to predict.
 
@@ -102,7 +102,7 @@ To train the model that will predict customer churn run:
 
 ```sql
 CREATE PREDICTOR churn_model FROM demo (SELECT * FROM CustomerChurnData)
-PREDICT Churn as customer_churn USING {"ignore_columns": ["gender"]};
+PREDICT Churn as churn_model USING {"ignore_columns": ["gender"]};
 ```
 
 ![INSERT query](/assets/sql/tutorials/insert.png)

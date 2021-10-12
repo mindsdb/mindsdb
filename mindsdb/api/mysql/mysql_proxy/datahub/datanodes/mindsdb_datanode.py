@@ -167,9 +167,12 @@ class MindsDBDataNode(DataNode):
             )
         else:
             # ---
+            # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
+            str_query = str(mindsdb_sql_query).replace('status', '`status`')
+            # ---
             try:
                 result_df = dfsql.sql_query(
-                    str(mindsdb_sql_query),
+                    str_query,
                     ds_kwargs={'case_sensitive': False},
                     reduce_output=False,
                     predictors=predictors_df

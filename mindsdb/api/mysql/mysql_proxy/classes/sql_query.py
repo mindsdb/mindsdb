@@ -228,7 +228,11 @@ class SQLQuery():
             sql = sql[:sql.lower().find('where 1=0')] + ' limit 0'
             is_crutch = True
         # ---
-        mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
+
+        # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
+        str_sql = sql.replace(' status ', ' `status` ')
+        # ---
+        mindsdb_sql_struct = parse_sql(str_sql, dialect='mindsdb')
 
         # is it query with only constants?
         if (

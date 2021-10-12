@@ -101,7 +101,7 @@ The required values that we need to provide are:
 To train the model that will predict customer churn run:
 
 ```sql
-CREATE PREDICTOR churn_model FROM demo (SELECT * FROM CustomerChurnData)
+CREATE PREDICTOR churn_model FROM demo (SELECT * FROM churn_model)
 PREDICT Churn as customer_churn USING {"ignore_columns": "gender"};
 ```
 

@@ -1031,9 +1031,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         # FIXME remove after https://github.com/mindsdb/mindsdb_sql/issues/68
         try:
-            statement = parse_sql(sql)
-            # if isinstance(statement, Show) is False:
-            #     raise Exception('Something wrong with "show"')
+            if keyword == 'set' and 'names' in sql_lower:
+                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/73
+                statement = parse_sql(sql_lower)
+            else:
+                statement = parse_sql(sql)
+
         except Exception:
             statement = parse_sql('show tables')
             statement.category = 'error'

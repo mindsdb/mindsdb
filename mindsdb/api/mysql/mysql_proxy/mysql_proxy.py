@@ -38,7 +38,9 @@ from mindsdb_sql.parser.ast import (
     Identifier,
     BinaryOperation,
     Identifier,
-    Constant
+    Constant,
+    StartTransaction,
+    Set
 )
 
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -1029,15 +1031,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # FIXME remove after https://github.com/mindsdb/mindsdb_sql/issues/68
         try:
             statement = parse_sql(sql)
-            if isinstance(statement, Show) is False:
-                raise Exception('Something wrong with "show"')
+            # if isinstance(statement, Show) is False:
+            #     raise Exception('Something wrong with "show"')
         except Exception:
             statement = parse_sql('show tables')
             statement.category = 'error'
 
-        sql_category = statement.category.lower()
-
-        if keyword == 'show':
+        if isinstance(statement, Show) or keyword == 'show':
+            sql_category = statement.category.lower()
             if sql_category in ('databases', 'schemas'):
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
@@ -1171,18 +1172,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_show_charset(charset)
                 return
 
-        if keyword == 'start':
-            # start transaction
+        if isinstance(statement, StartTransaction):
             self.packet(OkPacket).send()
-        elif keyword == 'set':
-            if 'autocommit' in sql_lower:
+        elif isinstance(statement, Set):
+            category = statement.category.lower()
+            if category == 'autocommit':
                 self.packet(OkPacket).send()
-            elif 'set names' in sql_lower:
-                # it can be "set names utf8"
-                self.charset = re.findall(r"set\s+names\s+(\S*)", sql_lower)[0]
-                self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
-                if self.charset == 'utf8mb4':
-                    self.charset_text_type = CHARSET_NUMBERS['utf8mb4_general_ci']
+            elif category == 'names':
+                # set names utf8;
+                charsets = {
+                    'utf8': 'utf8_general_ci',
+                    'utf8mb4': 'utf8mb4_general_ci'
+                }
+                self.charset = statement.arg.parts[0]
+                self.charset_text_type = charsets.get(self.charset)
+                if self.charset_text_type is None:
+                    log.warning(f"Unknown charset: {self.charset}. Setting up 'utf8_general_ci' as charset text type.")
+                    self.charset_text_type = 'utf8_general_ci'
                 self.packet(
                     OkPacket,
                     state_track=[
@@ -1192,6 +1198,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     ]
                 ).send()
             else:
+                log.warning(f'SQL statement is not processable, return OK package: {sql}')
                 self.packet(OkPacket).send()
         elif keyword == 'use':
             self.session.database = sql_lower.split()[1].strip(' ;')

@@ -1027,9 +1027,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         struct = statement.struct
 
         if keyword == 'show':
-            statement = parse_sql(sql)
-            if isinstance(statement, Show) is False:
-                raise Exception('Something wrong with "show"')
+            # FIXME remove after https://github.com/mindsdb/mindsdb_sql/issues/68
+            try:
+                statement = parse_sql(sql)
+                if isinstance(statement, Show) is False:
+                    raise Exception('Something wrong with "show"')
+            except Exception:
+                statement = parse_sql('show tables')
+                statement.category = 'error'
 
             if statement.category.lower() in ('databases', 'schemas'):
                 new_statement = Select(
@@ -1066,13 +1071,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql = str(statement)
                 sql_lower = sql.lower()
                 keyword = 'select'
-            elif (
-                'show variables' in sql_lower
-                or 'show session variables' in sql_lower
-                or 'show session status' in sql_lower
-                or 'show global variables' in sql_lower
-            ):
-                # category = variables | session variables | session status | global variables
+            elif statement.category.lower() in ('variables', 'session variables', 'session status', 'global variables'):
                 category = statement.category.lower()
                 condition = statement.condition
                 expression = statement.expression

@@ -38,6 +38,7 @@ from mindsdb_sql.parser.ast import (
     BinaryOperation,
     Identifier,
     Constant,
+    Explain,
     Select,
     Show,
     Set,
@@ -860,12 +861,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def answer_stmt_close(self, stmt_id):
         self.session.unregister_stmt(stmt_id)
 
-    def answer_explain_table(self, sql):
-        parts = sql.split(' ')
-        table = parts[1].lower()
-        if table == 'predictors' or table == 'mindsdb.predictors':
+    def answer_explain_table(self, target):
+        db = ((self.session.database or 'mindsdb') if len(target) != 2 else target[0]).lower()
+        table = target[-1].lower()
+        if table == 'predictors' and db == 'mindsdb':
             self.answer_explain_predictors()
-        elif table == 'commands' or table == 'mindsdb.commands':
+        elif table == 'commands' and db == 'mindsdb':
             self.answer_explain_commands()
         else:
             raise NotImplementedError("Only 'EXPLAIN predictors' and 'EXPLAIN commands' supported")
@@ -1340,8 +1341,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket).send()
         elif isinstance(statement, RollbackTransaction):
             self.packet(OkPacket).send()
-        elif keyword == 'explain':
-            self.answer_explain_table(sql)
+        elif isinstance(statement, Explain):
+            self.answer_explain_table(statement.target.parts)
         else:
             print(sql)
             log.warning(f'Unknown SQL statement: {sql}')

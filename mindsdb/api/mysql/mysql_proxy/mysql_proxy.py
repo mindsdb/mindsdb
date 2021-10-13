@@ -1187,7 +1187,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             try:
                 self.insert_predictor_answer(insert_dict)
             except TypeError as e:
-                raise TypeError(e + ', datasource might not exist')
+                raise TypeError(str(e) + ', datasource might not exist')
         elif keyword in ('update', 'insert'):
             raise NotImplementedError('Update and Insert not implemented')
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):

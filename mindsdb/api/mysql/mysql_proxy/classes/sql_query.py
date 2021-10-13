@@ -43,7 +43,7 @@ from mindsdb_sql.planner.steps import (
     JoinStep
 )
 
-from mindsdb.api.mysql.mysql_proxy.classes.com_operators_new import operator_map as new_operator_map
+from mindsdb.api.mysql.mysql_proxy.classes.com_operators_new import operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
@@ -620,7 +620,7 @@ class SQLQuery():
         elif not isinstance(where, (UnaryOperation, BinaryOperation)):
             Exception(f'Unknown operation type: {where}')
 
-        op_fn = new_operator_map.get(where.op)
+        op_fn = operator_map.get(where.op)
         if op_fn is None:
             raise Exception(f'unknown operator {where.op}')
 

@@ -178,7 +178,7 @@ class ModelController():
                 }
             else:
                 raise Exception(
-                    f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}. Error is {predictor_data.get("error", "unknown")}'
+                    f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}. Error is: {predictor_data.get("error", "unknown")}'
                 )
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:

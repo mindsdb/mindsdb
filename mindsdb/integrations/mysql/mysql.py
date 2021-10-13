@@ -190,3 +190,10 @@ class MySQL(Integration, MySQLConnectionChecker):
             drop table if exists {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
+
+    def get_row_count(self, query):
+        q = f""" 
+            SELECT COUNT(*) as count
+            FROM ({query}) as query;"""
+        result = self._query(q)
+        return result[0]['count']

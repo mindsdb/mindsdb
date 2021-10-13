@@ -32,15 +32,15 @@ import dfsql
 import moz_sql_parser as sql_parser
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
-    Select,
-    Star,
-    Show,
-    Identifier,
+    RollbackTransaction,
+    CommitTransaction,
+    StartTransaction,
     BinaryOperation,
     Identifier,
     Constant,
-    StartTransaction,
-    Set
+    Select,
+    Show,
+    Set,
 )
 
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -1039,14 +1039,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if isinstance(statement, Show) or keyword == 'show':
             sql_category = statement.category.lower()
+            condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
+            expression = statement.expression
             if sql_category in ('databases', 'schemas'):
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
                     from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
                 )
-                if statement.condition == 'like':
-                    new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), statement.expression])   # !!!
-                elif statement.condition is not None:
+                if condition == 'like':
+                    new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), expression])
+                elif condition is not None:
                     raise Exception(f'Not implemented: {sql}')
                 statement = new_statement
 
@@ -1055,9 +1057,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 keyword = 'select'
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
-                if statement.condition == 'from':
-                    schema = statement.expression.parts[0]
-                elif statement.condition is not None:
+                if condition == 'from':
+                    schema = expression.parts[0]
+                elif condition is not None:
                     raise Exception(f'Unknown condition in query: {statement}')
 
                 new_statement = Select(
@@ -1075,9 +1077,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql_lower = sql.lower()
                 keyword = 'select'
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
-                condition = statement.condition
-                expression = statement.expression
-
                 new_statement = Select(
                     targets=[Identifier(parts=['Variable_name']), Identifier(parts=['Value'])],
                     from_table=Identifier(parts=['dataframe']),
@@ -1171,6 +1170,29 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 charset = sql_lower.replace('show character set where charset = ', '').strip("'")
                 self.answer_show_charset(charset)
                 return
+            elif sql_category == 'warnings':
+                self.answer_show_warnings()
+                return
+            elif sql_category == 'engines':
+                self.answer_show_engines()
+                return
+            elif sql_category == 'charset':
+                self.answer_show_charset()
+                return
+            elif sql_category == 'collation':
+                self.answer_show_collation()
+                return
+            elif sql_category == 'table status':
+                # SHOW TABLE STATUS LIKE 'table'
+                table_name = None
+                if condition == 'like' and isinstance(expression, Constant):
+                    table_name = expression.value
+                if table_name is None:
+                    err_str = f"Can't determine table name in query: {sql}"
+                    log.warning(err_str)
+                    raise Exception(err_str)
+                self.answer_show_table_status(table_name)
+                return
 
         if isinstance(statement, StartTransaction):
             self.packet(OkPacket).send()
@@ -1207,16 +1229,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answer_create_ai_table(struct)
         elif keyword == 'create_predictor':
             self.answer_create_predictor(struct)
-        elif 'show warnings' in sql_lower:
-            self.answerShowWarnings()
-        elif 'show engines' in sql_lower:
-            self.answerShowEngines()
-        elif 'show charset' in sql_lower:
-            self.answerShowCharset()
-        elif 'show collation' in sql_lower:
-            self.answerShowCollation()
-        elif 'show table status' in sql_lower:
-            self.answer_show_table_status(sql)
         elif keyword == 'delete' and \
                 ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
             self.delete_predictor_sql(sql)
@@ -1324,46 +1336,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 session=self.session
             )
             self.selectAnswer(query)
-        elif keyword == 'rollback':
+        elif isinstance(statement, CommitTransaction):
             self.packet(OkPacket).send()
-        elif keyword == 'commit':
+        elif isinstance(statement, RollbackTransaction):
             self.packet(OkPacket).send()
         elif keyword == 'explain':
             self.answer_explain_table(sql)
         else:
             print(sql)
+            log.warning(f'Unknown SQL statement: {sql}')
             raise NotImplementedError('Action not implemented')
-
-    def answer_show_charset(self, charset):
-        # TODO answer based on 'charset' arg
-        packages = []
-        packages += self.getTabelPackets(
-            columns=[{
-                'table_name': '',
-                'name': 'Charset',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'Description',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'Default collation',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'Default Maxlen',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }],
-            data=[['utf8mb4', 'UTF-8 Unicode', 'utf8mb4_general_ci', 4]]
-        )
-        if self.client_capabilities.DEPRECATE_EOF is True:
-            packages.append(self.packet(OkPacket, eof=True))
-        else:
-            packages.append(self.packet(EofPacket))
-        self.sendPackageGroup(packages)
-        return
 
     def answer_show_create_table(self, table):
         packages = []
@@ -1618,16 +1600,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(EofPacket))
         self.sendPackageGroup(packages)
 
-    def answer_show_table_status(self, sql):
+    def answer_show_table_status(self, table_name):
         # NOTE at this moment parsed statement only like `SHOW TABLE STATUS LIKE 'table'`.
         # NOTE some columns has {'database': 'mysql'}, other not. That correct. This is how real DB sends messages.
-        parts = sql.split(' ')
-        if parts[3].lower() != 'like':
-            raise NotImplementedError('Action not implemented')
-        table = parts[4].strip("'")
-
-        packages = []
-        packages += self.getTabelPackets(
+        packages = self.getTabelPackets(
             columns=[{
                 'database': 'mysql',
                 'table_name': 'tables',
@@ -1756,7 +1732,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'charset': self.charset_text_type
             }],
             data=[[
-                table,          # Name
+                table_name,     # Name
                 'InnoDB',       # Engine
                 10,             # Version
                 'Dynamic',      # Row_format
@@ -1779,7 +1755,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
         self.sendPackageGroup(packages)
 
-    def answerShowWarnings(self):
+    def answer_show_warnings(self):
         packages = []
         packages += self.getTabelPackets(
             columns=[{
@@ -1827,7 +1803,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.packet(OkPacket, eof=True, status=0x0000))
         self.sendPackageGroup(packages)
 
-    def answerShowCollation(self):
+    def answer_show_collation(self):
         packages = []
         packages += self.getTabelPackets(
             columns=[{
@@ -1881,7 +1857,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
         self.sendPackageGroup(packages)
 
-    def answerShowCharset(self):
+    def answer_show_charset(self, charset=None):
+        charsets = {
+            'utf8': ['utf8', 'UTF-8 Unicode', 'utf8_general_ci', 3],
+            'latin1': ['latin1', 'cp1252 West European', 'latin1_swedish_ci', 1],
+            'utf8mb4': ['utf8mb4', 'UTF-8 Unicode', 'utf8mb4_general_ci', 4]
+        }
+        if charset is None:
+            data = list(charset.values())
+        elif charset not in charsets:
+            err_str = f'Unknown charset: {charset}'
+            log.warning(err_str)
+            raise Exception(err_str)
+        else:
+            data = [charsets.get(charset)]
+
         packages = []
         packages += self.getTabelPackets(
             columns=[{
@@ -1913,15 +1903,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'type': TYPES.MYSQL_TYPE_LONGLONG,
                 'charset': CHARSET_NUMBERS['binary']
             }],
-            data=[
-                ['utf8', 'UTF-8 Unicode', 'utf8_general_ci', 3],
-                ['latin1', 'cp1252 West European', 'latin1_swedish_ci', 1]
-            ]
+            data=data
         )
-        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
         self.sendPackageGroup(packages)
 
-    def answerShowEngines(self):
+    def answer_show_engines(self):
         packages = []
         packages += self.getTabelPackets(
             columns=[{

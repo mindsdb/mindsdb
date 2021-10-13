@@ -1148,10 +1148,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     packages.append(self.packet(EofPacket))
                 self.sendPackageGroup(packages)
                 return
-            elif (
-                sql_lower.startswith("show function status where db = 'mindsdb'")
-                or sql_lower.startswith("show procedure status where db = 'mindsdb'")
-            ):
+            elif statement.category.lower() in ('function status', 'procedure status'):
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB';
                 # SHOW PROCEDURE STATUS WHERE Db = 'MINDSDB'
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB' AND Name LIKE '%';
@@ -1172,7 +1169,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 charset = sql_lower.replace('show character set where charset = ', '').strip("'")
                 self.answer_show_charset(charset)
                 return
-
 
         if keyword == 'start':
             # start transaction

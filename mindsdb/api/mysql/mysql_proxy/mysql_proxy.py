@@ -1026,17 +1026,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         keyword = statement.keyword
         struct = statement.struct
 
-        if keyword == 'show':
-            # FIXME remove after https://github.com/mindsdb/mindsdb_sql/issues/68
-            try:
-                statement = parse_sql(sql)
-                if isinstance(statement, Show) is False:
-                    raise Exception('Something wrong with "show"')
-            except Exception:
-                statement = parse_sql('show tables')
-                statement.category = 'error'
+        # FIXME remove after https://github.com/mindsdb/mindsdb_sql/issues/68
+        try:
+            statement = parse_sql(sql)
+            if isinstance(statement, Show) is False:
+                raise Exception('Something wrong with "show"')
+        except Exception:
+            statement = parse_sql('show tables')
+            statement.category = 'error'
 
-            if statement.category.lower() in ('databases', 'schemas'):
+        sql_category = statement.category.lower()
+
+        if keyword == 'show':
+            if sql_category in ('databases', 'schemas'):
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
                     from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
@@ -1050,7 +1052,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql = str(statement)
                 sql_lower = sql.lower()
                 keyword = 'select'
-            elif statement.category.lower() in ('tables', 'full tables'):
+            elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
                 if statement.condition == 'from':
                     schema = statement.expression.parts[0]
@@ -1071,8 +1073,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql = str(statement)
                 sql_lower = sql.lower()
                 keyword = 'select'
-            elif statement.category.lower() in ('variables', 'session variables', 'session status', 'global variables'):
-                category = statement.category.lower()
+            elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
                 condition = statement.condition
                 expression = statement.expression
 
@@ -1089,7 +1090,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     raise Exception(f'Unknown condition in query: {statement}')
 
                 data = {}
-                is_session = 'session' in category
+                is_session = 'session' in sql_category
                 for var_name, var_data in SERVER_VARIABLES.items():
                     var_name = var_name.replace('@@', '')
                     if is_session and var_name.startswith('session.') is False:
@@ -1148,7 +1149,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     packages.append(self.packet(EofPacket))
                 self.sendPackageGroup(packages)
                 return
-            elif statement.category.lower() in ('function status', 'procedure status'):
+            elif sql_category in ('function status', 'procedure status'):
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB';
                 # SHOW PROCEDURE STATUS WHERE Db = 'MINDSDB'
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB' AND Name LIKE '%';

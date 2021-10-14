@@ -163,6 +163,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def server_close(srv):
         srv.server_close()
 
+    # TODO add init
+
     def init_session(self, company_id=None):
         global connection_id
         log.debug('New connection [{ip}:{port}]'.format(
@@ -1031,14 +1033,26 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         # FIXME remove after https://github.com/mindsdb/mindsdb_sql/issues/68
         try:
-            if keyword == 'set' and 'names' in sql_lower:
+            # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
+            sql_lower_replace = sql_lower.replace(' status ', ' `status` ')
+            sql_relpace = sql.replace(' status ', ' `status` ')
+            # ---
+            if keyword == 'set' and 'names' in sql_lower_replace:
                 # FIXME https://github.com/mindsdb/mindsdb_sql/issues/73
-                statement = parse_sql(sql_lower)
+                if '@@' in sql_lower:
+                    statement = parse_sql(sql_lower_replace, dialect='mysql')
+                else:
+                    statement = parse_sql(sql_lower_replace, dialect='mindsdb')
             else:
-                statement = parse_sql(sql)
-
+                if '@@' in sql_lower:
+                    statement = parse_sql(sql_relpace, dialect='mysql')
+                else:
+                    statement = parse_sql(sql_relpace, dialect='mindsdb')
         except Exception:
-            statement = parse_sql('show tables')
+            if keyword == 'show':
+                statement = parse_sql('show tables')
+            elif keyword == 'set':
+                statement = parse_sql('set autocommit')
             statement.category = 'error'
 
         if isinstance(statement, Show) or keyword == 'show':
@@ -1197,24 +1211,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     raise Exception(err_str)
                 self.answer_show_table_status(table_name)
                 return
-
-        if isinstance(statement, StartTransaction):
+        elif isinstance(statement, (StartTransaction, CommitTransaction, RollbackTransaction)):
             self.packet(OkPacket).send()
-        elif isinstance(statement, Set):
+        elif keyword == 'set' or isinstance(statement, Set):
             category = statement.category.lower()
             if category == 'autocommit':
                 self.packet(OkPacket).send()
             elif category == 'names':
                 # set names utf8;
                 charsets = {
-                    'utf8': 'utf8_general_ci',
-                    'utf8mb4': 'utf8mb4_general_ci'
+                    'utf8': CHARSET_NUMBERS['utf8_general_ci'],
+                    'utf8mb4': CHARSET_NUMBERS['utf8mb4_general_ci']
                 }
                 self.charset = statement.arg.parts[0]
                 self.charset_text_type = charsets.get(self.charset)
                 if self.charset_text_type is None:
                     log.warning(f"Unknown charset: {self.charset}. Setting up 'utf8_general_ci' as charset text type.")
-                    self.charset_text_type = 'utf8_general_ci'
+                    self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
                 self.packet(
                     OkPacket,
                     state_track=[
@@ -1263,7 +1276,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise NotImplementedError('Update and Insert not implemented')
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             self.packet(OkPacket).send()
-        elif keyword == 'select':
+        elif isinstance(statement, Select):
+            # if statement.from_table is None:
+            #     self.answer_single_line_select(statement)
+            #     return
             if 'connection_id()' in sql_lower:
                 self.answer_connection_id(sql)
                 return
@@ -1340,16 +1356,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 session=self.session
             )
             self.selectAnswer(query)
-        elif isinstance(statement, CommitTransaction):
-            self.packet(OkPacket).send()
-        elif isinstance(statement, RollbackTransaction):
-            self.packet(OkPacket).send()
         elif isinstance(statement, Explain):
             self.answer_explain_table(statement.target.parts)
         else:
             print(sql)
             log.warning(f'Unknown SQL statement: {sql}')
             raise NotImplementedError('Action not implemented')
+
+    # def answer_single_line_select(self, statement):
+    #     pass
 
     def answer_show_create_table(self, table):
         packages = []

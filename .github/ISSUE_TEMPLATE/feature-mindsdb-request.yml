@@ -1,7 +1,14 @@
 
 name : 'Feature Request'
 description : 'Added New Feature'
-label : 'Thank You For Contributing In our Project'
+# label : 'Thank You For Contributing In our Project'
 Title: 
   value: |
     Feature Name
+body:
+- type: markdown
+  value: "## Welcome!"
+- type: markdown
+  attributes:
+    value: |
+      Thanks for taking the time to fill out this bug! If you need real-time help, join us on Discord

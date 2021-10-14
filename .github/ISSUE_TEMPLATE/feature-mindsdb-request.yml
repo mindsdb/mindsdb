@@ -2,9 +2,8 @@
 name : 'Feature Request'
 description : 'Added New Feature'
 # label : 'Thank You For Contributing In our Project'
-title: 
-  value: |
-    Feature Name
+title: Feature
+ 
 body[0]:
 - type: markdown
   value: "## Welcome!"

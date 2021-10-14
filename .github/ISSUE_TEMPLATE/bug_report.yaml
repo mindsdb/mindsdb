@@ -2,11 +2,15 @@ name: 🐞 Bug report
 description: Create a bug report to help us improve Milvus
 title: "[Bug]: "
 
-  
 body:
-- type: markdown
-  value: "## Welcome!"
-- type: markdown
+- type: dropdown
+  id: download
   attributes:
-    value: |
-      Thanks for taking the time to fill out this bug! If y
+    label: How did you download the software?
+    options:
+      - Homebrew
+      - MacPorts
+      - apt-get
+      - Built from source
+  validations:
+    required: true

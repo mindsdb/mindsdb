@@ -4,7 +4,8 @@ description : 'Added New Feature'
 # label : 'Thank You For Contributing In our Project'
 title: Feature
  
-body[0]:
+body: car
+ 
 - type: markdown
   value: "## Welcome!"
 - type: markdown

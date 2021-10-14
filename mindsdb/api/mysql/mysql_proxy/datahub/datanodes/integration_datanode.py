@@ -1,5 +1,4 @@
 import pandas as pd
-from moz_sql_parser import format
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 

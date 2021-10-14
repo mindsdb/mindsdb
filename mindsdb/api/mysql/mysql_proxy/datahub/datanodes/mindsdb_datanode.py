@@ -16,7 +16,6 @@ from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import get_db_integration
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import to_moz_sql_struct
 
 
 class NumpyJSONEncoder(json.JSONEncoder):

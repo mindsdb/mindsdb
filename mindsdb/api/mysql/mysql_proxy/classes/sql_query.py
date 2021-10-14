@@ -43,7 +43,7 @@ from mindsdb_sql.planner.steps import (
     JoinStep
 )
 
-from mindsdb.api.mysql.mysql_proxy.classes.com_operators_new import operator_map
+from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.interfaces.ai_table.ai_table import AITableStore

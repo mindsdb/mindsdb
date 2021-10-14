@@ -28,7 +28,6 @@ import base64
 
 import pandas as pd
 import dfsql
-import moz_sql_parser as sql_parser
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     RollbackTransaction,

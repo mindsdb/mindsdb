@@ -44,7 +44,6 @@ from mindsdb_sql.parser.ast import (
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
 
-from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
@@ -1290,7 +1289,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     'database': self.session.database,
                     'current_user': self.session.username,
                     'user': self.session.username,
-                    'version': mindsdb_version
+                    'version': '8.0.17'
                 }
                 function_name = target.op.lower()
                 column_name = f'{target.op}()'

@@ -63,6 +63,7 @@ class InformationSchema(DataNode):
         data = [
             ['SCHEMATA', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
             ['TABLES', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
+            ['COLUMNS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
             ['EVENTS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
             ['ROUTINES', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
             ['TRIGGERS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci']
@@ -145,7 +146,7 @@ class InformationSchema(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def select_query(self, query):
+    def select(self, query):
         query_tables = get_all_tables(query)
 
         if len(query_tables) != 1:
@@ -180,11 +181,18 @@ class InformationSchema(DataNode):
             )
         # endregion
         else:
-            data = dfsql.sql_query(
-                str(query),
-                ds_kwargs={'case_sensitive': False},
-                reduce_output=False,
-                **{table_name: dataframe}
-            )
+            # ---
+            try:
+                if table == 'TABLES':
+                    query = 'select * from TABLES'
+                data = dfsql.sql_query(
+                    str(query),
+                    ds_kwargs={'case_sensitive': False},
+                    reduce_output=False,
+                    **{table_name: dataframe}
+                )
+            except Exception:
+                print('exception!')
+                return [], []
 
-        return data.to_dict(orient='records')
+        return data.to_dict(orient='records'), data.columns.to_list()

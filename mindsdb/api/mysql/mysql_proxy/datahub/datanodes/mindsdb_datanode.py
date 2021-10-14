@@ -146,9 +146,13 @@ class MindsDBDataNode(DataNode):
         predictors_df = self._select_predictors()
         mindsdb_sql_query.from_table.parts = ['predictors']
 
+        # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
+        str_query = str(mindsdb_sql_query).replace('status', '`status`')
+        # ---
+
         # +++ FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
-        if ' 1 = 0' in str(mindsdb_sql_query):
-            q = str(mindsdb_sql_query)
+        if ' 1 = 0' in str(str_query):
+            q = str_query
             q = q[:q.lower().find('where')] + ' limit 0'
             result_df = dfsql.sql_query(
                 q,
@@ -156,9 +160,8 @@ class MindsDBDataNode(DataNode):
                 reduce_output=False,
                 predictors=predictors_df
             )
-        elif 'AND (1 = 1)' in str(mindsdb_sql_query):
-            q = str(mindsdb_sql_query)
-            q = q.replace('AND (1 = 1)', ' ')
+        elif 'AND (1 = 1)' in str_query:
+            q = str_query.replace('AND (1 = 1)', ' ')
             result_df = dfsql.sql_query(
                 q,
                 ds_kwargs={'case_sensitive': False},
@@ -169,7 +172,7 @@ class MindsDBDataNode(DataNode):
             # ---
             try:
                 result_df = dfsql.sql_query(
-                    str(mindsdb_sql_query),
+                    str_query,
                     ds_kwargs={'case_sensitive': False},
                     reduce_output=False,
                     predictors=predictors_df
@@ -183,19 +186,9 @@ class MindsDBDataNode(DataNode):
 
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def select_query(self, query):
-        moz_struct = to_moz_sql_struct(query)
-        data = self.select(
-            table=query.from_table.parts[-1],
-            columns=None,
-            where=moz_struct.get('where')
-        )
-        return data
-
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None, is_timeseries=False):
+    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
-        _mdb_make_predictions = is_timeseries
         if table == 'predictors':
             return self._select_predictors()
         if table == 'commands':

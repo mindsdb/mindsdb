@@ -45,6 +45,7 @@ plugins:
             'installation/Windows/': 'installation/windows.md'
             'installation/MacOS/': 'installation/macos.md'
             'installation/macos/': '/deployment/macos.md'
+            'installation/linux/': '/deployment/linux.md'
     - table-reader
 
 markdown_extensions:

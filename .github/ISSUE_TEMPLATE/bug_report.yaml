@@ -1,5 +1,5 @@
 name: 🐞 Bug report
-description: Create a bug report to help us improve Milvus
+description: Create a bug report to help us improve MindsDB
 title: "[Bug]: "
 labels: [kind/bug, ]
 assignees: 

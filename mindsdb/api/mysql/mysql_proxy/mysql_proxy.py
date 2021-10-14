@@ -14,7 +14,6 @@ import os
 import sys
 import socketserver as SocketServer
 import ssl
-import re
 import traceback
 import json
 import atexit
@@ -151,19 +150,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     The Main Server controller class
     """
 
-    charset = 'utf8'
-
-    charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
-
-    session = None
-
-    client_capabilities = None
-
     @staticmethod
     def server_close(srv):
         srv.server_close()
 
-    # TODO add init
+    def __init__(self):
+        self.charset = 'utf8'
+        self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
+        self.session = None
+        self.client_capabilities = None
+        super().__init__()
 
     def init_session(self, company_id=None):
         global connection_id

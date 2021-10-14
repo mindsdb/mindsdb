@@ -1,5 +1,7 @@
 
-name: Feature mindsdb request
-about: Suggest an idea for this project
-labels: 
-
+name : 'Feature Request'
+description : 'Added New Feature'
+label : 'Thank You For Contributing In our Project'
+Title: 
+  value: |
+    Feature Name

@@ -26,7 +26,7 @@ First, we need to connect MindsDB to the database where the Customer Churn data 
 * Username - database user
 * Password - user's password
 
-![Connect to DB](/assets/sql/tutorials/connect.gif)
+![Connect to DB](/docs/mindsdb-docs/docs/assets/sql/connectdb.png)
 
 Then, click on CONNECT. The next step is to use the MySQL client to connect to MindsDB’s MySQL API and train a new model that shall predict customer churn.
 
@@ -41,7 +41,7 @@ mysql -h cloud-mysql.mindsdb.com --port 3306 -u theusername@mail.com -p
 In the above command, we specify the hostname and user name explicitly, as well as a password for connecting.
 
 
-![Connect mysql-client](/assets/sql/tutorials/connect.png)
+![Connect mysql-client](/docs/mindsdb-docs/docs/assets/sql/mysql-client.gif)
 
 If you got the above screen that means you have successfully connected. If you have an authentication error, please make sure you are providing the email address you have used to create an account on MindsDB Cloud.
 
@@ -81,7 +81,7 @@ use mindsdb;
 show tables;
 ```
 
-![use  mindsdb](/assets/sql/tutorials/use.png)
+![use  mindsdb](/docs/mindsdb-docs/docs/assets/sql/use.png)
 
 You will notice there are 2 tables available inside the MindsDB database. To train a new machine learning model we will need to CREATE Predictor as a new record inside the predictors table as:
 
@@ -105,7 +105,7 @@ CREATE PREDICTOR churn_model FROM demo (SELECT * FROM CustomerChurnData)
 PREDICT Churn as customer_churn USING {"ignore_columns": "gender"};
 ```
 
-![INSERT query](/assets/sql/tutorials/insert.png)
+![INSERT query](/docs/mindsdb-docs/docs/assets/sql/tutorials/insert.png)
 
 What we did here was to create a predictor called `customer_churn `to predict the `Churn` and also ignore the `gender` column as an irrelevant column for the model. Also note that the ID columns in this case `customerId` will be automatically detected by MindsDB and ignored. The model training has started. To check if the training has finished you can SELECT the model name from the predictors table:
 
@@ -115,7 +115,7 @@ SELECT * FROM predictors WHERE name='churn_model';
 
 The complete status means that the model training has successfully finished. 
 
-![SELECT status](/assets/sql/tutorials/status.png)
+![SELECT status](/docs/mindsdb-docs/docs/assets/sql/tutorials/status.png)
 
 The next steps would be to query the model and predict the customer churn. Let’s be creative and imagine a customer. Customer will use only DSL service, no phone service and multiple lines, she was with the company for 1 month and has a partner. Add all of this information to the `WHERE` clause.
 
@@ -123,7 +123,7 @@ The next steps would be to query the model and predict the customer churn. Let�
 SELECT Churn, Churn_confidence, Churn_explain as Info  FROM customer_churn WHERE when_data='{"SeniorCitizen": 0, "Partner": "Yes", "Dependents": "No", "tenure": 1, "PhoneService": "No", "MultipleLines": "No phone service", "InternetService": "DSL"}';
 ```
 
-![SELECT from model](/assets/sql/tutorials/select.png)
+![SELECT from model](/docs/mindsdb-docs/docs/assets/sql/tutorials/select.png)
 
 With the confidence of around 82% MindsDB predicted that this customer will churn. One important thing to check here is the important_missing_information value, where MindsDB is pointing to the important missing information for giving a more accurate prediction, in this case, Contract, MonthlyCharges, TotalCharges and OnlineBackup. Let’s include those values in the WHERE clause, and run a new query:
 
@@ -131,4 +131,4 @@ With the confidence of around 82% MindsDB predicted that this customer will chur
 SELECT Churn, Churn_confidence, Churn_explain as Info  FROM customer_churn WHERE when_data='{"SeniorCitizen": 0, "Partner": "Yes", "Dependents": "No", "tenure": 1, "PhoneService": "No", "MultipleLines": "No phone service", "InternetService": "DSL", "OnlineSecurity": "No", "OnlineBackup": "Yes", "DeviceProtection": "No", "TechSupport": "No", "StreamingTV": "No", "StreamingMovies": "No", "Contract": "Month-to-month", "PaperlessBilling": "Yes", "PaymentMethod": "Electronic check", "MonthlyCharges": 29.85, "TotalCharges": 29.85}';
 ```
 
-![SELECT from model info](/assets/sql/tutorials/selecti.png)
+![SELECT from model info](/docs/mindsdb-docs/docs/assets/sql/tutorials/selecti.png)

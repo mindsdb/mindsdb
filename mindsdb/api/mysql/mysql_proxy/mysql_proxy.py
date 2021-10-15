@@ -1004,11 +1004,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), expression])
                 elif condition is not None:
                     raise Exception(f'Not implemented: {sql}')
-                statement = new_statement
 
-                sql = str(statement)
-                sql_lower = sql.lower()
-                keyword = 'select'
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.selectAnswer(query)
+                return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
                 if condition == 'from':
@@ -1025,11 +1027,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     ])
                 )
 
-                statement = new_statement
-
-                sql = str(statement)
-                sql_lower = sql.lower()
-                keyword = 'select'
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.selectAnswer(query)
+                return
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
                 new_statement = Select(
                     targets=[Identifier(parts=['Variable_name']), Identifier(parts=['Value'])],

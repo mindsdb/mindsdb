@@ -28,7 +28,7 @@ We suggest you to install MindsDB in a virtual environment when using **pip** to
     ```
 You should see a list with the names of installed packages:
 
-![Pip list](/assets/pipfreeze.png)
+![Pip list](/docs/mindsdb-docs/docs/assets/pipfreeze.png)
 
 
 # Deploy using Anaconda

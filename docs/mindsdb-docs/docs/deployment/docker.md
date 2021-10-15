@@ -2,7 +2,7 @@
 
 To use MindsDB's Docker Container you first need to have <a href="https://docs.docker.com/install" target="_blank">Docker</a> installed on your machine. To make sure Docker is successfully installed on your machine, run:
 
-```
+```console
 docker run hello-world
 ```
 
@@ -17,13 +17,13 @@ MindsDB images are uploaded to the <a href="https://hub.docker.com/u/mindsdb" ta
 
 First, run the below command to pull our latest production image:
 
-```
+```console
 docker pull mindsdb/mindsdb
 ```
 
 Or, to try out the latest beta version, pull the beta image:
 
-```
+```console
 docker pull mindsdb/mindsdb_beta
 ```
 
@@ -39,11 +39,11 @@ By default, when you run the MindsDB container, it does not publish any of its p
 
 Next, run the below command to start the container:
 
-```
+```console
 docker run -p 47334:47334 mindsdb/mindsdb
 ```
 
-![Docker run](/assets/docker-install.gif)
+![Docker run](/docs/mindsdb-docs/docs/assets/docker-install.gif)
 
 That's it. MindsDB should automatically start the Studio on your default browser.
 
@@ -57,7 +57,7 @@ That's it. MindsDB should automatically start the Studio on your default browser
 
 If you want to extend the default configuration, you will be able to send the config.json value as JSON string argument to the MDB_CONFIG_CONTENT as:
 
-```
+```console
 docker run -e MDB_CONFIG_CONTENT='{"api":{"http": {"host": "0.0.0.0","port": "47334"}}}' mindsdb/mindsdb
 ```
 

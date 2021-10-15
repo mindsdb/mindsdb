@@ -50,12 +50,14 @@
 ## Try it out
 
 * [Getting started](https://docs.mindsdb.com/)
-* [Install MindsDB](https://docs.mindsdb.com/Installing/)
+* Install MindsDB Using
 	* [Docker](https://docs.mindsdb.com/installation/docker/)
-	* [Linux](https://docs.mindsdb.com/installation/Linux/)
-	* [Windows](https://docs.mindsdb.com/installation/Windows/)
-	* [MacOS](https://docs.mindsdb.com/installation/MacOS/)
-	* [From source](https://docs.mindsdb.com/installation/source/)
+	* [Pip/Conda](https://docs.mindsdb.com/installation/Linux/)
+		* [Windows](https://docs.mindsdb.com/deployment/windows/)
+		* [Linux](https://docs.mindsdb.com/deployment/linux/)
+		* [MacOS](https://docs.mindsdb.com/deployment/macos/) 	
+	* [MindsDB Cloud](https://docs.mindsdb.com/deployment/cloud/)
+	* [From source](https://docs.mindsdb.com/deployment/source/)
 * [Tutorials](https://docs.mindsdb.com/databases/)
 	* [AI Tables in MariaDB](https://docs.mindsdb.com/tutorials/mysql/)
 	* [AI Tables in ClickHouse](https://docs.mindsdb.com/tutorials/clickhouse/)

@@ -43,6 +43,7 @@ from mindsdb_sql.parser.ast import (
     Set,
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropIntegration
 
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
@@ -991,7 +992,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 statement = parse_sql('set autocommit')
             statement.category = 'error'
 
-        if isinstance(statement, Show) or keyword == 'show':
+        if isinstance(statement, DropPredictor):
+            predictor_name = statement.name.parts[-1]
+            self.session.datahub['mindsdb'].delete_predictor(predictor_name)
+            self.packet(OkPacket).send()
+        elif isinstance(statement, DropIntegration):
+            raise Exception('Not ready')
+        elif isinstance(statement, Show) or keyword == 'show':
             sql_category = statement.category.lower()
             condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
             expression = statement.expression
@@ -2097,7 +2104,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             try:
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
-                    sql = SqlStatementParser(sql).sql
+                    sql = SqlStatementParser.clear_sql(sql)
                     log.debug(f'COM_QUERY: {sql}')
                     self.query_answer(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:

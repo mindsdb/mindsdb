@@ -1,12 +1,11 @@
 # CREATE VIEW statement
 
-!!! info "Work in progress"
-    Note this feature is in beta version. If you have additional questions or issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+!!! info "Work in progress" Note this feature is in beta version. If you have additional questions or issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
 
 In MindsDB, the `AI Table` is a virtual table based on the result-set of the SQL Statement that `JOINS` the table data with the models prediction. The `AI Table` can be created using the `CREATE AI table ai_table_name` statement.
 
 ```sql
-CREATE AI table ai_table_name as (
+CREATE VIEW ai_table_name as (
     SELECT
         a.colum_name,
         a.colum_name2,
@@ -17,10 +16,9 @@ CREATE AI table ai_table_name as (
 );
 ```
 
-
 ## Example view
 
-The below table can be `JOINED` with the model trained from it as an AI Table. 
+The below table can be `JOINED` with the model trained from it as an AI Table.
 
 {{ read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv', nrows=2) }}
 
@@ -42,6 +40,6 @@ CREATE AI table home_rentals as (
         a.location,
         p.rental_price as price
     FROM mysql_db.home_rentals as a
-    JOIN home_rentals_model as p 
+    JOIN home_rentals_model as p
 );
 ```

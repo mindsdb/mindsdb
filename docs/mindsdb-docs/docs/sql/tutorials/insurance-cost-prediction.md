@@ -1,7 +1,7 @@
 
 # Predict insurance cost using Mindsdb
 
-*Level: Easy*
+*Level: Easy*  
 *Dataset: [Medical Cost Personal Data](https://www.kaggle.com/mirichoi0218/insurance)*
 
 Can you accurately predict insurance costs?  

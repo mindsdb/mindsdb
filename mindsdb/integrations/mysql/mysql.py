@@ -199,10 +199,10 @@ class MySQL(Integration, MySQLConnectionChecker):
         return result[0]['count']
 
     def get_tables_list(self):
-        q = f"""select table_schema, table_name 
-                from information_schema.tables
-                where table_type = 'BASE TABLE' and table_schema = database()
-                order by table_schema, table_name;"""
+        q = f"""SELECT table_schema, table_name 
+                FROM information_schema.tables
+                WHERE table_type = 'BASE TABLE' AND table_schema = database()
+                ORDER by table_schema, table_name;"""
         tables_list = self._query(q)
-        tables= [f"{table['0']}.{table['1']}" for table in tables_list]
+        tables= [f"{table[0]}.{table[1]}" for table in tables_list]
         return tables

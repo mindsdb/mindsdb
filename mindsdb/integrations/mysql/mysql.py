@@ -197,3 +197,13 @@ class MySQL(Integration, MySQLConnectionChecker):
             FROM ({query}) as query;"""
         result = self._query(q)
         return result[0]['count']
+
+    def get_tables_list(self):
+        q = f""" SELECT table_schema, table_name
+                      FROM information_schema.tables
+                      WHERE table_schema != 'mysql'
+                      AND table_schema != 'information_schema'
+                      ORDER BY table_schema, table_name"""
+        tables_list = self._query(q)
+        tables= [f"{table['table_schema']}.{table['table_name']}" for table in tables_list]
+        return tables

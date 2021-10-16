@@ -100,7 +100,7 @@ INSERT INTO mindsdb.predictors(name, predict, select_data_query) VALUES ('us_con
 ```
 
 * name (string) -- The name of the predictor.
-* predict (string) --  The feature you want to predict, in this example consumption. To predict multiple featurs include a comma separated string e.g 'consumption,income'.
+* predict (string) --  The feature you want to predict, in this example consumption. To predict multiple features include a comma separated string e.g 'consumption,income'.
 * select_data_query (string) -- The SELECT query that will ingest the data to train the model.
 * training_options (JSON as comma separated string) -- optional value that contains additional training parameters. For a full list of the parameters check the [PredictorInterface](/PredictorInterface/#learn).
 
@@ -122,7 +122,7 @@ You should get a similar response from MindsDB as:
 
 | consumption  | predicted | info   |
 |----------------|------------|------|
-| 1.252233223 | 0.923 | Check JSON bellow  |
+| 1.252233223 | 0.923 | Check JSON below  |
 
 ```json
 
@@ -149,7 +149,7 @@ You should get a similar response from MindsDB as:
 ```
 ### Delete the model
 
-To delete the predictor that you have previously created, you need to delete it from `mindsdb.predictors` table. The name should be equal to name added in the INSERT statment while creating the predictor, e.g:
+To delete the predictor that you have previously created, you need to delete it from `mindsdb.predictors` table. The name should be equal to name added in the INSERT statement while creating the predictor, e.g:
 
 ```sql
 DELETE FROM mindsdb.predictors WHERE name='us_consumption'

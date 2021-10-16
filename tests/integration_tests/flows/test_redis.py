@@ -71,11 +71,11 @@ class RedisTest(unittest.TestCase):
 
     def upload_ds(self, name):
         df = pd.DataFrame({
-            'group': ["A" for _ in range(100, 210)],
-            'order': [x for x in range(100, 210)],
-            'x1': [x for x in range(100,210)],
-            'x2': [x*2 for x in range(100,210)],
-            'y': [x*3 for x in range(100,210)]
+            'group': ["A" for _ in range(100, 250)],
+            'order': [x for x in range(100, 250)],
+            'x1': [x for x in range(100, 250)],
+            'x2': [x * 2 for x in range(100, 250)],
+            'y': [x * 3 for x in range(100, 250)]
         })
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)
@@ -127,7 +127,7 @@ class RedisTest(unittest.TestCase):
         url = f'{HTTP_API_ROOT}/predictors/{predictor_name}'
         res = requests.put(url, json=params)
         res.raise_for_status()
-    
+
     def test_1_create_integration(self):
         print(f"\nExecuting {self._testMethodName}")
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
@@ -138,12 +138,11 @@ class RedisTest(unittest.TestCase):
 
         res = requests.put(url, json={"params": params})
         self.assertEqual(res.status_code, 200)
-    
+
     def test_2_create_redis_stream(self):
         print(f"\nExecuting {self._testMethodName}")
         self.upload_ds(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
-        time.sleep(30)
 
         url = f'{HTTP_API_ROOT}/streams/{NORMAL_STREAM_NAME}'
         res = requests.put(url, json={
@@ -189,8 +188,8 @@ class RedisTest(unittest.TestCase):
         stream_in = RedisStream(STREAM_IN_TS, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
-        for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': "A", 'y': 3*x})
+        for x in range(230, 241):
+            stream_in.write({'x1': x, 'x2': 2 * x, 'order': x, 'group': "A", 'y': 3 * x})
             time.sleep(0.01)
         time.sleep(10)
 
@@ -214,7 +213,7 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
 
         for x in range(1, 3):
-            stream_in.write({'x1': x, 'x2': 2*x})
+            stream_in.write({'x1': x, 'x2': 2 * x})
             time.sleep(5)
         time.sleep(30)
 
@@ -262,7 +261,7 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
 
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'y': 3*x})
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'y': 3 * x})
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)

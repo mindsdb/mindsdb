@@ -12,7 +12,7 @@ Using SQL to perform machine learning at the data layer will bring you many bene
 
 ## Pre-requisites
 
-First, make sure you have succesfully installed MindsDB. Check out the installation guide for [Docker](/deployment/docker/) or [PyPi](/deployment/source/) install. Second, you will need to have mysql-client or DBeaver, MySQL WOrkbench etc installed locally to connect to MySQL API.
+First, make sure you have successfully installed MindsDB. Check out the installation guide for [Docker](/deployment/docker/) or [PyPi](/deployment/source/) install. Second, you will need to have mysql-client or DBeaver, MySQL WOrkbench etc installed locally to connect to MySQL API.
 
 ## Database Connection
 
@@ -35,7 +35,7 @@ Then, click on CONNECT. The next step is to use the MySQL client to connect to M
 I will use a mysql command line client in the next part of the tutorial but you can follow up with the one that works the best for you, like Dbeaver. The first step is to use the MindsDB Cloud user to connect to the MySQL API:
 
 ```
-mysql -h cloud-mysql.mindsdb.com --port 3306 -u theusername@mail.com -p
+mysql -h cloud.mindsdb.com --port 3306 -u theusername@mail.com -p
 ```
 
 In the above command, we specify the hostname and user name explicitly, as well as a password for connecting.
@@ -102,7 +102,7 @@ To train the model that will predict customer churn run:
 
 ```sql
 CREATE PREDICTOR churn_model FROM demo (SELECT * FROM CustomerChurnData)
-PREDICT Churn as customer_churn USING {"ignore_columns": "gender"};
+PREDICT Churn as customer_churn USING {"ignore_columns": ["gender"]};
 ```
 
 ![INSERT query](/assets/sql/tutorials/insert.png)
@@ -110,7 +110,7 @@ PREDICT Churn as customer_churn USING {"ignore_columns": "gender"};
 What we did here was to create a predictor called `customer_churn `to predict the `Churn` and also ignore the `gender` column as an irrelevant column for the model. Also note that the ID columns in this case `customerId` will be automatically detected by MindsDB and ignored. The model training has started. To check if the training has finished you can SELECT the model name from the predictors table:
 
 ```sql
-SELECT * FROM predictors WHERE name='churn_model';
+SELECT * FROM mindsdb.predictors WHERE name='churn_model';
 ```
 
 The complete status means that the model training has successfully finished. 
@@ -120,7 +120,7 @@ The complete status means that the model training has successfully finished.
 The next steps would be to query the model and predict the customer churn. Let’s be creative and imagine a customer. Customer will use only DSL service, no phone service and multiple lines, she was with the company for 1 month and has a partner. Add all of this information to the `WHERE` clause.
 
 ```sql
-SELECT Churn, Churn_confidence, Churn_explain as Info  FROM customer_churn WHERE when_data='{"SeniorCitizen": 0, "Partner": "Yes", "Dependents": "No", "tenure": 1, "PhoneService": "No", "MultipleLines": "No phone service", "InternetService": "DSL"}';
+SELECT Churn, Churn_confidence, Churn_explain as Info  FROM mindsdb.churn_model WHERE when_data='{"SeniorCitizen": 0, "Partner": "Yes", "Dependents": "No", "tenure": 1, "PhoneService": "No", "MultipleLines": "No phone service", "InternetService": "DSL"}';
 ```
 
 ![SELECT from model](/assets/sql/tutorials/select.png)
@@ -128,7 +128,7 @@ SELECT Churn, Churn_confidence, Churn_explain as Info  FROM customer_churn WHERE
 With the confidence of around 82% MindsDB predicted that this customer will churn. One important thing to check here is the important_missing_information value, where MindsDB is pointing to the important missing information for giving a more accurate prediction, in this case, Contract, MonthlyCharges, TotalCharges and OnlineBackup. Let’s include those values in the WHERE clause, and run a new query:
 
 ```sql
-SELECT Churn, Churn_confidence, Churn_explain as Info  FROM customer_churn WHERE when_data='{"SeniorCitizen": 0, "Partner": "Yes", "Dependents": "No", "tenure": 1, "PhoneService": "No", "MultipleLines": "No phone service", "InternetService": "DSL", "OnlineSecurity": "No", "OnlineBackup": "Yes", "DeviceProtection": "No", "TechSupport": "No", "StreamingTV": "No", "StreamingMovies": "No", "Contract": "Month-to-month", "PaperlessBilling": "Yes", "PaymentMethod": "Electronic check", "MonthlyCharges": 29.85, "TotalCharges": 29.85}';
+SELECT Churn, Churn_confidence, Churn_explain as Info  FROM mindsdb.churn_model WHERE when_data='{"SeniorCitizen": 0, "Partner": "Yes", "Dependents": "No", "tenure": 1, "PhoneService": "No", "MultipleLines": "No phone service", "InternetService": "DSL", "OnlineSecurity": "No", "OnlineBackup": "Yes", "DeviceProtection": "No", "TechSupport": "No", "StreamingTV": "No", "StreamingMovies": "No", "Contract": "Month-to-month", "PaperlessBilling": "Yes", "PaymentMethod": "Electronic check", "MonthlyCharges": 29.85, "TotalCharges": 29.85}';
 ```
 
 ![SELECT from model info](/assets/sql/tutorials/selecti.png)

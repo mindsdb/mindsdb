@@ -1,6 +1,6 @@
 # MindsDB Cloud as a SQL Database
 
-MindsDB Cloud provides a powerful MySQL API that allows cloud users to connect to it. The first step to connect is to use the MindsDB Cloud user. If you haven't signup to the MindsDB Cloud follow the steps explained [here](/deployment/cloud). After that you can use one of the bellow db clients:
+MindsDB Cloud provides a powerful MySQL API that allows cloud users to connect to it. The first step to connect is to use the MindsDB Cloud user. If you haven't signup to the MindsDB Cloud follow the steps explained [here](/deployment/cloud). After that you can use one of the below db clients:
 
 * [MySQL Command-Line Client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html) 
 * [DBeaver](https://dbeaver.io/)
@@ -10,11 +10,11 @@ MindsDB Cloud provides a powerful MySQL API that allows cloud users to connect t
 Open mysql client and run:
 
 ```
-mysql -h cloud-mysql.mindsdb.com --port 3306 -u cloudusername@mail.com -p
+mysql -h cloud.mindsdb.com --port 3306 -u cloudusername@mail.com -p
 ```
 The required parameters are:
 
-* -h: Host name of mindsdbs mysql api (cloud-mysql.mindsdb.com)	
+* -h: Host name of mindsdbs mysql api (by default takes cloud.mindsdb.com if not specified)	
 * --port: TCP/IP port number for connection(3306)	
 * -u: MindsDB Cloud username
 * -p:  MindsDB Cloud password
@@ -52,7 +52,7 @@ All of the newly trained machine learning models will be visible as a new record
 * name - The name of the model.
 * status - Training status(training, complete, error).
 * accuracy - The model accuracy.
-* predict - The name of the target varaibale.
+* predict - The name of the target variable.
 * select_data_query - SQL select query to create the datasource.
 * external_datasource - Name of the pre-existing datasource created from GUI.
 * training options - Additional training parameters. The full list can be found at [Predictor Interface docs](/PredictorInterface/#learn).

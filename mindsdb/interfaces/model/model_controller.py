@@ -10,7 +10,7 @@ from typing import Optional, Tuple, Union, Dict, Any
 
 import lightwood
 from lightwood.api.types import ProblemDefinition
-from packaging import version
+from lightwood import __version__ as lightwood_version
 import numpy as np
 import pandas as pd
 import mindsdb_datasources
@@ -94,6 +94,11 @@ class ModelController():
         if 'stop_training_in_x_seconds' in kwargs:
             problem_definition['time_aim'] = kwargs['stop_training_in_x_seconds']
 
+        if 'ignore_columns' in kwargs:
+            problem_definition['ignore_features'] = kwargs['ignore_columns']
+            if isinstance(problem_definition['ignore_features'], list) is False:
+                problem_definition['ignore_features'] = [problem_definition['ignore_features']]
+
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         df = ds.df
@@ -101,14 +106,51 @@ class ModelController():
         return df, problem_definition, join_learn_process
 
     @mark_process(name='learn')
-    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict, company_id: int) -> None:
+    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict,
+              company_id: int, delete_ds_on_fail: Optional[bool] = False) -> None:
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        if predictor_record is not None:
+            raise Exception('Predictor name must be unique.')
+
         df, problem_definition, join_learn_process = self._unpack_old_args(from_data, kwargs, to_predict)
-        p = LearnProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
+
+        problem_definition = ProblemDefinition.from_dict(problem_definition)
+        predictor_record = db.Predictor(
+            company_id=company_id,
+            name=name,
+            datasource_id=datasource_id,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=lightwood_version,
+            to_predict=problem_definition.target,
+            learn_args=problem_definition.to_dict(),
+            data={'name': name}
+        )
+
+        db.session.add(predictor_record)
+        db.session.commit()
+        predictor_id = predictor_record.id
+
+        p = LearnProcess(df, problem_definition, predictor_id, delete_ds_on_fail)
         p.start()
         if join_learn_process:
             p.join()
             if not IS_PY36:
                 p.close()
+        db.session.refresh(predictor_record)
+
+        data = {}
+        if predictor_record.update_status == 'available':
+            data['status'] = 'complete'
+        elif predictor_record.json_ai is None and predictor_record.code is None:
+            data['status'] = 'generating'
+        elif predictor_record.data is None:
+            data['status'] = 'editable'
+        elif 'training_log' in predictor_record.data:
+            data['status'] = 'training'
+        elif 'error' not in predictor_record.data:
+            data['status'] = 'complete'
+        else:
+            data['status'] = 'error'
 
     @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
@@ -135,7 +177,9 @@ class ModelController():
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
                 }
             else:
-                raise Exception(f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}')
+                raise Exception(
+                    f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}. Error is: {predictor_data.get("error", "unknown")}'
+                )
 
         if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
             ds_cls = getattr(mindsdb_datasources, when_data['class'])
@@ -208,11 +252,6 @@ class ModelController():
 
         linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=predictor_record.datasource_id).first()
 
-        # check update availability
-        if version.parse(predictor_record.mindsdb_version) < version.parse(mindsdb_version):
-            predictor_record.update_status = 'available'
-            db.session.commit()
-
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
         data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
@@ -226,7 +265,9 @@ class ModelController():
         data['problem_definition'] = predictor_record.learn_args
 
         # assume older models are complete, only temporary
-        if predictor_record.update_status == 'available':
+        if 'error' in predictor_record.data:
+            data['status'] = 'error'
+        elif predictor_record.update_status == 'available':
             data['status'] = 'complete'
         elif predictor_record.json_ai is None and predictor_record.code is None:
             data['status'] = 'generating'
@@ -288,14 +329,38 @@ class ModelController():
         return 'Updated in progress'
 
     @mark_process(name='learn')
-    def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict, join_learn_process: bool, company_id: int):
+    def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict,
+                           join_learn_process: bool, company_id: int):
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        if predictor_record is not None:
+            raise Exception('Predictor name must be unique.')
+
         df, problem_definition, _ = self._unpack_old_args(from_data, problem_definition_dict)
-        p = GenerateProcess(df, ProblemDefinition.from_dict(problem_definition), name, company_id, datasource_id)
+
+        problem_definition = ProblemDefinition.from_dict(problem_definition)
+
+        predictor_record = db.Predictor(
+            company_id=company_id,
+            name=name,
+            datasource_id=datasource_id,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=lightwood_version,
+            to_predict=problem_definition.target,
+            learn_args=problem_definition.to_dict(),
+            data={'name': name}
+        )
+
+        db.session.add(predictor_record)
+        db.session.commit()
+        predictor_id = predictor_record.id
+
+        p = GenerateProcess(df, problem_definition, predictor_id)
         p.start()
         if join_learn_process:
             p.join()
             if not IS_PY36:
                 p.close()
+        db.session.refresh(predictor_record)
 
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
@@ -336,6 +401,7 @@ class ModelController():
             p.join()
             if not IS_PY36:
                 p.close()
+
 
 '''
 Notes: Remove ray from actors are getting stuck

@@ -17,7 +17,7 @@ You will need MindsDB version >= 2.3.0 and PostgreSQL installed:
 !!! info "Default configuration"
     MindsDB will try to use the default configuration(hosts, ports, usernames) for each of the database integrations. If you want to extend that or you are using different parameters create a new config.json file. 
 
-The avaiable configuration options are:
+The available configuration options are:
 
 * api['http] -- This key is used for starting the MindsDB http server by providing:
     * host(default 127.0.0.1) - The mindsdb server address.
@@ -100,7 +100,7 @@ INSERT INTO mindsdb.predictors(name, predict, select_data_query, training_option
 ```
 
 * name (string) -- The name of the predictor.
-* predict (string) --  The feature you want to predict, in this example consumption. To predict multiple featurs include a comma separated string e.g 'consumption,income'.
+* predict (string) --  The feature you want to predict, in this example consumption. To predict multiple features include a comma separated string e.g 'consumption,income'.
 * select_data_query (string) -- The SELECT query that will ingest the data to train the model.
 * training_options (JSON as comma separated string) -- optional value that contains additional training parameters. For a full list of the parameters check the [PredictorInterface](/PredictorInterface/#learn). If you are using timeseries data check the [Timeseries settings](/tutorials/Timeseries/).
 
@@ -125,7 +125,7 @@ You should get a similar response from MindsDB as:
 
 | consumption  | predicted | info   |
 |----------------|------------|------|
-| 1.4979682087292199 | 0.9475 | Check JSON bellow  |
+| 1.4979682087292199 | 0.9475 | Check JSON below  |
 
 ```json
 
@@ -152,7 +152,7 @@ You should get a similar response from MindsDB as:
 ```
 ### Delete the model
 
-To delete the predictor that you have previously created, you need to delete it from `mindsdb.predictors` table. The name should be equal to name added in the INSERT statment while creating the predictor, e.g:
+To delete the predictor that you have previously created, you need to delete it from `mindsdb.predictors` table. The name should be equal to name added in the INSERT statement while creating the predictor, e.g:
 
 ```sql
 DELETE FROM mindsdb.predictors WHERE name='us_consumption'

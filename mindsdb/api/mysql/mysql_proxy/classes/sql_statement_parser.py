@@ -1,3 +1,6 @@
+import re
+import json
+
 from pyparsing import (
     CaselessKeyword,
     ParseException,
@@ -23,10 +26,10 @@ from pyparsing import (
     alphas,
     nums
 )
-import re
-import json
-
-import moz_sql_parser as moz_sql
+from mindsdb_sql.parser.ast import (
+    Join
+)
+from mindsdb_sql import parse_sql
 
 
 RE_INT = re.compile(r'^[-+]?([1-9]\d*|0)$')
@@ -243,55 +246,39 @@ class SqlStatementParser():
             r['select'] = r['select'][1:-1]
         r['select'] = r['select'].strip(' \n')
 
-        select = moz_sql.parse(r['select'])
+        select = parse_sql(r['select'])
 
-        if 'from' not in select \
-           or len(select['from']) != 2 \
-           or 'join' not in select['from'][1]:
+        if isinstance(select.from_table, Join) is False:
             raise Exception("'from' must be like: 'from integration.table join predictor'")
 
-        # add 'name' to each statement
-        for s in [*select['select'], select['from'][0], select['from'][1]['join']]:
-            if 'name' not in s:
-                if '.' in s['value']:
-                    s['name'] = s['value'][s['value'].find('.') + 1:]
-                else:
-                    s['name'] = s['value']
+        integration_name = select.from_table.left.parts[0]
+        select.from_table.left.parts = select.from_table.left.parts[1:]
+        integration_name_alias = select.from_table.left.alias.parts[0]
 
-        f = {
-            'integration': select['from'][0],
-            'predictor': select['from'][1]['join']
-        }
+        predictor_name = select.from_table.right.parts[0]
+        predictor_name_alias = select.from_table.right.alias.parts[0]
+        select.from_table = select.from_table.left
 
-        # remove predictor join
-        select['from'].pop()
-
-        new_select = []
+        query_fields = []
         predictor_fields = []
-        integration_prefix = f"{f['integration']['name']}."
-        for s in select['select']:
-            if s['value'].startswith(integration_prefix):
-                s['value'] = s['value'][len(integration_prefix):]
-                new_select.append(s)
-            else:
-                predictor_fields.append(s)
+        predictor_fields_targets = []
 
-        predictor_prefix = f"{f['predictor']['name']}."
-        for pf in predictor_fields:
-            if pf['value'].startswith(predictor_prefix):
-                pf['value'] = pf['value'][len(predictor_prefix):]
+        integration_sql = str(select)
 
-        integration_name = f['integration']['value'][:f['integration']['value'].find('.')]
-        f['integration']['value'] = f['integration']['value'][len(integration_name) + 1:]
-        select['select'] = new_select
-        integration_sql = moz_sql.format(select)
+        for target in select.targets:
+            if target.parts[0] == integration_name_alias:
+                query_fields.append(target.parts[1])
+                predictor_fields_targets.append(target)
+            elif target.parts[0] == predictor_name_alias:
+                predictor_fields.append(target.parts[1])
+        select.targets = predictor_fields_targets
 
         res = {
             'ai_table_name': r['ai_table_name'],
             'integration_name': integration_name,
             'integration_query': integration_sql,
-            'query_fields': select['select'],
-            'predictor_name': f['predictor']['value'],
+            'query_fields': query_fields,
+            'predictor_name': predictor_name,
             'predictor_fields': predictor_fields
         }
 
@@ -579,9 +566,11 @@ class SqlStatementParser():
             ''',
             {
                 'ai_table_name': 'ai_table_name',
-                'integration_name': 'integration',
-                'select': 'select * from table',
-                'predictor_name': 'model_name'
+                'integration_name': 'integration_name',
+                'integration_query': 'SELECT a.col1, a.col2, a.col3, p.col3 AS pred_col3 FROM table_name AS a',
+                'query_fields': ['col1', 'col2', 'col3'],
+                'predictor_name': 'predictor_name',
+                'predictor_fields': ['col3']
             }
         ]]
         for sql, result in tests:

@@ -43,7 +43,7 @@ from mindsdb_sql.planner.steps import (
     JoinStep
 )
 
-from mindsdb.api.mysql.mysql_proxy.classes.com_operators_new import operator_map as new_operator_map
+from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
@@ -176,9 +176,14 @@ class SQLQuery():
         table_alias = get_table_alias(step.query.from_table, self.database)
         # TODO for information_schema we have 'database' = 'mindsdb'
 
-        data = dn.select_query(
+        data, column_names = dn.select(
             query=query
         )
+
+        self.columns_list = [
+            table_alias + (column_name, column_name)
+            for column_name in column_names
+        ]
 
         for i, row in enumerate(data):
             row['__mindsdb_row_id'] = self.row_id + i
@@ -223,7 +228,11 @@ class SQLQuery():
             sql = sql[:sql.lower().find('where 1=0')] + ' limit 0'
             is_crutch = True
         # ---
-        mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
+
+        # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
+        str_sql = sql.replace(' status ', ' `status` ')
+        # ---
+        mindsdb_sql_struct = parse_sql(str_sql, dialect='mindsdb')
 
         # is it query with only constants?
         if (
@@ -611,7 +620,7 @@ class SQLQuery():
         elif not isinstance(where, (UnaryOperation, BinaryOperation)):
             Exception(f'Unknown operation type: {where}')
 
-        op_fn = new_operator_map.get(where.op)
+        op_fn = operator_map.get(where.op)
         if op_fn is None:
             raise Exception(f'unknown operator {where.op}')
 

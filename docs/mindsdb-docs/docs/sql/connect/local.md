@@ -50,20 +50,18 @@ If you are using Dbeaver make sure to select Driver for MySQL 8 or later. If the
 
 1. From the navigation menu, click Connect to database.
 2. Search `MySQL 8+`.
-
-![Connect mysql 8](/assets/sql/dbeaver8.png)
-
-1. Select the `MySQL 8+` or `MySQL`.
-2. Click on `Next`.
-3. Add the Hostname (127.0.0.1).
-3. Add the Database name (leave empty).
-5. Add Port (3306).
-6. Add the database user (default mindsdb).
-7. Add Password for the user (default empty).
-8. Click on `Finish`.
+3. Select the `MySQL 8+` or `MySQL`.
+4. Click on `Next`.
+5. Add the Hostname (127.0.0.1).
+6. Add the Database name (leave empty).
+7. Add Port (3306).
+8. Add the database user (default mindsdb).
+9. Add Password for the user (default empty).
+10. Click on `Finish`.
 
 ![Connect](/assets/sql/dbeaver-local.png)
 
+![Connect mysql 8](/assets/sql/dbeaver8.png)
 
 ## MindsDB Database
 

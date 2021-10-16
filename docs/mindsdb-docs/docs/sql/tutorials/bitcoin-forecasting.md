@@ -2,7 +2,7 @@
 # Forecast bitcoin using Mindsdb
 
 *Level: Easy*  
-*Dataset: [Coinbase 2018 bitcoin data](https://www.kaggle.com/gorgia/bitcoin-markets?select=btc_usd_Coinbase.csv)*
+*Dataset: [Coinbase 2017-2018 bitcoin data](https://www.kaggle.com/gorgia/bitcoin-markets?select=btc_usd_Coinbase.csv)*
 
 Bitcoin is a digital currency that uses blockchain technology, bitcoin can be sent from user to user on the peer-to-peer bitcoin network
 without the need for intermediaries. For some people, bitcoin is not only a digital currency but can also be used for investing.

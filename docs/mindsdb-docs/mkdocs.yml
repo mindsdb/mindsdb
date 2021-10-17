@@ -80,6 +80,7 @@ nav:
     - Classification: 
       - Customer Churn: sql/tutorials/customer-churn.md
       - Heart Disease: sql/tutorials/heart-disease.md
+      - Forecast Metro Traffic: mongo/tutorials/Forecast-Metro-Traffic.md
     - Time series: sql/tutorials/test.md
   - Contribution and Community:
       - How to contribute: contribute.md

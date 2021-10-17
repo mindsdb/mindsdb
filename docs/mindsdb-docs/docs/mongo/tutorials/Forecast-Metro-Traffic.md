@@ -16,6 +16,7 @@ We will be using the Metro traffic dataset :metro: that can be downloaded from [
 1. This tutorial is primarily going to be about MindsDB so the reader is expected to have some level of familiarity with [MongoDB Atlas](https://www.mongodb.com/cloud/atlas). In short, MongoDB Atlas is a Database as a Service(DaaS), which we will be using to spin up a MongoDB database cluster and load our dataset.
 2. Download a copy of the Metro Traffic dataset from [here](https://github.com/mindsdb/benchmarks/blob/main/benchmarks/datasets/metro_traffic_ts/data.csv).
 3. You are also expected to have an account on MindsDB Cloud. If not, head over to [https://cloud.mindsdb.com/](https://cloud.mindsdb.com/) and create an account. It hardly takes a few minutes. :zap:
+4. We also need MongoDB Compass to load the dataset into the collection. It can be downloaded from [here](https://www.mongodb.com/try/download/compass).
 
 Finally, No! **You are not required to have any background in programming or machine learning**. As mentioned before you wont be writing a single line of code!
 

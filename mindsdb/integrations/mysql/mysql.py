@@ -197,6 +197,15 @@ class MySQL(Integration, MySQLConnectionChecker):
             FROM ({query}) as query;"""
         result = self._query(q)
         return result[0]['count']
+
+    def get_columns(self):
+        q = f"""SELECT COLUMN_NAME ,TABLE_NAME
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_SCHEMA = database()
+                    ORDER BY COLUMN_NAME, TABLE_NAME;"""
+        columns_list = self._query(q)
+        columns = [f"{columns[0]}.{columns[1]}" for columns in columns_list]
+        return columns
     
     def get_tables_list(self):
         q= f"""

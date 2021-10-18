@@ -31,13 +31,13 @@ Connecting to MySQL API is the same as connecting to a MySQL database. You can u
 Open mysql client and run:
 
 ```
-mysql -h 127.0.0.1 --port 3306 -u mindsdb -p 
+mysql -h 127.0.0.1 --port 47335 -u mindsdb -p 
 ```
 
 The required parameters are:
 
 * -h: Host name of mindsdbs mysql api (127.0.0.1).
-* --port: TCP/IP port number for connection(3306).
+* --port: TCP/IP port number for connection(47335).
 * -u: MySQL user name to use when connecting(default mindsdb).
 * -p:  Password to use when connecting(default no password).
 

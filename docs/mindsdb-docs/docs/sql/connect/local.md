@@ -57,7 +57,7 @@ If you are using Dbeaver make sure to select Driver for MySQL 8 or later. If the
 4. Click on `Next`.
 5. Add the Hostname (127.0.0.1).
 6. Add the Database name (leave empty).
-7. Add Port (3306).
+7. Add Port (47335).
 8. Add the database user (default mindsdb).
 9. Add Password for the user (default empty).
 10. Click on `Finish`.

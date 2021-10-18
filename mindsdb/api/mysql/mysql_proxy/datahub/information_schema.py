@@ -185,14 +185,15 @@ class InformationSchema(DataNode):
             try:
                 if table == 'TABLES':
                     query = 'select * from TABLES'
+                    table_name = 'TABLES'
                 data = dfsql.sql_query(
                     str(query),
                     ds_kwargs={'case_sensitive': False},
                     reduce_output=False,
                     **{table_name: dataframe}
                 )
-            except Exception:
-                print('exception!')
+            except Exception as e:
+                print(f'Exception! {e}')
                 return [], []
 
         return data.to_dict(orient='records'), data.columns.to_list()

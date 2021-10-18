@@ -27,12 +27,12 @@ class IntegrationDataNode(DataNode):
 
         dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': sql_query})
         data = dso.df.to_dict(orient='records')
+        column_names = list(dso.df.columns)
 
-        for column_name in dso.df.columns:
+        for column_name in column_names:
             if pd.core.dtypes.common.is_datetime_or_timedelta_dtype(dso.df[column_name]):
                 pass_data = dso.df[column_name].dt.to_pydatetime()
                 for i, rec in enumerate(data):
                     rec[column_name] = pass_data[i].timestamp()
 
-        column_names = None
         return data, column_names

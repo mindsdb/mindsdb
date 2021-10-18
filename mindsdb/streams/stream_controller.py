@@ -35,8 +35,8 @@ class StreamController:
 
         self.target = p.to_predict[0]
 
-        ts_settings = p.learn_args.get('timeseries_settings')
-        if isinstance(ts_settings, dict) is False or len(ts_settings) == 0:
+        ts_settings = p.learn_args.get('timeseries_settings', {})
+        if isinstance(ts_settings, dict) is False or ts_settings.get('is_timeseries', False) is False:
             ts_settings = None
 
         if ts_settings is None:

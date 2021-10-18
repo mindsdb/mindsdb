@@ -206,4 +206,10 @@ class MySQL(Integration, MySQLConnectionChecker):
         columns_list = self._query(q)
         columns = [f"{columns[0]}.{columns[1]}" for columns in columns_list]
         return columns
-
+    
+    def get_tables_list(self):
+        q= f"""
+            SHOW TABLES;
+            """
+        result = self._query(q)
+        return result

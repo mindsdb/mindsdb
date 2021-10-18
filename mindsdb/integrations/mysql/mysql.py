@@ -49,6 +49,17 @@ class MySQLConnectionChecker:
 
 
 class MySQL(Integration, MySQLConnectionChecker):
+    
+    def get_columns(self):
+        q = f"""SELECT COLUMN_NAME ,TABLE_NAME
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_SCHEMA = database()
+                    ORDER BY COLUMN_NAME, TABLE_NAME;"""
+        columns_list = self._query(q)
+        columns = [f"{columns[0]}.{columns[1]}" for columns in columns_list]
+        return columns
+    
+    
     def __init__(self, config, name, db_info):
         super().__init__(config, name)
         self.user = db_info.get('user')

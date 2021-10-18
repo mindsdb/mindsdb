@@ -197,8 +197,8 @@ class MySQL(Integration, MySQLConnectionChecker):
             FROM ({query}) as query;"""
         result = self._query(q)
         return result[0]['count']
-
-def get_tables_list(self):
+    
+    def get_tables_list(self):
         q= f"""
             SHOW TABLES;
             """

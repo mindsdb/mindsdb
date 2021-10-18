@@ -1952,7 +1952,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.answerTableQuery(query)
 
-    def _get_column_defenition_packets(self, columns, data=[]):
+    def _get_column_defenition_packets(self, columns, data=None):
+        if data is None:
+            data = []
         packets = []
         for i, column in enumerate(columns):
             table_name = column.get('table_name', 'table_name')

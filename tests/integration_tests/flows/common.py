@@ -260,7 +260,9 @@ def override_recursive(a, b):
             override_recursive(a[key], b[key])
 
 
-def run_environment(apis, override_config={}):
+def run_environment(apis, override_config=None):
+    if override_config is None:
+        override_config = {}
     api_str = ','.join(apis)
 
     override_recursive(config_json, override_config)

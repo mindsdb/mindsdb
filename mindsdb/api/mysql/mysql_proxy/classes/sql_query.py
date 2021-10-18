@@ -425,8 +425,7 @@ class SQLQuery():
                     columns=None,
                     where_data=where_data,
                     integration_name=self.session.integration,
-                    integration_type=self.session.integration_type,
-                    is_timeseries=_mdb_make_predictions
+                    integration_type=self.session.integration_type
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, JoinStep):

@@ -86,7 +86,7 @@ class OkPacket(Packet):
             section_pack = b''
             if item is None:
                 continue
-            elif isinstance(item, bytes):
+            if isinstance(item, bytes):
                 section_pack = item
             else:
                 section_pack = getattr(self, key).toStringPacket()

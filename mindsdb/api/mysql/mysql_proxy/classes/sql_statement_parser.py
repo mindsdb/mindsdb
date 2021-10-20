@@ -76,6 +76,8 @@ class SqlStatementParser():
                 self._struct = self.parse_as_insert()
             elif self._keyword == 'delete':
                 self._struct = self.parse_as_delete()
+            elif self._keyword == 'drop':
+                self._struct = None
             elif self._keyword == 'create_predictor':
                 self._struct = self.parse_as_create_predictor()
             elif self._keyword in 'create_ai_table':
@@ -139,12 +141,13 @@ class SqlStatementParser():
             rollback
             commit
             explain
+            drop
 
             create_predictor
             create_ai_table
         '''
-        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW = map(
-            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW".split()
+        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DROP = map(
+            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DROP".split()
         )
         CREATE_PREDICTOR = CREATE + PREDICTOR
         CREATE_AI_TABLE = CREATE + AI + TABLE
@@ -156,7 +159,7 @@ class SqlStatementParser():
             | UPDATE | ALTER | SELECT
             | ROLLBACK | COMMIT | EXPLAIN
             | CREATE_PREDICTOR | CREATE_AI_TABLE
-            | CREATE_VIEW
+            | CREATE_VIEW | DROP
         )('keyword')
 
         r = expr.parseString(sql)

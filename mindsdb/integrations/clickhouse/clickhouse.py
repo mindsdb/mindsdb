@@ -23,6 +23,16 @@ class ClickhouseConnectionChecker:
 
 
 class Clickhouse(Integration, ClickhouseConnectionChecker):
+
+    def get_tables_list(self):
+        q = f"""select table_schema, table_name 
+                from information_schema.tables
+                where table_type = 'BASE TABLE' and table_schema = database()
+                order by table_schema, table_name;"""
+        tables_list = self._query(q)
+        tables= [f"{table['0']}.{table['1']}" for table in tables_list]
+        return tables
+
     def __init__(self, config, name, db_info):
         super().__init__(config, name)
         self.user = db_info.get('user', 'default')

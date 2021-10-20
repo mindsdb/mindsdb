@@ -473,6 +473,29 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
+        # region validate 'predict' name
+        column_names = [x['name'] for x in ds_data['columns']]
+        for i, predict_column_name in enumerate(predict):
+            candidate = None
+            for column_name in column_names:
+                if column_name == predict_column_name:
+                    if candidate is not None:
+                        raise Exception("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
+                    candidate = column_name
+            if candidate is None:
+                for column_name in column_names:
+                    if column_name.lower() == predict_column_name.lower():
+                        if candidate is not None:
+                            raise Exception("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
+                        candidate = column_name
+            if candidate is None:
+                raise Exception("Datasource has not column with name '{predict_column_name}'")
+            predict[i] = candidate
+
+        if len(predict) != len(set(predict)):
+            raise Exception("'predict' column name is duplicated")
+        # endregion
+
         model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True)
 
         self.packet(OkPacket).send()

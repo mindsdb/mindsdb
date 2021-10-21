@@ -1,22 +1,22 @@
-
-# Forecast bitcoin using Mindsdb
+# Forecast Bitcoin price using MindsDB
 
 *Level: Easy*  
-*Dataset: [Coinbase 2017-2018 bitcoin data](https://www.kaggle.com/gorgia/bitcoin-markets?select=btc_usd_Coinbase.csv)*
+*Dataset: [Coinbase 2017-2018 Bitcoin data](https://www.kaggle.com/gorgia/Bitcoin-markets?select=btc_usd_Coinbase.csv)*
 
-Bitcoin is a digital currency that uses blockchain technology, bitcoin can be sent from user to user on the peer-to-peer bitcoin network
-without the need for intermediaries. For some people, bitcoin is not only a digital currency but can also be used for investing.
+Bitcoin is a digital currency that uses blockchain technology, Bitcoin can be sent from user to user on the peer-to-peer Bitcoin network without the need for intermediaries. Note that this is just a task for fun so use it at your own risk.
 
-In this tutorial, you will learn how to forecast bitcoin using Mindsdb. And all you need to know is just SQL and Mindsdb.
+In this tutorial, you will learn how to forecast Bitcoin using MindsDB. And all you need to know is just SQL. Behind the scenes, MindsDB will create the complete machine learning workflow, like determine, normalize & encode the data, train & test the model, etc. But we don’t need to bother with all this complexity. Of course, if you want to, you can tune things manually inside MindsDB with a declarative syntax caled JSON-AI, but we will not cover it in this article.
+
+DISCLAIMER: Please note that predicting Bitcoin price is just an example for showing MindsDB technology and you are solely responsible for any results you may get in real life, if you use this information for real trading purposes. Please note, that you can also follow this tutorial with other data you have.
 
 ## Pre-requisites
 
-First, you need Mindsdb, if you want to use Mindsdb locally, you need to install Mindsdb with
+First, you need MindsDB installed. If you want to use MindsDB locally, you need to install MindsDB with
 [Docker](https://docs.mindsdb.com/deployment/docker/) or [Python](https://docs.mindsdb.com/deployment/pypi/). 
-However, if you want to use Mindsdb without installing it locally, you can use [Cloud Mindsdb](https://cloud.mindsdb.com/signup). 
-And in this tutorial, I'm using Cloud Mindsdb.
+However, if you want to use MindsDB without installing it locally, you can use [Cloud Mindsdb](https://cloud.mindsdb.com/signup). 
+In this tutorial, I'm using MindsDB Cloud, because it is easy to set up in just 2 minutes and it has a great free tier.
 
-Second, you need a MySQL client to connect to Mindsdb MYSQL API.
+Second, you need a MySQL client to connect to MindsDB MYSQL API.
 
 ## Connect your database
 
@@ -39,12 +39,12 @@ The next step is to use the MySQL client to connect to MindsDB’s MySQL API, tr
 
 ## Connect to MindsDB’s MySQL API
 
-Here I'm using MySQL command-line client, but you can also follow up with the one that works the best for you, like Dbeaver.  
-The first step is to use the MindsDB Cloud user to connect to the Mindsdb MySQL API, using this command:
+In this tutorial I'm using MySQL command-line client, but you can also follow up with the one that works the best for you, like Dbeaver.  
+The first step is to use the MindsDB Cloud user to connect to the MindsDB MySQL API, using this command:
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/connect-mindsdb-sql.png)
 
-You need to specify the hostname and user name explicitly, as well as a password for connecting. Click enter and you are connected to Mindsdb API.
+You need to specify the hostname and user name explicitly, as well as a password for connecting. Click enter and you are connected to MindsDB API.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/success-connect-sql.png)
 
@@ -56,24 +56,24 @@ Now, let's show the databases.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-databases-sql.png)
 
-There are 4 databases, and the mysql database is the database that I've connected to Mindsdb.
+There are 4 databases, and the MySQL database is the database that I've connected to MindsDB.
 
-Let's check mysql database.
+Let's check the MySQL database.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-tables-sql.png)
 
-There are 3 tables, and in this tutorial, we will use the bitcoin table.  
-And let's check, what is inside this table.
+There are 3 tables, and in this tutorial, we will use the Bitcoin table.  
+And let's check what is inside this table.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-bitcoin-table.png)
 
-These tables have 5 columns date, open price, the highest price of the day, lowest price of the day, and close price. 
+These tables have 5 columns: date, open price, the highest price of the day, lowest price of the day, and close price. 
 The column we want to forecast is close price.
 
 
 ## Create the model
 
-Now, to create the model let's move to mindsdb database. and let's see what's inside.
+Now, to create the model let's move to MindsDB database. and let's see what's inside.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-tables-sql-2.png)
 
@@ -85,7 +85,7 @@ CREATE PREDICTOR predictor_name
 FROM integration_name
 (SELECT column_name, column_name2 FROM table_name) as ds_name
 PREDICT column_target as column_alias
-ORDER_BY column_orderby
+ORDER BY column_orderby
 WINDOW num_window
 HORIZON num_horizon
 USING {"is_timeseries": "Yes"}
@@ -95,10 +95,10 @@ The values that we need to provide are:
 
 * predictor_name (string) - The name of the model.
 * integration_name (string) - The name of the connection to your database.
-* ds_name (string) - the name of dataset you want to create, it's optional if you don't specify this value Mindsdb will generate by itself.
+* ds_name (string) - the name of the dataset you want to create, it's optional if you don't specify this value MindsDB will generate by itself.
 * column_target (string) - The feature you want to predict.
 * column_alias - Alias name of the feature you want to predict.
-* column_orderby - The column to order the data, for time series mainly using date column.
+* column_orderby - The column to order the data, for time series this should be the date/time column.
 * num_window - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. 
 This could be used to specify something like "Always use the previous 10 rows".
 * num_horizon - keyword specifies the number of future predictions. 
@@ -127,7 +127,7 @@ Now you are in the last step of this tutorial, creating the prediction. To creat
 
 ```sql
 SELECT target_variable, target_variable_explain FROM model_table 
-                                                WHERE when_data='{"column3": "value", "column2": "value"}';
+WHERE when_data='{"column3": "value", "column2": "value"}';
 ```
 
 And you need to set these values:
@@ -138,4 +138,8 @@ And you need to set these values:
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/create-prediction-bitcoin-sql.png)
 
-And now you have made an bitcoin forcasting model using SQL and Mindsdb. Yayyy!
+Finally, we have created a Bitcoin forecasting model using SQL and MindsDB. Yayyy!
+
+## Conclusions
+
+As you can see it is very easy to start making predictions with machine learning even without being a data scientist! Feel free to check this yourself! MindsDB [free cloud account](https://cloud.mindsdb.com/signup?utm_medium=community&utm_source=dev.to&utm_campaign=predict%20Bitcoin%20price) is fast to set up and has more than enough to give it a try. Or use the open source version if you want to.

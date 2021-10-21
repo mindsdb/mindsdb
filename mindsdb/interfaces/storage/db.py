@@ -105,6 +105,7 @@ class Predictor(Base):
     is_custom = Column(Boolean)     # to del
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
+    error = Column(String, nullable=True
 
     json_ai = Column(Json, nullable=True)
     code = Column(String, nullable=True)

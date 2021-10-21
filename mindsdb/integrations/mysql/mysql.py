@@ -198,12 +198,18 @@ class MySQL(Integration, MySQLConnectionChecker):
         result = self._query(q)
         return result[0]['count']
 
+    def get_columns(self):
+        q = f"""SELECT COLUMN_NAME ,TABLE_NAME
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_SCHEMA = database()
+                    ORDER BY COLUMN_NAME, TABLE_NAME;"""
+        columns_list = self._query(q)
+        columns = [f"{columns[0]}.{columns[1]}" for columns in columns_list]
+        return columns
+    
     def get_tables_list(self):
-        q = f""" SELECT table_schema, table_name
-                      FROM information_schema.tables
-                      WHERE table_schema != 'mysql'
-                      AND table_schema != 'information_schema'
-                      ORDER BY table_schema, table_name"""
-        tables_list = self._query(q)
-        tables= [f"{table['table_schema']}.{table['table_name']}" for table in tables_list]
-        return tables
+        q= f"""
+            SHOW TABLES;
+            """
+        result = self._query(q)
+        return result

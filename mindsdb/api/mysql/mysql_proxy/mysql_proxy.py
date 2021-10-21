@@ -484,6 +484,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
         ds_data = data_store.get_datasource(ds_name)
+        if ds_data == None:
+            raise Exception(f"DataSource '{ds_name}' does not exists")
         ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
             if col not in ds_columns:
@@ -1184,10 +1186,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
             insert_dict = OrderedDict(zip(struct['columns'], struct['values']))
-            try:
-                self.insert_predictor_answer(insert_dict)
-            except TypeError as e:
-                raise TypeError(str(e) + ', datasource might not exist')
+            self.insert_predictor_answer(insert_dict)
         elif keyword in ('update', 'insert'):
             raise NotImplementedError('Update and Insert not implemented')
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):

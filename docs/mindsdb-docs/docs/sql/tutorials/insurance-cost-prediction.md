@@ -1,32 +1,39 @@
-
-# Predict insurance cost using Mindsdb
+# Predict insurance cost using MindsDB
 
 *Level: Easy*  
 *Dataset: [Medical Cost Personal Data](https://www.kaggle.com/mirichoi0218/insurance)*
 
 Can you accurately predict insurance costs?  
-In this tutorial, you will learn how to predict insurance costs using Mindsdb.
-This tutorial is very easy because you don't need to learn any machine learning algorithm, all you need to know is just SQL and Mindsdb.
+
+In this tutorial, you will learn how to predict insurance costs using MindsDB.
+This tutorial is very easy because you don't need to learn any machine learning algorithms, all you need to know is just SQL.
+
+The process looks like the following:
+First we will connect MindsDB to a database with past data so it can learn from it
+We will use a single SQL command that will tell MindsDB to train its predictor
+We will use the standard SQL Select statement to get predictions from AI Tables in MindsDB. Like if this data already exists!
+
+MindsDB will execute a complete Machine Learning workflow behind the scenes, it will determine data types for each column, normalize and encode it, train and test ML model. All this happens automatically, so it is very cool! Those who want to get their hands dirty with manual hyperparameters optimization, you can also do that with MindsDB using a declarative syntax called JSON-AI.
+
+So let's look at how it works using a real use case. For the demo purpose we will use a public dataset from Kaggle, but you are free to follow this tutorial with your own data.
 
 ## Pre-requisites
 
-First, you need Mindsdb, if you want to use Mindsdb locally, you need to install Mindsdb using
-[Docker](https://docs.mindsdb.com/deployment/docker/) or [Python](https://docs.mindsdb.com/deployment/pypi/). 
-But if you want to use Mindsdb without installing it locally, you can use [Cloud Mindsdb](https://cloud.mindsdb.com/signup). 
-And in this tutorial, I'm using Cloud Mindsdb.
-
-Second, you need a MySQL client to connect to Mindsdb MYSQL API.
+First, you need MindsDB installed. If you want to use it locally, you can use
+[Docker](https://docs.mindsdb.com/deployment/docker/) or [PIP](https://docs.mindsdb.com/deployment/pypi/). 
+Alternatively, to use MindsDB without installing it locally, you can use the [Cloud](https://cloud.mindsdb.com/signup) service. 
+Let’s use the cloud for this tutorial. 
+Second, you need a MySQL client to connect to the MindsDB MySQL API.
 
 ## Connect your database
 
-First, you need to connect MindsDB to the database where the dataset is stored.
-In the left navigation click on Database, click on the ADD DATABASE.
-And you need to provide all of the required parameters for connecting to the database.
+First, you need to connect MindsDB to the database where the data is stored. Open MindsDB GUI and in the left navigation click on Database, then click on the ADD DATABASE.
+Here, you need to provide all of the required parameters for connecting to the database.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/add-database-cloud-mindsdb-sql.png)
 
 * Supported Database - select the database that you want to connect to
-* Integrations Name - add a name to the integration, here I'm using 'mysql' but you can name it anything
+* Integrations Name - add a name to the integration, here I'm using 'mysql' but you can name it differently
 * Database - the database name
 * Host - database hostname
 * Port - database port
@@ -39,11 +46,11 @@ The next step is to use the MySQL client to connect to MindsDB’s MySQL API, tr
 ## Connect to MindsDB’s MySQL API
 
 Here I'm using MySQL command-line client, but you can also follow up with the one that works the best for you, like Dbeaver.  
-The first step is to use the MindsDB Cloud user to connect to the Mindsdb MySQL API, using this command:
+The first step is to use the MindsDB Cloud user to connect to the MindsDB MySQL API, using this command:
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/connect-mindsdb-sql.png)
 
-You need to specify the hostname and user name explicitly, as well as a password for connecting. Click enter and you are connected to Mindsdb API.
+You need to specify the hostname and user name explicitly, as well as a password for connecting. Click enter and you are connected to MindsDB API.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/success-connect-sql.png)
 
@@ -55,14 +62,14 @@ Now, let's show the databases.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-databases-sql.png)
 
-There are 4 databases, and the mysql database is the database that I've connected to Mindsdb.
+There are 4 databases, and the MySQL database is the database that I've connected to MindsDB.
 
-Let's check mysql database.
+Let's check the MySQL database.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-tables-sql.png)
 
 There are 3 tables, and because the tutorial is about insurance cost prediction, we will use the insurance table.  
-And let's check, what is inside this table.
+Let's check what is inside this table.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-insurance-table.png)
 
@@ -80,7 +87,7 @@ resulting from mass in kilograms and height in meters (float)
 
 ## Create the model
 
-Now, to create the model let's move to mindsdb database. and let's see what's inside.
+Now, to create the model, let's move to the MindsDB database, and see what's inside.
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-tables-sql-2.png)
 
@@ -98,7 +105,7 @@ The values that we need to provide are:
 
 * predictor_name (string) - The name of the model.
 * integration_name (string) - The name of the connection to your database.
-* ds_name (string) - the name of dataset you want to create, it's optional if you don't specify this value Mindsdb will generate by itself.
+* ds_name (string) - the name of the dataset you want to create, it's optional if you don't specify this value MindsDB will generate by itself.
 * column_name (string) - The feature you want to predict.
 * column_alias - Alias name of the feature you want to predict.
 
@@ -106,7 +113,7 @@ So, use this command to create the models:
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/create-predictor-insurance-sql.png)
 
-If there's no error, that means your model is created and training. To see if your model is finished, use this command:
+If there's no error, that means your model is created and training has started. To see if your model is finished, use this command:
 
 ```sql
 SELECT * FROM mindsdb.predictors WHERE name = predictor_name;
@@ -118,7 +125,7 @@ And values that we need to provide are:
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-predictor-isurance-sql.png)
 
-If the model is finished, it will look like this. The model has been created! and the accuracy is 75%, you can still increasing the accuracy by cleaning the data, or doing some data wrangling techniques.
+If the predictor is ready, it will look like this. The model has been created and trained! The reported accuracy is 75%. If you want to have more control over the model, head to lightwood.io to see how that can be customized.
 
 ## Create the prediction
 
@@ -126,10 +133,10 @@ Now you are in the last step of this tutorial, creating the prediction. To creat
 
 ```sql
 SELECT target_variable, target_variable_explain FROM model_table 
-                                                WHERE when_data='{"column3": "value", "column2": "value"}';
+WHERE when_data='{"column3": "value", "column2": "value"}';
 ```
 
-And you need to set these values:
+You need to set these values:
 - target_variable - The original value of the target variable.
 - target_variable_confidence - Model confidence score.
 - target_variable_explain - JSON object that contains additional information as confidence_lower_bound, confidence_upper_bound, anomaly, truth.
@@ -137,4 +144,8 @@ And you need to set these values:
 
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/create-prediction-isurance-sql.png)
 
-And now you have made an insurance predictor using SQL and Mindsdb. Yayyy!
+Finally, we have made an insurance predictor using SQL and MindsDB. Yayyy!
+
+## Conclusions
+
+As you can see it is very easy to start making predictions with machine learning even without being a data scientist! Feel free to check this yourself, MindsDB has an option of a [free cloud account](https://cloud.mindsdb.com/signup?utm_medium=referral&utm_source=community&utm_campaign=insurance%20cost%20prediction) that is more than enough to give it a try.

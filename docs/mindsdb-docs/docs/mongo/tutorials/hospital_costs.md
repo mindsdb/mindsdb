@@ -1,14 +1,14 @@
-# Forecast Hospital Costs using MindsDB Cloud and MongoDB Atlas
+# Forecast Hospital Costs using MindsDB Cloud and MongoDB Atlas :fireworks:
 
-In this tutorial, we will be learning to:
+In this tutorial, we all will  learn to the following:
 
-:point_right: Connect a MongoDB database to MindsDB.
+:point_right: Connecting the  MongoDB database to MindsDB.
 
 :point_right: Train a model to predict Hospital Costs.
 
 :point_right: Get a prediction from the model given certain input parameters.
 
-All of that **without writing a single line of code and in less than 15 minutes**. Yes, you read that right! :100:
+Amazing things what i want to tells you all this is done **without writing a SINGLE LINE CODE !!** :open_mouth: Yes Its is True Belive Mindsdb's Power💪 .
 
 We will be using the  Hospital Costs dataset 🏥 that can be downloaded from [here](https://github.com/mindsdb/benchmarks/blob/main/benchmarks/datasets/hospital_costs/data.csv). You are also free to use your own dataset and follow along the tutorial.
 
@@ -20,9 +20,9 @@ We will be using the  Hospital Costs dataset 🏥 that can be downloaded from [h
 
 Finally, No! **You are not required to have any background in programming or machine learning**. As mentioned before you wont be writing a single line of code!
 
-## :hash: About MindsDB
-> MindsDB is a predictive platform that makes databases intelligent and machine learning easy to use. It allows data analysts to build and visualize forecasts in BI dashboards without going through the complexity of ML pipelines, all through SQL. It also helps data scientists to streamline MLOps by providing advanced instruments for in-database machine learning and optimize ML workflows through a declarative JSON-AI syntax.
-Although only SQL is mentioned, MongoDB is also supported.
+## :hash: MindsDB In Short
+> **_MindsDB is a predictive platform that makes databases intelligent and machine learning easy to use. It allows data analysts to build and visualize forecasts in BI dashboards without going through the complexity of ML pipelines, all through SQL. It also helps data scientists to streamline MLOps by providing advanced instruments for in-database machine learning and optimize ML workflows through a declarative JSON-AI syntax.
+Although only SQL is mentioned, MongoDB is also supported._**
 
 ## :hash: Dataset overview
 A nationwide survey of hospital costs conducted by the US Agency for Healthcare
@@ -42,11 +42,13 @@ The dataset is a `.csv` file that contains 6 columns:
 
 Phew! With all of that out of the way, we can finally get started! :rocket: 
 
+# :video_game: Let the Game Begin :basketball:
+
 ## :hash: Setting up a Cluster on MongoDB Atlas
-1. Head over to [https://cloud.mongodb.com/](https://cloud.mongodb.com/) and create a new project named `mindsdb` and within it a new database cluster named `mindsDB`. Typically, it takes a minute or two to provision a cluster. Once it is done, you should have something like this:
+1. Head over to [https://cloud.mongodb.com/](https://cloud.mongodb.com/) and create a new project named `mindsdb` and within it a new database cluster named `mindsDB`. Typically, it takes a some _**Short Time( 1 to 2 minutes)**_ to provision a cluster. Once it is done, you should have something like this:
     ![Create cluster](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/n7otmph2uyb4cpu3u1ar.png)
     
-2. Click on the "Connect" button. In the popup modal, you will be asked to add a connection IP address. Although not recommended, for the sake of this tutorial, choose "Allow access from anywhere" and then "Add IP Address".
+2. Click on the "Connect" button. In the popup, you will be asked to add a connection IP address. Although not recommended, for the sake of this tutorial, choose "Allow access from anywhere" and then "Add IP Address".
     ![Firewall setup](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/xbc1y1uhxsbghd4j12ae.png) 
     
 3. Next, you will be asked to create a new database user. After providing a username and password, click on the "Create Database User" button.
@@ -110,7 +112,7 @@ We will now use this connection string to connect to our database from MongoDB C
 
     }
     ```
-    > **Sex** has value **false** means **Female**
+    >:ballot_box_with_check: **Sex** has value **false** means **Female**
     
     Enter the above details and "Run Query".
     

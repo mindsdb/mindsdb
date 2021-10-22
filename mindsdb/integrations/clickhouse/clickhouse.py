@@ -162,13 +162,9 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         tables= [f"{table[0]}.{table[1]}" for table in tables_list]
         return tables
 
-    def get_columns(self):
-        q = f"""SELECT column, table
-                    FROM system.parts_columns
-                    WHERE active and database NOT IN  ('system', 'mdb_system')
-                    GROUP BY column, table
-                    ORDER BY column, table;"""
-        columns_list = self._query(q)
-        columns= [f"{column[0]}.{column[1]}" for column in columns_list]
+    def get_columns(self,query):
+        query_result = self._query(query).json()
+        columns_info = query_result['meta']
+        columns= [column['name'] for column in columns_info]
         return columns
 

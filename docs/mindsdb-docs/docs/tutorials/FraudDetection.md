@@ -17,7 +17,7 @@ This dataset presents transactions that occurred in two days, where we have 492 
 {{ read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/credit_card_fraud/processed_data/test.csv', nrows=7) }}
 
 <details>
-  <summary>Click to expand Features Informations:</summary>
+  <summary>Click to expand Features Information:</summary>
 
 ```
 * Time Number of seconds elapsed between this transaction and the first transaction in the dataset

@@ -1,12 +1,10 @@
-import time
+import requests
 import unittest
 from random import randint
 from pathlib import Path
 from uuid import uuid1
 import json
-import lightwood
 
-import requests
 
 from common import (
     CONFIG_PATH,
@@ -184,7 +182,6 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/util/ping')
         assert response.status_code == 200
 
-
         response = requests.get(f'{root}/config/vars')
         assert response.status_code == 200
 
@@ -299,6 +296,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         pvs = res.json()
         assert pvs[0]['rental_price']['predicted_value'] == 5555555
+
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

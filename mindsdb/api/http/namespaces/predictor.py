@@ -1,4 +1,3 @@
-import time
 from dateutil.parser import parse as parse_datetime
 from flask import request
 from flask_restx import Resource, abort
@@ -10,6 +9,7 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     put_predictor_params
 )
 
+
 @ns_conf.route('/')
 class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
@@ -17,6 +17,7 @@ class PredictorList(Resource):
         '''List all predictors'''
         models = request.model_interface.get_models()
         return models
+
 
 @ns_conf.route('/<name>')
 @ns_conf.param('name', 'The predictor identifier')
@@ -89,13 +90,6 @@ class Predictor(Resource):
             )
 
         request.model_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
-        for i in range(20):
-            try:
-                # Dirty hack, we should use a messaging queue between the predictor process and this bit of the code
-                request.model_interface.get_model_data(name)
-                break
-            except Exception:
-                time.sleep(1)
 
         if retrain is True:
             try:
@@ -231,7 +225,7 @@ class PredictorEditCode(Resource):
     def put(self, name):
         request.model_interface.edit_code(name, request.json['code'])
         return '', 200
-    
+
 
 @ns_conf.route('/<name>/train')
 @ns_conf.param('name', 'The predictor identifier')

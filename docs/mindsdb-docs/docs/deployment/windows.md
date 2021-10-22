@@ -8,21 +8,21 @@ You will need <a href="https://www.anaconda.com/products/individual" target="_bl
 
 1. Create new virtual environment and install mindsdb:
 
-    ```
+    ```console
     conda create -n mindsdb
     ```
 
-    ```
+    ```console
     conda activate mindsdb
     ```
 
-    ```
+    ```console
     pip install mindsdb
     ```
 
 2. To verify that mindsdb was installed run:
 
-    ```
+    ```console
     conda list
     ```
 
@@ -37,25 +37,25 @@ We suggest you to install MindsDB in a virtual environment when using `pip` to a
 
 1. Create new virtual environment called mindsdb:
 
-    ```
+    ```console
     py -m venv mindsdb
     ```
 
     And, activate it:
 
-    ```
+    ```console
     .\mindsdb\Scripts\activate.bat
     ```
 
 2. Install MindsDB:
 
-    ```
+    ```console
     pip install mindsdb
     ```
 
 3. To verify that mindsdb was installed run:
 
-    ```
+    ```console
     pip freeze
     ```
     
@@ -73,9 +73,9 @@ If the installation fails, don't worry, simply follow the below bellow instructi
 !!! failure "pip command not found fail"
     Depending on your environment, you might have to use **pip3** instead of **pip**, and **python3.x** instead of **py** in the above commands e.g
 
-    ```
+```console
     pip3 install mindsdb
-    ```
+```
 
 !!! failure "Installation fail"
     If you are using **Python 3.9** you may get installation errors. Some of the MindsDB's dependencies are not working with **Python 3.9**, so please downgrade to older versions for now. We are working on this and **Python 3.9** will be supported soon.

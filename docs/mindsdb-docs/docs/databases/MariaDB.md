@@ -16,7 +16,7 @@ You will need MindsDB version >= 2.0.0 and MariaDB installed:
 !!! info "Default configuration"
     MindsDB will try to use the default configuration(hosts, ports, usernames) for each of the database integrations. If you want to extend that or you are using different parameters creata a new config.json file. 
 
-The avaiable configuration options are:
+The available configuration options are:
 
 * api['http] -- This key is used for starting the MindsDB http server by providing:
     * host(default 0.0.0.0.) - The mindsdb server address.
@@ -110,7 +110,7 @@ VALUES
 ```
 
 * name (string) -- The name of the predictor.
-* predict (string) --  The feature you want to predict, in this example price. To predict multiple featurs include a comma separated string e.g 'price,year'.
+* predict (string) --  The feature you want to predict, in this example price. To predict multiple features include a comma separated string e.g 'price,year'.
 * select_data_query (string) -- The SELECT query that will ingest the data to train the model.
 * training_options (JSON as comma separated string) -- optional value that contains additional training parameters. For a full list of the parameters check the [PredictorInterface](/PredictorInterface/#learn).
 
@@ -139,7 +139,7 @@ You should get a similar response from MindsDB as:
 
 | price  | predicted | info   |
 |----------------|------------|------|
-| 13111 | 0.9921 | Check JSON bellow  |
+| 13111 | 0.9921 | Check JSON below  |
 
 ```json
 
@@ -177,7 +177,7 @@ You should get a similar response from MindsDB as:
 ```
 ### Delete the model
 
-To delete the predictor that you have previously created, you need to delete it from `mindsdb.predictors` table. The name should be equal to name added in the INSERT statment while creating the predictor, e.g:
+To delete the predictor that you have previously created, you need to delete it from `mindsdb.predictors` table. The name should be equal to name added in the INSERT statement while creating the predictor, e.g:
 
 ```sql
 DELETE FROM mindsdb.predictors WHERE name='used_cars_model'

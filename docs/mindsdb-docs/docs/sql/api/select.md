@@ -44,7 +44,7 @@ The following SQL statement selects only the target variable `rental_price` as `
 
 ```sql
 SELECT rental_price as price, 
-rental_price_confidence as accuracy 
+rental_price_confidence as confidence 
 FROM mindsdb.home_rentals_model WHERE when_data='{"sqft": 800, "number_of_rooms": 4, "number_of_bathrooms": 2, 
                                             "location": "good", "days_on_market" : 12,  
                                             "neighborhood": "downtown", "initial_price": "2222"}';

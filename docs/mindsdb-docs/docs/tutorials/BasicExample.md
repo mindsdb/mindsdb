@@ -3,7 +3,7 @@ id: basic-mindsdb
 title: Learning from Examples
 ---
 
-This is a basic example of mindsdb_native usage in predicting the real estate prices for an area. If you want to follow out visually, watch bellow video:
+This is a basic example of mindsdb_native usage in predicting the real estate prices for an area. If you want to follow out visually, watch below video:
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/W69iSFgNpgQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
@@ -30,7 +30,7 @@ Predictor(name='home_rentals_price').learn(
 # use the model to make predictions
 result = Predictor(name='home_rentals_price').predict(when_data={'number_of_rooms': 1, 'initial_price': 1222, 'sqft': 1190})
 
-# The result will be an array containing predictions for each data point (in this case only one), a confidence for said prediction and a few other extra informations
+# The result will be an array containing predictions for each data point (in this case only one), a confidence for said prediction and a few other extra information
 print('The predicted price is between ${price} with {conf} confidence'.format(price=result[0].explanation['rental_price']['confidence_interval'], conf=result[0].explanation['rental_price']['confidence']))
 ```
 

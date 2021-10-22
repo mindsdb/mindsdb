@@ -14,7 +14,7 @@ Breast Cancer Wisconsin (Diagnostic) [Data Set](https://archive.ics.uci.edu/ml/d
 {{ read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/cancer50/raw_data/cancer50.csv', nrows=7) }}
 
 <details>
-  <summary>Click to expand Features Informations:</summary>
+  <summary>Click to expand Features Information:</summary>
 
 ```
 1. id ID number

@@ -15,7 +15,7 @@ With Mindsdb anyone can build state of the art models without any machine learni
 
 Building models require time for cleaning the data, normalizing the data, converting it into the format your library uses, determining the type of data in each column and a proper encoding for it
 
-Mindsdb can read data from csv, json, excel, file urls, s3 objects , dataframes and relational database tables or queries (currently there's native support for maraiadb, mysql and postgres), you just need to tell it which colum(s) it should predict. It will automatically process the data for you and give insights about the data.
+Mindsdb can read data from csv, json, excel, file urls, s3 objects , dataframes and relational database tables or queries (currently there's native support for maraiadb, mysql and postgres), you just need to tell it which column(s) it should predict. It will automatically process the data for you and give insights about the data.
 
 
 ## Code Samples
@@ -217,9 +217,9 @@ It should be noted, Mindsdb accuracy doesn't always beat or match stat-of-the-ar
 
 If you have the time and know-how to build a model that performs better than Mindsdb, but you still want the insights into the model and the data, as well as the pre-processing that Mindsdb provides, you can always plug in a custom machine learning model into Mindsdb.
 
-We are currently creating a new Benchmarks repository where you can find detailed list with up to date examples. Untill we release that you can check the old list of accuracy comparisons on our [examples repo](https://github.com/mindsdb/mindsdb-examples/tree/master/benchmarks) and [public benchmarks](https://github.com/mindsdb/benchmarks).
+We are currently creating a new Benchmarks repository where you can find detailed list with up to date examples. Until we release that you can check the old list of accuracy comparisons on our [examples repo](https://github.com/mindsdb/mindsdb-examples/tree/master/benchmarks) and [public benchmarks](https://github.com/mindsdb/benchmarks).
 
-Each directory containes different examples, datasets and `README.md`. To see the accuracies and the models, simply run `mindsdb_acc.py` to run mindsdb on the dataset.
+Each directory contains different examples, datasets and `README.md`. To see the accuracies and the models, simply run `mindsdb_acc.py` to run mindsdb on the dataset.
 
 At some point we might keep a more easy to read list of these comparisons, but for now the results change to often and there are too many models to make this practical to maintain.
 

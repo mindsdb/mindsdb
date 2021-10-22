@@ -12,12 +12,12 @@ title: Credit Scoring
 
 ###### [![Data](https://img.shields.io/badge/GET--DATA-DefaultofCreditCard-green)](https://github.com/mindsdb/mindsdb-examples/tree/master/classics/german_credit_data/processed_data)
 
-The German Credit dataset is a publically available from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Statlog+%28German+Credit+Data%29). The dataset contains data on 20 variables and the classification whether an applicant is considered a Good or a Bad credit risks.
+The German Credit dataset is a publicly available from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Statlog+%28German+Credit+Data%29). The dataset contains data on 20 variables and the classification whether an applicant is considered a Good or a Bad credit risks.
 
 {{ read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/german_credit_data/processed_data/test.csv', nrows=7) }}
 
 <details>
-  <summary>Click to expand Features Informations:</summary>
+  <summary>Click to expand Features Information:</summary>
 
 ```
 * Attribute 1: (qualitative)
@@ -54,7 +54,7 @@ The German Credit dataset is a publically available from the [UCI Machine Learni
 * Attribute 5: (numerical)
     * Credit amount
 
-* Attibute 6: (qualitative)
+* Attribute 6: (qualitative)
     * Savings account/bonds
     * A61 : ... < 100 DM
     * A62 : 100 <= ... < 500 DM

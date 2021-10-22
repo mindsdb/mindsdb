@@ -3,55 +3,20 @@ id: installing-mindsdb
 title: Getting started
 ---
 
-## Installation
-
-There are a few options to deploy MindsDB on different operating systems. To find the one that works the best for you, check out the below links.
-
-!!! tip "Recommended"
-    Our suggestion is to always use Docker as the most stable and easy way because it encapsulates all of the dependencies that MindsDB Server needs.
-
-=== "Docker"
-
-    !!! info "Deployment"
-        Follow the [Docker deployment](/deployment/docker) instructions.
-
-=== "MindsDB Cloud"
-
-    !!! info "Deployment"
-        Follow the [MindsDB cloud](/deployment/cloud) instructions.
-
-=== "Windows"
-
-    !!! info "Deployment"
-        Follow the [Windows deployment](/deployment/windows) instructions.
-
-=== "Linux"
-
-    !!! info "Deployment"
-        Follow the [Linux deployment](/deployment/linux) instructions.
-
-=== "MacOS"
-
-    !!! info "Deployment"
-        Follow the [macOS deployment](/deployment/macos) instructions.
-
-=== "Source"
-
-    !!! info "Deployment"
-        Follow the from [source deployment](/deployment/source) instructions.
+Follow the below steps to get up and running with MindsDB.
 
 
-## Tutorials
+#### Steps:
 
-* [Customer Churn](/tutorials/customer-churn/)
+1.  Deploy MindsDB: 
+    1.  [Docker](/deployment/docker) OR
+    2.  [Pip](/deployment/pypi) OR
+    3.  [MindsDB Cloud](/deployment/cloud)
+2. Connect your Data to MindsDB:
+3. Connect to MindsDB like it was a Database using your preferred DB Client
+    1. Using MindsDB Cloud OR
+    2. Using a Local Deployment
+4. CREATE a predictor (model) trained on your data
+5. Make predictions using your model
 
-## Contribute to MindsDB
-
-* [Became a contributor to MindsDB](/contribute)
-* [Join MindsDB community](/community)
-
-## Useful links
-
- * <a href="https://apidocs.mindsdb.com/" target="_blank">MindsDB APIs documentation</a>
- * <a href="https://mindsdb.com/contact-us/" target="_blank">Get in touch</a>
  

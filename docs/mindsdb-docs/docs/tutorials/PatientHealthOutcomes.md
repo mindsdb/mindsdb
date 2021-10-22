@@ -16,7 +16,7 @@ In the Heart Disease UCI dataset, the data comes from 4 databases: the Hungarian
 {{ read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/heart_disease/raw_data/heart.csv', nrows=7) }}
 
 <details>
-  <summary>Click to expand Features Informations:</summary>
+  <summary>Click to expand Features Information:</summary>
 
 ```
 1. age: age in years
@@ -41,7 +41,7 @@ In the Heart Disease UCI dataset, the data comes from 4 databases: the Hungarian
     * Value 2: flat
     * Value 3: downsloping
 12. ca: number of major vessels (0-3) colored by flourosopy
-13. thal: 3 = normal; 6 = fixed defect; 7 = reversable defect
+13. thal: 3 = normal; 6 = fixed defect; 7 = reversible defect
 14. num: diagnosis of heart disease (angiographic disease status)
     * Value 0: < 50% diameter narrowing
     * Value 1: > 50% diameter narrowing

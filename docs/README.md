@@ -44,6 +44,7 @@ overrides
 ├─ base.html                           # Base template
 └─ main.html
 .mkdocs.yml                            # Mkdocs configuration file
+.old-navigation.yml                    # Old Navigation file
 ```
 # Contribute
 

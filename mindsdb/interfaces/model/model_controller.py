@@ -94,7 +94,7 @@ class ModelController():
         if 'stop_training_in_x_seconds' in kwargs:
             problem_definition['time_aim'] = kwargs['stop_training_in_x_seconds']
 
-        if 'ignore_columns' in kwargs:
+        if kwargs.get('ignore_columns') is not None:
             problem_definition['ignore_features'] = kwargs['ignore_columns']
             if isinstance(problem_definition['ignore_features'], list) is False:
                 problem_definition['ignore_features'] = [problem_definition['ignore_features']]

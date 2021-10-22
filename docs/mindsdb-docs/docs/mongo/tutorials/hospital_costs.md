@@ -114,22 +114,22 @@ We will now use this connection string to connect to our database from MongoDB C
     ```
     >:ballot_box_with_check: **Sex** has value **false** means **Female**
     
-    Enter the above details and "Run Query".
+    Enter the above details(**Don Just Copy Free to change value of input**) and "Run Query".
     
     ![Run query](https://images.unsplash.com/photo-1634704822405-e81f23b5bebf?ixid=MnwxMjA3fDB8MHxwcm9maWxlLXBhZ2V8MXx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=60)
 4. We can see that the model predicted with 99% confidence that on such a day, the traffic volume would be 832.
     ![Prediction result](https://images.unsplash.com/photo-1634675897727-de9f0f98da98?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1225&q=80)
  
-You can play with the inputs and run a few more queries and observe the results.
+Feel Free to use inputs according you Mind ! 
+That All !
+### _Now Just Enjoy And Work !_
 
 ## :hash: What Next?
 This tutorial can be extended to perform lots of awesome things. For example, it would be interesting to see the dependence between the AGE and the TOTCHG. Some interesting questions that can be asked are:
-1. Given a certain `TOTCHG` what is the probability the person is MAle :sunny:? What is the probability that it is Female? 🌧️
+1. Given a certain `TOTCHG` what is the probability the person is Male :sunny:? What is the probability that it is Female? 🌧️
 2. Given a certain `TOTCHG`, how certain can we be that person is of **Adult AGE Group**? 🏖️
 3. Can we predict more parameters instead of only the `TOTCHG`? :thinking:
 
 Apart from these, you can also install MindsDB on your machine and connect with your local databases to get predictions. You can also use a BI tool to visualize these predictions. Apart from SQL and MongoDB, you can explore other data source integrations that MindsDB supports like Oracle and Kafka.
 
-If you have made it this far, thank you for your time and hope you found this useful. If you like the article, like it and share it with others.
 
-Happy Querying! :chart_with_downwards_trend:

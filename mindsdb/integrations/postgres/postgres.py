@@ -210,11 +210,11 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
         tables= [f"{table['table_schema']}.{table['table_name']}" for table in tables_list]
         return tables
 
-    def get_columns(self):
-        q = f"""SELECT column_name, table_name
-		FROM information_schema.columns
-		WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
-		ORDER BY column_name, table_name;"""
-        columns_list = self._query(q)
-        columns = [f"{columns[0]}.{columns[1]}" for columns in columns_list]
-        return columns
+    def get_columns(self,query):
+        q = f"""SELECT * from ({query}) LIMIT 1;"""
+        query_response = self._query(q)
+        if len(query_response) > 0:
+            columns = list(query_response[0].keys())
+            return columns
+        else:
+             return []

@@ -30,16 +30,16 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         self.host = db_info.get('host')
         self.port = db_info.get('port')
 
-    def get_columns(self):
-        q = f"""SELECT column, table
-                    FROM system.parts_columns
-                    WHERE active and database NOT IN  ('system', 'mdb_system')
-                    GROUP BY column, table
-                    ORDER BY column, table;"""
-        columns_list = self._query(q)
-        columns= [f"{column[0]}.{column[1]}" for column in columns_list]
-        return columns
 
+    def get_columns(self,query):
+        q = f"""SELECT * from ({query}) LIMIT 1;"""
+        query_response = self._query(q)
+        if len(query_response) > 0:
+            columns = list(query_response[0].keys())
+            return columns
+        else:
+             return []
+            
     def _to_clickhouse_table(self, dtype_dict, predicted_cols, columns):
         subtype_map = {
             dtype.integer: 'Nullable(Int64)',

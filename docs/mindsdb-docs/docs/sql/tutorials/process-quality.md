@@ -277,7 +277,7 @@ The output should look similar to this.
 1 row in set (0.81 sec)
 ```
 
-As you can see, the model predicted the `silica concentrate` for our data point. Again we can see a very high confidence due to the limited dataset. When making predictions you can include different fields. As you can notice, we have only included the first 7 fields of out dataset. You are free to test different combinations.
+As you can see, the model predicted the `silica concentrate` for our data point. Again we can see a very high confidence due to the limited dataset. When making predictions you can include different fields. As you can notice, we have only included the first 7 fields of our dataset. You are free to test different combinations.
 
 You are now done with the tutorial! 🎉
 

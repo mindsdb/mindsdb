@@ -5,7 +5,7 @@ title: Getting started
 
 Follow the below steps to get up and running with MindsDB.
 
-
+![Getting Started Image](assets/getting-started.png)
 #### Steps:
 
 1.  Deploy MindsDB: 

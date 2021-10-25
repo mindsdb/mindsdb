@@ -108,10 +108,10 @@ Start by heading to the MindsDB GUI.  For this tutorial, we'll be using MindsDB 
 
 Click on Databases in the upper left, then on Add Database in the lower right.  In the popup screen, fill in the details for your MySQL database, and specify a name for the integration (here, we chose bodyfat_integration).  You can test if the database is connectable by clicking `Click Here to Test Connection`, and if all is well, click on the Connect button:
 
-![MindsDB Database Connection](/assets/tutorials/insurance-premiums/connect-database.png)
+![MindsDB Database Connection](/assets/sql/tutorials/bodyfat/connect-database.png)
 
 You should now see your new database integration appear in the MindsDB GUI:
-![MindsDB Database Connection Established](/assets/tutorials/insurance-premiums/database-connected.png)
+![MindsDB Database Connection Established](/assets/sql/tutorials/bodyfat/database-connected.png)
 
 At this point, you have successfully connected MindsDB to the database!
 

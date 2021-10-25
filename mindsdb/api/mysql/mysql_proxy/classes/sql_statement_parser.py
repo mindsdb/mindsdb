@@ -82,6 +82,8 @@ class SqlStatementParser():
                 self._struct = self.parse_as_create_predictor()
             elif self._keyword in 'create_ai_table':
                 self._struct = self.parse_as_create_ai_table()
+            elif self._keyword == 'retrain':
+                self._struct = self.parse_as_retrain()
 
     @property
     def keyword(self):
@@ -146,8 +148,8 @@ class SqlStatementParser():
             create_predictor
             create_ai_table
         '''
-        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DROP = map(
-            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DROP".split()
+        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DROP, RETRAIN = map(
+            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DROP RETRAIN".split()
         )
         CREATE_PREDICTOR = CREATE + PREDICTOR
         CREATE_AI_TABLE = CREATE + AI + TABLE
@@ -159,7 +161,7 @@ class SqlStatementParser():
             | UPDATE | ALTER | SELECT
             | ROLLBACK | COMMIT | EXPLAIN
             | CREATE_PREDICTOR | CREATE_AI_TABLE
-            | CREATE_VIEW | DROP
+            | CREATE_VIEW | DROP | RETRAIN
         )('keyword')
 
         r = expr.parseString(sql)
@@ -343,6 +345,23 @@ class SqlStatementParser():
             r['order_by'] = [x['name'] for x in r['order_by']]
 
         return r
+
+    def parse_as_retrain(self) -> dict:
+        result = {
+            'predictor_name': None
+        }
+
+        expr = (
+            Word("retrain").suppress() + Word(printables).setResultsName('predictor_name')
+        )
+
+        r = expr.parseString(self._sql).asDict()
+        if isinstance(r.get('predictor_name'), str) is False:
+            raise Exception("Cant determine predictor name in 'retrain' statement")
+
+        result.update(r)
+
+        return result
 
     def parse_as_delete(self) -> dict:
         ''' Parse delete. Example: 'delete from database.table where column_a= 1 and column_b = 2;'
@@ -586,6 +605,14 @@ class SqlStatementParser():
     def test():
         tests = [
             [
+                'retrain predictor',
+                {
+                    'keyword': 'retrain',
+                    'struct': {
+                        'predictor_name': 'predictor'
+                    }
+                }
+            ], [
                 'start transaction',
                 {'keyword': 'start'}
             ], [

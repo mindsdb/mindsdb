@@ -85,7 +85,7 @@ class ModelController():
             problem_definition['target'] = to_predict
         elif isinstance(to_predict, list) and len(to_predict) == 1:
             problem_definition['target'] = to_predict[0]
-        else:
+        elif problem_definition.get('target') is None:
             raise Exception(
                 f"Predict target must be 'str' or 'list' with 1 element. Got: {to_predict}"
             )

@@ -440,6 +440,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.packet(OkPacket).send()
 
+    def answer_retrain_predictor(self, predictor_name):
+        model_interface = self.session.model_interface
+        models = model_interface.get_models()
+        if predictor_name not in [x['name'] for x in models]:
+            raise Exception(f"Can't retrain predictor. There is no predictor with name '{predictor_name}'")
+        model_interface.update_model(predictor_name)
+        self.packet(OkPacket).send()
+
     def answer_create_predictor(self, struct):
         model_interface = self.session.model_interface
         data_store = self.session.data_store
@@ -998,6 +1006,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket).send()
         elif isinstance(statement, DropIntegration):
             raise Exception('Not ready')
+        elif keyword == 'retrain':
+            self.answer_retrain_predictor(struct['predictor_name'])
+            return
         elif isinstance(statement, Show) or keyword == 'show':
             sql_category = statement.category.lower()
             condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition

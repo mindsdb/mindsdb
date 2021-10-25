@@ -352,7 +352,7 @@ class SqlStatementParser():
         }
 
         expr = (
-            Word("where").suppress() + Word(printables).setResultsName('predictor_name')
+            Word("retrain").suppress() + Word(printables).setResultsName('predictor_name')
         )
 
         r = expr.parseString(self._sql).asDict()

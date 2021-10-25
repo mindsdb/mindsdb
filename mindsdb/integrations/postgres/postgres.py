@@ -217,4 +217,4 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
             columns = list(query_response[0].keys())
             return columns
         else:
-             return []
+            return []

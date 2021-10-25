@@ -77,11 +77,18 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
-    def _unpack_old_args(self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
-        if to_predict is not None:
-            problem_definition = {'target': to_predict if isinstance(to_predict, str) else to_predict[0]}
+    def _unpack_old_args(
+        self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None
+    ) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
+        problem_definition = kwargs or {}
+        if isinstance(to_predict, str):
+            problem_definition['target'] = to_predict
+        elif isinstance(to_predict, list) and len(to_predict) == 1:
+            problem_definition['target'] = to_predict[0]
         else:
-            problem_definition = kwargs
+            raise Exception(
+                f"Predict target must be 'str' or 'list' with 1 element. Got: {to_predict}"
+            )
 
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
@@ -96,8 +103,12 @@ class ModelController():
 
         if kwargs.get('ignore_columns') is not None:
             problem_definition['ignore_features'] = kwargs['ignore_columns']
-            if isinstance(problem_definition['ignore_features'], list) is False:
-                problem_definition['ignore_features'] = [problem_definition['ignore_features']]
+
+        if (
+            problem_definition.get('ignore_features') is not None
+            and isinstance(problem_definition['ignore_features'], list) is False
+        ):
+            problem_definition['ignore_features'] = [problem_definition['ignore_features']]
 
         ds_cls = getattr(mindsdb_datasources, from_data['class'])
         ds = ds_cls(*from_data['args'], **from_data['kwargs'])

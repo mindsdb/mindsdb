@@ -163,7 +163,7 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         return tables
 
     def get_columns(self,query):
-        q = f"SELECT * FROM ({query}) LIMIT 1"
+        q = f"SELECT * FROM ({query}) LIMIT 1 FORMAT JSON"
         query_result = self._query(q).json()
         columns_info = query_result['meta']
         columns= [column['name'] for column in columns_info]

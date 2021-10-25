@@ -325,8 +325,14 @@ class ModelController():
 
         return 0
 
+    @mark_process(name='learn')
     def update_model(self, name: str, company_id: int):
         # TODO: Add version check here once we're done debugging
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        assert predictor_record is not None
+        predictor_record.update_status = 'updating'
+        db.session.commit()
+
         p = UpdateProcess(name, company_id)
         p.start()
         return 'Updated in progress'

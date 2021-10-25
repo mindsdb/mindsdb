@@ -87,6 +87,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         raise e
 
 
+@mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
               delete_ds_on_fail: Optional[bool] = False) -> None:
     try:
@@ -112,6 +113,7 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
     return 0
 
 
+@mark_process(name='learn')
 def run_update(name: str, company_id: int):
     original_name = name
     name = f'{company_id}@@@@@{name}'

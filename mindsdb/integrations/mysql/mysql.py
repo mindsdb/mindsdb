@@ -205,7 +205,7 @@ class MySQL(Integration, MySQLConnectionChecker):
             columns = list(query_response[0].keys())
             return columns
         else:
-             return []
+            return []
     
     def get_tables_list(self):
         q= f"""

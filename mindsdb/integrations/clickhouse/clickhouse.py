@@ -161,3 +161,11 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         tables_list = self._query(q)
         tables= [f"{table[0]}.{table[1]}" for table in tables_list]
         return tables
+
+    def get_columns(self,query):
+        q = f"SELECT * FROM ({query}) LIMIT 1 FORMAT JSON"
+        query_result = self._query(q).json()
+        columns_info = query_result['meta']
+        columns= [column['name'] for column in columns_info]
+        return columns
+

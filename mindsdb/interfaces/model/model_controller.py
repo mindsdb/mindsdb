@@ -258,6 +258,7 @@ class ModelController():
         data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
         data['predict'] = predictor_record.to_predict[0]
         data['update'] = predictor_record.update_status
+        data['mindsdb_version'] = predictor_record.mindsdb_version
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
@@ -291,7 +292,9 @@ class ModelController():
             model_data = self.get_model_data(db_p.name, company_id=company_id)
             reduced_model_data = {}
 
-            for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update', 'data_source_name']:
+            for k in ['name', 'version', 'is_active', 'predict', 'status',
+                      'current_phase', 'accuracy', 'data_source', 'update',
+                      'data_source_name', 'mindsdb_version']:
                 reduced_model_data[k] = model_data.get(k, None)
 
             for k in ['train_end_at', 'updated_at', 'created_at']:

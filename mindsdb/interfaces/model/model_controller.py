@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from pandas.core.frame import DataFrame
 import psutil
 import datetime
 from copy import deepcopy
@@ -77,6 +78,11 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
+    def _get_from_data_df(self, from_data: dict) -> DataFrame:
+        ds_cls = getattr(mindsdb_datasources, from_data['class'])
+        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
+        return ds.df
+
     def _unpack_old_args(
         self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None
     ) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
@@ -110,9 +116,7 @@ class ModelController():
         ):
             problem_definition['ignore_features'] = [problem_definition['ignore_features']]
 
-        ds_cls = getattr(mindsdb_datasources, from_data['class'])
-        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
-        df = ds.df
+        df = self._get_from_data_df(from_data)
 
         return df, problem_definition, join_learn_process
 
@@ -405,7 +409,7 @@ class ModelController():
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
 
-        df, _, _ = self._unpack_old_args(from_data, {}, None)
+        df = self._get_from_data_df(from_data)
         p = FitProcess(predictor_record.id, df)
         p.start()
         if join_learn_process:

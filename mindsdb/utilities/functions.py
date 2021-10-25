@@ -54,11 +54,11 @@ def mark_process(name):
     def mark_process_wrapper(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            create_process_mark(name)
+            mark = create_process_mark(name)
             try:
                 return func(*args, **kwargs)
             finally:
-                delete_process_mark(name)
+                delete_process_mark(name, mark)
         return wrapper
     return mark_process_wrapper
 

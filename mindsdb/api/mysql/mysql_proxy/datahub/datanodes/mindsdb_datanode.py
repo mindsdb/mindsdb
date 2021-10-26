@@ -103,7 +103,7 @@ class MindsDBDataNode(DataNode):
     def _select_predictors(self):
         models = self.model_interface.get_models()
         columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
-                   'mindsdb_version', 'select_data_query', 'external_datasource',
+                   'mindsdb_version', 'error', 'select_data_query', 'external_datasource',
                    'training_options']
         return pd.DataFrame([[
             x['name'],
@@ -112,6 +112,7 @@ class MindsDBDataNode(DataNode):
             ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
             x['update'],
             x['mindsdb_version'],
+            x['error'],
             '',
             '',  # TODO
             ''  # TODO ?

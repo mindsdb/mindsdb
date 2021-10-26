@@ -309,7 +309,7 @@ class ModelController():
 
             for k in ['name', 'version', 'is_active', 'predict', 'status',
                       'current_phase', 'accuracy', 'data_source', 'update',
-                      'data_source_name', 'mindsdb_version']:
+                      'data_source_name', 'mindsdb_version', 'error']:
                 reduced_model_data[k] = model_data.get(k, None)
 
             for k in ['train_end_at', 'updated_at', 'created_at']:

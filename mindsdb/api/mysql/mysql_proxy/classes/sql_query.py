@@ -344,8 +344,9 @@ class SQLQuery():
                 values = []
                 for row in step_data:
                     for row_data in row.values():
-                        for v in row_data.values():
-                            values.append(v)
+                        for name, value in row_data.items():
+                            if name != '__mindsdb_row_id':
+                                values.append(value)
 
                 data = []
                 substep = step.step

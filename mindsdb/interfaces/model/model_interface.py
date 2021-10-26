@@ -47,13 +47,13 @@ class ModelInterface():
 
     def generate_predictor(self, *args, **kwargs):
         return self.controller.generate_predictor(*args, **kwargs)
-    
+
     def edit_json_ai(self, *args, **kwargs):
         return self.controller.edit_json_ai(*args, **kwargs)
-    
+
     def edit_code(self, *args, **kwargs):
         return self.controller.edit_code(*args, **kwargs)
-    
+
     def fit_predictor(self, *args, **kwargs):
         return self.controller.fit_predictor(*args, **kwargs)
 

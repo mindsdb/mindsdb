@@ -45,14 +45,17 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             dtype.audio: 'Nullable(String)',
             dtype.short_text: 'Nullable(String)',
             dtype.rich_text: 'Nullable(String)',
-            dtype.array: 'Nullable(String)'
+            dtype.array: 'Nullable(String)',
+            dtype.quantity: 'Nullable(String)',
+            dtype.tsarray: 'Nullable(String)',
+            'default': 'Nullable(String)'
         }
 
         column_declaration = []
         for name in columns:
             try:
                 col_subtype = dtype_dict[name]
-                new_type = subtype_map[col_subtype]
+                new_type = subtype_map.get(col_subtype, subtype_map.get('default'))
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')

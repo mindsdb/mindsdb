@@ -1,9 +1,9 @@
 site_name: MindsDB Documentation
-site_url: 'https://docs.mindsdb.com'
-repo_name: 'mindsdb/mindsdb'
-repo_url: 'https://github.com/mindsdb/mindsdb'
+site_url: "https://docs.mindsdb.com"
+repo_name: "mindsdb/mindsdb"
+repo_url: "https://github.com/mindsdb/mindsdb"
 theme:
-  name: 'material'
+  name: "material"
   custom_dir: overrides
   logo: assets/mdb_logo_w.svg
   favicon: assets/mdb_logo.png
@@ -22,31 +22,29 @@ theme:
       toggle:
         icon: material/toggle-switch
         name: Switch to light mode
-extra:
-  disqus: docs-mindsdb-com
 plugins:
-    - search:
-        lang: 'en'
-        social:
-          - type: 'github'
-            link: 'https://github.com/mindsdb/mindsdb'
-          - type: 'twitter'
-            link: 'https://twitter.com/mindsdb'
-          - type: 'link'
-            link: 'https://www.mindsdb.com'
-    - redirects:
-        redirect_maps:
-            'installation/Installing.md': 'index.md'
-            'Installing.md': 'index.md'
-            'databases/tutorials/AiTablesInPostgreSQL': 'tutorials/postgresql.md'
-            'databases/tutorials/AiTablesInMySQL': 'tutorials/mysql.md'
-            'databases/MariaDB': 'tutorials/mariadb.md'
-            'installation/Linux/': '/deployment/linux.md'
-            'installation/Windows/': '/deployment/windows.md'
-            'installation/MacOS/': '/deployment/macos.md'
-            'installation/macos/': '/deployment/macos.md'
-            'installation/linux/': '/deployment/linux.md'
-    - table-reader
+  - search:
+      lang: "en"
+      social:
+        - type: "github"
+          link: "https://github.com/mindsdb/mindsdb"
+        - type: "twitter"
+          link: "https://twitter.com/mindsdb"
+        - type: "link"
+          link: "https://www.mindsdb.com"
+  - redirects:
+      redirect_maps:
+        "installation/Installing.md": "index.md"
+        "Installing.md": "index.md"
+        "databases/tutorials/AiTablesInPostgreSQL": "tutorials/postgresql.md"
+        "databases/tutorials/AiTablesInMySQL": "tutorials/mysql.md"
+        "databases/MariaDB": "tutorials/mariadb.md"
+        "installation/Linux/": "/deployment/linux.md"
+        "installation/Windows/": "/deployment/windows.md"
+        "installation/MacOS/": "/deployment/macos.md"
+        "installation/macos/": "/deployment/macos.md"
+        "installation/linux/": "/deployment/linux.md"
+  - table-reader
 
 markdown_extensions:
   - codehilite
@@ -60,27 +58,27 @@ markdown_extensions:
 nav:
   - What is MindsDB: index.md
   - Deploying MindsDB:
-    - Docker: deployment/docker.md
-    - Pip: deployment/pypi.md
-    - MindsDB Cloud: deployment/cloud.md
+      - Docker: deployment/docker.md
+      - Pip: deployment/pypi.md
+      - MindsDB Cloud: deployment/cloud.md
   - Connect your data: connect.md
   - Connect to MindsDB as a Database:
       - Local Deployment: sql/connect/local.md
       - MindsDB Cloud: sql/connect/cloud.md
   - SQL:
-    - USE: sql/api/use.md
-    - CREATE:
-      - Predictor: sql/api/predictor.md
-      - View: sql/api/view.md
-    - DROP: sql/api/drop.md
-    - SELECT: sql/api/select.md
-    - JOIN: sql/api/join.md
+      - USE: sql/api/use.md
+      - CREATE:
+          - Predictor: sql/api/predictor.md
+          - View: sql/api/view.md
+      - DROP: sql/api/drop.md
+      - SELECT: sql/api/select.md
+      - JOIN: sql/api/join.md
   - Tutorials:
-    - Regression: sql/tutorials/test.md
-    - Classification: 
-      - Customer Churn: sql/tutorials/customer-churn.md
-      - Heart Disease: sql/tutorials/heart-disease.md
-    - Time series: sql/tutorials/test.md
+      - Regression: sql/tutorials/test.md
+      - Classification:
+          - Customer Churn: sql/tutorials/customer-churn.md
+          - Heart Disease: sql/tutorials/heart-disease.md
+      - Time series: sql/tutorials/test.md
   - Contribution and Community:
       - How to contribute: contribute.md
       - Join our community: community.md

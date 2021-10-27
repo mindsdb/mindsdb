@@ -79,12 +79,16 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
         dbw = DatabaseWrapper(predictor_record.company_id)
         mi = ModelInterfaceWrapper(ModelInterface(), predictor_record.company_id)
-        dbw.register_predictors([mi.get_model_data(predictor_record.name)])
     except Exception as e:
         session.refresh(predictor_record)
         predictor_record.data = {'error': f'{traceback.format_exc()}\nMain error: {e}'}
         session.commit()
         raise e
+
+    try:
+        dbw.register_predictors([mi.get_model_data(predictor_record.name)])
+    except Exception as e:
+        log.warn(e)
 
 
 @mark_process(name='learn')

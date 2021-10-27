@@ -230,7 +230,7 @@ N,  P,  K,  temperature,  humidity,   ph,           rainfall,     label
 77, 52, 17, 24.86374934,  65.7420046, 5.714799723,  75.82270467,  maize
 ```
  
-As you can see, the model correctly predicted the most appropriate `crop type` for our field.
+As you can see, the model correctly predicted the most appropriate crop type for our field.
 
 You are now done with the tutorial! 🎉
 

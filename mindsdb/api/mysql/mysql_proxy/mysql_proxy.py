@@ -406,7 +406,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     data_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
-        model_interface.learn(insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs)
+        try:
+            insert['predict'] = self._check_predict_columns(insert['predict'], ds_columns)
+        except Exception:
+            if is_select_data_query:
+                data_store.delete_datasource(ds_name)
+            raise
+
+        model_interface.learn(
+            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=is_select_data_query
+        )
 
         self.packet(OkPacket).send()
 
@@ -438,6 +447,43 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             predictor_fields=struct['predictor_fields']
         )
 
+        self.packet(OkPacket).send()
+
+    def _check_predict_columns(self, predict_column_names, ds_column_names):
+        ''' validate 'predict' column names
+
+            predict_column_names: list of 'predict' columns
+            ds_column_names: list of all datasource columns
+        '''
+        cleaned_predict_column_names = []
+        for predict_column_name in predict_column_names:
+            candidate = None
+            for column_name in ds_column_names:
+                if column_name == predict_column_name:
+                    if candidate is not None:
+                        raise Exception("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
+                    candidate = column_name
+            if candidate is None:
+                for column_name in ds_column_names:
+                    if column_name.lower() == predict_column_name.lower():
+                        if candidate is not None:
+                            raise Exception("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
+                        candidate = column_name
+            if candidate is None:
+                raise Exception("Datasource has not column with name '{predict_column_name}'")
+            cleaned_predict_column_names.append(candidate)
+
+        if len(cleaned_predict_column_names) != len(set(cleaned_predict_column_names)):
+            raise Exception("'predict' column name is duplicated")
+
+        return cleaned_predict_column_names
+
+    def answer_retrain_predictor(self, predictor_name):
+        model_interface = self.session.model_interface
+        models = model_interface.get_models()
+        if predictor_name not in [x['name'] for x in models]:
+            raise Exception(f"Can't retrain predictor. There is no predictor with name '{predictor_name}'")
+        model_interface.update_model(predictor_name)
         self.packet(OkPacket).send()
 
     def answer_create_predictor(self, struct):
@@ -472,6 +518,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 kwargs['timeseries_settings'] = timeseries_settings
             else:
                 kwargs['timeseries_settings'].update(timeseries_settings)
+
+        ds_column_names = [x['name'] for x in ds_data['columns']]
+        try:
+            predict = self._check_predict_columns(predict, ds_column_names)
+        except Exception:
+            data_store.delete_datasource(ds_name)
+            raise
 
         model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True)
 
@@ -998,6 +1051,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket).send()
         elif isinstance(statement, DropIntegration):
             raise Exception('Not ready')
+        elif keyword == 'retrain':
+            self.answer_retrain_predictor(struct['predictor_name'])
+            return
         elif isinstance(statement, Show) or keyword == 'show':
             sql_category = statement.category.lower()
             condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
@@ -1831,7 +1887,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'utf8mb4': ['utf8mb4', 'UTF-8 Unicode', 'utf8mb4_general_ci', 4]
         }
         if charset is None:
-            data = list(charset.values())
+            data = list(charsets.values())
         elif charset not in charsets:
             err_str = f'Unknown charset: {charset}'
             log.warning(err_str)

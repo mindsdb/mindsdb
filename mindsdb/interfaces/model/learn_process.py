@@ -79,14 +79,19 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
         dbw = DatabaseWrapper(predictor_record.company_id)
         mi = ModelInterfaceWrapper(ModelInterface(), predictor_record.company_id)
-        dbw.register_predictors([mi.get_model_data(predictor_record.name)])
     except Exception as e:
         session.refresh(predictor_record)
         predictor_record.data = {'error': f'{traceback.format_exc()}\nMain error: {e}'}
         session.commit()
         raise e
 
+    try:
+        dbw.register_predictors([mi.get_model_data(predictor_record.name)])
+    except Exception as e:
+        log.warn(e)
 
+
+@mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
               delete_ds_on_fail: Optional[bool] = False) -> None:
     try:
@@ -112,6 +117,7 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
     return 0
 
 
+@mark_process(name='learn')
 def run_update(name: str, company_id: int):
     original_name = name
     name = f'{company_id}@@@@@{name}'

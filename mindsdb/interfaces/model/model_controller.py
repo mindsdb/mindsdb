@@ -273,6 +273,7 @@ class ModelController():
         data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
         data['predict'] = predictor_record.to_predict[0]
         data['update'] = predictor_record.update_status
+        data['mindsdb_version'] = predictor_record.mindsdb_version
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
@@ -306,7 +307,9 @@ class ModelController():
             model_data = self.get_model_data(db_p.name, company_id=company_id)
             reduced_model_data = {}
 
-            for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update', 'data_source_name']:
+            for k in ['name', 'version', 'is_active', 'predict', 'status',
+                      'current_phase', 'accuracy', 'data_source', 'update',
+                      'data_source_name', 'mindsdb_version', 'error']:
                 reduced_model_data[k] = model_data.get(k, None)
 
             for k in ['train_end_at', 'updated_at', 'created_at']:
@@ -337,8 +340,14 @@ class ModelController():
 
         return 0
 
+    @mark_process(name='learn')
     def update_model(self, name: str, company_id: int):
         # TODO: Add version check here once we're done debugging
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        assert predictor_record is not None
+        predictor_record.update_status = 'updating'
+        db.session.commit()
+
         p = UpdateProcess(name, company_id)
         p.start()
         return 'Updated in progress'

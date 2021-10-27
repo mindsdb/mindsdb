@@ -75,14 +75,17 @@ class MySQL(Integration, MySQLConnectionChecker):
             dtype.audio: 'VARCHAR(500)',
             dtype.short_text: 'VARCHAR(500)',
             dtype.rich_text: 'VARCHAR(500)',
-            dtype.array: 'VARCHAR(500)'
+            dtype.array: 'VARCHAR(500)',
+            dtype.quantity: 'VARCHAR(500)',
+            dtype.tsarray: 'VARCHAR(500)',
+            'default': 'VARCHAR(500)'
         }
 
         column_declaration = []
         for name in columns:
             try:
                 col_subtype = dtype_dict[name]
-                new_type = subtype_map[col_subtype]
+                new_type = subtype_map.get(col_subtype, subtype_map.get('default'))
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
@@ -198,14 +201,14 @@ class MySQL(Integration, MySQLConnectionChecker):
         result = self._query(q)
         return result[0]['count']
 
-    def get_columns(self):
-        q = f"""SELECT COLUMN_NAME ,TABLE_NAME
-                    FROM INFORMATION_SCHEMA.COLUMNS 
-                    WHERE TABLE_SCHEMA = database()
-                    ORDER BY COLUMN_NAME, TABLE_NAME;"""
-        columns_list = self._query(q)
-        columns = [f"{columns[0]}.{columns[1]}" for columns in columns_list]
-        return columns
+    def get_columns(self,query):
+        q = f"""SELECT * from ({query}) LIMIT 1;"""
+        query_response = self._query(q)
+        if len(query_response) > 0:
+            columns = list(query_response[0].keys())
+            return columns
+        else:
+            return []
     
     def get_tables_list(self):
         q= f"""

@@ -209,7 +209,7 @@ With the address copied, head over to MindsDB GUI.
 
 In the main screen, select `ADD DATABASE`. Then add your integration details.
 
-![MindsDB PostgreSQL integration details](/assets/tutorials/process-quality/database-integration.png)
+![MindsDB PostgreSQL integration details](/docs/mindsdb-docs/docs/assets/sql/tutorials/process-quality/database-integration.png)
 
 Click `Connect`, you should now see your PostgresSQL database connection in the main screen.
 

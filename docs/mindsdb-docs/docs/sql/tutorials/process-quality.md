@@ -125,7 +125,7 @@ You should see a similar output.
 (10 rows)
 ```
 
-The last step is to change the table column names so that they don't contain spaces and special charactes. This will simplify things later. Use the following queries to change the column names.
+The last step is to change the table column names so that they don't contain spaces and special characters. This will simplify things later. Use the following queries to change the column names.
 
 ```sql
 ALTER TABLE process_quality
@@ -187,7 +187,7 @@ The recommended way of connecting a database to MindsDB is through MindsDB GUI. 
 Since our PostgreSQL instance is local we will use `ngrok` to make it available to MindsDB Cloud. If you are using a PostgreSQL instance that already has a public address or you have installed MindsDB locally you can skip this step.
 
 First you need to setup an ngrok tunnel with the following command.
-> If you have used a diffrent port for your PostgreSQL installation, remember to change it here.
+> If you have used a different port for your PostgreSQL installation, remember to change it here.
 
 ```bash
 ngrok tcp 5423
@@ -203,7 +203,7 @@ Region                        United States (us)
 Web Interface                 http://127.0.0.1:4040
 Forwarding                    tcp://x.tcp.ngrok.io:12345 -> localhost:5432
 ```
-Now you can copy the forowarded address from the above output. You are intrested in the `x.tcp.ngrok.io:12345` part.
+Now you can copy the forwarded address from the above output. You are interested in the `x.tcp.ngrok.io:12345` part.
 
 With the address copied, head over to MindsDB GUI.
 

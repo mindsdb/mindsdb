@@ -175,7 +175,7 @@ USE mindsdb;
 Use the following query to create a predictor that will predict the `label` (*crop type*) for the specific field parameters.
 
 ```sql
-CREATE PREDICTOR crop_predictor3
+CREATE PREDICTOR crop_predictor
 FROM crops_integration (
     SELECT * FROM crops
 ) PREDICT label as crop_type;
@@ -205,8 +205,6 @@ After the predictor has finished training, you will see a similar output.
 
 ```
 
-As you can see the accuracy of the model is 1. This is the result of using a limited dataset of 5000 rows. In reality when using the whole dataset, you will probably see a more reasonable accuracy.
-
 You are now done with creating the predictor! ✨
 
 ## Make predictions
@@ -218,7 +216,7 @@ To run a prediction against new or existing data, you can use the following quer
 ```sql
 SELECT label
 FROM mindsdb.crop_predictor
-WHERE when_data='{"N": 77, "P": 52, "K": 17, "temperature": 24, "humidity": 20.74, "ph": 5.71, "rainfall": 75.82}';
+WHERE when_data='{"N": 77, "P": 52, "K": 17, "temperature": 24, "humidity": 20.74, "ph": 5.71, "rainfall": 75.82}'\G
 ```
 
 ```console
@@ -232,7 +230,7 @@ N,  P,  K,  temperature,  humidity,   ph,           rainfall,     label
 77, 52, 17, 24.86374934,  65.7420046, 5.714799723,  75.82270467,  maize
 ```
  
-As you can see, the model predicted the most appropriate `crop type` for our field. When making predictions you can include different fields. As you can notice, we have only included the first 7 fields of our dataset. You are free to test different combinations.
+As you can see, the model correctly predicted the most appropriate `crop type` for our field.
 
 You are now done with the tutorial! 🎉
 

@@ -58,14 +58,17 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
             dtype.audio: 'text',
             dtype.short_text: 'text',
             dtype.rich_text: 'text',
-            dtype.array: 'text'
+            dtype.array: 'text',
+            dtype.quantity: 'text',
+            dtype.tsarray: 'text',
+            'default': 'text'
         }
 
         column_declaration = []
         for name in columns:
             try:
                 col_subtype = dtype_dict[name]
-                new_type = subtype_map[col_subtype]
+                new_type = subtype_map.get(col_subtype, subtype_map.get('default'))
                 column_declaration.append(f' "{name}" {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' "{name}_original" {new_type} ')

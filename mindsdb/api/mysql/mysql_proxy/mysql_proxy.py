@@ -1887,7 +1887,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'utf8mb4': ['utf8mb4', 'UTF-8 Unicode', 'utf8mb4_general_ci', 4]
         }
         if charset is None:
-            data = list(charset.values())
+            data = list(charsets.values())
         elif charset not in charsets:
             err_str = f'Unknown charset: {charset}'
             log.warning(err_str)

@@ -11,6 +11,7 @@
 
 
 import os
+import re
 import sys
 import socketserver as SocketServer
 import ssl
@@ -1013,6 +1014,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.sendPackageGroup(packages)
             return
         # ---
+
+        # region FIXME https://github.com/mindsdb/mindsdb_sql/issues/75
+        if sql.replace('\n\t', '') == "SELECT * FROM information_schema.TABLES t WHERE t.TABLE_SCHEMA = 'information_schema' AND t.TABLE_NAME = 'CHECK_CONSTRAINTS'":
+            sql = "SELECT * FROM information_schema.TABLES as t WHERE t.TABLE_SCHEMA = 'information_schema' AND t.TABLE_NAME = 'CHECK_CONSTRAINTS'"
+        # endregion
+
+        # region FIXME https://github.com/mindsdb/mindsdb_sql/issues/79
+        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<2> offset \g<1> ', sql, flags=re.IGNORECASE)
+        # endregion
 
         statement = SqlStatementParser(sql)
         sql = statement.sql

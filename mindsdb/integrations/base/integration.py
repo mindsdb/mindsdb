@@ -62,8 +62,9 @@ class StreamIntegration(Integration):
                                         predictor=dct['predictor'],
                                         stream_in=dct['stream_in'],
                                         stream_out=dct['stream_out'],
-                                        anomaly_stream=dct.get('anomaly_stream', None),
-                                        learning_stream=dct.get('learning_stream', None)
+                                        anomaly_stream=dct.get('stream_anomaly', None),
+                                        learning_params=dct.get('learning_params', None),
+                                        learning_threshold=dct.get('learning_threshold', None),
                                     )
                                     db.session.add(stream)
                                     db.session.commit()

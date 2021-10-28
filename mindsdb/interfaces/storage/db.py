@@ -155,7 +155,6 @@ class Stream(Base):
     stream_in = Column(String, nullable=False)
     stream_out = Column(String, nullable=False)
     anomaly_stream = Column(String)
-    learning_stream = Column(String)
     integration = Column(String)
     predictor = Column(String, nullable=False)
     company_id = Column(Integer)
@@ -163,6 +162,9 @@ class Stream(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     type = Column(String, default='unknown')
     connection_info = Column(Json, default={})
+    learning_params = Column(Json, default={})
+    learning_threshold = Column(Integer, default=0)
+
 
 
 Base.metadata.create_all(engine)

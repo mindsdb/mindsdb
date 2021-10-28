@@ -4,7 +4,7 @@ import walrus
 
 from mindsdb.integrations.base import StreamIntegration
 import mindsdb.interfaces.storage.db as db
-from mindsdb.streams import RedisStream, StreamController
+from mindsdb.streams import RedisStream, StreamController, StreamLearningController
 
 
 class RedisConnectionChecker:
@@ -39,12 +39,22 @@ class Redis(StreamIntegration, RedisConnectionChecker):
             control_stream=RedisStream(self.control_stream, self.connection_info) if self.control_stream else None
         )
 
-    def _make_stream(self, s: db.Stream) -> StreamController:
+    def _make_stream(self, s: db.Stream):
+        if s.learning_params and s.learning_threshold:
+            return StreamLearningController(
+                    s.name,
+                    s.pre,
+                    s.learning_params,
+                    learning_threshold=s.learning_threshold,
+                    stream_in=RedisStream(s.stream_in, self.connection_info),
+                    stream_out=RedisStream(s.stream_out, self.connection_info),
+                    integration=s.integration
+                    )
+
         return StreamController(
             s.name,
             s.predictor,
             stream_in=RedisStream(s.stream_in, self.connection_info),
             stream_out=RedisStream(s.stream_out, self.connection_info),
             anomaly_stream=RedisStream(s.anomaly_stream, self.connection_info) if s.anomaly_stream is not None else None,
-            learning_stream=RedisStream(s.learning_stream, self.connection_info) if s.learning_stream is not None else None,
         )

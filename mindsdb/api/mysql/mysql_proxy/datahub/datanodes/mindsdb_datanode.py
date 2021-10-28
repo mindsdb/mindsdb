@@ -60,9 +60,11 @@ class MindsDBDataNode(DataNode):
 
     def _get_ai_table_columns(self, table_name):
         aitable_record = self.ai_table.get_ai_table(table_name)
-        columns = (
-            [x['name'] for x in aitable_record.query_fields] + [x['name'] for x in aitable_record.predictor_columns]
-        )
+        columns = []
+        if isinstance(aitable_record.query_fields, list) and isinstance(aitable_record.predictor_columns, list):
+            columns = (
+                [x['name'] for x in aitable_record.query_fields] + [x['name'] for x in aitable_record.predictor_columns]
+            )
         return columns
 
     def _get_model_columns(self, table_name):

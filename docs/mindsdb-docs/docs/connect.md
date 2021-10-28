@@ -31,7 +31,7 @@
     7. Add Password for the user.
     8. Click on `CONNECT`.
 
-![Connect to database](assets/sql/datasource.gif)
+![Connect to database](/assets/sql/datasource.gif)
 
 !!! tip "Required inputs"
     Note: For different type of database there could be different required inputs you need to provide.

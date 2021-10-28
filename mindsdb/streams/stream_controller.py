@@ -1,7 +1,9 @@
 import os
 from threading import Event, Thread
 from time import time
+from tempfile import NamedTemporaryFile
 
+import requests
 import pandas as pd
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper, ModelInterface
@@ -142,3 +144,84 @@ class StreamController:
                             else:
                                 self.stream_out.write(res_list[-1])
                             cache[gb_value] = cache[gb_value][1:]
+
+
+class StreamLearningController:
+    def __init__(self, name, predictor, learning_params, stream_in, stream_out, learning_threshold=100):
+        self.name = name
+        self.predictor = predictor
+        self.learning_params = learning_params
+        self.learning_threshold = learning_threshold
+        self.learning_data = []
+
+        self.config = Config()
+        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        self.mindsdb_url = f"http://{self.config['api']['http']['host']}:{self.config['api']['http']['port']}"
+        self.mindsdb_api_root = self.mindsdb_url + "/api"
+        self.stream_in = stream_in
+        self.stream_out = stream_out
+        self.training_ds_name = self.predictor + "_training_ds"
+        self.thread = Thread(target=StreamLearningController._learn_model, args=(self,))
+
+        self.thread.start()
+
+    def _upload_ds(self, df):
+        with NamedTemporaryFile(mode='w+', newline='', delete=True) as f:
+            df.to_csv(f, index=False)
+            f.flush()
+            url = f'{self.mindsdb_api_root}/datasources/{self.training_ds_name}'
+            data = {
+                "source_type": (None, 'file'),
+                "file": (f.name, f, 'text/csv'),
+                "source": (None, f.name.split('/')[-1]),
+                "name": (None, self.training_ds_name)
+            }
+            res = requests.put(url, files=data)
+            res.raise_for_status()
+
+
+    def _collect_training_data(self):
+        threshold = time() + self.learning_threshold
+        while time() < threshold:
+            self.learning_data.extend(self.stream_in.read())
+        return pd.DataFrame.from_records(self.learning_data)
+
+    def _learn_model(self):
+        try:
+            p = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=self.predictor).first()
+            if p is not None:
+                predictor_name = f"TMP_{self.predictor}_TMP"
+            else:
+                predictor_name = self.predictor
+
+            df = self._collect_training_data()
+            self._upload_ds(df)
+            self.learning_params['data_source_name'] = self.training_ds_name
+            if ['kwargs'] not in self.learning_params:
+                self.learning_params['kwargs'] = {}
+            self.learning_params['kwargs']['join_learn_process'] = True
+            url = f'{self.mindsdb_api_root}/predictors/{predictor_name}'
+            res = requests.put(url, json=self.learning_params)
+            res.raise_for_status()
+
+            if p is not None:
+                delete_url = f'{self.mindsdb_api_root}/predictors/{self.predictor}'
+                rename_url = f'{self.mindsdb_api_root}/predictors/{predictor_name}/rename?new_name={self.predictor}'
+                res = requests.delete(delete_url)
+                res.raise_for_status()
+                res = requests.get(rename_url)
+                res.raise_for_status()
+            msg = {"action": "training", "predictor": self.predictor,
+                    "status": "success", "details": ""}
+        except Exception as e:
+            msg = {"action": "training", "predictor": self.predictor,
+                    "status": "error", "details": str(e)}
+        self.stream_out.write(msg)
+
+
+
+
+
+
+
+

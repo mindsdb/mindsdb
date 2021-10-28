@@ -496,15 +496,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         predictor_name = struct['predictor_name']
         integration_name = struct['integration_name']
 
-        if get_db_integration(integration_name, company_id) is None:
-            raise Exception(f"Unknown integration: {integration_name}")
+        if integration_name.lower().startswith('datasource.'):
+            ds_name = integration_name[integration_name.find('.') + 1:]
+            ds = data_store.get_datasource_obj(ds_name, raw=True)
+            ds_data = data_store.get_datasource(ds_name)
+        else:
+            if get_db_integration(integration_name, company_id) is None:
+                raise Exception(f"Unknown integration: {integration_name}")
 
-        ds_name = struct.get('datasource_name')
-        if ds_name is None:
-            ds_name = data_store.get_vacant_name(predictor_name)
+            ds_name = struct.get('datasource_name')
+            if ds_name is None:
+                ds_name = data_store.get_vacant_name(predictor_name)
 
-        ds = data_store.save_datasource(ds_name, integration_name, {'query': struct['select']})
-        ds_data = data_store.get_datasource(ds_name)
+            ds = data_store.save_datasource(ds_name, integration_name, {'query': struct['select']})
+            ds_data = data_store.get_datasource(ds_name)
 
         # TODO add alias here
         predict = [x['name'] for x in struct['predict']]

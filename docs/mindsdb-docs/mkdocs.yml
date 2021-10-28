@@ -72,6 +72,7 @@ nav:
     - CREATE:
       - Predictor: sql/api/predictor.md
       - View: sql/api/view.md
+    - RETRAIN: sql/api/retrain.md
     - DROP: sql/api/drop.md
     - SELECT: sql/api/select.md
     - JOIN: sql/api/join.md

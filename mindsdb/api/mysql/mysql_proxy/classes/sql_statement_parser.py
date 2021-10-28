@@ -356,7 +356,7 @@ class SqlStatementParser():
         }
 
         expr = (
-            Word("retrain").suppress() + Word(printables).setResultsName('predictor_name')
+            CaselessKeyword("retrain").suppress() + Word(printables).setResultsName('predictor_name')
         )
 
         r = expr.parseString(self._sql).asDict()
@@ -621,7 +621,7 @@ class SqlStatementParser():
     def test():
         tests = [
             [
-                'retrain predictor',
+                'retraIN predictor',
                 {
                     'keyword': 'retrain',
                     'struct': {

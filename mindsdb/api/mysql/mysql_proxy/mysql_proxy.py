@@ -11,6 +11,7 @@
 
 
 import os
+import re
 import sys
 import socketserver as SocketServer
 import ssl
@@ -39,6 +40,7 @@ from mindsdb_sql.parser.ast import (
     Function,
     Explain,
     Select,
+    Star,
     Show,
     Set,
 )
@@ -470,7 +472,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                             raise Exception("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
                         candidate = column_name
             if candidate is None:
-                raise Exception("Datasource has not column with name '{predict_column_name}'")
+                raise Exception(f"Datasource has not column with name '{predict_column_name}'")
             cleaned_predict_column_names.append(candidate)
 
         if len(cleaned_predict_column_names) != len(set(cleaned_predict_column_names)):
@@ -494,15 +496,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         predictor_name = struct['predictor_name']
         integration_name = struct['integration_name']
 
-        if get_db_integration(integration_name, company_id) is None:
-            raise Exception(f"Unknown integration: {integration_name}")
+        if integration_name.lower().startswith('datasource.'):
+            ds_name = integration_name[integration_name.find('.') + 1:]
+            ds = data_store.get_datasource_obj(ds_name, raw=True)
+            ds_data = data_store.get_datasource(ds_name)
+        else:
+            if get_db_integration(integration_name, company_id) is None:
+                raise Exception(f"Unknown integration: {integration_name}")
 
-        ds_name = struct.get('datasource_name')
-        if ds_name is None:
-            ds_name = data_store.get_vacant_name(predictor_name)
+            ds_name = struct.get('datasource_name')
+            if ds_name is None:
+                ds_name = data_store.get_vacant_name(predictor_name)
 
-        ds = data_store.save_datasource(ds_name, integration_name, {'query': struct['select']})
-        ds_data = data_store.get_datasource(ds_name)
+            ds = data_store.save_datasource(ds_name, integration_name, {'query': struct['select']})
+            ds_data = data_store.get_datasource(ds_name)
 
         # TODO add alias here
         predict = [x['name'] for x in struct['predict']]
@@ -1013,6 +1020,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         # ---
 
+        # region FIXME https://github.com/mindsdb/mindsdb_sql/issues/75
+        if sql.replace('\n\t', '') == "SELECT * FROM information_schema.TABLES t WHERE t.TABLE_SCHEMA = 'information_schema' AND t.TABLE_NAME = 'CHECK_CONSTRAINTS'":
+            sql = "SELECT * FROM information_schema.TABLES as t WHERE t.TABLE_SCHEMA = 'information_schema' AND t.TABLE_NAME = 'CHECK_CONSTRAINTS'"
+        # endregion
+
+        # region FIXME https://github.com/mindsdb/mindsdb_sql/issues/79
+        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<2> offset \g<1> ', sql, flags=re.IGNORECASE)
+        # endregion
+
         statement = SqlStatementParser(sql)
         sql = statement.sql
         sql_lower = sql.lower()
@@ -1058,6 +1074,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql_category = statement.category.lower()
             condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
             expression = statement.expression
+            if 'show plugins' in sql_lower:
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=['information_schema', 'PLUGINS'])
+                )
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.selectAnswer(query)
+                return
             if sql_category in ('databases', 'schemas'):
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
@@ -1213,6 +1240,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     raise Exception(err_str)
                 self.answer_show_table_status(table_name)
                 return
+            else:
+                raise Exception(f'Statement not implemented: {sql}')
         elif isinstance(statement, (StartTransaction, CommitTransaction, RollbackTransaction)):
             self.packet(OkPacket).send()
         elif keyword == 'set' or isinstance(statement, Set):

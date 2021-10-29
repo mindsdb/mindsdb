@@ -1,6 +1,7 @@
 # Manufacturing process quality
 
-Predicting process result quality is a common task in manufacturing analytics. Manufacturing plants commonly use quality predictions to gain a competitive edge over their competitors, improve their products or increase their customers satisfaction. **MindsDB** is a tool that can help you solve quality prediction tasks **easily** and **effectively**
+Predicting process result quality is a common task in manufacturing analytics. Manufacturing plants commonly use quality predictions to gain a competitive edge over their competitors, improve their products or increase their customers satisfaction. **MindsDB** is a tool that can help you solve quality prediction tasks **easily** and **effectively** using machine learning. 
+MindsDB abstracts ML models as virtual “AI Tables” in databases and you can make predictions just using normal SQL commands.
 
 In this tutorial you will learn how to predict the quality of a mining process using **MindsDB** and **PostgreSQL**.
 
@@ -182,11 +183,11 @@ You have now finished setting up the PostgreSQL database! 🐘
 
 In this section, you will connect your database to MindsDB.
 
-The recommended way of connecting a database to MindsDB is through MindsDB GUI. In this tutorial we will use the GUI at MindsDB Cloud.
+The recommended way of connecting a database to MindsDB is through MindsDB GUI. If you are using an open-source version, launch MindsDB Studio. In this tutorial we will use MindsDB Cloud that has GUI already.
 
 Since our PostgreSQL instance is local we will use `ngrok` to make it available to MindsDB Cloud. If you are using a PostgreSQL instance that already has a public address or you have installed MindsDB locally you can skip this step.
 
-First you need to setup an ngrok tunnel with the following command.
+First you need to set up an ngrok tunnel with the following command.
 > If you have used a different port for your PostgreSQL installation, remember to change it here.
 
 ```bash
@@ -209,17 +210,17 @@ With the address copied, head over to MindsDB GUI.
 
 In the main screen, select `ADD DATABASE`. Then add your integration details.
 
-![MindsDB PostgreSQL integration details](/docs/mindsdb-docs/docs/assets/sql/tutorials/process-quality/database-integration.png)
+![MindsDB PostgreSQL integration details](/assets/tutorials/process-quality/database-integration.png)
 
-Click `Connect`, you should now see your PostgresSQL database connection in the main screen.
+Click `Connect`, you should now see your PostgreSQL database connection in the main screen.
 
 You are now done with connecting MindsDB to your database! 🚀
 
 ## Create a predictor
 
-In this section you will connect to MindsDB with the MySql API and create a predictor.
+In this section you will connect to MindsDB with the MySql API and create a Predictor. It is in MindsDB terms a machine learning model, but all its complexity is automated and abstracted as a virtual “AI Table”. If you are an ML expert and want to tweak the model, MindsDB also allows you that (please refer to documentation).
 
-Use the following query to create a predictor that will predict the silica_concentrate at the end of our mining process.
+Use the following query to create a Predictor that will foretell the silica_concentrate at the end of our mining process.
 > The row number is limited to 5000 to speed up training but you can keep the whole dataset.
 ```sql
 CREATE PREDICTOR process_quality_predictor
@@ -228,19 +229,19 @@ FROM process_quality_integration (
 ) PREDICT silica_concentrate as quality USING {"ignore_columns": ["date"]};
 ```
 
-After creating the predictor you should se a similar output:
+After creating the Predictor you should see a similar output:
 
 ```console
 Query OK, 0 rows affected (2 min 27.52 sec)
 ```
 
-Now the predictor will begin training. You can check the status of the predictor with the following query.
+Now the Predictor will begin training. You can check the status with the following query.
 
 ```sql
 SELECT * FROM mindsdb.predictors WHERE name='quality_predictor';
 ```
 
-After the predictor has finished training, you will see a similar output.
+After the Predictor has finished training, you will see a similar output.
 
 ```console
 +-----------------------------+----------+----------+--------------------+-------------------+---------------------+------------------+
@@ -251,7 +252,7 @@ After the predictor has finished training, you will see a similar output.
 1 row in set (0.28 sec)
 ```
 
-As you can see the accuracy of the model is 1. This is the result of using a limited dataset of 5000 rows. In reality when using the whole dataset, you will probably see a more reasonable accuracy.
+As you can see the accuracy of the model is 1 (i.e. 100%). This is the result of using a limited dataset of 5000 rows. In reality when using the whole dataset, you will probably see a more reasonable accuracy.
 
 You are now done with creating the predictor! ✨
 
@@ -281,4 +282,6 @@ As you can see, the model predicted the `silica concentrate` for our data point.
 
 You are now done with the tutorial! 🎉
 
-For more check out other [tutorials and MindsDB documentation](https://docs.mindsdb.com/).
+Please feel free to try it yourself. Sign up for a free MindsDB account to get up and running in 5 minutes, and if you need any help, feel free to ask in Slack or Github.
+
+For more tutorials like this check out [MindsDB documentation](https://docs.mindsdb.com/).

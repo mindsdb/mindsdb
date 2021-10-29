@@ -77,6 +77,7 @@ nav:
   - Tutorials:
     - Regression: sql/tutorials/test.md
     - Classification: 
+      - Crop prediciton: sql/tutorials/crop-prediction.md
       - Customer Churn: sql/tutorials/customer-churn.md
       - Heart Disease: sql/tutorials/heart-disease.md
     - Time series: sql/tutorials/test.md

@@ -84,6 +84,8 @@ class SqlStatementParser():
                 self._struct = self.parse_as_create_ai_table()
             elif self._keyword == 'retrain':
                 self._struct = self.parse_as_retrain()
+            elif self._keyword == 'describe':
+                self._struct = self.parse_as_describe()
 
     @property
     def keyword(self):
@@ -144,12 +146,15 @@ class SqlStatementParser():
             commit
             explain
             drop
+            retrain
+            describe
 
             create_predictor
             create_ai_table
         '''
-        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DROP, RETRAIN = map(
-            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DROP RETRAIN".split()
+        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DROP, RETRAIN, DESCRIBE = map(
+            CaselessKeyword,
+            "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DROP RETRAIN DESCRIBE".split()
         )
         CREATE_PREDICTOR = CREATE + PREDICTOR
         CREATE_AI_TABLE = CREATE + AI + TABLE
@@ -162,6 +167,7 @@ class SqlStatementParser():
             | ROLLBACK | COMMIT | EXPLAIN
             | CREATE_PREDICTOR | CREATE_AI_TABLE
             | CREATE_VIEW | DROP | RETRAIN
+            | DESCRIBE
         )('keyword')
 
         r = expr.parseString(sql)
@@ -363,6 +369,24 @@ class SqlStatementParser():
 
         return result
 
+    def parse_as_describe(self) -> dict:
+        result = {
+            'predictor_name': None
+        }
+
+        expr = (
+            Word("retrain").suppress() + Word(printables).setResultsName('predictor_name')
+        )
+
+        r = expr.parseString(self._sql).asDict()
+        if isinstance(r.get('predictor_name'), str) is False:
+            raise Exception("Cant determine predictor name in 'describe' statement")
+
+        result.update(r)
+
+        return result
+
+
     def parse_as_delete(self) -> dict:
         ''' Parse delete. Example: 'delete from database.table where column_a= 1 and column_b = 2;'
         '''
@@ -411,7 +435,7 @@ class SqlStatementParser():
                 r['columns'] = [r['columns']]
                 r['values'] = [r['values']]
             if len(r['columns']) != len(r['values']):
-                raise SqlStatementParseError(f"Columns and values have different amounts")
+                raise SqlStatementParseError("Columns and values have different amounts")
 
             for i, val in enumerate(r['values']):
                 if isinstance(val, str) and val.lower() == 'null':

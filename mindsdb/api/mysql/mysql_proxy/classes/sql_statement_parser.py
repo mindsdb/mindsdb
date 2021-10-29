@@ -84,6 +84,8 @@ class SqlStatementParser():
                 self._struct = self.parse_as_create_ai_table()
             elif self._keyword == 'retrain':
                 self._struct = self.parse_as_retrain()
+            elif self._keyword == 'create_datasource':
+                self._struct = self.parse_as_create_datasource()
 
     @property
     def keyword(self):
@@ -147,13 +149,15 @@ class SqlStatementParser():
 
             create_predictor
             create_ai_table
+            create_datasource
         '''
-        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DROP, RETRAIN = map(
-            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DROP RETRAIN".split()
+        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DATASOURCE, DROP, RETRAIN = map(
+            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DATASOURCE DROP RETRAIN".split()
         )
         CREATE_PREDICTOR = CREATE + PREDICTOR
         CREATE_AI_TABLE = CREATE + AI + TABLE
         CREATE_VIEW = CREATE + VIEW
+        CREATE_DATASOURCE = CREATE + DATASOURCE
 
         expr = (
             START | SET | USE
@@ -162,6 +166,7 @@ class SqlStatementParser():
             | ROLLBACK | COMMIT | EXPLAIN
             | CREATE_PREDICTOR | CREATE_AI_TABLE
             | CREATE_VIEW | DROP | RETRAIN
+            | CREATE_DATASOURCE
         )('keyword')
 
         r = expr.parseString(sql)
@@ -364,6 +369,44 @@ class SqlStatementParser():
             raise Exception("Cant determine predictor name in 'retrain' statement")
 
         result.update(r)
+
+        return result
+
+    def parse_as_create_datasource(self) -> dict:
+        ''' Parse 'CREATE DATASOURCE' query
+            Example: CREATE DATASOURCE name FROM mysql WITH {"user": "admin", "password": "password", "host": "127.0.0.1"}
+        '''
+        result = {
+            'datasource_name': None,
+            'database_type': None,
+            'connection_args': None
+        }
+
+        expr = (
+            CaselessKeyword("create").suppress() + CaselessKeyword("datasource").suppress()
+            + Word(printables).setResultsName('datasource_name')
+            + CaselessKeyword("from").suppress()
+            + Word(printables).setResultsName('database_type')
+            + CaselessKeyword("with").suppress()
+            + originalTextFor(nestedExpr('{', '}'))('connection_args')
+        )
+
+        r = expr.parseString(self._sql).asDict()
+
+        datasource_name = r.get('datasource_name')
+        if isinstance(datasource_name, str) is False:
+            raise Exception("Cant determine datasource name")
+        result['datasource_name'] = datasource_name
+
+        database_type = r.get('database_type')
+        if isinstance(database_type, str) is False:
+            raise Exception("Cant determine database type")
+        result['database_type'] = database_type
+
+        try:
+            result['connection_args'] = json.loads(r.get('connection_args'))
+        except Exception:
+            raise Exception('Cant parse connection arguments.')
 
         return result
 

@@ -282,6 +282,6 @@ As you can see, the model predicted the `silica concentrate` for our data point.
 
 You are now done with the tutorial! 🎉
 
-Please feel free to try it yourself. Sign up for a free MindsDB account to get up and running in 5 minutes, and if you need any help, feel free to ask in Slack or Github.
+Please feel free to try it yourself. Sign up for a [free MindsDB account](https://cloud.mindsdb.com/signup?utm_medium=community&utm_source=ext.%20blogs&utm_campaign=blog-manufacturing-process-quality) to get up and running in 5 minutes, and if you need any help, feel free to ask in [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or [Github](https://github.com/mindsdb/mindsdb/discussions).
 
-For more tutorials like this check out [MindsDB documentation](https://docs.mindsdb.com/).
+For more tutorials like this, check out [MindsDB documentation](https://docs.mindsdb.com/).

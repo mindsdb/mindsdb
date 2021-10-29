@@ -664,6 +664,17 @@ class SqlStatementParser():
     def test():
         tests = [
             [
+                'CREATE DATASOURce name FROM mysql WITH {"user": "admin", "password": "password", "host": "127.0.0.1"}',
+                {
+                    'keyword': 'create_datasource',
+                    'struct': {
+                        'datasource_name': 'name',
+                        'database_type': 'mysql',
+                        'connection_args': {"user": "admin", "password": "password", "host": "127.0.0.1"}
+                    }
+                }
+            ],
+            [
                 'retraIN predictor',
                 {
                     'keyword': 'retrain',

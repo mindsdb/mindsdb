@@ -75,12 +75,13 @@ nav:
     - SELECT: sql/api/select.md
     - JOIN: sql/api/join.md
   - Tutorials:
-    - Regression: sql/tutorials/test.md
+    - Regression: 
+      - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
     - Classification: 
-      - Crop prediciton: sql/tutorials/crop-prediction.md
+      - Crop Recomendation: sql/tutorials/crop-prediction.md
       - Customer Churn: sql/tutorials/customer-churn.md
       - Heart Disease: sql/tutorials/heart-disease.md
-    - Time series: sql/tutorials/test.md
+    - Time series: sql/tutorials/mindsdb-superset-snowflake.md
   - Contribution and Community:
       - How to contribute: contribute.md
       - Join our community: community.md

@@ -253,7 +253,7 @@ JOIN mindsdb.crop_predictor AS predictions
 LIMIT 5;
 ```
 
-As you can see below, the predictor has made multiple predictions for each data point in the `collected_data` table! You can also try selecting other fields to get more insight on the predictions. See the [JOIN query documentation](https://docs.mindsdb.com/sql/api/join/) for more information.
+As you can see below, the predictor has made multiple predictions for each data point in the `collected_data` table! You can also try selecting other fields to get more insight on the predictions. See the [JOIN clause documentation](https://docs.mindsdb.com/sql/api/join/) for more information.
 
 ```console
 +------+------+------+-------------+----------+------+----------+---------------------+

@@ -1,6 +1,6 @@
 # Best crop type prediction
 
-Modern agriculture is becoming very dependant on technology. From advanced machinery to specially selected crops. All the technology produces a lot of data that can be used for better adjustment of the farming process. One use case of machine learning in agriculture could be the selection of the best crop for a specific field to maximize the potential yield. Such problems are often called *Classification Problems* in machine learning. With **MindsDB** you can easily use your existing database to create prediction models that help you make better business decisions.
+Modern agriculture is becoming very dependent on technology. From advanced machinery to specially selected crops. All the technology produces a lot of data that can be used for better adjustment of the farming process. One use case of machine learning in agriculture could be the selection of the best crop for a specific field to maximize the potential yield. Such problems are often called *Classification Problems* in machine learning. With **MindsDB** you can easily make automated machine learning predictions straight from your existing database. Even without advanced ML engineering skills, you can start leveraging predictive models that help you make better business decisions.
 
 In this tutorial you will learn how to predict the best crop type based on field parameters using **MindsDB** and **MariaDB**.
 
@@ -158,7 +158,7 @@ You are now done with connecting MindsDB to your database! 🚀
 
 ## Create a predictor
 
-In this section you will connect to MindsDB with the MySQL API and create a predictor.
+In this section you will connect to MindsDB with the MySQL API and create a predictor with a single SQL command. Predictor is in fact a complete machine learning model, with datasource columns serving as features, and MindsDB takes care of the rest of ML workflow automatically. There is a way to get your hands into the insides of the model to fine tune it, but we will not cover it in this tutorial.
 
 First you need to connect to MindsDB through the MySQL API. To do so, use the following command.
 > Remember to change the username for the connection
@@ -193,7 +193,7 @@ Now the predictor will begin training. You can check the status of the predictor
 SELECT * FROM mindsdb.predictors WHERE name='crop_predictor';
 ```
 
-After the predictor has finished training, you will see a similar output.
+After the predictor has finished training, you will see a similar output. Note that MindsDB does model testing for you automatically, so you will immediately see if the predictor is accurate enough.
 
 ```console
 +-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
@@ -253,7 +253,7 @@ JOIN mindsdb.crop_predictor1 AS predictions
 LIMIT 5;
 ```
 
-As you can see below, the predictor made multiple predictions for each data point in the `collected_data` table! You can also try selecting other fields to get more insight on the predictions. See the [JOIN query documentation](https://docs.mindsdb.com/sql/api/join/) for more information.
+As you can see below, the predictor has made multiple predictions for each data point in the `collected_data` table! You can also try selecting other fields to get more insight on the predictions. See the [JOIN query documentation](https://docs.mindsdb.com/sql/api/join/) for more information.
 
 ```console
 +------+------+------+-------------+----------+------+----------+---------------------+

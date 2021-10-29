@@ -199,7 +199,7 @@ After the predictor has finished training, you will see a similar output.
 +-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
 | name            | status   | accuracy           | predict | update_status | mindsdb_version | error | select_data_query | external_datasource | training_options |
 +-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
-| crop_predictor | complete | 0.9954545454545454 | label   | up_to_date    | 2.55.2          |       |                   |                     |                  |
+|  crop_predictor | complete | 0.9954545454545454 | label   | up_to_date    | 2.55.2          |       |                   |                     |                  |
 +-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
 1 row in set (0.29 sec)
 
@@ -253,7 +253,7 @@ JOIN mindsdb.crop_predictor1 AS predictions
 LIMIT 5;
 ```
 
-As you can see below, the predictor made multiple predictions for each data point in the `collected_data` table!
+As you can see below, the predictor made multiple predictions for each data point in the `collected_data` table! You can also try selecting other fields to get more insight on the predictions. See the [JOIN query documentation](https://docs.mindsdb.com/sql/api/join/) for more information.
 
 ```console
 +------+------+------+-------------+----------+------+----------+---------------------+

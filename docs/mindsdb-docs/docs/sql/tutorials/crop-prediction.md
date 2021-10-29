@@ -1,4 +1,8 @@
-# Best crop type prediction
+# Crop recomendation
+
+*Dataset: [Crop recomendation Data](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset)*
+
+*Communtiy Author: [pixpack](https://github.com/pixpack)*
 
 Modern agriculture is becoming very dependent on technology. From advanced machinery to specially selected crops. All the technology produces a lot of data that can be used for better adjustment of the farming process. One use case of machine learning in agriculture could be the selection of the best crop for a specific field to maximize the potential yield. Such problems are often called *Classification Problems* in machine learning. With **MindsDB** you can easily make automated machine learning predictions straight from your existing database. Even without advanced ML engineering skills, you can start leveraging predictive models that help you make better business decisions.
 
@@ -150,7 +154,7 @@ With the address copied, head over to MindsDB GUI.
 
 In the main screen, select `ADD DATABASE`. Then add your integration details.
 
-![MindsDB MariaDB integration details](/docs/mindsdb-docs/docs/assets/sql/tutorials/crop-prediction/database-integration-mariadb.png)
+![MindsDB MariaDB integration details](/assets/sql/tutorials/crop-prediction/database-integration-mariadb.png)
 
 Click `Connect`, you should now see your MariaDB database connection in the main screen.
 

@@ -1,4 +1,4 @@
-# Crop recomendation
+# Crop Recomendation
 
 *Dataset: [Crop recomendation Data](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset)*
 

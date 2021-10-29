@@ -95,7 +95,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from mindsdb.interfaces.database.integrations import get_db_integrations, get_db_integration
+from mindsdb.interfaces.database.integrations import get_db_integrations, get_db_integration, add_db_integration
 
 connection_id = 0
 
@@ -486,6 +486,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if predictor_name not in [x['name'] for x in models]:
             raise Exception(f"Can't retrain predictor. There is no predictor with name '{predictor_name}'")
         model_interface.update_model(predictor_name)
+        self.packet(OkPacket).send()
+
+    def answer_create_datasource(self, struct: dict):
+        ''' create new datasource (integration in old terms)
+            Args:
+                struct: data for creating integration
+        '''
+        company_id = self.session.company_id
+        datasource_name = struct['datasource_name']
+        database_type = struct['database_type']
+        connection_args = struct['connection_args']
+        connection_args['type'] = database_type
+
+        add_db_integration(datasource_name, connection_args, company_id)
         self.packet(OkPacket).send()
 
     def answer_create_predictor(self, struct):
@@ -1069,6 +1083,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise Exception('Not ready')
         elif keyword == 'retrain':
             self.answer_retrain_predictor(struct['predictor_name'])
+            return
+        elif keyword == 'create_datasource':
+            self.answer_create_datasource(struct)
             return
         elif isinstance(statement, Show) or keyword == 'show':
             sql_category = statement.category.lower()

@@ -41,10 +41,11 @@ class Redis(StreamIntegration, RedisConnectionChecker):
 
     def _make_stream(self, s: db.Stream):
         if s.learning_params and s.learning_threshold:
+            learning_params = json.loads(s.learning_params) if isinstance(s.learning_params, str) else s.learning_params
             return StreamLearningController(
                     s.name,
-                    s.pre,
-                    s.learning_params,
+                    s.predictor,
+                    learning_params,
                     learning_threshold=s.learning_threshold,
                     stream_in=RedisStream(s.stream_in, self.connection_info),
                     stream_out=RedisStream(s.stream_out, self.connection_info),

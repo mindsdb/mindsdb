@@ -1,6 +1,7 @@
 import os
+import traceback
 from threading import Event, Thread
-from time import time
+from time import time, sleep
 from tempfile import NamedTemporaryFile
 
 import requests
@@ -142,7 +143,7 @@ class StreamLearningController:
         self.thread.start()
 
     def _upload_ds(self, df):
-        with NamedTemporaryFile(mode='w+', newline='', delete=True) as f:
+        with NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)
             f.flush()
             url = f'{self.mindsdb_api_root}/datasources/{self.training_ds_name}'
@@ -155,11 +156,11 @@ class StreamLearningController:
             res = requests.put(url, files=data)
             res.raise_for_status()
 
-
     def _collect_training_data(self):
         threshold = time() + self.learning_threshold
         while time() < threshold:
             self.learning_data.extend(self.stream_in.read())
+            sleep(0.2)
         return pd.DataFrame.from_records(self.learning_data)
 
     def _learn_model(self):
@@ -174,7 +175,7 @@ class StreamLearningController:
             df = self._collect_training_data()
             self._upload_ds(df)
             self.learning_params['data_source_name'] = self.training_ds_name
-            if ['kwargs'] not in self.learning_params:
+            if 'kwargs' not in self.learning_params:
                 self.learning_params['kwargs'] = {}
             self.learning_params['kwargs']['join_learn_process'] = True
             url = f'{self.mindsdb_api_root}/predictors/{predictor_name}'
@@ -192,7 +193,7 @@ class StreamLearningController:
                     "status": "success", "details": ""}
         except Exception as e:
             msg = {"action": "training", "predictor": self.predictor,
-                    "status": "error", "details": str(e)}
+                    "status": "error", "details": traceback.format_exc()}
         self.stream_out.write(msg)
 
         # Need to delete its own record from db to mark is at outdated

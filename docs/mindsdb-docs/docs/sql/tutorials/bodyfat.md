@@ -1,6 +1,6 @@
 # Determining Body Fat Percentage
 
-Machine Learning powered data analysis can be performed quickly and efficiently by MindsDB to enable individuals to make accurate predictions for certain metrics based on a variety of associated values.  In this tutorial, we'll be using MindsDB and a MySQL database to predict body fat percentage based on several bodypart measurement criteria.
+Machine Learning powered data analysis can be performed quickly and efficiently by MindsDB to enable individuals to make accurate predictions for certain metrics based on a variety of associated values. MindsDB enables you to make predictions automatically using just SQL commands, all the ML workflow is automated, and abstracted as virtual “AI tables” in your database so you may start getting insights from forecasts right away. In this tutorial, we'll be using MindsDB and a MySQL database to predict body fat percentage based on several body part measurement criteria.
 
 ## Pre-requisites
 - A working copy of MindsDB.  Check out the [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/) installation guides to install locally, or get up and running in seconds using [MindsDB Cloud](https://docs.mindsdb.com/deployment/cloud/).
@@ -104,7 +104,7 @@ At this point, you have completed setting up the MySQL Database and loading the 
 ## Connect MindsDB to the Database
 In this section, you'll connect MindsDB to the database you've just set up.
 
-Start by heading to the MindsDB GUI.  For this tutorial, we'll be using MindsDB Cloud to connect to our database.
+Start by heading to the MindsDB GUI. If you use an open-source version, launch MindsDB Studio, but for this tutorial, we'll be using MindsDB Cloud to connect to our database.
 
 Click on Databases in the upper left, then on Add Database in the lower right.  In the popup screen, fill in the details for your MySQL database, and specify a name for the integration (here, we chose bodyfat_integration).  You can test if the database is connectable by clicking `Click Here to Test Connection`, and if all is well, click on the Connect button:
 
@@ -140,7 +140,7 @@ MySQL [(none)]>
 You have now connected to the MindsDB MySQL API successfully!
 
 ## Using SQL Commands to Train ML Models
-We will now train a new machine learning model for the dataset we've created.  In your mysql-client run the following command:
+We will now train a new machine learning model for the dataset we've created. In MindsDB terms it is called a Predictor. We will show how to create it automatically, but there is also a way to fine tune it, if you know what you are doing (check the [MindsDB docs](https://docs.mindsdb.com)).  Go to your mysql-client and run the following command:
 
 ```sql
 USE mindsdb;
@@ -212,4 +212,41 @@ This should return output similar to:
 
 As you can see, with around 99% confidence, MindsDB predicted the body fat percentage for this individual at 8.97%.  You can at this point feel free to alter the prospective individual's bodypart measurement parameters and make additional prediction queries if you'd like.  
 
-This concludes the tutorial!  Hopefully, following along has shown you how easy it is to apply machine learning to your dataset prediction needs by using MindsDB.  
+### Making Batch Predictions using the JOIN Command
+The above example showed how to make predictions for a single individual's bodyfat, but what if you had a table of bodypart measurements for a number of individuals, and wanted to make predictions for them all?  This is possible using the [JOIN command](https://docs.mindsdb.com/sql/api/join/), which allows for the combining of rows from a database table and the prediction model table on a related column.  
+
+The basic syntax to use the JOIN command is:
+```sql
+SELECT t.column_name1, t.column_name2, FROM integration_name.table AS t 
+JOIN mindsdb.predictor_name AS p WHERE t.column_name IN (value1, value2, ...);
+```
+
+For our purposes, we'll re-use the original data set, taking the Age, Density, Weight, Height, Neck circumference, Chest circumference, Abdomen circumference, and Hip circumference fields.  We'll also include the original BodyFat percentage to compare our predicted values against the originals.  Execute the following command:
+
+```sql
+SELECT t.Age, t.Density, t.Weight, t.Height, t.Neck, t.Chest, t.Abdomen, t.Hip, t.BodyFat, p.BodyFat AS predicted_BodyFat
+FROM bodyfat_integration.bodyfat AS t JOIN mindsdb.bodyfat_predictor AS p
+LIMIT 5;
+```
+
+This should return an output table similar to the following:
+```console
++------+---------+--------+--------+------+-------+---------+-------+---------+--------------------+
+| Age  | Density | Weight | Height | Neck | Chest | Abdomen | Hip   | BodyFat | predicted_BodyFat  |
++------+---------+--------+--------+------+-------+---------+-------+---------+--------------------+
+| 23   | 1.0708  | 154.25 | 67.75  | 36.2 | 93.1  | 85.2    | 94.5  | 12.3    | 12.475132275112655 |
+| 22   | 1.0853  | 173.25 | 72.25  | 38.5 | 93.6  | 83.0    | 98.7  | 6.1     | 6.07133439184195   |
+| 22   | 1.0414  | 154.0  | 66.25  | 34.0 | 95.8  | 87.9    | 99.2  | 25.3    | 25.156538398443754 |
+| 26   | 1.0751  | 184.75 | 72.25  | 37.4 | 101.8 | 86.4    | 101.2 | 10.4    | 10.696461885516461 |
+| 24   | 1.034   | 184.25 | 71.25  | 34.4 | 97.3  | 100.0   | 101.9 | 28.7    | 28.498772660802427 |
++------+---------+--------+--------+------+-------+---------+-------+---------+--------------------+
+5 rows in set (1.091 sec)
+```
+
+As you can see, a prediction has been generated for each row in the input table.  Additionally, our predicted bodyfat percentages align closely with the original values!  Note that even though we chose only to display the Age, Density, Weight, Height, Neck, Chest, Abdomen, and Hip measurements in this example, the predicted_BodyFat field was determined by taking into consideration all of the data fields in the original bodyfat table (as this table was JOINed with the bodyfat_predictor table, from which we selected the specified fields).  In order to make predictions based ONLY on the specified fields, we would have to create a new table containing only those fields, and JOIN that with the bodyfat_predictor table!
+
+You are now done with the tutorial! 🎉
+
+Please feel free to try it yourself. Sign up for a [free MindsDB account](https://cloud.mindsdb.com) to get up and running in 5 minutes, and if you need any help, feel free to ask in [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or [Github](https://github.com/mindsdb/mindsdb/discussions).
+
+For more tutorials like this check out [MindsDB documentation](https://docs.mindsdb.com/).

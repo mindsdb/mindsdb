@@ -60,9 +60,11 @@ class MindsDBDataNode(DataNode):
 
     def _get_ai_table_columns(self, table_name):
         aitable_record = self.ai_table.get_ai_table(table_name)
-        columns = (
-            [x['name'] for x in aitable_record.query_fields] + [x['name'] for x in aitable_record.predictor_columns]
-        )
+        columns = []
+        if isinstance(aitable_record.query_fields, list) and isinstance(aitable_record.predictor_columns, list):
+            columns = (
+                [x['name'] for x in aitable_record.query_fields] + [x['name'] for x in aitable_record.predictor_columns]
+            )
         return columns
 
     def _get_model_columns(self, table_name):
@@ -103,7 +105,7 @@ class MindsDBDataNode(DataNode):
     def _select_predictors(self):
         models = self.model_interface.get_models()
         columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
-                   'mindsdb_version', 'select_data_query', 'external_datasource',
+                   'mindsdb_version', 'error', 'select_data_query', 'external_datasource',
                    'training_options']
         return pd.DataFrame([[
             x['name'],
@@ -112,6 +114,7 @@ class MindsDBDataNode(DataNode):
             ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
             x['update'],
             x['mindsdb_version'],
+            x['error'],
             '',
             '',  # TODO
             ''  # TODO ?

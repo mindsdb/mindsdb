@@ -297,6 +297,7 @@ class SqlStatementParser():
         GROUP_BY = GROUP + BY
 
         word = Word(alphanums + "_")
+        worddot = Word(alphanums + "_" + ".")
 
         s_int = Word(nums).setParseAction(tokenMap(int))
 
@@ -307,8 +308,8 @@ class SqlStatementParser():
         using_item = Group(word('name') + Word('=').suppress() + (word | QuotedString("'"))('value'))
 
         expr = (
-            CREATE + PREDICTOR + word('predictor_name') + FROM + Optional(word)('integration_name')
-            + originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name'))
+            CREATE + PREDICTOR + word('predictor_name') + FROM + Optional(worddot)('integration_name')
+            + Optional(originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name')))
             + PREDICT
             + delimitedList(predict_item, delim=',')('predict')
             + Optional(ORDER_BY + delimitedList(order_item, delim=',')('order_by'))
@@ -325,9 +326,12 @@ class SqlStatementParser():
 
         # postprocessing
         r = r.asDict()
-        if r['select'].startswith('(') and r['select'].endswith(')'):
-            r['select'] = r['select'][1:-1]
-        r['select'] = r['select'].strip(' \n')
+        if 'select' in r:
+            if r['select'].startswith('(') and r['select'].endswith(')'):
+                r['select'] = r['select'][1:-1]
+            r['select'] = r['select'].strip(' \n')
+        else:
+            r['select'] = None
 
         using = r.get('using')
         if isinstance(using, str):
@@ -352,7 +356,7 @@ class SqlStatementParser():
         }
 
         expr = (
-            Word("retrain").suppress() + Word(printables).setResultsName('predictor_name')
+            CaselessKeyword("retrain").suppress() + Word(printables).setResultsName('predictor_name')
         )
 
         r = expr.parseString(self._sql).asDict()
@@ -570,6 +574,18 @@ class SqlStatementParser():
                 'using': {'x': 1, 'y': 'a'}
             }
         ], [
+            '''
+                CREATE PREDICTOR name
+                FROM file.name
+                PREDICT f1
+            ''',
+            {
+                'predictor_name': 'name',
+                'integration_name': 'file.name',
+                'select': None,
+                'predict': [{'name': 'f1'}]
+            }
+        ], [
             # '''
             # CREATE AI table ai_table_name
             # FROM integration (select * from table)
@@ -605,7 +621,7 @@ class SqlStatementParser():
     def test():
         tests = [
             [
-                'retrain predictor',
+                'retraIN predictor',
                 {
                     'keyword': 'retrain',
                     'struct': {

@@ -238,7 +238,7 @@ Query OK, 0 rows affected (2 min 27.52 sec)
 Now the Predictor will begin training. You can check the status with the following query.
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='quality_predictor';
+SELECT * FROM mindsdb.predictors WHERE name='process_quality_predictor';
 ```
 
 After the Predictor has finished training, you will see a similar output.
@@ -264,7 +264,7 @@ To run a prediction against new or existing data, you can use the following quer
 
 ```sql
 SELECT silica_concentrate, silica_concentrate_confidence, silica_concentrate_explain as Info
-FROM mindsdb.process_quality_predictor_1
+FROM mindsdb.process_quality_predictor
 WHERE when_data='{"iron_feed": 48.81, "silica_feed": 25.31, "starch_flow": 2504.94, "amina_flow": 309.448, "ore_pulp_flow": 377.6511682692, "ore_pulp_ph": 10.0607, "ore_pulp_density": 1.68676}';
 ```
 
@@ -279,6 +279,42 @@ The output should look similar to this.
 ```
 
 As you can see, the model predicted the `silica concentrate` for our data point. Again we can see a very high confidence due to the limited dataset. When making predictions you can include different fields. As you can notice, we have only included the first 7 fields of our dataset. You are free to test different combinations.
+
+In the previous example, we have made a prediction for a single data point. In a real scenario you might want to make predictions on multiple data points. In this case, MindsDB allows you to Join this other table with the Predictor. In result, you will get another table as an output with a predicted value as one of its columns.
+
+Let’s see how to make batch predictions.
+
+Use the following command to create the batch prediction.
+
+```sql
+SELECT 
+    collected_data.iron_feed,
+    collected_data.silica_feed,
+    collected_data.starch_flow,
+    collected_data.amina_flow,
+    collected_data.ore_pulp_flow,
+    collected_data.ore_pulp_ph,
+    collected_data.ore_pulp_density,
+    predictions.silica_concentrate_confidence as confidence,
+    predictions.silica_concentrate as predicted_silica_concentrate
+FROM process_quality_integration.process_quality AS collected_data
+JOIN mindsdb.process_quality_predictor AS predictions
+LIMIT 5;
+```
+
+As you can see below, the predictor has made multiple predictions for each data point in the `collected_data` table! You can also try selecting other fields to get more insight on the predictions. See the [JOIN clause documentation](https://docs.mindsdb.com/sql/api/join/) for more information.
+
+```console
++-----------+-------------+-------------+------------+---------------+-------------+------------------+------------+------------------------------+
+| iron_feed | silica_feed | starch_flow | amina_flow | ore_pulp_flow | ore_pulp_ph | ore_pulp_density | confidence | predicted_silica_concentrate |
++-----------+-------------+-------------+------------+---------------+-------------+------------------+------------+------------------------------+
+| 58.84     | 11.46       | 3277.34     | 564.209    | 403.242       | 9.88472     | 1.76297          | 0.99       | 2.129567174379606            |
+| 58.84     | 11.46       | 3333.59     | 565.308    | 401.016       | 9.88543     | 1.76331          | 0.99       | 2.129548423407259            |
+| 58.84     | 11.46       | 3400.39     | 565.674    | 399.551       | 9.88613     | 1.76366          | 0.99       | 2.130100408285386            |
+| 58.84     | 11.46       | 3410.55     | 563.843    | 397.559       | 9.88684     | 1.764            | 0.99       | 2.1298757513510136           |
+| 58.84     | 11.46       | 3408.98     | 559.57     | 401.719       | 9.88755     | 1.76434          | 0.99       | 2.130438907683961            |
++-----------+-------------+-------------+------------+---------------+-------------+------------------+------------+------------------------------+
+```
 
 You are now done with the tutorial! 🎉
 

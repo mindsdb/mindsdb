@@ -249,7 +249,7 @@ SELECT
     collected_data.rainfall,
     predictions.label as predicted_crop_type
 FROM crops_integration.crops AS collected_data
-JOIN mindsdb.crop_predictor1 AS predictions
+JOIN mindsdb.crop_predictor AS predictions
 LIMIT 5;
 ```
 

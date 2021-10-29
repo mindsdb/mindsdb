@@ -232,6 +232,42 @@ N,  P,  K,  temperature,  humidity,   ph,           rainfall,     label
  
 As you can see, the model correctly predicted the most appropriate crop type for our field.
 
+OK, we made a prediction using a single query, but what if you want to make a batch prediction for a large set of data in your database? In this case, MindsDB allows you to Join this other table with the Predictor. In result, you will get another table as an output with a predicted value as one of its columns.
+
+Let’s see how it works.
+
+Use the following command to create the batch prediction.
+
+```sql
+SELECT 
+    collected_data.N,
+    collected_data.P,
+    collected_data.K,
+    collected_data.temperature,
+    collected_data.humidity,
+    collected_data.ph,
+    collected_data.rainfall,
+    predictions.label as predicted_crop_type
+FROM crops_integration.crops AS collected_data
+JOIN mindsdb.crop_predictor1 AS predictions
+LIMIT 5;
+```
+
+As you can see below, the predictor made multiple predictions for each data point in the `collected_data` table!
+
+```console
++------+------+------+-------------+----------+------+----------+---------------------+
+| N    | P    | K    | temperature | humidity | ph   | rainfall | predicted_crop_type |
++------+------+------+-------------+----------+------+----------+---------------------+
+| 90   | 42   | 43   | 21          | 82.0     | 6.5  | 202.94   | rice                |
+| 85   | 58   | 41   | 22          | 80.32    | 7.04 | 226.66   | rice                |
+| 60   | 55   | 44   | 23          | 82.32    | 7.84 | 263.96   | rice                |
+| 74   | 35   | 40   | 26          | 80.16    | 6.98 | 242.86   | rice                |
+| 78   | 42   | 42   | 20          | 81.6     | 7.63 | 262.72   | rice                |
++------+------+------+-------------+----------+------+----------+---------------------+
+```
 You are now done with the tutorial! 🎉
+
+Please feel free to try it yourself. Sign up for a [free MindsDB account](https://cloud.mindsdb.com/signup?utm_medium=community&utm_source=ext.%20blogs&utm_campaign=blog-crop-detection) to get up and running in 5 minutes, and if you need any help, feel free to ask in [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or [Github](https://github.com/mindsdb/mindsdb/discussions).
 
 For more check out other [tutorials and MindsDB documentation](https://docs.mindsdb.com/).

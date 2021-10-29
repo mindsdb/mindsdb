@@ -31,7 +31,7 @@ docker pull mindsdb/mindsdb_beta
 
 By default, when you run the MindsDB container, it does not publish any of its ports. To make the ports available you must run the container by providing `-p` flag as:
 
-* `-p 47334:47334` - Map 47734 port which is used by the MindsDB GUI and the HTTP API. 
+* `-p 47334:47334` - Map 47334 port which is used by the MindsDB GUI and the HTTP API. 
 * `-p 47335:47335` - Map 47335 to use MindsDB MySQL API.
 * `-p 47336:47336` - Map  47336 port to use MindsDB MongoDB API.
 

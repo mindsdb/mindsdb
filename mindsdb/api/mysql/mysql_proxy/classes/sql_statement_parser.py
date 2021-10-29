@@ -379,7 +379,7 @@ class SqlStatementParser():
         }
 
         expr = (
-            Word("retrain").suppress() + Word(printables).setResultsName('predictor_name')
+            CaselessKeyword("describe").suppress() + Word(printables).setResultsName('predictor_name')
         )
 
         r = expr.parseString(self._sql).asDict()
@@ -389,7 +389,6 @@ class SqlStatementParser():
         result.update(r)
 
         return result
-
 
     def parse_as_delete(self) -> dict:
         ''' Parse delete. Example: 'delete from database.table where column_a= 1 and column_b = 2;'
@@ -643,94 +642,100 @@ class SqlStatementParser():
 
     @staticmethod
     def test():
-        tests = [
-            [
-                'retraIN predictor',
-                {
-                    'keyword': 'retrain',
-                    'struct': {
-                        'predictor_name': 'predictor'
+        tests = [[
+            'deSCribe predictor',
+            {
+                'keyword': 'describe',
+                'struct': {
+                    'predictor_name': 'predictor'
+                }
+            }
+        ], [
+            'retraIN predictor',
+            {
+                'keyword': 'retrain',
+                'struct': {
+                    'predictor_name': 'predictor'
+                }
+            }
+        ], [
+            'start transaction',
+            {'keyword': 'start'}
+        ], [
+            ' START transaction',
+            {'keyword': 'start'}
+        ], [
+            "insert into a.b(col1, col2) values ('val1', 'val2');",
+            {
+                'keyword': 'insert',
+                'struct': {
+                    'database': 'a',
+                    'table': 'b',
+                    'columns': ['col1', 'col2'],
+                    'values': ['val1', 'val2']
+                }
+            }
+        ], [
+            "insert into a values (1, 1.1, 'a A', '()', '?', ?);",
+            {
+                'keyword': 'insert',
+                'struct': {
+                    'database': None,
+                    'table': 'a',
+                    'columns': [],
+                    'values': [1, 1.1, 'a A', '()', '?', SQL_PARAMETER]
+                }
+            }
+        ], [
+            "insert into `a a`.`B B` (col1) values (1);",
+            {
+                'keyword': 'insert',
+                'struct': {
+                    'database': 'a a',
+                    'table': 'B B',
+                    'columns': ['col1'],
+                    'values': [1]
+                }
+            }
+        ], [
+            "delete from database_a.table_a where column_a = 1",
+            {
+                'keyword': 'delete',
+                'struct': {
+                    'database': 'database_a',
+                    'table': 'table_a',
+                    'where': {
+                        'column_a': 1
                     }
                 }
-            ], [
-                'start transaction',
-                {'keyword': 'start'}
-            ], [
-                ' START transaction',
-                {'keyword': 'start'}
-            ], [
-                "insert into a.b(col1, col2) values ('val1', 'val2');",
-                {
-                    'keyword': 'insert',
-                    'struct': {
-                        'database': 'a',
-                        'table': 'b',
-                        'columns': ['col1', 'col2'],
-                        'values': ['val1', 'val2']
+            }
+        ], [
+            "delete from table_a where column_a = 1 and column_b = ?;",
+            {
+                'keyword': 'delete',
+                'struct': {
+                    'database': None,
+                    'table': 'table_a',
+                    'where': {
+                        'column_a': 1,
+                        'column_b': SQL_PARAMETER
                     }
                 }
-            ], [
-                "insert into a values (1, 1.1, 'a A', '()', '?', ?);",
-                {
-                    'keyword': 'insert',
-                    'struct': {
-                        'database': None,
-                        'table': 'a',
-                        'columns': [],
-                        'values': [1, 1.1, 'a A', '()', '?', SQL_PARAMETER]
+            }
+        ], [
+            "delete from database_c.table_a where column_a = ? and column_b = ?;",
+            {
+                'keyword': 'delete',
+                'struct': {
+                    'database': 'database_c',
+                    'table': 'table_a',
+                    'where': {
+                        'column_a': SQL_PARAMETER,
+                        'column_b': SQL_PARAMETER
                     }
                 }
-            ], [
-                "insert into `a a`.`B B` (col1) values (1);",
-                {
-                    'keyword': 'insert',
-                    'struct': {
-                        'database': 'a a',
-                        'table': 'B B',
-                        'columns': ['col1'],
-                        'values': [1]
-                    }
-                }
-            ], [
-                "delete from database_a.table_a where column_a = 1",
-                {
-                    'keyword': 'delete',
-                    'struct': {
-                        'database': 'database_a',
-                        'table': 'table_a',
-                        'where': {
-                            'column_a': 1
-                        }
-                    }
-                }
-            ], [
-                "delete from table_a where column_a = 1 and column_b = ?;",
-                {
-                    'keyword': 'delete',
-                    'struct': {
-                        'database': None,
-                        'table': 'table_a',
-                        'where': {
-                            'column_a': 1,
-                            'column_b': SQL_PARAMETER
-                        }
-                    }
-                }
-            ], [
-                "delete from database_c.table_a where column_a = ? and column_b = ?;",
-                {
-                    'keyword': 'delete',
-                    'struct': {
-                        'database': 'database_c',
-                        'table': 'table_a',
-                        'where': {
-                            'column_a': SQL_PARAMETER,
-                            'column_b': SQL_PARAMETER
-                        }
-                    }
-                }
-            ]
-        ]
+            }
+        ]]
         for test in tests:
             sql = test[0]
             print(sql)

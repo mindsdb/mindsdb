@@ -280,7 +280,7 @@ The output should look similar to this.
 
 As you can see, the model predicted the `silica concentrate` for our data point. Again we can see a very high confidence due to the limited dataset. When making predictions you can include different fields. As you can notice, we have only included the first 7 fields of our dataset. You are free to test different combinations.
 
-In the previous example, we have made a prediction for a single data point. In a real scenario you might want to make predictions on multiple data points. In this case, MindsDB allows you to Join this other table with the Predictor. In result, you will get another table as an output with a predicted value as one of its columns.
+In the previous example, we have made a prediction for a single data point. In a real scenario, you might want to make predictions on multiple data points. In this case, MindsDB allows you to Join this other table with the Predictor. In result, you will get another table as an output with a predicted value as one of its columns.
 
 Let’s see how to make batch predictions.
 

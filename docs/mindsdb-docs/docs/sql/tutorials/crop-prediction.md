@@ -123,7 +123,7 @@ You have now finished setting up the MariaDB database!
 
 In this section, you will connect your database to MindsDB.
 
-The recommended way of connecting a database to MindsDB is through MindsDB GUI. In this tutorial we will use the GUI at MindsDB Cloud.
+The recommended way of connecting a database to MindsDB is through its GUI. In the open source version you need to launch MindsDB Studio, but in this tutorial we will use the GUI at MindsDB Cloud.
 
 Since our MariaDB instance is local we will use `ngrok` to make it available to MindsDB Cloud. If you are using a MariaDB instance that already has a public address or you have installed MindsDB locally you can skip this step.
 

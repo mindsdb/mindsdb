@@ -480,6 +480,55 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         return cleaned_predict_column_names
 
+    def answer_describe_predictor(self, predictor_name):
+        model_interface = self.session.model_interface
+        models = model_interface.get_models()
+        if predictor_name not in [x['name'] for x in models]:
+            raise Exception(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
+        description = model_interface.get_model_description(predictor_name)
+        description = [
+            description['accuracies'],
+            description['column_importances'],
+            description['outputs'],
+            description['inputs'],
+            description['datasource'],
+            description['model']
+        ]
+        packages = self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'accuracies',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'column_importances',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': "outputs",
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'inputs',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'datasource',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'model',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=[description]
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+        return
+
     def answer_retrain_predictor(self, predictor_name):
         model_interface = self.session.model_interface
         models = model_interface.get_models()
@@ -1067,6 +1116,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket).send()
         elif isinstance(statement, DropIntegration):
             raise Exception('Not ready')
+        elif keyword == 'describe':
+            self.answer_describe_predictor(struct['predictor_name'])
+            return
         elif keyword == 'retrain':
             self.answer_retrain_predictor(struct['predictor_name'])
             return

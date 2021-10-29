@@ -87,7 +87,6 @@ class Stream(Resource):
             stream_in=params['stream_in'],
             stream_out=params['stream_out'],
             anomaly_stream=params.get('anomaly_stream'),
-            learning_stream=params.get('learning_stream'),
             type = params.get('type'),
             connection_info = params.get('connection')
         )

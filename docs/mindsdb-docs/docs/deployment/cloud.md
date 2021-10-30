@@ -4,16 +4,16 @@ For a quick jumpstart into using MindsDB you can sign up for our Cloud. MindsDB 
 
 1. Create an account by visiting the [cloud.mindsdb.com/signup](https://cloud.mindsdb.com/signup) and filling out the sign-up form.
 
-    ![Sign up](/assets/cloud/login.png)
+   ![Sign up](./assets/cloud/login.png)
 
-2. After sign up, you will get a confirmation email to validate your account.    
+2. After sign up, you will get a confirmation email to validate your account.
 
-    ![Validate](/assets/cloud/email.png)
+   ![Validate](./assets/cloud/email.png)
 
 3. Once your account is validated, you can login to MindsDB Cloud.
 
-    ![Login](/assets/cloud/ready.png)
+   ![Login](./assets/cloud/ready.png)
 
 4. Now, you are ready to use MindsDB Cloud.
 
-    ![GUI](/assets/cloud/gui.png)
+   ![GUI](./assets/cloud/gui.png)

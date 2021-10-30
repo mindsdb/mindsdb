@@ -8,7 +8,6 @@ docker run hello-world
 
 You should see the `Hello from Docker!` message displayed. If not, check the <a href="https://www.docker.com/get-started" target="_blank">Get Started</a> documentation.
 
-
 ### MindsDB container
 
 MindsDB images are uploaded to the <a href="https://hub.docker.com/u/mindsdb" target="_blank">MindsDB repo on docker hub</a> after each release.
@@ -31,9 +30,9 @@ docker pull mindsdb/mindsdb_beta
 
 By default, when you run the MindsDB container, it does not publish any of its ports. To make the ports available you must run the container by providing `-p` flag as:
 
-* `-p 47334:47334` - Map 47334 port which is used by the MindsDB GUI and the HTTP API. 
-* `-p 47335:47335` - Map 47335 to use MindsDB MySQL API.
-* `-p 47336:47336` - Map  47336 port to use MindsDB MongoDB API.
+- `-p 47334:47334` - Map 47334 port which is used by the MindsDB GUI and the HTTP API.
+- `-p 47335:47335` - Map 47335 to use MindsDB MySQL API.
+- `-p 47336:47336` - Map 47336 port to use MindsDB MongoDB API.
 
 #### Start container
 
@@ -43,15 +42,13 @@ Next, run the below command to start the container:
 docker run -p 47334:47334 mindsdb/mindsdb
 ```
 
-![Docker run](/assets/docker-install.gif)
+![Docker run](./assets/docker-install.gif)
 
 That's it. MindsDB should automatically start the Studio on your default browser.
 
 !!! warning "MKL Issues"
-	Note. If you experience any issue related to MKL or if your training process does not complete, please add env var or starter Docker with this command:
-	```
-	docker run --env MKL_SERVICE_FORCE_INTEL=1 -it -p 47334:47334 mindsdb/mindsdb
-	```
+Note. If you experience any issue related to MKL or if your training process does not complete, please add env var or starter Docker with this command:
+` docker run --env MKL_SERVICE_FORCE_INTEL=1 -it -p 47334:47334 mindsdb/mindsdb `
 
 #### Extend config.json
 
@@ -61,4 +58,4 @@ If you want to extend the default configuration, you will be able to send the co
 docker run -e MDB_CONFIG_CONTENT='{"api":{"http": {"host": "0.0.0.0","port": "47334"}}}' mindsdb/mindsdb
 ```
 
-Or, you can pipe `<`  the content of the file to the MDB_CONFIG_CONTENT.
+Or, you can pipe `<` the content of the file to the MDB_CONFIG_CONTENT.

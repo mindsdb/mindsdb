@@ -94,7 +94,7 @@ Let’s see how we can use machine learning with MindsDB to optimize the number 
 
 ## Set Up MindsDB
 
-First things first! You need to connect your database to MindsDB. One of the easy ways to do so is to create a MindsDB cloud account. If you prefer to deploy MindsDB locally, please refer to installation instructions via Docker or PyPI.
+First things first! You need to connect your database to MindsDB. One of the easy ways to do so is to create a [MindsDB cloud](https://docs.mindsdb.com/deployment/cloud/) account. If you prefer to deploy MindsDB locally, please refer to installation instructions via [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPI](https://docs.mindsdb.com/deployment/pypi/).
 
 Once an account is created you can connect to Snowflake using standard parameters like database name (in this case the Chicago Transit Authority), host, port, username, password, etc.
 

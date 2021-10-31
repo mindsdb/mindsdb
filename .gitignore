@@ -11,7 +11,6 @@ my_model.zip
 model.py
 tests/integration_tests/flows/model.py
 tests/integration_tests/flows/my_model.zip
-.vscode
 distributions/docker-compose/*/storage
 venv/*
 root
@@ -22,3 +21,8 @@ tests/prediction_latency_test/*.csv
 storage_dir
 docker/dist/*
 .directory
+
+# VisualStudioCode
+.vscode
+.vscode/*
+.history

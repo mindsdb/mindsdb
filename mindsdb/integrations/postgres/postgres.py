@@ -58,14 +58,17 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
             dtype.audio: 'text',
             dtype.short_text: 'text',
             dtype.rich_text: 'text',
-            dtype.array: 'text'
+            dtype.array: 'text',
+            dtype.quantity: 'text',
+            dtype.tsarray: 'text',
+            'default': 'text'
         }
 
         column_declaration = []
         for name in columns:
             try:
                 col_subtype = dtype_dict[name]
-                new_type = subtype_map[col_subtype]
+                new_type = subtype_map.get(col_subtype, subtype_map.get('default'))
                 column_declaration.append(f' "{name}" {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' "{name}_original" {new_type} ')
@@ -210,11 +213,11 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
         tables= [f"{table['table_schema']}.{table['table_name']}" for table in tables_list]
         return tables
 
-    def get_columns(self):
-        q = f"""SELECT column_name, table_name
-		FROM information_schema.columns
-		WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
-		ORDER BY column_name, table_name;"""
-        columns_list = self._query(q)
-        columns = [f"{columns[0]}.{columns[1]}" for columns in columns_list]
-        return columns
+    def get_columns(self,query):
+        q = f"""SELECT * from ({query}) LIMIT 1;"""
+        query_response = self._query(q)
+        if len(query_response) > 0:
+            columns = list(query_response[0].keys())
+            return columns
+        else:
+            return []

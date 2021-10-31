@@ -1,7 +1,9 @@
 import os
+import time
 import tempfile
 import threading
 from pathlib import Path
+from typing import Optional
 
 from appdirs import user_data_dir
 
@@ -42,23 +44,37 @@ def create_dirs_recursive(path):
         raise ValueError(f'Wrong path: {path}')
 
 
-def _get_process_mark_id():
-    return f'{os.getpid()}-{threading.get_ident()}'
+def _get_process_mark_id(unified: bool = False) -> str:
+    ''' Creates a text that can be used to identify process+thread
+        Args:
+            unified: bool, if True then result will be same for same process+thread
+        Returns:
+            mark of process+thread
+    '''
+    mark = f'{os.getpid()}-{threading.get_ident()}'
+    if unified is True:
+        return mark
+    return f"{mark}-{str(time.time()).replace('.', '')}"
 
 
 def create_process_mark(folder='learn'):
+    mark = None
     if os.name == 'posix':
         p = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{folder}/')
         p.mkdir(parents=True, exist_ok=True)
+        mark = _get_process_mark_id()
         p.joinpath(_get_process_mark_id()).touch()
+    return mark
 
 
-def delete_process_mark(folder='learn'):
+def delete_process_mark(folder: str = 'learn', mark: Optional[str] = None):
+    if mark is None:
+        mark = _get_process_mark_id()
     if os.name == 'posix':
         p = (
             Path(tempfile.gettempdir())
             .joinpath(f'mindsdb/processes/{folder}/')
-            .joinpath(_get_process_mark_id())
+            .joinpath(mark)
         )
         if p.exists():
             p.unlink()

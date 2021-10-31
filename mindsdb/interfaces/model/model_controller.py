@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from pandas.core.frame import DataFrame
 import psutil
 import datetime
 from copy import deepcopy
@@ -77,11 +78,23 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
-    def _unpack_old_args(self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
-        if to_predict is not None:
-            problem_definition = {'target': to_predict if isinstance(to_predict, str) else to_predict[0]}
-        else:
-            problem_definition = kwargs
+    def _get_from_data_df(self, from_data: dict) -> DataFrame:
+        ds_cls = getattr(mindsdb_datasources, from_data['class'])
+        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
+        return ds.df
+
+    def _unpack_old_args(
+        self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None
+    ) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
+        problem_definition = kwargs or {}
+        if isinstance(to_predict, str):
+            problem_definition['target'] = to_predict
+        elif isinstance(to_predict, list) and len(to_predict) == 1:
+            problem_definition['target'] = to_predict[0]
+        elif problem_definition.get('target') is None:
+            raise Exception(
+                f"Predict target must be 'str' or 'list' with 1 element. Got: {to_predict}"
+            )
 
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
@@ -96,12 +109,14 @@ class ModelController():
 
         if kwargs.get('ignore_columns') is not None:
             problem_definition['ignore_features'] = kwargs['ignore_columns']
-            if isinstance(problem_definition['ignore_features'], list) is False:
-                problem_definition['ignore_features'] = [problem_definition['ignore_features']]
 
-        ds_cls = getattr(mindsdb_datasources, from_data['class'])
-        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
-        df = ds.df
+        if (
+            problem_definition.get('ignore_features') is not None
+            and isinstance(problem_definition['ignore_features'], list) is False
+        ):
+            problem_definition['ignore_features'] = [problem_definition['ignore_features']]
+
+        df = self._get_from_data_df(from_data)
 
         return df, problem_definition, join_learn_process
 
@@ -258,6 +273,7 @@ class ModelController():
         data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
         data['predict'] = predictor_record.to_predict[0]
         data['update'] = predictor_record.update_status
+        data['mindsdb_version'] = predictor_record.mindsdb_version
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
@@ -291,7 +307,9 @@ class ModelController():
             model_data = self.get_model_data(db_p.name, company_id=company_id)
             reduced_model_data = {}
 
-            for k in ['name', 'version', 'is_active', 'predict', 'status', 'current_phase', 'accuracy', 'data_source', 'update', 'data_source_name']:
+            for k in ['name', 'version', 'is_active', 'predict', 'status',
+                      'current_phase', 'accuracy', 'data_source', 'update',
+                      'data_source_name', 'mindsdb_version', 'error']:
                 reduced_model_data[k] = model_data.get(k, None)
 
             for k in ['train_end_at', 'updated_at', 'created_at']:
@@ -322,8 +340,14 @@ class ModelController():
 
         return 0
 
+    @mark_process(name='learn')
     def update_model(self, name: str, company_id: int):
         # TODO: Add version check here once we're done debugging
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        assert predictor_record is not None
+        predictor_record.update_status = 'updating'
+        db.session.commit()
+
         p = UpdateProcess(name, company_id)
         p.start()
         return 'Updated in progress'
@@ -394,7 +418,7 @@ class ModelController():
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
 
-        df, _, _ = self._unpack_old_args(from_data, {}, None)
+        df = self._get_from_data_df(from_data)
         p = FitProcess(predictor_record.id, df)
         p.start()
         if join_learn_process:

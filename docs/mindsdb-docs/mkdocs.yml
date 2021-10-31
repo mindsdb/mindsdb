@@ -57,7 +57,7 @@ markdown_extensions:
       custom_checkbox: true
 nav:
   - What is MindsDB: index.md
-  - Deploying MindsDB:
+  - Getting Started Guide:
     - Docker: deployment/docker.md
     - Pip: deployment/pypi.md
     - MindsDB Cloud: deployment/cloud.md

@@ -76,6 +76,7 @@ nav:
     - JOIN: sql/api/join.md
   - Tutorials:
     - Regression: 
+      - Bodyfat Prediction: sql/tutorials/bodyfat.md
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
     - Classification: 
       - Crop Recomendation: sql/tutorials/crop-prediction.md

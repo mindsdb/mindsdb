@@ -28,7 +28,7 @@ MindsDB brings machine learning to existing SQL databases with a concept called 
 
 Let’s consider the following income table that stores the income and debt values.
 
-```
+```sql
 SELECT income, debt FROM income_table;
 ```
 
@@ -40,7 +40,7 @@ A simple visualization of the data present in the income table is as follows.
 
 Querying the income table to get the debt value for a particular income value results in the following.
 
-```
+```sql
 SELECT income, debt FROM income
 WHERE income = 80000;
 ```
@@ -51,7 +51,7 @@ WHERE income = 80000;
 
 But what happens when we query the table for income value that is not present?
 
-```
+```sql
 SELECT income, debt FROM income WHERE income = 90000;
 ```
 
@@ -105,14 +105,14 @@ Once an account is created you can connect to Snowflake using standard parameter
 
 MindsDB works through a MySQL Wire protocol. Therefore, you can connect to it using any MySQL client. Here, we’ll use the DBeaver database client and can see the Snowflake databases we are connected to.
 
-![Dbeaver connect](/assets/sql/tutorials/snowflake-superset/10-DBeaver connection.png)
+![Dbeaver connect](/assets/sql/tutorials/snowflake-superset/10-DBeaver_connection.png)
 
 ### Step 1: Getting the Training Data
 
 We start by getting the training data from the database that we connected to our MindsDB cloud account. It is always good to first make sure that all the databases are present and the connections correct.
 
 
-```
+```sql
 show databases;
 ```
 
@@ -126,7 +126,7 @@ MindsDB comes with some built-in databases as follows:
 
 The SNF database is the database of the Chicago Transit Authority that we connected. It provides us with the training data. Let’s check it.
 
-```
+```sql
 SELECT *
 FROM CHICAGO_TRANSIT_AUTHORITY.PUBLIC.CTA_BUS_RIDES_LATEST
 LIMIT 100;
@@ -140,7 +140,7 @@ The training data consists of the number of rides per bus route and day. For exa
 
 Let’s move on to the next step, which is training the predictive model. For that, we’ll use the MINDSDB database.
 
-```
+```sql
 use mindsdb;
 show tables
 ```
@@ -148,7 +148,7 @@ show tables
 
 MINDSDB database comes with the predictors and commands tables. The predictors table lets us see the status of our predictive models. For example, assuming that we have already trained our predictive model for forecasting the number of rides, we’ll see the following.
 
-```
+```sql
 SELECT name, status FROM MINDSDB.PREDICTORS;
 ```
 

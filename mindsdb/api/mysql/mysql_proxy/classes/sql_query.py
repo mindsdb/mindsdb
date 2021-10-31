@@ -344,8 +344,9 @@ class SQLQuery():
                 values = []
                 for row in step_data:
                     for row_data in row.values():
-                        for v in row_data.values():
-                            values.append(v)
+                        for name, value in row_data.items():
+                            if name != '__mindsdb_row_id':
+                                values.append(value)
 
                 data = []
                 substep = step.step
@@ -425,8 +426,7 @@ class SQLQuery():
                     columns=None,
                     where_data=where_data,
                     integration_name=self.session.integration,
-                    integration_type=self.session.integration_type,
-                    is_timeseries=_mdb_make_predictions
+                    integration_type=self.session.integration_type
                 )
                 data = [{get_preditor_alias(step, self.database): x} for x in data]
             elif isinstance(step, JoinStep):

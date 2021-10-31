@@ -39,7 +39,7 @@
    Machine Learning using SQL
    <br/>
    <br/>
-  <img width="600" src="https://mindsdb-resources.s3.amazonaws.com/MindsDB+Glue.png" alt="MindsDB">	
+  <img width="600" src="https://docs.mindsdb.com/assets/mdb_image.png" alt="MindsDB">	
 
 </h2>
 

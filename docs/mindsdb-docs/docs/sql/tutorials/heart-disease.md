@@ -27,7 +27,7 @@ First, we need to connect MindsDB to the database where the Heart Disease data i
 * Username - database user
 * Password - user's password
 
-
+![Connect to DB](/assets/sql/tutorials/heart-disease/connect_db.png)
 
 Then, click on CONNECT. The next step is to use the MySQL client to connect to MindsDB’s MySQL API and train a new model that shall predict the risk of heart disease for a certain patient.
 ​
@@ -43,8 +43,9 @@ mysql -h cloud.mindsdb.com --port 3306 -u theusername@mail.com -p
 ```
 ​
 In the above command, we specify the hostname and user name, as well as a password for connecting. If you use a local instance of MindsDB you have to specify its parameters. Please refer to the [documentation](https://docs.mindsdb.com/sql/connect/local/).
-​
-​
+
+![Connect mysql-client](/assets/sql/tutorials/heart-disease/connect_mysql_client.png)
+
 If you have an authentication error, please make sure you are providing the email address you have used to create an account on MindsDB Cloud.
 ​
 ### Data Overview
@@ -77,6 +78,8 @@ use mindsdb;
 show tables;
 ```
 ​
+![use  mindsdb](/assets/sql/tutorials/heart-disease/use_mindsdb.png)
+
 You will notice there are 2 tables available inside the MindsDB database. To train a new machine learning model we will need to CREATE Predictor as a new record inside the predictors table as:
 ​
 ```sql
@@ -99,6 +102,7 @@ CREATE PREDICTOR patients_target FROM db_integration (SELECT * FROM HeartDisease
 PREDICT target USING {"ignore_columns": ["sex"]};
 ```
 ​
+![CREATE predictor](/assets/sql/tutorials/heart-disease/create_predictor.png)
 ​
 What we did here was to create a predictor called `patients_target `to predict the presence of heart disease as `target` and also ignore the `sex` column as an irrelevant column for the model. The model has started training. To check if the training has finished you can SELECT the model name from the predictors table:
 ​
@@ -106,6 +110,8 @@ What we did here was to create a predictor called `patients_target `to predict t
 SELECT * FROM mindsdb.predictors WHERE name='patients_target';
 ```
 ​
+![SELECT status](/assets/sql/tutorials/heart-disease/predictor_status.png)
+
 The complete status means that the model training has successfully finished.
  
 ## Using SQL Statements to make predictions
@@ -116,15 +122,19 @@ The complete status means that the model training has successfully finished.
 SELECT target as prediction, target_confidence as confidence, target_explain as info FROM mindsdb.patients_target WHERE when_data='{"age": 30, "chol": 177, "slope": 2, "thal": 2}';
 ```
 ​
+![SELECT from model](/assets/sql/tutorials/heart-disease/select_prediction_query.png)
+
 With a confidence of around 99%, MindsDB predicted a high risk of heart disease for this patient.
  
 The above example shows how you can make predictions for a single patient. But what if you have a table in your database with many patients’ diagnosis data, and you want to make predictions for them in bulk?
 For this purpose, you can join the predictor with such a table.
  
 ```sql
-SELECT * FROM db_integration.HeartDiseaseData AS t JOIN mindsdb.patients_target AS tb WHERE t.age in ('45');
+SELECT * FROM db_integration.HeartDiseaseData AS t JOIN mindsdb.patients_target AS tb WHERE t.thal in ('2');
 ```
 ​
+![SELECT from model](/assets/sql/tutorials/heart-disease/join_query.gif)
+
 Now you can even connect the output table to your BI tool and for more convenient visualization of the results using graphs or pivots.
  
 ## Conclusion

@@ -67,14 +67,17 @@ class Mariadb(Integration, MariadbConnectionChecker):
             dtype.audio: 'VARCHAR(500)',
             dtype.short_text: 'VARCHAR(500)',
             dtype.rich_text: 'VARCHAR(500)',
-            dtype.array: 'VARCHAR(500)'
+            dtype.array: 'VARCHAR(500)',
+            dtype.quantity: 'VARCHAR(500)',
+            dtype.tsarray: 'VARCHAR(500)',
+            'default': 'VARCHAR(500)'
         }
 
         column_declaration = []
         for name in columns:
             try:
                 col_subtype = dtype_dict[name]
-                new_type = subtype_map[col_subtype]
+                new_type = subtype_map.get(col_subtype, subtype_map.get('default'))
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')

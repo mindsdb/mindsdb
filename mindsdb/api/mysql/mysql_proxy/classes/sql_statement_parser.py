@@ -76,10 +76,14 @@ class SqlStatementParser():
                 self._struct = self.parse_as_insert()
             elif self._keyword == 'delete':
                 self._struct = self.parse_as_delete()
+            elif self._keyword == 'drop':
+                self._struct = None
             elif self._keyword == 'create_predictor':
                 self._struct = self.parse_as_create_predictor()
             elif self._keyword in 'create_ai_table':
                 self._struct = self.parse_as_create_ai_table()
+            elif self._keyword == 'retrain':
+                self._struct = self.parse_as_retrain()
 
     @property
     def keyword(self):
@@ -139,12 +143,13 @@ class SqlStatementParser():
             rollback
             commit
             explain
+            drop
 
             create_predictor
             create_ai_table
         '''
-        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW = map(
-            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW".split()
+        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DROP, RETRAIN = map(
+            CaselessKeyword, "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DROP RETRAIN".split()
         )
         CREATE_PREDICTOR = CREATE + PREDICTOR
         CREATE_AI_TABLE = CREATE + AI + TABLE
@@ -156,7 +161,7 @@ class SqlStatementParser():
             | UPDATE | ALTER | SELECT
             | ROLLBACK | COMMIT | EXPLAIN
             | CREATE_PREDICTOR | CREATE_AI_TABLE
-            | CREATE_VIEW
+            | CREATE_VIEW | DROP | RETRAIN
         )('keyword')
 
         r = expr.parseString(sql)
@@ -292,6 +297,7 @@ class SqlStatementParser():
         GROUP_BY = GROUP + BY
 
         word = Word(alphanums + "_")
+        worddot = Word(alphanums + "_" + ".")
 
         s_int = Word(nums).setParseAction(tokenMap(int))
 
@@ -302,8 +308,8 @@ class SqlStatementParser():
         using_item = Group(word('name') + Word('=').suppress() + (word | QuotedString("'"))('value'))
 
         expr = (
-            CREATE + PREDICTOR + word('predictor_name') + FROM + Optional(word)('integration_name')
-            + originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name'))
+            CREATE + PREDICTOR + word('predictor_name') + FROM + Optional(worddot)('integration_name')
+            + Optional(originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name')))
             + PREDICT
             + delimitedList(predict_item, delim=',')('predict')
             + Optional(ORDER_BY + delimitedList(order_item, delim=',')('order_by'))
@@ -320,9 +326,12 @@ class SqlStatementParser():
 
         # postprocessing
         r = r.asDict()
-        if r['select'].startswith('(') and r['select'].endswith(')'):
-            r['select'] = r['select'][1:-1]
-        r['select'] = r['select'].strip(' \n')
+        if 'select' in r:
+            if r['select'].startswith('(') and r['select'].endswith(')'):
+                r['select'] = r['select'][1:-1]
+            r['select'] = r['select'].strip(' \n')
+        else:
+            r['select'] = None
 
         using = r.get('using')
         if isinstance(using, str):
@@ -340,6 +349,23 @@ class SqlStatementParser():
             r['order_by'] = [x['name'] for x in r['order_by']]
 
         return r
+
+    def parse_as_retrain(self) -> dict:
+        result = {
+            'predictor_name': None
+        }
+
+        expr = (
+            CaselessKeyword("retrain").suppress() + Word(printables).setResultsName('predictor_name')
+        )
+
+        r = expr.parseString(self._sql).asDict()
+        if isinstance(r.get('predictor_name'), str) is False:
+            raise Exception("Cant determine predictor name in 'retrain' statement")
+
+        result.update(r)
+
+        return result
 
     def parse_as_delete(self) -> dict:
         ''' Parse delete. Example: 'delete from database.table where column_a= 1 and column_b = 2;'
@@ -548,6 +574,18 @@ class SqlStatementParser():
                 'using': {'x': 1, 'y': 'a'}
             }
         ], [
+            '''
+                CREATE PREDICTOR name
+                FROM file.name
+                PREDICT f1
+            ''',
+            {
+                'predictor_name': 'name',
+                'integration_name': 'file.name',
+                'select': None,
+                'predict': [{'name': 'f1'}]
+            }
+        ], [
             # '''
             # CREATE AI table ai_table_name
             # FROM integration (select * from table)
@@ -583,6 +621,14 @@ class SqlStatementParser():
     def test():
         tests = [
             [
+                'retraIN predictor',
+                {
+                    'keyword': 'retrain',
+                    'struct': {
+                        'predictor_name': 'predictor'
+                    }
+                }
+            ], [
                 'start transaction',
                 {'keyword': 'start'}
             ], [

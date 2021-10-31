@@ -45,14 +45,17 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             dtype.audio: 'Nullable(String)',
             dtype.short_text: 'Nullable(String)',
             dtype.rich_text: 'Nullable(String)',
-            dtype.array: 'Nullable(String)'
+            dtype.array: 'Nullable(String)',
+            dtype.quantity: 'Nullable(String)',
+            dtype.tsarray: 'Nullable(String)',
+            'default': 'Nullable(String)'
         }
 
         column_declaration = []
         for name in columns:
             try:
                 col_subtype = dtype_dict[name]
-                new_type = subtype_map[col_subtype]
+                new_type = subtype_map.get(col_subtype, subtype_map.get('default'))
                 column_declaration.append(f' `{name}` {new_type} ')
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
@@ -151,3 +154,21 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             drop table if exists {self.mindsdb_database}.{self._escape_table_name(name)};
         """
         self._query(q)
+
+    def get_tables_list(self):
+        q = f"""SELECT database, table
+                    FROM system.parts
+                    WHERE active and database NOT IN  ('system', 'mdb_system')
+                    GROUP BY database, table
+                    ORDER BY database, table;"""
+        tables_list = self._query(q)
+        tables= [f"{table[0]}.{table[1]}" for table in tables_list]
+        return tables
+
+    def get_columns(self,query):
+        q = f"SELECT * FROM ({query}) LIMIT 1 FORMAT JSON"
+        query_result = self._query(q).json()
+        columns_info = query_result['meta']
+        columns= [column['name'] for column in columns_info]
+        return columns
+

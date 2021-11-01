@@ -1,6 +1,5 @@
 import os
 from threading import Thread
-from mindsdb.streams import StreamController
 
 from mindsdb.utilities.config import STOP_THREADS_EVENT
 from mindsdb.utilities.log import log
@@ -113,7 +112,7 @@ class StreamIntegration(Integration):
         for s in self._streams:
             s.stop_event.set()
 
-    def _make_stream(self, s: db.Stream) -> StreamController:
+    def _make_stream(self, s: db.Stream):
         raise NotImplementedError
 
     def _query(self, query, fetch=False):

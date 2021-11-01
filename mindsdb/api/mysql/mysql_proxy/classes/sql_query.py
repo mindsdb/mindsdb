@@ -284,6 +284,28 @@ class SQLQuery():
             self.columns_list = [('mindsdb', 'commands', 'commands', 'command', 'command')]
             return
 
+        # is it query to 'datasources'?
+        if (
+            isinstance(mindsdb_sql_struct.from_table, Identifier)
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
+            and (
+                self.database == 'mindsdb'
+                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+            )
+        ):
+            dn = self.datahub.get(self.mindsdb_database_name)
+            data, columns = dn.get_datasources(mindsdb_sql_struct)
+            table_name = ('mindsdb', 'datasources', 'datasources')
+            self.fetched_data = [
+                {table_name: row}
+                for row in data
+            ]
+            self.columns_list = [
+                (table_name + (column_name, column_name))
+                for column_name in columns
+            ]
+            return
+
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
         integrations_names.append('information_schema')

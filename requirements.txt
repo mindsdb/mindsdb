@@ -20,5 +20,4 @@ appdirs >= 1.0.0
 mindsdb-sql == 0.0.31
 dfsql == 0.6.6
 checksumdir >= 1.2.0
-torchvision >=0.11.1
-torch >=1.10.0
+

@@ -37,8 +37,7 @@ jobs:
         #python -m pip install --upgrade pip==21.0.1
         pip install 'pymssql >= 2.1.4'
         pip install boto3
-        #pip install --no-cache-dir .
-        pip install -r requirements.txt
+        pip install --no-cache-dir .
       shell: bash
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}

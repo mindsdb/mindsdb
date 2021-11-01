@@ -50,7 +50,7 @@ class KafkaTest(unittest.TestCase):
 
     def test_length(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import KafkaStream
+        from mindsdb_streams import KafkaStream
         stream = KafkaStream(f'test_stream_length_{STREAM_SUFFIX}', CONNECTION_PARAMS)
 
         self.assertEqual(len(list(stream.read())), 0)
@@ -150,7 +150,7 @@ class KafkaTest(unittest.TestCase):
 
     def test_3_making_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import KafkaStream
+        from mindsdb_streams import KafkaStream
         stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS, mode='w')
         stream_out = KafkaStream(STREAM_OUT, CONNECTION_PARAMS, mode='r')
         # wait when the integration launches created stream
@@ -177,7 +177,7 @@ class KafkaTest(unittest.TestCase):
 
     def test_5_making_ts_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import KafkaStream
+        from mindsdb_streams import KafkaStream
         stream_in = KafkaStream(STREAM_IN_TS, CONNECTION_PARAMS)
         stream_out = KafkaStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
@@ -191,7 +191,7 @@ class KafkaTest(unittest.TestCase):
 
     def test_6_create_stream_kafka_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import KafkaStream
+        from mindsdb_streams import KafkaStream
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -215,7 +215,7 @@ class KafkaTest(unittest.TestCase):
     '''
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import KafkaStream
+        from mindsdb_streams import KafkaStream
         control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
         learning_stream = KafkaStream(LEARNING_STREAM, CONNECTION_PARAMS)
 

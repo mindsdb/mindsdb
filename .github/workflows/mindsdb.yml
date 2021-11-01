@@ -1,4 +1,4 @@
-name: MindsDB workflow
+name: MindsDB Tests & Deploy
 
 on:
   push:

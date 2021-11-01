@@ -50,7 +50,7 @@ class RedisTest(unittest.TestCase):
 
     def test_length(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
 
         stream = RedisStream(f'test_stream_length_{STREAM_SUFFIX}', CONNECTION_PARAMS)
 
@@ -156,7 +156,7 @@ class RedisTest(unittest.TestCase):
 
     def test_3_making_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
 
         stream_in = RedisStream(STREAM_IN, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
@@ -184,7 +184,7 @@ class RedisTest(unittest.TestCase):
 
     def test_5_making_ts_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
         stream_in = RedisStream(STREAM_IN_TS, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
@@ -197,7 +197,7 @@ class RedisTest(unittest.TestCase):
 
     def test_6_create_stream_redis_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -222,7 +222,7 @@ class RedisTest(unittest.TestCase):
     '''
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
         learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
 
@@ -241,7 +241,7 @@ class RedisTest(unittest.TestCase):
 
     def test_9_making_ts_stream_prediction_no_group(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
         PREDICTOR_NAME = TS_PREDICTOR + "_no_group"
         STREAM_IN = STREAM_IN_TS + 'no_group'
         STREAM_OUT = STREAM_OUT_TS + 'no_group'

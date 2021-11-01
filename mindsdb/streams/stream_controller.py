@@ -191,13 +191,13 @@ class StreamLearningController:
                 res.raise_for_status()
             msg = {"action": "training", "predictor": self.predictor,
                     "status": "success", "details": ""}
-        except Exception as e:
+        except Exception:
             msg = {"action": "training", "predictor": self.predictor,
                     "status": "error", "details": traceback.format_exc()}
         self.stream_out.write(msg)
 
-        # Need to delete its own record from db to mark is at outdated
-        # for integration, which delete it from 'active threads' after that
+        # Need to delete its own record from db to mark it as outdated
+        # for integration, which will delete it from 'active threads' after that
         db.session.query(db.Stream).filter_by(
                 company_id=self.company_id, integration=self.integration, name=self.name).delete()
         db.session.commit()

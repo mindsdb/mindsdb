@@ -46,7 +46,7 @@ DS_NAME = "kafka_test_ds"
 class KafkaTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        run_environment(apis=['mysql', 'http'])
+        run_environment(apis=['http', ])
 
     def test_length(self):
         print(f"\nExecuting {self._testMethodName}")

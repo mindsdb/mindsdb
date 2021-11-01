@@ -46,7 +46,7 @@ NORMAL_STREAM_NAME = f'normal_stream_{STREAM_SUFFIX}'
 class RedisTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        run_environment(apis=['mysql', 'http'])
+        run_environment(apis=['http', ])
 
     def test_length(self):
         print(f"\nExecuting {self._testMethodName}")

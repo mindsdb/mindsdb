@@ -15,7 +15,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.database.integrations import get_db_integration
+from mindsdb.interfaces.database.integrations import DatasourceController
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
@@ -150,6 +150,7 @@ class DataStore():
         raise Exception(f"Can not find appropriate name for datasource '{base}'")
 
     def create_datasource(self, source_type, source, file_path=None, company_id=None, ds_meta_dir=None):
+        datasource_controller = DatasourceController()
         if source_type == 'file':
             source = os.path.join(ds_meta_dir, source)
             shutil.move(file_path, source)
@@ -161,8 +162,8 @@ class DataStore():
                 'kwargs': {}
             }
 
-        elif get_db_integration(source_type, company_id) is not None:
-            integration = get_db_integration(source_type, company_id)
+        elif datasource_controller.get_db_integration(source_type, company_id) is not None:
+            integration = datasource_controller.get_db_integration(source_type, company_id)
 
             ds_class_map = {
                 'clickhouse': ClickhouseDS,

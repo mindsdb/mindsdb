@@ -12,6 +12,7 @@
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
 from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
 from mindsdb.interfaces.datastore.datastore import DataStoreWrapper
+from mindsdb.interfaces.database.integrations import DatasourceInterfaceWrapper
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.utilities.config import Config
@@ -22,7 +23,7 @@ class SessionController():
     This class manages the server session
     '''
 
-    def __init__(self, original_model_interface, original_data_store, company_id=None) -> object:
+    def __init__(self, server, company_id=None) -> object:
         """
         Initialize the session
         :param company_id:
@@ -39,12 +40,18 @@ class SessionController():
 
         self.config = Config()
         self.ai_table = AITableStore(company_id=company_id)
+
         self.data_store = DataStoreWrapper(
-            data_store=original_data_store,
+            data_store=server.original_data_store,
             company_id=company_id
         )
         self.model_interface = ModelInterfaceWrapper(
-            model_interface=original_model_interface,
+            model_interface=server.original_model_interface,
+            company_id=company_id
+        )
+
+        self.datasource_interface = DatasourceInterfaceWrapper(
+            server.original_datasource_controller,
             company_id=company_id
         )
 

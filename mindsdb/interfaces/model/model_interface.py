@@ -1,5 +1,3 @@
-
-
 class ModelInterfaceWrapper(object):
     def __init__(self, model_interface, company_id=None):
         self.company_id = company_id

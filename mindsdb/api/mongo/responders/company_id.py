@@ -1,6 +1,7 @@
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.interfaces.datastore.datastore import DataStoreWrapper
 from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
+from mindsdb.interfaces.database.integrations import DatasourceInterfaceWrapper
 
 
 class Responce(Responder):
@@ -18,6 +19,10 @@ class Responce(Responder):
         )
         mindsdb_env['mindsdb_native'] = ModelInterfaceWrapper(
             model_interface=mindsdb_env['origin_model_interface'],
+            company_id=company_id
+        )
+        mindsdb_env['datasource_controller'] = DatasourceInterfaceWrapper(
+            interface=self.mindsdb_env['origin_datasource_controller'],
             company_id=company_id
         )
 

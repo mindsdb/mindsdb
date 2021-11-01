@@ -1,4 +1,3 @@
-import traceback
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
@@ -7,10 +6,9 @@ from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.integrations.mongodb.mongodb import MongoDB
 from mindsdb.integrations.redis.redisdb import Redis
 from mindsdb.integrations.kafka.kafkadb import Kafka
-
 from mindsdb.utilities.log import log as logger
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.database.integrations import get_db_integration, get_db_integrations
+from mindsdb.interfaces.database.integrations import DatasourceController, DatasourceInterfaceWrapper
 
 
 class DatabaseWrapper():
@@ -26,6 +24,9 @@ class DatabaseWrapper():
     def __init__(self, company_id):
         self.config = Config()
         self.company_id = company_id
+        self.datasource_interface = DatasourceInterfaceWrapper(
+            DatasourceController(), company_id
+        )
 
     def setup_integration(self, db_alias):
         try:
@@ -39,7 +40,7 @@ class DatabaseWrapper():
             logger.warning('Failed to integrate with database ' + db_alias + f', error: {e}')
 
     def _get_integration(self, db_alias):
-        integration = get_db_integration(db_alias, self.company_id)
+        integration = self.datasource_interface.get_db_integration(db_alias)
         if integration:
             db_type = integration['type']
             if db_type in self.known_dbs:
@@ -49,11 +50,14 @@ class DatabaseWrapper():
         return True
 
     def _get_integrations(self, publish=False):
-        all_integrations = get_db_integrations(self.company_id)
+        all_integrations = self.datasource_interface.get_db_integrations()
         if publish is True:
-            all_integrations = [x for x, y in get_db_integrations(self.company_id).items() if y.get('publish') is True]
+            all_integrations = [
+                x for x, y in self.datasource_interface.get_db_integrations().items()
+                if y.get('publish') is True
+            ]
         else:
-            all_integrations = [x for x in get_db_integrations(self.company_id)]
+            all_integrations = [x for x in self.datasource_interface.get_db_integrations()]
         integrations = [self._get_integration(x) for x in all_integrations]
         integrations = [x for x in integrations if x is not True and x is not False]
         return integrations

@@ -15,7 +15,7 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.database.integrations import get_db_integration
+from mindsdb.interfaces.database.integrations import DatasourceController
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -123,6 +123,7 @@ class MindsDBDataNode(DataNode):
         ] for x in models], columns=columns)
 
     def _select_datasources(self):
+        # TODO
         return pd.DataFrame(
             [],
             columns=['name', 'database_type', 'host', 'port']
@@ -240,7 +241,7 @@ class MindsDBDataNode(DataNode):
             select_data_query = where_data['select_data_query']
             del where_data['select_data_query']
 
-            integration_data = get_db_integration(integration_name, self.company_id)
+            integration_data = DatasourceController().get_db_integration(integration_name, self.company_id)
             if integration_type == 'clickhouse':
                 ch = Clickhouse(self.config, integration_name, integration_data)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')

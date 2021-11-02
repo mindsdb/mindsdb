@@ -219,27 +219,42 @@ class RedisTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    '''
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
         from mindsdb_streams import RedisStream
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
-        learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
+        stream_in = RedisStream(STREAM_IN_OL, CONNECTION_PARAMS)
+        stream_out = RedisStream(STREAM_OUT_OL, CONNECTION_PARAMS)
+        PREDICTOR_NAME = "ONLINE_LEARNING"
 
         control_stream.write({
             'action': 'create',
             'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
-            'predictor': DEFAULT_PREDICTOR,
+            'predictor': PREDICTOR_NAME,
+            'learning_params': {"to_predict": "y",
+                                'kwargs': {
+                                    'stop_training_in_x_seconds': 20}
+                                },
+            'learning_threshold': 10,
             'stream_in': STREAM_IN_OL,
             'stream_out': STREAM_OUT_OL,
-            'learning_stream': LEARNING_STREAM
         })
 
         for x in range(1, 101):
-            learning_stream.write({'x1': x, 'x2': 2*x, 'y': 3*x})
-   '''
+            stream_in.write({'x1': x, 'x2': 2*x, 'y': 3*x})
+
+        time.sleep(30)
+        res = list(stream_out.read())
+        if not res or res[0]['status'] != 'success':
+            self.fail(f"expected to have successfully trained predictor, but have: {res}")
+
+        url = f'{HTTP_API_ROOT}/predictors/{PREDICTOR_NAME}'
+        res = requests.get(url)
+        self.assertEqual(res.status_code, 200,
+                         f"expected to get {PREDICTOR_NAME} info, but have {res.text}")
 
     def test_9_making_ts_stream_prediction_no_group(self):
+        time.sleep(10)
         print(f"\nExecuting {self._testMethodName}")
         from mindsdb_streams import RedisStream
         PREDICTOR_NAME = TS_PREDICTOR + "_no_group"

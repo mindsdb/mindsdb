@@ -1,0 +1,24 @@
+FROM docker.io/pytorch/pytorch:1.10.0-cuda11.3-cudnn8-runtime
+
+ARG VERSION
+
+EXPOSE 47334/tcp
+EXPOSE 47335/tcp
+EXPOSE 47336/tcp
+
+ENV PYTHONUNBUFFERED=1
+
+RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==21.3.1 && \
+    pip install --prefer-binary --no-cache-dir wheel==0.37.0
+
+######### temporal fix for prophet (because it's dumb) ##########
+RUN apt update && \
+    apt-get install --yes --no-install-recommends build-essential
+#################################################################
+
+RUN pip install --prefer-binary --no-cache-dir mindsdb==$VERSION
+
+COPY mindsdb_config.release.json /root/mindsdb_config.json
+COPY mindsdb_launcher.sh /root/
+
+CMD bash /root/mindsdb_launcher.sh

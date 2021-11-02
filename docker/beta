@@ -1,0 +1,23 @@
+FROM pytorch/pytorch:latest
+
+ARG VERSION
+
+EXPOSE 47334/tcp
+EXPOSE 47335/tcp
+EXPOSE 47336/tcp
+
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y curl
+RUN pip install mindsdb==$VERSION;
+
+ENV PYTHONUNBUFFERED=1
+
+
+ENV MDB_AUTOUPDATE=1
+ENV MDB_RELTYPE=beta
+
+COPY mindsdb_config.beta.json /root/mindsdb_config.json
+COPY mindsdb_launcher.sh /root/
+
+CMD bash /root/mindsdb_launcher.sh

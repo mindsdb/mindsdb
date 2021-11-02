@@ -22,7 +22,7 @@ class Responce(Responder):
             company_id=company_id
         )
         mindsdb_env['datasource_controller'] = DatasourceInterfaceWrapper(
-            interface=self.mindsdb_env['origin_datasource_controller'],
+            interface=mindsdb_env['origin_datasource_controller'],
             company_id=company_id
         )
 

@@ -57,7 +57,7 @@ markdown_extensions:
       custom_checkbox: true
 nav:
   - What is MindsDB: index.md
-  - Deploying MindsDB:
+  - Getting Started Guide:
     - Docker: deployment/docker.md
     - Pip: deployment/pypi.md
     - MindsDB Cloud: deployment/cloud.md
@@ -76,10 +76,14 @@ nav:
     - JOIN: sql/api/join.md
   - Tutorials:
     - Regression: sql/tutorials/test.md
+      - Process Quality: sql/tutorials/process-quality.md
+      - Bodyfat Prediction: sql/tutorials/bodyfat.md
+      - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
     - Classification: 
+      - Crop Recomendation: sql/tutorials/crop-prediction.md
       - Customer Churn: sql/tutorials/customer-churn.md
       - Heart Disease: sql/tutorials/heart-disease.md
-    - Time series: sql/tutorials/test.md
+    - Time series: sql/tutorials/mindsdb-superset-snowflake.md
   - Contribution and Community:
       - How to contribute: contribute.md
       - Join our community: community.md

@@ -1,7 +1,5 @@
 from mindsdb.api.mongo.classes import Responder
-from mindsdb.interfaces.datastore.datastore import DataStoreWrapper
-from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
-from mindsdb.interfaces.database.integrations import DatasourceInterfaceWrapper
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 
 
 class Responce(Responder):
@@ -13,16 +11,16 @@ class Responce(Responder):
         need_response = query.get('need_response', False)
 
         mindsdb_env['company_id'] = company_id
-        mindsdb_env['data_store'] = DataStoreWrapper(
-            data_store=mindsdb_env['origin_data_store'],
+        mindsdb_env['data_store'] = WithKWArgsWrapper(
+            mindsdb_env['origin_data_store'],
             company_id=company_id
         )
-        mindsdb_env['mindsdb_native'] = ModelInterfaceWrapper(
-            model_interface=mindsdb_env['origin_model_interface'],
+        mindsdb_env['mindsdb_native'] = WithKWArgsWrapper(
+            mindsdb_env['origin_model_interface'],
             company_id=company_id
         )
-        mindsdb_env['datasource_controller'] = DatasourceInterfaceWrapper(
-            interface=mindsdb_env['origin_datasource_controller'],
+        mindsdb_env['datasource_controller'] = WithKWArgsWrapper(
+            mindsdb_env['origin_datasource_controller'],
             company_id=company_id
         )
 

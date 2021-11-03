@@ -19,19 +19,6 @@ from mindsdb.interfaces.database.integrations import DatasourceController
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
-class DataStoreWrapper(object):
-    def __init__(self, data_store, company_id=None):
-        self.company_id = company_id
-        self.data_store = data_store
-
-    def __getattr__(self, name):
-        def wrapper(*args, **kwargs):
-            if kwargs.get('company_id') is None:
-                kwargs['company_id'] = self.company_id
-            return getattr(self.data_store, name)(*args, **kwargs)
-        return wrapper
-
-
 class DataStore():
     def __init__(self):
         self.config = Config()

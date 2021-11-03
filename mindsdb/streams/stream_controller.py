@@ -4,10 +4,11 @@ from time import time
 
 import pandas as pd
 from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper, ModelInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.cache import Cache
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 
 
 class StreamController:
@@ -25,7 +26,7 @@ class StreamController:
 
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
         self.stop_event = Event()
-        self.model_interface = ModelInterfaceWrapper(ModelInterface())
+        self.model_interface = WithKWArgsWrapper(ModelInterface(), company_id=self.company_id)
         self.data_store = DataStore()
         self.config = Config()
 
@@ -74,7 +75,7 @@ class StreamController:
                 self.data_store.save_datasource(name=name, source_type='file', source=path, file_path=path, company_id=self.company_id)
                 ds = self.data_store.get_datasource(name, self.company_id)
 
-                self.model_interface.adjust(p.name, from_data, ds['id'], self.company_id)
+                self.model_interface.adjust(p.name, from_data, ds['id'])
                 self.learning_data.clear()
 
     def _make_predictions(self):

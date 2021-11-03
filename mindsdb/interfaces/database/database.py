@@ -8,7 +8,8 @@ from mindsdb.integrations.redis.redisdb import Redis
 from mindsdb.integrations.kafka.kafkadb import Kafka
 from mindsdb.utilities.log import log as logger
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.database.integrations import DatasourceController, DatasourceInterfaceWrapper
+from mindsdb.interfaces.database.integrations import DatasourceController
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 
 
 class DatabaseWrapper():
@@ -24,8 +25,8 @@ class DatabaseWrapper():
     def __init__(self, company_id):
         self.config = Config()
         self.company_id = company_id
-        self.datasource_interface = DatasourceInterfaceWrapper(
-            DatasourceController(), company_id
+        self.datasource_interface = WithKWArgsWrapper(
+            DatasourceController(), company_id=company_id
         )
 
     def setup_integration(self, db_alias):

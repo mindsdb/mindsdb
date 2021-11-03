@@ -13,19 +13,6 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
 
 
-class DatasourceInterfaceWrapper:
-    def __init__(self, interface, company_id=None):
-        self.company_id = company_id
-        self.interface = interface
-
-    def __getattr__(self, name):
-        def wrapper(*args, **kwargs):
-            if kwargs.get('company_id') is None:
-                kwargs['company_id'] = self.company_id
-            return getattr(self.interface, name)(*args, **kwargs)
-        return wrapper
-
-
 class DatasourceController:
     @staticmethod
     def _is_not_empty_str(s):

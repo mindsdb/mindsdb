@@ -6,16 +6,15 @@ from bson import codec_options
 from collections import OrderedDict
 from abc import abstractmethod
 
-from mindsdb.api.mongo.classes import RespondersCollection, Session
-
-from mindsdb.api.mongo.responders import responders
 import mindsdb.api.mongo.functions as helpers
+from mindsdb.api.mongo.classes import RespondersCollection, Session
+from mindsdb.api.mongo.responders import responders
 from mindsdb.api.mongo.utilities import log
-
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session as db_session
-from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
-from mindsdb.interfaces.model.model_interface import ModelInterface, ModelInterfaceWrapper
-from mindsdb.interfaces.database.integrations import DatasourceController, DatasourceInterfaceWrapper
+from mindsdb.interfaces.datastore.datastore import DataStore
+from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.database.integrations import DatasourceController
 
 OP_REPLY = 1
 OP_UPDATE = 2001
@@ -296,16 +295,16 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             'origin_model_interface': ModelInterface(),
             'origin_datasource_controller': DatasourceController(),
         }
-        self.mindsdb_env['mindsdb_native'] = ModelInterfaceWrapper(
-            model_interface=self.mindsdb_env['origin_model_interface'],
+        self.mindsdb_env['mindsdb_native'] = WithKWArgsWrapper(
+            self.mindsdb_env['origin_model_interface'],
             company_id=None
         )
-        self.mindsdb_env['data_store'] = DataStoreWrapper(
-            data_store=self.mindsdb_env['origin_data_store'],
+        self.mindsdb_env['data_store'] = WithKWArgsWrapper(
+            self.mindsdb_env['origin_data_store'],
             company_id=None
         )
-        self.mindsdb_env['datasource_controller'] = DatasourceInterfaceWrapper(
-            interface=self.mindsdb_env['origin_datasource_controller'],
+        self.mindsdb_env['datasource_controller'] = WithKWArgsWrapper(
+            self.mindsdb_env['origin_datasource_controller'],
             company_id=None
         )
 

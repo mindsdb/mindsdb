@@ -57,7 +57,7 @@ markdown_extensions:
       custom_checkbox: true
 nav:
   - What is MindsDB: index.md
-  - Deploying MindsDB:
+  - Getting Started Guide:
     - Docker: deployment/docker.md
     - Pip: deployment/pypi.md
     - MindsDB Cloud: deployment/cloud.md
@@ -75,7 +75,9 @@ nav:
     - SELECT: sql/api/select.md
     - JOIN: sql/api/join.md
   - Tutorials:
-    - Regression: 
+    - Regression: sql/tutorials/test.md
+      - Process Quality: sql/tutorials/process-quality.md
+      - Bodyfat Prediction: sql/tutorials/bodyfat.md
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
     - Classification: 
       - Crop Recomendation: sql/tutorials/crop-prediction.md

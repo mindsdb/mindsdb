@@ -10,15 +10,16 @@ import psutil
 import torch.multiprocessing as mp
 from packaging import version
 
-from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
-from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface, ModelInterfaceWrapper
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
+from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
-from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import log
+from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
 import mindsdb.interfaces.storage.db as db
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
@@ -68,10 +69,10 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
     # @TODO Backwards compatibiltiy for tests, remove later
-    from mindsdb.interfaces.database.integrations import DatasourceController, DatasourceInterfaceWrapper
+    from mindsdb.interfaces.database.integrations import DatasourceController
     dbw = DatabaseWrapper(COMPANY_ID)
-    model_interface = ModelInterfaceWrapper(ModelInterface(), COMPANY_ID)
-    datasource_interface = DatasourceInterfaceWrapper(DatasourceController(), COMPANY_ID)
+    model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
+    datasource_interface = WithKWArgsWrapper(DatasourceController(), company_id=COMPANY_ID)
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []
     for model in raw_model_data_arr:

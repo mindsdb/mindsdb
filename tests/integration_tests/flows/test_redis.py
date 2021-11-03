@@ -219,7 +219,35 @@ class RedisTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    def test_8_test_online_learning(self):
+    def test_8_making_ts_stream_prediction_no_group(self):
+        time.sleep(10)
+        print(f"\nExecuting {self._testMethodName}")
+        from mindsdb_streams import RedisStream
+        PREDICTOR_NAME = TS_PREDICTOR + "_no_group"
+        STREAM_IN = STREAM_IN_TS + 'no_group'
+        STREAM_OUT = STREAM_OUT_TS + 'no_group'
+
+        self.train_ts_predictor(TS_DS_NAME, PREDICTOR_NAME, with_gb=False)
+
+        url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}_no_group'
+        res = requests.put(url, json={
+            "predictor": PREDICTOR_NAME,
+            "stream_in": STREAM_IN,
+            "stream_out": STREAM_OUT,
+            "integration": INTEGRATION_NAME,
+        })
+
+        self.assertEqual(res.status_code, 200)
+        stream_in = RedisStream(STREAM_IN, CONNECTION_PARAMS)
+        stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
+
+        for x in range(210, 221):
+            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'y': 3 * x})
+            time.sleep(5)
+
+        self.assertEqual(len(list(stream_out.read())), 2)
+
+    def test_9_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
         from mindsdb_streams import RedisStream
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
@@ -252,34 +280,6 @@ class RedisTest(unittest.TestCase):
         res = requests.get(url)
         self.assertEqual(res.status_code, 200,
                          f"expected to get {PREDICTOR_NAME} info, but have {res.text}")
-
-    def test_9_making_ts_stream_prediction_no_group(self):
-        time.sleep(10)
-        print(f"\nExecuting {self._testMethodName}")
-        from mindsdb_streams import RedisStream
-        PREDICTOR_NAME = TS_PREDICTOR + "_no_group"
-        STREAM_IN = STREAM_IN_TS + 'no_group'
-        STREAM_OUT = STREAM_OUT_TS + 'no_group'
-
-        self.train_ts_predictor(TS_DS_NAME, PREDICTOR_NAME, with_gb=False)
-
-        url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}_no_group'
-        res = requests.put(url, json={
-            "predictor": PREDICTOR_NAME,
-            "stream_in": STREAM_IN,
-            "stream_out": STREAM_OUT,
-            "integration": INTEGRATION_NAME,
-        })
-
-        self.assertEqual(res.status_code, 200)
-        stream_in = RedisStream(STREAM_IN, CONNECTION_PARAMS)
-        stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
-
-        for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'y': 3 * x})
-            time.sleep(5)
-
-        self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_delete_stream_http_api(self):
         print(f"\nExecuting {self._testMethodName}")

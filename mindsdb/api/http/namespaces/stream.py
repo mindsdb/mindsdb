@@ -5,7 +5,6 @@ from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.streams import ns_conf
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage.db import session
 
 STREAM_INTEGRATION_TYPES = ('kafka', 'redis')
 
@@ -88,11 +87,13 @@ class Stream(Resource):
             stream_out=params['stream_out'],
             anomaly_stream=params.get('anomaly_stream'),
             type = params.get('type'),
-            connection_info = params.get('connection')
+            connection_info = params.get('connection'),
+            learning_params = params.get('learning_params', {}),
+            learning_threshold = params.get('learning_threshold', 0)
         )
 
-        session.add(stream)
-        session.commit()
+        db.session.add(stream)
+        db.session.commit()
 
         return {'success': True}, 200
 

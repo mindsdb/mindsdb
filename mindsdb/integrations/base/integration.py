@@ -88,6 +88,11 @@ class StreamIntegration(Integration):
                             # Bad action value
                             log.error('INTEGRATION %s: bad action value received - %s', self.name, dct)
 
+            # it is really required to add 'commit' here
+            # to avoid case when sessin.query returns previously
+            # deleted object
+            # https://stackoverflow.com/questions/10210080/how-to-disable-sqlalchemy-caching
+            db.session.commit()
             stream_db_recs = db.session.query(db.Stream).filter_by(
                 company_id=self.company_id,
                 integration=self.name

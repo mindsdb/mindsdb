@@ -13,6 +13,12 @@ You should see the `Hello from Docker!` message displayed. If not, check the <a 
 
 MindsDB images are uploaded to the <a href="https://hub.docker.com/u/mindsdb" target="_blank">MindsDB repo on docker hub</a> after each release.
 
+#### For "Docker for Mac" Users
+
+By default, Docker for Mac allocates __2.00GB of memory__. This is insufficient for deploying to docker. We recommend increasing the default memory limit to __4.00GB__. 
+
+Please refer to [https://docs.docker.com/desktop/mac/#resources](https://docs.docker.com/desktop/mac/#resources) for more information on how to increase the allocated memory.
+
 #### Pull image
 
 First, run the below command to pull our latest production image:

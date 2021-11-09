@@ -36,6 +36,9 @@ class ModelInterface():
     def get_model_data(self, *args, **kwargs):
         return self.controller.get_model_data(*args, **kwargs)
 
+    def get_model_description(self, *args, **kwargs):
+        return self.controller.get_model_description(*args, **kwargs)
+
     def get_models(self, *args, **kwargs):
         return self.controller.get_models(*args, **kwargs)
 

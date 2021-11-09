@@ -5,6 +5,7 @@ on:
   pull_request:
     branches:
       - stable
+      - staging
     paths-ignore:
       - 'docs/**'
       - 'README.md'

@@ -1,9 +1,8 @@
-from mindsdb.interfaces.database.integrations import get_db_integration
 from flask import request
 from flask_restx import Resource, abort
+
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.streams import ns_conf
-
 import mindsdb.interfaces.storage.db as db
 
 STREAM_INTEGRATION_TYPES = ('kafka', 'redis')
@@ -54,7 +53,7 @@ class Stream(Resource):
             return abort(400, "'integration' in case of local installation and 'connection' in case of cloud are required.")
 
         if 'integration' in params_keys:
-            integration = get_db_integration(params['integration'], request.company_id)
+            integration = request.datasource_interface.get_db_integration(params['integration'])
             if integration is None:
                 return abort(404, 'Integration "{}" doesn\'t exist'.format(params['integration']))
 

@@ -3,7 +3,6 @@ from collections import OrderedDict
 from lightwood.api import dtype
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-from mindsdb.interfaces.database.integrations import get_db_integrations
 
 
 class Responce(Responder):
@@ -51,7 +50,7 @@ class Responce(Responder):
 
             datasource = where_data
             if 'select_data_query' in where_data:
-                integrations = get_db_integrations(mindsdb_env['company_id']).keys()
+                integrations = mindsdb_env['datasource_controller'].get_db_integrations().keys()
                 connection = where_data.get('connection')
                 if connection is None:
                     if 'default_mongodb' in integrations:

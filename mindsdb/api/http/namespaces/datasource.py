@@ -6,10 +6,8 @@ import multipart
 import zipfile
 import tarfile
 
-from dateutil.parser import parse
 from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
-from flask import current_app as ca
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
@@ -20,7 +18,6 @@ from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
 from mindsdb.api.http.namespaces.entitites.datasources.datasource_data import (
     get_datasource_rows_params
 )
-from mindsdb.interfaces.database.integrations import get_db_integration
 
 
 def parse_filter(key, value):
@@ -73,7 +70,7 @@ class Datasource(Resource):
             log.error(e)
             return http_error(
                 400,
-                f"Error deleting datasource",
+                "Error deleting datasource",
                 f"There was an error while tring to delete datasource with name '{name}'"
             )
         return '', 200
@@ -125,7 +122,7 @@ class Datasource(Resource):
 
         if 'query' in data:
             integration_id = request.json['integration_id']
-            integration = get_db_integration(integration_id, request.company_id)
+            integration = request.datasource_interface.get_db_integration(integration_id)
             if integration is None:
                 abort(400, f"{integration_id} integration doesn't exist")
 
@@ -243,7 +240,7 @@ class DatasourceData(Resource):
                 where.append(param)
 
         data_dict = request.default_store.get_data(name, where, params['page[size]'], params['page[offset]'])
-        
+
         return data_dict, 200
 
 

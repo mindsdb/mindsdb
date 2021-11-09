@@ -11,16 +11,17 @@ import lightwood
 from lightwood.api.types import ProblemDefinition
 from lightwood import __version__ as lightwood_version
 
+from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.interfaces.model.model_interface import ModelInterface, ModelInterfaceWrapper
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.storage.db import session, Predictor, Datasource
-from mindsdb import __version__ as mindsdb_version
-from mindsdb.interfaces.datastore.datastore import DataStore, DataStoreWrapper
+from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 
 
 ctx = mp.get_context('spawn')
@@ -78,7 +79,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         session.commit()
 
         dbw = DatabaseWrapper(predictor_record.company_id)
-        mi = ModelInterfaceWrapper(ModelInterface(), predictor_record.company_id)
+        mi = WithKWArgsWrapper(ModelInterface(), company_id=predictor_record.company_id)
     except Exception as e:
         session.refresh(predictor_record)
         predictor_record.data = {'error': f'{traceback.format_exc()}\nMain error: {e}'}
@@ -124,7 +125,7 @@ def run_update(name: str, company_id: int):
 
     fs_store = FsStore()
     config = Config()
-    data_store = DataStoreWrapper(DataStore(), company_id)
+    data_store = WithKWArgsWrapper(DataStore(), company_id=company_id)
 
     try:
         predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()

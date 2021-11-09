@@ -15,11 +15,10 @@ from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import initialize_log, get_log
-from mindsdb.interfaces.datastore.datastore import DataStoreWrapper
+from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session
-from mindsdb.interfaces.model.model_interface import ModelInterfaceWrapper
 
 
 def start(verbose, no_studio):
@@ -84,13 +83,18 @@ def start(verbose, no_studio):
 
         request.company_id = company_id
 
-        request.default_store = DataStoreWrapper(
-            data_store=current_app.original_data_store,
+        request.default_store = WithKWArgsWrapper(
+            current_app.original_data_store,
             company_id=company_id
         )
-        
-        request.model_interface = ModelInterfaceWrapper(
-            model_interface=current_app.original_model_interface,
+
+        request.model_interface = WithKWArgsWrapper(
+            current_app.original_model_interface,
+            company_id=company_id
+        )
+
+        request.datasource_interface = WithKWArgsWrapper(
+            current_app.original_datasource_interface,
             company_id=company_id
         )
 

@@ -85,7 +85,8 @@ class SqlStatementParser():
             elif self._keyword == 'retrain':
                 self._struct = self.parse_as_retrain()
             elif self._keyword == 'create_datasource':
-                self._struct = self.parse_as_create_datasource()
+                # self._struct = self.parse_as_create_datasource()
+                pass
             elif self._keyword == 'describe':
                 self._struct = self.parse_as_describe()
 

@@ -1079,11 +1079,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         # ---
 
-        # region FIXME https://github.com/mindsdb/mindsdb_sql/issues/75
-        if sql.replace('\n\t', '') == "SELECT * FROM information_schema.TABLES t WHERE t.TABLE_SCHEMA = 'information_schema' AND t.TABLE_NAME = 'CHECK_CONSTRAINTS'":
-            sql = "SELECT * FROM information_schema.TABLES as t WHERE t.TABLE_SCHEMA = 'information_schema' AND t.TABLE_NAME = 'CHECK_CONSTRAINTS'"
-        # endregion
-
         statement = SqlStatementParser(sql)
         sql = statement.sql
         sql_lower = sql.lower()
@@ -1092,7 +1087,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         keyword = statement.keyword
         struct = statement.struct
 
-        # FIXME remove after https://github.com/mindsdb/mindsdb_sql/issues/68
         try:
             # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
             sql_lower_replace = sql_lower.replace(' status ', ' `status` ')

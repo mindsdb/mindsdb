@@ -147,9 +147,6 @@ class SQLQuery():
                 sql = subquery.strip('()')
         # ---
 
-        # 'offset x, y' - specific just for mysql, parser dont understand it
-        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<2> offset \g<1> ', sql, flags=re.IGNORECASE)
-
         self.raw = sql
         self.model_types = {}
         self._parse_query(sql)

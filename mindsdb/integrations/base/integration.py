@@ -1,6 +1,5 @@
 import os
 from threading import Thread
-from mindsdb.streams import StreamController
 
 from mindsdb.utilities.config import STOP_THREADS_EVENT
 from mindsdb.utilities.log import log
@@ -62,8 +61,9 @@ class StreamIntegration(Integration):
                                         predictor=dct['predictor'],
                                         stream_in=dct['stream_in'],
                                         stream_out=dct['stream_out'],
-                                        anomaly_stream=dct.get('anomaly_stream', None),
-                                        learning_stream=dct.get('learning_stream', None)
+                                        anomaly_stream=dct.get('stream_anomaly', None),
+                                        learning_params=dct.get('learning_params', None),
+                                        learning_threshold=dct.get('learning_threshold', None),
                                     )
                                     db.session.add(stream)
                                     db.session.commit()
@@ -88,6 +88,11 @@ class StreamIntegration(Integration):
                             # Bad action value
                             log.error('INTEGRATION %s: bad action value received - %s', self.name, dct)
 
+            # it is really required to add 'commit' here
+            # to avoid case when sessin.query returns previously
+            # deleted object
+            # https://stackoverflow.com/questions/10210080/how-to-disable-sqlalchemy-caching
+            db.session.commit()
             stream_db_recs = db.session.query(db.Stream).filter_by(
                 company_id=self.company_id,
                 integration=self.name
@@ -112,7 +117,7 @@ class StreamIntegration(Integration):
         for s in self._streams:
             s.stop_event.set()
 
-    def _make_stream(self, s: db.Stream) -> StreamController:
+    def _make_stream(self, s: db.Stream):
         raise NotImplementedError
 
     def _query(self, query, fetch=False):

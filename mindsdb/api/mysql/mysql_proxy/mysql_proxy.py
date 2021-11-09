@@ -1276,9 +1276,39 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
                 self.answer_show_create_table(table)
                 return
-            elif 'show character set where charset =' in sql_lower:
-                # show character set where charset = 'utf8mb4';
-                charset = sql_lower.replace('show character set where charset = ', '').strip("'")
+            elif sql_category in ('character set', 'charset'):
+                charset = None
+                if condition == 'where':
+                    if isinstance(expression, BinaryOperation):
+                        if expression.op == '=':
+                            if isinstance(expression.args[0], Identifier):
+                                if expression.args[0].parts[0].lower() == 'charset':
+                                    charset = expression.args[1].value
+                                else:
+                                    raise Exception(
+                                        f'Error during processing query: {sql}\n'
+                                        f"Only filter by 'charset' supported 'WHERE', but '{expression.args[0].parts[0]}' found"
+                                    )
+                            else:
+                                raise Exception(
+                                    f'Error during processing query: {sql}\n'
+                                    f"Expected identifier in 'WHERE', but '{expression.args[0]}' found"
+                                )
+                        else:
+                            raise Exception(
+                                f'Error during processing query: {sql}\n'
+                                f"Expected '=' comparison in 'WHERE', but '{expression.op}' found"
+                            )
+                    else:
+                        raise Exception(
+                            f'Error during processing query: {sql}\n'
+                            f"Expected binary operation in 'WHERE', but '{expression}' found"
+                        )
+                elif condition is not None:
+                    raise Exception(
+                        f'Error during processing query: {sql}\n'
+                        f"Only 'WHERE' filter supported, but '{condition}' found"
+                    )
                 self.answer_show_charset(charset)
                 return
             elif sql_category == 'warnings':
@@ -1286,9 +1316,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             elif sql_category == 'engines':
                 self.answer_show_engines()
-                return
-            elif sql_category == 'charset':
-                self.answer_show_charset()
                 return
             elif sql_category == 'collation':
                 self.answer_show_collation()

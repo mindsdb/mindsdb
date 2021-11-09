@@ -128,9 +128,9 @@ And values that we need to provide are:
 
 If the predictor is ready, it will look like this. The model has been created and trained! The reported accuracy is 75%. If you want to have more control over the model, head to lightwood.io to see how that can be customized.
 
-## Create the prediction
+## Make prediction
 
-Now you are in the last step of this tutorial, creating the prediction. To create a prediction you can use this command:
+Now you are in the last step of this tutorial, making the prediction. To make a prediction you can use this command:
 
 ```sql
 SELECT target_variable, target_variable_explain FROM model_table 
@@ -138,6 +138,7 @@ WHERE when_data='{"column3": "value", "column2": "value"}';
 ```
 
 You need to set these values:
+
 - target_variable - The original value of the target variable.
 - target_variable_confidence - Model confidence score.
 - target_variable_explain - JSON object that contains additional information as confidence_lower_bound, confidence_upper_bound, anomaly, truth.

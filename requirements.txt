@@ -20,4 +20,4 @@ appdirs >= 1.0.0
 mindsdb-sql == 0.0.31
 dfsql == 0.6.6
 checksumdir >= 1.2.0
-git+https://github.com/mindsdb/mindsdb_streams.git@v0.0.2
+git+https://github.com/mindsdb/mindsdb_streams.git@v0.0.3

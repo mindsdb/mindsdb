@@ -45,7 +45,7 @@ from mindsdb_sql.parser.ast import (
     Set,
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropIntegration
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropIntegration, CreateIntegration
 
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
@@ -1120,10 +1120,22 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 statement = parse_sql('set autocommit')
             statement.category = 'error'
 
+        if isinstance(statement, CreateIntegration):
+            struct = {
+                'datasource_name': statement.name,
+                'database_type': statement.engine,
+                'connection_args': statement.parameters
+            }
+            self.answer_create_datasource(struct)
+            return
         if isinstance(statement, DropPredictor):
             predictor_name = statement.name.parts[-1]
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
             self.packet(OkPacket).send()
+        elif keyword == 'create_datasource':
+            # fallback for statement
+            self.answer_create_datasource(struct)
+            return
         elif isinstance(statement, DropIntegration):
             raise Exception('Not ready')
         elif keyword == 'describe':
@@ -1131,9 +1143,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         elif keyword == 'retrain':
             self.answer_retrain_predictor(struct['predictor_name'])
-            return
-        elif keyword == 'create_datasource':
-            self.answer_create_datasource(struct)
             return
         elif isinstance(statement, Show) or keyword == 'show':
             sql_category = statement.category.lower()

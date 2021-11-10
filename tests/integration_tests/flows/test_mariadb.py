@@ -165,21 +165,21 @@ class MariaDBTest(unittest.TestCase):
         print('Test predictor table not exists')
         self.assertTrue(TEST_PREDICTOR_NAME not in self.get_tables_in(MINDSDB_DATABASE))
 
-    def test_6_delete_predictor_by_delete_statement(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
-        # NOTE looks like error in mariadb CONNECT engine: we get MINDSDB_DATABASE in DELETE query,
-        # instead of database in engine config.
-        if USE_EXTERNAL_DB_SERVER:
-            return
+    # def test_6_delete_predictor_by_delete_statement(self):
+    #     print(f'\nExecuting {inspect.stack()[0].function}')
+    #     # NOTE looks like error in mariadb CONNECT engine: we get MINDSDB_DATABASE in DELETE query,
+    #     # instead of database in engine config.
+    #     if USE_EXTERNAL_DB_SERVER:
+    #         return
 
-        name = f'{TEST_PREDICTOR_NAME}_external'
+    #     name = f'{TEST_PREDICTOR_NAME}_external'
 
-        query(f"""
-            delete from mindsdb.predictors where name='{name}';
-        """)
+    #     query(f"""
+    #         delete from mindsdb.predictors where name='{name}';
+    #     """)
 
-        print('Test predictor table not exists')
-        self.assertTrue(name not in self.get_tables_in(MINDSDB_DATABASE))
+    #     print('Test predictor table not exists')
+    #     self.assertTrue(name not in self.get_tables_in(MINDSDB_DATABASE))
 
 
 if __name__ == "__main__":

@@ -77,8 +77,8 @@ class Predictor(Resource):
         from_ds = data.get('from')
         delete_ds_on_fail = False
         if ds_name is not None:
-            ds_data = request.default_store.get_datasource_obj(ds_name, raw=True)
-            if ds_data is None:
+            ds = request.default_store.get_datasource_obj(ds_name, raw=True)
+            if ds is None:
                 return http_error(
                     400,
                     'DS not exists',
@@ -102,7 +102,6 @@ class Predictor(Resource):
                 )
 
             ds = request.default_store.save_datasource(ds_name, from_ds['datasource'], {'query': from_ds['query']})
-            ds_data = request.default_store.get_datasource(ds_name)
         else:
             return http_error(
                 400,

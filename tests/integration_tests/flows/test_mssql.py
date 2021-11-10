@@ -179,21 +179,21 @@ class MSSQLTest(unittest.TestCase):
         predictors = [x['name'] for x in predictors]
         self.assertTrue(TEST_PREDICTOR_NAME not in predictors)
 
-    def test_6_delete_predictor_by_delete_statement(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
-        name = f'{TEST_PREDICTOR_NAME}_external'
+    # def test_6_delete_predictor_by_delete_statement(self):
+    #     print(f'\nExecuting {inspect.stack()[0].function}')
+    #     name = f'{TEST_PREDICTOR_NAME}_external'
 
-        query(f"""
-            exec ('delete from mindsdb.predictors where name=''{name}'' ') at {MINDSDB_DATABASE};
-        """)
+    #     query(f"""
+    #         exec ('delete from mindsdb.predictors where name=''{name}'' ') at {MINDSDB_DATABASE};
+    #     """)
 
-        predictors = fetch(f'''
-            exec ('
-                select * from mindsdb.predictors
-            ') AT {MINDSDB_DATABASE};
-        ''')
-        predictors = [x['name'] for x in predictors]
-        self.assertTrue(name not in predictors)
+    #     predictors = fetch(f'''
+    #         exec ('
+    #             select * from mindsdb.predictors
+    #         ') AT {MINDSDB_DATABASE};
+    #     ''')
+    #     predictors = [x['name'] for x in predictors]
+    #     self.assertTrue(name not in predictors)
 
 
 if __name__ == "__main__":

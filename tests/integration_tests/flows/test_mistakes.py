@@ -29,7 +29,6 @@ CONDITION = {
 
 TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
-EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'

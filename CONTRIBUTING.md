@@ -4,31 +4,6 @@ Being part of the core MindsDB team is accessible to anyone who is motivated and
 
 Please see below how to contribute to the project, also refer to the contributing documentation.
 
-# Hacktoberfest 2021
-We are very excited that MindsDB is participating in this year's Hacktoberfest 2021 event. This month-long event through October gives you the chance to contribute to the Open Source codebase of MindsDB!
-
-MindsDB engineers have prepared several categories of open issues that are ideal for first-time contributors. It's entirely up to you what you choose to work on and if you have your own great idea, feel free to suggest it by reaching out to us via our Slack community or Github Discussions.
-
-**Our Major Incentive and SWAG from MindsDB!** 
-
-Make contributions and enter into the draw for a [Deep Learning Laptop](https://lambdalabs.com/deep-learning/laptops/tensorbook) **powered by the NVIDIA RTX 3080 Max-Q GPU**. Pre-installed with TensorFlow, PyTorch, CUDA, cuDNN and more.
-
-![Deep Learning Laptop](/assets/laptop.jpeg)
-
-Also we’d love to send you a special MindsDB SWAG gift packs
-
-![MindsDB Swag](/assets/swag.png)
-
-
-#### How to take part:
-
-1. Contribute with at least 5 points making pull requests to any of our open issues labeled Hacktoberfest during the October timeframe.
-2. Complete the form with links to all your completed PR’s so we know where to ship the gift pack to!
-
-Entries close at midnight (PST) Sunday, 31 October 2021 with the prize draw winner announced at an online event on Monday, 1st of November.
-
-Please check https://mindsdb.com/hacktoberfest for more details.
-
 ## How can you help us?
 
 * Report a bug

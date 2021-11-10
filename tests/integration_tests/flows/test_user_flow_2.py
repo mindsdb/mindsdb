@@ -12,14 +12,7 @@ from common import (
     check_prediction_values,
     condition_dict_to_str,
     run_environment,
-    make_test_csv,
     stop_mindsdb,
-)
-
-from http_test_helpers import (
-    check_ds_not_exists,
-    check_ds_exists,
-    check_ds_analyzable
 )
 
 
@@ -37,7 +30,6 @@ CONDITION = {
 # ---
 
 TEST_DATA_TABLE = TEST_DATASET
-EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'
@@ -89,29 +81,7 @@ class UserFlowTest_2(unittest.TestCase):
             )
         )
 
-        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50', as_dict=True)
-        cls.external_datasource_csv_path = make_test_csv(EXTERNAL_DS_NAME, data)
-
-    def test_1_upload_ds(self):
-        check_ds_not_exists(TEST_DS_CSV)
-
-        with open(self.external_datasource_csv_path, 'rb') as f:
-            d = f.read()
-        res = requests.put(
-            f'{HTTP_API_ROOT}/datasources/{TEST_DS_CSV}',
-            files={
-                'file': ('data.csv', d, 'text/csv'),
-                'name': (None, TEST_DS_CSV),
-                'source_type': (None, 'file'),
-                'source': (None, 'data.csv')
-            }
-        )
-        assert res.status_code == 200
-
-        check_ds_exists(TEST_DS_CSV)
-        check_ds_analyzable(TEST_DS_CSV)
-
-    def test_2_add_integration(self):
+    def test_1_add_integration(self):
         test_integration_data = {}
         test_integration_data.update(config['integrations']['default_mariadb'])
         test_integration_data['publish'] = True
@@ -119,7 +89,7 @@ class UserFlowTest_2(unittest.TestCase):
         res = requests.put(f'{HTTP_API_ROOT}/config/integrations/{TEST_INTEGRATION}', json={'params': test_integration_data})
         assert res.status_code == 200
 
-    def test_3_restart_and_connect(self):
+    def test_2_restart_and_connect(self):
         stop_mindsdb()
 
         run_environment(
@@ -139,26 +109,7 @@ class UserFlowTest_2(unittest.TestCase):
             )
         )
 
-    def test_4_learn_predictor(self):
-        query(f"""
-            insert into {MINDSDB_DATABASE}.predictors (name, predict, external_datasource, training_options) values
-            (
-                '{TEST_PREDICTOR}',
-                '{','.join(to_predict_column_names)}',
-                '{TEST_DS_CSV}',
-                '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
-            );
-        """)
-
-        print('predictor record in mindsdb.predictors')
-        res = fetch(f"select status from {MINDSDB_DATABASE}.predictors where name = '{TEST_PREDICTOR}'")
-        self.assertTrue(len(res) == 1)
-        self.assertTrue(res[0]['status'] == 'complete')
-
-        print('predictor table in mindsdb db')
-        self.assertTrue(TEST_PREDICTOR in self.get_tables_in(MINDSDB_DATABASE))
-
-    def test_5_make_query(self):
+    def test_3_make_query(self):
         res = fetch(f"""
             select
                 *

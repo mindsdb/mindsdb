@@ -1,7 +1,3 @@
-import os
-import shutil
-import tempfile
-
 from contextlib import closing
 import mysql.connector
 
@@ -137,7 +133,6 @@ class MySQL(Integration, MySQLConnectionChecker):
                 accuracy VARCHAR(500),
                 predict VARCHAR(500),
                 select_data_query VARCHAR(500),
-                external_datasource VARCHAR(500),
                 training_options VARCHAR(500),
                 key name_key (name)
             ) ENGINE=FEDERATED CHARSET=utf8 CONNECTION='{connect}';
@@ -167,7 +162,6 @@ class MySQL(Integration, MySQLConnectionChecker):
             ))
             columns_sql += ',`when_data` varchar(500)'
             columns_sql += ',`select_data_query` varchar(500)'
-            columns_sql += ',`external_datasource` varchar(500)'
             for col in predict:
                 columns_sql += f',`{col}_confidence` double'
                 if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
@@ -182,8 +176,7 @@ class MySQL(Integration, MySQLConnectionChecker):
                 CREATE TABLE {self.mindsdb_database}.{self._escape_table_name(name)} (
                     {columns_sql},
                     index when_data_index (when_data),
-                    index select_data_query_index (select_data_query),
-                    index external_datasource_index (external_datasource)
+                    index select_data_query_index (select_data_query)
                 ) ENGINE=FEDERATED CHARSET=utf8 CONNECTION='{connect}';
             """
             self._query(q)
@@ -195,24 +188,23 @@ class MySQL(Integration, MySQLConnectionChecker):
         self._query(q)
 
     def get_row_count(self, query):
-        q = f""" 
+        q = f"""
             SELECT COUNT(*) as count
-            FROM ({query}) as query;"""
+            FROM ({query}) as query;
+        """
         result = self._query(q)
         return result[0]['count']
 
-    def get_columns(self,query):
-        q = f"""SELECT * from ({query}) LIMIT 1;"""
+    def get_columns(self, query):
+        q = f"SELECT * from ({query}) LIMIT 1;"
         query_response = self._query(q)
         if len(query_response) > 0:
             columns = list(query_response[0].keys())
             return columns
         else:
             return []
-    
+
     def get_tables_list(self):
-        q= f"""
-            SHOW TABLES;
-            """
+        q = "SHOW TABLES;"
         result = self._query(q)
         return result

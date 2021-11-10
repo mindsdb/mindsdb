@@ -118,8 +118,7 @@ class MindsDBDataNode(DataNode):
             x['mindsdb_version'],
             x['error'],
             '',
-            '',  # TODO
-            ''  # TODO ?
+            ''   # TODO
         ] for x in models], columns=columns)
 
     def _select_datasources(self):

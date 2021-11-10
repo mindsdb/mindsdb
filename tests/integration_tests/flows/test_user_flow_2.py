@@ -109,7 +109,26 @@ class UserFlowTest_2(unittest.TestCase):
             )
         )
 
-    def test_3_make_query(self):
+    def test_3_learn_predictor(self):
+        query(f"""
+            insert into {MINDSDB_DATABASE}.predictors (name, predict, select_data_query, training_options) values
+            (
+                '{TEST_PREDICTOR}',
+                '{','.join(to_predict_column_names)}',
+                'select * from test_data.{TEST_DATASET} limit 50',
+                '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
+            );
+        """)
+
+        print('predictor record in mindsdb.predictors')
+        res = fetch(f"select status from {MINDSDB_DATABASE}.predictors where name = '{TEST_PREDICTOR}'")
+        self.assertTrue(len(res) == 1)
+        self.assertTrue(res[0]['status'] == 'complete')
+
+        print('predictor table in mindsdb db')
+        self.assertTrue(TEST_PREDICTOR in self.get_tables_in(MINDSDB_DATABASE))
+
+    def test_4_make_query(self):
         res = fetch(f"""
             select
                 *

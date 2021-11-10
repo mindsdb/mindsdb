@@ -10,7 +10,6 @@
 """
 
 import re
-import copy
 import dfsql
 import pandas as pd
 import datetime
@@ -383,22 +382,6 @@ class SQLQuery():
                 predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
-
-                # +++ external datasource
-                if 'external_datasource' in where_data:
-                    external_datasource_sql = where_data['external_datasource']
-                    if 'select ' not in external_datasource_sql.lower():
-                        external_datasource_sql = f'select * from {external_datasource_sql}'
-                    temp_session = copy.copy(self.session)
-                    temp_session.database = 'datasource'
-                    query = SQLQuery(external_datasource_sql, session=temp_session)
-                    result = query.fetch(self.datahub, view='dict')
-                    if result['success'] is False:
-                        raise Exception(f"Something wrong with getting data from {where_data['external_datasource']}")
-                    for row in result['result']:
-                        row.update(where_data)
-                    where_data = result['result']
-                # ---
 
                 data = dn.select(
                     table=predictor,

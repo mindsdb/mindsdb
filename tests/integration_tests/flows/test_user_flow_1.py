@@ -40,7 +40,6 @@ TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'
 TEST_DS_CSV = 'test_ds_csv'
 TEST_PREDICTOR = 'test_predictor'
-TEST_PREDICTOR_CSV = 'test_predictor_csv'
 
 config = {}
 
@@ -167,18 +166,16 @@ class UserFlowTest_1(unittest.TestCase):
                 assert res[field]['confidence'] > 0
 
         test_predictor(TEST_PREDICTOR, TEST_DS)
-        test_predictor(TEST_PREDICTOR_CSV, TEST_DS_CSV)
 
     def test_5_delete(self):
-        for predictor_name in [TEST_PREDICTOR, TEST_PREDICTOR_CSV]:
-            res = requests.delete(f'{HTTP_API_ROOT}/predictors/{predictor_name}')
-            assert res.status_code == 200
-            check_predictor_not_exists(predictor_name)
+        res = requests.delete(f'{HTTP_API_ROOT}/predictors/{TEST_PREDICTOR}')
+        assert res.status_code == 200
+        check_predictor_not_exists(TEST_PREDICTOR)
 
-        for ds_name in [TEST_DS_CSV, TEST_DS]:
-            res = requests.delete(f'{HTTP_API_ROOT}/datasources/{ds_name}')
-            assert res.status_code == 200
-            check_ds_not_exists(ds_name)
+        # for ds_name in [TEST_DS_CSV, TEST_DS]:
+        #     res = requests.delete(f'{HTTP_API_ROOT}/datasources/{ds_name}')
+        #     assert res.status_code == 200
+        #     check_ds_not_exists(ds_name)
 
 
 if __name__ == "__main__":

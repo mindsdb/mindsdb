@@ -95,7 +95,7 @@ class MSSQLTest(unittest.TestCase):
 
         self.assertTrue(len(predictors) == 0)
 
-    def test_3_insert_predictor(self):
+    def test_2_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
             exec ('
@@ -115,7 +115,7 @@ class MSSQLTest(unittest.TestCase):
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
-    def test_5_query_predictor(self):
+    def test_3_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         res = query(f"""
             exec ('
@@ -141,7 +141,7 @@ class MSSQLTest(unittest.TestCase):
         self.assertIsInstance(res['rental_price_explain'], str)
         self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
 
-    def test_6_range_query(self):
+    def test_4_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         results = query(f"""
@@ -164,7 +164,7 @@ class MSSQLTest(unittest.TestCase):
             self.assertIsInstance(res['rental_price_max'], str)
             self.assertIsInstance(res['rental_price_explain'], str)
 
-    def test_7_delete_predictor_by_command(self):
+    def test_5_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
@@ -179,7 +179,7 @@ class MSSQLTest(unittest.TestCase):
         predictors = [x['name'] for x in predictors]
         self.assertTrue(TEST_PREDICTOR_NAME not in predictors)
 
-    def test_8_delete_predictor_by_delete_statement(self):
+    def test_6_delete_predictor_by_delete_statement(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         name = f'{TEST_PREDICTOR_NAME}_external'
 

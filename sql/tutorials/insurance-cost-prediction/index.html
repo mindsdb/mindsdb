@@ -380,6 +380,18 @@
   
   
     <li class="md-nav__item">
+      <a href="../../../info/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../../deployment/docker/" class="md-nav__link">
         Docker
       </a>
@@ -780,8 +792,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#create-the-prediction" class="md-nav__link">
-    Create the prediction
+  <a href="#make-prediction" class="md-nav__link">
+    Make prediction
   </a>
   
 </li>
@@ -874,10 +886,37 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+      
+      <label class="md-nav__link" for="__nav_6_3">
+        Time series
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Time series" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_3">
+          <span class="md-nav__icon md-icon"></span>
+          Time series
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
     <li class="md-nav__item">
       <a href="../mindsdb-superset-snowflake/" class="md-nav__link">
-        Time series
+        AI-powered forecasts in Apache Superset and Snowflake
       </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -1022,8 +1061,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#create-the-prediction" class="md-nav__link">
-    Create the prediction
+  <a href="#make-prediction" class="md-nav__link">
+    Make prediction
   </a>
   
 </li>
@@ -1142,16 +1181,18 @@ To train a new machine learning model we will need to CREATE Predictor as a new 
 </ul>
 <p><img alt="Show model" src="/assets/sql/tutorials/insurance-cost/show-predictor-isurance-sql.png" /></p>
 <p>If the predictor is ready, it will look like this. The model has been created and trained! The reported accuracy is 75%. If you want to have more control over the model, head to lightwood.io to see how that can be customized.</p>
-<h2 id="create-the-prediction">Create the prediction</h2>
-<p>Now you are in the last step of this tutorial, creating the prediction. To create a prediction you can use this command:</p>
+<h2 id="make-prediction">Make prediction</h2>
+<p>Now you are in the last step of this tutorial, making the prediction. To make a prediction you can use this command:</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">target_variable</span><span class="p">,</span> <span class="n">target_variable_explain</span> <span class="k">FROM</span> <span class="n">model_table</span> 
 <span class="k">WHERE</span> <span class="n">when_data</span><span class="o">=</span><span class="s1">&#39;{&quot;column3&quot;: &quot;value&quot;, &quot;column2&quot;: &quot;value&quot;}&#39;</span><span class="p">;</span>
 </code></pre></div>
-<p>You need to set these values:
-- target_variable - The original value of the target variable.
-- target_variable_confidence - Model confidence score.
-- target_variable_explain - JSON object that contains additional information as confidence_lower_bound, confidence_upper_bound, anomaly, truth.
-- when_data - The data to make the predictions from(WHERE clause params).</p>
+<p>You need to set these values:</p>
+<ul>
+<li>target_variable - The original value of the target variable.</li>
+<li>target_variable_confidence - Model confidence score.</li>
+<li>target_variable_explain - JSON object that contains additional information as confidence_lower_bound, confidence_upper_bound, anomaly, truth.</li>
+<li>when_data - The data to make the predictions from(WHERE clause params).</li>
+</ul>
 <p><img alt="Query model" src="/assets/sql/tutorials/insurance-cost/create-prediction-isurance-sql.png" /></p>
 <p>Finally, we have trained an insurance model using SQL and MindsDB.</p>
 <h2 id="conclusions">Conclusions</h2>

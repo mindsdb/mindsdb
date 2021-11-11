@@ -380,6 +380,18 @@
             
   
   
+  
+    <li class="md-nav__item">
+      <a href="../../info/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
     
   
   
@@ -421,6 +433,13 @@
   
     <nav class="md-nav" aria-label="MindsDB container">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-docker-for-mac-users" class="md-nav__link">
+    For "Docker for Mac" Users
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#pull-image" class="md-nav__link">
@@ -857,10 +876,37 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+      
+      <label class="md-nav__link" for="__nav_6_3">
+        Time series
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Time series" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_3">
+          <span class="md-nav__icon md-icon"></span>
+          Time series
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../sql/tutorials/mindsdb-superset-snowflake/" class="md-nav__link">
-        Time series
+        AI-powered forecasts in Apache Superset and Snowflake
       </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -971,6 +1017,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#for-docker-for-mac-users" class="md-nav__link">
+    For "Docker for Mac" Users
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#pull-image" class="md-nav__link">
     Pull image
   </a>
@@ -1027,6 +1080,9 @@
 <p>You should see the <code>Hello from Docker!</code> message displayed. If not, check the <a href="https://www.docker.com/get-started" target="_blank">Get Started</a> documentation.</p>
 <h3 id="mindsdb-container">MindsDB container</h3>
 <p>MindsDB images are uploaded to the <a href="https://hub.docker.com/u/mindsdb" target="_blank">MindsDB repo on docker hub</a> after each release.</p>
+<h4 id="for-docker-for-mac-users">For "Docker for Mac" Users</h4>
+<p>By default, Docker for Mac allocates <strong>2.00GB of memory</strong>. This is insufficient for deploying to docker. We recommend increasing the default memory limit to <strong>4.00GB</strong>. </p>
+<p>Please refer to <a href="https://docs.docker.com/desktop/mac/#resources">https://docs.docker.com/desktop/mac/#resources</a> for more information on how to increase the allocated memory.</p>
 <h4 id="pull-image">Pull image</h4>
 <p>First, run the below command to pull our latest production image:</p>
 <div class="highlight"><pre><span></span><code>docker pull mindsdb/mindsdb

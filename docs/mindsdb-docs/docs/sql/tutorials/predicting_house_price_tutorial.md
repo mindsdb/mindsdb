@@ -13,7 +13,7 @@ So let get started.
 
 ## Cleaning data:
 Simply install database and clean it using excel ,your data should look like this:
-![data_demo](https://user-images.githubusercontent.com/59201258/139728303-c8981d0d-2a23-431d-bddd-7b4c43d67019.PNG)
+![excle_img](https://user-images.githubusercontent.com/59201258/141510855-b8e2325a-361c-44c4-9fd8-8adfb6729602.PNG)
 
 
 ## Starting mysql main server
@@ -48,10 +48,11 @@ To start mindsdb locally run:
     python3 -m mindsdb --api=http,mysql
 
 You don't need config file in this case, now go to gui interface, and Add database:
-![add_database](https://user-images.githubusercontent.com/59201258/139728393-dee5dc6f-8aad-4583-91b4-f93ae4a6929a.PNG)
+![ADD_DB](https://user-images.githubusercontent.com/59201258/141510954-1ad712de-563a-477b-904c-c0c7a60e57e9.PNG)
 
 Now type all details like below:
-![database setup](https://user-images.githubusercontent.com/59201258/139728418-395ad554-0b8e-40cf-be20-07d4a35340c7.PNG)
+
+![fill_form](https://user-images.githubusercontent.com/59201258/141511055-0c7cedc7-d610-47a1-915c-2729e166bf91.PNG)
 
 
  - ***Intergration name:*** It define the name through which we will access database in mindsdb's mysql server.
@@ -60,7 +61,8 @@ Now type all details like below:
  - ***Username and password:*** they should be same as your main MySQL server that is running(we run it in second step).
 
 Now click on connect , it eventually create an instance and you are now ready to create your predictor, your gui should look like this:
-![gui_1](https://user-images.githubusercontent.com/59201258/139728457-142cac67-20d9-4066-90e6-aa3b953c8262.PNG)
+
+![gui_updated](https://user-images.githubusercontent.com/59201258/141511216-a316b3f2-ea11-4088-9706-892f7a405400.PNG)
 
 ## Creating predictor
 
@@ -90,7 +92,8 @@ Now when you created predictor ,you can see status of your predictor:
     SELECT  *  FROM  mindsdb.predictors  WHERE  name='housing_predictor';
 
 You will see something like this:
-![table_status_predictor](https://user-images.githubusercontent.com/59201258/139728583-479063d3-c25f-45dd-a3a6-3eaafbde8294.PNG)
+
+![prediction_tb](https://user-images.githubusercontent.com/59201258/141511308-19d16dee-40ed-495a-94b6-becf26ae36ee.PNG)
 
 Now for predicting on any data:
  
@@ -100,7 +103,8 @@ Now for predicting on any data:
     WHERE when_data='{"id":2487200874,"grade":5,"bedrooms":4,"bathrooms":2,"sqft_living":890,"floors":1,"condition_of":3}';
 
 Now you will see result like that:
-![result](https://user-images.githubusercontent.com/59201258/139728610-a7edac6b-2851-48fa-af3d-986903cf9c54.PNG)
+
+![answer](https://user-images.githubusercontent.com/59201258/141511536-f18ad990-84c3-4c1b-97b6-2001bc5f0ddc.PNG)
 
 
 You successfully completed this tutorial congrats,now you can run mindsdb locally on you SQL databases!

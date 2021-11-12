@@ -73,8 +73,8 @@ jobs:
           # python tests/integration_tests/flows/test_redis.py
 
           # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream Integration\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
+          echo -e "\n===============\ntest Kafka Stream Integration\n===============\n"
+          python tests/integration_tests/flows/test_kafka.py
 
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"

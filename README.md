@@ -21,8 +21,6 @@
     <a href="https://apidocs.mindsdb.com/">API Docs</a>
     <span> | </span>
     <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">Community Slack</a>
-    <span> | </span>
-    <a href="https://github.com/mindsdb/mindsdb/issues?q=is%3Aopen+is%3Aissue+label%3Ahacktoberfest">Hacktoberfest</a>
   </h3>
   
 </div>

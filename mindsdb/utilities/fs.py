@@ -63,7 +63,7 @@ def create_process_mark(folder='learn'):
         p = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{folder}/')
         p.mkdir(parents=True, exist_ok=True)
         mark = _get_process_mark_id()
-        p.joinpath(_get_process_mark_id()).touch()
+        p.joinpath(mark).touch()
     return mark
 
 

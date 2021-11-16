@@ -62,8 +62,8 @@ nav:
     - Docker: deployment/docker.md
     - Pip: deployment/pypi.md
     - MindsDB Cloud: deployment/cloud.md
-  - Connect your data: connect.md
-  - Connect to MindsDB as a Database:
+  - Plug your data: connect.md
+  - Connect to MindsDB SQL Server:
       - Local Deployment: sql/connect/local.md
       - MindsDB Cloud: sql/connect/cloud.md
   - SQL:

@@ -76,6 +76,7 @@ nav:
     - SELECT: sql/api/select.md
     - JOIN: sql/api/join.md
   - Tutorials:
+    - AI Tables intro: sql/tutorials/ai-tables.md
     - Regression: 
       - Process Quality: sql/tutorials/process-quality.md
       - Bodyfat Prediction: sql/tutorials/bodyfat.md

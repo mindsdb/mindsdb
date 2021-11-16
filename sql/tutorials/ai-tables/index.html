@@ -9,21 +9,21 @@
       
       
       
-        <link rel="canonical" href="https://docs.mindsdb.com/integrations/SageMakerSDK/">
+        <link rel="canonical" href="https://docs.mindsdb.com/sql/tutorials/ai-tables/">
       
-      <link rel="icon" href="../../assets/mdb_logo.png">
+      <link rel="icon" href="../../../assets/mdb_logo.png">
       <meta name="generator" content="mkdocs-1.2.2, mkdocs-material-7.2.8">
     
     
       
-        <title>Train and host MindsDB Models using SageMaker SDK - MindsDB Documentation</title>
+        <title>AI Tables intro - MindsDB Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.92558b1b.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.92558b1b.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.3f5d1f46.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.3f5d1f46.min.css">
         
       
     
@@ -38,7 +38,7 @@
     
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
     
 
@@ -74,7 +74,7 @@
     <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="" data-md-color-accent="">
   
     
-    <script>function __prefix(e){return new URL("../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    <script>function __prefix(e){return new URL("../../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
     
       <script>var palette=__get("__palette");if(null!==palette&&"object"==typeof palette.color)for(var key in palette.color)document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#add-dependencies" class="md-skip">
+        <a href="#ai-tables-intro" class="md-skip">
           Skip to content
         </a>
       
@@ -128,14 +128,14 @@
 
     <!-- Link to home -->
     <a
-      href="../.."
+      href="../../.."
       title="MindsDB Documentation"
       class="md-header__button md-logo"
       aria-label="MindsDB Documentation"
       data-md-component="logo"
     >
       
-  <img src="../../assets/mdb_logo_w.svg" alt="logo">
+  <img src="../../../assets/mdb_logo_w.svg" alt="logo">
 
     </a>
 
@@ -155,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Train and host MindsDB Models using SageMaker SDK
+              AI Tables intro
             
           </span>
         </div>
@@ -313,9 +313,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="MindsDB Documentation" class="md-nav__button md-logo" aria-label="MindsDB Documentation" data-md-component="logo">
+    <a href="../../.." title="MindsDB Documentation" class="md-nav__button md-logo" aria-label="MindsDB Documentation" data-md-component="logo">
       
-  <img src="../../assets/mdb_logo_w.svg" alt="logo">
+  <img src="../../../assets/mdb_logo_w.svg" alt="logo">
 
     </a>
     MindsDB Documentation
@@ -344,7 +344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         What is MindsDB
       </a>
     </li>
@@ -380,7 +380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../info/" class="md-nav__link">
+      <a href="../../../info/" class="md-nav__link">
         Getting Started
       </a>
     </li>
@@ -392,7 +392,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/docker/" class="md-nav__link">
+      <a href="../../../deployment/docker/" class="md-nav__link">
         Docker
       </a>
     </li>
@@ -404,7 +404,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/pypi/" class="md-nav__link">
+      <a href="../../../deployment/pypi/" class="md-nav__link">
         Pip
       </a>
     </li>
@@ -416,7 +416,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/cloud/" class="md-nav__link">
+      <a href="../../../deployment/cloud/" class="md-nav__link">
         MindsDB Cloud
       </a>
     </li>
@@ -437,7 +437,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../connect/" class="md-nav__link">
+      <a href="../../../connect/" class="md-nav__link">
         Plug your data
       </a>
     </li>
@@ -473,7 +473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/connect/local/" class="md-nav__link">
+      <a href="../../connect/local/" class="md-nav__link">
         Local Deployment
       </a>
     </li>
@@ -485,7 +485,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/connect/cloud/" class="md-nav__link">
+      <a href="../../connect/cloud/" class="md-nav__link">
         MindsDB Cloud
       </a>
     </li>
@@ -527,7 +527,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/use/" class="md-nav__link">
+      <a href="../../api/use/" class="md-nav__link">
         USE
       </a>
     </li>
@@ -560,7 +560,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/predictor/" class="md-nav__link">
+      <a href="../../api/predictor/" class="md-nav__link">
         Predictor
       </a>
     </li>
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/view/" class="md-nav__link">
+      <a href="../../api/view/" class="md-nav__link">
         View
       </a>
     </li>
@@ -590,7 +590,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/retrain/" class="md-nav__link">
+      <a href="../../api/retrain/" class="md-nav__link">
         RETRAIN
       </a>
     </li>
@@ -602,7 +602,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/drop/" class="md-nav__link">
+      <a href="../../api/drop/" class="md-nav__link">
         DROP
       </a>
     </li>
@@ -614,7 +614,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/select/" class="md-nav__link">
+      <a href="../../api/select/" class="md-nav__link">
         SELECT
       </a>
     </li>
@@ -626,7 +626,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/join/" class="md-nav__link">
+      <a href="../../api/join/" class="md-nav__link">
         JOIN
       </a>
     </li>
@@ -645,12 +645,14 @@
 
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" checked>
       
       <label class="md-nav__link" for="__nav_6">
         Tutorials
@@ -666,11 +668,58 @@
             
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../../sql/tutorials/ai-tables/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          AI Tables intro
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         AI Tables intro
       </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#machine-learning-ml-lifecycle" class="md-nav__link">
+    Machine Learning (ML) Lifecycle
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deep-dive-into-the-ai-tables" class="md-nav__link">
+    Deep Dive into the AI Tables
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -701,7 +750,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/process-quality/" class="md-nav__link">
+      <a href="../process-quality/" class="md-nav__link">
         Process Quality
       </a>
     </li>
@@ -713,7 +762,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/bodyfat/" class="md-nav__link">
+      <a href="../bodyfat/" class="md-nav__link">
         Bodyfat Prediction
       </a>
     </li>
@@ -725,7 +774,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/insurance-cost-prediction/" class="md-nav__link">
+      <a href="../insurance-cost-prediction/" class="md-nav__link">
         Insurance Cost
       </a>
     </li>
@@ -764,7 +813,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/crop-prediction/" class="md-nav__link">
+      <a href="../crop-prediction/" class="md-nav__link">
         Crop Recomendation
       </a>
     </li>
@@ -776,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/customer-churn/" class="md-nav__link">
+      <a href="../customer-churn/" class="md-nav__link">
         Customer Churn
       </a>
     </li>
@@ -788,7 +837,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/heart-disease/" class="md-nav__link">
+      <a href="../heart-disease/" class="md-nav__link">
         Heart Disease
       </a>
     </li>
@@ -827,7 +876,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/mindsdb-superset-snowflake/" class="md-nav__link">
+      <a href="../mindsdb-superset-snowflake/" class="md-nav__link">
         AI-powered forecasts in Apache Superset and Snowflake
       </a>
     </li>
@@ -875,7 +924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contribute/" class="md-nav__link">
+      <a href="../../../contribute/" class="md-nav__link">
         How to contribute
       </a>
     </li>
@@ -887,7 +936,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/" class="md-nav__link">
+      <a href="../../../community/" class="md-nav__link">
         Join our community
       </a>
     </li>
@@ -899,7 +948,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../faq/" class="md-nav__link">
+      <a href="../../../faq/" class="md-nav__link">
         FAQ
       </a>
     </li>
@@ -928,6 +977,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -936,36 +987,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#add-dependencies" class="md-nav__link">
-    Add dependencies
+  <a href="#machine-learning-ml-lifecycle" class="md-nav__link">
+    Machine Learning (ML) Lifecycle
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#start-training" class="md-nav__link">
-    Start training
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#deploy-the-model" class="md-nav__link">
-    Deploy the model
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#delete-the-endpoint" class="md-nav__link">
-    Delete the endpoint
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#full-code-example" class="md-nav__link">
-    Full code example
+  <a href="#deep-dive-into-the-ai-tables" class="md-nav__link">
+    Deep Dive into the AI Tables
   </a>
   
 </li>
@@ -982,101 +1012,52 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/integrations/SageMakerSDK.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/tutorials/ai-tables.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
                 
-                  <h1>Train and host MindsDB Models using SageMaker SDK</h1>
-                
-                <p>The following section explaines how to train and host models using <a href="https://sagemaker.readthedocs.io/en/stable/">Amazon SageMaker SDK</a>.</p>
-<h3 id="add-dependencies">Add dependencies</h3>
-<p>Install SageMaker SDK :
-<div class="highlight"><pre><span></span><code>pip install sagemaker
+                <h1 id="ai-tables-intro">AI Tables Intro</h1>
+<p>There is an ongoing transformational shift within the modern business world from the “what happened and why” based on historical data analysis to the “what will we predict can happen and how can we make it happen” based on machine learning predictive modeling.</p>
+<p><img alt="Analytics" src="/assets/sql/tutorials/snowflake-superset/1-ML_audience.png" /></p>
+<p>The success of your predictions depends both on the data you have available and the models you train this data on. Data Scientists and Data Engineers need best-in-class tools to prepare the data for feature engineering, the best training models, and the best way of deploying, monitoring, and managing these implementations for optimal prediction confidence.</p>
+<p>Running MindsDB with Snowflake can significantly increase the performance and reduce the computational requirements of training your machine learning models. If you are already a Snowflake user, you can take advantage of key features quickly to enable fast, efficient machine learning capabilities directly in your database by simply connecting Snowflake to the MindsDB service.</p>
+<p>In this article, we will show you how to connect Snowflake to MindsDB, how you can enable real-time machine learning with Snowflake and MindsDB, and how to visualize the MindsDB predictions with Apache Superset.</p>
+<h2 id="machine-learning-ml-lifecycle">Machine Learning (ML) Lifecycle</h2>
+<p>The ML lifecycle can be represented as a process that consists of the data preparation phase, modeling phase, and deployment phase. The diagram below presents all the steps included in each of the stages.</p>
+<p><img alt="ML Workflow" src="/assets/sql/tutorials/snowflake-superset/2-ML_workflow.png" /></p>
+<p>Companies looking to implement machine learning have found their current solutions require substantial amounts of data preparation, cleaning, and labeling, plus hard to find machine learning/AI data scientists to conduct feature engineering; build, train, and optimize models; assemble, verify, and deploy into production; and then monitor in real-time, improve, and refine. Machine learning models require multiple iterations with existing data to train. Additionally, extracting, transforming, and loading (ETL) data from one system to another is complicated, leads to multiple copies of information, and is a compliance and tracking nightmare.</p>
+<p>A recent study has shown it takes 64% of companies a month, to over a year, to deploy a machine learning model into production¹. Leveraging existing databases and automating the feature engineering, building, training, and optimization of models, assembling them, and deploying them into production is called AutoML and has been gaining traction within enterprises for enabling non-experts to use machine learning models for practical applications.</p>
+<p><img alt="Classical ML" src="/assets/sql/tutorials/snowflake-superset/3-AI_Tables-income-debt.jpg" /></p>
+<p>MindsDB brings machine learning to existing SQL databases with a concept called AI Tables. AI Tables integrate the machine learning models as virtual tables inside a database, create predictions, and can be queried with simple SQL statements. Almost instantly, time series, regression, and classification predictions can be done directly in your database.</p>
+<h2 id="deep-dive-into-the-ai-tables">Deep Dive into the AI Tables</h2>
+<p>Let’s consider the following income table that stores the income and debt values.</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">income</span><span class="p">,</span> <span class="n">debt</span> <span class="k">FROM</span> <span class="n">income_table</span><span class="p">;</span>
 </code></pre></div>
-First, add IAM Role that have AmazonSageMakerFullAccess Policy.
-<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">sagemaker</span> <span class="k">as</span> <span class="nn">sage</span>
-<span class="n">role</span> <span class="o">=</span> <span class="s2">&quot;arn:aws:iam::123213143532:role/service-role/AmazonSageMaker-ExecutionRole-20199&quot;</span>
-<span class="n">sess</span> <span class="o">=</span> <span class="n">sage</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span>
-<span class="n">account</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">boto_session</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;sts&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get_caller_identity</span><span class="p">()[</span><span class="s1">&#39;Account&#39;</span><span class="p">]</span>
+<p><img alt="AI_Tables-income_table" src="/assets/sql/tutorials/snowflake-superset/3-AI_Tables-income_table.jpg" /></p>
+<p>A simple visualization of the data present in the income table is as follows.</p>
+<p><img alt="Income vs Debt" src="/assets/sql/tutorials/snowflake-superset/4-AI_Tables-income-debt-query.jpg" /></p>
+<p>Querying the income table to get the debt value for a particular income value results in the following.</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">income</span><span class="p">,</span> <span class="n">debt</span> <span class="k">FROM</span> <span class="n">income</span>
+<span class="k">WHERE</span> <span class="n">income</span> <span class="o">=</span> <span class="mi">80000</span><span class="p">;</span>
 </code></pre></div>
-Next, provide s3 bucket where the models will be saved, get aws region from session and add URI to MindsDB image in AWS ECR:
-<div class="highlight"><pre><span></span><code><span class="n">bucket_path</span> <span class="o">=</span> <span class="s2">&quot;s3://mdb-sagemaker/models/&quot;</span>
-<span class="n">region</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">boto_session</span><span class="o">.</span><span class="n">region_name</span>
-<span class="n">image</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.dkr.ecr.</span><span class="si">{}</span><span class="s1">.amazonaws.com/mindsdb_lts:latest&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">account</span><span class="p">,</span> <span class="n">region</span><span class="p">)</span>
-</code></pre></div></p>
-<h3 id="start-training">Start training</h3>
-<p>The required properties for invoking SageMaker training using Estimator are:</p>
-<ul>
-<li>The image name(str) -- The MindsDB container URI on ECR.</li>
-<li>The role(str) -- AWS arn with SageMaker execution role.</li>
-<li>The instance count(int) -- The number of machines to use for training.</li>
-<li>The instance type(str) -- The type of machine to use for training.</li>
-<li>The output path(str) -- Path to the s3 bucket where the model artifact will be saved.</li>
-<li>The session(sagemaker.session.Session) -- The SageMaker session object that we’ve defined in the code above.</li>
-<li>The base job name(str) -- The name of the training job.</li>
-<li>The hyperparameters(dict) -- The MindsDB container requires to_predict value so it knows which column to predict.</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="n">mindsdb_impl</span> <span class="o">=</span> <span class="n">sage</span><span class="o">.</span><span class="n">estimator</span><span class="o">.</span><span class="n">Estimator</span><span class="p">(</span><span class="n">image</span><span class="p">,</span>
-                       <span class="n">role</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ml.m4.xlarge&#39;</span><span class="p">,</span>
-                       <span class="n">output_path</span><span class="o">=</span><span class="n">bucket_path</span><span class="p">,</span>
-                       <span class="n">sagemaker_session</span><span class="o">=</span><span class="n">sess</span><span class="p">,</span>
-                       <span class="n">base_job_name</span><span class="o">=</span><span class="s2">&quot;mindsdb-lts-sdk&quot;</span><span class="p">,</span>
-                       <span class="n">hyperparameters</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;to_predict&quot;</span><span class="p">:</span> <span class="s2">&quot;Class&quot;</span><span class="p">})</span>
+<p><img alt="Income vs Debt table" src="/assets/sql/tutorials/snowflake-superset/5-debt-income-query-table.jpg" /></p>
+<p><img alt="Income vs Debt chart" src="/assets/sql/tutorials/snowflake-superset/5-debt-income-query.jpg" /></p>
+<p>But what happens when we query the table for income value that is not present?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">income</span><span class="p">,</span> <span class="n">debt</span> <span class="k">FROM</span> <span class="n">income</span> <span class="k">WHERE</span> <span class="n">income</span> <span class="o">=</span> <span class="mi">90000</span><span class="p">;</span>
 </code></pre></div>
-<h3 id="deploy-the-model">Deploy the model</h3>
-<p>The required configuration for deploying model:</p>
-<ul>
-<li>initial_instance_count (int) -- The initial number of instances to run in the Endpoint created from this Model.</li>
-<li>instance_type (str) -- The EC2 instance type to deploy this Model to. For example, ‘ml.p2.xlarge’, or ‘local’ for local mode.</li>
-<li>endpoint_name (str) -- The name of the endpoint on SageMaker.</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="n">dataset_location</span> <span class="o">=</span> <span class="s1">&#39;s3://mdb-sagemaker/diabetes.csv&#39;</span>
-<span class="n">mindsdb_impl</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">dataset_location</span><span class="p">)</span>
-<span class="n">predictor</span> <span class="o">=</span> <span class="n">mindsdb_impl</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ml.m4.xlarge&#39;</span><span class="p">,</span> <span class="n">endpoint_name</span><span class="o">=</span><span class="s1">&#39;mindsdb-impl&#39;</span><span class="p">)</span>
- <span class="err">```</span>
-
-<span class="c1">### Make a prediction</span>
-
-<span class="n">Load</span> <span class="n">the</span> <span class="n">test</span> <span class="n">dataset</span> <span class="ow">and</span> <span class="n">then</span> <span class="n">call</span> <span class="n">the</span> <span class="n">Predictor</span> <span class="n">predict</span> <span class="n">method</span> <span class="k">with</span> <span class="n">test</span> <span class="n">data</span><span class="o">.</span>
-<span class="err">```</span><span class="n">python</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;test_data/diabetes-test.csv&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
-        <span class="n">when_data</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">predictor</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">when_data</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+<p><img alt="Income vs Debt table" src="/assets/sql/tutorials/snowflake-superset/6-debt-income-query-null-table.jpg" /></p>
+<p><img alt="Income vs Debt query" src="/assets/sql/tutorials/snowflake-superset/6-debt-income-query-null.jpg" /></p>
+<p>When a table doesn’t have an exact match the query will return a null value. This is where the AI Tables come into play!</p>
+<p>Let’s create a debt model that allows us to approximate the debt value for any income value. We’ll train this debt model using the income table’s data.</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">debt_model</span> <span class="k">FROM</span> <span class="n">income_table</span> <span class="n">PREDICT</span> <span class="n">debt</span><span class="p">;</span>
 </code></pre></div>
-<h3 id="delete-the-endpoint">Delete the endpoint</h3>
-<p>Don't forget to delete the endpoint after using it.
-<div class="highlight"><pre><span></span><code><span class="n">sess</span><span class="o">.</span><span class="n">delete_endpoint</span><span class="p">(</span><span class="s1">&#39;mindsdb-impl&#39;</span><span class="p">)</span>
-</code></pre></div></p>
-<h3 id="full-code-example">Full code example</h3>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">sagemaker</span> <span class="k">as</span> <span class="nn">sage</span>
-
-<span class="c1"># Add AmazonSageMaker Execution role here</span>
-<span class="n">role</span> <span class="o">=</span> <span class="s2">&quot;arn:aws:iam:&quot;</span>
-
-<span class="n">sess</span> <span class="o">=</span> <span class="n">sage</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span>
-<span class="n">account</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">boto_session</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;sts&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get_caller_identity</span><span class="p">()[</span><span class="s1">&#39;Account&#39;</span><span class="p">]</span>
-<span class="n">bucket_path</span> <span class="o">=</span> <span class="s2">&quot;s3://mdb-sagemaker/models/&quot;</span>
-<span class="n">region</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">boto_session</span><span class="o">.</span><span class="n">region_name</span>
-<span class="n">image</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.dkr.ecr.</span><span class="si">{}</span><span class="s1">.amazonaws.com/mindsdb_lts:latest&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">account</span><span class="p">,</span> <span class="n">region</span><span class="p">)</span>
-
-<span class="c1">#Hyperparameters to_predict is required for MindsDB container</span>
-<span class="n">mindsdb_impl</span> <span class="o">=</span> <span class="n">sage</span><span class="o">.</span><span class="n">estimator</span><span class="o">.</span><span class="n">Estimator</span><span class="p">(</span><span class="n">image</span><span class="p">,</span>
-                       <span class="n">role</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ml.m4.xlarge&#39;</span><span class="p">,</span>
-                       <span class="n">output_path</span><span class="o">=</span><span class="n">bucket_path</span><span class="p">,</span>
-                       <span class="n">sagemaker_session</span><span class="o">=</span><span class="n">sess</span><span class="p">,</span>
-                       <span class="n">base_job_name</span><span class="o">=</span><span class="s2">&quot;mindsdb-lts-sdk&quot;</span><span class="p">,</span>
-                       <span class="n">hyperparameters</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;to_predict&quot;</span><span class="p">:</span> <span class="s2">&quot;Class&quot;</span><span class="p">})</span>
-
-<span class="n">dataset_location</span> <span class="o">=</span> <span class="s1">&#39;s3://mdb-sagemaker/diabetes.csv&#39;</span>
-<span class="n">mindsdb_impl</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">dataset_location</span><span class="p">)</span>
-<span class="n">predictor</span> <span class="o">=</span> <span class="n">mindsdb_impl</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ml.m4.xlarge&#39;</span><span class="p">,</span> <span class="n">endpoint_name</span><span class="o">=</span><span class="s1">&#39;mindsdb-impl&#39;</span><span class="p">)</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;test_data/diabetes-test.csv&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
-        <span class="n">when_data</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">predictor</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">when_data</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+<p>MindsDB provides the <strong>CREATE PREDICTOR</strong> statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows.</p>
+<p><img alt="Income vs Debt model" src="/assets/sql/tutorials/snowflake-superset/7-debt-income-query-ml.jpg" /></p>
+<p>Let’s now look for the debt value of some random income value. To get the approximated debt value, we query the debt_model and not the income table.</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">income</span><span class="p">,</span> <span class="n">debt</span> <span class="k">FROM</span> <span class="n">debt_model</span> <span class="k">WHERE</span> <span class="n">income</span> <span class="o">=</span> <span class="mi">90120</span><span class="p">;</span>
 </code></pre></div>
-                
-                  
+<p><img alt="Income vs Debt model" src="/assets/sql/tutorials/snowflake-superset/7-debt-income-query-ml-table.jpg" /></p>
                 
               
               
@@ -1096,10 +1077,10 @@ Next, provide s3 bucket where the models will be saved, get aws region from sess
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../assets/javascripts/workers/search.94ec81fe.min.js", "version": null}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../assets/javascripts/workers/search.94ec81fe.min.js", "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.48dfec6c.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.48dfec6c.min.js"></script>
       
     
   </body>

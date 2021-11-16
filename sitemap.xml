@@ -2,432 +2,437 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://docs.mindsdb.com/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/FunctionalInterface/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/InsideMindsDB/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/PredictorInterface/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/community/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/connect/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/contribute/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/faq/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/info/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/bi-tools/tableau/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/databases/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/databases/Clickhouse/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/databases/MariaDB/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/databases/MySQL/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/databases/PostgreSQL/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/clickhouse/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/configuration/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/local/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/mariadb/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/mongodb/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/mssql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/mysql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/postgresql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/remote/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/datasources/snowflake/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/cloud/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/docker/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/linux/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/macos/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/pypi/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/source/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/windows/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/integrations/AwsSageMaker/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/integrations/CallSageMakerEndpoint/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/integrations/MindsDBSageContainer/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/integrations/SageMakerSDK/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/integrations/UseMindsDBinSage/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/lightwood/API/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/lightwood/info/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/clickhouse/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/mariadb/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/mongodb/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/mssql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/mysql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/postgresql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/quality/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/timeseries/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/train/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/query/clickhouse/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/query/mariadb/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/query/mongodb/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/query/mssql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/query/mysql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/query/postgresql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/model/query/studio/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/mongo/connect/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/mongo/tutorials/Forecast-Metro-Traffic/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/mongo/tutorials/test/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/server/SDKs/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/drop/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/integration/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/join/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/predictor/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/publish/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/retrain/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/select/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/stream/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/use/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/view/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/connect/cloud/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/connect/local/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.mindsdb.com/sql/tutorials/ai-tables/</loc>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/bitcoin-forecasting/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/bodyfat/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/crop-prediction/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/customer-churn/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/heart-disease/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/insurance-cost-prediction/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/mindsdb-superset-snowflake/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/process-quality/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/tutorials/AdvancedExamples/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/tutorials/Timeseries/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/tutorials/clickhouse/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/tutorials/mariadb/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/tutorials/microsoft-sql-server/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/tutorials/mysql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/tutorials/postgresql/</loc>
-         <lastmod>2021-11-11</lastmod>
+         <lastmod>2021-11-16</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>

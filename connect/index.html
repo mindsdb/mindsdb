@@ -16,7 +16,7 @@
     
     
       
-        <title>Connect your data - MindsDB Documentation</title>
+        <title>Plug your data - MindsDB Documentation</title>
       
     
     
@@ -155,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Connect your data
+              Plug your data
             
           </span>
         </div>
@@ -447,12 +447,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          Connect your data
+          Plug your data
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        Connect your data
+        Plug your data
       </a>
       
         
@@ -498,13 +498,13 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
       
       <label class="md-nav__link" for="__nav_4">
-        Connect to MindsDB as a Database
+        Connect to MindsDB SQL Server
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Connect to MindsDB as a Database" data-md-level="1">
+      <nav class="md-nav" aria-label="Connect to MindsDB SQL Server" data-md-level="1">
         <label class="md-nav__title" for="__nav_4">
           <span class="md-nav__icon md-icon"></span>
-          Connect to MindsDB as a Database
+          Connect to MindsDB SQL Server
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -707,18 +707,30 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../sql/tutorials/ai-tables/" class="md-nav__link">
+        AI Tables intro
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
     
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_1" type="checkbox" id="__nav_6_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_2" type="checkbox" id="__nav_6_2" >
       
-      <label class="md-nav__link" for="__nav_6_1">
+      <label class="md-nav__link" for="__nav_6_2">
         Regression
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Regression" data-md-level="2">
-        <label class="md-nav__title" for="__nav_6_1">
+        <label class="md-nav__title" for="__nav_6_2">
           <span class="md-nav__icon md-icon"></span>
           Regression
         </label>
@@ -774,14 +786,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_2" type="checkbox" id="__nav_6_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
       
-      <label class="md-nav__link" for="__nav_6_2">
+      <label class="md-nav__link" for="__nav_6_3">
         Classification
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Classification" data-md-level="2">
-        <label class="md-nav__title" for="__nav_6_2">
+        <label class="md-nav__title" for="__nav_6_3">
           <span class="md-nav__icon md-icon"></span>
           Classification
         </label>
@@ -837,14 +849,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_4" type="checkbox" id="__nav_6_4" >
       
-      <label class="md-nav__link" for="__nav_6_3">
+      <label class="md-nav__link" for="__nav_6_4">
         Time series
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Time series" data-md-level="2">
-        <label class="md-nav__title" for="__nav_6_3">
+        <label class="md-nav__title" for="__nav_6_4">
           <span class="md-nav__icon md-icon"></span>
           Time series
         </label>
@@ -990,71 +1002,6 @@
                 
                 
                 <h1 id="connect-your-data">Connect your data</h1>
-<div class="admonition tip">
-<p class="admonition-title">The recommended way to connect MindsDB to your data store is through MindsDB Studio.</p>
-<p>Below is a list of all the integrations we currently support:</p>
-<table>
-<thead>
-<tr>
-<th>SQL</th>
-<th>NoSQL</th>
-<th>Streams</th>
-<th>Data Warehouse</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/MySQL-00758F?style=for-the-badge&logo=mysql&logoColor=white" alt="Connect MySQL"></a></td>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white" alt="Connect MongoDB"></a></td>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/redis-%23DD0031.svg?&style=for-the-badge&logo=redis&logoColor=white" alt="Connect Redis"></a></td>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Snowflake-35aedd?style=for-the-badge&logo=snowflake&logoColor=blue" alt="Connect Snowflake"></a></td>
-</tr>
-<tr>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="Connect PostgreSQL"></a></td>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/ScyllaDB-F4F5FF?style=for-the-badge&logo=scylladb&logoColor=white" alt="Connect ScyllaDB"></a></td>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Apache Kafka-808080?style=for-the-badge&logo=apache-kafka&logoColor=white" alt="Connect Kafka"></a></td>
-<td>-</td>
-</tr>
-<tr>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" alt="Connect MariaDB"></a></td>
-<td>-</td>
-<td>-</td>
-<td>-</td>
-</tr>
-<tr>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Clickhouse-e6e600?style=for-the-badge&logo=clickhouse&logoColor=white" alt="Connect Clickhouse"></a></td>
-<td>-</td>
-<td>-</td>
-<td>-</td>
-</tr>
-<tr>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Cassandra-1287B1?style=for-the-badge&logo=apache%20cassandra&logoColor=white" alt="Connect Cassandra"></a></td>
-<td>-</td>
-<td>-</td>
-<td>-</td>
-</tr>
-<tr>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Microsoft%20SQL%20Sever-CC2927?style=for-the-badge&logo=microsoft%20sql%20server&logoColor=white" alt="Connect SQL Server"></a></td>
-<td>-</td>
-<td>-</td>
-<td>-</td>
-</tr>
-<tr>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Singlestore-5f07b4?style=for-the-badge&logo=singlestore&logoColor=white" alt="Connect Singlestore"></a></td>
-<td>-</td>
-<td>-</td>
-<td>-</td>
-</tr>
-<tr>
-<td><a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/CockroachDB-585AF4?style=for-the-badge&logo=cockroachdb&logoColor=white" alt="Connect CockroachDB"></a></td>
-<td>-</td>
-<td>-</td>
-<td>-</td>
-</tr>
-</tbody>
-</table>
-<p>If you want to connect without using the MindsDB Studio, you can find the specific database configuration examples <a href="/datasources/configuration/#extending-default-configuration">here</a>.</p>
-</div>
 <h4 id="connect-to-database">Connect to database</h4>
 <ol>
 <li>From the left navigation menu, select Database Integration.</li>

@@ -71,11 +71,11 @@ class RedisTest(unittest.TestCase):
 
     def upload_ds(self, name):
         df = pd.DataFrame({
-            'group': ["A" for _ in range(100, 250)],
-            'order': [x for x in range(100, 250)],
-            'x1': [x for x in range(100, 250)],
-            'x2': [x * 2 for x in range(100, 250)],
-            'y': [x * 3 for x in range(100, 250)]
+            'group': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
+            'order': [x for x in range(100, 210)] + [x for x in range(200, 310)],
+            'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
+            'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
+            'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
         })
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)

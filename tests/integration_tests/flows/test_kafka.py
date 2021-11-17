@@ -233,15 +233,18 @@ class KafkaTest(unittest.TestCase):
             'stream_out': STREAM_OUT_OL,
         })
 
-        time.sleep(30)
-
         for x in range(1, 101):
             stream_in.write({'x1': x, 'x2': 2 * x, 'y': 3 * x})
 
-        time.sleep(30)
-        res = list(stream_out.read())
-        if not res or res[0]['status'] != 'success':
-            self.fail(f"expected to have successfully trained predictor, but have: {res}")
+        i = 0
+        while i < 30:
+            time.sleep(5)
+            res = list(stream_out.read())
+            if res and res[0]['status'] == 'success':
+                print('All fine')
+                break
+            i = i + 1
+        assert i < 30
 
         url = f'{HTTP_API_ROOT}/predictors/{PREDICTOR_NAME}'
         res = requests.get(url)

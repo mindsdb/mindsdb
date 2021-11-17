@@ -364,6 +364,9 @@ class ModelController():
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=old_name).first()
         db_p.name = new_name
         db.session.commit()
+        dbw = DatabaseWrapper(company_id)
+        dbw.unregister_predictor(old_name)
+        dbw.register_predictors([self.get_model_data(new_name, company_id)])
 
     @mark_process(name='learn')
     def update_model(self, name: str, company_id: int):

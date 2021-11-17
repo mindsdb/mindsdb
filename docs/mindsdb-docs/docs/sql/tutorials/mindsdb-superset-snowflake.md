@@ -123,13 +123,13 @@ The two data sets that we are relevant for visualization are the stops_by_route 
 
 Superset lets us visualize the stops_by_route data set as follows.
 
-![Visualize query](/assets/sql/tutorials/snowflake-superset/17-stops_by_route_Superset.png)
+![Visualize query](/assets/sql/tutorials/snowflake-superset/17-stops_by_route_Superset.jpg)
 
 Every bus route has a different color. Also, there is volatility associated with each bus route. Let’s publish this chart to a new dashboard by clicking the **+Save** button, then switch to the **Save as** tab, and then type in “Routes Dashboard” in the **Add to Dashboard** field.
 
 Now, let’s craft a time-series line chart to visualize actual vs predicted riders. Let’s look at the chart that presents the actual number of bus riders (in blue) and the predicted number of bus rides (in purple).
 
-![Predictive query](/assets/sql/tutorials/snowflake-superset/18-timeseries_chart.png)
+![Predictive query](/assets/sql/tutorials/snowflake-superset/18-timeseries_chart.jpg)
 
 Predictions made by MindsDB closely resemble the actual data, except for a short time during March 2020 when the large-scale lockdowns took place. There we see a sudden drop in the number of bus rides. But MindsDB took some time to cope with this new reality and adjust its predictions.
 
@@ -137,7 +137,7 @@ Lastly, let’s add a data zoom to this chart for end-users to zoom in on specif
 
 Let’s head over to the dashboard now and customize it to make it more dynamic and explorable. Click **Dashboards** in the top nav bar and then select “Routes Dashboard” from the list of dashboards. You can rearrange the chart positions by clicking the pencil icon, dragging the corners of the chart objects, and then clicking **Save**.
 
-![Timeseries chart](/assets/sql/tutorials/snowflake-superset/19-timeseries2.png)
+![Timeseries chart](/assets/sql/tutorials/snowflake-superset/19-timeseries2.jpg)
 
 Let’s add some dashboard filters to this dashboard so dashboard consumers can filter the charts down to specific bus routes and volatility values. Click the right arrow (->) to pop open the filter tray. Then select the pencil icon to start editing this dashboard’s filters. Create the following filters with appropriate filter names:
 
@@ -146,21 +146,21 @@ Let’s add some dashboard filters to this dashboard so dashboard consumers can 
 
 Click Save to publish these filters.
 
-![Filters](/assets/sql/tutorials/snowflake-superset/20-filters1.png)
+![Filters](/assets/sql/tutorials/snowflake-superset/20-filters1.jpg)
 
-![Filters](/assets/sql/tutorials/snowflake-superset/20-filters2.png)
+![Filters](/assets/sql/tutorials/snowflake-superset/20-filters2.jpg)
 
 Let’s give these filters for a test ride! Use the routes filter to only show information for routes 1, 100, and 1001.
 
-![Timeseries chart](/assets/sql/tutorials/snowflake-superset/21-graph.png)
+![Timeseries chart](/assets/sql/tutorials/snowflake-superset/21-graph.jpg)
 
 We could zoom in to see the time during the first large-scale lockdowns in March 2020. For these particular routes, the predictions made by MindsDB are not so far off.
 
-![Timeseries chart](/assets/sql/tutorials/snowflake-superset/22-graph.png)
+![Timeseries chart](/assets/sql/tutorials/snowflake-superset/22-graph.jpg)
 
 Now, let’s use our volatility filter to view only the routes with volatility values greater than 55.
 
-![Timeseries chart](/assets/sql/tutorials/snowflake-superset/23-graph.png)
+![Timeseries chart](/assets/sql/tutorials/snowflake-superset/23-graph.jpg)
 
 
 ## Conclusions: Powerful forecasting with MindsDB, your database, and Superset

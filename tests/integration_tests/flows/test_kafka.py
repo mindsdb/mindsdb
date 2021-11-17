@@ -237,7 +237,7 @@ class KafkaTest(unittest.TestCase):
             stream_in.write({'x1': x, 'x2': 2 * x, 'y': 3 * x})
 
         start_time = time.time()
-        while (time.time() - start_time) < 120:
+        while (time.time() - start_time) < 300:
             time.sleep(5)
             res = list(stream_out.read())
             if res and res[0]['status'] == 'success':

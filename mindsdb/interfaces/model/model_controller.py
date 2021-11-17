@@ -360,6 +360,11 @@ class ModelController():
 
         return 0
 
+    def rename_model(self, old_name, new_name, company_id: int):
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=old_name).first()
+        db_p.name = new_name
+        db.session.commit()
+
     @mark_process(name='learn')
     def update_model(self, name: str, company_id: int):
         # TODO: Add version check here once we're done debugging

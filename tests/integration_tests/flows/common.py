@@ -158,14 +158,16 @@ def stop_mindsdb(ports=None):
 
     pid_port = set((x.pid, x.laddr[1]) for x in procs)
 
+    interrupted_pids = []
     for pid, port in pid_port:
         if pid is None:
             print(f'Can not release {port} because it occupied by OS')
-        else:
+        elif pid not in interrupted_pids:
             try:
                 p = psutil.Process(pid)
                 print(f'Send SIGINT to {pid}/{[port]}')
                 p.send_signal(signal.SIGINT)
+                interrupted_pids.append(pid)
             except psutil.NoSuchProcess:
                 pass
             except Exception as e:

@@ -62,8 +62,8 @@ nav:
     - Docker: deployment/docker.md
     - Pip: deployment/pypi.md
     - MindsDB Cloud: deployment/cloud.md
-  - Connect your data: connect.md
-  - Connect to MindsDB as a Database:
+  - Plug your data: connect.md
+  - Connect to MindsDB SQL Server:
       - Local Deployment: sql/connect/local.md
       - MindsDB Cloud: sql/connect/cloud.md
   - SQL:
@@ -76,6 +76,7 @@ nav:
     - SELECT: sql/api/select.md
     - JOIN: sql/api/join.md
   - Tutorials:
+    - AI Tables intro: sql/tutorials/ai-tables.md
     - Regression: 
       - Process Quality: sql/tutorials/process-quality.md
       - Bodyfat Prediction: sql/tutorials/bodyfat.md

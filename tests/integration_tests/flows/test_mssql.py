@@ -139,7 +139,7 @@ class MSSQLTest(unittest.TestCase):
         self.assertIsInstance(res['rental_price_min'], str)
         self.assertIsInstance(res['rental_price_max'], str)
         self.assertIsInstance(res['rental_price_explain'], str)
-        self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
+        # self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
 
     def test_4_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

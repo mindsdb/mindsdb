@@ -124,93 +124,93 @@ class KafkaTest(unittest.TestCase):
         res = requests.put(url, json=params)
         res.raise_for_status()
 
-    def test_1_create_integration(self):
-        print(f"\nExecuting {self._testMethodName}")
-        url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
-        params = {"type": "kafka",
-                  "connection": CONNECTION_PARAMS,
-                  "control_stream": CONTROL_STREAM}
-        res = requests.put(url, json={'params': params})
-        self.assertEqual(res.status_code, 200)
+    # def test_1_create_integration(self):
+    #     print(f"\nExecuting {self._testMethodName}")
+    #     url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
+    #     params = {"type": "kafka",
+    #               "connection": CONNECTION_PARAMS,
+    #               "control_stream": CONTROL_STREAM}
+    #     res = requests.put(url, json={'params': params})
+    #     self.assertEqual(res.status_code, 200)
 
-    def test_2_create_kafka_stream(self):
-        print(f"\nExecuting {self._testMethodName}")
-        self.upload_ds(DS_NAME)
-        self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
+    # def test_2_create_kafka_stream(self):
+    #     print(f"\nExecuting {self._testMethodName}")
+    #     self.upload_ds(DS_NAME)
+    #     self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/normal_stream_{STREAM_SUFFIX}'
-        res = requests.put(url, json={
-            "predictor": DEFAULT_PREDICTOR,
-            "stream_in": STREAM_IN,
-            "stream_out": STREAM_OUT,
-            "integration": INTEGRATION_NAME
-        })
+    #     url = f'{HTTP_API_ROOT}/streams/normal_stream_{STREAM_SUFFIX}'
+    #     res = requests.put(url, json={
+    #         "predictor": DEFAULT_PREDICTOR,
+    #         "stream_in": STREAM_IN,
+    #         "stream_out": STREAM_OUT,
+    #         "integration": INTEGRATION_NAME
+    #     })
 
-        self.assertEqual(res.status_code, 200)
+    #     self.assertEqual(res.status_code, 200)
 
-    def test_3_making_stream_prediction(self):
-        print(f"\nExecuting {self._testMethodName}")
-        from mindsdb_streams import KafkaStream
-        stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS, mode='w')
-        stream_out = KafkaStream(STREAM_OUT, CONNECTION_PARAMS, mode='r')
-        # wait when the integration launches created stream
-        time.sleep(10)
-        for x in range(1, 3):
-            stream_in.write({'x1': x, 'x2': 2*x})
-            time.sleep(5)
-        time.sleep(10)
-        self.assertEqual(len(list(stream_out.read())), 2)
+    # def test_3_making_stream_prediction(self):
+    #     print(f"\nExecuting {self._testMethodName}")
+    #     from mindsdb_streams import KafkaStream
+    #     stream_in = KafkaStream(STREAM_IN, CONNECTION_PARAMS, mode='w')
+    #     stream_out = KafkaStream(STREAM_OUT, CONNECTION_PARAMS, mode='r')
+    #     # wait when the integration launches created stream
+    #     time.sleep(10)
+    #     for x in range(1, 3):
+    #         stream_in.write({'x1': x, 'x2': 2*x})
+    #         time.sleep(5)
+    #     time.sleep(10)
+    #     self.assertEqual(len(list(stream_out.read())), 2)
 
-    def test_4_create_kafka_ts_stream(self):
-        print(f"\nExecuting {self._testMethodName}")
-        self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
+    # def test_4_create_kafka_ts_stream(self):
+    #     print(f"\nExecuting {self._testMethodName}")
+    #     self.train_ts_predictor(DS_NAME, TS_PREDICTOR)
 
-        url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}'
-        res = requests.put(url, json={
-            'predictor': TS_PREDICTOR,
-            'stream_in': STREAM_IN_TS,
-            'stream_out': STREAM_OUT_TS,
-            'integration': INTEGRATION_NAME,
-        })
+    #     url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}'
+    #     res = requests.put(url, json={
+    #         'predictor': TS_PREDICTOR,
+    #         'stream_in': STREAM_IN_TS,
+    #         'stream_out': STREAM_OUT_TS,
+    #         'integration': INTEGRATION_NAME,
+    #     })
 
-        self.assertEqual(res.status_code, 200)
+    #     self.assertEqual(res.status_code, 200)
 
-    def test_5_making_ts_stream_prediction(self):
-        print(f"\nExecuting {self._testMethodName}")
-        from mindsdb_streams import KafkaStream
-        stream_in = KafkaStream(STREAM_IN_TS, CONNECTION_PARAMS)
-        stream_out = KafkaStream(STREAM_OUT_TS, CONNECTION_PARAMS)
+    # def test_5_making_ts_stream_prediction(self):
+    #     print(f"\nExecuting {self._testMethodName}")
+    #     from mindsdb_streams import KafkaStream
+    #     stream_in = KafkaStream(STREAM_IN_TS, CONNECTION_PARAMS)
+    #     stream_out = KafkaStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
-        # wait when the integration launches created stream
-        time.sleep(10)
-        for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A', 'y': 3*x})
-            time.sleep(0.001)
-        time.sleep(10)
-        self.assertEqual(len(list(stream_out.read())), 2)
+    #     # wait when the integration launches created stream
+    #     time.sleep(10)
+    #     for x in range(210, 221):
+    #         stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A', 'y': 3*x})
+    #         time.sleep(0.001)
+    #     time.sleep(10)
+    #     self.assertEqual(len(list(stream_out.read())), 2)
 
-    def test_6_create_stream_kafka_native_api(self):
-        print(f"\nExecuting {self._testMethodName}")
-        from mindsdb_streams import KafkaStream
-        control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
-        control_stream.write({
-            'action': 'create',
-            'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
-            'predictor': DEFAULT_PREDICTOR,
-            'stream_in': STREAM_IN_NATIVE,
-            'stream_out': STREAM_OUT_NATIVE,
-        })
+    # def test_6_create_stream_kafka_native_api(self):
+    #     print(f"\nExecuting {self._testMethodName}")
+    #     from mindsdb_streams import KafkaStream
+    #     control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
+    #     control_stream.write({
+    #         'action': 'create',
+    #         'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
+    #         'predictor': DEFAULT_PREDICTOR,
+    #         'stream_in': STREAM_IN_NATIVE,
+    #         'stream_out': STREAM_OUT_NATIVE,
+    #     })
 
-        time.sleep(5)
+    #     time.sleep(5)
 
-        stream_in = KafkaStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
-        stream_out = KafkaStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
+    #     stream_in = KafkaStream(STREAM_IN_NATIVE, CONNECTION_PARAMS)
+    #     stream_out = KafkaStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
 
-        for x in range(1, 3):
-            stream_in.write({'x1': x, 'x2': 2*x})
-            time.sleep(5)
+    #     for x in range(1, 3):
+    #         stream_in.write({'x1': x, 'x2': 2*x})
+    #         time.sleep(5)
 
-        self.assertEqual(len(list(stream_out.read())), 2)
+    #     self.assertEqual(len(list(stream_out.read())), 2)
 
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
@@ -236,15 +236,14 @@ class KafkaTest(unittest.TestCase):
         for x in range(1, 101):
             stream_in.write({'x1': x, 'x2': 2 * x, 'y': 3 * x})
 
-        i = 0
-        while i < 30:
+        start_time = time.time()
+        while (time.time() - start_time) < 120:
             time.sleep(5)
             res = list(stream_out.read())
             if res and res[0]['status'] == 'success':
-                print('All fine')
                 break
-            i = i + 1
-        assert i < 30
+        else:
+            raise Exception('Create predictor timeout')
 
         url = f'{HTTP_API_ROOT}/predictors/{PREDICTOR_NAME}'
         res = requests.get(url)

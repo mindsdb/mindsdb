@@ -243,15 +243,14 @@ class RedisTest(unittest.TestCase):
         for x in range(1, 101):
             stream_in.write({'x1': x, 'x2': 2 * x, 'y': 3 * x})
 
-        i = 0
-        while i < 30:
+        start_time = time.time()
+        while (time.time() - start_time) < 120:
             time.sleep(5)
             res = list(stream_out.read())
             if res and res[0]['status'] == 'success':
-                print('All fine')
                 break
-            i = i + 1
-        assert i < 30
+        else:
+            raise Exception('Create predictor timeout')
 
         url = f'{HTTP_API_ROOT}/predictors/{PREDICTOR_NAME}'
         res = requests.get(url)

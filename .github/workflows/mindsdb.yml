@@ -68,13 +68,13 @@ jobs:
 
           export USE_EXTERNAL_DB_SERVER="1"
 
-          # Kafka Stream
-          echo -e "\n===============\ntest Kafka Stream Integration\n===============\n"
-          python tests/integration_tests/flows/test_kafka.py
+          # # Kafka Stream
+          # echo -e "\n===============\ntest Kafka Stream Integration\n===============\n"
+          # python tests/integration_tests/flows/test_kafka.py
 
-          # Redis Stream
-          echo -e "\n===============\ntest Redis Stream Integration\n===============\n"
-          python tests/integration_tests/flows/test_redis.py
+          # # Redis Stream
+          # echo -e "\n===============\ntest Redis Stream Integration\n===============\n"
+          # python tests/integration_tests/flows/test_redis.py
 
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"

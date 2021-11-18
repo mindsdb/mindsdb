@@ -212,43 +212,43 @@ class KafkaTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    # def test_8_test_online_learning(self):
-    #     print(f"\nExecuting {self._testMethodName}")
-    #     from mindsdb_streams import KafkaStream
-    #     control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
-    #     stream_in = KafkaStream(STREAM_IN_OL, CONNECTION_PARAMS)
-    #     stream_out = KafkaStream(STREAM_OUT_OL, CONNECTION_PARAMS)
-    #     PREDICTOR_NAME = "ONLINE_LEARNING"
+    def test_8_test_online_learning(self):
+        print(f"\nExecuting {self._testMethodName}")
+        from mindsdb_streams import KafkaStream
+        control_stream = KafkaStream(CONTROL_STREAM, CONNECTION_PARAMS)
+        stream_in = KafkaStream(STREAM_IN_OL, CONNECTION_PARAMS)
+        stream_out = KafkaStream(STREAM_OUT_OL, CONNECTION_PARAMS)
+        PREDICTOR_NAME = "ONLINE_LEARNING"
 
-    #     control_stream.write({
-    #         'action': 'create',
-    #         'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
-    #         'predictor': PREDICTOR_NAME,
-    #         'learning_params': {"to_predict": "y",
-    #                             'kwargs': {
-    #                                 'stop_training_in_x_seconds': 3}
-    #                             },
-    #         'learning_threshold': 10,
-    #         'stream_in': STREAM_IN_OL,
-    #         'stream_out': STREAM_OUT_OL,
-    #     })
+        control_stream.write({
+            'action': 'create',
+            'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
+            'predictor': PREDICTOR_NAME,
+            'learning_params': {"to_predict": "y",
+                                'kwargs': {
+                                    'stop_training_in_x_seconds': 3}
+                                },
+            'learning_threshold': 10,
+            'stream_in': STREAM_IN_OL,
+            'stream_out': STREAM_OUT_OL,
+        })
 
-    #     for x in range(1, 101):
-    #         stream_in.write({'x1': x, 'x2': 2 * x, 'y': 3 * x})
+        for x in range(1, 101):
+            stream_in.write({'x1': x, 'x2': 2 * x, 'y': 3 * x})
 
-    #     start_time = time.time()
-    #     while (time.time() - start_time) < 30:
-    #         time.sleep(5)
-    #         res = list(stream_out.read())
-    #         if res and res[0]['status'] == 'success':
-    #             break
-    #     else:
-    #         raise Exception('Create predictor timeout')
+        start_time = time.time()
+        while (time.time() - start_time) < 30:
+            time.sleep(5)
+            res = list(stream_out.read())
+            if res and res[0]['status'] == 'success':
+                break
+        else:
+            raise Exception('Create predictor timeout')
 
-    #     url = f'{HTTP_API_ROOT}/predictors/{PREDICTOR_NAME}'
-    #     res = requests.get(url)
-    #     self.assertEqual(res.status_code, 200,
-    #                      f"expected to get {PREDICTOR_NAME} info, but have {res.text}")
+        url = f'{HTTP_API_ROOT}/predictors/{PREDICTOR_NAME}'
+        res = requests.get(url)
+        self.assertEqual(res.status_code, 200,
+                         f"expected to get {PREDICTOR_NAME} info, but have {res.text}")
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ import kafka
 
 from mindsdb.integrations.base import StreamIntegration
 import mindsdb.interfaces.storage.db as db
-from mindsdb.streams import KafkaStream, StreamController
+from mindsdb_streams import KafkaStream, StreamController, StreamLearningController
 
 
 class KafkaConnectionChecker:
@@ -44,11 +44,22 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         )
 
     def _make_stream(self, s: db.Stream):
+        if s.learning_params and s.learning_threshold:
+            learning_params = json.loads(s.learning_params) if isinstance(s.learning_params, str) else s.learning_params
+            return StreamLearningController(
+                    s.name,
+                    s.predictor,
+                    learning_params,
+                    s.learning_threshold,
+                    stream_in=KafkaStream(s.stream_in, self.connection_info),
+                    stream_out=KafkaStream(s.stream_out, self.connection_info),
+                    in_thread=True
+                )
         return StreamController(
             s.name,
             s.predictor,
             stream_in=KafkaStream(s.stream_in, self.connection_info),
             stream_out=KafkaStream(s.stream_out, self.connection_info),
-            anomaly_stream=KafkaStream(s.anomaly_stream, self.connection_info) if s.anomaly_stream is not None else None,
-            learning_stream=KafkaStream(s.learning_stream, self.connection_info) if s.learning_stream is not None else None,
+            stream_anomaly=KafkaStream(s.anomaly_stream, self.connection_info) if s.anomaly_stream is not None else None,
+            in_thread=True
         )

@@ -1,18 +1,3 @@
-
-
-class ModelInterfaceWrapper(object):
-    def __init__(self, model_interface, company_id=None):
-        self.company_id = company_id
-        self.model_interface = model_interface
-
-    def __getattr__(self, name):
-        def wrapper(*args, **kwargs):
-            if kwargs.get('company_id') is None:
-                kwargs['company_id'] = self.company_id
-            return getattr(self.model_interface, name)(*args, **kwargs)
-        return wrapper
-
-
 class ModelInterface():
     def __init__(self):
         from mindsdb.interfaces.model.model_controller import ModelController
@@ -36,11 +21,17 @@ class ModelInterface():
     def get_model_data(self, *args, **kwargs):
         return self.controller.get_model_data(*args, **kwargs)
 
+    def get_model_description(self, *args, **kwargs):
+        return self.controller.get_model_description(*args, **kwargs)
+
     def get_models(self, *args, **kwargs):
         return self.controller.get_models(*args, **kwargs)
 
     def delete_model(self, *args, **kwargs):
         return self.controller.delete_model(*args, **kwargs)
+
+    def rename_model(self, *args, **kwargs):
+        return self.controller.rename_model(*args, **kwargs)
 
     def update_model(self, *args, **kwargs):
         return self.controller.update_model(*args, **kwargs)

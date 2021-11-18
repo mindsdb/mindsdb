@@ -36,8 +36,8 @@ TS_STREAM_IN_NATIVE = 'TS_' + STREAM_IN_NATIVE
 TS_STREAM_OUT_NATIVE = 'TS_' + STREAM_OUT_NATIVE
 STREAM_IN_OL = f"test_stream_in_ol_{STREAM_SUFFIX}"
 STREAM_OUT_OL = f"test_stream_out_ol_{STREAM_SUFFIX}"
-DEFAULT_PREDICTOR = "redis_predictorr"
-TS_PREDICTOR = "redis_ts_predictorr"
+DEFAULT_PREDICTOR = "redis_predictor"
+TS_PREDICTOR = "redis_ts_predictor"
 DS_NAME = "redis_test_ds"
 TS_DS_NAME = "ts_redis_test_ds"
 NORMAL_STREAM_NAME = f'normal_stream_{STREAM_SUFFIX}'
@@ -46,11 +46,11 @@ NORMAL_STREAM_NAME = f'normal_stream_{STREAM_SUFFIX}'
 class RedisTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        run_environment(apis=['mysql', 'http'])
+        run_environment(apis=['http', ])
 
     def test_length(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
 
         stream = RedisStream(f'test_stream_length_{STREAM_SUFFIX}', CONNECTION_PARAMS)
 
@@ -71,11 +71,11 @@ class RedisTest(unittest.TestCase):
 
     def upload_ds(self, name):
         df = pd.DataFrame({
-            'group': ["A" for _ in range(100, 250)],
-            'order': [x for x in range(100, 250)],
-            'x1': [x for x in range(100, 250)],
-            'x2': [x * 2 for x in range(100, 250)],
-            'y': [x * 3 for x in range(100, 250)]
+            'group': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
+            'order': [x for x in range(100, 210)] + [x for x in range(200, 310)],
+            'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
+            'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
+            'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
         })
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)
@@ -156,7 +156,7 @@ class RedisTest(unittest.TestCase):
 
     def test_3_making_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
 
         stream_in = RedisStream(STREAM_IN, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
@@ -184,7 +184,7 @@ class RedisTest(unittest.TestCase):
 
     def test_5_making_ts_stream_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
         stream_in = RedisStream(STREAM_IN_TS, CONNECTION_PARAMS)
         stream_out = RedisStream(STREAM_OUT_TS, CONNECTION_PARAMS)
 
@@ -197,7 +197,7 @@ class RedisTest(unittest.TestCase):
 
     def test_6_create_stream_redis_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
         control_stream.write({
             'action': 'create',
@@ -219,29 +219,47 @@ class RedisTest(unittest.TestCase):
 
         self.assertEqual(len(list(stream_out.read())), 2)
 
-    '''
     def test_8_test_online_learning(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
         control_stream = RedisStream(CONTROL_STREAM, CONNECTION_PARAMS)
-        learning_stream = RedisStream(LEARNING_STREAM, CONNECTION_PARAMS)
+        stream_in = RedisStream(STREAM_IN_OL, CONNECTION_PARAMS)
+        stream_out = RedisStream(STREAM_OUT_OL, CONNECTION_PARAMS)
+        PREDICTOR_NAME = "ONLINE_LEARNING"
 
         control_stream.write({
             'action': 'create',
             'name': f'{self._testMethodName}_{STREAM_SUFFIX}',
-            'predictor': DEFAULT_PREDICTOR,
+            'predictor': PREDICTOR_NAME,
+            'learning_params': {"to_predict": "y",
+                                'kwargs': {
+                                    'stop_training_in_x_seconds': 3}
+                                },
+            'learning_threshold': 10,
             'stream_in': STREAM_IN_OL,
             'stream_out': STREAM_OUT_OL,
-            'learning_stream': LEARNING_STREAM
         })
 
         for x in range(1, 101):
-            learning_stream.write({'x1': x, 'x2': 2*x, 'y': 3*x})
-   '''
+            stream_in.write({'x1': x, 'x2': 2 * x, 'y': 3 * x})
+
+        start_time = time.time()
+        while (time.time() - start_time) < 300:
+            time.sleep(5)
+            res = list(stream_out.read())
+            if res and res[0]['status'] == 'success':
+                break
+        else:
+            raise Exception('Create predictor timeout')
+
+        url = f'{HTTP_API_ROOT}/predictors/{PREDICTOR_NAME}'
+        res = requests.get(url)
+        self.assertEqual(res.status_code, 200,
+                         f"expected to get {PREDICTOR_NAME} info, but have {res.text}")
 
     def test_9_making_ts_stream_prediction_no_group(self):
         print(f"\nExecuting {self._testMethodName}")
-        from mindsdb.streams import RedisStream
+        from mindsdb_streams import RedisStream
         PREDICTOR_NAME = TS_PREDICTOR + "_no_group"
         STREAM_IN = STREAM_IN_TS + 'no_group'
         STREAM_OUT = STREAM_OUT_TS + 'no_group'

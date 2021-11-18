@@ -10,18 +10,17 @@ import psutil
 import torch.multiprocessing as mp
 from packaging import version
 
-from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
-from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface, ModelInterfaceWrapper
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
+from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
-from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import log
+from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
 import mindsdb.interfaces.storage.db as db
-
-from mindsdb.interfaces.database.integrations import get_db_integrations
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
 
@@ -70,9 +69,10 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
     # @TODO Backwards compatibiltiy for tests, remove later
-    from mindsdb.interfaces.database.integrations import add_db_integration, get_db_integration, remove_db_integration
+    from mindsdb.interfaces.database.integrations import DatasourceController
     dbw = DatabaseWrapper(COMPANY_ID)
-    model_interface = ModelInterfaceWrapper(ModelInterface(), COMPANY_ID)
+    model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
+    datasource_interface = WithKWArgsWrapper(DatasourceController(), company_id=COMPANY_ID)
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []
     for model in raw_model_data_arr:
@@ -107,20 +107,20 @@ if __name__ == '__main__':
             db.session.commit()
         # endregion
 
-        for integration_name in get_db_integrations(COMPANY_ID, sensitive_info=True):
+        for integration_name in datasource_interface.get_db_integrations(sensitive_info=True):
             print(f"Setting up integration: {integration_name}")
-            if get_db_integration(integration_name, COMPANY_ID).get('publish', False):
+            if datasource_interface.get_db_integration(integration_name).get('publish', False):
                 # do setup and register only if it is 'publish' integration
                 dbw.setup_integration(integration_name)
                 dbw.register_predictors(model_data_arr, integration_name=integration_name)
 
         for integration_name in config.get('integrations', {}):
             try:
-                it = get_db_integration(integration_name, None)
+                it = datasource_interface.get_db_integration(integration_name)
                 if it is not None:
-                    remove_db_integration(integration_name, None)
+                    datasource_interface.remove_db_integration(integration_name)
                 print(f'Adding: {integration_name}')
-                add_db_integration(integration_name, config['integrations'][integration_name], None)            # Setup for user `None`, since we don't need this for cloud
+                datasource_interface.add_db_integration(integration_name, config['integrations'][integration_name])            # Setup for user `None`, since we don't need this for cloud
                 if config['integrations'][integration_name].get('publish', False) and not is_cloud:
                     dbw.setup_integration(integration_name)
                     dbw.register_predictors(model_data_arr, integration_name=integration_name)

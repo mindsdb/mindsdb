@@ -15,7 +15,7 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.database.integrations import get_db_integration
+from mindsdb.interfaces.database.integrations import DatasourceController
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -49,7 +49,7 @@ class MindsDBDataNode(DataNode):
     def getTables(self):
         models = self.model_interface.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
-        models += ['predictors', 'commands']
+        models += ['predictors', 'commands', 'datasources']
 
         ai_tables = self.ai_table.get_ai_tables()
         models += [x['name'] for x in ai_tables]
@@ -87,9 +87,11 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         if table == 'predictors':
-            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
+            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'training_options']
         if table == 'commands':
             return ['command']
+        if table == 'datasources':
+            return ['name', 'database_type', 'host', 'port']
 
         columns = []
 
@@ -98,14 +100,14 @@ class MindsDBDataNode(DataNode):
             columns = self._get_ai_table_columns(table)
         elif table in [x['name'] for x in self.model_interface.get_models()]:
             columns = self._get_model_columns(table)
-            columns += ['when_data', 'select_data_query', 'external_datasource']
+            columns += ['when_data', 'select_data_query']
 
         return columns
 
     def _select_predictors(self):
         models = self.model_interface.get_models()
         columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
-                   'mindsdb_version', 'error', 'select_data_query', 'external_datasource',
+                   'mindsdb_version', 'error', 'select_data_query',
                    'training_options']
         return pd.DataFrame([[
             x['name'],
@@ -116,9 +118,15 @@ class MindsDBDataNode(DataNode):
             x['mindsdb_version'],
             x['error'],
             '',
-            '',  # TODO
-            ''  # TODO ?
+            ''   # TODO
         ] for x in models], columns=columns)
+
+    def _select_datasources(self):
+        # TODO
+        return pd.DataFrame(
+            [],
+            columns=['name', 'database_type', 'host', 'port']
+        )
 
     def delete_predictor(self, name):
         self.model_interface.delete_model(name)
@@ -192,6 +200,17 @@ class MindsDBDataNode(DataNode):
 
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
+    def get_datasources(self, mindsdb_sql_query):
+        datasources_df = self._select_datasources()
+        mindsdb_sql_query.from_table.parts = ['datasources']
+        result_df = dfsql.sql_query(
+            str(mindsdb_sql_query),
+            ds_kwargs={'case_sensitive': False},
+            reduce_output=False,
+            datasources=datasources_df
+        )
+        return result_df.to_dict(orient='records'), list(result_df.columns)
+
     def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
@@ -199,6 +218,8 @@ class MindsDBDataNode(DataNode):
             return self._select_predictors()
         if table == 'commands':
             return []
+        if table == 'datasources':
+            return self._select_datasources()
         if self.ai_table.get_ai_table(table):
             return self._select_from_ai_table(table, columns, where)
 
@@ -219,7 +240,7 @@ class MindsDBDataNode(DataNode):
             select_data_query = where_data['select_data_query']
             del where_data['select_data_query']
 
-            integration_data = get_db_integration(integration_name, self.company_id)
+            integration_data = DatasourceController().get_db_integration(integration_name, self.company_id)
             if integration_type == 'clickhouse':
                 ch = Clickhouse(self.config, integration_name, integration_data)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')
@@ -380,7 +401,7 @@ class MindsDBDataNode(DataNode):
 
         data = []
         explains = []
-        keys_to_save = [*keys, '__mindsdb_row_id', 'external_datasource', 'select_data_query', 'when_data']
+        keys_to_save = [*keys, '__mindsdb_row_id', 'select_data_query', 'when_data']
         for i, el in enumerate(pred_dicts):
             data.append({key: el.get(key) for key in keys_to_save})
             explains.append(explanations[i])

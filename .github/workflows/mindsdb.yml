@@ -37,7 +37,8 @@ jobs:
         #python -m pip install --upgrade pip==21.0.1
         pip install 'pymssql >= 2.1.4'
         pip install boto3
-        pip install --no-cache-dir .
+        # pip install --no-cache-dir .
+        pip install -r requirements.txt
       shell: bash
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
@@ -67,13 +68,13 @@ jobs:
 
           export USE_EXTERNAL_DB_SERVER="1"
 
-          # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream Integration\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
-
           # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream Integration\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
+          echo -e "\n===============\ntest Kafka Stream Integration\n===============\n"
+          python tests/integration_tests/flows/test_kafka.py
+
+          # Redis Stream
+          echo -e "\n===============\ntest Redis Stream Integration\n===============\n"
+          python tests/integration_tests/flows/test_redis.py
 
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"

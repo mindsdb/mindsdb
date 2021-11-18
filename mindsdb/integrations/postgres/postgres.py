@@ -145,7 +145,6 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
                 accuracy text,
                 predict text,
                 select_data_query text,
-                external_datasource text,
                 training_options text
             )
             SERVER server_{self.mindsdb_database}
@@ -173,7 +172,6 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
                 list(model_meta['dtype_dict'].keys())
             ))
             columns_sql += ',"select_data_query" text'
-            columns_sql += ',"external_datasource" text'
             for col in predict:
                 columns_sql += f',"{col}_confidence" float8'
                 if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):
@@ -197,23 +195,26 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
         self._query(q)
 
     def get_row_count(self, query):
-        q = f""" 
+        q = f"""
             SELECT COUNT(*) as count
-            FROM ({query}) as query;"""
+            FROM ({query}) as query;
+        """
         result = self._query(q)
         return result[0]['count']
-    
+
     def get_tables_list(self):
-        q = f""" SELECT table_schema, table_name
-                      FROM information_schema.tables
-                      WHERE table_schema != 'pg_catalog'
-                      AND table_schema != 'information_schema'
-                      ORDER BY table_schema, table_name"""
+        q = """
+            SELECT table_schema, table_name
+            FROM information_schema.tables
+            WHERE table_schema != 'pg_catalog'
+            AND table_schema != 'information_schema'
+            ORDER BY table_schema, table_name
+        """
         tables_list = self._query(q)
-        tables= [f"{table['table_schema']}.{table['table_name']}" for table in tables_list]
+        tables = [f"{table['table_schema']}.{table['table_name']}" for table in tables_list]
         return tables
 
-    def get_columns(self,query):
+    def get_columns(self, query):
         q = f"""SELECT * from ({query}) LIMIT 1;"""
         query_response = self._query(q)
         if len(query_response) > 0:

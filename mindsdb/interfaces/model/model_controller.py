@@ -301,6 +301,26 @@ class ModelController():
                 data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
         return data
 
+    def get_model_description(self, name: str, company_id: int):
+        """
+        Similar to `get_model_data` but meant to be seen directly by the user, rather than parsed by something like the Studio predictor view.
+
+        Uses `get_model_data` to compose this, but in the future we might want to make this independent if we deprected `get_model_data`
+
+        :returns: Dictionary of the analysis (meant to be foramtted by the APIs and displayed as json/yml/whatever)
+        """ # noqa
+        model_description = {}
+        model_data = self.get_model_data(name, company_id)
+
+        model_description['accuracies'] = model_data['accuracies']
+        model_description['column_importances'] = model_data['column_importances']
+        model_description['outputs'] = [model_data['predict']]
+        model_description['inputs'] = [col for col in model_data['dtype_dict'] if col not in model_description['outputs']]
+        model_description['datasource'] = model_data['data_source_name']
+        model_description['model'] = ' --> '.join(str(k) for k in model_data['json_ai'])
+
+        return model_description
+
     def get_models(self, company_id: int):
         models = []
         for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id):
@@ -339,6 +359,14 @@ class ModelController():
         self.fs_store.delete(f'predictor_{company_id}_{db_p.id}')
 
         return 0
+
+    def rename_model(self, old_name, new_name, company_id: int):
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=old_name).first()
+        db_p.name = new_name
+        db.session.commit()
+        dbw = DatabaseWrapper(company_id)
+        dbw.unregister_predictor(old_name)
+        dbw.register_predictors([self.get_model_data(new_name, company_id)])
 
     @mark_process(name='learn')
     def update_model(self, name: str, company_id: int):

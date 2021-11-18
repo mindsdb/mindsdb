@@ -10,7 +10,6 @@
 """
 
 import re
-import copy
 import dfsql
 import pandas as pd
 import datetime
@@ -147,9 +146,6 @@ class SQLQuery():
                 sql = subquery.strip('()')
         # ---
 
-        # 'offset x, y' - specific just for mysql, parser dont understand it
-        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<2> offset \g<1> ', sql, flags=re.IGNORECASE)
-
         self.raw = sql
         self.model_types = {}
         self._parse_query(sql)
@@ -284,6 +280,28 @@ class SQLQuery():
             self.columns_list = [('mindsdb', 'commands', 'commands', 'command', 'command')]
             return
 
+        # is it query to 'datasources'?
+        if (
+            isinstance(mindsdb_sql_struct.from_table, Identifier)
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
+            and (
+                self.database == 'mindsdb'
+                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+            )
+        ):
+            dn = self.datahub.get(self.mindsdb_database_name)
+            data, columns = dn.get_datasources(mindsdb_sql_struct)
+            table_name = ('mindsdb', 'datasources', 'datasources')
+            self.fetched_data = [
+                {table_name: row}
+                for row in data
+            ]
+            self.columns_list = [
+                (table_name + (column_name, column_name))
+                for column_name in columns
+            ]
+            return
+
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
         integrations_names.append('information_schema')
@@ -364,22 +382,6 @@ class SQLQuery():
                 predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
-
-                # +++ external datasource
-                if 'external_datasource' in where_data:
-                    external_datasource_sql = where_data['external_datasource']
-                    if 'select ' not in external_datasource_sql.lower():
-                        external_datasource_sql = f'select * from {external_datasource_sql}'
-                    temp_session = copy.copy(self.session)
-                    temp_session.database = 'datasource'
-                    query = SQLQuery(external_datasource_sql, session=temp_session)
-                    result = query.fetch(self.datahub, view='dict')
-                    if result['success'] is False:
-                        raise Exception(f"Something wrong with getting data from {where_data['external_datasource']}")
-                    for row in result['result']:
-                        row.update(where_data)
-                    where_data = result['result']
-                # ---
 
                 data = dn.select(
                     table=predictor,

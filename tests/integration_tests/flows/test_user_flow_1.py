@@ -8,8 +8,7 @@ import mysql.connector
 from common import (
     HTTP_API_ROOT,
     CONFIG_PATH,
-    run_environment,
-    make_test_csv
+    run_environment
 )
 
 from http_test_helpers import (
@@ -36,13 +35,11 @@ CONDITION = {
 
 TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
-EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'
 TEST_DS_CSV = 'test_ds_csv'
 TEST_PREDICTOR = 'test_predictor'
-TEST_PREDICTOR_CSV = 'test_predictor_csv'
 
 config = {}
 
@@ -86,9 +83,6 @@ class UserFlowTest_1(unittest.TestCase):
             )
         )
 
-        data = fetch(f'select * from test_data.{TEST_DATA_TABLE} limit 50', as_dict=True)
-        cls.external_datasource_csv_path = make_test_csv(EXTERNAL_DS_NAME, data)
-
     def test_1_create_integration_via_http(self):
         '''
         check integration is not exists
@@ -131,29 +125,7 @@ class UserFlowTest_1(unittest.TestCase):
         check_ds_exists(TEST_DS)
         check_ds_analyzable(TEST_DS)
 
-    def test_4_create_ds_from_csv_by_http(self):
-        '''
-        same for csv-ds
-        '''
-        check_ds_not_exists(TEST_DS_CSV)
-
-        with open(self.external_datasource_csv_path, 'rb') as f:
-            d = f.read()
-        res = requests.put(
-            f'{HTTP_API_ROOT}/datasources/{TEST_DS_CSV}',
-            files={
-                'file': ('data.csv', d, 'text/csv'),
-                'name': (None, TEST_DS_CSV),
-                'source_type': (None, 'file'),
-                'source': (None, 'data.csv')
-            }
-        )
-        assert res.status_code == 200
-
-        check_ds_exists(TEST_DS_CSV)
-        check_ds_analyzable(TEST_DS_CSV)
-
-    def test_5_create_and_query_predictors(self):
+    def test_4_create_and_query_predictors(self):
         '''
         check predictor not exists
         learn predictor
@@ -194,18 +166,16 @@ class UserFlowTest_1(unittest.TestCase):
                 assert res[field]['confidence'] > 0
 
         test_predictor(TEST_PREDICTOR, TEST_DS)
-        test_predictor(TEST_PREDICTOR_CSV, TEST_DS_CSV)
 
-    def test_6_delete(self):
-        for predictor_name in [TEST_PREDICTOR, TEST_PREDICTOR_CSV]:
-            res = requests.delete(f'{HTTP_API_ROOT}/predictors/{predictor_name}')
-            assert res.status_code == 200
-            check_predictor_not_exists(predictor_name)
+    def test_5_delete(self):
+        res = requests.delete(f'{HTTP_API_ROOT}/predictors/{TEST_PREDICTOR}')
+        assert res.status_code == 200
+        check_predictor_not_exists(TEST_PREDICTOR)
 
-        for ds_name in [TEST_DS_CSV, TEST_DS]:
-            res = requests.delete(f'{HTTP_API_ROOT}/datasources/{ds_name}')
-            assert res.status_code == 200
-            check_ds_not_exists(ds_name)
+        # for ds_name in [TEST_DS_CSV, TEST_DS]:
+        #     res = requests.delete(f'{HTTP_API_ROOT}/datasources/{ds_name}')
+        #     assert res.status_code == 200
+        #     check_ds_not_exists(ds_name)
 
 
 if __name__ == "__main__":

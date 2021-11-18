@@ -1,88 +1,6 @@
-# How to make AI-powered forecasts in Apache Superset and Snowflake using MindsDB
+# Using MindsDB Machine Learning to Solve a Real-World **time series** Problem
 
-There is an ongoing transformational shift within the modern business world from the “what happened and why” based on historical data analysis to the “what will we predict can happen and how can we make it happen” based on machine learning predictive modeling.
-
-![Analytics](/assets/sql/tutorials/snowflake-superset/1-ML_audience.png)
-
-The success of your predictions depends both on the data you have available and the models you train this data on. Data Scientists and Data Engineers need best-in-class tools to prepare the data for feature engineering, the best training models, and the best way of deploying, monitoring, and managing these implementations for optimal prediction confidence.
-
-Running MindsDB with Snowflake can significantly increase the performance and reduce the computational requirements of training your machine learning models. If you are already a Snowflake user, you can take advantage of key features quickly to enable fast, efficient machine learning capabilities directly in your database by simply connecting Snowflake to the MindsDB service.
-
-In this article, we will show you how to connect Snowflake to MindsDB, how you can enable real-time machine learning with Snowflake and MindsDB, and how to visualize the MindsDB predictions with Apache Superset.
-
-## Machine Learning (ML) Lifecycle
-
-The ML lifecycle can be represented as a process that consists of the data preparation phase, modeling phase, and deployment phase. The diagram below presents all the steps included in each of the stages.
-
-![ML Workflow](/assets/sql/tutorials/snowflake-superset/2-ML_workflow.png)
-
-Companies looking to implement machine learning have found their current solutions require substantial amounts of data preparation, cleaning, and labeling, plus hard to find machine learning/AI data scientists to conduct feature engineering; build, train, and optimize models; assemble, verify, and deploy into production; and then monitor in real-time, improve, and refine. Machine learning models require multiple iterations with existing data to train. Additionally, extracting, transforming, and loading (ETL) data from one system to another is complicated, leads to multiple copies of information, and is a compliance and tracking nightmare.
-
-A recent study has shown it takes 64% of companies a month, to over a year, to deploy a machine learning model into production¹. Leveraging existing databases and automating the feature engineering, building, training, and optimization of models, assembling them, and deploying them into production is called AutoML and has been gaining traction within enterprises for enabling non-experts to use machine learning models for practical applications.
-
-![Classical ML](/assets/sql/tutorials/snowflake-superset/3-AI_Tables-income-debt.jpg)
-
-MindsDB brings machine learning to existing SQL databases with a concept called AI Tables. AI Tables integrate the machine learning models as virtual tables inside a database, create predictions, and can be queried with simple SQL statements. Almost instantly, time series, regression, and classification predictions can be done directly in your database.
-
-## Deep Dive into the AI Tables
-
-Let’s consider the following income table that stores the income and debt values.
-
-```sql
-SELECT income, debt FROM income_table;
-```
-
-![AI_Tables-income_table](/assets/sql/tutorials/snowflake-superset/3-AI_Tables-income_table.jpg)
-
-A simple visualization of the data present in the income table is as follows.
-
-![Income vs Debt](/assets/sql/tutorials/snowflake-superset/4-AI_Tables-income-debt-query.jpg)
-
-Querying the income table to get the debt value for a particular income value results in the following.
-
-```sql
-SELECT income, debt FROM income
-WHERE income = 80000;
-```
-
-![Income vs Debt table](/assets/sql/tutorials/snowflake-superset/5-debt-income-query-table.jpg)
-
-![Income vs Debt chart](/assets/sql/tutorials/snowflake-superset/5-debt-income-query.jpg)
-
-But what happens when we query the table for income value that is not present?
-
-```sql
-SELECT income, debt FROM income WHERE income = 90000;
-```
-
-![Income vs Debt table](/assets/sql/tutorials/snowflake-superset/6-debt-income-query-null-table.jpg)
-
-![Income vs Debt query](/assets/sql/tutorials/snowflake-superset/6-debt-income-query-null.jpg)
-
-When a table doesn’t have an exact match the query will return a null value. This is where the AI Tables come into play!
-
-Let’s create a debt model that allows us to approximate the debt value for any income value. We’ll train this debt model using the income table’s data.
-
-```sql
-CREATE PREDICTOR debt_model FROM income_table PREDICT debt;
-```
-
-MindsDB provides the **CREATE PREDICTOR** statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows.
-
-![Income vs Debt model](/assets/sql/tutorials/snowflake-superset/7-debt-income-query-ml.jpg)
-
-Let’s now look for the debt value of some random income value. To get the approximated debt value, we query the debt_model and not the income table.
-
-```sql
-SELECT income, debt FROM debt_model WHERE income = 90120;
-```
-
-![Income vs Debt model](/assets/sql/tutorials/snowflake-superset/7-debt-income-query-ml-table.jpg)
-
-
-## Using MindsDB Machine Learning to Solve a Real-World Problem
-
-Now, let’s use these powerful AI tables in a real-world scenario.
+Let’s use these powerful AI tables in a real-world scenario. (if you are not familiar with AI-Tables, you can learn about them in [here](/sql/tutorials/ai-tables/). 
 
 Imagine that you are a data analyst at the Chicago Transit Authority. Every day, you need to optimize the number of buses per route to avoid overcrowded or empty buses. You need machine learning to forecast the number of rides per bus, per route, and by time of day. The data you have looks like the table below with route_id, timestamp, number of rides, and day-type (W = weekend)
 
@@ -105,7 +23,7 @@ Once an account is created you can connect to Snowflake using standard parameter
 
 MindsDB works through a MySQL Wire protocol. Therefore, you can connect to it using any MySQL client. Here, we’ll use the DBeaver database client and can see the Snowflake databases we are connected to.
 
-![Dbeaver connect](/assets/sql/tutorials/snowflake-superset/10-DBeaver_connection.png)
+![Dbeaver connect](/assets/sql/tutorials/snowflake-superset/10-DBeaver connection.png)
 
 ### Step 1: Getting the Training Data
 
@@ -205,13 +123,13 @@ The two data sets that we are relevant for visualization are the stops_by_route 
 
 Superset lets us visualize the stops_by_route data set as follows.
 
-![Visualize query](/assets/sql/tutorials/snowflake-superset/17-stops_by_route_Superset.png)
+![Visualize query](/assets/sql/tutorials/snowflake-superset/17-stops_by_route_Superset.jpg)
 
 Every bus route has a different color. Also, there is volatility associated with each bus route. Let’s publish this chart to a new dashboard by clicking the **+Save** button, then switch to the **Save as** tab, and then type in “Routes Dashboard” in the **Add to Dashboard** field.
 
 Now, let’s craft a time-series line chart to visualize actual vs predicted riders. Let’s look at the chart that presents the actual number of bus riders (in blue) and the predicted number of bus rides (in purple).
 
-![Predictive query](/assets/sql/tutorials/snowflake-superset/18-timeseries_chart.png)
+![Predictive query](/assets/sql/tutorials/snowflake-superset/18-timeseries_chart.jpg)
 
 Predictions made by MindsDB closely resemble the actual data, except for a short time during March 2020 when the large-scale lockdowns took place. There we see a sudden drop in the number of bus rides. But MindsDB took some time to cope with this new reality and adjust its predictions.
 
@@ -219,7 +137,7 @@ Lastly, let’s add a data zoom to this chart for end-users to zoom in on specif
 
 Let’s head over to the dashboard now and customize it to make it more dynamic and explorable. Click **Dashboards** in the top nav bar and then select “Routes Dashboard” from the list of dashboards. You can rearrange the chart positions by clicking the pencil icon, dragging the corners of the chart objects, and then clicking **Save**.
 
-![Timeseries chart](/assets/sql/tutorials/snowflake-superset/19-timeseries2.png)
+![Timeseries chart](/assets/sql/tutorials/snowflake-superset/19-timeseries2.jpg)
 
 Let’s add some dashboard filters to this dashboard so dashboard consumers can filter the charts down to specific bus routes and volatility values. Click the right arrow (->) to pop open the filter tray. Then select the pencil icon to start editing this dashboard’s filters. Create the following filters with appropriate filter names:
 
@@ -228,28 +146,29 @@ Let’s add some dashboard filters to this dashboard so dashboard consumers can 
 
 Click Save to publish these filters.
 
-![Filters](/assets/sql/tutorials/snowflake-superset/20-filters1.png)
+![Filters](/assets/sql/tutorials/snowflake-superset/20-filters1.jpg)
 
-![Filters](/assets/sql/tutorials/snowflake-superset/20-filters2.png)
+![Filters](/assets/sql/tutorials/snowflake-superset/20-filters2.jpg)
 
 Let’s give these filters for a test ride! Use the routes filter to only show information for routes 1, 100, and 1001.
 
-![Timeseries chart](/assets/sql/tutorials/snowflake-superset/21-graph.png)
+![Timeseries chart](/assets/sql/tutorials/snowflake-superset/21-graph.jpg)
 
 We could zoom in to see the time during the first large-scale lockdowns in March 2020. For these particular routes, the predictions made by MindsDB are not so far off.
 
-![Timeseries chart](/assets/sql/tutorials/snowflake-superset/22-graph.png)
+![Timeseries chart](/assets/sql/tutorials/snowflake-superset/22-graph.jpg)
 
 Now, let’s use our volatility filter to view only the routes with volatility values greater than 55.
 
-![Timeseries chart](/assets/sql/tutorials/snowflake-superset/23-graph.png)
+![Timeseries chart](/assets/sql/tutorials/snowflake-superset/23-graph.jpg)
 
 
-## Conclusions: Powerful forecasting with MindsDB, Snowflake, and Superset
+## Conclusions: Powerful forecasting with MindsDB, your database, and Superset
 
-The combination of MindsDB and Snowflake covers all the phases of the ML lifecycle. And Superset helps you to visualize the data in any form of diagrams, charts, or dashboards.
+The combination of MindsDB and your database covers all the phases of the ML lifecycle. And Superset helps you to visualize the data in any form of diagrams, charts, or dashboards.
 
-![Timeseries chart](/assets/sql/tutorials/snowflake-superset/24-MindsDB_ML-Workflow.jpg)
+
+![Timeseries chart](/assets/sql/tutorials/snowflake-superset/24-MindsDB_ML-Workflow.png)
 
 
 MindsDB provides easy-to-use predictive models through AI Tables. You can create these predictive models using SQL statements and feeding the input data. Also, you can query them the same way you query a table. The easiest way to get started with Superset is with the free tier for [Preset Cloud](https://preset.io/product/), a hassle-free and fully hosted cloud service for Superset.

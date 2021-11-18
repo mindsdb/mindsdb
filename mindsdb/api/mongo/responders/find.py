@@ -3,7 +3,6 @@ from collections import OrderedDict
 from lightwood.api import dtype
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-from mindsdb.interfaces.database.integrations import get_db_integrations
 
 
 class Responce(Responder):
@@ -21,7 +20,6 @@ class Responce(Responder):
                 'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
                 'predict': ', '.join(x['predict'] if isinstance(x['predict'], list) else [x['predict']]),
                 'select_data_query': '',
-                'external_datasource': '',
                 'training_options': ''
             } for x in models]
         elif table in model_names:
@@ -40,7 +38,7 @@ class Responce(Responder):
                 columns += [f"{col}_confidence"]
                 columns += [f"{col}_explain"]
 
-            columns += ['when_data', 'select_data_query', 'external_datasource']
+            columns += ['when_data', 'select_data_query']
 
             where_data_list = where_data if isinstance(where_data, list) else [where_data]
             for statement in where_data_list:
@@ -51,7 +49,7 @@ class Responce(Responder):
 
             datasource = where_data
             if 'select_data_query' in where_data:
-                integrations = get_db_integrations(mindsdb_env['company_id']).keys()
+                integrations = mindsdb_env['datasource_controller'].get_db_integrations().keys()
                 connection = where_data.get('connection')
                 if connection is None:
                     if 'default_mongodb' in integrations:
@@ -72,12 +70,6 @@ class Responce(Responder):
                     source_type=connection,
                     source=where_data['select_data_query']
                 )
-                datasource = mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True)
-
-            if 'external_datasource' in where_data:
-                ds_name = where_data['external_datasource']
-                if mindsdb_env['data_store'].get_datasource(ds_name) is None:
-                    raise Exception(f"Datasource {ds_name} not exists")
                 datasource = mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True)
 
             if isinstance(datasource, OrderedDict):

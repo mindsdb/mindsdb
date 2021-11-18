@@ -29,7 +29,6 @@ CONDITION = {
 
 TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
-EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 TEST_INTEGRATION = 'test_integration'
 TEST_DS = 'test_ds'
@@ -133,7 +132,7 @@ class MistakesTest_1(unittest.TestCase):
             'data_source_name': 'wrong ds'
         }
         res = requests.put(f'{HTTP_API_ROOT}/predictors/{TEST_PREDICTOR}', json=data)
-        assert 'Can not find datasource' in res.json()['message']
+        assert 'DS not exists' in res.json()['title']
 
         check_predictor_not_exists(TEST_PREDICTOR)
 

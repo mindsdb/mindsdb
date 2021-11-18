@@ -71,7 +71,8 @@ The available configuration options are:
            "password": "password",
            "port": 3306,
            "type": "mariadb",
-           "user": "root"
+           "user": "root",
+           "database":"mindsdb"
         }
     },
     "log": {

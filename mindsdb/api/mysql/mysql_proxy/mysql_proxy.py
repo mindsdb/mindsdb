@@ -45,7 +45,7 @@ from mindsdb_sql.parser.ast import (
     Set,
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropIntegration
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropIntegration, CreateIntegration
 
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
@@ -95,7 +95,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from mindsdb.interfaces.database.integrations import get_db_integrations, get_db_integration
+from mindsdb.interfaces.database.integrations import DatasourceController
 
 connection_id = 0
 
@@ -117,12 +117,12 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         integration = None
         integration_type = None
         extracted_username = username
-        integrations_names = get_db_integrations(company_id).keys()
+        integrations_names = DatasourceController().get_db_integrations(company_id).keys()
         for integration_name in integrations_names:
             if username == f'{hardcoded_user}_{integration_name}':
                 extracted_username = hardcoded_user
                 integration = integration_name
-                integration_type = get_db_integration(integration, company_id)['type']
+                integration_type = DatasourceController().get_db_integration(integration, company_id)['type']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
@@ -176,8 +176,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.server.connection_id += 1
         self.connection_id = self.server.connection_id
         self.session = SessionController(
-            self.server.original_model_interface,
-            self.server.original_data_store,
+            server=self.server,
             company_id=company_id
         )
 
@@ -342,21 +341,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if insert[key] is SQL_DEFAULT:
                 insert[key] = None  # all default values at this moment is null (None)
 
-        is_external_datasource = isinstance(insert.get('external_datasource'), str) and len(insert['external_datasource']) > 0
-        is_select_data_query = isinstance(insert.get('select_data_query'), str) and len(insert['select_data_query']) > 0
-
-        if is_external_datasource and is_select_data_query:
+        select_data_query = insert.get('select_data_query')
+        if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
             self.packet(
                 ErrPacket,
                 err_code=ERR.ER_WRONG_ARGUMENTS,
-                msg="'external_datasource' and 'select_data_query' should not be used in one query"
-            ).send()
-            return
-        elif is_external_datasource is False and is_select_data_query is False:
-            self.packet(
-                ErrPacket,
-                err_code=ERR.ER_WRONG_ARGUMENTS,
-                msg="in query should be 'external_datasource' or 'select_data_query'"
+                msg="'select_data_query' should not be empty"
             ).send()
             return
 
@@ -382,21 +372,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
 
-        if is_select_data_query:
-            integration = self.session.integration
-            if isinstance(integration, str) is False or len(integration) == 0:
-                self.packet(
-                    ErrPacket,
-                    err_code=ERR.ER_WRONG_ARGUMENTS,
-                    msg='select_data_query can be used only in query from database'
-                ).send()
-                return
-            insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-            ds_name = data_store.get_vacant_name(insert['name'])
-            ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})
-        elif is_external_datasource:
-            ds = data_store.get_datasource_obj(insert['external_datasource'], raw=True)
-            ds_name = insert['external_datasource']
+        integration = self.session.integration
+        if isinstance(integration, str) is False or len(integration) == 0:
+            self.packet(
+                ErrPacket,
+                err_code=ERR.ER_WRONG_ARGUMENTS,
+                msg='select_data_query can be used only in query from database'
+            ).send()
+            return
+        insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
+        ds_name = data_store.get_vacant_name(insert['name'])
+        ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})
 
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
@@ -404,19 +390,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
             if col not in ds_columns:
-                if is_select_data_query:
-                    data_store.delete_datasource(ds_name)
+                data_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
         try:
             insert['predict'] = self._check_predict_columns(insert['predict'], ds_columns)
         except Exception:
-            if is_select_data_query:
-                data_store.delete_datasource(ds_name)
+            data_store.delete_datasource(ds_name)
             raise
 
         model_interface.learn(
-            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=is_select_data_query
+            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True
         )
 
         self.packet(OkPacket).send()
@@ -424,7 +408,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def answer_create_ai_table(self, struct):
         ai_table = self.session.ai_table
         model_interface = self.session.model_interface
-        company_id = self.session.company_id
 
         table = ai_table.get_ai_table(struct['ai_table_name'])
         if table is not None:
@@ -437,7 +420,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise Exception(f"Predictor with name {struct['predictor_name']} not exists")
 
         # check integration exists
-        if get_db_integration(struct['integration_name'], company_id) is None:
+        if self.session.datasource_interface.get_db_integration(struct['integration_name']) is None:
             raise Exception(f"Integration with name {struct['integration_name']} not exists")
 
         ai_table.add(
@@ -480,6 +463,55 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         return cleaned_predict_column_names
 
+    def answer_describe_predictor(self, predictor_name):
+        model_interface = self.session.model_interface
+        models = model_interface.get_models()
+        if predictor_name not in [x['name'] for x in models]:
+            raise Exception(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
+        description = model_interface.get_model_description(predictor_name)
+        description = [
+            description['accuracies'],
+            description['column_importances'],
+            description['outputs'],
+            description['inputs'],
+            description['datasource'],
+            description['model']
+        ]
+        packages = self.getTabelPackets(
+            columns=[{
+                'table_name': '',
+                'name': 'accuracies',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'column_importances',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': "outputs",
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'inputs',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'datasource',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }, {
+                'table_name': '',
+                'name': 'model',
+                'type': TYPES.MYSQL_TYPE_VAR_STRING
+            }],
+            data=[description]
+        )
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            packages.append(self.packet(OkPacket, eof=True))
+        else:
+            packages.append(self.packet(EofPacket))
+        self.sendPackageGroup(packages)
+        return
+
     def answer_retrain_predictor(self, predictor_name):
         model_interface = self.session.model_interface
         models = model_interface.get_models()
@@ -488,10 +520,22 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         model_interface.update_model(predictor_name)
         self.packet(OkPacket).send()
 
+    def answer_create_datasource(self, struct: dict):
+        ''' create new datasource (integration in old terms)
+            Args:
+                struct: data for creating integration
+        '''
+        datasource_name = struct['datasource_name']
+        database_type = struct['database_type']
+        connection_args = struct['connection_args']
+        connection_args['type'] = database_type
+
+        self.session.datasource_interface.add_db_integration(datasource_name, connection_args)
+        self.packet(OkPacket).send()
+
     def answer_create_predictor(self, struct):
         model_interface = self.session.model_interface
         data_store = self.session.data_store
-        company_id = self.session.company_id
 
         predictor_name = struct['predictor_name']
         integration_name = struct['integration_name']
@@ -501,7 +545,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds = data_store.get_datasource_obj(ds_name, raw=True)
             ds_data = data_store.get_datasource(ds_name)
         else:
-            if get_db_integration(integration_name, company_id) is None:
+            if self.session.datasource_interface.get_db_integration(integration_name) is None:
                 raise Exception(f"Unknown integration: {integration_name}")
 
             ds_name = struct.get('datasource_name')
@@ -939,7 +983,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ['accuracy', 'varchar(255)', 'YES', '', None, ''],
                 ['predict', 'varchar(255)', 'YES', '', None, ''],
                 ['select_data_query', 'varchar(255)', 'YES', '', None, ''],
-                ['external_datasource', 'varchar(255)', 'YES', '', None, ''],
                 ['training_options', 'varchar(255)', 'YES', '', None, ''],
             ],
             status=status
@@ -1020,15 +1063,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         # ---
 
-        # region FIXME https://github.com/mindsdb/mindsdb_sql/issues/75
-        if sql.replace('\n\t', '') == "SELECT * FROM information_schema.TABLES t WHERE t.TABLE_SCHEMA = 'information_schema' AND t.TABLE_NAME = 'CHECK_CONSTRAINTS'":
-            sql = "SELECT * FROM information_schema.TABLES as t WHERE t.TABLE_SCHEMA = 'information_schema' AND t.TABLE_NAME = 'CHECK_CONSTRAINTS'"
-        # endregion
-
-        # region FIXME https://github.com/mindsdb/mindsdb_sql/issues/79
-        sql = re.sub(r'\n?limit([\n\d\s]*),([\n\d\s]*)', ' limit \g<2> offset \g<1> ', sql, flags=re.IGNORECASE)
-        # endregion
-
         statement = SqlStatementParser(sql)
         sql = statement.sql
         sql_lower = sql.lower()
@@ -1037,7 +1071,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         keyword = statement.keyword
         struct = statement.struct
 
-        # FIXME remove after https://github.com/mindsdb/mindsdb_sql/issues/68
         try:
             # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
             sql_lower_replace = sql_lower.replace(' status ', ' `status` ')
@@ -1061,12 +1094,27 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 statement = parse_sql('set autocommit')
             statement.category = 'error'
 
+        if isinstance(statement, CreateIntegration):
+            struct = {
+                'datasource_name': statement.name,
+                'database_type': statement.engine,
+                'connection_args': statement.parameters
+            }
+            self.answer_create_datasource(struct)
+            return
         if isinstance(statement, DropPredictor):
             predictor_name = statement.name.parts[-1]
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
             self.packet(OkPacket).send()
+        elif keyword == 'create_datasource':
+            # fallback for statement
+            self.answer_create_datasource(struct)
+            return
         elif isinstance(statement, DropIntegration):
             raise Exception('Not ready')
+        elif keyword == 'describe':
+            self.answer_describe_predictor(struct['predictor_name'])
+            return
         elif keyword == 'retrain':
             self.answer_retrain_predictor(struct['predictor_name'])
             return
@@ -1212,9 +1260,39 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
                 self.answer_show_create_table(table)
                 return
-            elif 'show character set where charset =' in sql_lower:
-                # show character set where charset = 'utf8mb4';
-                charset = sql_lower.replace('show character set where charset = ', '').strip("'")
+            elif sql_category in ('character set', 'charset'):
+                charset = None
+                if condition == 'where':
+                    if isinstance(expression, BinaryOperation):
+                        if expression.op == '=':
+                            if isinstance(expression.args[0], Identifier):
+                                if expression.args[0].parts[0].lower() == 'charset':
+                                    charset = expression.args[1].value
+                                else:
+                                    raise Exception(
+                                        f'Error during processing query: {sql}\n'
+                                        f"Only filter by 'charset' supported 'WHERE', but '{expression.args[0].parts[0]}' found"
+                                    )
+                            else:
+                                raise Exception(
+                                    f'Error during processing query: {sql}\n'
+                                    f"Expected identifier in 'WHERE', but '{expression.args[0]}' found"
+                                )
+                        else:
+                            raise Exception(
+                                f'Error during processing query: {sql}\n'
+                                f"Expected '=' comparison in 'WHERE', but '{expression.op}' found"
+                            )
+                    else:
+                        raise Exception(
+                            f'Error during processing query: {sql}\n'
+                            f"Expected binary operation in 'WHERE', but '{expression}' found"
+                        )
+                elif condition is not None:
+                    raise Exception(
+                        f'Error during processing query: {sql}\n'
+                        f"Only 'WHERE' filter supported, but '{condition}' found"
+                    )
                 self.answer_show_charset(charset)
                 return
             elif sql_category == 'warnings':
@@ -1222,9 +1300,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             elif sql_category == 'engines':
                 self.answer_show_engines()
-                return
-            elif sql_category == 'charset':
-                self.answer_show_charset()
                 return
             elif sql_category == 'collation':
                 self.answer_show_collation()
@@ -2270,6 +2345,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             make_ssl_cert(cert_path)
             atexit.register(lambda: os.remove(cert_path))
 
+        # TODO make it session local
         server_capabilities.set(
             CAPABILITIES.CLIENT_SSL,
             config['api']['mysql']['ssl']
@@ -2289,6 +2365,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         server.original_model_interface = ModelInterface()
         server.original_data_store = DataStore()
+        server.original_datasource_controller = DatasourceController()
 
         atexit.register(MysqlProxy.server_close, srv=server)
 

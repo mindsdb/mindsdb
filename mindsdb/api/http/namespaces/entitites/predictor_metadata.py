@@ -4,27 +4,6 @@ from mindsdb.api.http.namespaces.entitites.target_column_metadata import target_
 from flask_restx import fields
 from collections import OrderedDict
 
-predictor_metadata = ns_conf.model('PredictorMetadata', {
-    # Primary key
-    'status': fields.String(required=False, description='The current model status', enum=['training', 'complete', 'error']),
-    'current_phase': fields.String(required=False, description='Current training phase'),
-    'name': fields.String(required=False, description='The predictor name'),
-    'version': fields.String(required=False, description='The predictor version to publish under, this is so that we can train multiple predictors for the same problem but expose them via the same name'),
-    # other attributes
-    'data_preparation': fields.Nested(data_preparation_metadata, required=False, description='The metadata used in the preparation stage, in which we break the data into train, test, validation'),
-    'accuracy': fields.Float(description='The current accuracy of the model'),
-    'train_data_accuracy': fields.Float(description='The current accuracy of the model', required=False),
-    'test_data_accuracy': fields.Float(description='The current accuracy of the model', required=False),
-    'valid_data_accuracy': fields.Float(description='The current accuracy of the model', required=False),
-    'model_analysis': fields.List(fields.Nested(target_column_metadata), required=False, description='The model analysis stage, in which we extract statistical information from the input data for each target variable, thus, this is a list; one item per target column')
-    ,'data_analysis_v2': fields.Raw(default={})
-    ,'timeseries': fields.Raw()
-    ,'data_source': fields.String(required=False, description='The data source it\'s learning from')
-    ,'stack_trace_on_error': fields.String(required=False, description='Why it failed, if it did')
-    ,'error_explanation': fields.String(required=False, description='Why it failed, if it did, short version')
-    ,'useable_input_columns': fields.Raw()
-})
-
 predictor_query_params = OrderedDict([
     ('name', {
         'description': 'The predictor name',
@@ -50,6 +29,25 @@ upload_predictor_params = OrderedDict([
     })
 ])
 
+put_predictor_metadata = ns_conf.model('PUTPredictorMetadata', {
+    'data_source_name': fields.String(
+        required=False,
+        description='Datasource name. Outdated, will be removed soon.'
+    ),
+    'from': fields.Nested(
+        ns_conf.model('PUTPredictorMetadata_from', {
+            'datasource': fields.String(required=False, description='Name of datasource'),
+            'query': fields.String(required=False, description='Query to datasource', )
+        }),
+        required=False,
+        description='Source of data for predictor training'
+    ),
+    'to_predict': fields.String(
+        required=True,
+        description='Predicted field name'
+    ),
+    'kwargs': fields.Raw(default={})
+})
 
 put_predictor_params = OrderedDict([
     ('name', {
@@ -59,16 +57,17 @@ put_predictor_params = OrderedDict([
         'required': True
     }),
     ('data_source_name', {
-        'description': 'The predictor name',
-        'type': 'string',
-        'in': 'body',
-        'required': True
-    }),
-    ('from_data', {
-        'description': '',
+        'description': 'The data source name',
         'type': 'string',
         'in': 'body',
         'required': False
+    }),
+    ('datasource', {
+        'description': '',
+        'type': 'string',
+        'in': 'body',
+        'required': False,
+        'example': '{"name": "mysql_ds", "query": "select * from db.table"}'
     }),
     ('to_predict', {
         'description': 'list of column names to predict',
@@ -76,5 +75,12 @@ put_predictor_params = OrderedDict([
         'in': 'body',
         'required': True,
         'example': "['number_of_rooms', 'price']"
+    }),
+    ('kwargs', {
+        'description': 'list of column names to predict',
+        'type': 'object',
+        'in': 'body',
+        'required': False,
+        'example': '{"advanced_args": {"use_selfaware_model": false}}'
     })
 ])

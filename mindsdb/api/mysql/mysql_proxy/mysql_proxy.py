@@ -341,21 +341,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if insert[key] is SQL_DEFAULT:
                 insert[key] = None  # all default values at this moment is null (None)
 
-        is_external_datasource = isinstance(insert.get('external_datasource'), str) and len(insert['external_datasource']) > 0
-        is_select_data_query = isinstance(insert.get('select_data_query'), str) and len(insert['select_data_query']) > 0
-
-        if is_external_datasource and is_select_data_query:
+        select_data_query = insert.get('select_data_query')
+        if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
             self.packet(
                 ErrPacket,
                 err_code=ERR.ER_WRONG_ARGUMENTS,
-                msg="'external_datasource' and 'select_data_query' should not be used in one query"
-            ).send()
-            return
-        elif is_external_datasource is False and is_select_data_query is False:
-            self.packet(
-                ErrPacket,
-                err_code=ERR.ER_WRONG_ARGUMENTS,
-                msg="in query should be 'external_datasource' or 'select_data_query'"
+                msg="'select_data_query' should not be empty"
             ).send()
             return
 
@@ -381,21 +372,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
 
-        if is_select_data_query:
-            integration = self.session.integration
-            if isinstance(integration, str) is False or len(integration) == 0:
-                self.packet(
-                    ErrPacket,
-                    err_code=ERR.ER_WRONG_ARGUMENTS,
-                    msg='select_data_query can be used only in query from database'
-                ).send()
-                return
-            insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-            ds_name = data_store.get_vacant_name(insert['name'])
-            ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})
-        elif is_external_datasource:
-            ds = data_store.get_datasource_obj(insert['external_datasource'], raw=True)
-            ds_name = insert['external_datasource']
+        integration = self.session.integration
+        if isinstance(integration, str) is False or len(integration) == 0:
+            self.packet(
+                ErrPacket,
+                err_code=ERR.ER_WRONG_ARGUMENTS,
+                msg='select_data_query can be used only in query from database'
+            ).send()
+            return
+        insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
+        ds_name = data_store.get_vacant_name(insert['name'])
+        ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})
 
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
@@ -403,19 +390,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
             if col not in ds_columns:
-                if is_select_data_query:
-                    data_store.delete_datasource(ds_name)
+                data_store.delete_datasource(ds_name)
                 raise Exception(f"Column '{col}' not exists")
 
         try:
             insert['predict'] = self._check_predict_columns(insert['predict'], ds_columns)
         except Exception:
-            if is_select_data_query:
-                data_store.delete_datasource(ds_name)
+            data_store.delete_datasource(ds_name)
             raise
 
         model_interface.learn(
-            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=is_select_data_query
+            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True
         )
 
         self.packet(OkPacket).send()
@@ -998,7 +983,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ['accuracy', 'varchar(255)', 'YES', '', None, ''],
                 ['predict', 'varchar(255)', 'YES', '', None, ''],
                 ['select_data_query', 'varchar(255)', 'YES', '', None, ''],
-                ['external_datasource', 'varchar(255)', 'YES', '', None, ''],
                 ['training_options', 'varchar(255)', 'YES', '', None, ''],
             ],
             status=status

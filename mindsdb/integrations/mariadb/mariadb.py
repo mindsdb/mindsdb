@@ -136,7 +136,6 @@ class Mariadb(Integration, MariadbConnectionChecker):
                 accuracy VARCHAR(500),
                 predict VARCHAR(500),
                 select_data_query VARCHAR(500),
-                external_datasource VARCHAR(500),
                 training_options VARCHAR(500)
             ) ENGINE=CONNECT CHARSET=utf8 TABLE_TYPE=MYSQL CONNECTION='{connect}';
         """
@@ -164,7 +163,6 @@ class Mariadb(Integration, MariadbConnectionChecker):
             ))
             columns_sql += ',`when_data` varchar(500)'
             columns_sql += ',`select_data_query` varchar(500)'
-            columns_sql += ',`external_datasource` varchar(500)'
             for col in predict:
                 columns_sql += f',`{col}_confidence` double'
                 if model_meta['dtype_dict'][col] in (dtype.integer, dtype.float):

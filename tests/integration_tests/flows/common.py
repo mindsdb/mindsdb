@@ -124,10 +124,13 @@ def open_ssh_tunnel(port, direction='R'):
     if not path.is_dir():
         path.mkdir(mode=0o777, exist_ok=True, parents=True)
 
+    if port == 5005 and os.path.exists('/tmp/mindsdb/.mindsdb-ssh-ctrl-5005'):
+        return 0
+
     if is_mssql_test() and port != 5005:
-        cmd = f'ssh -i ~/.ssh/db_machine_ms -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} Administrator@107.21.140.172'
+        cmd = f'ssh -i ~/.ssh/db_machine_ms -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o TCPKeepAlive=yes -o ServerAliveCountMax=5 -o ServerAliveInterval=15 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} Administrator@107.21.140.172'
     else:
-        cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
+        cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o TCPKeepAlive=yes -o ServerAliveCountMax=5 -o ServerAliveInterval=15 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
     sp = subprocess.Popen(
         cmd.split(' '),
         stdout=OUTPUT,
@@ -158,14 +161,16 @@ def stop_mindsdb(ports=None):
 
     pid_port = set((x.pid, x.laddr[1]) for x in procs)
 
+    interrupted_pids = []
     for pid, port in pid_port:
         if pid is None:
             print(f'Can not release {port} because it occupied by OS')
-        else:
+        elif pid not in interrupted_pids:
             try:
                 p = psutil.Process(pid)
                 print(f'Send SIGINT to {pid}/{[port]}')
                 p.send_signal(signal.SIGINT)
+                interrupted_pids.append(pid)
             except psutil.NoSuchProcess:
                 pass
             except Exception as e:

@@ -87,7 +87,7 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         if table == 'predictors':
-            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'external_datasource', 'training_options']
+            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'training_options']
         if table == 'commands':
             return ['command']
         if table == 'datasources':
@@ -100,14 +100,14 @@ class MindsDBDataNode(DataNode):
             columns = self._get_ai_table_columns(table)
         elif table in [x['name'] for x in self.model_interface.get_models()]:
             columns = self._get_model_columns(table)
-            columns += ['when_data', 'select_data_query', 'external_datasource']
+            columns += ['when_data', 'select_data_query']
 
         return columns
 
     def _select_predictors(self):
         models = self.model_interface.get_models()
         columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
-                   'mindsdb_version', 'error', 'select_data_query', 'external_datasource',
+                   'mindsdb_version', 'error', 'select_data_query',
                    'training_options']
         return pd.DataFrame([[
             x['name'],
@@ -118,8 +118,7 @@ class MindsDBDataNode(DataNode):
             x['mindsdb_version'],
             x['error'],
             '',
-            '',  # TODO
-            ''  # TODO ?
+            ''   # TODO
         ] for x in models], columns=columns)
 
     def _select_datasources(self):
@@ -402,7 +401,7 @@ class MindsDBDataNode(DataNode):
 
         data = []
         explains = []
-        keys_to_save = [*keys, '__mindsdb_row_id', 'external_datasource', 'select_data_query', 'when_data']
+        keys_to_save = [*keys, '__mindsdb_row_id', 'select_data_query', 'when_data']
         for i, el in enumerate(pred_dicts):
             data.append({key: el.get(key) for key in keys_to_save})
             explains.append(explanations[i])

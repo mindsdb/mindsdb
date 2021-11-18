@@ -6,7 +6,8 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     predictor_query_params,
-    put_predictor_params
+    put_predictor_params,
+    put_predictor_metadata
 )
 
 
@@ -39,7 +40,8 @@ class Predictor(Resource):
         request.model_interface.delete_model(name)
         return '', 200
 
-    @ns_conf.doc('put_predictor', params=put_predictor_params)
+    @ns_conf.doc('put_predictor')
+    @ns_conf.expect(put_predictor_metadata)
     def put(self, name):
         '''Learning new predictor'''
         data = request.json
@@ -71,11 +73,41 @@ class Predictor(Resource):
         except Exception:
             retrain = None
 
-        ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
-        from_data = request.default_store.get_datasource_obj(ds_name, raw=True)
+        ds_name = data.get('data_source_name')
+        from_ds = data.get('from')
+        delete_ds_on_fail = False
+        if ds_name is not None:
+            ds = request.default_store.get_datasource_obj(ds_name, raw=True)
+            if ds is None:
+                return http_error(
+                    400,
+                    'DS not exists',
+                    f'Can not find datasource: {ds_name}'
+                )
+        elif isinstance(from_ds, dict):
+            if 'datasource' not in from_ds or 'query' not in from_ds:
+                return http_error(
+                    400,
+                    'Wring arguments',
+                    "'from' must contain 'datasource' and 'query'"
+                )
+            delete_ds_on_fail = True
+            ds_name = request.default_store.get_vacant_name(name)
 
-        if from_data is None:
-            return {'message': f'Can not find datasource: {ds_name}'}, 400
+            if request.datasource_interface.get_db_integration(from_ds['datasource']) is None:
+                return http_error(
+                    400,
+                    'Datasource not exist',
+                    f"Datasource not exist: {from_ds['datasource']}"
+                )
+
+            ds = request.default_store.save_datasource(ds_name, from_ds['datasource'], {'query': from_ds['query']})
+        else:
+            return http_error(
+                400,
+                'Wring arguments',
+                "query must contain 'data_source_name' or 'from'"
+            )
 
         if retrain is True:
             original_name = name
@@ -89,7 +121,10 @@ class Predictor(Resource):
                 f"Predictor with name '{name}' already exists. Each predictor must have unique name."
             )
 
-        request.model_interface.learn(name, from_data, to_predict, request.default_store.get_datasource(ds_name)['id'], kwargs=kwargs)
+        request.model_interface.learn(
+            name, ds, to_predict, request.default_store.get_datasource(ds_name)['id'],
+            kwargs=kwargs, delete_ds_on_fail=delete_ds_on_fail
+        )
 
         if retrain is True:
             try:

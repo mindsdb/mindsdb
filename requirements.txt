@@ -1,4 +1,4 @@
-lightwood >= 1.6.0, < 1.7.0
+lightwood >= 1.7.0, < 1.8.0
 flask-restx >= 0.2.0
 flask >= 1.0, < 2.0
 python-multipart >= 0.0.5
@@ -20,4 +20,4 @@ appdirs >= 1.0.0
 mindsdb-sql == 0.0.33
 dfsql == 0.6.6
 checksumdir >= 1.2.0
-mindsdb_streams @ git+https://github.com/mindsdb/mindsdb_streams.git@v0.0.3
+mindsdb_streams @ https://github.com/mindsdb/mindsdb_streams/archive/refs/tags/v0.0.3.tar.gz

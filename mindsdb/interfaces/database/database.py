@@ -41,7 +41,8 @@ class DatabaseWrapper():
             logger.warning('Failed to integrate with database ' + db_alias + f', error: {e}')
 
     def _get_integration(self, db_alias):
-        integration = self.datasource_interface.get_db_integration(db_alias)
+        db_name = self.datasource_interface.get_db_integration(db_alias)
+        integration ={k: v.replace(" ", "") for k, v in db_name.items()}
         if integration:
             db_type = integration['type']
             if db_type in self.known_dbs:

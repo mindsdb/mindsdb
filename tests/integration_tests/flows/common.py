@@ -128,9 +128,9 @@ def open_ssh_tunnel(port, direction='R'):
         return 0
 
     if is_mssql_test() and port != 5005:
-        cmd = f'ssh -i ~/.ssh/db_machine_ms -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} Administrator@107.21.140.172'
+        cmd = f'ssh -i ~/.ssh/db_machine_ms -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o TCPKeepAlive=yes -o ServerAliveCountMax=5 -o ServerAliveInterval=15 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} Administrator@107.21.140.172'
     else:
-        cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
+        cmd = f'ssh -i ~/.ssh/db_machine -S /tmp/mindsdb/.mindsdb-ssh-ctrl-{port} -o TCPKeepAlive=yes -o ServerAliveCountMax=5 -o ServerAliveInterval=15 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fMN{direction} 127.0.0.1:{port}:127.0.0.1:{port} ubuntu@3.220.66.106'
     sp = subprocess.Popen(
         cmd.split(' '),
         stdout=OUTPUT,

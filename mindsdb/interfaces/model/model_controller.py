@@ -177,6 +177,12 @@ class ModelController():
         predictor_data = self.get_model_data(name, company_id)
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
 
+        if (
+            name in self.predictor_cache
+            and self.predictor_cache[name]['updated_at'] != predictor_record.updated_at
+        ):
+            del self.predictor_cache[name]
+
         if name not in self.predictor_cache:
             # Clear the cache entirely if we have less than 1.2 GB left
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
@@ -185,8 +191,11 @@ class ModelController():
             if predictor_data['status'] == 'complete':
                 self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
-                    'predictor':
-                    lightwood.predictor_from_state(os.path.join(self.config['paths']['predictors'], fs_name), predictor_record.code),
+                    'predictor': lightwood.predictor_from_state(
+                        os.path.join(self.config['paths']['predictors'], fs_name),
+                        predictor_record.code
+                    ),
+                    'updated_at': predictor_record.updated_at,
                     'created': datetime.datetime.now(),
                     'code': predictor_record.code,
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))

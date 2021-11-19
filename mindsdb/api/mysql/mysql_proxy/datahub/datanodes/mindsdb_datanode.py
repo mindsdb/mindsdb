@@ -39,12 +39,12 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_interface, ai_table, data_store, company_id):
+    def __init__(self, model_interface, ai_table, data_store, datasource_interface):
         self.config = Config()
-        self.company_id = company_id
         self.model_interface = model_interface
         self.ai_table = ai_table
         self.data_store = data_store
+        self.datasource_interface = datasource_interface
 
     def getTables(self):
         models = self.model_interface.get_models()
@@ -91,7 +91,7 @@ class MindsDBDataNode(DataNode):
         if table == 'commands':
             return ['command']
         if table == 'datasources':
-            return ['name', 'database_type', 'host', 'port']
+            return ['name', 'database_type', 'host', 'port', 'user']
 
         columns = []
 
@@ -122,10 +122,14 @@ class MindsDBDataNode(DataNode):
         ] for x in models], columns=columns)
 
     def _select_datasources(self):
-        # TODO
+        datasources = self.datasource_interface.get_db_integrations()
+        result = [
+            [ds_name, ds_meta.get('type'), ds_meta.get('host'), ds_meta.get('port'), ds_meta.get('user')]
+            for ds_name, ds_meta in datasources.items()
+        ]
         return pd.DataFrame(
-            [],
-            columns=['name', 'database_type', 'host', 'port']
+            result,
+            columns=['name', 'database_type', 'host', 'port', 'user']
         )
 
     def delete_predictor(self, name):
@@ -240,7 +244,7 @@ class MindsDBDataNode(DataNode):
             select_data_query = where_data['select_data_query']
             del where_data['select_data_query']
 
-            integration_data = DatasourceController().get_db_integration(integration_name, self.company_id)
+            integration_data = self.datasource_interface.get_db_integration(integration_name)
             if integration_type == 'clickhouse':
                 ch = Clickhouse(self.config, integration_name, integration_data)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')

@@ -6,10 +6,6 @@ There is an ongoing transformational shift within the modern business world from
 
 The success of your predictions depends both on the data you have available and the models you train this data on. Data Scientists and Data Engineers need best-in-class tools to prepare the data for feature engineering, the best training models, and the best way of deploying, monitoring, and managing these implementations for optimal prediction confidence.
 
-Running MindsDB with Snowflake can significantly increase the performance and reduce the computational requirements of training your machine learning models. If you are already a Snowflake user, you can take advantage of key features quickly to enable fast, efficient machine learning capabilities directly in your database by simply connecting Snowflake to the MindsDB service.
-
-In this article, we will show you how to connect Snowflake to MindsDB, how you can enable real-time machine learning with Snowflake and MindsDB, and how to visualize the MindsDB predictions with Apache Superset.
-
 ## Machine Learning (ML) Lifecycle
 
 The ML lifecycle can be represented as a process that consists of the data preparation phase, modeling phase, and deployment phase. The diagram below presents all the steps included in each of the stages.

@@ -44,7 +44,6 @@ class MySqlApiTest(unittest.TestCase):
 
 
     def query(self, _query):
-        print(f'API MYSQL password: {self.config["api"]["mysql"]["password"]}')
         with tempfile.TemporaryDirectory() as tmpdirname:
             with open(f"{tmpdirname}/test.sql", 'w') as f:
                 f.write(_query)
@@ -58,20 +57,54 @@ class MySqlApiTest(unittest.TestCase):
         return res
 
     def create_datasource(self, db_type):
-        _query = "CREATE DATASOURCE %s WITH ENGINE='%s',PARAMETERS='%s';" % (db_type.upper(), db_type, json.dumps(self.db_creds[db_type]))
+        _query = "CREATE DATASOURCE %s WITH ENGINE='%s',PARAMETERS='%s';" % (db_type.upper(),
+                                                                             db_type,
+                                                                             json.dumps(self.db_creds[db_type]))
         return self.query(_query)
 
     def validate_datasource_creation(self, ds_type):
         self.create_datasource(ds_type.lower())
         res = self.query("SELECT * FROM datasources WHERE name='{}';".format(ds_type.upper())).decode('utf-8')
-        print("Select result: ", res)
         self.assertTrue(ds_type.upper() in res,
                         f"Expected datasource is not found after creation - {ds_type.upper()}")
 
     def test_create_mysql_datasource_query(self):
         print(f"\nExecuting {self._testMethodName}")
         self.validate_datasource_creation('mysql')
-        
+
+    def test_create_clickhouse_datasource_query(self):
+        print(f"\nExecuting {self._testMethodName}")
+        self.validate_datasource_creation('clickhouse')
+
+    def test_create_mariadb_datasource_query(self):
+        print(f"\nExecuting {self._testMethodName}")
+        self.validate_datasource_creation('mariadb')
+
+    def test_create_postgres_datasource_query(self):
+        print(f"\nExecuting {self._testMethodName}")
+        self.validate_datasource_creation('postgres')
+
+    def test_create_mongodb_datasource_query(self):
+        print(f"\nExecuting {self._testMethodName}")
+        self.validate_datasource_creation('mongodb')
+
+    def test_create_snowflake_datasource_query(self):
+        print(f"\nExecuting {self._testMethodName}")
+        self.validate_datasource_creation('snowflake')
+
+    def test_create_mssql_datasource_query(self):
+        print(f"\nExecuting {self._testMethodName}")
+        self.validate_datasource_creation('mssql')
+
+    def test_create_scylla_datasource_query(self):
+        print(f"\nExecuting {self._testMethodName}")
+        self.validate_datasource_creation('scylla')
+
+    def test_create_cassandra_datasource_query(self):
+        print(f"\nExecuting {self._testMethodName}")
+        self.validate_datasource_creation('cassandra')
+
+
 if __name__ == "__main__":
     try:
         unittest.main(failfast=True)

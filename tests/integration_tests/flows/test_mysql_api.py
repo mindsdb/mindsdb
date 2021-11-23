@@ -7,7 +7,11 @@ from pathlib import Path
 import docker
 import netifaces
 
-from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER, CONFIG_PATH
+from common import (HTTP_API_ROOT,
+                    run_environment,
+                    EXTERNAL_DB_CREDENTIALS,
+                    USE_EXTERNAL_DB_SERVER,
+                    CONFIG_PATH)
 
 def get_docker0_inet_ip():
     if "docker0" not in netifaces.interfaces():
@@ -35,14 +39,14 @@ class MySqlApiTest(unittest.TestCase):
         with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
             cls.db_creds = json.load(f)
 
-        cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (cls.config["api"]["mysql"]["host"],
-                                                                       cls.config["api"]["mysql"]["port"],
-                                                                       cls.config["api"]["mysql"]["user"])
+        cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
+                                                               cls.config["api"]["mysql"]["host"],
+                                                               cls.config["api"]["mysql"]["port"],
+                                                               cls.config["api"]["mysql"]["user"])
 
     @classmethod
     def tearDownClass(cls):
         cls.docker_client.close()
-
 
     def query(self, _query):
         """Run mysql docker container
@@ -106,9 +110,12 @@ class MySqlApiTest(unittest.TestCase):
     def test_3_making_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
         predictor_name = 'home_rentals'
-        _query = 'SELECT rp, rp_explain FROM ' + predictor_name + ' WHERE when_data=\'{"number_of_rooms":"2","sqft":"400","location":"downtown","days_on_market":"2","initial_price":"2500"}\';'
+        _query = ('SELECT rp, rp_explain FROM ' +
+                  predictor_name +
+                  ' WHERE when_data=\'{"number_of_rooms":"2","sqft":"400","location":"downtown","days_on_market":"2","initial_price":"2500"}\';')
         res = self.query(_query)
-        self.assertTrue('rp' in res and 'rp_explain' in res, f"error getting prediction from {predictor_name} - {res}")
+        self.assertTrue('rp' in res and 'rp_explain' in res,
+                        f"error getting prediction from {predictor_name} - {res}")
 
 if __name__ == "__main__":
     try:

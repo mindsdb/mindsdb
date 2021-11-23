@@ -1,3 +1,4 @@
+import time
 import tempfile
 import unittest
 import json
@@ -44,6 +45,16 @@ class MySqlApiTest(unittest.TestCase):
 
 
     def query(self, _query):
+        """Run mysql docker container
+           Perform connection to mindsdb database
+           Execute sql request
+           ----------------------
+           It is very problematic (or even impossible)
+           to provide sql statement as it is in 'docker run command',
+           that's why this action is splitted on three steps:
+               Save sql statement into temporary dir in .sql file
+               Run docker container with volume points to this temp dir,
+               Provide .sql file as input parameter for 'mysql' command"""
         with tempfile.TemporaryDirectory() as tmpdirname:
             with open(f"{tmpdirname}/test.sql", 'w') as f:
                 f.write(_query)
@@ -54,7 +65,7 @@ class MySqlApiTest(unittest.TestCase):
                                                  remove=True,
                                                  volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
                                                  environment={"MYSQL_PWD": self.config["api"]["mysql"]["password"]})
-        return res
+        return res.decode('utf-8')
 
     def create_datasource(self, db_type):
         _query = "CREATE DATASOURCE %s WITH ENGINE='%s',PARAMETERS='%s';" % (db_type.upper(),
@@ -64,46 +75,40 @@ class MySqlApiTest(unittest.TestCase):
 
     def validate_datasource_creation(self, ds_type):
         self.create_datasource(ds_type.lower())
-        res = self.query("SELECT * FROM datasources WHERE name='{}';".format(ds_type.upper())).decode('utf-8')
+        res = self.query("SELECT * FROM datasources WHERE name='{}';".format(ds_type.upper()))
         self.assertTrue(ds_type.upper() in res,
                         f"Expected datasource is not found after creation - {ds_type.upper()}")
 
-    def test_create_mysql_datasource_query(self):
+    def test_1_create_datasources(self):
         print(f"\nExecuting {self._testMethodName}")
-        self.validate_datasource_creation('mysql')
+        for ds_type in self.db_creds:
+            if ds_type not in ['kafka', 'redis', 'mongodb_atlas']:
+                with self.subTest(msg=ds_type):
+                    self.validate_datasource_creation(ds_type)
 
-    def test_create_clickhouse_datasource_query(self):
+    def test_2_create_predictor(self):
         print(f"\nExecuting {self._testMethodName}")
-        self.validate_datasource_creation('clickhouse')
+        predictor_name = 'home_rentals'
+        _query = f"CREATE PREDICTOR {predictor_name} from MYSQL (select * from test_data.home_rentals) as hr_ds predict rental_price as rp;"
+        self.query(_query)
+        timeout = 600
+        threshold = time.time() + timeout
+        res = ''
+        while time.time() < threshold:
+            _query = "SELECT status FROM predictors WHERE name='{}';".format(predictor_name)
+            res = self.query(_query)
+            if 'complete' in res:
+                break
+            time.sleep(2)
+        self.assertTrue('complete' in res,
+                        f"predictor {predictor_name} is not complete after {timeout} seconds")
 
-    def test_create_mariadb_datasource_query(self):
+    def test_3_making_prediction(self):
         print(f"\nExecuting {self._testMethodName}")
-        self.validate_datasource_creation('mariadb')
-
-    def test_create_postgres_datasource_query(self):
-        print(f"\nExecuting {self._testMethodName}")
-        self.validate_datasource_creation('postgres')
-
-    def test_create_mongodb_datasource_query(self):
-        print(f"\nExecuting {self._testMethodName}")
-        self.validate_datasource_creation('mongodb')
-
-    def test_create_snowflake_datasource_query(self):
-        print(f"\nExecuting {self._testMethodName}")
-        self.validate_datasource_creation('snowflake')
-
-    def test_create_mssql_datasource_query(self):
-        print(f"\nExecuting {self._testMethodName}")
-        self.validate_datasource_creation('mssql')
-
-    def test_create_scylla_datasource_query(self):
-        print(f"\nExecuting {self._testMethodName}")
-        self.validate_datasource_creation('scylla')
-
-    def test_create_cassandra_datasource_query(self):
-        print(f"\nExecuting {self._testMethodName}")
-        self.validate_datasource_creation('cassandra')
-
+        predictor_name = 'home_rentals'
+        _query = 'SELECT rp, rp_explain FROM ' + predictor_name + ' WHERE when_data=\'{"number_of_rooms":"2","sqft":"400","location":"downtown","days_on_market":"2","initial_price":"2500"}\';'
+        res = self.query(_query)
+        self.assertTrue('rp' in res and 'rp_explain' in res, f"error getting prediction from {predictor_name} - {res}")
 
 if __name__ == "__main__":
     try:

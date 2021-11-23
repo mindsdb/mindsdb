@@ -20,3 +20,5 @@ appdirs >= 1.0.0
 mindsdb-sql == 0.0.34
 dfsql == 0.6.6
 checksumdir >= 1.2.0
+docker >= 5.0.3
+netifaces >= 0.11.0

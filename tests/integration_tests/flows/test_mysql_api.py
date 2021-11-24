@@ -13,6 +13,22 @@ from common import (HTTP_API_ROOT,
                     USE_EXTERNAL_DB_SERVER,
                     CONFIG_PATH)
 
+
+class Dlist(list):
+    """Service class for convinient work with list of dicts(db response)"""
+    def __contains__(self, item):
+        if item in self.__getitem__(0):
+            return True
+        return False
+
+    def get_record(self, key, value):
+        if key in self:
+            for x in self:
+                if x[key] == value:
+                    return x
+        return None
+
+
 def get_docker0_inet_ip():
     if "docker0" not in netifaces.interfaces():
         raise Exception("Unable to find 'docker' interface. Please install docker first.")
@@ -48,7 +64,7 @@ class MySqlApiTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.docker_client.close()
 
-    def query(self, _query):
+    def query(self, _query, encoding='utf-8'):
         """Run mysql docker container
            Perform connection to mindsdb database
            Execute sql request
@@ -69,7 +85,19 @@ class MySqlApiTest(unittest.TestCase):
                                                  remove=True,
                                                  volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
                                                  environment={"MYSQL_PWD": self.config["api"]["mysql"]["password"]})
-        return res.decode('utf-8')
+        return self.to_dicts(res.decode(encoding))
+
+    @staticmethod
+    def to_dicts(response):
+        lines = response.splitlines()
+        if len(lines) < 2:
+            return {}
+        headers = tuple(lines[0].split("\t"))
+        res = Dlist()
+        for body in lines[1:]:
+            data = tuple(body.split("\t"))
+            res.append(dict(zip(headers, data)))
+        return res
 
     def create_datasource(self, db_type):
         _query = "CREATE DATASOURCE %s WITH ENGINE='%s',PARAMETERS='%s';" % (db_type.upper(),
@@ -80,18 +108,17 @@ class MySqlApiTest(unittest.TestCase):
     def validate_datasource_creation(self, ds_type):
         self.create_datasource(ds_type.lower())
         res = self.query("SELECT * FROM datasources WHERE name='{}';".format(ds_type.upper()))
-        self.assertTrue(ds_type.upper() in res,
-                        f"Expected datasource is not found after creation - {ds_type.upper()}")
+        self.assertTrue("name" in res and res.get_record("name", ds_type.upper()),
+                f"Expected datasource is not found after creation - {ds_type.upper()}: {res}")
 
     def test_1_create_datasources(self):
-        print(f"\nExecuting {self._testMethodName}")
         for ds_type in self.db_creds:
             if ds_type not in ['kafka', 'redis', 'mongodb_atlas']:
                 with self.subTest(msg=ds_type):
+                    print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{ds_type}]")
                     self.validate_datasource_creation(ds_type)
 
     def test_2_create_predictor(self):
-        print(f"\nExecuting {self._testMethodName}")
         predictor_name = 'home_rentals'
         _query = f"CREATE PREDICTOR {predictor_name} from MYSQL (select * from test_data.home_rentals) as hr_ds predict rental_price as rp;"
         self.query(_query)
@@ -101,14 +128,13 @@ class MySqlApiTest(unittest.TestCase):
         while time.time() < threshold:
             _query = "SELECT status FROM predictors WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
-            if 'complete' in res:
+            if 'status' in res and res.get_record('status', 'complete'):
                 break
             time.sleep(2)
-        self.assertTrue('complete' in res,
+        self.assertTrue('status' in res and res.get_record('status', 'complete'),
                         f"predictor {predictor_name} is not complete after {timeout} seconds")
 
     def test_3_making_prediction(self):
-        print(f"\nExecuting {self._testMethodName}")
         predictor_name = 'home_rentals'
         _query = ('SELECT rp, rp_explain FROM ' +
                   predictor_name +
@@ -117,9 +143,37 @@ class MySqlApiTest(unittest.TestCase):
         self.assertTrue('rp' in res and 'rp_explain' in res,
                         f"error getting prediction from {predictor_name} - {res}")
 
+
+    def test_4_service_requests(self):
+        service_requests = [
+                "show databases;",
+                "show schemas;",
+                "show tables;",
+                "show tables from mindsdb;",
+                "show full tables from mindsdb;",
+                "show variables;",
+                "show session status;",
+                "show global variables;",
+                "show engines;",
+                "show warnings;",
+                "show charset;",
+                "show collation;",
+                "show function status where db = 'mindsdb';",
+                "show procedure status where db = 'mindsdb';",
+                "show table status like commands;",
+                ]
+        for req in service_requests:
+            name = "_".join(req.split(" ")[:4])
+            for x in ["'", '"']:
+                name = name.replace(x, '')
+            with self.subTest(msg=name):
+                print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{name}]")
+                self.query(req)
+
+
 if __name__ == "__main__":
     try:
-        unittest.main(failfast=True)
+        unittest.main(failfast=True, verbosity=2)
         print('Tests passed!')
     except Exception as e:
         print(f'Tests Failed!\n{e}')

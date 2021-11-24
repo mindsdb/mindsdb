@@ -158,16 +158,14 @@ class MySqlApiTest(unittest.TestCase):
                 "show warnings;",
                 "show charset;",
                 "show collation;",
-                "show function status where db = 'mindsdb';",
-                "show procedure status where db = 'mindsdb';",
-                "show table status like commands;",
+                # "show function status where db = 'mindsdb';",
+                # "show procedure status where db = 'mindsdb';",
+                # "show table status like commands;",
                 ]
         for req in service_requests:
-            name = "_".join(req.split(" ")[:4])
-            for x in ["'", '"']:
-                name = name.replace(x, '')
-            with self.subTest(msg=name):
-                print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{name}]")
+            name = "_".join(req.split(" "))
+            with self.subTest(msg=req):
+                print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{req}]")
                 self.query(req)
 
 

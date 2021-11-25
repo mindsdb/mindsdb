@@ -24,6 +24,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess
+from mindsdb.interfaces.datastore.datastore import DataStore
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -359,7 +360,13 @@ class ModelController():
         name = f'{company_id}@@@@@{name}'
 
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        if db_p is None:
+            raise Exception(f"Predictor '{name}' does not exist")
         db.session.delete(db_p)
+        if db_p.datasource_id is not None:
+            dataset_record = db.Datasource.query.get(db_p.datasource_id)
+            if isinstance(dataset_record.data, dict) and dataset_record.data.get('source_type') != 'file':
+                DataStore().delete_datasource(name, company_id)
         db.session.commit()
 
         DatabaseWrapper(company_id).unregister_predictor(name)

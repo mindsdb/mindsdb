@@ -20,7 +20,9 @@ HTTP_API_ROOT = 'http://localhost:47334/api'
 
 DATASETS_PATH = os.getenv('DATASETS_PATH')
 
-USE_EXTERNAL_DB_SERVER = bool(int(os.getenv('USE_EXTERNAL_DB_SERVER') or "1"))
+USE_EXTERNAL_DB_SERVER = bool(int(os.getenv('USE_EXTERNAL_DB_SERVER') or "0"))
+
+USE_PERSISTENT_STORAGE = bool(int(os.getenv('USE_PERSISTENT_STORAGE') or "0"))
 
 EXTERNAL_DB_CREDENTIALS = str(Path.home().joinpath('.mindsdb_credentials.json'))
 
@@ -35,7 +37,7 @@ START_TIMEOUT = 15
 OUTPUT = None  # [None|subprocess.DEVNULL]
 
 TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
-    f'temp/test_storage_{int(time.time()*1000)}/' if USE_EXTERNAL_DB_SERVER else 'temp/test_storage/'
+    f'temp/test_storage_{int(time.time()*1000)}/' if not USE_PERSISTENT_STORAGE else 'temp/test_storage/'
 ).resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -260,6 +262,9 @@ def override_recursive(a, b):
         if isinstance(b[key], dict) is False:
             a[key] = b[key]
         elif key not in a or isinstance(a[key], dict) is False:
+            a[key] = b[key]
+        #make config section empty by demand
+        elif isinstance(b[key], dict) is True and b[key] == {}:
             a[key] = b[key]
         else:
             override_recursive(a[key], b[key])

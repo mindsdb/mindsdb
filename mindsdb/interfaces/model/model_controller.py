@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from pandas.core.frame import DataFrame
+import json
 import psutil
 import datetime
 from copy import deepcopy
@@ -14,6 +14,7 @@ from lightwood.api.types import ProblemDefinition
 from lightwood import __version__ as lightwood_version
 import numpy as np
 import pandas as pd
+from pandas.core.frame import DataFrame
 import mindsdb_datasources
 
 from mindsdb import __version__ as mindsdb_version
@@ -364,9 +365,15 @@ class ModelController():
             raise Exception(f"Predictor '{name}' does not exist")
         db.session.delete(db_p)
         if db_p.datasource_id is not None:
-            dataset_record = db.Datasource.query.get(db_p.datasource_id)
-            if isinstance(dataset_record.data, dict) and dataset_record.data.get('source_type') != 'file':
-                DataStore().delete_datasource(name, company_id)
+            try:
+                dataset_record = db.Datasource.query.get(db_p.datasource_id)
+                if (
+                    isinstance(dataset_record.data, str)
+                    and json.loads(dataset_record.data).get('source_type') != 'file'
+                ):
+                    DataStore().delete_datasource(dataset_record.name, company_id)
+            except Exception:
+                pass
         db.session.commit()
 
         DatabaseWrapper(company_id).unregister_predictor(name)

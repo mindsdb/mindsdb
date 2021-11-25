@@ -89,6 +89,8 @@ class MySqlApiTest(unittest.TestCase):
 
     @staticmethod
     def to_dicts(response):
+        if not response:
+            return {}
         lines = response.splitlines()
         if len(lines) < 2:
             return {}

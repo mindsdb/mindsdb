@@ -1073,17 +1073,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         struct = statement.struct
 
         try:
-            if keyword == 'set' and 'names' in sql_lower:
-                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/73
-                if '@@' in sql_lower:
-                    statement = parse_sql(sql_lower, dialect='mysql')
-                else:
-                    statement = parse_sql(sql_lower, dialect='mindsdb')
+            if '@@' in sql_lower:
+                statement = parse_sql(sql, dialect='mysql')
             else:
-                if '@@' in sql_lower:
-                    statement = parse_sql(sql, dialect='mysql')
-                else:
-                    statement = parse_sql(sql, dialect='mindsdb')
+                statement = parse_sql(sql, dialect='mindsdb')
         except Exception:
             if keyword == 'show':
                 statement = parse_sql('show tables')

@@ -11,7 +11,6 @@
 
 
 import os
-import re
 import sys
 import socketserver as SocketServer
 import ssl
@@ -387,7 +386,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
         ds_data = data_store.get_datasource(ds_name)
-        if ds_data == None:
+        if ds_data is None:
             raise Exception(f"DataSource '{ds_name}' does not exists")
         ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
@@ -1074,21 +1073,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         struct = statement.struct
 
         try:
-            # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
-            sql_lower_replace = sql_lower.replace(' status ', ' `status` ')
-            sql_relpace = sql.replace(' status ', ' `status` ')
-            # ---
-            if keyword == 'set' and 'names' in sql_lower_replace:
+            if keyword == 'set' and 'names' in sql_lower:
                 # FIXME https://github.com/mindsdb/mindsdb_sql/issues/73
                 if '@@' in sql_lower:
-                    statement = parse_sql(sql_lower_replace, dialect='mysql')
+                    statement = parse_sql(sql_lower, dialect='mysql')
                 else:
-                    statement = parse_sql(sql_lower_replace, dialect='mindsdb')
+                    statement = parse_sql(sql_lower, dialect='mindsdb')
             else:
                 if '@@' in sql_lower:
-                    statement = parse_sql(sql_relpace, dialect='mysql')
+                    statement = parse_sql(sql, dialect='mysql')
                 else:
-                    statement = parse_sql(sql_relpace, dialect='mindsdb')
+                    statement = parse_sql(sql, dialect='mindsdb')
         except Exception:
             if keyword == 'show':
                 statement = parse_sql('show tables')

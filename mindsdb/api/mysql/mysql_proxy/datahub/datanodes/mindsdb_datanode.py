@@ -164,12 +164,9 @@ class MindsDBDataNode(DataNode):
         predictors_df = self._select_predictors()
         mindsdb_sql_query.from_table.parts = ['predictors']
 
-        # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
-        str_query = str(mindsdb_sql_query).replace('status', '`status`')
-        # ---
-
+        str_query = str(mindsdb_sql_query)
         # +++ FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
-        if ' 1 = 0' in str(str_query):
+        if ' 1 = 0' in str_query:
             q = str_query
             q = q[:q.lower().find('where')] + ' limit 0'
             result_df = dfsql.sql_query(

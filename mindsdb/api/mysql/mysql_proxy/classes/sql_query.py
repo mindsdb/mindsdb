@@ -225,10 +225,7 @@ class SQLQuery():
             is_crutch = True
         # ---
 
-        # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
-        str_sql = sql.replace(' status ', ' `status` ')
-        # ---
-        mindsdb_sql_struct = parse_sql(str_sql, dialect='mindsdb')
+        mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
         # is it query with only constants?
         if (

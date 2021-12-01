@@ -1073,16 +1073,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         struct = statement.struct
 
         try:
-            if '@@' in sql_lower:
-                statement = parse_sql(sql, dialect='mysql')
-            else:
+            try:
                 statement = parse_sql(sql, dialect='mindsdb')
+            except Exception:
+                statement = parse_sql(sql, dialect='mysql')
         except Exception:
-            if keyword == 'show':
-                statement = parse_sql('show tables')
-            elif keyword == 'set':
-                statement = parse_sql('set autocommit')
-            statement.category = 'error'
+            raise Exception('Can`t parse query: {sql}')
 
         if isinstance(statement, CreateIntegration):
             struct = {

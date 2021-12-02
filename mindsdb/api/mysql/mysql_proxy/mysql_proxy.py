@@ -319,15 +319,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         string = b''.join([x.accum() for x in packages])
         self.socket.sendall(string)
 
-    def answerTableQuery(self, query):
-        packages = []
-        packages += self.getTabelPackets(
-            columns=query.columns,
-            data=query.result
-        )
-        packages.append(self.packet(OkPacket, eof=True))
-        self.sendPackageGroup(packages)
-
     def insert_predictor_answer(self, insert):
         ''' Start learn new predictor.
             Parameters:
@@ -2106,7 +2097,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ).send()
             return
 
-        self.answerTableQuery(query)
+        packages = []
+        packages += self.getTabelPackets(
+            columns=query.columns,
+            data=query.result
+        )
+        packages.append(self.packet(OkPacket, eof=True))
+        self.sendPackageGroup(packages)
 
     def _get_column_defenition_packets(self, columns, data=[]):
         packets = []

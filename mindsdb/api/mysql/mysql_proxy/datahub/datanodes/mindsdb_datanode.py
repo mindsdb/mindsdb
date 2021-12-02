@@ -86,7 +86,9 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         if table == 'predictors':
-            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'training_options']
+            return ['name', 'status', 'accuracy', 'predict', 'update_status',
+                    'mindsdb_version', 'error', 'select_data_query',
+                    'training_options']
         if table == 'commands':
             return ['command']
         if table == 'datasources':
@@ -185,6 +187,7 @@ class MindsDBDataNode(DataNode):
         else:
             # ---
             try:
+                str_query = str_query.replace(' status', ' `status`').replace(' STATUS', ' `STATUS`')
                 result_df = dfsql.sql_query(
                     str_query,
                     ds_kwargs={'case_sensitive': False},

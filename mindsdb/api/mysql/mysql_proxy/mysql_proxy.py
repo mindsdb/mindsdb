@@ -1078,7 +1078,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             except Exception:
                 statement = parse_sql(sql, dialect='mysql')
         except Exception:
-            raise Exception('Can`t parse query: {sql}')
+            # not all statemts are parse by parse_sql
+            pass
 
         if isinstance(statement, CreateIntegration):
             struct = {

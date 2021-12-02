@@ -144,6 +144,9 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
                 status text,
                 accuracy text,
                 predict text,
+                update_status text,
+                mindsdb_version text,
+                error text,
                 select_data_query text,
                 training_options text
             )

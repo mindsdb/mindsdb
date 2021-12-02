@@ -18,6 +18,10 @@ def migrate_to_head():
     config_file = Path(__file__).parent.parent.parent / 'alembic.ini'
     config = Config(config_file)
 
+    # mindsdb can runs not from project directory
+    script_location_abc = config_file.parent / config.get_main_option('script_location')
+    config.set_main_option('script_location', str(script_location_abc))
+
     script = ScriptDirectory.from_config(config)
     with db.engine.begin() as conn:
         mc = MigrationContext.configure(conn)

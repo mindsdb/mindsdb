@@ -3,12 +3,14 @@
 
 - alembic revision --autogenerate -m <migration_name>
 
+Creating migration is required after changing database models
+
 ## Apply all migrations
 
-- python -m mindsdb.migrate
-- python -m mindsdb.migrate --config <user_config>
+Happened automatically in start of application. 
+In case when database version is newer than backend then not perform migrations.
 
-## Manage database version
+## Manual manage database version
 - alembic upgrade +2
 - alembic downgrade -1
 - alembic upgrade <revision_name>

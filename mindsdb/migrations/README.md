@@ -3,11 +3,11 @@
 
 - alembic revision --autogenerate -m <migration_name>
 
-Creating migration is required after changing database models
+Creating migration is required after changing database models during development process.
 
 ## Apply all migrations
 
-Happened automatically in start of application. 
+Migrations are applying automatically at start of application 
 In case when database version is newer than backend then not perform migrations.
 
 ## Manual manage database version

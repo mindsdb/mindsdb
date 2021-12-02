@@ -1118,7 +1118,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     str(new_statement),
                     session=self.session
                 )
-                self.selectAnswer(query)
+                self.answer_select(query)
                 return
             if sql_category in ('databases', 'schemas'):
                 new_statement = Select(
@@ -1134,7 +1134,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     str(new_statement),
                     session=self.session
                 )
-                self.selectAnswer(query)
+                self.answer_select(query)
                 return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
@@ -1156,7 +1156,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     str(new_statement),
                     session=self.session
                 )
-                self.selectAnswer(query)
+                self.answer_select(query)
                 return
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
                 new_statement = Select(
@@ -1420,7 +1420,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql,
                 session=self.session
             )
-            self.selectAnswer(query)
+            self.answer_select(query)
         elif isinstance(statement, Explain):
             self.answer_explain_table(statement.target.parts)
         else:
@@ -2093,7 +2093,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
         self.sendPackageGroup(packages)
 
-    def selectAnswer(self, query):
+    def answer_select(self, query):
         result = query.fetch(
             self.session.datahub
         )

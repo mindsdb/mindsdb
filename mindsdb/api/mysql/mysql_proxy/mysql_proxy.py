@@ -1307,13 +1307,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif isinstance(statement, (StartTransaction, CommitTransaction, RollbackTransaction)):
             self.packet(OkPacket).send()
         elif keyword == 'set' or isinstance(statement, Set):
-            if statement.category is None:
-                log.warning(f'SQL statement is not processable, return OK package: {sql}')
+            category = (statement.category or '').lower()
+            if category == '' and isinstance(statement.arg, BinaryOperation):
                 self.packet(OkPacket).send()
-                return
-
-            category = statement.category.lower()
-            if category == 'autocommit':
+            elif category == 'autocommit':
                 self.packet(OkPacket).send()
             elif category == 'names':
                 # set names utf8;

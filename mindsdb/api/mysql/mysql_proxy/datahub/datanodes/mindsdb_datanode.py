@@ -187,6 +187,7 @@ class MindsDBDataNode(DataNode):
         else:
             # ---
             try:
+                # FIXME https://github.com/mindsdb/dfsql/issues/44
                 str_query = str_query.replace(' status', ' `status`').replace(' STATUS', ' `STATUS`')
                 result_df = dfsql.sql_query(
                     str_query,

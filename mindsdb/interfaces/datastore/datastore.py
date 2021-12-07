@@ -175,8 +175,22 @@ class DataStore():
 
             if dsClass is None:
                 raise Exception(f'Unsupported datasource: {source_type}, please install required dependencies!')
+
+            if integration['type'] in ['clickhouse']:
+                creation_info = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source['query'],
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port']
+                    }
+                }
+                ds = dsClass(**creation_info['kwargs'])
             
-            if integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb', 'clickhouse']:
+            elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
                 creation_info = {
                     'class': dsClass.__name__,
                     'args': [],
@@ -220,7 +234,7 @@ class DataStore():
 
                 if 'database' in source:
                     kwargs['database'] = source['database']
-
+                
                 ds = dsClass(**kwargs)
 
             elif integration['type'] == 'snowflake':

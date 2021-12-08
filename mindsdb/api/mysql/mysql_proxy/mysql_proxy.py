@@ -11,7 +11,6 @@
 
 
 import os
-import re
 import sys
 import socketserver as SocketServer
 import ssl
@@ -320,15 +319,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         string = b''.join([x.accum() for x in packages])
         self.socket.sendall(string)
 
-    def answerTableQuery(self, query):
-        packages = []
-        packages += self.getTabelPackets(
-            columns=query.columns,
-            data=query.result
-        )
-        packages.append(self.packet(OkPacket, eof=True))
-        self.sendPackageGroup(packages)
-
     def insert_predictor_answer(self, insert):
         ''' Start learn new predictor.
             Parameters:
@@ -387,7 +377,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
         ds_data = data_store.get_datasource(ds_name)
-        if ds_data == None:
+        if ds_data is None:
             raise Exception(f"DataSource '{ds_name}' does not exists")
         ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
@@ -1074,27 +1064,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         struct = statement.struct
 
         try:
-            # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
-            sql_lower_replace = sql_lower.replace(' status ', ' `status` ')
-            sql_relpace = sql.replace(' status ', ' `status` ')
-            # ---
-            if keyword == 'set' and 'names' in sql_lower_replace:
-                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/73
-                if '@@' in sql_lower:
-                    statement = parse_sql(sql_lower_replace, dialect='mysql')
-                else:
-                    statement = parse_sql(sql_lower_replace, dialect='mindsdb')
-            else:
-                if '@@' in sql_lower:
-                    statement = parse_sql(sql_relpace, dialect='mysql')
-                else:
-                    statement = parse_sql(sql_relpace, dialect='mindsdb')
+            try:
+                statement = parse_sql(sql, dialect='mindsdb')
+            except Exception:
+                statement = parse_sql(sql, dialect='mysql')
         except Exception:
-            if keyword == 'show':
-                statement = parse_sql('show tables')
-            elif keyword == 'set':
-                statement = parse_sql('set autocommit')
-            statement.category = 'error'
+            # not all statemts are parse by parse_sql
+            pass
 
         if isinstance(statement, CreateIntegration):
             struct = {
@@ -1124,7 +1100,22 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql_category = statement.category.lower()
             condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
             expression = statement.expression
-            if 'show plugins' in sql_lower:
+            if sql_category == 'predictors':
+                if expression is not None:
+                    raise Exception("'SHOW PREDICTORS' query should be used without filters")
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors'])
+                )
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.answer_select(query)
+                return
+            if sql_category == 'plugins':
+                if expression is not None:
+                    raise Exception("'SHOW PLUGINS' query should be used without filters")
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=['information_schema', 'PLUGINS'])
@@ -1133,9 +1124,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     str(new_statement),
                     session=self.session
                 )
-                self.selectAnswer(query)
+                self.answer_select(query)
                 return
-            if sql_category in ('databases', 'schemas'):
+            elif sql_category in ('databases', 'schemas'):
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
                     from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
@@ -1149,7 +1140,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     str(new_statement),
                     session=self.session
                 )
-                self.selectAnswer(query)
+                self.answer_select(query)
                 return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
@@ -1171,7 +1162,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     str(new_statement),
                     session=self.session
                 )
-                self.selectAnswer(query)
+                self.answer_select(query)
                 return
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
                 new_statement = Select(
@@ -1322,8 +1313,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif isinstance(statement, (StartTransaction, CommitTransaction, RollbackTransaction)):
             self.packet(OkPacket).send()
         elif keyword == 'set' or isinstance(statement, Set):
-            category = statement.category.lower()
-            if category == 'autocommit':
+            category = (statement.category or '').lower()
+            if category == '' and isinstance(statement.arg, BinaryOperation):
+                self.packet(OkPacket).send()
+            elif category == 'autocommit':
                 self.packet(OkPacket).send()
             elif category == 'names':
                 # set names utf8;
@@ -1433,7 +1426,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 sql,
                 session=self.session
             )
-            self.selectAnswer(query)
+            self.answer_select(query)
         elif isinstance(statement, Explain):
             self.answer_explain_table(statement.target.parts)
         else:
@@ -2106,7 +2099,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
         self.sendPackageGroup(packages)
 
-    def selectAnswer(self, query):
+    def answer_select(self, query):
         result = query.fetch(
             self.session.datahub
         )
@@ -2119,7 +2112,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ).send()
             return
 
-        self.answerTableQuery(query)
+        packages = []
+        packages += self.getTabelPackets(
+            columns=query.columns,
+            data=query.result
+        )
+        packages.append(self.packet(OkPacket, eof=True))
+        self.sendPackageGroup(packages)
 
     def _get_column_defenition_packets(self, columns, data=[]):
         packets = []

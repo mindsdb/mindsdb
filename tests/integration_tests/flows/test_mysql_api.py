@@ -102,7 +102,7 @@ class MySqlApiTest(unittest.TestCase):
         return res
 
     def create_datasource(self, db_type):
-        _query = "CREATE DATASOURCE %s WITH ENGINE='%s',PARAMETERS='%s';" % (db_type.upper(),
+        _query = "CREATE DATASOURCE %s WITH ENGINE = '%s', PARAMETERS = %s;" % (db_type.upper(),
                                                                              db_type,
                                                                              json.dumps(self.db_creds[db_type]))
         return self.query(_query)

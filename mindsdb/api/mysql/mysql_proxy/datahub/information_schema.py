@@ -42,13 +42,13 @@ class InformationSchema(DataNode):
         ds = self.index.get(name.upper())
         return ds
 
-    def hasTable(self, tableName):
+    def has_table(self, tableName):
         tn = tableName.upper()
         if tn in self.information_schema or tn in self.index:
             return True
         return False
 
-    def getTableColumns(self, tableName):
+    def get_table_columns(self, tableName):
         tn = tableName.upper()
         if tn in self.information_schema:
             return self.information_schema[tn]
@@ -72,7 +72,7 @@ class InformationSchema(DataNode):
         ]
 
         for dsName, ds in self.index.items():
-            ds_tables = ds.getTables()
+            ds_tables = ds.get_tables()
             data += [[x, dsName, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
 
         df = pd.DataFrame(data, columns=columns)
@@ -102,8 +102,8 @@ class InformationSchema(DataNode):
                 result.append(result_row)
 
         mindsb_dn = self.index['MINDSDB']
-        for table_name in mindsb_dn.getTables():
-            table_columns = mindsb_dn.getTableColumns(table_name)
+        for table_name in mindsb_dn.get_tables():
+            table_columns = mindsb_dn.get_table_columns(table_name)
             for i, column_name in enumerate(table_columns):
                 result_row = row_templates['text'].copy()
                 result_row[1] = 'mindsdb'

@@ -10,16 +10,16 @@ class IntegrationDataNode(DataNode):
         self.integration_name = integration_name
         self.data_store = data_store
 
-    def getType(self):
+    def get_type(self):
         return self.type
 
-    def getTables(self):
+    def get_tables(self):
         return []
 
-    def hasTable(self, tableName):
+    def has_table(self, tableName):
         return True
 
-    def getTableColumns(self, tableName):
+    def get_table_columns(self, tableName):
         return []
 
     def select(self, query):

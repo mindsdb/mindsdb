@@ -1100,6 +1100,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql_category = statement.category.lower()
             condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
             expression = statement.expression
+            if sql_category == 'predictors':
+                if expression is not None:
+                    raise Exception("'SHOW PREDICTORS' query should be used without filters")
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors'])
+                )
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.answer_select(query)
+                return
             if sql_category == 'plugins':
                 if expression is not None:
                     raise Exception("'SHOW PLUGINS' query should be used without filters")

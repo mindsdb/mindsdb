@@ -1100,7 +1100,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql_category = statement.category.lower()
             condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
             expression = statement.expression
-            if 'show plugins' in sql_lower:
+            if sql_category == 'plugins':
+                if expression is not None:
+                    raise Exception("'SHOW PLUGINS' query should be used without filters")
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=['information_schema', 'PLUGINS'])
@@ -1111,7 +1113,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 )
                 self.answer_select(query)
                 return
-            if sql_category in ('databases', 'schemas'):
+            elif sql_category in ('databases', 'schemas'):
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
                     from_table=Identifier(parts=['information_schema', 'SCHEMATA'])

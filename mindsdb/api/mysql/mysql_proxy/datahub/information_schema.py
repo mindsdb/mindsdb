@@ -197,6 +197,10 @@ class InformationSchema(DataNode):
                 if table == 'TABLES':
                     query = 'select * from TABLES'
                     table_name = 'TABLES'
+                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/113
+                if table == 'PLUGINS':
+                    query = 'select * from PLUGINS1'
+                    table_name = 'PLUGINS1'
                 data = dfsql.sql_query(
                     str(query),
                     ds_kwargs={'case_sensitive': False},

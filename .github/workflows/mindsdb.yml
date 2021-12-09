@@ -71,13 +71,14 @@ jobs:
           # MySQL API
           echo -e "\n===============\ntest MySQL API\n===============\n"
           python tests/integration_tests/flows/test_mysql_api.py
+
           # # Kafka Stream
           # echo -e "\n===============\ntest Kafka Stream\n===============\n"
           # python tests/integration_tests/flows/test_kafka.py
 
-          # # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
+          # Redis Stream
+          echo -e "\n===============\ntest Redis Stream\n===============\n"
+          python tests/integration_tests/flows/test_redis.py
 
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"

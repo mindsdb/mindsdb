@@ -15,7 +15,6 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.database.integrations import DatasourceController
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -87,7 +86,9 @@ class MindsDBDataNode(DataNode):
 
     def getTableColumns(self, table):
         if table == 'predictors':
-            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'training_options']
+            return ['name', 'status', 'accuracy', 'predict', 'update_status',
+                    'mindsdb_version', 'error', 'select_data_query',
+                    'training_options']
         if table == 'commands':
             return ['command']
         if table == 'datasources':
@@ -164,12 +165,9 @@ class MindsDBDataNode(DataNode):
         predictors_df = self._select_predictors()
         mindsdb_sql_query.from_table.parts = ['predictors']
 
-        # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
-        str_query = str(mindsdb_sql_query).replace('status', '`status`')
-        # ---
-
+        str_query = str(mindsdb_sql_query)
         # +++ FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
-        if ' 1 = 0' in str(str_query):
+        if ' 1 = 0' in str_query:
             q = str_query
             q = q[:q.lower().find('where')] + ' limit 0'
             result_df = dfsql.sql_query(
@@ -189,6 +187,8 @@ class MindsDBDataNode(DataNode):
         else:
             # ---
             try:
+                # FIXME https://github.com/mindsdb/dfsql/issues/44
+                str_query = str_query.replace(' status', ' `status`').replace(' STATUS', ' `STATUS`')
                 result_df = dfsql.sql_query(
                     str_query,
                     ds_kwargs={'case_sensitive': False},

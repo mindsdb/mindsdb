@@ -132,6 +132,9 @@ class MySQL(Integration, MySQLConnectionChecker):
                 status VARCHAR(500),
                 accuracy VARCHAR(500),
                 predict VARCHAR(500),
+                update_status VARCHAR(500),
+                mindsdb_version VARCHAR(500),
+                error VARCHAR(500),
                 select_data_query VARCHAR(500),
                 training_options VARCHAR(500),
                 key name_key (name)

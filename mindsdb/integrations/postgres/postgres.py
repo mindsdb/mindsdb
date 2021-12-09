@@ -33,7 +33,9 @@ class PostgreSQLConnectionChecker:
             with closing(con) as con:
                 con.run('select 1;')
             connected = True
-        except Exception:
+        except Exception as e:
+            print('EXCEPTION!')
+            print(e)
             connected = False
         return connected
 

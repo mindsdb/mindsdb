@@ -11,7 +11,6 @@
 
 
 import os
-import re
 import sys
 import socketserver as SocketServer
 import ssl
@@ -316,18 +315,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.warning(f'Access denied for user {username}')
             return False
 
-    def sendPackageGroup(self, packages):
+    def send_package_group(self, packages):
         string = b''.join([x.accum() for x in packages])
         self.socket.sendall(string)
-
-    def answerTableQuery(self, query):
-        packages = []
-        packages += self.getTabelPackets(
-            columns=query.columns,
-            data=query.result
-        )
-        packages.append(self.packet(OkPacket, eof=True))
-        self.sendPackageGroup(packages)
 
     def insert_predictor_answer(self, insert):
         ''' Start learn new predictor.
@@ -387,6 +377,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
         ds_data = data_store.get_datasource(ds_name)
+        if ds_data is None:
+            raise Exception(f"DataSource '{ds_name}' does not exists")
         ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
             if col not in ds_columns:
@@ -477,7 +469,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             description['datasource'],
             description['model']
         ]
-        packages = self.getTabelPackets(
+        packages = self.get_tabel_packets(
             columns=[{
                 'table_name': '',
                 'name': 'accuracies',
@@ -509,7 +501,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(OkPacket, eof=True))
         else:
             packages.append(self.packet(EofPacket))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
         return
 
     def answer_retrain_predictor(self, predictor_name):
@@ -754,7 +746,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
             packages.append(self.packet(EofPacket, status=status))
 
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_stmt_execute(self, stmt_id, parameters):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
@@ -773,7 +765,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 # SELECT `table_name`, `column_name`
                 # FROM `information_schema`.`columns`
                 # WHERE `data_type`='enum' AND `table_schema`='mindsdb'
-                packages = self.getTabelPackets(
+                packages = self.get_tabel_packets(
                     columns=[{
                         'table_name': '',
                         'name': 'TABLE_NAME',
@@ -789,7 +781,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     packages.append(self.packet(OkPacket, eof=True))
                 else:
                     packages.append(self.packet(EofPacket))
-                self.sendPackageGroup(packages)
+                self.send_package_group(packages)
                 return
             # ---
 
@@ -803,7 +795,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.packet(OkPacket, eof=True, status=0x0062))
             else:
                 packages.append(self.packet(EofPacket, status=0x0062))
-            self.sendPackageGroup(packages)
+            self.send_package_group(packages)
         elif prepared_stmt['type'] == 'insert':
             statement = prepared_stmt['statement']
             struct = statement.struct
@@ -846,7 +838,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.packet(OkPacket, eof=True, status=status))
             else:
                 packages.append(self.packet(EofPacket, status=status))
-            self.sendPackageGroup(packages)
+            self.send_package_group(packages)
         elif prepared_stmt['type'] == 'delete':
             if len(parameters) == 0:
                 raise SqlError("Delete statement must content 'where' filter")
@@ -899,7 +891,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ])
         packages.append(self.packet(EofPacket, status=status))  # what should be if CLIENT_DEPRECATE_EOF?
 
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_stmt_close(self, stmt_id):
         self.session.unregister_stmt(stmt_id)
@@ -974,7 +966,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
         ])
 
-        packages = self.getTabelPackets(
+        packages = self.get_tabel_packets(
             columns=self._get_explain_columns(),
             # [Field, Type, Null, Key, Default, Extra]
             data=[
@@ -993,7 +985,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         else:
             packages.append(self.packet(OkPacket, eof=True, status=status))
 
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_explain_commands(self):
         status = sum([
@@ -1001,7 +993,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
         ])
 
-        packages = self.getTabelPackets(
+        packages = self.get_tabel_packets(
             columns=self._get_explain_columns(),
             data=[
                 # [Field, Type, Null, Key, Default, Extra]
@@ -1015,7 +1007,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         else:
             packages.append(self.packet(OkPacket, eof=True, status=status))
 
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def query_answer(self, sql):
         # +++
@@ -1054,12 +1046,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 data = [[str(value) for key, value in x.items()] for x in result]
 
             packages = []
-            packages += self.getTabelPackets(
+            packages += self.get_tabel_packets(
                 columns=columns,
                 data=data
             )
             packages.append(self.packet(OkPacket, eof=True))
-            self.sendPackageGroup(packages)
+            self.send_package_group(packages)
             return
         # ---
 
@@ -1072,27 +1064,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         struct = statement.struct
 
         try:
-            # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
-            sql_lower_replace = sql_lower.replace(' status ', ' `status` ')
-            sql_relpace = sql.replace(' status ', ' `status` ')
-            # ---
-            if keyword == 'set' and 'names' in sql_lower_replace:
-                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/73
-                if '@@' in sql_lower:
-                    statement = parse_sql(sql_lower_replace, dialect='mysql')
-                else:
-                    statement = parse_sql(sql_lower_replace, dialect='mindsdb')
-            else:
-                if '@@' in sql_lower:
-                    statement = parse_sql(sql_relpace, dialect='mysql')
-                else:
-                    statement = parse_sql(sql_relpace, dialect='mindsdb')
+            try:
+                statement = parse_sql(sql, dialect='mindsdb')
+            except Exception:
+                statement = parse_sql(sql, dialect='mysql')
         except Exception:
-            if keyword == 'show':
-                statement = parse_sql('show tables')
-            elif keyword == 'set':
-                statement = parse_sql('set autocommit')
-            statement.category = 'error'
+            # not all statemts are parse by parse_sql
+            pass
 
         if isinstance(statement, CreateIntegration):
             struct = {
@@ -1122,7 +1100,22 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sql_category = statement.category.lower()
             condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
             expression = statement.expression
-            if 'show plugins' in sql_lower:
+            if sql_category == 'predictors':
+                if expression is not None:
+                    raise Exception("'SHOW PREDICTORS' query should be used without filters")
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors'])
+                )
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.answer_select(query)
+                return
+            if sql_category == 'plugins':
+                if expression is not None:
+                    raise Exception("'SHOW PLUGINS' query should be used without filters")
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=['information_schema', 'PLUGINS'])
@@ -1131,9 +1124,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     str(new_statement),
                     session=self.session
                 )
-                self.selectAnswer(query)
+                self.answer_select(query)
                 return
-            if sql_category in ('databases', 'schemas'):
+            elif sql_category in ('databases', 'schemas'):
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
                     from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
@@ -1147,7 +1140,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     str(new_statement),
                     session=self.session
                 )
-                self.selectAnswer(query)
+                self.answer_select(query)
                 return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
@@ -1169,7 +1162,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     str(new_statement),
                     session=self.session
                 )
-                self.selectAnswer(query)
+                self.answer_select(query)
                 return
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
                 new_statement = Select(
@@ -1206,7 +1199,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 data = data.values.tolist()
 
                 packages = []
-                packages += self.getTabelPackets(
+                packages += self.get_tabel_packets(
                     columns=[{
                         'table_name': 'session_variables',
                         'name': 'Variable_name',
@@ -1222,11 +1215,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     packages.append(self.packet(OkPacket, eof=True))
                 else:
                     packages.append(self.packet(EofPacket))
-                self.sendPackageGroup(packages)
+                self.send_package_group(packages)
                 return
             elif "show status like 'ssl_version'" in sql_lower:
                 packages = []
-                packages += self.getTabelPackets(
+                packages += self.get_tabel_packets(
                     columns=[{
                         'table_name': 'session_variables',
                         'name': 'Variable_name',
@@ -1242,7 +1235,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     packages.append(self.packet(OkPacket, eof=True))
                 else:
                     packages.append(self.packet(EofPacket))
-                self.sendPackageGroup(packages)
+                self.send_package_group(packages)
                 return
             elif sql_category in ('function status', 'procedure status'):
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB';
@@ -1319,9 +1312,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise Exception(f'Statement not implemented: {sql}')
         elif isinstance(statement, (StartTransaction, CommitTransaction, RollbackTransaction)):
             self.packet(OkPacket).send()
-        elif keyword == 'set' or isinstance(statement, Set):
-            category = statement.category.lower()
-            if category == 'autocommit':
+        elif isinstance(statement, Set):
+            category = (statement.category or '').lower()
+            if category == '' and isinstance(statement.arg, BinaryOperation):
+                self.packet(OkPacket).send()
+            elif category == 'autocommit':
                 self.packet(OkPacket).send()
             elif category == 'names':
                 # set names utf8;
@@ -1345,6 +1340,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 log.warning(f'SQL statement is not processable, return OK package: {sql}')
                 self.packet(OkPacket).send()
+        elif keyword == 'set':
+            log.warning(f'Unknown SET query, return OK package: {sql}')
+            self.packet(OkPacket).send()
         elif keyword == 'use':
             self.session.database = sql_lower.split()[1].strip(' ;')
             self.packet(OkPacket).send()
@@ -1400,7 +1398,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     ]
                 else:
                     data = []
-                packages += self.getTabelPackets(
+                packages += self.get_tabel_packets(
                     columns=[{
                         'table_name': '',
                         'name': 'TABLE_NAME',
@@ -1424,14 +1422,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     packages.append(self.packet(OkPacket, eof=True))
                 else:
                     packages.append(self.packet(EofPacket))
-                self.sendPackageGroup(packages)
+                self.send_package_group(packages)
                 return
 
             query = SQLQuery(
                 sql,
                 session=self.session
             )
-            self.selectAnswer(query)
+            self.answer_select(query)
         elif isinstance(statement, Explain):
             self.answer_explain_table(statement.target.parts)
         else:
@@ -1483,7 +1481,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             })
             data.append(result)
 
-        packages = self.getTabelPackets(
+        packages = self.get_tabel_packets(
             columns=columns,
             data=[data]
         )
@@ -1491,11 +1489,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(OkPacket, eof=True))
         else:
             packages.append(self.packet(EofPacket))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_show_create_table(self, table):
         packages = []
-        packages += self.getTabelPackets(
+        packages += self.get_tabel_packets(
             columns=[{
                 'table_name': '',
                 'name': 'Table',
@@ -1511,11 +1509,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(OkPacket, eof=True))
         else:
             packages.append(self.packet(EofPacket))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_show_index(self):
         packages = []
-        packages += self.getTabelPackets(
+        packages += self.get_tabel_packets(
             columns=[{
                 'database': 'mysql',
                 'table_name': 'tables',
@@ -1643,11 +1641,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(OkPacket, eof=True))
         else:
             packages.append(self.packet(EofPacket))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_function_status(self):
         packages = []
-        packages += self.getTabelPackets(
+        packages += self.get_tabel_packets(
             columns=[{
                 'database': 'mysql',
                 'table_name': 'schemata',
@@ -1743,12 +1741,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(OkPacket, eof=True))
         else:
             packages.append(self.packet(EofPacket))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_show_table_status(self, table_name):
         # NOTE at this moment parsed statement only like `SHOW TABLE STATUS LIKE 'table'`.
         # NOTE some columns has {'database': 'mysql'}, other not. That correct. This is how real DB sends messages.
-        packages = self.getTabelPackets(
+        packages = self.get_tabel_packets(
             columns=[{
                 'database': 'mysql',
                 'table_name': 'tables',
@@ -1898,11 +1896,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ]]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_show_warnings(self):
         packages = []
-        packages += self.getTabelPackets(
+        packages += self.get_tabel_packets(
             columns=[{
                 'database': '',
                 'table_name': '',
@@ -1928,11 +1926,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data=[]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_show_collation(self):
         packages = []
-        packages += self.getTabelPackets(
+        packages += self.get_tabel_packets(
             columns=[{
                 'database': 'information_schema',
                 'table_name': 'COLLATIONS',
@@ -1982,7 +1980,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_show_charset(self, charset=None):
         charsets = {
@@ -2000,7 +1998,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data = [charsets.get(charset)]
 
         packages = []
-        packages += self.getTabelPackets(
+        packages += self.get_tabel_packets(
             columns=[{
                 'database': 'information_schema',
                 'table_name': 'CHARACTER_SETS',
@@ -2036,11 +2034,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(OkPacket, eof=True))
         else:
             packages.append(self.packet(EofPacket))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_show_engines(self):
         packages = []
-        packages += self.getTabelPackets(
+        packages += self.get_tabel_packets(
             columns=[{
                 'database': 'information_schema',
                 'table_name': 'ENGINES',
@@ -2087,10 +2085,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data=[['InnoDB', 'DEFAULT', 'Supports transactions, row-level locking, and foreign keys', 'YES', 'YES', 'YES']]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
     def answer_connection_id(self, sql):
-        packages = self.getTabelPackets(
+        packages = self.get_tabel_packets(
             columns=[{
                 'database': '',
                 'table_name': '',
@@ -2102,9 +2100,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data=[[self.connection_id]]
         )
         packages.append(self.packet(OkPacket, eof=True, status=0x0002))
-        self.sendPackageGroup(packages)
+        self.send_package_group(packages)
 
-    def selectAnswer(self, query):
+    def answer_select(self, query):
         result = query.fetch(
             self.session.datahub
         )
@@ -2117,7 +2115,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ).send()
             return
 
-        self.answerTableQuery(query)
+        packages = []
+        packages += self.get_tabel_packets(
+            columns=query.columns,
+            data=query.result
+        )
+        packages.append(self.packet(OkPacket, eof=True))
+        self.send_package_group(packages)
 
     def _get_column_defenition_packets(self, columns, data=[]):
         packets = []
@@ -2156,7 +2160,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
         return packets
 
-    def getTabelPackets(self, columns, data, status=0):
+    def get_tabel_packets(self, columns, data, status=0):
         # TODO remove columns order
         packets = [self.packet(ColumnCountPacket, count=len(columns))]
         packets.extend(self._get_column_defenition_packets(columns, data))

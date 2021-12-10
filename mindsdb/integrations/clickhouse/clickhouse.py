@@ -100,6 +100,9 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
                 status String,
                 accuracy String,
                 predict String,
+                update_status String,
+                mindsdb_version String,
+                error String,
                 select_data_query String,
                 training_options String
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors', '{msqyl_user}', '{msqyl_pass}')

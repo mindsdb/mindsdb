@@ -13,10 +13,11 @@ psutil
 sqlalchemy >= 1.3.0
 sentry-sdk
 walrus==0.8.2
-mindsdb_datasources == 1.5.0
+mindsdb_datasources == 1.5.2
 flask-compress >= 1.0.0
 kafka-python >= 2.0.0
 appdirs >= 1.0.0
-mindsdb-sql == 0.0.34
-dfsql == 0.6.6
+mindsdb-sql == 0.0.41
+dfsql == 0.6.8
 checksumdir >= 1.2.0
+mindsdb-streams == 0.0.5

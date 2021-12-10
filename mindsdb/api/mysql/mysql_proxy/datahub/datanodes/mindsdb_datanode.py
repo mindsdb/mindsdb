@@ -15,7 +15,6 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.database.integrations import DatasourceController
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -46,7 +45,7 @@ class MindsDBDataNode(DataNode):
         self.data_store = data_store
         self.datasource_interface = datasource_interface
 
-    def getTables(self):
+    def get_tables(self):
         models = self.model_interface.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
         models += ['predictors', 'commands', 'datasources']
@@ -55,8 +54,8 @@ class MindsDBDataNode(DataNode):
         models += [x['name'] for x in ai_tables]
         return models
 
-    def hasTable(self, table):
-        return table in self.getTables()
+    def has_table(self, table):
+        return table in self.get_tables()
 
     def _get_ai_table_columns(self, table_name):
         aitable_record = self.ai_table.get_ai_table(table_name)
@@ -85,9 +84,11 @@ class MindsDBDataNode(DataNode):
             columns += [f"{col}_explain"]
         return columns
 
-    def getTableColumns(self, table):
+    def get_table_columns(self, table):
         if table == 'predictors':
-            return ['name', 'status', 'accuracy', 'predict', 'select_data_query', 'training_options']
+            return ['name', 'status', 'accuracy', 'predict', 'update_status',
+                    'mindsdb_version', 'error', 'select_data_query',
+                    'training_options']
         if table == 'commands':
             return ['command']
         if table == 'datasources':
@@ -164,12 +165,9 @@ class MindsDBDataNode(DataNode):
         predictors_df = self._select_predictors()
         mindsdb_sql_query.from_table.parts = ['predictors']
 
-        # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
-        str_query = str(mindsdb_sql_query).replace('status', '`status`')
-        # ---
-
+        str_query = str(mindsdb_sql_query)
         # +++ FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
-        if ' 1 = 0' in str(str_query):
+        if ' 1 = 0' in str_query:
             q = str_query
             q = q[:q.lower().find('where')] + ' limit 0'
             result_df = dfsql.sql_query(
@@ -189,6 +187,8 @@ class MindsDBDataNode(DataNode):
         else:
             # ---
             try:
+                # FIXME https://github.com/mindsdb/dfsql/issues/44
+                str_query = str_query.replace(' status', ' `status`').replace(' STATUS', ' `STATUS`')
                 result_df = dfsql.sql_query(
                     str_query,
                     ds_kwargs={'case_sensitive': False},

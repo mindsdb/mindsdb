@@ -15,12 +15,16 @@ class PostgreSQLConnectionChecker:
         self.database = kwargs.get('database', 'postgres')
 
     def _get_connection(self):
+        additional_args = {}
+        if 'cockroachlabs.cloud' in self.host:
+            additional_args['ssl_context'] = True
         return pg8000.connect(
             database=self.database,
             user=self.user,
             password=self.password,
             host=self.host,
-            port=self.port
+            port=self.port,
+            **additional_args
         )
 
     def check_connection(self):
@@ -144,6 +148,9 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
                 status text,
                 accuracy text,
                 predict text,
+                update_status text,
+                mindsdb_version text,
+                error text,
                 select_data_query text,
                 training_options text
             )

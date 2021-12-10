@@ -545,10 +545,7 @@ class SqlStatementParser():
             + (originalTextFor(nestedExpr()))('values')
         )
 
-        try:
-            r = expr.parseString(text).asDict()
-        except Exception as e:
-            x = 1
+        r = expr.parseString(text).asDict()
 
         if len(r['db_table']) == 2:
             result['database'] = r['db_table'][0]

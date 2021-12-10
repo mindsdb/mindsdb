@@ -109,7 +109,7 @@ class MySqlApiTest(unittest.TestCase):
 
     def validate_datasource_creation(self, ds_type):
         self.create_datasource(ds_type.lower())
-        res = self.query("SELECT * FROM datasources WHERE name='{}';".format(ds_type.upper()))
+        res = self.query("SELECT * FROM mindsdb.datasources WHERE name='{}';".format(ds_type.upper()))
         self.assertTrue("name" in res and res.get_record("name", ds_type.upper()),
                 f"Expected datasource is not found after creation - {ds_type.upper()}: {res}")
 

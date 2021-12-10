@@ -1,9 +1,16 @@
+import ssl
+import atexit
+import os
+import tempfile
+
 from contextlib import closing
 import pg8000
 
 from lightwood.api import dtype
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.wizards import make_ssl_cert
 
 
 class PostgreSQLConnectionChecker:
@@ -17,7 +24,16 @@ class PostgreSQLConnectionChecker:
     def _get_connection(self):
         additional_args = {}
         if 'cockroachlabs.cloud' in self.host:
-            additional_args['ssl_context'] = True
+            config = Config()
+            cert_path = config['api']['mysql'].get('certificate_path')
+            if cert_path is None or cert_path == '':
+                cert_path = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
+                make_ssl_cert(cert_path)
+                atexit.register(lambda: os.remove(cert_path))
+
+            ssl_context = ssl.SSLContext()
+            ssl_context.load_cert_chain(cert_path)
+            additional_args['ssl_context'] = ssl_context
         return pg8000.connect(
             database=self.database,
             user=self.user,

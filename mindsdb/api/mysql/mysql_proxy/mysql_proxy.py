@@ -1312,7 +1312,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise Exception(f'Statement not implemented: {sql}')
         elif isinstance(statement, (StartTransaction, CommitTransaction, RollbackTransaction)):
             self.packet(OkPacket).send()
-        elif keyword == 'set' or isinstance(statement, Set):
+        elif isinstance(statement, Set):
             category = (statement.category or '').lower()
             if category == '' and isinstance(statement.arg, BinaryOperation):
                 self.packet(OkPacket).send()
@@ -1340,6 +1340,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 log.warning(f'SQL statement is not processable, return OK package: {sql}')
                 self.packet(OkPacket).send()
+        elif keyword == 'set':
+            log.warning(f'Unknown SET query, return OK package: {sql}')
+            self.packet(OkPacket).send()
         elif keyword == 'use':
             self.session.database = sql_lower.split()[1].strip(' ;')
             self.packet(OkPacket).send()

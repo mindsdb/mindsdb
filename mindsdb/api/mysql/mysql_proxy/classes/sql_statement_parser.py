@@ -123,7 +123,7 @@ class SqlStatementParser():
         expr = (
             originalTextFor(QuotedString("'"))
             | originalTextFor(QuotedString('"'))
-            | originalTextFor(QuotedString('\`'))
+            | originalTextFor(QuotedString('`'))
             | (oracleSqlComment | mySqlComment).suppress()
         )
 
@@ -191,7 +191,7 @@ class SqlStatementParser():
     def is_quoted_str(text):
         if isinstance(text, str) is False:
             return False
-        for quote in ['"', "'", '\`']:
+        for quote in ['"', "'", '`']:
             if text.startswith(quote) and text.endswith(quote):
                 return True
         return False
@@ -210,7 +210,7 @@ class SqlStatementParser():
 
     @staticmethod
     def unquote(text):
-        for quote in ['"', "'", '\`']:
+        for quote in ['"', "'", '`']:
             if text.startswith(quote) and text.endswith(quote):
                 return text[1:-1]
         return text
@@ -445,9 +445,9 @@ class SqlStatementParser():
         and_ = Literal("and")
 
         from_value = (
-            QuotedString('\`')
+            QuotedString('`')
             | originalTextFor(
-                Word(printables, excludeChars='.\`')
+                Word(printables, excludeChars='.`')
             )
         )
 
@@ -521,9 +521,9 @@ class SqlStatementParser():
         word = Word(alphas)
 
         from_value = (
-            QuotedString('\`')
+            QuotedString('`')
             | originalTextFor(
-                Word(printables, excludeChars='().\`')
+                Word(printables, excludeChars='().`')
             )
         )
 
@@ -545,7 +545,10 @@ class SqlStatementParser():
             + (originalTextFor(nestedExpr()))('values')
         )
 
-        r = expr.parseString(text).asDict()
+        try:
+            r = expr.parseString(text).asDict()
+        except Exception as e:
+            x = 1
 
         if len(r['db_table']) == 2:
             result['database'] = r['db_table'][0]

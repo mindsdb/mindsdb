@@ -319,7 +319,7 @@ class SQLQuery():
             if isinstance(step, GetPredictorColumns):
                 predictor_name = step.predictor.parts[-1]
                 dn = self.datahub.get(self.mindsdb_database_name)
-                columns = dn.getTableColumns(predictor_name)
+                columns = dn.get_table_columns(predictor_name)
                 self.columns_list = [
                     (self.mindsdb_database_name, predictor_name, predictor_name, column_name, column_name)
                     for column_name in columns

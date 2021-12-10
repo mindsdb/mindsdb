@@ -45,7 +45,7 @@ class MindsDBDataNode(DataNode):
         self.data_store = data_store
         self.datasource_interface = datasource_interface
 
-    def getTables(self):
+    def get_tables(self):
         models = self.model_interface.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
         models += ['predictors', 'commands', 'datasources']
@@ -54,8 +54,8 @@ class MindsDBDataNode(DataNode):
         models += [x['name'] for x in ai_tables]
         return models
 
-    def hasTable(self, table):
-        return table in self.getTables()
+    def has_table(self, table):
+        return table in self.get_tables()
 
     def _get_ai_table_columns(self, table_name):
         aitable_record = self.ai_table.get_ai_table(table_name)
@@ -84,7 +84,7 @@ class MindsDBDataNode(DataNode):
             columns += [f"{col}_explain"]
         return columns
 
-    def getTableColumns(self, table):
+    def get_table_columns(self, table):
         if table == 'predictors':
             return ['name', 'status', 'accuracy', 'predict', 'update_status',
                     'mindsdb_version', 'error', 'select_data_query',

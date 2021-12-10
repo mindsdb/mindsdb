@@ -4,16 +4,16 @@ class DataNode:
     def __init__(self):
         pass
 
-    def getType(self):
+    def get_type(self):
         return self.type
 
-    def getTables(self):
+    def get_tables(self):
         pass
 
-    def hasTable(self, tableName):
+    def has_table(self, tableName):
         pass
 
-    def getTableColumns(self, tableName):
+    def get_table_columns(self, tableName):
         pass
 
     def select(self, table=None, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):

@@ -1,5 +1,6 @@
 ## Predicting house price
 In this tutorial you will learn how to predict house price on basis of different parameter like condition,bedrooms,bathrooms,area etc. We will be using mysql database for this purpose and kc_house_data as dataset.
+link to dataset is https://www.kaggle.com/harlfoxem/housesalesprediction you can download whole dataset from here.
 The process will be like:
 
  1. Cleaning data and deleting unnecessary columns.

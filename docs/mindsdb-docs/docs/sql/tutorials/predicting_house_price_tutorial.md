@@ -100,7 +100,7 @@ Now for predicting on any data:
 
     SELECT price
     from mindsdb.housing_predictor
-    WHERE when_data='{"id":2487200874,"grade":5,"bedrooms":4,"bathrooms":2,"sqft_living":890,"floors":1,"condition_of":3}';
+    WHERE when_data='{"grade":5,"bedrooms":4,"bathrooms":2,"sqft_living":890,"floors":1,"condition_of":3}';
 
 Now you will see result like that:
 

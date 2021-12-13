@@ -46,7 +46,6 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropIntegration, CreateIntegration
 
-# from mindsdb.interfaces.storage.db import session as db_session, engine as db_engine
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet

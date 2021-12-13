@@ -100,8 +100,10 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
                 status String,
                 accuracy String,
                 predict String,
+                update_status String,
+                mindsdb_version String,
+                error String,
                 select_data_query String,
-                external_datasource String,
                 training_options String
                 ) ENGINE=MySQL('{msqyl_conn}', 'mindsdb', 'predictors', '{msqyl_user}', '{msqyl_pass}')
         """
@@ -128,7 +130,6 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             ))
             columns_sql += ',`when_data` Nullable(String)'
             columns_sql += ',`select_data_query` Nullable(String)'
-            columns_sql += ',`external_datasource` Nullable(String)'
             for col in predict:
                 columns_sql += f',`{col}_confidence` Nullable(Float64)'
 
@@ -156,19 +157,20 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
         self._query(q)
 
     def get_tables_list(self):
-        q = f"""SELECT database, table
-                    FROM system.parts
-                    WHERE active and database NOT IN  ('system', 'mdb_system')
-                    GROUP BY database, table
-                    ORDER BY database, table;"""
+        q = """
+            SELECT database, table
+            FROM system.parts
+            WHERE active and database NOT IN  ('system', 'mdb_system')
+            GROUP BY database, table
+            ORDER BY database, table;
+        """
         tables_list = self._query(q)
-        tables= [f"{table[0]}.{table[1]}" for table in tables_list]
+        tables = [f"{table[0]}.{table[1]}" for table in tables_list]
         return tables
 
-    def get_columns(self,query):
+    def get_columns(self, query):
         q = f"SELECT * FROM ({query}) LIMIT 1 FORMAT JSON"
         query_result = self._query(q).json()
         columns_info = query_result['meta']
-        columns= [column['name'] for column in columns_info]
+        columns = [column['name'] for column in columns_info]
         return columns
-

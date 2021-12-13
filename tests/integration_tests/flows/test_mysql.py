@@ -2,13 +2,11 @@ import unittest
 import inspect
 from pathlib import Path
 import json
-import requests
 
 import mysql.connector
 
 from common import (
     MINDSDB_DATABASE,
-    HTTP_API_ROOT,
     CONFIG_PATH,
     run_environment,
     get_all_pridict_fields,
@@ -30,7 +28,6 @@ CONDITION = {
 
 TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
-EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 INTEGRATION_NAME = 'default_mysql'
 
@@ -100,29 +97,7 @@ class MySQLDBTest(unittest.TestCase):
         data = fetch(f'select * from {MINDSDB_DATABASE}.predictors;')
         self.assertTrue(len(data) == 0)
 
-    def test_2_put_external_ds(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
-        params = {
-            'name': EXTERNAL_DS_NAME,
-            'query': f'select * from test_data.{TEST_DATA_TABLE} limit 50',
-            'integration_id': INTEGRATION_NAME
-        }
-
-        url = f'{HTTP_API_ROOT}/datasources/{EXTERNAL_DS_NAME}'
-        res = requests.put(url, json=params)
-        self.assertTrue(res.status_code == 200)
-        ds_data = res.json()
-
-        self.assertTrue(ds_data['source_type'] == INTEGRATION_NAME)
-        self.assertTrue(ds_data['row_count'] == 50)
-
-        url = f'{HTTP_API_ROOT}/datasources'
-        res = requests.get(url)
-        self.assertTrue(res.status_code == 200)
-        ds_data = res.json()
-        self.assertTrue(len(ds_data) == 1)
-
-    def test_3_insert_predictor(self):
+    def test_2_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
             insert into {MINDSDB_DATABASE}.predictors (name, predict, select_data_query, training_options) values
@@ -142,43 +117,7 @@ class MySQLDBTest(unittest.TestCase):
         print('predictor table in mindsdb db')
         self.assertTrue(TEST_PREDICTOR_NAME in self.get_tables_in(MINDSDB_DATABASE))
 
-    def test_4_externael_ds(self):
-        name = f'{TEST_PREDICTOR_NAME}_external'
-
-        query(f"""
-            insert into {MINDSDB_DATABASE}.predictors (name, predict, external_datasource, training_options) values
-            (
-                '{name}',
-                '{','.join(to_predict_column_names)}',
-                '{EXTERNAL_DS_NAME}',
-                '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
-            );
-        """)
-
-        print('predictor record in mindsdb.predictors')
-        res = fetch(f"select status from {MINDSDB_DATABASE}.predictors where name = '{name}'", as_dict=True)
-        self.assertTrue(len(res) == 1)
-        self.assertTrue(res[0]['status'] == 'complete')
-
-        print('predictor table in mindsdb db')
-        self.assertTrue(name in self.get_tables_in(MINDSDB_DATABASE))
-
-        fields = get_all_pridict_fields(TO_PREDICT)
-        res = fetch(f"""
-            select
-                {','.join(fields)}
-            from
-                {MINDSDB_DATABASE}.{name}
-            where
-                external_datasource='{EXTERNAL_DS_NAME}'
-        """, as_dict=True)
-
-        print('check result')
-        self.assertTrue(len(res) > 0)
-        for r in res:
-            self.assertTrue(check_prediction_values(r, TO_PREDICT))
-
-    def test_5_query_predictor(self):
+    def test_3_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         fields = get_all_pridict_fields(TO_PREDICT)
@@ -196,7 +135,7 @@ class MySQLDBTest(unittest.TestCase):
         self.assertTrue(len(res) == 1)
         self.assertTrue(check_prediction_values(res[0], TO_PREDICT))
 
-    def test_6_range_query(self):
+    def test_4_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         res = fetch(f"""
@@ -213,7 +152,7 @@ class MySQLDBTest(unittest.TestCase):
         for r in res:
             self.assertTrue(check_prediction_values(r, TO_PREDICT))
 
-    def test_7_delete_predictor_by_command(self):
+    def test_5_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
@@ -222,16 +161,16 @@ class MySQLDBTest(unittest.TestCase):
 
         self.assertTrue(TEST_PREDICTOR_NAME not in self.get_tables_in(MINDSDB_DATABASE))
 
-    def test_9_delete_predictor_by_delete_statement(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
+    # def test_9_delete_predictor_by_delete_statement(self):
+    #     print(f'\nExecuting {inspect.stack()[0].function}')
 
-        name = f'{TEST_PREDICTOR_NAME}_external'
+    #     name = f'{TEST_PREDICTOR_NAME}_external'
 
-        query(f"""
-            delete from {MINDSDB_DATABASE}.predictors where name='{name}';
-        """)
+    #     query(f"""
+    #         delete from {MINDSDB_DATABASE}.predictors where name='{name}';
+    #     """)
 
-        self.assertTrue(name not in self.get_tables_in(MINDSDB_DATABASE))
+    #     self.assertTrue(name not in self.get_tables_in(MINDSDB_DATABASE))
 
 
 if __name__ == "__main__":

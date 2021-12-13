@@ -2,13 +2,11 @@ import unittest
 import inspect
 from pathlib import Path
 import json
-import requests
 
 import pytds
 
 from common import (
     MINDSDB_DATABASE,
-    HTTP_API_ROOT,
     CONFIG_PATH,
     condition_dict_to_str,
     run_environment
@@ -29,7 +27,6 @@ CONDITION = {
 
 TEST_DATA_TABLE = TEST_DATASET
 TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
-EXTERNAL_DS_NAME = f'{TEST_DATASET}_external'
 
 INTEGRATION_NAME = 'default_mssql'
 
@@ -98,29 +95,7 @@ class MSSQLTest(unittest.TestCase):
 
         self.assertTrue(len(predictors) == 0)
 
-    def test_2_put_external_ds(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
-        params = {
-            'name': EXTERNAL_DS_NAME,
-            'query': f'select * from test_data.{TEST_DATA_TABLE} order by sqft offset 0 rows fetch next 50 rows only',
-            'integration_id': INTEGRATION_NAME
-        }
-
-        url = f'{HTTP_API_ROOT}/datasources/{EXTERNAL_DS_NAME}'
-        res = requests.put(url, json=params)
-        self.assertTrue(res.status_code == 200)
-        ds_data = res.json()
-
-        self.assertTrue(ds_data['source_type'] == INTEGRATION_NAME)
-        self.assertTrue(ds_data['row_count'] == 50)
-
-        url = f'{HTTP_API_ROOT}/datasources'
-        res = requests.get(url)
-        self.assertTrue(res.status_code == 200)
-        ds_data = res.json()
-        self.assertTrue(len(ds_data) == 1)
-
-    def test_3_insert_predictor(self):
+    def test_2_insert_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
             exec ('
@@ -140,43 +115,7 @@ class MSSQLTest(unittest.TestCase):
         self.assertTrue(len(res) == 1)
         self.assertTrue(res[0]['status'] == 'complete')
 
-    def test_4_externael_ds(self):
-        name = f'{TEST_PREDICTOR_NAME}_external'
-
-        query(f"""
-            exec ('
-                insert into predictors (name, predict, external_datasource, training_options)
-                values (
-                    ''{name}'',
-                    ''rental_price'',
-                    ''{EXTERNAL_DS_NAME}'',
-                    ''{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}''
-                )') AT {MINDSDB_DATABASE};
-        """)
-
-        print('predictor record in mindsdb.predictors')
-        res = query(f"""
-            exec ('SELECT status FROM mindsdb.predictors where name = ''{name}''') AT {MINDSDB_DATABASE};
-        """, as_dict=True, fetch=True)
-        self.assertTrue(len(res) == 1)
-        self.assertTrue(res[0]['status'] == 'complete')
-
-        res = query(f"""
-            exec ('
-                select
-                    *
-                from
-                    mindsdb.{name}
-                where
-                    external_datasource=''{EXTERNAL_DS_NAME}''
-            ') AT {MINDSDB_DATABASE};
-        """, as_dict=True, fetch=True)
-
-        print('check result')
-        self.assertTrue(len(res) > 0)
-        self.assertTrue(res[0]['rental_price'] is not None and res[0]['rental_price'] != 'None')
-
-    def test_5_query_predictor(self):
+    def test_3_query_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         res = query(f"""
             exec ('
@@ -200,9 +139,9 @@ class MSSQLTest(unittest.TestCase):
         self.assertIsInstance(res['rental_price_min'], str)
         self.assertIsInstance(res['rental_price_max'], str)
         self.assertIsInstance(res['rental_price_explain'], str)
-        self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
+        # self.assertTrue(res['number_of_rooms'] == 'None' or res['number_of_rooms'] is None)
 
-    def test_6_range_query(self):
+    def test_4_range_query(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         results = query(f"""
@@ -225,7 +164,7 @@ class MSSQLTest(unittest.TestCase):
             self.assertIsInstance(res['rental_price_max'], str)
             self.assertIsInstance(res['rental_price_explain'], str)
 
-    def test_7_delete_predictor_by_command(self):
+    def test_5_delete_predictor_by_command(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         query(f"""
@@ -240,21 +179,21 @@ class MSSQLTest(unittest.TestCase):
         predictors = [x['name'] for x in predictors]
         self.assertTrue(TEST_PREDICTOR_NAME not in predictors)
 
-    def test_8_delete_predictor_by_delete_statement(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
-        name = f'{TEST_PREDICTOR_NAME}_external'
+    # def test_6_delete_predictor_by_delete_statement(self):
+    #     print(f'\nExecuting {inspect.stack()[0].function}')
+    #     name = f'{TEST_PREDICTOR_NAME}_external'
 
-        query(f"""
-            exec ('delete from mindsdb.predictors where name=''{name}'' ') at {MINDSDB_DATABASE};
-        """)
+    #     query(f"""
+    #         exec ('delete from mindsdb.predictors where name=''{name}'' ') at {MINDSDB_DATABASE};
+    #     """)
 
-        predictors = fetch(f'''
-            exec ('
-                select * from mindsdb.predictors
-            ') AT {MINDSDB_DATABASE};
-        ''')
-        predictors = [x['name'] for x in predictors]
-        self.assertTrue(name not in predictors)
+    #     predictors = fetch(f'''
+    #         exec ('
+    #             select * from mindsdb.predictors
+    #         ') AT {MINDSDB_DATABASE};
+    #     ''')
+    #     predictors = [x['name'] for x in predictors]
+    #     self.assertTrue(name not in predictors)
 
 
 if __name__ == "__main__":

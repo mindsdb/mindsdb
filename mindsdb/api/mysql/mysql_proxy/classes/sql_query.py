@@ -10,7 +10,6 @@
 """
 
 import re
-import copy
 import dfsql
 import pandas as pd
 import datetime
@@ -33,6 +32,7 @@ from mindsdb_sql.parser.ast import (
 )
 from mindsdb_sql.planner.steps import (
     ApplyPredictorRowStep,
+    GetPredictorColumns,
     FetchDataframeStep,
     ApplyPredictorStep,
     MapReduceStep,
@@ -135,6 +135,7 @@ class SQLQuery():
         self.ai_table = None
         self.outer_query = None
         self.row_id = 0
+        self.columns_list = None
 
         self.mindsdb_database_name = 'mindsdb'
 
@@ -216,35 +217,7 @@ class SQLQuery():
         return result
 
     def _parse_query(self, sql):
-        # +++ FIXME https://github.com/mindsdb/mindsdb_sql/issues/53
-        is_crutch = False
-        if 'where 1 = 0' in sql.lower():
-            sql = sql[:sql.lower().find('where 1 = 0')] + ' limit 0'
-            is_crutch = True
-        elif 'where 1=0' in sql.lower():
-            sql = sql[:sql.lower().find('where 1=0')] + ' limit 0'
-            is_crutch = True
-        # ---
-
-        # +++ https://github.com/mindsdb/mindsdb_sql/issues/64
-        str_sql = sql.replace(' status ', ' `status` ')
-        # ---
-        mindsdb_sql_struct = parse_sql(str_sql, dialect='mindsdb')
-
-        # is it query with only constants?
-        if (
-            mindsdb_sql_struct.from_table is None
-            and mindsdb_sql_struct.where is None
-            and set(isinstance(x, Constant) for x in mindsdb_sql_struct.targets) == set([True])
-        ):
-            table_name = (None, None, None)
-            self.fetched_data = [{table_name: {}}]
-            self.columns_list = []
-            for column in mindsdb_sql_struct.targets:
-                alias = '.'.join(column.alias.parts) if column.alias is not None else column.value
-                self.fetched_data[0][table_name][alias] = column.value
-                self.columns_list.append(table_name + (alias, alias))
-            return
+        mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
 
         # is it query to 'predictors'?
         if (
@@ -306,7 +279,6 @@ class SQLQuery():
         integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('INFORMATION_SCHEMA')
         integrations_names.append('information_schema')
-        integrations_names.append('datasource')
 
         all_tables = get_all_tables(mindsdb_sql_struct)
 
@@ -333,11 +305,6 @@ class SQLQuery():
                             }
                         self.model_types.update(p.data.get('dtypes', {}))
 
-        # FIXME https://github.com/mindsdb/mindsdb_sql/issues/53
-        if is_crutch is True:
-            sql = sql[:sql.lower().find(' limit 0')] + " where when_data = '{}' limit 0"
-            mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
-
         plan = plan_query(
             mindsdb_sql_struct,
             integrations=integrations_names,
@@ -349,6 +316,15 @@ class SQLQuery():
 
         for step in plan.steps:
             data = []
+            if isinstance(step, GetPredictorColumns):
+                predictor_name = step.predictor.parts[-1]
+                dn = self.datahub.get(self.mindsdb_database_name)
+                columns = dn.get_table_columns(predictor_name)
+                self.columns_list = [
+                    (self.mindsdb_database_name, predictor_name, predictor_name, column_name, column_name)
+                    for column_name in columns
+                ]
+                data = []
             if isinstance(step, FetchDataframeStep):
                 data = self._fetch_dataframe_step(step)
             elif isinstance(step, UnionStep):
@@ -383,22 +359,6 @@ class SQLQuery():
                 predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
-
-                # +++ external datasource
-                if 'external_datasource' in where_data:
-                    external_datasource_sql = where_data['external_datasource']
-                    if 'select ' not in external_datasource_sql.lower():
-                        external_datasource_sql = f'select * from {external_datasource_sql}'
-                    temp_session = copy.copy(self.session)
-                    temp_session.database = 'datasource'
-                    query = SQLQuery(external_datasource_sql, session=temp_session)
-                    result = query.fetch(self.datahub, view='dict')
-                    if result['success'] is False:
-                        raise Exception(f"Something wrong with getting data from {where_data['external_datasource']}")
-                    for row in result['result']:
-                        row.update(where_data)
-                    where_data = result['result']
-                # ---
 
                 data = dn.select(
                     table=predictor,
@@ -513,10 +473,17 @@ class SQLQuery():
                 raise Exception('FilterStep not implemented')
             elif isinstance(step, ProjectStep):
                 step_data = steps_data[step.dataframe.step_num]
-                row = step_data[0]  # TODO if rowcount = 0
                 tables_columns = {}
-                for table_name in row:
-                    tables_columns[table_name] = list(row[table_name].keys())
+                if self.columns_list is None:
+                    row = step_data[0]  # TODO if rowcount = 0
+                    for table_name in row:
+                        tables_columns[table_name] = list(row[table_name].keys())
+                else:
+                    for columns_record in self.columns_list:
+                        table_name = (columns_record[0], columns_record[1], columns_record[2])
+                        if table_name not in tables_columns:
+                            tables_columns[table_name] = []
+                        tables_columns[table_name].append(columns_record[3])
 
                 columns_list = []
                 for column_full_name in step.columns:

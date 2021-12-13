@@ -8,14 +8,14 @@ class DataSourceDataNode(DataNode):
     def __init__(self, data_store):
         self.datastore = data_store
 
-    def getTables(self):
+    def get_tables(self):
         dss = self.datastore.get_datasources()
         return [x['name'] for x in dss]
 
-    def hasTable(self, table):
-        return table in self.getTables()
+    def has_table(self, table):
+        return table in self.get_tables()
 
-    def getTableColumns(self, table):
+    def get_table_columns(self, table):
         ds = self.datastore.get_datasource(table)
         return [x['name'] for x in ds['columns']]
 

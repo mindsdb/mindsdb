@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from pandas.core.frame import DataFrame
+import json
 import psutil
 import datetime
 from copy import deepcopy
@@ -14,6 +14,7 @@ from lightwood.api.types import ProblemDefinition
 from lightwood import __version__ as lightwood_version
 import numpy as np
 import pandas as pd
+from pandas.core.frame import DataFrame
 import mindsdb_datasources
 
 from mindsdb import __version__ as mindsdb_version
@@ -24,6 +25,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess
+from mindsdb.interfaces.datastore.datastore import DataStore
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -177,6 +179,12 @@ class ModelController():
         predictor_data = self.get_model_data(name, company_id)
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
 
+        if (
+            name in self.predictor_cache
+            and self.predictor_cache[name]['updated_at'] != predictor_record.updated_at
+        ):
+            del self.predictor_cache[name]
+
         if name not in self.predictor_cache:
             # Clear the cache entirely if we have less than 1.2 GB left
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
@@ -185,8 +193,11 @@ class ModelController():
             if predictor_data['status'] == 'complete':
                 self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
                 self.predictor_cache[name] = {
-                    'predictor':
-                    lightwood.predictor_from_state(os.path.join(self.config['paths']['predictors'], fs_name), predictor_record.code),
+                    'predictor': lightwood.predictor_from_state(
+                        os.path.join(self.config['paths']['predictors'], fs_name),
+                        predictor_record.code
+                    ),
+                    'updated_at': predictor_record.updated_at,
                     'created': datetime.datetime.now(),
                     'code': predictor_record.code,
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
@@ -350,7 +361,19 @@ class ModelController():
         name = f'{company_id}@@@@@{name}'
 
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        if db_p is None:
+            raise Exception(f"Predictor '{name}' does not exist")
         db.session.delete(db_p)
+        if db_p.datasource_id is not None:
+            try:
+                dataset_record = db.Datasource.query.get(db_p.datasource_id)
+                if (
+                    isinstance(dataset_record.data, str)
+                    and json.loads(dataset_record.data).get('source_type') != 'file'
+                ):
+                    DataStore().delete_datasource(dataset_record.name, company_id)
+            except Exception:
+                pass
         db.session.commit()
 
         DatabaseWrapper(company_id).unregister_predictor(name)
@@ -359,6 +382,14 @@ class ModelController():
         self.fs_store.delete(f'predictor_{company_id}_{db_p.id}')
 
         return 0
+
+    def rename_model(self, old_name, new_name, company_id: int):
+        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=old_name).first()
+        db_p.name = new_name
+        db.session.commit()
+        dbw = DatabaseWrapper(company_id)
+        dbw.unregister_predictor(old_name)
+        dbw.register_predictors([self.get_model_data(new_name, company_id)])
 
     @mark_process(name='learn')
     def update_model(self, name: str, company_id: int):

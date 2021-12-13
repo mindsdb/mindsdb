@@ -97,42 +97,13 @@ class CompanyIndependentTest(unittest.TestCase):
         integrations_b = get_integrations_names(company_id=CID_B)
         self.assertTrue(len(integrations_b) == 1 and integrations_b[0] == 'test_integration_b')
 
-    def test_3_add_datasources_http(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
-
-        params = {
-            'name': 'test_ds_a',
-            'query': 'select sqft, rental_price from test_data.home_rentals limit 30;',
-            'integration_id': 'test_integration_a'
-        }
-
-        url = f'{HTTP_API_ROOT}/datasources/test_ds_a'
-        res = requests.put(url, json=params, headers={'company-id': f'{CID_A}'})
-        self.assertTrue(res.status_code == 200)
-
-        datasources_a = get_datasources_names(company_id=CID_A)
-        datasources_b = get_datasources_names(company_id=CID_B)
-        self.assertTrue(len(datasources_a) == 1 and datasources_a[0] == 'test_ds_a')
-        self.assertTrue(len(datasources_b) == 0)
-
-        params = {
-            'name': 'test_ds_b',
-            'query': 'select sqft, rental_price from test_data.home_rentals limit 30;',
-            'integration_id': 'test_integration_b'
-        }
-
-        url = f'{HTTP_API_ROOT}/datasources/test_ds_b'
-        res = requests.put(url, json=params, headers={'company-id': f'{CID_B}'})
-        self.assertTrue(res.status_code == 200)
-
-        datasources_a = get_datasources_names(company_id=CID_A)
-        datasources_b = get_datasources_names(company_id=CID_B)
-        self.assertTrue(len(datasources_a) == 1 and datasources_a[0] == 'test_ds_a')
-        self.assertTrue(len(datasources_b) == 1 and datasources_b[0] == 'test_ds_b')
-
     def test_4_add_predictors_http(self):
+        print(f'\nExecuting {inspect.stack()[0].function}')
         params = {
-            'data_source_name': 'test_ds_a',
+            'from': {
+                'datasource': 'test_integration_a',
+                'query': 'select * from test_data.home_rentals limit 50'
+            },
             'to_predict': 'rental_price',
             'kwargs': {
                 'stop_training_in_x_seconds': 5,
@@ -154,7 +125,10 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(mongo_predictors_b) == 0)
 
         params = {
-            'data_source_name': 'test_ds_a',
+            'from': {
+                'datasource': 'test_integration_a',
+                'query': 'select * from test_data.home_rentals limit 50'
+            },
             'to_predict': 'rental_price',
             'kwargs': {
                 'stop_training_in_x_seconds': 5,
@@ -163,7 +137,7 @@ class CompanyIndependentTest(unittest.TestCase):
         }
         url = f'{HTTP_API_ROOT}/predictors/test_p_b'
         res = requests.put(url, json=params, headers={'company-id': f'{CID_B}'})
-        # shld not able create predictor from foreign ds
+        # shold not be able to create predictor from foreign ds
         self.assertTrue(res.status_code != 200)
 
         predictors_a = get_predictors_names_list(company_id=CID_A)
@@ -177,7 +151,10 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(mongo_predictors_b) == 0)
 
         params = {
-            'data_source_name': 'test_ds_b',
+            'from': {
+                'datasource': 'test_integration_b',
+                'query': 'select * from test_data.home_rentals limit 50'
+            },
             'to_predict': 'rental_price',
             'kwargs': {
                 'stop_training_in_x_seconds': 5,
@@ -199,12 +176,14 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(mongo_predictors_b) == 1 and mongo_predictors_b[0] == 'test_p_b')
 
     def test_5_add_predictors_mongo(self):
+        print(f'\nExecuting {inspect.stack()[0].function}')
         client = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
         client.admin.command({'company_id': CID_A, 'need_response': 1})
         client.mindsdb.predictors.insert_one({
             'name': 'test_mon_p_a',
             'predict': 'rental_price',
-            'external_datasource': 'test_ds_a',
+            'connection': 'test_integration_a',
+            'select_data_query': 'select * from test_data.home_rentals limit 50',
             'training_options': {
                 'join_learn_process': True,
                 'stop_training_in_x_seconds': 3

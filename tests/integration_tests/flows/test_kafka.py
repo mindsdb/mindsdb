@@ -70,11 +70,11 @@ class KafkaTest(unittest.TestCase):
 
     def upload_ds(self, name):
         df = pd.DataFrame({
-            'group': ["A" for _ in range(100, 210)],
-            'order': [x for x in range(100, 210)],
-            'x1': [x for x in range(100,210)],
-            'x2': [x*2 for x in range(100,210)],
-            'y': [x*3 for x in range(100,210)]
+            'group': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
+            'order': [x for x in range(100, 210)] + [x for x in range(200, 310)],
+            'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
+            'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
+            'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
         })
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)
@@ -226,7 +226,7 @@ class KafkaTest(unittest.TestCase):
             'predictor': PREDICTOR_NAME,
             'learning_params': {"to_predict": "y",
                                 'kwargs': {
-                                    'stop_training_in_x_seconds': 20}
+                                    'stop_training_in_x_seconds': 3}
                                 },
             'learning_threshold': 10,
             'stream_in': STREAM_IN_OL,
@@ -234,12 +234,16 @@ class KafkaTest(unittest.TestCase):
         })
 
         for x in range(1, 101):
-            stream_in.write({'x1': x, 'x2': 2*x, 'y': 3*x})
+            stream_in.write({'x1': x, 'x2': 2 * x, 'y': 3 * x})
 
-        time.sleep(30)
-        res = list(stream_out.read())
-        if not res or res[0]['status'] != 'success':
-            self.fail(f"expected to have successfully trained predictor, but have: {res}")
+        start_time = time.time()
+        while (time.time() - start_time) < 30:
+            time.sleep(5)
+            res = list(stream_out.read())
+            if res and res[0]['status'] == 'success':
+                break
+        else:
+            raise Exception('Create predictor timeout')
 
         url = f'{HTTP_API_ROOT}/predictors/{PREDICTOR_NAME}'
         res = requests.get(url)

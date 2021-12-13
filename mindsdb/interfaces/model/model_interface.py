@@ -30,6 +30,9 @@ class ModelInterface():
     def delete_model(self, *args, **kwargs):
         return self.controller.delete_model(*args, **kwargs)
 
+    def rename_model(self, *args, **kwargs):
+        return self.controller.rename_model(*args, **kwargs)
+
     def update_model(self, *args, **kwargs):
         return self.controller.update_model(*args, **kwargs)
 

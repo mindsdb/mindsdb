@@ -1,4 +1,6 @@
+import json
 from copy import deepcopy
+
 import kafka
 
 from mindsdb.integrations.base import StreamIntegration

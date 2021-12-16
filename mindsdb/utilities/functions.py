@@ -86,7 +86,7 @@ def get_versions_where_predictors_become_obsolete():
         try:
             versions_for_updating_predictors = res.text.replace(' \t\r', '').split('\n')
         except Exception as e:
-            print(f'Cant decode compatible-config.json: {e}')
+            print(f'Cant decode version_for_updating_predictors.txt: {e}')
             raise
     except Exception:
         return False, versions_for_updating_predictors

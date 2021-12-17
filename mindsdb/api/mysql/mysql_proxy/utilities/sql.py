@@ -1,3 +1,7 @@
+from uuid import uuid4
+
+import duckdb
+
 from mindsdb_sql.parser.ast import Join, Identifier, BinaryOperation, Constant, Operation, UnaryOperation
 from mindsdb_sql.parser.ast.select.star import Star
 
@@ -34,3 +38,30 @@ def where_to_dict(root):
             return root.value
     else:
         raise Exception(f'unknown type in "where": {root}')
+
+
+def query_df(df, query):
+    """ Perform simple query ('select' from one table, without subqueries and joins) on DataFrame.
+        NOTE: current version of duckdb save tables in memory between connection, therefore for
+        safetywe change name of table in query to radom string.
+
+        Args:
+            df (pandas.DataFrame): data
+            query (mindsdb_sql.parser.ast.Select): select query
+
+        Returns:
+            pandas.DataFrame
+    """
+    uuid = f"x{str(uuid4()).replace('-', '')}"
+    original_table_name = query.from_table.parts
+    query.from_table.parts = [uuid]
+    table_name = uuid
+    query_str = str(query)
+    query.from_table.parts = original_table_name
+
+    con = duckdb.connect(database=':memory:')
+    con.register(table_name, df)
+    result_df = con.execute(query_str).fetchdf()
+    con.unregister(table_name)
+    con.close()
+    return result_df

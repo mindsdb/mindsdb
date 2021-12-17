@@ -10,7 +10,8 @@ class FileDataNode(DataNode):
 
     def get_tables(self):
         dss = self.datastore.get_datasources()
-        return [x['name'] for x in dss]
+        file_dss = [x for x in dss if x['source_type'] == 'file']
+        return [x['name'] for x in file_dss]
 
     def has_table(self, table):
         return table in self.get_tables()

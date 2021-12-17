@@ -10,7 +10,6 @@
 """
 
 import re
-import dfsql
 import pandas as pd
 import datetime
 
@@ -48,6 +47,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
 import mindsdb.interfaces.storage.db as db
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -557,12 +557,7 @@ class SQLQuery():
             # ---
             data = self._make_list_result_view(result)
             df = pd.DataFrame(data)
-            result = dfsql.sql_query(
-                self.outer_query,
-                ds_kwargs={'case_sensitive': False},
-                reduce_output=False,
-                dataframe=df
-            )
+            result = query_df(df, self.outer_query)
 
             try:
                 self.columns_list = [

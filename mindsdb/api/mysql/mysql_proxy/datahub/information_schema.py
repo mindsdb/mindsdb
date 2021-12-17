@@ -1,6 +1,6 @@
-import dfsql
 import pandas as pd
 
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.file_datanode import FileDataNode
@@ -185,36 +185,10 @@ class InformationSchema(DataNode):
         else:
             raise Exception('Information schema: Not implemented.')
 
-        table_name = query.from_table.parts[-1]
-        # region FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
-        if ' 1 = 0' in str(query):
-            q = str(query)
-            q = q[:q.lower().find('where')] + ' limit 0'
-            data = dfsql.sql_query(
-                q,
-                ds_kwargs={'case_sensitive': False},
-                reduce_output=False,
-                **{table_name: dataframe}
-            )
-        # endregion
-        else:
-            # ---
-            try:
-                if table == 'TABLES':
-                    query = 'select * from TABLES'
-                    table_name = 'TABLES'
-                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/113
-                if table == 'PLUGINS':
-                    query = 'select * from PLUGINS1'
-                    table_name = 'PLUGINS1'
-                data = dfsql.sql_query(
-                    str(query),
-                    ds_kwargs={'case_sensitive': False},
-                    reduce_output=False,
-                    **{table_name: dataframe}
-                )
-            except Exception as e:
-                print(f'Exception! {e}')
-                return [], []
+        try:
+            data = query_df(dataframe, query)
+        except Exception as e:
+            print(f'Exception! {e}')
+            return [], []
 
         return data.to_dict(orient='records'), data.columns.to_list()

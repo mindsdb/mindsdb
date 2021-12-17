@@ -27,7 +27,6 @@ import select
 import base64
 
 import pandas as pd
-import dfsql
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     RollbackTransaction,
@@ -46,6 +45,7 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropIntegration, CreateIntegration
 
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
@@ -1194,12 +1194,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                         data[var_name] = var_data[0]
 
                 df = pd.DataFrame(data.items(), columns=['Variable_name', 'Value'])
-                data = dfsql.sql_query(
-                    str(new_statement),
-                    ds_kwargs={'case_sensitive': False},
-                    reduce_output=False,
-                    **{'dataframe': df}
-                )
+                data = query_df(df, new_statement)
                 data = data.values.tolist()
 
                 packages = []

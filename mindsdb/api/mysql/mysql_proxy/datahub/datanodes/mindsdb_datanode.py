@@ -5,9 +5,9 @@ from datetime import datetime
 from lightwood.api import dtype
 import pandas as pd
 import numpy as np
-import dfsql
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
@@ -163,56 +163,26 @@ class MindsDBDataNode(DataNode):
 
     def get_predictors(self, mindsdb_sql_query):
         predictors_df = self._select_predictors()
-        mindsdb_sql_query.from_table.parts = ['predictors']
 
-        str_query = str(mindsdb_sql_query)
-        # +++ FIXME https://github.com/mindsdb/dfsql/issues/37 https://github.com/mindsdb/mindsdb_sql/issues/53
-        if ' 1 = 0' in str_query:
-            q = str_query
-            q = q[:q.lower().find('where')] + ' limit 0'
-            result_df = dfsql.sql_query(
-                q,
-                ds_kwargs={'case_sensitive': False},
-                reduce_output=False,
-                predictors=predictors_df
-            )
-        elif 'AND (1 = 1)' in str_query:
-            q = str_query.replace('AND (1 = 1)', ' ')
-            result_df = dfsql.sql_query(
-                q,
-                ds_kwargs={'case_sensitive': False},
-                reduce_output=False,
-                predictors=predictors_df
-            )
-        else:
-            # ---
-            try:
-                # FIXME https://github.com/mindsdb/dfsql/issues/44
-                str_query = str_query.replace(' status', ' `status`').replace(' STATUS', ' `STATUS`')
-                result_df = dfsql.sql_query(
-                    str_query,
-                    ds_kwargs={'case_sensitive': False},
-                    reduce_output=False,
-                    predictors=predictors_df
-                )
-            except Exception:
-                # FIXME https://github.com/mindsdb/dfsql/issues/38
-                result_df = predictors_df
+        try:
+            result_df = query_df(predictors_df, mindsdb_sql_query)
+        except Exception as e:
+            print(f'Exception! {e}')
+            return [], []
 
         # FIXME https://github.com/mindsdb/dfsql/issues/38
-        result_df = result_df.where(pd.notnull(result_df), '')
+        # TODO remove it whem wll be sure query_df do properly casting
+        # result_df = result_df.where(pd.notnull(result_df), '')
 
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
     def get_datasources(self, mindsdb_sql_query):
         datasources_df = self._select_datasources()
-        mindsdb_sql_query.from_table.parts = ['datasources']
-        result_df = dfsql.sql_query(
-            str(mindsdb_sql_query),
-            ds_kwargs={'case_sensitive': False},
-            reduce_output=False,
-            datasources=datasources_df
-        )
+        try:
+            result_df = query_df(datasources_df, mindsdb_sql_query)
+        except Exception as e:
+            print(f'Exception! {e}')
+            return [], []
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
     def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None):

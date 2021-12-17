@@ -1,8 +1,8 @@
 from uuid import uuid4
 
 import duckdb
-
-from mindsdb_sql.parser.ast import Join, Identifier, BinaryOperation, Constant, Operation, UnaryOperation
+from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast import Select, Join, Identifier, BinaryOperation, Constant, Operation, UnaryOperation, OrderBy
 from mindsdb_sql.parser.ast.select.star import Star
 
 
@@ -40,28 +40,39 @@ def where_to_dict(root):
         raise Exception(f'unknown type in "where": {root}')
 
 
+def _remove_table_name(root):
+    if isinstance(root, BinaryOperation):
+        _remove_table_name(root.args[0])
+        _remove_table_name(root.args[1])
+    elif isinstance(root, Identifier):
+        root.parts = [root.parts[-1]]
+
+
 def query_df(df, query):
     """ Perform simple query ('select' from one table, without subqueries and joins) on DataFrame.
-        NOTE: current version of duckdb save tables in memory between connection, therefore for
-        safetywe change name of table in query to radom string.
 
         Args:
             df (pandas.DataFrame): data
-            query (mindsdb_sql.parser.ast.Select): select query
+            query (mindsdb_sql.parser.ast.Select | str): select query
 
         Returns:
             pandas.DataFrame
     """
-    uuid = f"x{str(uuid4()).replace('-', '')}"
-    original_table_name = query.from_table.parts
-    query.from_table.parts = [uuid]
-    table_name = uuid
-    query_str = str(query)
-    query.from_table.parts = original_table_name
 
-    con = duckdb.connect(database=':memory:')
-    con.register(table_name, df)
-    result_df = con.execute(query_str).fetchdf()
-    con.unregister(table_name)
-    con.close()
+    query = parse_sql(str(query), dialect='mysql')
+    if isinstance(query, Select) is False or isinstance(query.from_table, Identifier) is False:
+        raise Exception("Only 'SELECT from TABLE' statements supported for internal query")
+
+    query.from_table.parts = ['df_table']
+    for identifier in query.targets:
+        if isinstance(identifier, Identifier):
+            identifier.parts = [identifier.parts[-1]]
+    if isinstance(query.order_by, list):
+        for orderby in query.order_by:
+            if isinstance(orderby, OrderBy) and isinstance(orderby.field, Identifier):
+                orderby.field.parts = [orderby.field.parts[-1]]
+    _remove_table_name(query.where)
+
+    res = duckdb.query_df(df, 'df_table', query)
+    result_df = res.df()
     return result_df

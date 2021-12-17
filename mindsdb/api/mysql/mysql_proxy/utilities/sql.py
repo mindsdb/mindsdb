@@ -73,6 +73,6 @@ def query_df(df, query):
                 orderby.field.parts = [orderby.field.parts[-1]]
     _remove_table_name(query.where)
 
-    res = duckdb.query_df(df, 'df_table', query)
+    res = duckdb.query_df(df, 'df_table', str(query))
     result_df = res.df()
     return result_df

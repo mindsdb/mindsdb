@@ -2,7 +2,7 @@ import os
 import sys
 import json
 
-from mindsdb.__about__ import __version__
+from mindsdb.__about__ import __version__  # noqa: F401
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.fs import get_or_create_data_dir, create_dirs_recursive
 from mindsdb.utilities.functions import args_parse, is_notebook

@@ -26,6 +26,7 @@ jobs:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     name: Tests
     runs-on: ${{ matrix.runs_on }}
+    if: github.ref_type == 'branch'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}

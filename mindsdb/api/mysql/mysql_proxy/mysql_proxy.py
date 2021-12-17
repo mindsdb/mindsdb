@@ -99,6 +99,10 @@ from mindsdb.interfaces.database.integrations import DatasourceController
 connection_id = 0
 
 
+def empty_fn():
+    pass
+
+
 def check_auth(username, password, scramble_func, salt, company_id, config):
     '''
     '''
@@ -2236,6 +2240,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         Handle new incoming connections
         :return:
         """
+        self.server.hook_before_handle()
+
         log.debug('handle new incoming connection')
         cloud_connection = self.is_cloud_connection()
         self.init_session(company_id=cloud_connection.get('company_id'))
@@ -2366,6 +2372,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.check_auth = partial(check_auth, config=config)
         server.cert_path = cert_path
         server.connection_id = 0
+        server.hook_before_handle = empty_fn
 
         server.original_model_interface = ModelInterface()
         server.original_data_store = DataStore()

@@ -3,6 +3,9 @@ import pandas as pd
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.file_datanode import FileDataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datasource_datanode import DataSourceDataNode
 
 
 def get_table_alias(table_obj):
@@ -24,10 +27,13 @@ class InformationSchema(DataNode):
         'PLUGINS': ['PLUGIN_NAME', 'PLUGIN_VERSION', 'PLUGIN_STATUS', 'PLUGIN_TYPE', 'PLUGIN_TYPE_VERSION', 'PLUGIN_LIBRARY', 'PLUGIN_LIBRARY_VERSION', 'PLUGIN_AUTHOR', 'PLUGIN_DESCRIPTION', 'PLUGIN_LICENSE', 'LOAD_OPTION', 'PLUGIN_MATURITY', 'PLUGIN_AUTH_VERSION']
     }
 
-    def __init__(self, dsObject=None):
+    def __init__(self, model_interface, ai_table, data_store, datasource_interface):
         self.index = {}
-        if isinstance(dsObject, dict):
-            self.add(dsObject)
+        self.add({
+            'mindsdb': MindsDBDataNode(model_interface, ai_table, data_store, datasource_interface),
+            'datasource': DataSourceDataNode(data_store),
+            'file': FileDataNode(data_store)
+        })
 
     def __getitem__(self, key):
         return self.get(key)

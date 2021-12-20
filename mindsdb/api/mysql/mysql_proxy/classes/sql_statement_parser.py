@@ -312,11 +312,11 @@ class SqlStatementParser():
 
         s_int = Word(nums).setParseAction(tokenMap(int))
 
-        predict_item = Group(word('name') + Optional(AS.suppress() + word('alias')))
+        predict_item = Group((word | QuotedString("`"))('name') + Optional(AS.suppress() + word('alias')))
 
-        order_item = Group(word('name') + Optional(ASK | DESC)('sort'))
+        order_item = Group((word | QuotedString("`"))('name') + Optional(ASK | DESC)('sort'))
 
-        using_item = Group(word('name') + Word('=').suppress() + (word | QuotedString("'"))('value'))
+        using_item = Group((word | QuotedString("`"))('name') + Word('=').suppress() + (word | QuotedString("'"))('value'))
 
         expr = (
             CREATE + PREDICTOR + word('predictor_name') + FROM + Optional(worddot)('integration_name')
@@ -324,7 +324,7 @@ class SqlStatementParser():
             + PREDICT
             + delimitedList(predict_item, delim=',')('predict')
             + Optional(ORDER_BY + delimitedList(order_item, delim=',')('order_by'))
-            + Optional(GROUP_BY + delimitedList(word, delim=',')('group_by'))
+            + Optional(GROUP_BY + delimitedList(word | QuotedString("`"), delim=',')('group_by'))
             + Optional(WINDOW + s_int('window'))
             + Optional(HORIZON + s_int('nr_predictions'))
             + Optional(

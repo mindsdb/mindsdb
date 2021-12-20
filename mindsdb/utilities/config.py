@@ -56,7 +56,7 @@ class Config():
                     "port": "47334"
                 },
                 "mysql": {
-                    "host": "127.0.0.1",
+                    "host": "0.0.0.0",
                     "password": "",
                     "port": "47335",
                     "user": "mindsdb",

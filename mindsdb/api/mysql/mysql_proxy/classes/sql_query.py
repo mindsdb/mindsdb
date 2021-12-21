@@ -601,7 +601,7 @@ class SQLQuery():
                                 for row in step_data['values']:
                                     for table in row:
                                         row[table][name_or_alias] = column_name
-                                appropriate_table = list(step_data['values'][0].keys())[0]
+                                appropriate_table = step_data['tables'][0]
                                 columns_list.append(appropriate_table + (column_alias, column_alias))
                             else:
                                 columns_list.append(appropriate_table + (column_name, column_alias))

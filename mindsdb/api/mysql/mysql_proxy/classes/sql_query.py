@@ -12,6 +12,7 @@
 import re
 import pandas as pd
 import datetime
+import time
 
 import duckdb
 from lightwood.api import dtype
@@ -540,14 +541,19 @@ class SQLQuery():
                 df_a = pd.DataFrame(left_df_data)
                 df_b = pd.DataFrame(right_df_data)
 
+                a_name = f'a{round(time.time()*1000)}'
+                b_name = f'a{round(time.time()*1000)}'
                 con = duckdb.connect(database=':memory:')
-                con.register('df_a', df_a)
-                con.register('df_b', df_b)
+                con.register(a_name, df_a)
+                con.register(b_name, df_b)
                 resp_df = con.execute(f"""
-                    SELECT * FROM df_a as ta {step.query.join_type} df_b as tb
+                    SELECT * FROM {a_name} as ta {step.query.join_type} {b_name} as tb
                     ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                      = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                 """).fetchdf()
+                con.unregister('df_a')
+                con.unregister('df_b')
+                con.close()
                 resp_df = resp_df.where(pd.notnull(resp_df), None)
                 resp_dict = resp_df.to_dict(orient='records')
 

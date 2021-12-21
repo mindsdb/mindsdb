@@ -122,7 +122,7 @@ class MySqlApiTest(unittest.TestCase):
 
     def test_2_create_predictor(self):
         predictor_name = 'home_rentals'
-        _query = f"CREATE PREDICTOR {predictor_name} from MYSQL (select * from test_data.home_rentals) as hr_ds predict rental_price as rp;"
+        _query = f"CREATE PREDICTOR {predictor_name} from MYSQL (select * from test_data.home_rentals) as hr_ds predict rental_price;"
         self.query(_query)
         timeout = 600
         threshold = time.time() + timeout
@@ -138,11 +138,11 @@ class MySqlApiTest(unittest.TestCase):
 
     def test_3_making_prediction(self):
         predictor_name = 'home_rentals'
-        _query = ('SELECT rp, rp_explain FROM ' +
+        _query = ('SELECT rental_price, rental_price_explain FROM ' +
                   predictor_name +
                   ' WHERE when_data=\'{"number_of_rooms":"2","sqft":"400","location":"downtown","days_on_market":"2","initial_price":"2500"}\';')
         res = self.query(_query)
-        self.assertTrue('rp' in res and 'rp_explain' in res,
+        self.assertTrue('rental_price' in res and 'rental_price_explain' in res,
                         f"error getting prediction from {predictor_name} - {res}")
 
 

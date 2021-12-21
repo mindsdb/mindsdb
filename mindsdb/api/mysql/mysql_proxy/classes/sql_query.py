@@ -356,7 +356,7 @@ class SQLQuery():
                     },
                     'tables': [(self.mindsdb_database_name, predictor_name, predictor_name)]
                 }
-            if type(step) == FetchDataframeStep:
+            elif type(step) == FetchDataframeStep:
                 data = self._fetch_dataframe_step(step)
             elif type(step) == UnionStep:
                 raise Exception('Union step is not implemented')

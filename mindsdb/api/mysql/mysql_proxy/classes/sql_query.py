@@ -397,7 +397,7 @@ class SQLQuery():
                 elif type(substep) == MultipleSteps:
                     # TODO add with UNION
                     # data = self._multiple_steps_reduce(substep, values)
-                    raise Exception(f'MultipleSteps is not implemented')
+                    raise Exception('MultipleSteps is not implemented')
                 else:
                     raise Exception(f'Unknown step type: {step.step}')
             elif type(step) == ApplyPredictorRowStep:
@@ -428,7 +428,7 @@ class SQLQuery():
                     'columns': columns,
                     'tables': [table_name]
                 }
-            elif type(step) == ApplyPredictorStep:
+            elif type(step) == ApplyPredictorStep or type(step) == ApplyTimeseriesPredictorStep:
                 dn = self.datahub.get(self.mindsdb_database_name)
                 predictor = '.'.join(step.predictor.parts)
                 where_data = []
@@ -542,7 +542,7 @@ class SQLQuery():
                 df_b = pd.DataFrame(right_df_data)
 
                 a_name = f'a{round(time.time()*1000)}'
-                b_name = f'a{round(time.time()*1000)}'
+                b_name = f'b{round(time.time()*1000)}'
                 con = duckdb.connect(database=':memory:')
                 con.register(a_name, df_a)
                 con.register(b_name, df_b)
@@ -551,8 +551,8 @@ class SQLQuery():
                     ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                      = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                 """).fetchdf()
-                con.unregister('df_a')
-                con.unregister('df_b')
+                con.unregister(a_name)
+                con.unregister(b_name)
                 con.close()
                 resp_df = resp_df.where(pd.notnull(resp_df), None)
                 resp_dict = resp_df.to_dict(orient='records')
@@ -567,8 +567,8 @@ class SQLQuery():
                     data['values'].append(new_row)
             elif type(step) == FilterStep:
                 raise Exception('FilterStep is not implemented')
-            elif type(step) == ApplyTimeseriesPredictorStep:
-                raise Exception('ApplyTimeseriesPredictorStep is not implemented')
+            # elif type(step) == ApplyTimeseriesPredictorStep:
+            #     raise Exception('ApplyTimeseriesPredictorStep is not implemented')
             elif type(step) == ProjectStep:
                 step_data = steps_data[step.dataframe.step_num]
                 columns_list = []

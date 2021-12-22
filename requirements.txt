@@ -4,7 +4,7 @@ flask >= 1.0, < 2.0
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
 cryptography >= 2.9.2, < 3.4
-pg8000 >= 1.15.3
+psycopg[binary] >= 1.15.3
 python-tds >= 1.10.0
 waitress >= 1.4.4
 pymongo[tls, srv] >= 3.10.1

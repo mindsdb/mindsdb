@@ -3,7 +3,7 @@ import inspect
 from pathlib import Path
 import json
 
-import pg8000
+import psycopg
 
 from common import (
     MINDSDB_DATABASE,
@@ -39,25 +39,18 @@ to_predict_column_names = list(TO_PREDICT.keys())
 
 def query(query, fetch=False):
     integration = config['integrations'][INTEGRATION_NAME]
-    con = pg8000.connect(
-        database=integration.get('database', 'postgres'),
-        user=integration['user'],
-        password=integration['password'],
-        host=integration['host'],
-        port=integration['port']
-    )
 
-    cur = con.cursor()
-    res = True
-    cur.execute(query)
+    with psycopg.connect(f"host={integration['host']} port={integration['port']} dbname={integration.get('database', 'postgres')} user={integration['user']} password={integration['password']}") as con:
+        with con.cursor() as cur:
+            res = True
+            cur.execute(query)
 
-    if fetch is True:
-        rows = cur.fetchall()
-        keys = [k[0] if isinstance(k[0], str) else k[0].decode('ascii') for k in cur.description]
-        res = [dict(zip(keys, row)) for row in rows]
+            if fetch is True:
+                rows = cur.fetchall()
+                keys = [k[0] if isinstance(k[0], str) else k[0].decode('ascii') for k in cur.description]
+                res = [dict(zip(keys, row)) for row in rows]
 
-    con.commit()
-    con.close()
+            con.commit()
 
     return res
 

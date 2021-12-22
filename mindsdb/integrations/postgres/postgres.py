@@ -1,10 +1,5 @@
-import ssl
-import atexit
-import os
-import tempfile
-
 from contextlib import closing
-import pg8000
+import psycopg
 
 from lightwood.api import dtype
 from mindsdb.integrations.base import Integration
@@ -22,32 +17,15 @@ class PostgreSQLConnectionChecker:
         self.database = kwargs.get('database', 'postgres')
 
     def _get_connection(self):
-        additional_args = {}
-        if 'cockroachlabs.cloud' in self.host:
-            config = Config()
-            cert_path = config['api']['mysql'].get('certificate_path')
-            if cert_path is None or cert_path == '':
-                cert_path = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
-                make_ssl_cert(cert_path)
-                atexit.register(lambda: os.remove(cert_path))
-
-            ssl_context = ssl.SSLContext()
-            ssl_context.load_cert_chain(cert_path)
-            additional_args['ssl_context'] = ssl_context
-        return pg8000.connect(
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            host=self.host,
-            port=self.port,
-            **additional_args
-        )
+        conn = psycopg.connect(f'host={self.host} port={self.port} dbname={self.database} user={self.user} password={self.password}', connect_timeout=10)
+        return conn
 
     def check_connection(self):
         try:
             con = self._get_connection()
             with closing(con) as con:
-                con.run('select 1;')
+                cur = con.cursor()
+                cur.execute('select 1;')
             connected = True
         except Exception as e:
             print('EXCEPTION!')

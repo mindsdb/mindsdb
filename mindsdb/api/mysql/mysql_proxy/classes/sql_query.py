@@ -129,6 +129,18 @@ def replaceQueryVar(where, val):
             where.value = val
 
 
+def join_query_data(target, source):
+    target['values'].extend(source['values'])
+    target['tables'].extend(source['tables'])
+    target['tables'] = list(set(target['tables']))
+    for table_name in source['columns']:
+        if table_name not in target['columns']:
+            target['columns'][table_name] = source['columns'][table_name]
+        else:
+            target['columns'][table_name].extend(source['columns'][table_name])
+            target['columns'][table_name] = list(set(target['columns'][table_name]))
+
+
 class SQLQuery():
     def __init__(self, sql, session):
         self.session = session
@@ -199,17 +211,25 @@ class SQLQuery():
         return data
 
     def _multiple_steps(self, step):
-        data = []
+        data = {
+            'values': [],
+            'columns': {},
+            'tables': []
+        }
         for substep in step.steps:
-            data = self._fetch_dataframe_step(substep)
-            data.append(data)
+            sub_data = self._fetch_dataframe_step(substep)
+            join_query_data(data, sub_data)
         return data
 
     def _multiple_steps_reduce(self, step, values):
         if step.reduce != 'union':
             raise Exception(f'Unknown MultipleSteps type: {step.reduce}')
 
-        result = []
+        data = {
+            'values': [],
+            'columns': {},
+            'tables': []
+        }
 
         for substep in step.steps:
             if isinstance(substep, FetchDataframeStep) is False:
@@ -219,11 +239,10 @@ class SQLQuery():
         for v in values:
             for substep in step.steps:
                 replaceQueryVar(substep.query.where, v)
-            data = self._multiple_steps(step)
-            for part in data:
-                result.extend(part)
+            sub_data = self._multiple_steps(step)
+            join_query_data(data, sub_data)
 
-        return result
+        return data
 
     def _parse_query(self, sql):
         mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
@@ -395,9 +414,7 @@ class SQLQuery():
                             data['tables'] = sub_data['tables']
                         data['values'].extend(sub_data['values'])
                 elif type(substep) == MultipleSteps:
-                    # TODO add with UNION
-                    # data = self._multiple_steps_reduce(substep, values)
-                    raise Exception(f'MultipleSteps is not implemented')
+                    data = self._multiple_steps_reduce(substep, values)
                 else:
                     raise Exception(f'Unknown step type: {step.step}')
             elif type(step) == ApplyPredictorRowStep:
@@ -428,7 +445,7 @@ class SQLQuery():
                     'columns': columns,
                     'tables': [table_name]
                 }
-            elif type(step) == ApplyPredictorStep:
+            elif type(step) == ApplyPredictorStep or type(step) == ApplyTimeseriesPredictorStep:
                 dn = self.datahub.get(self.mindsdb_database_name)
                 predictor = '.'.join(step.predictor.parts)
                 where_data = []
@@ -488,6 +505,11 @@ class SQLQuery():
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
 
+                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/136
+                if True in [type(step) == ApplyTimeseriesPredictorStep for step in plan.steps]:
+                    right_data = steps_data[step.left.step_num]
+                    left_data = steps_data[step.right.step_num]
+
                 if step.query.condition is not None:
                     raise Exception('At this moment supported only JOIN without condition')
                 if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
@@ -542,17 +564,17 @@ class SQLQuery():
                 df_b = pd.DataFrame(right_df_data)
 
                 a_name = f'a{round(time.time()*1000)}'
-                b_name = f'a{round(time.time()*1000)}'
+                b_name = f'b{round(time.time()*1000)}'
                 con = duckdb.connect(database=':memory:')
                 con.register(a_name, df_a)
                 con.register(b_name, df_b)
                 resp_df = con.execute(f"""
-                    SELECT * FROM {a_name} as ta {step.query.join_type} {b_name} as tb
+                    SELECT * FROM {a_name} as ta full join {b_name} as tb
                     ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                      = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                 """).fetchdf()
-                con.unregister('df_a')
-                con.unregister('df_b')
+                con.unregister(a_name)
+                con.unregister(b_name)
                 con.close()
                 resp_df = resp_df.where(pd.notnull(resp_df), None)
                 resp_dict = resp_df.to_dict(orient='records')
@@ -567,8 +589,8 @@ class SQLQuery():
                     data['values'].append(new_row)
             elif type(step) == FilterStep:
                 raise Exception('FilterStep is not implemented')
-            elif type(step) == ApplyTimeseriesPredictorStep:
-                raise Exception('ApplyTimeseriesPredictorStep is not implemented')
+            # elif type(step) == ApplyTimeseriesPredictorStep:
+            #     raise Exception('ApplyTimeseriesPredictorStep is not implemented')
             elif type(step) == ProjectStep:
                 step_data = steps_data[step.dataframe.step_num]
                 columns_list = []
@@ -587,24 +609,28 @@ class SQLQuery():
                             column_name = column_name_parts[0]
 
                             appropriate_table = None
-                            for table_name, table_columns in step_data['columns'].items():
-                                if column_name in table_columns:
-                                    if appropriate_table is not None:
-                                        raise Exception('Fount multiple appropriate tables for column {column_name}')
-                                    else:
-                                        appropriate_table = table_name
+                            if len(step_data['tables']) == 1:
+                                appropriate_table = step_data['tables'][0]
+                            else:
+                                for table_name, table_columns in step_data['columns'].items():
+                                    if (column_name, column_name) in table_columns:
+                                        if appropriate_table is not None:
+                                            raise Exception('Found multiple appropriate tables for column {column_name}')
+                                        else:
+                                            appropriate_table = table_name
                             if appropriate_table is None:
                                 # it is probably constaint
-                                column_name = column_name.strip("'")
-                                name_or_alias = column_alias or column_name
-                                column_alias = name_or_alias
-                                for row in step_data['values']:
-                                    for table in row:
-                                        row[table][name_or_alias] = column_name
-                                appropriate_table = step_data['tables'][0]
+                                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/133
+                                # column_name = column_name.strip("'")
+                                # name_or_alias = column_alias or column_name
+                                # column_alias = name_or_alias
+                                # for row in step_data['values']:
+                                #     for table in row:
+                                #         row[table][(column_name, name_or_alias)] = row[table][(column_name, column_name)]
+                                # appropriate_table = step_data['tables'][0]
                                 columns_list.append(appropriate_table + (column_alias, column_alias))
                             else:
-                                columns_list.append(appropriate_table + (column_name, column_alias))
+                                columns_list.append(appropriate_table + (column_name, column_alias or column_name))  # column_name
                         elif len(column_name_parts) == 2:
                             table_name_or_alias = column_name_parts[0]
                             column_name = column_name_parts[1]

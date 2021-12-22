@@ -129,6 +129,18 @@ def replaceQueryVar(where, val):
             where.value = val
 
 
+def join_query_data(target, source):
+    target['values'].extend(source['values'])
+    target['tables'].extend(source['tables'])
+    target['tables'] = list(set(target['tables']))
+    for table_name in source['columns']:
+        if table_name not in target['columns']:
+            target['columns'][table_name] = source['columns'][table_name]
+        else:
+            target['columns'][table_name].extend(source['columns'][table_name])
+            target['columns'][table_name] = list(set(target['columns'][table_name]))
+
+
 class SQLQuery():
     def __init__(self, sql, session):
         self.session = session
@@ -199,17 +211,25 @@ class SQLQuery():
         return data
 
     def _multiple_steps(self, step):
-        data = []
+        data = {
+            'values': [],
+            'columns': {},
+            'tables': []
+        }
         for substep in step.steps:
-            data = self._fetch_dataframe_step(substep)
-            data.append(data)
+            sub_data = self._fetch_dataframe_step(substep)
+            join_query_data(data, sub_data)
         return data
 
     def _multiple_steps_reduce(self, step, values):
         if step.reduce != 'union':
             raise Exception(f'Unknown MultipleSteps type: {step.reduce}')
 
-        result = []
+        data = {
+            'values': [],
+            'columns': {},
+            'tables': []
+        }
 
         for substep in step.steps:
             if isinstance(substep, FetchDataframeStep) is False:
@@ -219,11 +239,10 @@ class SQLQuery():
         for v in values:
             for substep in step.steps:
                 replaceQueryVar(substep.query.where, v)
-            data = self._multiple_steps(step)
-            for part in data:
-                result.extend(part)
+            sub_data = self._multiple_steps(step)
+            join_query_data(data, sub_data)
 
-        return result
+        return data
 
     def _parse_query(self, sql):
         mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
@@ -395,9 +414,7 @@ class SQLQuery():
                             data['tables'] = sub_data['tables']
                         data['values'].extend(sub_data['values'])
                 elif type(substep) == MultipleSteps:
-                    # TODO add with UNION
-                    # data = self._multiple_steps_reduce(substep, values)
-                    raise Exception('MultipleSteps is not implemented')
+                    data = self._multiple_steps_reduce(substep, values)
                 else:
                     raise Exception(f'Unknown step type: {step.step}')
             elif type(step) == ApplyPredictorRowStep:
@@ -488,6 +505,11 @@ class SQLQuery():
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
 
+                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/136
+                if True in [type(step) == ApplyTimeseriesPredictorStep for step in plan.steps]:
+                    right_data = steps_data[step.left.step_num]
+                    left_data = steps_data[step.right.step_num]
+
                 if step.query.condition is not None:
                     raise Exception('At this moment supported only JOIN without condition')
                 if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
@@ -547,7 +569,7 @@ class SQLQuery():
                 con.register(a_name, df_a)
                 con.register(b_name, df_b)
                 resp_df = con.execute(f"""
-                    SELECT * FROM {a_name} as ta {step.query.join_type} {b_name} as tb
+                    SELECT * FROM {a_name} as ta full join {b_name} as tb
                     ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                      = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                 """).fetchdf()

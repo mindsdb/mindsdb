@@ -282,6 +282,8 @@ class MindsDBDataNode(DataNode):
         timeseries_settings = model['problem_definition']['timeseries_settings']
 
         if timeseries_settings['is_timeseries'] is True:
+            __mdb_make_predictions = set([row.get('__mdb_make_predictions', True) for row in where_data]) == {True}
+
             group_by = timeseries_settings['group_by']
             groups = set()
             for row in pred_dicts:
@@ -338,6 +340,8 @@ class MindsDBDataNode(DataNode):
                     new_row = copy.deepcopy(last_row)
                     new_row[predict] = new_row[predict][i]
                     new_row[data_column] = new_row[data_column][i]
+                    if '__mindsdb_row_id' in new_row and (i > 0 or __mdb_make_predictions is False):
+                        new_row['__mindsdb_row_id'] = None
                     rows.append(new_row)
 
                     new_explanation = copy.deepcopy(last_explanation)

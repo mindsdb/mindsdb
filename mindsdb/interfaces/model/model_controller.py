@@ -245,8 +245,10 @@ class ModelController():
                     elif f'group_{col}' in row:
                         td[col] = row[f'group_{col}']
                     else:
+                        # FIXME wrong order
                         # log.warning(f'Prediction resuld does not have column: {col}')
-                        td[col] = None
+                        # td[col] = None
+                        td[col] = df.iloc[i][col]
                 dict_arr.append({target: td})
             if pred_format == 'explain':
                 return explain_arr

@@ -609,24 +609,28 @@ class SQLQuery():
                             column_name = column_name_parts[0]
 
                             appropriate_table = None
-                            for table_name, table_columns in step_data['columns'].items():
-                                if column_name in table_columns:
-                                    if appropriate_table is not None:
-                                        raise Exception('Fount multiple appropriate tables for column {column_name}')
-                                    else:
-                                        appropriate_table = table_name
+                            if len(step_data['tables']) == 1:
+                                appropriate_table = step_data['tables'][0]
+                            else:
+                                for table_name, table_columns in step_data['columns'].items():
+                                    if (column_name, column_name) in table_columns:
+                                        if appropriate_table is not None:
+                                            raise Exception('Found multiple appropriate tables for column {column_name}')
+                                        else:
+                                            appropriate_table = table_name
                             if appropriate_table is None:
                                 # it is probably constaint
-                                column_name = column_name.strip("'")
-                                name_or_alias = column_alias or column_name
-                                column_alias = name_or_alias
-                                for row in step_data['values']:
-                                    for table in row:
-                                        row[table][name_or_alias] = column_name
-                                appropriate_table = step_data['tables'][0]
+                                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/133
+                                # column_name = column_name.strip("'")
+                                # name_or_alias = column_alias or column_name
+                                # column_alias = name_or_alias
+                                # for row in step_data['values']:
+                                #     for table in row:
+                                #         row[table][(column_name, name_or_alias)] = row[table][(column_name, column_name)]
+                                # appropriate_table = step_data['tables'][0]
                                 columns_list.append(appropriate_table + (column_alias, column_alias))
                             else:
-                                columns_list.append(appropriate_table + (column_name, column_alias))
+                                columns_list.append(appropriate_table + (column_name, column_alias or column_name))  # column_name
                         elif len(column_name_parts) == 2:
                             table_name_or_alias = column_name_parts[0]
                             column_name = column_name_parts[1]

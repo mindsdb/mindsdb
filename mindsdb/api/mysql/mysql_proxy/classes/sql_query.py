@@ -12,7 +12,9 @@
 import re
 import pandas as pd
 import datetime
+import time
 
+import duckdb
 from lightwood.api import dtype
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
@@ -30,6 +32,7 @@ from mindsdb_sql.parser.ast import (
     Star
 )
 from mindsdb_sql.planner.steps import (
+    ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     GetPredictorColumns,
     FetchDataframeStep,
@@ -178,22 +181,28 @@ class SQLQuery():
             query=query
         )
 
-        self.columns_list = [
-            table_alias + (column_name, column_name)
-            for column_name in column_names
-        ]
+        columns = [(column_name, column_name) for column_name in column_names]
+        columns.append(('__mindsdb_row_id', '__mindsdb_row_id'))
 
         for i, row in enumerate(data):
             row['__mindsdb_row_id'] = self.row_id + i
         self.row_id = self.row_id + len(data)
 
+        data = [{(key, key): value for key, value in row.items()} for row in data]
         data = [{table_alias: x} for x in data]
+
+        data = {
+            'values': data,
+            'columns': {table_alias: columns},
+            'tables': [table_alias]
+        }
         return data
 
     def _multiple_steps(self, step):
         data = []
         for substep in step.steps:
-            data.append(self._fetch_dataframe_step(substep))
+            data = self._fetch_dataframe_step(substep)
+            data.append(data)
         return data
 
     def _multiple_steps_reduce(self, step, values):
@@ -231,14 +240,20 @@ class SQLQuery():
             dn = self.datahub.get(self.mindsdb_database_name)
             data, columns = dn.get_predictors(mindsdb_sql_struct)
             table_name = ('mindsdb', 'predictors', 'predictors')
-            self.fetched_data = [
-                {table_name: row}
-                for row in data
-            ]
+            data = [{(key, key): value for key, value in row.items()} for row in data]
+            data = [{table_name: x} for x in data]
             self.columns_list = [
                 (table_name + (column_name, column_name))
                 for column_name in columns
             ]
+
+            columns = [(column_name, column_name) for column_name in columns]
+
+            self.fetched_data = {
+                'values': data,
+                'columns': {table_name: columns},
+                'tables': [table_name]
+            }
             return
 
         # is it query to 'commands'?
@@ -250,7 +265,11 @@ class SQLQuery():
                 or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
             )
         ):
-            self.fetched_data = []
+            self.fetched_data = {
+                'values': [],
+                'columns': {('mindsdb', 'commands', 'commands'): [('command', 'command')]},
+                'tables': [('mindsdb', 'commands', 'commands')]
+            }
             self.columns_list = [('mindsdb', 'commands', 'commands', 'command', 'command')]
             return
 
@@ -266,14 +285,21 @@ class SQLQuery():
             dn = self.datahub.get(self.mindsdb_database_name)
             data, columns = dn.get_datasources(mindsdb_sql_struct)
             table_name = ('mindsdb', 'datasources', 'datasources')
-            self.fetched_data = [
-                {table_name: row}
-                for row in data
-            ]
+            data = [{(key, key): value for key, value in row.items()} for row in data]
+            data = [{table_name: x} for x in data]
+
             self.columns_list = [
                 (table_name + (column_name, column_name))
                 for column_name in columns
             ]
+
+            columns = [(column_name, column_name) for column_name in columns]
+
+            self.fetched_data = {
+                'values': data,
+                'columns': {table_name: columns},
+                'tables': [table_name]
+            }
             return
 
         integrations_names = self.datahub.get_integrations_names()
@@ -312,50 +338,69 @@ class SQLQuery():
             predictor_metadata=predictor_metadata,
             default_namespace=self.database
         )
-        steps_data = []
 
+        steps_data = []
         for step in plan.steps:
             data = []
-            if isinstance(step, GetPredictorColumns):
+            if type(step) == GetPredictorColumns:
                 predictor_name = step.predictor.parts[-1]
                 dn = self.datahub.get(self.mindsdb_database_name)
                 columns = dn.get_table_columns(predictor_name)
-                self.columns_list = [
-                    (self.mindsdb_database_name, predictor_name, predictor_name, column_name, column_name)
-                    for column_name in columns
+                columns = [
+                    (column_name, column_name) for column_name in columns
                 ]
-                data = []
-            if isinstance(step, FetchDataframeStep):
+                data = {
+                    'values': [],
+                    'columns': {
+                        (self.mindsdb_database_name, predictor_name, predictor_name): columns
+                    },
+                    'tables': [(self.mindsdb_database_name, predictor_name, predictor_name)]
+                }
+            elif type(step) == FetchDataframeStep:
                 data = self._fetch_dataframe_step(step)
-            elif isinstance(step, UnionStep):
-                left_data = steps_data[step.left.step_num]
-                right_data = steps_data[step.right.step_num]
-                data = left_data + right_data
-            elif isinstance(step, MapReduceStep):
+            elif type(step) == UnionStep:
+                raise Exception('Union step is not implemented')
+                # TODO add union support
+                # left_data = steps_data[step.left.step_num]
+                # right_data = steps_data[step.right.step_num]
+                # data = left_data + right_data
+            elif type(step) == MapReduceStep:
                 if step.reduce != 'union':
                     raise Exception(f'Unknown MapReduceStep type: {step.reduce}')
 
                 step_data = steps_data[step.values.step_num]
                 values = []
-                for row in step_data:
+                step_data_values = step_data['values']
+                for row in step_data_values:
                     for row_data in row.values():
                         for name, value in row_data.items():
-                            if name != '__mindsdb_row_id':
+                            if name[0] != '__mindsdb_row_id':
                                 values.append(value)
 
-                data = []
+                data = {
+                    'values': [],
+                    'columns': {},
+                    'tables': []
+                }
                 substep = step.step
-                if isinstance(substep, FetchDataframeStep):
+                if type(substep) == FetchDataframeStep:
                     query = substep.query
                     markQueryVar(query.where)
                     for value in values:
                         replaceQueryVar(query.where, value)
-                        data.extend(self._fetch_dataframe_step(substep))
-                elif isinstance(substep, MultipleSteps):
-                    data = self._multiple_steps_reduce(substep, values)
+                        sub_data = self._fetch_dataframe_step(substep)
+                        if len(data['columns']) == 0:
+                            data['columns'] = sub_data['columns']
+                        if len(data['tables']) == 0:
+                            data['tables'] = sub_data['tables']
+                        data['values'].extend(sub_data['values'])
+                elif type(substep) == MultipleSteps:
+                    # TODO add with UNION
+                    # data = self._multiple_steps_reduce(substep, values)
+                    raise Exception(f'MultipleSteps is not implemented')
                 else:
                     raise Exception(f'Unknown step type: {step.step}')
-            elif isinstance(step, ApplyPredictorRowStep):
+            elif type(step) == ApplyPredictorRowStep:
                 predictor = '.'.join(step.predictor.parts)
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
@@ -365,15 +410,29 @@ class SQLQuery():
                     columns=None,
                     where_data=where_data,
                     integration_name=self.session.integration,
-                    integration_type=self.session.integration_type,
-                    # where={}
+                    integration_type=self.session.integration_type
                 )
-                data = [{get_preditor_alias(step, self.database): x} for x in data]
-            elif isinstance(step, ApplyPredictorStep):
+
+                data = [{(key, key): value for key, value in row.items()} for row in data]
+
+                table_name = get_preditor_alias(step, self.database)
+                values = [{table_name: x} for x in data]
+                columns = {table_name: []}
+                if len(data) > 0:
+                    row = data[0]
+                    columns[table_name] = list(row.keys())
+                # TODO else
+
+                data = {
+                    'values': values,
+                    'columns': columns,
+                    'tables': [table_name]
+                }
+            elif type(step) == ApplyPredictorStep:
                 dn = self.datahub.get(self.mindsdb_database_name)
                 predictor = '.'.join(step.predictor.parts)
                 where_data = []
-                for row in steps_data[step.dataframe.step_num]:
+                for row in steps_data[step.dataframe.step_num]['values']:
                     new_row = {}
                     for table_name in row:
                         keys_intersection = set(new_row) & set(row[table_name])
@@ -383,6 +442,8 @@ class SQLQuery():
                             )
                         new_row.update(row[table_name])
                     where_data.append(new_row)
+
+                where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
                 is_timeseries = predictor_metadata[predictor]['timeseries']
                 _mdb_make_predictions = None
@@ -407,88 +468,117 @@ class SQLQuery():
                     integration_name=self.session.integration,
                     integration_type=self.session.integration_type
                 )
-                data = [{get_preditor_alias(step, self.database): x} for x in data]
-            elif isinstance(step, JoinStep):
+
+                data = [{(key, key): value for key, value in row.items()} for row in data]
+
+                table_name = get_preditor_alias(step, self.database)
+                values = [{table_name: x} for x in data]
+                columns = {table_name: []}
+                if len(data) > 0:
+                    row = data[0]
+                    columns[table_name] = list(row.keys())
+                # TODO else
+
+                data = {
+                    'values': values,
+                    'columns': columns,
+                    'tables': [table_name]
+                }
+            elif type(step) == JoinStep:
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
 
-                if len(left_data) == 0 and len(right_data) == 0:
-                    return []
-                if len(left_data) == 0:
-                    return right_data
-                if len(right_data) == 0:
-                    return left_data
-
-                left_keys = left_data[0].keys()
-                right_keys = right_data[0].keys()
-
-                if len(left_keys) != 1 or len(right_keys) != 1:
-                    raise Exception('At this moment supported only one JOIN supported')
                 if step.query.condition is not None:
-                    raise Exception('At this moment supported only JOIN without conditions')
+                    raise Exception('At this moment supported only JOIN without condition')
+                if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
+                    raise Exception('At this moment supported only JOIN and LEFT JOIN')
+                if (
+                    len(left_data['tables']) != 1 or len(right_data['tables']) != 1
+                    or left_data['tables'][0] == right_data['tables'][0]
+                ):
+                    raise Exception('At this moment supported only JOIN of two different tables')
 
-                left_key = list(left_keys)[0]
-                right_key = list(right_keys)[0]
+                data = {
+                    'values': [],
+                    'columns': {},
+                    'tables': list(set(left_data['tables'] + right_data['tables']))
+                }
 
-                data = []
-                if step.query.join_type.upper() == 'LEFT JOIN':
-                    for left_row in left_data:
-                        left_row_data = left_row[left_key]
-                        for right_row in right_data:
-                            right_row_data = right_row[right_key]
-                            if left_row_data['__mindsdb_row_id'] == right_row_data['__mindsdb_row_id']:
-                                data.append({
-                                    left_key: left_row_data,
-                                    right_key: right_row_data
-                                })
-                                break
+                for data_part in [left_data, right_data]:
+                    for table_name in data_part['columns']:
+                        if table_name not in data['columns']:
+                            data['columns'][table_name] = data_part['columns'][table_name]
                         else:
-                            data.append({
-                                left_key: left_row_data,
-                                right_key: {}
-                            })
-                elif step.query.join_type.upper() == 'JOIN':
-                    right_used_ids = []
-                    for left_row in left_data:
-                        left_row_data = left_row[left_key]
-                        for right_row in right_data:
-                            right_row_data = right_row[right_key]
-                            if left_row_data['__mindsdb_row_id'] == right_row_data['__mindsdb_row_id']:
-                                data.append({
-                                    left_key: left_row_data,
-                                    right_key: right_row_data
-                                })
-                                right_used_ids.append(right_row_data['__mindsdb_row_id'])
-                                break
-                    for right_row in right_data:
-                        right_row_data = right_row[right_key]
-                        if right_row_data['__mindsdb_row_id'] not in right_used_ids:
-                            data.append({
-                                left_key: {},
-                                right_key: right_row_data
-                            })
-                else:
-                    raise Exception(f'Unknown JOIN type: {step.query.join_type}')
-            elif isinstance(step, FilterStep):
-                raise Exception('FilterStep not implemented')
-            elif isinstance(step, ProjectStep):
-                step_data = steps_data[step.dataframe.step_num]
-                tables_columns = {}
-                if self.columns_list is None:
-                    row = step_data[0]  # TODO if rowcount = 0
-                    for table_name in row:
-                        tables_columns[table_name] = list(row[table_name].keys())
-                else:
-                    for columns_record in self.columns_list:
-                        table_name = (columns_record[0], columns_record[1], columns_record[2])
-                        if table_name not in tables_columns:
-                            tables_columns[table_name] = []
-                        tables_columns[table_name].append(columns_record[3])
+                            data['columns'][table_name].extend(data_part['columns'][table_name])
+                for table_name in data['columns']:
+                    data['columns'][table_name] = list(set(data['columns'][table_name]))
 
+                left_key = left_data['tables'][0]
+                right_key = right_data['tables'][0]
+
+                left_columns_map = {}
+                left_columns_map_reverse = {}
+                for i, column_name in enumerate(left_data['columns'][left_key]):
+                    left_columns_map[f'a{i}'] = column_name
+                    left_columns_map_reverse[column_name] = f'a{i}'
+
+                right_columns_map = {}
+                right_columns_map_reverse = {}
+                for i, column_name in enumerate(right_data['columns'][right_key]):
+                    right_columns_map[f'b{i}'] = column_name
+                    right_columns_map_reverse[column_name] = f'b{i}'
+
+                left_df_data = []
+                for row in left_data['values']:
+                    row = row[left_key]
+                    left_df_data.append({left_columns_map_reverse[key]: value for key, value in row.items()})
+
+                right_df_data = []
+                for row in right_data['values']:
+                    row = row[right_key]
+                    right_df_data.append({right_columns_map_reverse[key]: value for key, value in row.items()})
+
+                df_a = pd.DataFrame(left_df_data)
+                df_b = pd.DataFrame(right_df_data)
+
+                a_name = f'a{round(time.time()*1000)}'
+                b_name = f'a{round(time.time()*1000)}'
+                con = duckdb.connect(database=':memory:')
+                con.register(a_name, df_a)
+                con.register(b_name, df_b)
+                resp_df = con.execute(f"""
+                    SELECT * FROM {a_name} as ta {step.query.join_type} {b_name} as tb
+                    ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
+                     = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
+                """).fetchdf()
+                con.unregister('df_a')
+                con.unregister('df_b')
+                con.close()
+                resp_df = resp_df.where(pd.notnull(resp_df), None)
+                resp_dict = resp_df.to_dict(orient='records')
+
+                for row in resp_dict:
+                    new_row = {left_key: {}, right_key: {}}
+                    for key, value in row.items():
+                        if key.startswith('a'):
+                            new_row[left_key][left_columns_map[key]] = value
+                        else:
+                            new_row[right_key][right_columns_map[key]] = value
+                    data['values'].append(new_row)
+            elif type(step) == FilterStep:
+                raise Exception('FilterStep is not implemented')
+            elif type(step) == ApplyTimeseriesPredictorStep:
+                raise Exception('ApplyTimeseriesPredictorStep is not implemented')
+            elif type(step) == ProjectStep:
+                step_data = steps_data[step.dataframe.step_num]
                 columns_list = []
                 for column_full_name in step.columns:
                     table_name = None
-                    if isinstance(column_full_name, Star) is False:
+                    if type(column_full_name) == Star:
+                        for table_name, table_columns_list in step_data['columns'].items():
+                            for column in table_columns_list:
+                                columns_list.append(table_name + column)
+                    elif type(column_full_name) == Identifier:
                         column_name_parts = column_full_name.parts
                         column_alias = None if column_full_name.alias is None else '.'.join(column_full_name.alias.parts)
                         if len(column_name_parts) > 2:
@@ -497,7 +587,7 @@ class SQLQuery():
                             column_name = column_name_parts[0]
 
                             appropriate_table = None
-                            for table_name, table_columns in tables_columns.items():
+                            for table_name, table_columns in step_data['columns'].items():
                                 if column_name in table_columns:
                                     if appropriate_table is not None:
                                         raise Exception('Fount multiple appropriate tables for column {column_name}')
@@ -508,12 +598,10 @@ class SQLQuery():
                                 column_name = column_name.strip("'")
                                 name_or_alias = column_alias or column_name
                                 column_alias = name_or_alias
-                                # appropriate_table = ''
-                                for row in step_data:
+                                for row in step_data['values']:
                                     for table in row:
                                         row[table][name_or_alias] = column_name
-                                appropriate_table = list(step_data[0].keys())[0]
-                                # raise Exception(f'Can not find approproate table for column {column_name}')
+                                appropriate_table = step_data['tables'][0]
                                 columns_list.append(appropriate_table + (column_alias, column_alias))
                             else:
                                 columns_list.append(appropriate_table + (column_name, column_alias))
@@ -522,25 +610,43 @@ class SQLQuery():
                             column_name = column_name_parts[1]
 
                             appropriate_table = None
-                            for table_name, table_columns in tables_columns.items():
+                            for table_name, table_columns in step_data['columns'].items():
                                 checkig_table_name_or_alias = table_name[2] or table_name[1]
                                 if table_name_or_alias == checkig_table_name_or_alias:
-                                    if column_name not in table_columns:
+                                    for table_column_name in table_columns:
+                                        if (
+                                            table_column_name[1] == column_name
+                                            or table_column_name[1] is None and table_column_name[0] == column_name
+                                        ):
+                                            break
+                                    else:
                                         raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
                                     appropriate_table = table_name
                                     break
                             if appropriate_table is None:
                                 raise Exception(f'Can not find approproate table for column {column_name}')
+
+                            columns_to_copy = None
+                            for column in step_data['columns'][appropriate_table]:
+                                if column[0] == column_name and (column[1] is None or column[1] == column_name):
+                                    columns_to_copy = column
+                                    break
+                            else:
+                                raise Exception(f'Can not find approproate column in data: {(column_name, column_alias)}')
+
+                            for row in step_data['values']:
+                                row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][columns_to_copy]
+
                             columns_list.append(appropriate_table + (column_name, column_alias))
                         else:
                             raise Exception('Undefined column name')
                     else:
-                        for table_name, table_columns in tables_columns.items():
-                            for column_name in table_columns:
-                                columns_list.append(table_name + (column_name, None))
+                        raise Exception(f'Unexpected column name type: {column_full_name}')
 
                 self.columns_list = columns_list
                 data = step_data
+            else:
+                raise Exception(F'Unknown planner step: {step}')
             steps_data.append(data)
 
         if self.outer_query is not None:
@@ -591,6 +697,14 @@ class SQLQuery():
                         if (table_key + (column_name, column_name)) not in self.columns_list:
                             self.columns_list.append((table_key + (column_name, column_name)))
 
+        # if there was no 'ProjectStep', then get columns list from last step:
+        if self.columns_list is None:
+            self.columns_list = []
+            for table_name in self.fetched_data['columns']:
+                self.columns_list.extend([
+                    table_name + column for column in self.fetched_data['columns'][table_name]
+                ])
+
         self.columns_list = [x for x in self.columns_list if x[3] != '__mindsdb_row_id']
 
     def _apply_where_filter(self, row, where):
@@ -611,13 +725,13 @@ class SQLQuery():
 
     def _make_list_result_view(self, data):
         if self.outer_query is not None:
-            return data
+            return data['values']
         result = []
-        for row in data:
+        for row in data['values']:
             data_row = []
             for column_record in self.columns_list:
                 table_name = column_record[:3]
-                column_name = column_record[3]
+                column_name = column_record[3:]
                 data_row.append(row[table_name][column_name])
             result.append(data_row)
         return result

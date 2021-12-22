@@ -1,4 +1,5 @@
 import duckdb
+import pandas as pd
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Select, Identifier, BinaryOperation, OrderBy
 
@@ -38,4 +39,5 @@ def query_df(df, query):
 
     res = duckdb.query_df(df, 'df_table', str(query))
     result_df = res.df()
+    result_df = result_df.where(pd.notnull(result_df), None)
     return result_df

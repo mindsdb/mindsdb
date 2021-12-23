@@ -337,7 +337,9 @@ class SQLQuery():
                         if ts_settings.get('is_timeseries') is True:
                             window = ts_settings.get('window')
                             order_by = ts_settings.get('order_by')[0]
-                            group_by = ts_settings.get('group_by')[0]
+                            group_by = ts_settings.get('group_by')
+                            if isinstance(group_by, list):
+                                group_by = ts_settings.get('group_by')[0]
                             predictor_metadata[model_name] = {
                                 'timeseries': True,
                                 'window': window,

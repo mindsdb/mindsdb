@@ -1146,6 +1146,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 )
                 self.answer_select(query)
                 return
+            elif sql_category == 'datasources':
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=['mindsdb', 'datasources'])
+                )
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.answer_select(query)
+                return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
                 if condition == 'from':

@@ -284,7 +284,11 @@ class MindsDBDataNode(DataNode):
         if timeseries_settings['is_timeseries'] is True:
             __mdb_make_predictions = set([row.get('__mdb_make_predictions', True) for row in where_data]) == {True}
 
+            predict = model['predict']
             group_by = timeseries_settings['group_by']
+            order_by_column = timeseries_settings['order_by'][0]
+            nr_predictions = timeseries_settings['nr_predictions']
+
             groups = set()
             for row in pred_dicts:
                 groups.add(
@@ -308,10 +312,6 @@ class MindsDBDataNode(DataNode):
                         rows_by_groups[group]['rows'].append(row)
                         rows_by_groups[group]['explanations'].append(explanations[row_index])
 
-            predict = model['predict']
-            data_column = timeseries_settings['order_by'][0]
-            nr_predictions = timeseries_settings['nr_predictions']
-
             for group, data in rows_by_groups.items():
                 rows = data['rows']
                 explanations = data['explanations']
@@ -324,13 +324,13 @@ class MindsDBDataNode(DataNode):
                     if isinstance(predictions, list) is False:
                         predictions = [predictions]
 
-                    date_values = row[data_column]
+                    date_values = row[order_by_column]
                     if isinstance(date_values, list) is False:
                         date_values = [date_values]
 
                 for i in range(len(rows) - 1):
                     rows[i][predict] = rows[i][predict][0]
-                    rows[i][data_column] = rows[i][data_column][0]
+                    rows[i][order_by_column] = rows[i][order_by_column][0]
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
                         explanations[i][predict][col] = explanations[i][predict][col][0]
 
@@ -338,15 +338,22 @@ class MindsDBDataNode(DataNode):
                 last_explanation = explanations.pop()
                 for i in range(nr_predictions):
                     new_row = copy.deepcopy(last_row)
-                    new_row[predict] = new_row[predict][i]
-                    new_row[data_column] = new_row[data_column][i]
+                    if nr_predictions == 1:
+                        new_row[predict] = new_row[predict]
+                        new_row[order_by_column] = new_row[order_by_column]
+                    else:
+                        new_row[predict] = new_row[predict][i]
+                        new_row[order_by_column] = new_row[order_by_column][i]
                     if '__mindsdb_row_id' in new_row and (i > 0 or __mdb_make_predictions is False):
                         new_row['__mindsdb_row_id'] = None
                     rows.append(new_row)
 
                     new_explanation = copy.deepcopy(last_explanation)
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        new_explanation[predict][col] = new_explanation[predict][col][i]
+                        if nr_predictions == 1:
+                            new_explanation[predict][col] = new_explanation[predict][col]
+                        else:
+                            new_explanation[predict][col] = new_explanation[predict][col][i]
                     if i != 0:
                         new_explanation[predict]['anomaly'] = None
                         new_explanation[predict]['truth'] = None
@@ -362,14 +369,14 @@ class MindsDBDataNode(DataNode):
             for i in range(len(pred_dicts)):
                 original_target_values[f'{predict}_original'].append(explanations[i][predict].get('truth', None))
 
-            if model['dtypes'][data_column] == dtype.date:
+            if model['dtypes'][order_by_column] == dtype.date:
                 for row in pred_dicts:
-                    if isinstance(row[data_column], (int, float)):
-                        row[data_column] = str(datetime.fromtimestamp(row[data_column]).date())
-            elif model['dtypes'][data_column] == dtype.datetime:
+                    if isinstance(row[order_by_column], (int, float)):
+                        row[order_by_column] = str(datetime.fromtimestamp(row[order_by_column]).date())
+            elif model['dtypes'][order_by_column] == dtype.datetime:
                 for row in pred_dicts:
-                    if isinstance(row[data_column], (int, float)):
-                        row[data_column] = str(datetime.fromtimestamp(row[data_column]))
+                    if isinstance(row[order_by_column], (int, float)):
+                        row[order_by_column] = str(datetime.fromtimestamp(row[order_by_column]))
 
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []

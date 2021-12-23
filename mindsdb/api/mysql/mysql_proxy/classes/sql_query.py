@@ -321,7 +321,7 @@ class SQLQuery():
             }
             return
 
-        integrations_names = self.datahub.get_integrations_names()
+        integrations_names = self.datahub.get_datasources_names()
         integrations_names.append('INFORMATION_SCHEMA')
         integrations_names.append('information_schema')
 

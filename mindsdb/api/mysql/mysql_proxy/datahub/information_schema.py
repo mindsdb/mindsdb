@@ -41,7 +41,7 @@ class InformationSchema(DataNode):
             return self
 
         if name_lower in self.persis_datanodes:
-            return self.persis_datanodes(name_lower)
+            return self.persis_datanodes[name_lower]
 
         datasource_names = self.datasource_interface.get_db_integrations().keys()
         for datasource_name in datasource_names:

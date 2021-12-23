@@ -6,12 +6,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.file_datanode import FileDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datasource_datanode import DataSourceDataNode
-
-
-def get_table_alias(table_obj):
-    if table_obj.alias is not None:
-        return table_obj.alias
-    return '.'.join(table_obj.parts)
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
 
 
 class InformationSchema(DataNode):
@@ -28,29 +23,36 @@ class InformationSchema(DataNode):
     }
 
     def __init__(self, model_interface, ai_table, data_store, datasource_interface):
-        self.index = {}
-        self.add({
+        self.datasource_interface = datasource_interface
+        self.data_store = data_store
+        self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(model_interface, ai_table, data_store, datasource_interface),
             'datasource': DataSourceDataNode(data_store),
             'file': FileDataNode(data_store)
-        })
+        }
 
     def __getitem__(self, key):
         return self.get(key)
 
-    def add(self, dsObject):
-        for key, val in dsObject.items():
-            self.index[key.upper()] = val
-
     def get(self, name):
-        if name.upper() == 'INFORMATION_SCHEMA':
+        name_lower = name.lower()
+
+        if name.lower() == 'information_schema':
             return self
-        ds = self.index.get(name.upper())
-        return ds
+
+        if name_lower in self.persis_datanodes:
+            return self.persis_datanodes[name_lower]
+
+        datasource_names = self.datasource_interface.get_db_integrations().keys()
+        for datasource_name in datasource_names:
+            if datasource_name.lower() == name_lower:
+                return IntegrationDataNode(datasource_name, self.data_store)
+
+        return None
 
     def has_table(self, tableName):
         tn = tableName.upper()
-        if tn in self.information_schema or tn in self.index:
+        if tn in self.information_schema:
             return True
         return False
 
@@ -58,11 +60,12 @@ class InformationSchema(DataNode):
         tn = tableName.upper()
         if tn in self.information_schema:
             return self.information_schema[tn]
-        raise Exception()
+        raise Exception(f'Table information_schema.{tableName} does not exists')
 
-    def get_integrations_names(self):
+    def get_datasources_names(self):
+        datasource_names = self.datasource_interface.get_db_integrations().keys()
         return [
-            x.lower() for x in self.index if x.lower() not in ['mindsdb', 'datasource']
+            x.lower() for x in datasource_names
         ]
 
     def _get_tables(self):
@@ -77,9 +80,13 @@ class InformationSchema(DataNode):
             ['PLUGINS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
         ]
 
-        for dsName, ds in self.index.items():
+        for ds_name, ds in self.persis_datanodes.items():
             ds_tables = ds.get_tables()
-            data += [[x, dsName, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
+            data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
+
+        for ds_name in self.get_datasources_names():
+            ds = self.get(ds_name)
+            data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
 
         df = pd.DataFrame(data, columns=columns)
         return df
@@ -107,7 +114,7 @@ class InformationSchema(DataNode):
                 result_row[4] = i
                 result.append(result_row)
 
-        mindsb_dn = self.index['MINDSDB']
+        mindsb_dn = self.get('MINDSDB')
         for table_name in mindsb_dn.get_tables():
             table_columns = mindsb_dn.get_table_columns(table_name)
             for i, column_name in enumerate(table_columns):
@@ -127,7 +134,11 @@ class InformationSchema(DataNode):
             ['def', 'information_schema', 'utf8', 'utf8_general_ci', None]
         ]
 
-        for database_name in self.index:
+        for database_name in self.persis_datanodes:
+            data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
+
+        datasource_names = self.datasource_interface.get_db_integrations().keys()
+        for database_name in datasource_names:
             data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 
         df = pd.DataFrame(data, columns=columns)

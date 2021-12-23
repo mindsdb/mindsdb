@@ -9,12 +9,6 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datasource_datanode import 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
 
 
-def get_table_alias(table_obj):
-    if table_obj.alias is not None:
-        return table_obj.alias
-    return '.'.join(table_obj.parts)
-
-
 class InformationSchema(DataNode):
     type = 'INFORMATION_SCHEMA'
 

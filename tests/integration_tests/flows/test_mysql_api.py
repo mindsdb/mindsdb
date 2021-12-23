@@ -145,27 +145,27 @@ class MySqlApiTest(unittest.TestCase):
         self.assertTrue('rental_price' in res and 'rental_price_explain' in res,
                         f"error getting prediction from {predictor_name} - {res}")
 
-
     def test_4_service_requests(self):
         service_requests = [
-                "show databases;",
-                "show schemas;",
-                "show tables;",
-                "show tables from mindsdb;",
-                "show full tables from mindsdb;",
-                "show variables;",
-                "show session status;",
-                "show global variables;",
-                "show engines;",
-                "show warnings;",
-                "show charset;",
-                "show collation;",
-                # "show function status where db = 'mindsdb';",
-                # "show procedure status where db = 'mindsdb';",
-                # "show table status like commands;",
-                ]
+            "show databases;",
+            "show schemas;",
+            "show tables;",
+            "show tables from mindsdb;",
+            "show full tables from mindsdb;",
+            "show variables;",
+            "show session status;",
+            "show global variables;",
+            "show engines;",
+            "show warnings;",
+            "show charset;",
+            "show collation;",
+            "show datasources",
+            "show predictors"
+            # "show function status where db = 'mindsdb';",
+            # "show procedure status where db = 'mindsdb';",
+            # "show table status like commands;",
+        ]
         for req in service_requests:
-            name = "_".join(req.split(" "))
             with self.subTest(msg=req):
                 print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{req}]")
                 self.query(req)

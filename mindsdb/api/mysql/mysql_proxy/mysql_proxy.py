@@ -37,6 +37,7 @@ from mindsdb_sql.parser.ast import (
     Constant,
     Function,
     Explain,
+    Insert,
     Select,
     Star,
     Show,
@@ -1364,28 +1365,30 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
             self.delete_predictor_sql(sql)
             self.packet(OkPacket).send()
-        elif keyword == 'insert' \
-                and (struct['database'] == 'mindsdb' or struct['database'] is None and self.session.database == 'mindsdb') \
-                and struct['table'] == 'commands':
-            insert = OrderedDict(zip(struct['columns'], struct['values']))
-            if len(insert) != 1 or 'command' not in insert:
-                self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg="Error: only 'command' should be inserted in mindsdb.commands").send()
-                return
-            self.handle_custom_command(insert['command'])
-        elif keyword == 'insert' \
-                and (struct['database'] == 'mindsdb' or struct['database'] is None and self.session.database == 'mindsdb') \
-                and struct['table'] == 'predictors':
-            if len(struct['columns']) != len(struct['values']):
-                # All clients what i saw convert queries from: "insert into a values (b)" to "insert into a (colb) values (b)"
-                # If once it no happened, then this error will raise, and will need to add columns list definition.
-                self.packet(
-                    ErrPacket,
-                    err_code=ERR.ER_WRONG_ARGUMENTS,
-                    msg="Error: number of columns is not equal to number of inserted values."
-                ).send()
-                return
-            insert_dict = OrderedDict(zip(struct['columns'], struct['values']))
-            self.insert_predictor_answer(insert_dict)
+        elif isinstance(statement, Insert):
+            db_name = self.session.database
+            if len(statement.table.parts) == 2:
+                db_name = statement.table.parts[0].lower()
+            table_name = statement.table.parts[-1].lower()
+            if db_name != 'mindsdb' or table_name not in ('predictors', 'commands'):
+                raise Exception("At this moment only insert to 'mindsdb.predictors' or 'mindsdb.commands' is possible")
+            column_names = []
+            for column_identifier in statement.columns:
+                if isinstance(column_identifier, Identifier) is False or len(column_identifier.parts) != 1:
+                    raise Exception(f'Incorrect column name: {column_identifier}')
+                column_name = column_identifier.parts[0].lower()
+                column_names.append(column_name)
+            if len(statement.values) > 1:
+                raise Exception('At this moment only 1 row can be inserted.')
+            for row in statement.values:
+                values = []
+                for value in row:
+                    values.append(value.value)
+                insert_dict = dict(zip(column_names, values))
+            if table_name == 'commands':
+                self.handle_custom_command(insert_dict['command'])
+            elif table_name == 'predictors':
+                self.insert_predictor_answer(insert_dict)
         elif keyword in ('update', 'insert'):
             raise NotImplementedError('Update and Insert not implemented')
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):

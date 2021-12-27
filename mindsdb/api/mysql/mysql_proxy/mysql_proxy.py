@@ -531,7 +531,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_drop_datasource(self, ds_name):
         try:
-            self.session.datasource_interface.remove_db_integration(ds_name)
+            ds = self.session.datasource_interface.get_db_integration(ds_name)
+            self.session.datasource_interface.remove_db_integration(ds['database_name'])
         except Exception:
             raise Exception(f"Something went wrong during deleting of datasource '{ds_name}'.")
         self.packet(OkPacket).send()

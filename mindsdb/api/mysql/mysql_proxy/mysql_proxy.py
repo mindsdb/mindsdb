@@ -44,7 +44,7 @@ from mindsdb_sql.parser.ast import (
     Set,
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropIntegration, CreateIntegration
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -502,10 +502,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }],
             data=[description]
         )
-        if self.client_capabilities.DEPRECATE_EOF is True:
-            packages.append(self.packet(OkPacket, eof=True))
-        else:
-            packages.append(self.packet(EofPacket))
+        packages.append(self.last_packet())
         self.send_package_group(packages)
         return
 
@@ -528,6 +525,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_args['type'] = database_type
 
         self.session.datasource_interface.add_db_integration(datasource_name, connection_args)
+        self.packet(OkPacket).send()
+
+    def answer_drop_datasource(self, ds_name):
+        try:
+            ds = self.session.datasource_interface.get_db_integration(ds_name)
+            self.session.datasource_interface.remove_db_integration(ds['database_name'])
+        except Exception:
+            raise Exception(f"Something went wrong during deleting of datasource '{ds_name}'.")
         self.packet(OkPacket).send()
 
     def answer_create_predictor(self, struct):
@@ -796,10 +801,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
             packages.extend(self._get_column_defenition_packets(columns))
 
-            if self.client_capabilities.DEPRECATE_EOF is True:
-                packages.append(self.packet(OkPacket, eof=True, status=0x0062))
-            else:
-                packages.append(self.packet(EofPacket, status=0x0062))
+            packages.append(self.last_packet(status=0x0062))
             self.send_package_group(packages)
         elif prepared_stmt['type'] == 'insert':
             statement = prepared_stmt['statement']
@@ -839,10 +841,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 SERVER_STATUS.SERVER_STATUS_CURSOR_EXISTS,
             ])
 
-            if self.client_capabilities.DEPRECATE_EOF is True:
-                packages.append(self.packet(OkPacket, eof=True, status=status))
-            else:
-                packages.append(self.packet(EofPacket, status=status))
+            packages.append(self.last_packet(status=status))
             self.send_package_group(packages)
         elif prepared_stmt['type'] == 'delete':
             if len(parameters) == 0:
@@ -894,8 +893,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
                 SERVER_STATUS.SERVER_STATUS_CURSOR_EXISTS,
             ])
-        packages.append(self.packet(EofPacket, status=status))  # what should be if CLIENT_DEPRECATE_EOF?
 
+        packages.append(self.last_packet(status=status))
         self.send_package_group(packages)
 
     def answer_stmt_close(self, stmt_id):
@@ -985,11 +984,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             status=status
         )
 
-        if self.client_capabilities.DEPRECATE_EOF is False:
-            packages.append(self.packet(EofPacket, status=status))
-        else:
-            packages.append(self.packet(OkPacket, eof=True, status=status))
-
+        packages.append(self.last_packet(status=status))
         self.send_package_group(packages)
 
     def answer_explain_commands(self):
@@ -1007,11 +1002,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             status=status
         )
 
-        if self.client_capabilities.DEPRECATE_EOF is False:
-            packages.append(self.packet(EofPacket, status=status))
-        else:
-            packages.append(self.packet(OkPacket, eof=True, status=status))
-
+        packages.append(self.last_packet(status=status))
         self.send_package_group(packages)
 
     def query_answer(self, sql):
@@ -1077,7 +1068,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # not all statemts are parse by parse_sql
             pass
 
-        if isinstance(statement, CreateIntegration):
+        if isinstance(statement, CreateDatasource):
             struct = {
                 'datasource_name': statement.name,
                 'database_type': statement.engine,
@@ -1093,8 +1084,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # fallback for statement
             self.answer_create_datasource(struct)
             return
-        elif isinstance(statement, DropIntegration):
-            raise Exception('Not ready')
+        elif isinstance(statement, DropDatasource):
+            ds_name = statement.name.parts[-1]
+            self.answer_drop_datasource(ds_name)
+            return
         elif keyword == 'describe':
             self.answer_describe_predictor(struct['predictor_name'])
             return
@@ -1222,10 +1215,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     }],
                     data=data
                 )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
+
+                packages.append(self.last_packet())
                 self.send_package_group(packages)
                 return
             elif "show status like 'ssl_version'" in sql_lower:
@@ -1242,10 +1233,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     }],
                     data=[['Ssl_version', 'TLSv1.1']]   # FIX
                 )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
+
+                packages.append(self.last_packet())
                 self.send_package_group(packages)
                 return
             elif sql_category in ('function status', 'procedure status'):
@@ -1431,10 +1420,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     }],
                     data=data
                 )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
+
+                packages.append(self.last_packet())
                 self.send_package_group(packages)
                 return
 
@@ -1498,10 +1485,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             columns=columns,
             data=[data]
         )
-        if self.client_capabilities.DEPRECATE_EOF is True:
-            packages.append(self.packet(OkPacket, eof=True))
-        else:
-            packages.append(self.packet(EofPacket))
+
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_show_create_table(self, table):
@@ -1518,10 +1503,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }],
             data=[[table, f'create table {table} ()']]
         )
-        if self.client_capabilities.DEPRECATE_EOF is True:
-            packages.append(self.packet(OkPacket, eof=True))
-        else:
-            packages.append(self.packet(EofPacket))
+
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_show_index(self):
@@ -1650,10 +1633,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }],
             data=[]
         )
-        if self.client_capabilities.DEPRECATE_EOF is True:
-            packages.append(self.packet(OkPacket, eof=True))
-        else:
-            packages.append(self.packet(EofPacket))
+
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_function_status(self):
@@ -1750,10 +1731,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }],
             data=[]
         )
-        if self.client_capabilities.DEPRECATE_EOF is True:
-            packages.append(self.packet(OkPacket, eof=True))
-        else:
-            packages.append(self.packet(EofPacket))
+
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_show_table_status(self, table_name):
@@ -1908,7 +1887,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ''              # Comment
             ]]
         )
-        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_show_warnings(self):
@@ -1938,7 +1917,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }],
             data=[]
         )
-        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_show_collation(self):
@@ -1992,7 +1971,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ['latin1_swedish_ci', 'latin1', 8, 'Yes', 'Yes', 1]
             ]
         )
-        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_show_charset(self, charset=None):
@@ -2043,10 +2022,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }],
             data=data
         )
-        if self.client_capabilities.DEPRECATE_EOF is True:
-            packages.append(self.packet(OkPacket, eof=True))
-        else:
-            packages.append(self.packet(EofPacket))
+
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_show_engines(self):
@@ -2097,7 +2074,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }],
             data=[['InnoDB', 'DEFAULT', 'Supports transactions, row-level locking, and foreign keys', 'YES', 'YES', 'YES']]
         )
-        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_connection_id(self, sql):
@@ -2112,7 +2089,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }],
             data=[[self.connection_id]]
         )
-        packages.append(self.packet(OkPacket, eof=True, status=0x0002))
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def answer_select(self, query):
@@ -2350,6 +2327,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         )
         self.session.inc_packet_sequence_number()
         return p
+
+    def last_packet(self, status=0x0002):
+        if self.client_capabilities.DEPRECATE_EOF is True:
+            return self.packet(OkPacket, eof=True, status=status)
+        else:
+            return self.packet(EofPacket, status=status)
 
     @staticmethod
     def startProxy():

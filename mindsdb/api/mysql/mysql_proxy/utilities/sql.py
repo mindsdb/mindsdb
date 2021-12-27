@@ -37,7 +37,10 @@ def query_df(df, query):
                 orderby.field.parts = [orderby.field.parts[-1]]
     _remove_table_name(query.where)
 
-    res = duckdb.query_df(df, 'df_table', str(query))
+    # FIXME https://github.com/mindsdb/mindsdb_sql/issues/130
+    # we need way to dump suery in postgres dialect
+    sql_query = str(query).replace('`', '')
+    res = duckdb.query_df(df, 'df_table', sql_query)
     result_df = res.df()
     result_df = result_df.where(pd.notnull(result_df), None)
     return result_df

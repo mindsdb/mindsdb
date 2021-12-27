@@ -43,7 +43,7 @@ from mindsdb_sql.parser.ast import (
     Set,
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropIntegration, CreateIntegration
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -524,6 +524,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_args['type'] = database_type
 
         self.session.datasource_interface.add_db_integration(datasource_name, connection_args)
+        self.packet(OkPacket).send()
+
+    def answer_drop_datasource(self, ds_name):
+        try:
+            ds = self.session.datasource_interface.get_db_integration(ds_name)
+            self.session.datasource_interface.remove_db_integration(ds['database_name'])
+        except Exception:
+            raise Exception(f"Something went wrong during deleting of datasource '{ds_name}'.")
         self.packet(OkPacket).send()
 
     def answer_create_predictor(self, struct):
@@ -1059,7 +1067,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # not all statemts are parse by parse_sql
             pass
 
-        if isinstance(statement, CreateIntegration):
+        if isinstance(statement, CreateDatasource):
             struct = {
                 'datasource_name': statement.name,
                 'database_type': statement.engine,
@@ -1075,8 +1083,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # fallback for statement
             self.answer_create_datasource(struct)
             return
-        elif isinstance(statement, DropIntegration):
-            raise Exception('Not ready')
+        elif isinstance(statement, DropDatasource):
+            ds_name = statement.name.parts[-1]
+            self.answer_drop_datasource(ds_name)
+            return
         elif keyword == 'describe':
             self.answer_describe_predictor(struct['predictor_name'])
             return

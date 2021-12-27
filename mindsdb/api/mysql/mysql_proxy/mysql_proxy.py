@@ -2319,7 +2319,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if self.client_capabilities.DEPRECATE_EOF is True:
             return self.packet(OkPacket, eof=True, status=status)
         else:
-            return self.packet(EofPacket)
+            return self.packet(EofPacket, status=status)
 
     @staticmethod
     def startProxy():

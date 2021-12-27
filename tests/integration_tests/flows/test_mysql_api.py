@@ -7,11 +7,10 @@ from pathlib import Path
 import docker
 import netifaces
 
-from common import (HTTP_API_ROOT,
-                    run_environment,
-                    EXTERNAL_DB_CREDENTIALS,
-                    USE_EXTERNAL_DB_SERVER,
-                    CONFIG_PATH)
+from common import (
+    run_environment,
+    EXTERNAL_DB_CREDENTIALS,
+    CONFIG_PATH)
 
 
 class Dlist(list):
@@ -39,12 +38,12 @@ class MySqlApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         override_config = {
-                'integrations': {},
-                'api': {
-                    "http": {"host": get_docker0_inet_ip()},
-                    "mysql": {"host": get_docker0_inet_ip()}
-                    }
-                }
+            'integrations': {},
+            'api': {
+                "http": {"host": get_docker0_inet_ip()},
+                "mysql": {"host": get_docker0_inet_ip()}
+            }
+        }
 
         run_environment(apis=['http', 'mysql'], override_config=override_config)
         cls.docker_client = docker.from_env()
@@ -56,9 +55,9 @@ class MySqlApiTest(unittest.TestCase):
             cls.db_creds = json.load(f)
 
         cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
-                                                               cls.config["api"]["mysql"]["host"],
-                                                               cls.config["api"]["mysql"]["port"],
-                                                               cls.config["api"]["mysql"]["user"])
+            cls.config["api"]["mysql"]["host"],
+            cls.config["api"]["mysql"]["port"],
+            cls.config["api"]["mysql"]["user"])
 
     @classmethod
     def tearDownClass(cls):
@@ -80,11 +79,12 @@ class MySqlApiTest(unittest.TestCase):
                 f.write(_query)
             cmd = f"{self.launch_query_tmpl} < /temp/test.sql"
             cmd = 'sh -c "' + cmd + '"'
-            res = self.docker_client.containers.run(self.mysql_image,
-                                                 command=cmd,
-                                                 remove=True,
-                                                 volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
-                                                 environment={"MYSQL_PWD": self.config["api"]["mysql"]["password"]})
+            res = self.docker_client.containers.run(
+                self.mysql_image,
+                command=cmd,
+                remove=True,
+                volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
+                environment={"MYSQL_PWD": self.config["api"]["mysql"]["password"]})
         return self.to_dicts(res.decode(encoding))
 
     @staticmethod
@@ -102,16 +102,17 @@ class MySqlApiTest(unittest.TestCase):
         return res
 
     def create_datasource(self, db_type):
-        _query = "CREATE DATASOURCE %s WITH ENGINE = '%s', PARAMETERS = %s;" % (db_type.upper(),
-                                                                             db_type,
-                                                                             json.dumps(self.db_creds[db_type]))
+        _query = "CREATE DATASOURCE %s WITH ENGINE = '%s', PARAMETERS = %s;" % (
+            db_type.upper(),
+            db_type,
+            json.dumps(self.db_creds[db_type]))
         return self.query(_query)
 
     def validate_datasource_creation(self, ds_type):
         self.create_datasource(ds_type.lower())
         res = self.query("SELECT * FROM mindsdb.datasources WHERE name='{}';".format(ds_type.upper()))
         self.assertTrue("name" in res and res.get_record("name", ds_type.upper()),
-                f"Expected datasource is not found after creation - {ds_type.upper()}: {res}")
+                        f"Expected datasource is not found after creation - {ds_type.upper()}: {res}")
 
     def test_1_create_datasources(self):
         for ds_type in self.db_creds:
@@ -169,6 +170,9 @@ class MySqlApiTest(unittest.TestCase):
             with self.subTest(msg=req):
                 print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{req}]")
                 self.query(req)
+
+    def test_5_drop_datasource(self):
+        self.query('drop datasource MYSQL;')
 
 
 if __name__ == "__main__":

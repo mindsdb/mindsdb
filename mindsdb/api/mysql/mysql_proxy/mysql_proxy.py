@@ -1292,7 +1292,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_show_warnings()
                 return
             elif sql_category == 'engines':
-                self.answer_show_engines()
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=['information_schema', 'ENGINES'])
+                )
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.answer_select(query)
                 return
             elif sql_category == 'collation':
                 self.answer_show_collation()
@@ -2023,57 +2031,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data=data
         )
 
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
-
-    def answer_show_engines(self):
-        packages = []
-        packages += self.get_tabel_packets(
-            columns=[{
-                'database': 'information_schema',
-                'table_name': 'ENGINES',
-                'name': 'Engine',
-                'alias': 'Engine',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'ENGINES',
-                'name': 'Support',
-                'alias': 'Support',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'ENGINES',
-                'name': 'Comment',
-                'alias': 'Comment',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'ENGINES',
-                'name': 'Transactions',
-                'alias': 'Transactions',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'ENGINES',
-                'name': 'XA',
-                'alias': 'XA',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'ENGINES',
-                'name': 'Savepoints',
-                'alias': 'Savepoints',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }],
-            data=[['InnoDB', 'DEFAULT', 'Supports transactions, row-level locking, and foreign keys', 'YES', 'YES', 'YES']]
-        )
         packages.append(self.last_packet())
         self.send_package_group(packages)
 

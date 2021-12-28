@@ -19,7 +19,8 @@ class InformationSchema(DataNode):
         'EVENTS': ['EVENT_CATALOG', 'EVENT_SCHEMA', 'EVENT_NAME', 'DEFINER', 'TIME_ZONE', 'EVENT_BODY', 'EVENT_DEFINITION', 'EVENT_TYPE', 'EXECUTE_AT', 'INTERVAL_VALUE', 'INTERVAL_FIELD', 'SQL_MODE', 'STARTS', 'ENDS', 'STATUS', 'ON_COMPLETION', 'CREATED', 'LAST_ALTERED', 'LAST_EXECUTED', 'EVENT_COMMENT', 'ORIGINATOR', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION'],
         'ROUTINES': ['SPECIFIC_NAME', 'ROUTINE_CATALOG', 'ROUTINE_SCHEMA', 'ROUTINE_NAME', 'ROUTINE_TYPE', 'DATA_TYPE', 'CHARACTER_MAXIMUM_LENGTH', 'CHARACTER_OCTET_LENGTH', 'NUMERIC_PRECISION', 'NUMERIC_SCALE', 'DATETIME_PRECISION', 'CHARACTER_SET_NAME', 'COLLATION_NAME', 'DTD_IDENTIFIER', 'ROUTINE_BODY', 'ROUTINE_DEFINITION', 'EXTERNAL_NAME', 'EXTERNAL_LANGUAGE', 'PARAMETER_STYLE', 'IS_DETERMINISTIC', 'SQL_DATA_ACCESS', 'SQL_PATH', 'SECURITY_TYPE', 'CREATED', 'LAST_ALTERED', 'SQL_MODE', 'ROUTINE_COMMENT', 'DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION'],
         'TRIGGERS': ['TRIGGER_CATALOG', 'TRIGGER_SCHEMA', 'TRIGGER_NAME', 'EVENT_MANIPULATION', 'EVENT_OBJECT_CATALOG', 'EVENT_OBJECT_SCHEMA', 'EVENT_OBJECT_TABLE', 'ACTION_ORDER', 'ACTION_CONDITION', 'ACTION_STATEMENT', 'ACTION_ORIENTATION', 'ACTION_TIMING', 'ACTION_REFERENCE_OLD_TABLE', 'ACTION_REFERENCE_NEW_TABLE', 'ACTION_REFERENCE_OLD_ROW', 'ACTION_REFERENCE_NEW_ROW', 'CREATED', 'SQL_MODE', 'DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION'],
-        'PLUGINS': ['PLUGIN_NAME', 'PLUGIN_VERSION', 'PLUGIN_STATUS', 'PLUGIN_TYPE', 'PLUGIN_TYPE_VERSION', 'PLUGIN_LIBRARY', 'PLUGIN_LIBRARY_VERSION', 'PLUGIN_AUTHOR', 'PLUGIN_DESCRIPTION', 'PLUGIN_LICENSE', 'LOAD_OPTION', 'PLUGIN_MATURITY', 'PLUGIN_AUTH_VERSION']
+        'PLUGINS': ['PLUGIN_NAME', 'PLUGIN_VERSION', 'PLUGIN_STATUS', 'PLUGIN_TYPE', 'PLUGIN_TYPE_VERSION', 'PLUGIN_LIBRARY', 'PLUGIN_LIBRARY_VERSION', 'PLUGIN_AUTHOR', 'PLUGIN_DESCRIPTION', 'PLUGIN_LICENSE', 'LOAD_OPTION', 'PLUGIN_MATURITY', 'PLUGIN_AUTH_VERSION'],
+        'ENGINES': ['ENGINE', 'SUPPORT', 'COMMENT', 'TRANSACTIONS', 'XA', 'SAVEPOINTS']
     }
 
     def __init__(self, model_interface, ai_table, data_store, datasource_interface):
@@ -29,6 +30,17 @@ class InformationSchema(DataNode):
             'mindsdb': MindsDBDataNode(model_interface, ai_table, data_store, datasource_interface),
             'datasource': DataSourceDataNode(data_store),
             'file': FileDataNode(data_store)
+        }
+
+        self.get_dataframe_funcs = {
+            'TABLES': self._get_tables,
+            'COLUMNS': self._get_columns,
+            'SCHEMATA': self._get_schemata,
+            'EVENTS': self._get_empty_table,
+            'ROUTINES': self._get_empty_table,
+            'TRIGGERS': self._get_empty_table,
+            'PLUGINS': self._get_empty_table,
+            'ENGINES': self._get_engines
         }
 
     def __getitem__(self, key):
@@ -70,14 +82,10 @@ class InformationSchema(DataNode):
 
     def _get_tables(self):
         columns = self.information_schema['TABLES']
+
         data = [
-            ['SCHEMATA', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
-            ['TABLES', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
-            ['COLUMNS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
-            ['EVENTS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
-            ['ROUTINES', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
-            ['TRIGGERS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
-            ['PLUGINS', 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci'],
+            [name, 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci']
+            for name in self.information_schema.keys()
         ]
 
         for ds_name, ds in self.persis_datanodes.items():
@@ -144,29 +152,15 @@ class InformationSchema(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def _get_events(self):
-        columns = self.information_schema['EVENTS']
-        data = []
+    def _get_engines(self):
+        columns = self.information_schema['ENGINES']
+        data = [['InnoDB', 'DEFAULT', 'Supports transactions, row-level locking, and foreign keys', 'YES', 'YES', 'YES']]
 
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def _get_routines(self):
-        columns = self.information_schema['ROUTINES']
-        data = []
-
-        df = pd.DataFrame(data, columns=columns)
-        return df
-
-    def _get_triggers(self):
-        columns = self.information_schema['TRIGGERS']
-        data = []
-
-        df = pd.DataFrame(data, columns=columns)
-        return df
-
-    def _get_plugins(self):
-        columns = self.information_schema['PLUGINS']
+    def _get_empty_table(self, table_name):
+        columns = self.information_schema[table_name]
         data = []
 
         df = pd.DataFrame(data, columns=columns)
@@ -178,23 +172,12 @@ class InformationSchema(DataNode):
         if len(query_tables) != 1:
             raise Exception(f'Only one table can be used in query to information_schema: {query}')
 
-        table = query_tables[0].upper()
-        if table == 'TABLES':
-            dataframe = self._get_tables()
-        elif table == 'COLUMNS':
-            dataframe = self._get_columns()
-        elif table == 'SCHEMATA':
-            dataframe = self._get_schemata()
-        elif table == 'EVENTS':
-            dataframe = self._get_events()
-        elif table == 'ROUTINES':
-            dataframe = self._get_routines()
-        elif table == 'TRIGGERS':
-            dataframe = self._get_triggers()
-        elif table == 'PLUGINS':
-            dataframe = self._get_plugins()
-        else:
+        table_name = query_tables[0].upper()
+
+        if table_name not in self.get_dataframe_funcs:
             raise Exception('Information schema: Not implemented.')
+
+        dataframe = self.get_dataframe_funcs[table_name]()
 
         try:
             data = query_df(dataframe, query)

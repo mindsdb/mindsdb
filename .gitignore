@@ -1,3 +1,4 @@
+**/*.pyc
 *__pycache__*
 var
 etc

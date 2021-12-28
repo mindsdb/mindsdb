@@ -34,6 +34,7 @@ from mindsdb_sql.parser.ast import (
     StartTransaction,
     BinaryOperation,
     Identifier,
+    Parameter,
     Constant,
     Function,
     Explain,
@@ -642,17 +643,33 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if statement.keyword == 'insert':
             prepared_stmt['type'] = 'insert'
 
-            struct = statement.struct
-            if struct['table'] not in ['predictors', 'commands']:
+            statement = parse_sql(sql, dialect='mindsdb')
+            if (
+                len(statement.table.parts) > 1 and statement.table.parts[0].lower() != 'mindsdb'
+                or len(statement.table.parts) == 1 and self.session.database != 'mindsdb'
+            ):
+                raise Exception("Only parametrized insert into table from 'mindsdb' database supported at this moment")
+            table_name = statement.table.parts[-1]
+            if table_name not in ['predictors', 'commands']:
                 raise Exception("Only parametrized insert into 'predictors' or 'commands' supported at this moment")
 
-            columns_str = ','.join([f'`{col}`' for col in struct['columns']])
+            new_statement = Select(
+                targets=statement.columns,
+                from_table=Identifier(parts=['mindsdb', table_name]),
+                limit=Constant(0)
+            )
+
             query = SQLQuery(
-                f'select {columns_str} from mindsdb.{struct["table"]}',
+                str(new_statement),
                 session=self.session
             )
-            num_params = struct['values'].count(SQL_PARAMETER)
-            num_columns = len(struct['values']) - num_params
+
+            num_params = 0
+            for row in statement.values:
+                for item in row:
+                    if isinstance(item, Parameter):
+                        num_params = num_params + 1
+            num_columns = len(query.columns) - num_params
 
             if num_columns != 0:
                 raise Exception("At this moment supported only insert where all values is parameters.")
@@ -804,30 +821,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.last_packet(status=0x0062))
             self.send_package_group(packages)
         elif prepared_stmt['type'] == 'insert':
-            statement = prepared_stmt['statement']
-            struct = statement.struct
-
-            insert_dict = OrderedDict(zip(struct['columns'], struct['values']))
-            if len(parameters) != len(insert_dict):
-                raise SqlError(f"For INSERT statement got {len(parameters)} parameters, but should be {len(insert_dict)}")
-
-            for i, col in enumerate(insert_dict.keys()):
-                insert_dict[col] = parameters[i]
-
-            sql = statement.sql
-            table = struct['table'].lower()
-            database = struct['database'].lower() if isinstance(struct['database'], str) else None
-            if table == 'commands' \
-                    and (database == 'mindsdb' or database is None and self.session.database == 'mindsdb'):
-                if len(insert_dict) != 1 or 'command' not in insert_dict:
-                    self.packet(ErrPacket, err_code=ERR.ER_WRONG_ARGUMENTS, msg="Error: only 'command' should be inserted in mindsdb.commands").send()
-                    return
-                self.handle_custom_command(insert_dict['command'])
-            elif table == 'predictors' \
-                    and (database == 'mindsdb' or database is None and self.session.database == 'mindsdb'):
-                self.insert_predictor_answer(insert_dict)
-            else:
-                raise NotImplementedError("Only 'insert into predictors' and 'insert into commands' implemented")
+            statement = parse_sql(prepared_stmt['statement'].sql, dialect='mindsdb')
+            parameter_index = 0
+            for row in statement.values:
+                for item_index, item in enumerate(row):
+                    if isinstance(item, Parameter):
+                        row[item_index] = Constant(parameters[parameter_index])
+                        parameter_index += 1
+            self.process_insert(statement)
         elif prepared_stmt['type'] == 'lock':
             sql = prepared_stmt['statement'].sql
             query = SQLQuery(sql, session=self.session)
@@ -1004,6 +1005,31 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         packages.append(self.last_packet(status=status))
         self.send_package_group(packages)
+
+    def process_insert(self, statement):
+        db_name = self.session.database
+        if len(statement.table.parts) == 2:
+            db_name = statement.table.parts[0].lower()
+        table_name = statement.table.parts[-1].lower()
+        if db_name != 'mindsdb' or table_name not in ('predictors', 'commands'):
+            raise Exception("At this moment only insert to 'mindsdb.predictors' or 'mindsdb.commands' is possible")
+        column_names = []
+        for column_identifier in statement.columns:
+            if isinstance(column_identifier, Identifier) is False or len(column_identifier.parts) != 1:
+                raise Exception(f'Incorrect column name: {column_identifier}')
+            column_name = column_identifier.parts[0].lower()
+            column_names.append(column_name)
+        if len(statement.values) > 1:
+            raise Exception('At this moment only 1 row can be inserted.')
+        for row in statement.values:
+            values = []
+            for value in row:
+                values.append(value.value)
+            insert_dict = dict(zip(column_names, values))
+        if table_name == 'commands':
+            self.handle_custom_command(insert_dict['command'])
+        elif table_name == 'predictors':
+            self.insert_predictor_answer(insert_dict)
 
     def query_answer(self, sql):
         # +++
@@ -1363,29 +1389,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.delete_predictor_sql(sql)
             self.packet(OkPacket).send()
         elif isinstance(statement, Insert):
-            db_name = self.session.database
-            if len(statement.table.parts) == 2:
-                db_name = statement.table.parts[0].lower()
-            table_name = statement.table.parts[-1].lower()
-            if db_name != 'mindsdb' or table_name not in ('predictors', 'commands'):
-                raise Exception("At this moment only insert to 'mindsdb.predictors' or 'mindsdb.commands' is possible")
-            column_names = []
-            for column_identifier in statement.columns:
-                if isinstance(column_identifier, Identifier) is False or len(column_identifier.parts) != 1:
-                    raise Exception(f'Incorrect column name: {column_identifier}')
-                column_name = column_identifier.parts[0].lower()
-                column_names.append(column_name)
-            if len(statement.values) > 1:
-                raise Exception('At this moment only 1 row can be inserted.')
-            for row in statement.values:
-                values = []
-                for value in row:
-                    values.append(value.value)
-                insert_dict = dict(zip(column_names, values))
-            if table_name == 'commands':
-                self.handle_custom_command(insert_dict['command'])
-            elif table_name == 'predictors':
-                self.insert_predictor_answer(insert_dict)
+            self.process_insert(statement)
         elif keyword in ('update', 'insert'):
             raise NotImplementedError('Update and Insert not implemented')
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):

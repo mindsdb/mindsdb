@@ -72,9 +72,7 @@ class SqlStatementParser():
         self._sql = SqlStatementParser.clear_sql(text)
         self._keyword = SqlStatementParser.get_keyword(self._sql)
         if init_parse:
-            if self._keyword == 'insert':
-                self._struct = self.parse_as_insert()
-            elif self._keyword == 'delete':
+            if self._keyword == 'delete':
                 self._struct = self.parse_as_delete()
             elif self._keyword == 'drop':
                 self._struct = None
@@ -505,102 +503,6 @@ class SqlStatementParser():
 
         return result
 
-    def parse_as_insert(self) -> dict:
-        ''' Parse insert. Example: 'insert into database.table (columns) values (values)'
-        '''
-
-        text = self._sql
-
-        result = {
-            'database': None,
-            'table': None,
-            'columns': [],
-            'values': []
-        }
-
-        word = Word(alphas)
-
-        from_value = (
-            QuotedString('`')
-            | originalTextFor(
-                Word(printables, excludeChars='().`')
-            )
-        )
-
-        list_value = (
-            quotedString
-            | originalTextFor(
-                OneOrMore(
-                    Word(printables, excludeChars="(),")
-                    | nestedExpr()
-                )
-            )
-        )
-
-        expr = (
-            word.suppress() + word.suppress()
-            + (delimitedList(from_value, delim='.'))('db_table')
-            + (Optional(originalTextFor(nestedExpr())))('columns')
-            + word.suppress()
-            + (originalTextFor(nestedExpr()))('values')
-        )
-
-        r = expr.parseString(text).asDict()
-
-        if len(r['db_table']) == 2:
-            result['database'] = r['db_table'][0]
-            result['table'] = r['db_table'][1]
-        else:
-            result['table'] = r['db_table'][0]
-
-        LPAR, RPAR = map(Suppress, "()")
-        parenthesis_list_expr = LPAR + delimitedList(list_value) + RPAR
-
-        if 'columns' in r:
-            columns = r['columns']
-            if isinstance(columns, list):
-                if len(columns) != 1:
-                    raise Exception(f"Error when parse columns list: {columns}")
-                columns_str = columns[0]
-            else:
-                columns_str = columns
-            columns = parenthesis_list_expr.parseString(columns_str)
-            result['columns'] = columns.asList()
-
-        values = r['values']
-        if isinstance(values, list):
-            if len(values) != 1:
-                raise Exception(f"Error when parse values list: {values}")
-            values_str = values[0]
-        else:
-            values_str = values
-        values = parenthesis_list_expr.parseString(values_str)
-        result['values'] = values.asList()
-
-        for i, val in enumerate(result['values']):
-            if isinstance(val, str) and val.lower() == 'null':
-                result['values'][i] = None
-            elif val == '?':
-                result['values'][i] = SQL_PARAMETER
-            elif isinstance(val, str) and val.lower() == 'default':
-                result['values'][i] = SQL_DEFAULT
-            elif SqlStatementParser.is_int_str(val):
-                result['values'][i] = int(val)
-            elif SqlStatementParser.is_float_str(val):
-                result['values'][i] = float(val)
-            elif SqlStatementParser.is_quoted_str(val):
-                result['values'][i] = SqlStatementParser.unquote(val)
-            elif isinstance(val, str):
-                # it should be in one case, only if server send function as argument, for example:
-                # insert into table (datetime) values (now())
-                raise Exception(f"Error: cant determine type of '{val}'")
-
-        for i, val in enumerate(result['columns']):
-            if SqlStatementParser.is_quoted_str(val):
-                result['columns'][i] = SqlStatementParser.unquote(val)
-
-        return result
-
     @staticmethod
     def test_create():
         def check_recursive(a, b):
@@ -723,39 +625,6 @@ class SqlStatementParser():
         ], [
             ' START transaction',
             {'keyword': 'start'}
-        ], [
-            "insert into a.b(col1, col2) values ('val1', 'val2');",
-            {
-                'keyword': 'insert',
-                'struct': {
-                    'database': 'a',
-                    'table': 'b',
-                    'columns': ['col1', 'col2'],
-                    'values': ['val1', 'val2']
-                }
-            }
-        ], [
-            "insert into a values (1, 1.1, 'a A', '()', '?', ?);",
-            {
-                'keyword': 'insert',
-                'struct': {
-                    'database': None,
-                    'table': 'a',
-                    'columns': [],
-                    'values': [1, 1.1, 'a A', '()', '?', SQL_PARAMETER]
-                }
-            }
-        ], [
-            "insert into `a a`.`B B` (col1) values (1);",
-            {
-                'keyword': 'insert',
-                'struct': {
-                    'database': 'a a',
-                    'table': 'B B',
-                    'columns': ['col1'],
-                    'values': [1]
-                }
-            }
         ], [
             "delete from database_a.table_a where column_a = 1",
             {

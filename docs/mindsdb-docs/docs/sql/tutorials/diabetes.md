@@ -145,13 +145,13 @@ CREATE TABLE Diabetes (
     8.2 Run the below query and see the results returned.
 
 ```sql
-    SELECT * FROM "DIABETES_DATA'.diabetes;
+    SELECT * FROM "DIABETES_DATA".diabetes;
 ```
 
 You can use the below query structure to show your database
 
 ```sql
-    SELECT * FROM "Database_name'.table_name;
+    SELECT * FROM "Schema_name".table_name;
 ```
 ![Select tables](/assets/tutorials/diabetes/pg4admin/select_pgtable.gif)
 All the rows imported will be retrieved.

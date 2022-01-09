@@ -195,7 +195,7 @@ On the landing page, navigate to the left corner of the screen and select `ADD D
 
 ![MindsDB integration details](/assets/tutorials/diabetes/Connecting_database_to_MindsdbCloud.gif)
 
-Click `Connect`, you should now see your MariaDB database connection in the main screen.
+Click `Connect`, you should now see your Postgres database connection in the main screen.
 
 You are now done with connecting MindsDB to your database! 🚀
 

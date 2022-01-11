@@ -1020,7 +1020,7 @@
                 <h1 id="select-statement">SELECT statement</h1>
 <p>The <code>SELECT</code> statement is used to get a predictions from the model table. The data is not persistent and is returned on the fly as a result-set. The basic syntax for selecting from the model is:</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">target_variable</span><span class="p">,</span> <span class="n">target_variable_explain</span> <span class="k">FROM</span> <span class="n">model_table</span> 
-                                                <span class="k">WHERE</span> <span class="n">when_data</span><span class="o">=</span><span class="s1">&#39;{&quot;column3&quot;: &quot;value&quot;, &quot;column2&quot;: &quot;value&quot;}&#39;</span><span class="p">;</span>
+                                                <span class="k">WHERE</span> <span class="n">column3</span><span class="o">=</span> <span class="ss">&quot;value&quot;</span> <span class="k">AND</span>  <span class="n">column2</span><span class="o">=</span> <span class="ss">&quot;value&quot;</span><span class="p">;</span>
 </code></pre></div>
 <h2 id="model-table-columns">Model table columns</h2>
 <p>The below list contains the column names of the model table. Note that <code>target_variable_</code> will be the name of the target variable column.</p>
@@ -1030,7 +1030,6 @@
 <li>target_variable_max - Upper bound of the predicted value.</li>
 <li>target_variable_confidence - Model confidence score.</li>
 <li>target_variable_explain - JSON object that contains additional information as <code>confidence_lower_bound</code>, <code>confidence_upper_bound</code>, <code>anomaly</code>, <code>truth</code>.</li>
-<li>when_data - The data to make the predictions from(WHERE clause params).</li>
 <li>select_data_query - SQL select query to create the datasource.</li>
 <li>external_datasource - Name of the pre-existing datasource that the model was built from.</li>
 </ul>

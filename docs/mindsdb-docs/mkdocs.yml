@@ -85,6 +85,7 @@ nav:
       - Crop Recomendation: sql/tutorials/crop-prediction.md
       - Customer Churn: sql/tutorials/customer-churn.md
       - Heart Disease: sql/tutorials/heart-disease.md
+      - Mushrooms: sql/tutorials/mushrooms.md
     - Time series:
       - AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
   - Contribution and Community:

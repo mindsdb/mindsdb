@@ -2,6 +2,8 @@
 
 *Dataset:[Diabetes Data](https://github.com/mindsdb/mindsdb-examples/blob/a43f66f0250c460c0c4a0793baa941307b09c9f2/others/diabetes_example/dataset/diabetes-train.csv)*
 
+Communtiy Author: [Chandre Tosca Van Der Westhuizen](https://github.com/chandrevdw31)
+
 Diabetes is a metabolic disease that causes high blood sugar and if left untreated can damage your nerves, eyes, kidneys and other organs. It is known as a silent killer, as recent studies have shown that by the year 2040 the world's diabetic patients will reach 642 million. The need to analyse vast medical data to assist in the diagnoses, treatment and management of illnesses is increasing for the medical community. With the rapid development of machine learning, it has been applied to many aspects of medical health and is transforming the health care system.
 
 The vitality to intelligently transform information into valuable knowledge through machine learning has become more present in biosciences. With the use of predictive models, MindsDB can assist in classifying diabetic and non-diabetic patients or those who pose a high risk. This is just a small showcase on how MindsDB's machine learning will be able to assist in vastly enhancing the reach of illnesses, thereby making it more efficient and can revolutionize businesses and most importantly the health care system.
@@ -22,7 +24,7 @@ For this tutorial, Docker is highly recommended. A `docker-compose.yml` file wil
 To ensure you can complete all the steps, make sure you have access to the following tools:
 
 1. A MindsDB instance. Check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/). You can also use [MindsDB Cloud](https://docs.mindsdb.com/deployment/cloud/).
-2. A PostgreSQL Database. You can install it [locally](https://www.postgresql.org/download/) or through [Docker](https://hub.docker.com/_/postgres).
+2. Optional: A PostgreSQL Database. You can install it [locally](https://www.postgresql.org/download/) or through [Docker](https://hub.docker.com/_/postgres).
 3. Downloaded the dataset. You can get it from [here](https://github.com/mindsdb/mindsdb-examples/blob/a43f66f0250c460c0c4a0793baa941307b09c9f2/others/diabetes_example/dataset/diabetes-train.csv)
 4. Access to PGAdmin4 (provided with the docker-compose file).
 5. Optional: Access to ngrok. You can check the installation details at the [ngrok website](https://ngrok.com/).
@@ -31,9 +33,12 @@ To ensure you can complete all the steps, make sure you have access to the follo
 
 1. Create a new project directory named e.g. `mindsdb-tutorial`
 2. Inside your project directory:
-2.1 Create a new file named `docker-compose.yml`.
-2.2 Create another directory named `data`.
-2.3 Download the CSV datafile and store it in your directory
+
+    2.1 Create a new file named `docker-compose.yml`.
+
+    2.2 Create another directory named `data`.
+  
+    2.3 Download the CSV datafile and store it in your directory
 
 Open the `docker-compose.yml` file with any text-editor, copy the following and save.
 
@@ -130,12 +135,15 @@ CREATE TABLE Diabetes (
     Class varchar(100)
 );
 ```
+
 ![Create table](/assets/tutorials/diabetes/pg4admin/Create_pgtable.gif)
-7. Before you import the data, please delete the first row as it is a table header. To import rows into your table, right click on the table name and select 'Import/Export'.
 
-    7.1 Under the Options tab, ensure the slider is set to 'Import'.
+7. Before you import the data, please delete the first row as it is a table header. To import rows into your table, right click on the table name and select *Import/Export*.
 
+    7.1 Under the Options tab, ensure the slider is set to *Import*.
+ 
     7.2 Select your file name and ensure that the delimiters are set.
+
 ![Import rows](/assets/tutorials/diabetes/pg4admin/Import_rows.gif)
 
 8. By making a select query, the data that has been loaded can be verified.

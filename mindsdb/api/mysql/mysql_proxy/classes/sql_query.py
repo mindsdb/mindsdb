@@ -141,6 +141,14 @@ def join_query_data(target, source):
             target['columns'][table_name] = list(set(target['columns'][table_name]))
 
 
+def is_empty_prediction_row(predictor_value):
+    "Define empty rows in predictor after JOIN"
+    for key in predictor_value:
+        if predictor_value[key] is not None and pd.notna(predictor_value[key]):
+            return False
+    return True
+
+
 class SQLQuery():
     def __init__(self, sql, session):
         self.session = session
@@ -466,7 +474,6 @@ class SQLQuery():
                 where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
                 is_timeseries = predictor_metadata[predictor]['timeseries']
-                log.info("ApplyTimeseriesPredictorStep - predictor metadata: %s", predictor_metadata[predictor])
                 _mdb_make_predictions = None
                 if is_timeseries:
                     if 'LATEST' in self.raw:
@@ -492,16 +499,43 @@ class SQLQuery():
 
                 if is_timeseries:
                     if 'LATEST' not in self.raw:
+                        # remove additional records from predictor results:
+                        # first 'window_size' and last 'nr_prediction' records
+                        # otherwise there are many unxpected rows in prediciton result:
+                        # ----------------------------------------------------------------------------------------
+                        # mysql> SELECT tb.time, tb.state, tb.pnew_case, tb.new_case from
+                        # MYSQL_LOCAL.test_data.covid AS
+                        # ta JOIN mindsdb.covid_hor3 AS tb
+                        # WHERE ta.state = "CA" AND ta.time BETWEEN "2020-10-19" AND "2020-10-20";
+                        # ----------------------------------------------------------------------------------------
+                        # +------------+-------+-----------+----------+
+                        # | time       | state | pnew_case | new_case |
+                        # +------------+-------+-----------+----------+
+                        # | 2020-10-09 | CA    | 0         | 2862     |
+                        # | 2020-10-10 | CA    | 0         | 2979     |
+                        # | 2020-10-11 | CA    | 0         | 3075     |
+                        # | 2020-10-12 | CA    | 0         | 3329     |
+                        # | 2020-10-13 | CA    | 0         | 2666     |
+                        # | 2020-10-14 | CA    | 0         | 2378     |
+                        # | 2020-10-15 | CA    | 0         | 3449     |
+                        # | 2020-10-16 | CA    | 0         | 3803     |
+                        # | 2020-10-17 | CA    | 0         | 4170     |
+                        # | 2020-10-18 | CA    | 0         | 3806     |
+                        # | 2020-10-19 | CA    | 0         | 3286     |
+                        # | 2020-10-20 | CA    | 0         | 3474     |
+                        # | 2020-10-21 | CA    | 0         | 3474     |
+                        # | 2020-10-22 | CA    | 0         | 3474     |
+                        # +------------+-------+-----------+----------+
+                        # 14 rows in set (2.52 sec)
+
                         window_size = predictor_metadata[predictor]['window']
                         nr_predictions = predictor_metadata[predictor]['nr_predictions']
                         if len(data) > (window_size + nr_predictions):
                             data = data[window_size:]
-                            log.info("DATA AFTER TRUNCATION: %s", data)
                             if len(data) > nr_predictions:
                                 data = data[:-nr_predictions+1]
                 data = [{(key, key): value for key, value in row.items()} for row in data]
 
-                # log.info("DATA AFTER MODIFICATION: %s", data)
                 table_name = get_preditor_alias(step, self.database)
                 values = [{table_name: x} for x in data]
                 columns = {table_name: []}
@@ -515,15 +549,16 @@ class SQLQuery():
                     'columns': columns,
                     'tables': [table_name]
                 }
-                log.info("FINAL DATA: %s", data)
             elif type(step) == JoinStep:
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
 
                 # FIXME https://github.com/mindsdb/mindsdb_sql/issues/136
+                is_timeseries = False
                 if True in [type(step) == ApplyTimeseriesPredictorStep for step in plan.steps]:
                     right_data = steps_data[step.left.step_num]
                     left_data = steps_data[step.right.step_num]
+                    is_timeseries = True
 
                 if step.query.condition is not None:
                     raise Exception('At this moment supported only JOIN without condition')
@@ -602,6 +637,34 @@ class SQLQuery():
                         else:
                             new_row[right_key][right_columns_map[key]] = value
                     data['values'].append(new_row)
+
+                # remove all records with empty data from predictor from join result
+                # otherwise there are emtpy records in the final result:
+                # +------------+------------+-------+-----------+----------+
+                # | time       | time       | state | pnew_case | new_case |
+                # +------------+------------+-------+-----------+----------+
+                # | 2020-10-21 | 2020-10-24 | CA    | 0.0       | 5945.0   |
+                # | 2020-10-22 | 2020-10-23 | CA    | 0.0       | 6141.0   |
+                # | 2020-10-23 | 2020-10-22 | CA    | 0.0       | 2940.0   |
+                # | 2020-10-24 | 2020-10-21 | CA    | 0.0       | 3707.0   |
+                # | NULL       | 2020-10-20 | NULL  | nan       | nan      |
+                # | NULL       | 2020-10-19 | NULL  | nan       | nan      |
+                # | NULL       | 2020-10-18 | NULL  | nan       | nan      |
+                # | NULL       | 2020-10-17 | NULL  | nan       | nan      |
+                # | NULL       | 2020-10-16 | NULL  | nan       | nan      |
+                # +------------+------------+-------+-----------+----------+
+                # 9 rows in set (2.07 sec)
+
+                if is_timeseries:
+                    data_values = []
+                    for row in data['values']:
+                        for key in row:
+                            if 'mindsdb' in key:
+                                if not is_empty_prediction_row(row[key]):
+                                    data_values.append(row)
+                                    break
+                    data['values'] = data_values
+
             elif type(step) == FilterStep:
                 raise Exception('FilterStep is not implemented')
             # elif type(step) == ApplyTimeseriesPredictorStep:

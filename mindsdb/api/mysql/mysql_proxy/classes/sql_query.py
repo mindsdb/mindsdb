@@ -343,6 +343,7 @@ class SQLQuery():
                             predictor_metadata[model_name] = {
                                 'timeseries': True,
                                 'window': window,
+                                'nr_predictions': ts_settings.get('nr_predictions'),
                                 'order_by_column': order_by,
                                 'group_by_column': group_by
                             }
@@ -465,6 +466,7 @@ class SQLQuery():
                 where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
                 is_timeseries = predictor_metadata[predictor]['timeseries']
+                log.info("ApplyTimeseriesPredictorStep - predictor metadata: %s", predictor_metadata[predictor])
                 _mdb_make_predictions = None
                 if is_timeseries:
                     if 'LATEST' in self.raw:
@@ -488,8 +490,18 @@ class SQLQuery():
                     integration_type=self.session.integration_type
                 )
 
+                if is_timeseries:
+                    if 'LATEST' not in self.raw:
+                        window_size = predictor_metadata[predictor]['window']
+                        nr_predictions = predictor_metadata[predictor]['nr_predictions']
+                        if len(data) > (window_size + nr_predictions):
+                            data = data[window_size:]
+                            log.info("DATA AFTER TRUNCATION: %s", data)
+                            if len(data) > nr_predictions:
+                                data = data[:-nr_predictions+1]
                 data = [{(key, key): value for key, value in row.items()} for row in data]
 
+                # log.info("DATA AFTER MODIFICATION: %s", data)
                 table_name = get_preditor_alias(step, self.database)
                 values = [{table_name: x} for x in data]
                 columns = {table_name: []}
@@ -503,6 +515,7 @@ class SQLQuery():
                     'columns': columns,
                     'tables': [table_name]
                 }
+                log.info("FINAL DATA: %s", data)
             elif type(step) == JoinStep:
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]

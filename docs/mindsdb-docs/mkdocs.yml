@@ -76,14 +76,15 @@ nav:
     - SELECT: sql/api/select.md
     - JOIN: sql/api/join.md
   - Tutorials:
-    - AI Tables intro: sql/tutorials/ai-tables.md
+    - AI Tables Intro: sql/tutorials/ai-tables.md
     - Regression:
       - Process Quality: sql/tutorials/process-quality.md
-      - Bodyfat Prediction: sql/tutorials/bodyfat.md
+      - Body Fat Prediction: sql/tutorials/bodyfat.md
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
     - Classification:
-      - Crop Recomendation: sql/tutorials/crop-prediction.md
+      - Crop Recommendation: sql/tutorials/crop-prediction.md
       - Customer Churn: sql/tutorials/customer-churn.md
+      - Diabetes: sql/tutorials/diabetes.md
       - Heart Disease: sql/tutorials/heart-disease.md
     - Time series:
       - AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md

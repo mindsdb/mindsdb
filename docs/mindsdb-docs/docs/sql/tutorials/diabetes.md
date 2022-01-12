@@ -110,7 +110,7 @@ We will use a gui manager; **pgAdmin**
 ![Access pg4admin](/assets/tutorials/diabetes/pg4admin/Accessing_pg4admin.gif)
 3. Create a new server connection by navigating to the right side of the page and right click on 'Server', select 'Create' and enter the required details.
 
-    3.1 For the purpose of the exercise, under the General Tab the Name entered is MIndsDB and the host name/address is localhost under the Connection tab .
+    3.1 For the purpose of the exercise, under the General Tab the Name entered is MIndsDB and the host name/address is localhost under the Connection tab.
 ![Create Server](/assets/tutorials/diabetes/pg4admin/Creating_pgserver.gif)
 
 4. To create a new database, select the dropdown of the Server and navigate to 'Databases', right click on it and select 'Create' and then 'Databases'.Enter the required details.

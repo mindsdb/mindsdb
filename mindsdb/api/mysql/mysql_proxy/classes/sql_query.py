@@ -530,9 +530,9 @@ class SQLQuery():
 
                         window_size = predictor_metadata[predictor]['window']
                         nr_predictions = predictor_metadata[predictor]['nr_predictions']
-                        if len(data) > (window_size + nr_predictions):
+                        if len(data) >= (window_size + nr_predictions):
                             data = data[window_size:]
-                            if len(data) > nr_predictions:
+                            if len(data) > nr_predictions and nr_predictions > 1:
                                 data = data[:-nr_predictions+1]
                 data = [{(key, key): value for key, value in row.items()} for row in data]
 

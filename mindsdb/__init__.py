@@ -2,7 +2,7 @@ import os
 import sys
 import json
 
-from mindsdb.__about__ import __version__
+from mindsdb.__about__ import __version__  # noqa: F401
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.fs import get_or_create_data_dir, create_dirs_recursive
 from mindsdb.utilities.functions import args_parse, is_notebook
@@ -77,7 +77,6 @@ if not is_ray_worker:
         os.environ['MINDSDB_DB_CON'] = user_config['storage_db']
     elif os.environ.get('MINDSDB_DB_CON', '') == '':
         os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
-
 
     from mindsdb.utilities.config import Config
     mindsdb_config = Config()

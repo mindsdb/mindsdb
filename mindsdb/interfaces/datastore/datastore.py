@@ -9,7 +9,7 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb_datasources import (
     FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS,
-    SnowflakeDS, AthenaDS, CassandraDS, ScyllaDS
+    SnowflakeDS, AthenaDS, CassandraDS, ScyllaDS, TrinoDS
 )
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predictor
@@ -164,7 +164,8 @@ class DataStore():
                 'snowflake': SnowflakeDS,
                 'athena': AthenaDS,
                 'cassandra': CassandraDS,
-                'scylladb': ScyllaDS
+                'scylladb': ScyllaDS,
+                'trinodb': TrinoDS
             }
 
             try:
@@ -173,7 +174,7 @@ class DataStore():
                 raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
 
             if dsClass is None:
-                raise Exception(f'Unsupported datasource: {source_type}, please install required dependencies!')
+                raise Exception(f"Unsupported datasource: {source_type}, type is {integration['type']}, please install required dependencies!")
 
             if integration['type'] in ['clickhouse']:
                 creation_info = {
@@ -188,7 +189,7 @@ class DataStore():
                     }
                 }
                 ds = dsClass(**creation_info['kwargs'])
-
+            
             elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
                 creation_info = {
                     'class': dsClass.__name__,
@@ -201,7 +202,6 @@ class DataStore():
                         'port': integration['port']
                     }
                 }
-
                 kwargs = creation_info['kwargs']
 
                 integration_folder_name = f'integration_files_{company_id}_{integration["id"]}'
@@ -234,7 +234,7 @@ class DataStore():
 
                 if 'database' in source:
                     kwargs['database'] = source['database']
-
+                
                 ds = dsClass(**kwargs)
 
             elif integration['type'] == 'snowflake':
@@ -285,6 +285,23 @@ class DataStore():
                         'access_key': source['access_key'],
                         'secret_key': source['secret_key'],
                         'region_name': source['region_name']
+                    }
+                }
+
+                ds = dsClass(**creation_info['kwargs'])
+            
+            elif integration['type'] == 'trinodb':
+                creation_info = {
+                    'class': dsClass.__name__,
+                    'args': [],
+                    'kwargs': {
+                        'query': source['query'],
+                        'user': integration['user'],
+                        'password': integration['password'],
+                        'host': integration['host'],
+                        'port': integration['port'],
+                        'schema': integration['schema'],
+                        'catalog': integration['catalog']
                     }
                 }
 

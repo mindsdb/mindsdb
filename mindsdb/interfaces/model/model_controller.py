@@ -245,7 +245,11 @@ class ModelController():
                     elif f'group_{col}' in row:
                         td[col] = row[f'group_{col}']
                     else:
-                        td[col] = df.iloc[i][col]
+                        orginal_index = row.get('original_index')
+                        if orginal_index is None:
+                            log.warning('original_index is None')
+                            orginal_index = i
+                        td[col] = df.iloc[orginal_index][col]
                 dict_arr.append({target: td})
             if pred_format == 'explain':
                 return explain_arr

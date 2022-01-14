@@ -1,9 +1,11 @@
 from contextlib import closing
-import pg8000
+import psycopg
 
 from lightwood.api import dtype
 from mindsdb.integrations.base import Integration
 from mindsdb.utilities.log import log
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.wizards import make_ssl_cert
 
 
 class PostgreSQLConnectionChecker:
@@ -15,21 +17,19 @@ class PostgreSQLConnectionChecker:
         self.database = kwargs.get('database', 'postgres')
 
     def _get_connection(self):
-        return pg8000.connect(
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            host=self.host,
-            port=self.port
-        )
+        conn = psycopg.connect(f'host={self.host} port={self.port} dbname={self.database} user={self.user} password={self.password}', connect_timeout=10)
+        return conn
 
     def check_connection(self):
         try:
             con = self._get_connection()
             with closing(con) as con:
-                con.run('select 1;')
+                cur = con.cursor()
+                cur.execute('select 1;')
             connected = True
-        except Exception:
+        except Exception as e:
+            print('EXCEPTION!')
+            print(e)
             connected = False
         return connected
 
@@ -144,6 +144,9 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
                 status text,
                 accuracy text,
                 predict text,
+                update_status text,
+                mindsdb_version text,
+                error text,
                 select_data_query text,
                 training_options text
             )

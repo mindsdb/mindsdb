@@ -1,3 +1,4 @@
+
 MindsDB as a Machine Learning framework can help marketing, sales, and customer retention teams determine the best incentive and the right time to make an offer to minimize customer turnover.
 
 In this tutorial you will learn how to use SQL queries to train a machine learning model and make predictions in three simple steps:
@@ -47,7 +48,7 @@ If you got the above screen that means you have successfully connected. If you h
 
 ### Data Overview
 
-In this tutorial, we will use the customer churn data-set. Each row represents a customer and we will train a machine learning model to help us predict if the customer is going to stop using the company products. Below is a short description of each feature inside the data.
+In this tutorial, we will use the [customer churn data-set](https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/customer_churn/raw_data/WA_Fn-UseC_-Telco-Customer-Churn.csv) . Each row represents a customer and we will train a machine learning model to help us predict if the customer is going to stop using the company products. Below is a short description of each feature inside the data.
 
 * CustomerId - Customer ID
 * Gender - Male or Female customer

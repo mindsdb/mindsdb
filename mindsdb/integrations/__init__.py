@@ -7,17 +7,15 @@ from .postgres.postgres import PostgreSQLConnectionChecker
 from .redis.redisdb import RedisConnectionChecker
 from .kafka.kafkadb import KafkaConnectionChecker
 from .snowflake.snowflake import SnowflakeConnectionChecker
-
+from .trinodb.trinodb import TrinodbConnectionChecker
 
 try:
     from .scylladb.scylladb import ScyllaDBConnectionChecker
 except ImportError:
-    print("ScyllaDB Datasource is not available by default. If you wish to use it, please install mindsdb_datasources[scylla]")
     ScyllaDBConnectionChecker = None
 try:
     from .cassandra.cassandra import CassandraConnectionChecker
 except ImportError:
-    print("Cassandra Datasource is not available by default. If you wish to use it, please install mindsdb_datasources[cassandra]")
     CassandraConnectionChecker = None
 
 
@@ -32,7 +30,8 @@ CHECKERS = {
     "cockroachdb": PostgreSQLConnectionChecker,
     "redis": RedisConnectionChecker,
     "kafka": KafkaConnectionChecker,
-    "snowflake": SnowflakeConnectionChecker
+    "snowflake": SnowflakeConnectionChecker,
+    "trinodb": TrinodbConnectionChecker
 }
 
 

@@ -166,6 +166,6 @@ class Stream(Base):
     learning_threshold = Column(Integer, default=0)
 
 
-
-Base.metadata.create_all(engine)
-orm.configure_mappers()
+# DDL is changing through migrations
+# Base.metadata.create_all(engine)
+# orm.configure_mappers()

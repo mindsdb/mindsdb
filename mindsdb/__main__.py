@@ -21,6 +21,7 @@ from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
 import mindsdb.interfaces.storage.db as db
+from mindsdb.migrations import migrate
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
 
@@ -51,6 +52,12 @@ if __name__ == '__main__':
     mp.freeze_support()
     args = args_parse()
     config = Config()
+
+    is_cloud = config.get('cloud', False)
+
+    if not is_cloud:
+        print('Applying database migrations:')
+        migrate.migrate_to_head()
 
     if args.verbose is True:
         # Figure this one out later
@@ -83,7 +90,6 @@ if __name__ == '__main__':
             except Exception:
                 pass
 
-    is_cloud = config.get('cloud', False)
     if not is_cloud:
         # region Mark old predictors as outdated
         is_modified = False

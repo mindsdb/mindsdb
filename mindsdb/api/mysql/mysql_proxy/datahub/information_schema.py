@@ -1,3 +1,5 @@
+from functools import partial
+
 import pandas as pd
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -5,7 +7,6 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.file_datanode import FileDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datasource_datanode import DataSourceDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
 
 
@@ -28,18 +29,17 @@ class InformationSchema(DataNode):
         self.data_store = data_store
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(model_interface, ai_table, data_store, datasource_interface),
-            'datasource': DataSourceDataNode(data_store),
-            'file': FileDataNode(data_store)
+            'files': FileDataNode(data_store)
         }
 
         self.get_dataframe_funcs = {
             'TABLES': self._get_tables,
             'COLUMNS': self._get_columns,
             'SCHEMATA': self._get_schemata,
-            'EVENTS': self._get_empty_table,
-            'ROUTINES': self._get_empty_table,
-            'TRIGGERS': self._get_empty_table,
-            'PLUGINS': self._get_empty_table,
+            'EVENTS': partial(self._get_empty_table, 'EVENTS'),
+            'ROUTINES': partial(self._get_empty_table, 'ROUTINES'),
+            'TRIGGERS': partial(self._get_empty_table, 'TRIGGERS'),
+            'PLUGINS': partial(self._get_empty_table, 'PLUGINS'),
             'ENGINES': self._get_engines
         }
 
@@ -94,6 +94,7 @@ class InformationSchema(DataNode):
 
         for ds_name in self.get_datasources_names():
             ds = self.get(ds_name)
+            ds_tables = ds.get_tables()
             data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
 
         df = pd.DataFrame(data, columns=columns)

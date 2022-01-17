@@ -1188,7 +1188,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     targets=[Identifier(parts=['table_name'], alias=Identifier(f'Tables_in_{schema}'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
                     where=BinaryOperation('and', args=[
-                        BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema.upper())]),
+                        BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                         BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
                     ])
                 )
@@ -1336,6 +1336,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 table_name = None
                 if condition == 'like' and isinstance(expression, Constant):
                     table_name = expression.value
+                elif condition == 'from' and isinstance(expression, Identifier):
+                    table_name = expression.parts[-1]
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
                     log.warning(err_str)

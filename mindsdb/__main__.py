@@ -53,8 +53,11 @@ if __name__ == '__main__':
     args = args_parse()
     config = Config()
 
-    print('Applying database migrations:')
-    migrate.migrate_to_head()
+    is_cloud = config.get('cloud', False)
+
+    if not is_cloud:
+        print('Applying database migrations:')
+        migrate.migrate_to_head()
 
     if args.verbose is True:
         # Figure this one out later
@@ -87,7 +90,6 @@ if __name__ == '__main__':
             except Exception:
                 pass
 
-    is_cloud = config.get('cloud', False)
     if not is_cloud:
         # region Mark old predictors as outdated
         is_modified = False

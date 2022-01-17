@@ -497,43 +497,43 @@ class SQLQuery():
                     integration_type=self.session.integration_type
                 )
 
-                if is_timeseries:
-                    if 'LATEST' not in self.raw:
-                        # remove additional records from predictor results:
-                        # first 'window_size' and last 'nr_prediction' records
-                        # otherwise there are many unxpected rows in prediciton result:
-                        # ----------------------------------------------------------------------------------------
-                        # mysql> SELECT tb.time, tb.state, tb.pnew_case, tb.new_case from
-                        # MYSQL_LOCAL.test_data.covid AS
-                        # ta JOIN mindsdb.covid_hor3 AS tb
-                        # WHERE ta.state = "CA" AND ta.time BETWEEN "2020-10-19" AND "2020-10-20";
-                        # ----------------------------------------------------------------------------------------
-                        # +------------+-------+-----------+----------+
-                        # | time       | state | pnew_case | new_case |
-                        # +------------+-------+-----------+----------+
-                        # | 2020-10-09 | CA    | 0         | 2862     |
-                        # | 2020-10-10 | CA    | 0         | 2979     |
-                        # | 2020-10-11 | CA    | 0         | 3075     |
-                        # | 2020-10-12 | CA    | 0         | 3329     |
-                        # | 2020-10-13 | CA    | 0         | 2666     |
-                        # | 2020-10-14 | CA    | 0         | 2378     |
-                        # | 2020-10-15 | CA    | 0         | 3449     |
-                        # | 2020-10-16 | CA    | 0         | 3803     |
-                        # | 2020-10-17 | CA    | 0         | 4170     |
-                        # | 2020-10-18 | CA    | 0         | 3806     |
-                        # | 2020-10-19 | CA    | 0         | 3286     |
-                        # | 2020-10-20 | CA    | 0         | 3474     |
-                        # | 2020-10-21 | CA    | 0         | 3474     |
-                        # | 2020-10-22 | CA    | 0         | 3474     |
-                        # +------------+-------+-----------+----------+
-                        # 14 rows in set (2.52 sec)
+                # if is_timeseries:
+                #     if 'LATEST' not in self.raw:
+                #         # remove additional records from predictor results:
+                #         # first 'window_size' and last 'nr_prediction' records
+                #         # otherwise there are many unxpected rows in prediciton result:
+                #         # ----------------------------------------------------------------------------------------
+                #         # mysql> SELECT tb.time, tb.state, tb.pnew_case, tb.new_case from
+                #         # MYSQL_LOCAL.test_data.covid AS
+                #         # ta JOIN mindsdb.covid_hor3 AS tb
+                #         # WHERE ta.state = "CA" AND ta.time BETWEEN "2020-10-19" AND "2020-10-20";
+                #         # ----------------------------------------------------------------------------------------
+                #         # +------------+-------+-----------+----------+
+                #         # | time       | state | pnew_case | new_case |
+                #         # +------------+-------+-----------+----------+
+                #         # | 2020-10-09 | CA    | 0         | 2862     |
+                #         # | 2020-10-10 | CA    | 0         | 2979     |
+                #         # | 2020-10-11 | CA    | 0         | 3075     |
+                #         # | 2020-10-12 | CA    | 0         | 3329     |
+                #         # | 2020-10-13 | CA    | 0         | 2666     |
+                #         # | 2020-10-14 | CA    | 0         | 2378     |
+                #         # | 2020-10-15 | CA    | 0         | 3449     |
+                #         # | 2020-10-16 | CA    | 0         | 3803     |
+                #         # | 2020-10-17 | CA    | 0         | 4170     |
+                #         # | 2020-10-18 | CA    | 0         | 3806     |
+                #         # | 2020-10-19 | CA    | 0         | 3286     |
+                #         # | 2020-10-20 | CA    | 0         | 3474     |
+                #         # | 2020-10-21 | CA    | 0         | 3474     |
+                #         # | 2020-10-22 | CA    | 0         | 3474     |
+                #         # +------------+-------+-----------+----------+
+                #         # 14 rows in set (2.52 sec)
 
-                        window_size = predictor_metadata[predictor]['window']
-                        nr_predictions = predictor_metadata[predictor]['nr_predictions']
-                        if len(data) >= (window_size + nr_predictions):
-                            data = data[window_size:]
-                            if len(data) > nr_predictions and nr_predictions > 1:
-                                data = data[:-nr_predictions+1]
+                #         window_size = predictor_metadata[predictor]['window']
+                #         nr_predictions = predictor_metadata[predictor]['nr_predictions']
+                #         if len(data) >= (window_size + nr_predictions):
+                #             data = data[window_size:]
+                #             if len(data) > nr_predictions and nr_predictions > 1:
+                #                 data = data[:-nr_predictions+1]
                 data = [{(key, key): value for key, value in row.items()} for row in data]
 
                 table_name = get_preditor_alias(step, self.database)
@@ -655,15 +655,15 @@ class SQLQuery():
                 # +------------+------------+-------+-----------+----------+
                 # 9 rows in set (2.07 sec)
 
-                if is_timeseries:
-                    data_values = []
-                    for row in data['values']:
-                        for key in row:
-                            if 'mindsdb' in key:
-                                if not is_empty_prediction_row(row[key]):
-                                    data_values.append(row)
-                                    break
-                    data['values'] = data_values
+                # if is_timeseries:
+                #     data_values = []
+                #     for row in data['values']:
+                #         for key in row:
+                #             if 'mindsdb' in key:
+                #                 if not is_empty_prediction_row(row[key]):
+                #                     data_values.append(row)
+                #                     break
+                #     data['values'] = data_values
 
             elif type(step) == FilterStep:
                 raise Exception('FilterStep is not implemented')

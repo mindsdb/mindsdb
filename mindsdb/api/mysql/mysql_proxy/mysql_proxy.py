@@ -43,6 +43,7 @@ from mindsdb_sql.parser.ast import (
     Star,
     Show,
     Set,
+    Use
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource
@@ -1376,11 +1377,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 log.warning(f'SQL statement is not processable, return OK package: {sql}')
                 self.packet(OkPacket).send()
+        elif isinstance(statement, Use):
+            db_name = statement.value.parts[-1]
+            self.change_default_db(db_name)
+            self.packet(OkPacket).send()
         elif keyword == 'set':
             log.warning(f'Unknown SET query, return OK package: {sql}')
-            self.packet(OkPacket).send()
-        elif keyword == 'use':
-            self.session.database = sql_lower.split()[1].strip(' ;')
             self.packet(OkPacket).send()
         elif keyword == 'create_ai_table':
             self.answer_create_ai_table(struct)
@@ -1400,9 +1402,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if statement.from_table is None:
                 self.answer_single_row_select(statement)
                 return
-            # if 'connection_id()' in sql_lower:
-            #     self.answer_connection_id(sql)
-            #     return
             if "table_name,table_comment,if(table_type='base table', 'table', table_type)" in sql_lower:
                 # TABLEAU
                 # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA LIKE 'mindsdb' AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
@@ -2184,6 +2183,32 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'is_cloud': False
         }
 
+    def is_db_exists(self, db_name):
+        sql_statement = Select(
+            targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
+            from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
+            where=BinaryOperation('=', args=[Identifier('schema_name'), Constant(db_name)])
+        )
+        query = SQLQuery(
+            str(sql_statement),
+            session=self.session
+        )
+        result = query.fetch(
+            self.session.datahub
+        )
+        if result.get('success') is True and len(result.get('result')) > 0:
+            return True
+        return False
+
+    def change_default_db(self, db_name):
+        # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can
+        # send packet with COM_INIT_DB=null. In this case keep old database name as default.
+        if db_name != 'null':
+            if self.is_db_exists(db_name):
+                self.session.database = db_name
+            else:
+                raise Exception(f"Database {db_name} does not exists")
+
     def handle(self):
         """
         Handle new incoming connections
@@ -2247,10 +2272,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     break
                 elif p.type.value == COMMANDS.COM_INIT_DB:
                     new_database = p.database.value.decode()
-                    # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can
-                    # send packet with COM_INIT_DB=null. In this case keep old database name as default.
-                    if new_database != 'null':
-                        self.session.database = new_database
+                    self.change_default_db(new_database)
                     self.packet(OkPacket).send()
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:
                     # this command is deprecated, but console client still use it.

@@ -2,6 +2,9 @@ import duckdb
 import pandas as pd
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Select, Identifier, BinaryOperation, OrderBy
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.utilities.log import log
 
 
 def _remove_table_name(root):
@@ -37,10 +40,14 @@ def query_df(df, query):
                 orderby.field.parts = [orderby.field.parts[-1]]
     _remove_table_name(query.where)
 
-    # FIXME https://github.com/mindsdb/mindsdb_sql/issues/130
-    # we need way to dump suery in postgres dialect
-    sql_query = str(query).replace('`', '')
-    res = duckdb.query_df(df, 'df_table', sql_query)
+    render = SqlalchemyRender('postgres')
+    try:
+        query_str = render.get_string(query, with_failback=False)
+    except Exception as e:
+        log.error(f"Exception during query casting to 'postgres' dialect. Query: {query}. Error: {e}")
+        query_str = render.get_string(query, with_failback=True)
+
+    res = duckdb.query_df(df, 'df_table', query_str)
     result_df = res.df()
     result_df = result_df.where(pd.notnull(result_df), None)
     return result_df

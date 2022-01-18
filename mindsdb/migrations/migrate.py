@@ -8,6 +8,7 @@ from alembic.migration import MigrationContext
 
 import mindsdb.interfaces.storage.db as db
 
+
 def migrate_to_head():
     '''
         Trying to update database to head revision.
@@ -35,4 +36,3 @@ def migrate_to_head():
             return
 
     upgrade(config=config, revision='head')
-

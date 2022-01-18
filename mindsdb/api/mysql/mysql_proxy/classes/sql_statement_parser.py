@@ -151,6 +151,7 @@ class SqlStatementParser():
             describe
 
             create_predictor
+            create_table
             create_ai_table
             create_datasource
             create_database
@@ -164,6 +165,7 @@ class SqlStatementParser():
         CREATE_VIEW = CREATE + VIEW
         CREATE_DATASOURCE = CREATE + DATASOURCE
         CREATE_DATABASE = CREATE + DATABASE
+        CREATE_TABLE = CREATE + TABLE
 
         expr = (
             START | SET | USE
@@ -173,7 +175,7 @@ class SqlStatementParser():
             | CREATE_PREDICTOR | CREATE_AI_TABLE
             | CREATE_VIEW | DROP | RETRAIN
             | CREATE_DATASOURCE | DESCRIBE
-            | CREATE_DATABASE
+            | CREATE_DATABASE | CREATE_TABLE
         )('keyword')
 
         r = expr.parseString(sql)

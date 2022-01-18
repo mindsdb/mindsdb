@@ -76,7 +76,7 @@ class SqlStatementParser():
                 self._struct = self.parse_as_delete()
             elif self._keyword == 'drop':
                 self._struct = None
-            elif self._keyword == 'create_predictor':
+            elif self._keyword == 'create_predictor' or self._keyword == 'create_table':
                 self._struct = self.parse_as_create_predictor()
             elif self._keyword in 'create_ai_table':
                 self._struct = self.parse_as_create_ai_table()
@@ -151,17 +151,21 @@ class SqlStatementParser():
             describe
 
             create_predictor
+            create_table
             create_ai_table
             create_datasource
+            create_database
         '''
-        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DATASOURCE, DROP, RETRAIN, DESCRIBE = map(
+        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DATASOURCE, DROP, RETRAIN, DESCRIBE, DATABASE = map(
             CaselessKeyword,
-            "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DATASOURCE DROP RETRAIN DESCRIBE".split()
+            "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DATASOURCE DROP RETRAIN DESCRIBE DATABASE".split()
         )
         CREATE_PREDICTOR = CREATE + PREDICTOR
         CREATE_AI_TABLE = CREATE + AI + TABLE
         CREATE_VIEW = CREATE + VIEW
         CREATE_DATASOURCE = CREATE + DATASOURCE
+        CREATE_DATABASE = CREATE + DATABASE
+        CREATE_TABLE = CREATE + TABLE
 
         expr = (
             START | SET | USE
@@ -171,6 +175,7 @@ class SqlStatementParser():
             | CREATE_PREDICTOR | CREATE_AI_TABLE
             | CREATE_VIEW | DROP | RETRAIN
             | CREATE_DATASOURCE | DESCRIBE
+            | CREATE_DATABASE | CREATE_TABLE
         )('keyword')
 
         r = expr.parseString(sql)
@@ -299,8 +304,8 @@ class SqlStatementParser():
         return res
 
     def parse_as_create_predictor(self) -> dict:
-        CREATE, PREDICTOR, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, HORIZON, USING, ASK, DESC = map(
-            CaselessKeyword, "CREATE PREDICTOR FROM WHERE PREDICT AS ORDER GROUP BY WINDOW HORIZON USING ASK DESC".split()
+        CREATE, PREDICTOR, TABLE, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, HORIZON, USING, ASK, DESC = map(
+            CaselessKeyword, "CREATE PREDICTOR TABLE FROM WHERE PREDICT AS ORDER GROUP BY WINDOW HORIZON USING ASK DESC".split()
         )
         ORDER_BY = ORDER + BY
         GROUP_BY = GROUP + BY
@@ -317,7 +322,7 @@ class SqlStatementParser():
         using_item = Group((word | QuotedString("`"))('name') + Word('=').suppress() + (word | QuotedString("'"))('value'))
 
         expr = (
-            CREATE + PREDICTOR + word('predictor_name') + FROM + Optional(worddot)('integration_name')
+            CREATE + (PREDICTOR | TABLE) + word('predictor_name') + FROM + Optional(worddot)('integration_name')
             + Optional(originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name')))
             + PREDICT
             + delimitedList(predict_item, delim=',')('predict')

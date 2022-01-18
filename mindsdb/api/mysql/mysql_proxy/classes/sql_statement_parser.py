@@ -76,7 +76,7 @@ class SqlStatementParser():
                 self._struct = self.parse_as_delete()
             elif self._keyword == 'drop':
                 self._struct = None
-            elif self._keyword == 'create_predictor':
+            elif self._keyword == 'create_predictor' or self._keyword == 'create_table':
                 self._struct = self.parse_as_create_predictor()
             elif self._keyword in 'create_ai_table':
                 self._struct = self.parse_as_create_ai_table()
@@ -304,8 +304,8 @@ class SqlStatementParser():
         return res
 
     def parse_as_create_predictor(self) -> dict:
-        CREATE, PREDICTOR, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, HORIZON, USING, ASK, DESC = map(
-            CaselessKeyword, "CREATE PREDICTOR FROM WHERE PREDICT AS ORDER GROUP BY WINDOW HORIZON USING ASK DESC".split()
+        CREATE, PREDICTOR, TABLE, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, HORIZON, USING, ASK, DESC = map(
+            CaselessKeyword, "CREATE PREDICTOR TABLE FROM WHERE PREDICT AS ORDER GROUP BY WINDOW HORIZON USING ASK DESC".split()
         )
         ORDER_BY = ORDER + BY
         GROUP_BY = GROUP + BY
@@ -322,7 +322,7 @@ class SqlStatementParser():
         using_item = Group((word | QuotedString("`"))('name') + Word('=').suppress() + (word | QuotedString("'"))('value'))
 
         expr = (
-            CREATE + PREDICTOR + word('predictor_name') + FROM + Optional(worddot)('integration_name')
+            CREATE + (PREDICTOR | TABLE) + word('predictor_name') + FROM + Optional(worddot)('integration_name')
             + Optional(originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name')))
             + PREDICT
             + delimitedList(predict_item, delim=',')('predict')

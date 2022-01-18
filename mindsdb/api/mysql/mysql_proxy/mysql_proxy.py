@@ -1384,7 +1384,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket).send()
         elif keyword == 'create_ai_table':
             self.answer_create_ai_table(struct)
-        elif keyword == 'create_predictor':
+        elif keyword == 'create_predictor' or keyword == 'create_table':
             self.answer_create_predictor(struct)
         elif keyword == 'delete' and \
                 ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):

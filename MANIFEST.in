@@ -1,2 +1,2 @@
 include requirements.txt
-include alembic.ini
+include mindsdb/migrations/alembic.ini

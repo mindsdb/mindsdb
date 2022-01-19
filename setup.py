@@ -55,6 +55,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(),
+    package_data={'': ['migrations/alembic.ini']},
     install_requires=pkgs,
     dependency_links=new_links,
     classifiers=[

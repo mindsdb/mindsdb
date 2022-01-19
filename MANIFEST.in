@@ -1,1 +1,2 @@
 include requirements.txt
+include alembic.ini

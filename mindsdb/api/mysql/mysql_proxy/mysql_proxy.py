@@ -1387,7 +1387,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'integration_name': statement.integration_name.parts[-1],
                 'select': statement.query,
                 'predict': [x.parts[-1] for x in statement.targets]
+                # 'order_by', 'group_by', 'window', 'nr_predictions'
             }
+            if statement['using'] is not None:
+                struct['using'] = statement['using']
+            if statement['datasource_name'] is not None:
+                struct['datasource_name'] = statement['datasource_name']
             self.answer_create_predictor(struct)
         elif keyword == 'set':
             log.warning(f'Unknown SET query, return OK package: {sql}')

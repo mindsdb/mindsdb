@@ -16,7 +16,7 @@ def migrate_to_head():
          then do nothing.
     '''
 
-    config_file = Path(__file__).parent.parent.parent / 'alembic.ini'
+    config_file = Path(__file__).parent / 'alembic.ini'
     config = Config(config_file)
 
     # mindsdb can runs not from project directory

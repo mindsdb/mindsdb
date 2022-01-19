@@ -191,3 +191,4 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/ver/dist'
         DEST_DIR: 'mindsdb-installer/ver'
+

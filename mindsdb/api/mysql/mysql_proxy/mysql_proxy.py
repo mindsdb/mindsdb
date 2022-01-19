@@ -46,7 +46,7 @@ from mindsdb_sql.parser.ast import (
     Use
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource, CreatePredictor
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -1381,13 +1381,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
             self.packet(OkPacket).send()
+        elif isinstance(statement, CreatePredictor):
+            struct = {
+                'predictor_name': statement.name.parts[-1],
+                'integration_name': statement.integration_name.parts[-1],
+                'select': statement.query,
+                'predict': [x.parts[-1] for x in statement.targets]
+            }
+            self.answer_create_predictor(struct)
         elif keyword == 'set':
             log.warning(f'Unknown SET query, return OK package: {sql}')
             self.packet(OkPacket).send()
         elif keyword == 'create_ai_table':
             self.answer_create_ai_table(struct)
-        elif keyword == 'create_predictor' or keyword == 'create_table':
-            self.answer_create_predictor(struct)
+        # elif keyword == 'create_predictor' or keyword == 'create_table':
+        #     self.answer_create_predictor(struct)
         elif keyword == 'delete' and \
                 ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
             self.delete_predictor_sql(sql)

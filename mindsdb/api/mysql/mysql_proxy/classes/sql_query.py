@@ -114,18 +114,18 @@ def markQueryVar(where):
     elif isinstance(where, UnaryOperation):
         markQueryVar(where.args[0])
     elif isinstance(where, Constant):
-        if where.value == '$var':
+        if where.value.startswith('$var['):
             where.is_var = True
 
 
-def replaceQueryVar(where, val):
+def replaceQueryVar(where, val, index):
     if isinstance(where, BinaryOperation):
-        replaceQueryVar(where.args[0], val)
-        replaceQueryVar(where.args[1], val)
+        replaceQueryVar(where.args[0], val, index)
+        replaceQueryVar(where.args[1], val, index)
     elif isinstance(where, UnaryOperation):
-        replaceQueryVar(where.args[0], val)
+        replaceQueryVar(where.args[0], val, index)
     elif isinstance(where, Constant):
-        if hasattr(where, 'is_var') and where.is_var is True:
+        if hasattr(where, 'is_var') and where.is_var is True and where.value == f'$var[{index}]':
             where.value = val
 
 
@@ -244,9 +244,9 @@ class SQLQuery():
                 raise Exception(f'Wrong step type for MultipleSteps: {step}')
             markQueryVar(substep.query.where)
 
-        for v in values:
+        for i, v in enumerate(values):
             for substep in step.steps:
-                replaceQueryVar(substep.query.where, v)
+                replaceQueryVar(substep.query.where, v, i)
             sub_data = self._multiple_steps(step)
             join_query_data(data, sub_data)
 
@@ -416,8 +416,8 @@ class SQLQuery():
                 if type(substep) == FetchDataframeStep:
                     query = substep.query
                     markQueryVar(query.where)
-                    for value in values:
-                        replaceQueryVar(query.where, value)
+                    for i, value in enumerate(values):
+                        replaceQueryVar(query.where, value, i)
                         sub_data = self._fetch_dataframe_step(substep)
                         if len(data['columns']) == 0:
                             data['columns'] = sub_data['columns']

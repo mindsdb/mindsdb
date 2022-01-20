@@ -23,7 +23,7 @@ import os
 
 
 # init database
-import __init__
+from mindsdb import __init__
 from mindsdb.interfaces.storage.db import Base
 target_metadata = Base.metadata
 

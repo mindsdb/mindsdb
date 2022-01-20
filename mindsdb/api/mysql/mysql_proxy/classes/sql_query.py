@@ -346,14 +346,14 @@ class SQLQuery():
                             window = ts_settings.get('window')
                             order_by = ts_settings.get('order_by')[0]
                             group_by = ts_settings.get('group_by')
-                            if isinstance(group_by, list):
-                                group_by = ts_settings.get('group_by')[0]
+                            if isinstance(group_by, list) is False and group_by is not None:
+                                group_by = [group_by]
                             predictor_metadata[model_name] = {
                                 'timeseries': True,
                                 'window': window,
                                 'nr_predictions': ts_settings.get('nr_predictions'),
                                 'order_by_column': order_by,
-                                'group_by_column': group_by
+                                'group_by_columns': group_by
                             }
                         else:
                             predictor_metadata[model_name] = {

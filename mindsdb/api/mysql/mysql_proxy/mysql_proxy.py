@@ -46,7 +46,7 @@ from mindsdb_sql.parser.ast import (
     Use
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource, CreatePredictor
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -537,7 +537,30 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise Exception(f"Something went wrong during deleting of datasource '{ds_name}'.")
         self.packet(OkPacket).send()
 
-    def answer_create_predictor(self, struct):
+    def answer_create_predictor(self, statement):
+        struct = {
+            'predictor_name': statement.name.parts[-1],
+            'integration_name': statement.integration_name.parts[-1],
+            'select': statement.query_str,
+            'predict': [x.parts[-1] for x in statement.targets]
+        }
+        if len(struct['predict']) > 1:
+            raise Exception("Only one field can be in 'PREDICT'")
+        if statement.using is not None:
+            struct['using'] = statement.using
+        if statement.datasource_name is not None:
+            struct['datasource_name'] = statement.datasource_name.parts[-1]
+        if statement.order_by is not None:
+            struct['order_by'] = [x.field.parts[-1] for x in statement.order_by]
+            if len(struct['order_by']) > 1:
+                raise Exception("Only one field can be in 'OPRDER BY'")
+        if statement.group_by is not None:
+            struct['group_by'] = [x.parts[-1] for x in statement.group_by]
+        if statement.window is not None:
+            struct['window'] = statement.window
+        if statement.horizon is not None:
+            struct['nr_predictions'] = statement.horizon
+
         model_interface = self.session.model_interface
         data_store = self.session.data_store
 
@@ -559,9 +582,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds = data_store.save_datasource(ds_name, integration_name, {'query': struct['select']})
             ds_data = data_store.get_datasource(ds_name)
 
-        # TODO add alias here
-        predict = [x['name'] for x in struct['predict']]
-
         timeseries_settings = {}
         for w in ['order_by', 'group_by', 'window', 'nr_predictions']:
             if w in struct:
@@ -572,11 +592,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if 'timeseries_settings' not in kwargs:
                 kwargs['timeseries_settings'] = timeseries_settings
             else:
+                if isinstance(kwargs.get('timeseries_settings'), str):
+                    kwargs['timeseries_settings'] = json.loads(kwargs['timeseries_settings'])
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
         ds_column_names = [x['name'] for x in ds_data['columns']]
         try:
-            predict = self._check_predict_columns(predict, ds_column_names)
+            predict = self._check_predict_columns(struct['predict'], ds_column_names)
         except Exception:
             data_store.delete_datasource(ds_name)
             raise
@@ -1381,13 +1403,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
             self.packet(OkPacket).send()
+        elif isinstance(statement, CreatePredictor):
+            self.answer_create_predictor(statement)
         elif keyword == 'set':
             log.warning(f'Unknown SET query, return OK package: {sql}')
             self.packet(OkPacket).send()
         elif keyword == 'create_ai_table':
             self.answer_create_ai_table(struct)
-        elif keyword == 'create_predictor' or keyword == 'create_table':
-            self.answer_create_predictor(struct)
         elif keyword == 'delete' and \
                 ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
             self.delete_predictor_sql(sql)
@@ -1395,7 +1417,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif isinstance(statement, Insert):
             self.process_insert(statement)
         elif keyword in ('update', 'insert'):
-            raise NotImplementedError('Update and Insert not implemented')
+            raise NotImplementedError('Update and Insert are not implemented')
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             self.packet(OkPacket).send()
         elif isinstance(statement, Select):

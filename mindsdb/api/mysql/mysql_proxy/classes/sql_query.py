@@ -115,7 +115,7 @@ def markQueryVar(where):
     elif isinstance(where, UnaryOperation):
         markQueryVar(where.args[0])
     elif isinstance(where, Constant):
-        if where.value.startswith('$var['):
+        if str(where.value).startswith('$var['):
             where.is_var = True
 
 
@@ -352,7 +352,7 @@ class SQLQuery():
                             predictor_metadata[model_name] = {
                                 'timeseries': True,
                                 'window': window,
-                                'nr_predictions': ts_settings.get('nr_predictions'),
+                                'horizon': ts_settings.get('horizon'),
                                 'order_by_column': order_by,
                                 'group_by_columns': group_by
                             }
@@ -501,7 +501,7 @@ class SQLQuery():
                 # if is_timeseries:
                 #     if 'LATEST' not in self.raw:
                 #         # remove additional records from predictor results:
-                #         # first 'window_size' and last 'nr_prediction' records
+                #         # first 'window_size' and last 'horizon' records
                 #         # otherwise there are many unxpected rows in prediciton result:
                 #         # ----------------------------------------------------------------------------------------
                 #         # mysql> SELECT tb.time, tb.state, tb.pnew_case, tb.new_case from
@@ -530,11 +530,11 @@ class SQLQuery():
                 #         # 14 rows in set (2.52 sec)
 
                 #         window_size = predictor_metadata[predictor]['window']
-                #         nr_predictions = predictor_metadata[predictor]['nr_predictions']
-                #         if len(data) >= (window_size + nr_predictions):
+                #         horizon = predictor_metadata[predictor]['horizon']
+                #         if len(data) >= (window_size + horizon):
                 #             data = data[window_size:]
-                #             if len(data) > nr_predictions and nr_predictions > 1:
-                #                 data = data[:-nr_predictions+1]
+                #             if len(data) > horizon and horizon > 1:
+                #                 data = data[:-horizon + 1]
                 data = [{(key, key): value for key, value in row.items()} for row in data]
 
                 table_name = get_preditor_alias(step, self.database)

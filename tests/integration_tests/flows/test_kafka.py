@@ -114,7 +114,7 @@ class KafkaTest(unittest.TestCase):
                 'timeseries_settings': {
                     "order_by": ["order"],
                     "group_by": ["group"],
-                    "nr_predictions": 1,
+                    "horizon": 1,
                     "use_previous_target": True,
                     "window": 10
                 },

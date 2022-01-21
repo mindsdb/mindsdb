@@ -285,7 +285,7 @@ class MindsDBDataNode(DataNode):
             __mdb_make_predictions = set([row.get('__mdb_make_predictions', True) for row in where_data]) == {True}
 
             predict = model['predict']
-            group_by = timeseries_settings['group_by']
+            group_by = timeseries_settings['group_by'] or []
             order_by_column = timeseries_settings['order_by'][0]
             horizon = timeseries_settings['horizon']
 

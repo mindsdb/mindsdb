@@ -48,7 +48,7 @@ db.predictors.insert({
         "timeseries_settings": {                
                 "order_by": list of fields,                
                 "group_by": list of fields,    #optional            
-                "nr_predictions": int,         #optional       
+                "horizon": int,         #optional       
                 "use_previous_target": Boolean,                
                 "window": int            
             }

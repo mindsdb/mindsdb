@@ -14,7 +14,7 @@ VALUES     ('model_name',
             '{ "timeseries_settings": {                
                 "order_by": ["order"],                
                 "group_by": ["group"],                
-                "nr_predictions": 1,                
+                "horizon": 1,                
                 "use_previous_target": True,                
                 "window": 10            
             }}' 
@@ -25,7 +25,7 @@ You can specify the following `keys` inside the `timeseries_settings`:
 
 * order_by (list of strings) -- The list of columns names on which the data should be ordered.
 * group_by (list of strings) -- The list of columns based on which to group multiple unrelated entities present in your timeseries data.
-* nr_predictions (int) --
+* horizon (int) --
 * use_previous_target (Boolean) -- Use the previous values of the target column[s] for making predictions. Defaults to True
 * window (int) --  The number of rows to "look back" into when making a prediction, after the rows are ordered by the order_by column and split into groups. Could be used to specify something like "Always use the previous 10 rows". 
 

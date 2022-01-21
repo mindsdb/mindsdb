@@ -119,15 +119,15 @@ def markQueryVar(where):
             where.is_var = True
 
 
-def replaceQueryVar(where, val, index):
+def replaceQueryVar(where, var_value, var_name):
     if isinstance(where, BinaryOperation):
-        replaceQueryVar(where.args[0], val, index)
-        replaceQueryVar(where.args[1], val, index)
+        replaceQueryVar(where.args[0], var_value, var_name)
+        replaceQueryVar(where.args[1], var_value, var_name)
     elif isinstance(where, UnaryOperation):
-        replaceQueryVar(where.args[0], val, index)
+        replaceQueryVar(where.args[0], var_value, var_name)
     elif isinstance(where, Constant):
-        if hasattr(where, 'is_var') and where.is_var is True and where.value == f'$var[{index}]':
-            where.value = val
+        if hasattr(where, 'is_var') and where.is_var is True and where.value == f'$var[{var_name}]':
+            where.value = var_value
 
 
 def join_query_data(target, source):
@@ -230,7 +230,7 @@ class SQLQuery():
             join_query_data(data, sub_data)
         return data
 
-    def _multiple_steps_reduce(self, step, values):
+    def _multiple_steps_reduce(self, step, vars):
         if step.reduce != 'union':
             raise Exception(f'Unknown MultipleSteps type: {step.reduce}')
 
@@ -245,9 +245,9 @@ class SQLQuery():
                 raise Exception(f'Wrong step type for MultipleSteps: {step}')
             markQueryVar(substep.query.where)
 
-        for i, v in enumerate(values):
+        for name, value in vars.items():
             for substep in step.steps:
-                replaceQueryVar(substep.query.where, v, i)
+                replaceQueryVar(substep.query.where, value, name)
             sub_data = self._multiple_steps(step)
             join_query_data(data, sub_data)
 
@@ -400,13 +400,13 @@ class SQLQuery():
                     raise Exception(f'Unknown MapReduceStep type: {step.reduce}')
 
                 step_data = steps_data[step.values.step_num]
-                values = []
+                vars = {}
                 step_data_values = step_data['values']
                 for row in step_data_values:
                     for row_data in row.values():
                         for name, value in row_data.items():
                             if name[0] != '__mindsdb_row_id':
-                                values.append(value)
+                                vars[name[1] or name[0]] = value
 
                 data = {
                     'values': [],
@@ -417,8 +417,8 @@ class SQLQuery():
                 if type(substep) == FetchDataframeStep:
                     query = substep.query
                     markQueryVar(query.where)
-                    for i, value in enumerate(values):
-                        replaceQueryVar(query.where, value, i)
+                    for name, value in vars.items():
+                        replaceQueryVar(query.where, value, name)
                         sub_data = self._fetch_dataframe_step(substep)
                         if len(data['columns']) == 0:
                             data['columns'] = sub_data['columns']
@@ -426,7 +426,7 @@ class SQLQuery():
                             data['tables'] = sub_data['tables']
                         data['values'].extend(sub_data['values'])
                 elif type(substep) == MultipleSteps:
-                    data = self._multiple_steps_reduce(substep, values)
+                    data = self._multiple_steps_reduce(substep, vars)
                 else:
                     raise Exception(f'Unknown step type: {step.step}')
             elif type(step) == ApplyPredictorRowStep:

@@ -559,7 +559,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if statement.window is not None:
             struct['window'] = statement.window
         if statement.horizon is not None:
-            struct['nr_predictions'] = statement.horizon
+            struct['horizon'] = statement.horizon
 
         model_interface = self.session.model_interface
         data_store = self.session.data_store
@@ -583,7 +583,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds_data = data_store.get_datasource(ds_name)
 
         timeseries_settings = {}
-        for w in ['order_by', 'group_by', 'window', 'nr_predictions']:
+        for w in ['order_by', 'group_by', 'window', 'horizon']:
             if w in struct:
                 timeseries_settings[w] = struct.get(w)
 

@@ -329,7 +329,7 @@ class SqlStatementParser():
             + Optional(ORDER_BY + delimitedList(order_item, delim=',')('order_by'))
             + Optional(GROUP_BY + delimitedList(word | QuotedString("`"), delim=',')('group_by'))
             + Optional(WINDOW + s_int('window'))
-            + Optional(HORIZON + s_int('nr_predictions'))
+            + Optional(HORIZON + s_int('horizon'))
             + Optional(
                 (USING + delimitedList(using_item, delim=',')('using'))
                 | (USING + originalTextFor(nestedExpr('{', '}'))('using'))
@@ -541,7 +541,7 @@ class SqlStatementParser():
                 'order_by': ['f_order_1', 'f_order_2', 'f_order_3'],
                 'group_by': ['f_group_1', 'f_group_2'],
                 'window': 100,
-                'nr_predictions': 7,
+                'horizon': 7,
                 'using': {'x': 1, 'y': 'a'}
             }
         ], [

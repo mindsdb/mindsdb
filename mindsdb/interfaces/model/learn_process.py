@@ -3,12 +3,14 @@ import traceback
 import tempfile
 from pathlib import Path
 from typing import Optional
+from numpy import isin
+import json
 
 import pandas as pd
 from pandas.core.frame import DataFrame
 import torch.multiprocessing as mp
 import lightwood
-from lightwood.api.types import ProblemDefinition
+from lightwood.api.types import ProblemDefinition, JsonAI
 from lightwood import __version__ as lightwood_version
 
 from mindsdb import __version__ as mindsdb_version
@@ -41,9 +43,69 @@ def delete_learn_mark():
             p.unlink()
 
 
+def rep_recur(org: dict, ovr: dict):
+    for k in ovr:
+        if k in org:
+            if isinstance(org[k], dict) and isinstance(ovr[k], dict):
+                rep_recur(org[k], ovr[k])
+            else:
+                org[k] = ovr[k]
+        else:
+            org[k] = ovr[k]
+
+
+def brack_to_mod(ovr):
+    if not isinstance(ovr, dict):
+        if isinstance(ovr, list):
+            for i in range(len(ovr)):
+                ovr[i] = brack_to_mod(ovr[i])
+        elif isinstance(ovr, str):
+            if '(' in ovr and ')' in ovr:
+                mod = ovr.split('(')[0]
+                args = {}
+                if '()' not in ovr:
+                    for str_pair in ovr.split('(')[1].split(')')[0].split(','):
+                        k = str_pair.split('=')[0].strip(' ')
+                        v = str(str_pair.split('=')[1]).strip(' ')
+                        args[k] = v
+
+                ovr = {
+                    'module': mod,
+                    'args': args
+                }
+        return ovr
+    else:
+        for k in ovr.keys():
+            ovr[k] = brack_to_mod(ovr[k])
+
+    return ovr
+
 @mark_process(name='learn')
-def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int) -> int:
+def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None) -> int:
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
+
+    if json_ai_override is None:
+        json_ai_override = {}
+    
+    for k in json_ai_override:
+        json_ai_override[k] = json.loads(json_ai_override[k])
+
+    if 'models' in json_ai_override:
+        json_ai_override['outputs'] = {
+            problem_definition.target: {
+                'mixers': json_ai_override['models']
+            }
+        }
+        del json_ai_override['models']
+
+    json_ai_override = brack_to_mod(json_ai_override)
+
+    json_ai = json_ai.to_dict()
+    print('\n\n', json_ai, '\n\n')
+    rep_recur(json_ai, json_ai_override)
+    print('\n\n', json_ai, '\n\n')
+    json_ai = JsonAI.from_dict(json_ai)
+
     code = lightwood.code_from_json_ai(json_ai)
 
     predictor_record = Predictor.query.with_for_update().get(predictor_id)
@@ -94,9 +156,11 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
-              delete_ds_on_fail: Optional[bool] = False) -> None:
+              delete_ds_on_fail: Optional[bool] = False, json_ai_override: dict = None) -> None:
+    if json_ai_override is None:
+        json_ai_override = {}
     try:
-        run_generate(df, problem_definition, predictor_id)
+        run_generate(df, problem_definition, predictor_id, json_ai_override)
         run_fit(predictor_id, df)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)

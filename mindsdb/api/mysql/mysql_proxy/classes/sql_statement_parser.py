@@ -74,19 +74,14 @@ class SqlStatementParser():
         if init_parse:
             if self._keyword == 'delete':
                 self._struct = self.parse_as_delete()
-            elif self._keyword == 'drop':
-                self._struct = None
-            elif self._keyword == 'create_predictor' or self._keyword == 'create_table':
-                self._struct = self.parse_as_create_predictor()
             elif self._keyword in 'create_ai_table':
                 self._struct = self.parse_as_create_ai_table()
             elif self._keyword == 'retrain':
                 self._struct = self.parse_as_retrain()
-            elif self._keyword == 'create_datasource':
-                # self._struct = self.parse_as_create_datasource()
-                pass
             elif self._keyword == 'describe':
                 self._struct = self.parse_as_describe()
+            else:
+                self._struct = None
 
     @property
     def keyword(self):
@@ -303,67 +298,6 @@ class SqlStatementParser():
 
         return res
 
-    def parse_as_create_predictor(self) -> dict:
-        CREATE, PREDICTOR, TABLE, FROM, WHERE, PREDICT, AS, ORDER, GROUP, BY, WINDOW, HORIZON, USING, ASK, DESC = map(
-            CaselessKeyword, "CREATE PREDICTOR TABLE FROM WHERE PREDICT AS ORDER GROUP BY WINDOW HORIZON USING ASK DESC".split()
-        )
-        ORDER_BY = ORDER + BY
-        GROUP_BY = GROUP + BY
-
-        word = Word(alphanums + "_")
-        worddot = Word(alphanums + "_" + ".")
-
-        s_int = Word(nums).setParseAction(tokenMap(int))
-
-        predict_item = Group((word | QuotedString("`"))('name') + Optional(AS.suppress() + word('alias')))
-
-        order_item = Group((word | QuotedString("`"))('name') + Optional(ASK | DESC)('sort'))
-
-        using_item = Group((word | QuotedString("`"))('name') + Word('=').suppress() + (word | QuotedString("'"))('value'))
-
-        expr = (
-            CREATE + (PREDICTOR | TABLE) + word('predictor_name') + FROM + Optional(worddot)('integration_name')
-            + Optional(originalTextFor(nestedExpr('(', ')'))('select') + Optional(AS + word('datasource_name')))
-            + PREDICT
-            + delimitedList(predict_item, delim=',')('predict')
-            + Optional(ORDER_BY + delimitedList(order_item, delim=',')('order_by'))
-            + Optional(GROUP_BY + delimitedList(word | QuotedString("`"), delim=',')('group_by'))
-            + Optional(WINDOW + s_int('window'))
-            + Optional(HORIZON + s_int('horizon'))
-            + Optional(
-                (USING + delimitedList(using_item, delim=',')('using'))
-                | (USING + originalTextFor(nestedExpr('{', '}'))('using'))
-            )
-        )
-
-        r = expr.parseString(self._sql)
-
-        # postprocessing
-        r = r.asDict()
-        if 'select' in r:
-            if r['select'].startswith('(') and r['select'].endswith(')'):
-                r['select'] = r['select'][1:-1]
-            r['select'] = r['select'].strip(' \n')
-        else:
-            r['select'] = None
-
-        using = r.get('using')
-        if isinstance(using, str):
-            r['using'] = json.loads(using)
-        elif isinstance(using, list):
-            new_using = {}
-            for el in using:
-                if el['name'] == 'stop_training_in_x_seconds':
-                    new_using['time_aim'] = el['value']
-                else:
-                    new_using[el['name']] = el['value']
-            r['using'] = new_using
-
-        if isinstance(r.get('order_by'), list):
-            r['order_by'] = [x['name'] for x in r['order_by']]
-
-        return r
-
     def parse_as_retrain(self) -> dict:
         result = {
             'predictor_name': None
@@ -380,42 +314,6 @@ class SqlStatementParser():
         result.update(r)
 
         return result
-
-    def parse_as_create_datasource(self) -> dict:
-        ''' Parse 'CREATE DATASOURCE' query
-            Example: CREATE DATASOURCE name FROM mysql WITH {"user": "admin", "password": "password", "host": "127.0.0.1"}
-        '''
-        result = {
-            'datasource_name': None,
-            'database_type': None,
-            'connection_args': None
-        }
-
-        expr = (
-            CaselessKeyword("create").suppress() + CaselessKeyword("datasource").suppress()
-            + Word(printables).setResultsName('datasource_name')
-            + CaselessKeyword("from").suppress()
-            + Word(printables).setResultsName('database_type')
-            + CaselessKeyword("with").suppress()
-            + originalTextFor(nestedExpr('{', '}'))('connection_args')
-        )
-
-        r = expr.parseString(self._sql).asDict()
-
-        datasource_name = r.get('datasource_name')
-        if isinstance(datasource_name, str) is False:
-            raise Exception("Cant determine datasource name")
-        result['datasource_name'] = datasource_name
-
-        database_type = r.get('database_type')
-        if isinstance(database_type, str) is False:
-            raise Exception("Cant determine database type")
-        result['database_type'] = database_type
-
-        try:
-            result['connection_args'] = json.loads(r.get('connection_args'))
-        except Exception:
-            raise Exception('Cant parse connection arguments.')
 
     def parse_as_describe(self) -> dict:
         result = {

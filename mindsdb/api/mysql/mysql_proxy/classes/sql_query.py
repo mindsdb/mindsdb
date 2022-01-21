@@ -37,6 +37,7 @@ from mindsdb_sql.planner.steps import (
     GetPredictorColumns,
     FetchDataframeStep,
     ApplyPredictorStep,
+    LimitOffsetStep,
     MapReduceStep,
     MultipleSteps,
     ProjectStep,
@@ -669,6 +670,8 @@ class SQLQuery():
                 raise Exception('FilterStep is not implemented')
             # elif type(step) == ApplyTimeseriesPredictorStep:
             #     raise Exception('ApplyTimeseriesPredictorStep is not implemented')
+            elif type(step) == LimitOffsetStep:
+                pass
             elif type(step) == ProjectStep:
                 step_data = steps_data[step.dataframe.step_num]
                 columns_list = []

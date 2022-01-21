@@ -47,7 +47,7 @@ from mindsdb_sql.parser.ast import (
     Use
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource, CreatePredictor
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource, CreatePredictor, RetrainPredictor
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -1141,8 +1141,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif isinstance(statement, Describe):
             self.answer_describe_predictor(statement.value.parts[-1])
             return
-        elif keyword == 'retrain':
-            self.answer_retrain_predictor(struct['predictor_name'])
+        elif type(statement) == RetrainPredictor:
+            self.answer_retrain_predictor(statement.name.parts[-1])
             return
         elif isinstance(statement, Show) or keyword == 'show':
             sql_category = statement.category.lower()

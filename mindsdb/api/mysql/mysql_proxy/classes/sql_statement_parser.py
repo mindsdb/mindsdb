@@ -76,8 +76,6 @@ class SqlStatementParser():
                 self._struct = self.parse_as_delete()
             elif self._keyword in 'create_ai_table':
                 self._struct = self.parse_as_create_ai_table()
-            elif self._keyword == 'retrain':
-                self._struct = self.parse_as_retrain()
             else:
                 self._struct = None
 
@@ -295,23 +293,6 @@ class SqlStatementParser():
         }
 
         return res
-
-    def parse_as_retrain(self) -> dict:
-        result = {
-            'predictor_name': None
-        }
-
-        expr = (
-            CaselessKeyword("retrain").suppress() + Word(printables).setResultsName('predictor_name')
-        )
-
-        r = expr.parseString(self._sql).asDict()
-        if isinstance(r.get('predictor_name'), str) is False:
-            raise Exception("Cant determine predictor name in 'retrain' statement")
-
-        result.update(r)
-
-        return result
 
     def parse_as_delete(self) -> dict:
         ''' Parse delete. Example: 'delete from database.table where column_a= 1 and column_b = 2;'

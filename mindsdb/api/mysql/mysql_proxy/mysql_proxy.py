@@ -35,6 +35,7 @@ from mindsdb_sql.parser.ast import (
     BinaryOperation,
     Identifier,
     Parameter,
+    Describe,
     Constant,
     Function,
     Explain,
@@ -1137,8 +1138,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds_name = statement.name.parts[-1]
             self.answer_drop_datasource(ds_name)
             return
-        elif keyword == 'describe':
-            self.answer_describe_predictor(struct['predictor_name'])
+        elif isinstance(statement, Describe):
+            self.answer_describe_predictor(statement.value.parts[-1])
             return
         elif keyword == 'retrain':
             self.answer_retrain_predictor(struct['predictor_name'])

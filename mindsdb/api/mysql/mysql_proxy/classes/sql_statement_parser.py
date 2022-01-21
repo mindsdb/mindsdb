@@ -78,8 +78,6 @@ class SqlStatementParser():
                 self._struct = self.parse_as_create_ai_table()
             elif self._keyword == 'retrain':
                 self._struct = self.parse_as_retrain()
-            elif self._keyword == 'describe':
-                self._struct = self.parse_as_describe()
             else:
                 self._struct = None
 
@@ -310,23 +308,6 @@ class SqlStatementParser():
         r = expr.parseString(self._sql).asDict()
         if isinstance(r.get('predictor_name'), str) is False:
             raise Exception("Cant determine predictor name in 'retrain' statement")
-
-        result.update(r)
-
-        return result
-
-    def parse_as_describe(self) -> dict:
-        result = {
-            'predictor_name': None
-        }
-
-        expr = (
-            CaselessKeyword("describe").suppress() + Word(printables).setResultsName('predictor_name')
-        )
-
-        r = expr.parseString(self._sql).asDict()
-        if isinstance(r.get('predictor_name'), str) is False:
-            raise Exception("Cant determine predictor name in 'describe' statement")
 
         result.update(r)
 

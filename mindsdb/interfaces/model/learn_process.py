@@ -66,7 +66,7 @@ def brack_to_mod(ovr):
                 if '()' not in ovr:
                     for str_pair in ovr.split('(')[1].split(')')[0].split(','):
                         k = str_pair.split('=')[0].strip(' ')
-                        v = str(str_pair.split('=')[1]).strip(' ')
+                        v = str_pair.split('=')[1].strip(' ')
                         args[k] = v
 
                 ovr = {
@@ -101,9 +101,7 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
     json_ai_override = brack_to_mod(json_ai_override)
 
     json_ai = json_ai.to_dict()
-    print('\n\n', json_ai, '\n\n')
     rep_recur(json_ai, json_ai_override)
-    print('\n\n', json_ai, '\n\n')
     json_ai = JsonAI.from_dict(json_ai)
 
     code = lightwood.code_from_json_ai(json_ai)

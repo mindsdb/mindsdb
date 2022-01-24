@@ -17,7 +17,6 @@ The below list contains the column names of the model table. Note that `target_v
 * target_variable_confidence - Model confidence score.
 * target_variable_explain - JSON object that contains additional information as `confidence_lower_bound`, `confidence_upper_bound`, `anomaly`, `truth`.
 * select_data_query - SQL select query to create the datasource.
-* external_datasource - Name of the pre-existing datasource that the model was built from.
 
 {{ read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/home_rentals_model.csv') }}
 

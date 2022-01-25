@@ -47,7 +47,14 @@ from mindsdb_sql.parser.ast import (
     Use
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource, CreatePredictor, RetrainPredictor
+from mindsdb_sql.parser.dialects.mindsdb import (
+    CreateDatasource,
+    RetrainPredictor,
+    CreatePredictor,
+    DropDatasource,
+    DropPredictor,
+    CreateView
+)
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.utilities.wizards import make_ssl_cert

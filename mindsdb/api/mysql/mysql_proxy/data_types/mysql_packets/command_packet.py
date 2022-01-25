@@ -18,7 +18,6 @@ from mindsdb_sql.parser.ast import Parameter
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import COMMANDS, getConstName, TYPES
-from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SQL_PARAMETER
 
 
 class CommandPacket(Packet):

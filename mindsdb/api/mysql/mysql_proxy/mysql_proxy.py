@@ -39,6 +39,7 @@ from mindsdb_sql.parser.ast import (
     Constant,
     Function,
     Explain,
+    Delete,
     Insert,
     Select,
     Star,
@@ -1411,9 +1412,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket).send()
         elif keyword == 'create_ai_table':
             self.answer_create_ai_table(struct)
-        elif keyword == 'delete' and \
-                ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
-            self.delete_predictor_sql(sql)
+        elif isinstance(statement, Delete):
+            if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
+                raise Exception("Only 'DELETE' from database 'mindsdb' is possible at this moment")
+            if statement.table.parts[-1] != 'predictors':
+                raise Exception("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
+            self.delete_predictor_sql(str(sql))
             self.packet(OkPacket).send()
         elif isinstance(statement, Insert):
             self.process_insert(statement)

@@ -1,81 +1,29 @@
 import re
-import json
 
 from pyparsing import (
     CaselessKeyword,
+    originalTextFor,
     ParseException,
     ParserElement,
     QuotedString,
     ZeroOrMore,
-    StringEnd,
-    OneOrMore,
-    Suppress,
-    Optional,
-    Literal,
-    SkipTo,
-    Group,
-    Word,
-    originalTextFor,
-    delimitedList,
-    quotedString,
-    printables,
     nestedExpr,
     restOfLine,
-    alphanums,
-    tokenMap,
-    alphas,
-    nums
+    StringEnd,
+    Literal,
+    SkipTo
 )
-from mindsdb_sql.parser.ast import (
-    Join
-)
-from mindsdb_sql import parse_sql
-
 
 RE_INT = re.compile(r'^[-+]?([1-9]\d*|0)$')
 RE_FLOAT = re.compile(r'^[-+]?([1-9]\d*\.\d*|0\.|0\.\d*)$')
 
 
-class SqlStatementParseError(Exception):
-    pass
-
-
-class SQLParameter:
-    pass
-
-
-SQL_PARAMETER = SQLParameter()
-
-
-class SQLDefault:
-    pass
-
-
-SQL_DEFAULT = SQLDefault()
-
-
 class SqlStatementParser():
-    """Parser for initial analysis of sql statements.
-    Example of usage:
-
-        sql = "insert into a.b (col1) values ('val1')"
-        statement = SqlStatementParser(sql)
-        print(statement.keyword)    # insert
-        print(statement.struct)     # {'database': 'a', 'table': 'b', 'columns': ['col1'], 'values': ['val1']}
-    """
-    _original_sql: str = None
-    _sql: str = None
-    _struct: str = None
-
-    def __init__(self, text, init_parse=True):
+    def __init__(self, text):
         self._original_sql = text
         self._sql = SqlStatementParser.clear_sql(text)
         self._keyword = SqlStatementParser.get_keyword(self._sql)
-        if init_parse:
-            if self._keyword in 'create_ai_table':
-                self._struct = self.parse_as_create_ai_table()
-            else:
-                self._struct = None
+        self._struct = None
 
     @property
     def keyword(self):
@@ -204,62 +152,3 @@ class SqlStatementParser():
 
         self._sql = r.asDict()['original'].strip()
         return True
-
-    def parse_as_create_ai_table(self) -> dict:
-        CREATE, AI, TABLE, VIEW, FROM, USING, AS = map(
-            CaselessKeyword, "CREATE AI TABLE VIEW FROM USING AS".split()
-        )
-
-        AI_TABLE = AI + TABLE
-
-        word = Word(alphanums + "_")
-
-        expr = (
-            CREATE + (AI_TABLE | VIEW) + word('ai_table_name') + AS
-            + originalTextFor(nestedExpr('(', ')'))('select')
-        )
-
-        r = expr.parseString(self._sql)
-        r = r.asDict()
-
-        if r['select'].startswith('(') and r['select'].endswith(')'):
-            r['select'] = r['select'][1:-1]
-        r['select'] = r['select'].strip(' \n')
-
-        select = parse_sql(r['select'])
-
-        if isinstance(select.from_table, Join) is False:
-            raise Exception("'from' must be like: 'from integration.table join predictor'")
-
-        integration_name = select.from_table.left.parts[0]
-        select.from_table.left.parts = select.from_table.left.parts[1:]
-        integration_name_alias = select.from_table.left.alias.parts[0]
-
-        predictor_name = select.from_table.right.parts[0]
-        predictor_name_alias = select.from_table.right.alias.parts[0]
-        select.from_table = select.from_table.left
-
-        query_fields = []
-        predictor_fields = []
-        predictor_fields_targets = []
-
-        integration_sql = str(select)
-
-        for target in select.targets:
-            if target.parts[0] == integration_name_alias:
-                query_fields.append(target.parts[1])
-                predictor_fields_targets.append(target)
-            elif target.parts[0] == predictor_name_alias:
-                predictor_fields.append(target.parts[1])
-        select.targets = predictor_fields_targets
-
-        res = {
-            'ai_table_name': r['ai_table_name'],
-            'integration_name': integration_name,
-            'integration_query': integration_sql,
-            'query_fields': query_fields,
-            'predictor_name': predictor_name,
-            'predictor_fields': predictor_fields
-        }
-
-        return res

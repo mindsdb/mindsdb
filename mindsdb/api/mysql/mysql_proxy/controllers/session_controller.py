@@ -53,6 +53,11 @@ class SessionController():
             company_id=company_id
         )
 
+        self.view_interface = WithKWArgsWrapper(
+            server.original_view_controller,
+            company_id=company_id
+        )
+
         self.datahub = init_datahub(
             model_interface=self.model_interface,
             ai_table=self.ai_table,

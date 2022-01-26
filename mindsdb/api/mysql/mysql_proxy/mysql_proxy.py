@@ -107,6 +107,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import DatasourceController
+from mindsdb.interfaces.database.views import ViewController
 
 connection_id = 0
 
@@ -542,6 +543,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise Exception(f"Something went wrong during deleting of datasource '{ds_name}'.")
         self.packet(OkPacket).send()
 
+    def answer_create_view(self, statement):
+        name = statement.name
+        query = str(statement.query)
+        datasource_name = statement.from_table.parts[-1]
+
+        self.session.view_interface.add(name, query, datasource_name)
+        self.packet(OkPacket).send()
+
     def answer_create_predictor(self, statement):
         struct = {
             'predictor_name': statement.name.parts[-1],
@@ -578,7 +587,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds_data = data_store.get_datasource(ds_name)
         else:
             if self.session.datasource_interface.get_db_integration(integration_name) is None:
-                raise Exception(f"Unknown integration: {integration_name}")
+                raise Exception(f"Unknown datasource: {integration_name}")
 
             ds_name = struct.get('datasource_name')
             if ds_name is None:
@@ -1120,6 +1129,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 statement = parse_sql(sql, dialect='mysql')
         except Exception:
             # not all statemts are parse by parse_sql
+            log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
             pass
 
         if type(statement) == CreateDatasource:
@@ -1410,6 +1420,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket).send()
         elif type(statement) == CreatePredictor:
             self.answer_create_predictor(statement)
+        elif type(statement) == CreateView:
+            self.answer_create_view(statement)
         elif keyword == 'set':
             log.warning(f'Unknown SET query, return OK package: {sql}')
             self.packet(OkPacket).send()
@@ -2384,6 +2396,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.original_model_interface = ModelInterface()
         server.original_data_store = DataStore()
         server.original_datasource_controller = DatasourceController()
+        server.original_view_controller = ViewController()
 
         atexit.register(MysqlProxy.server_close, srv=server)
 

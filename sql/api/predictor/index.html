@@ -625,44 +625,16 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#using-keyword" class="md-nav__link">
-    USING keyword
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-example" class="md-nav__link">
-    USING example
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#time-series-keywords" class="md-nav__link">
     Time Series keywords
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#order-by-keyword" class="md-nav__link">
-    ORDER BY keyword
-  </a>
-  
-    <nav class="md-nav" aria-label="ORDER BY keyword">
+    <nav class="md-nav" aria-label="Time Series keywords">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#order-by-asc-example" class="md-nav__link">
-    ORDER BY ASC example
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#order-by-desc-example" class="md-nav__link">
-    ORDER BY DESC example
+  <a href="#time-series-example" class="md-nav__link">
+    Time Series example
   </a>
   
 </li>
@@ -673,16 +645,16 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#group-by-statement" class="md-nav__link">
-    GROUP BY statement
+  <a href="#using-keyword" class="md-nav__link">
+    USING keyword
   </a>
   
-    <nav class="md-nav" aria-label="GROUP BY statement">
+    <nav class="md-nav" aria-label="USING keyword">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#group-by-example" class="md-nav__link">
-    GROUP BY example
+  <a href="#using-example" class="md-nav__link">
+    USING example
   </a>
   
 </li>
@@ -802,7 +774,7 @@
   
     <li class="md-nav__item">
       <a href="../../tutorials/ai-tables/" class="md-nav__link">
-        AI Tables intro
+        AI Tables Intro
       </a>
     </li>
   
@@ -847,7 +819,7 @@
   
     <li class="md-nav__item">
       <a href="../../tutorials/bodyfat/" class="md-nav__link">
-        Bodyfat Prediction
+        Body Fat Prediction
       </a>
     </li>
   
@@ -898,7 +870,7 @@
   
     <li class="md-nav__item">
       <a href="../../tutorials/crop-prediction/" class="md-nav__link">
-        Crop Recomendation
+        Crop Recommendation
       </a>
     </li>
   
@@ -911,6 +883,18 @@
     <li class="md-nav__item">
       <a href="../../tutorials/customer-churn/" class="md-nav__link">
         Customer Churn
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/diabetes/" class="md-nav__link">
+        Diabetes
       </a>
     </li>
   
@@ -1099,44 +1083,16 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#using-keyword" class="md-nav__link">
-    USING keyword
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-example" class="md-nav__link">
-    USING example
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#time-series-keywords" class="md-nav__link">
     Time Series keywords
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#order-by-keyword" class="md-nav__link">
-    ORDER BY keyword
-  </a>
-  
-    <nav class="md-nav" aria-label="ORDER BY keyword">
+    <nav class="md-nav" aria-label="Time Series keywords">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#order-by-asc-example" class="md-nav__link">
-    ORDER BY ASC example
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#order-by-desc-example" class="md-nav__link">
-    ORDER BY DESC example
+  <a href="#time-series-example" class="md-nav__link">
+    Time Series example
   </a>
   
 </li>
@@ -1147,16 +1103,16 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#group-by-statement" class="md-nav__link">
-    GROUP BY statement
+  <a href="#using-keyword" class="md-nav__link">
+    USING keyword
   </a>
   
-    <nav class="md-nav" aria-label="GROUP BY statement">
+    <nav class="md-nav" aria-label="USING keyword">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#group-by-example" class="md-nav__link">
-    GROUP BY example
+  <a href="#using-example" class="md-nav__link">
+    USING example
   </a>
   
 </li>
@@ -1277,6 +1233,36 @@
 <p>To check the training status for the <code>home_rentals_model</code> run:</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">predictors</span> <span class="k">WHERE</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;home_rentals_model&#39;</span><span class="p">;</span>
 </code></pre></div>
+<h2 id="time-series-keywords">Time Series keywords</h2>
+<p>To train a timeseries model, MindsDB provides additional keywords.
+* <code>ORDER BY</code> -  keyword is used as the column that defines the time series order by, these can be a date, or anything that defines the sequence of events to order the data by descending (DESC) or ascending (ASC) order. The default order will always be <code>ASC</code>
+* <code>WINDOW</code> - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be used to specify something like "Always use the previous 10 rows". 
+* <code>HORIZON</code> - (OPTIONAL, default value is 1) keyword specifies the number of future predictions. 
+* <code>GROUP BY</code> - (OPTIONAL) keyword is used to group the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. </p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
+<span class="k">FROM</span> <span class="n">db_integration</span> 
+<span class="p">(</span><span class="k">SELECT</span> <span class="n">sequential_column</span><span class="p">,</span> <span class="n">partition_column</span><span class="p">,</span> <span class="n">other_column</span><span class="p">,</span> <span class="n">target_column</span> <span class="k">FROM</span> <span class="k">table_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">ds_name</span>
+<span class="n">PREDICT</span> <span class="n">target_column</span> <span class="k">AS</span> <span class="n">column_alias</span>
+
+<span class="k">ORDER</span> <span class="k">BY</span> <span class="n">sequantial_column</span>
+<span class="k">GROUP</span> <span class="k">BY</span> <span class="n">partition_column</span>
+
+<span class="n">WINDOW</span> <span class="mi">10</span>
+<span class="n">HORIZON</span> <span class="mi">5</span><span class="p">;</span>
+</code></pre></div>
+<h3 id="time-series-example">Time Series example</h3>
+<p>The following example trains the new <code>inventory_model</code> model which can predicts the <code>units_in_inventory</code> for the next 7 days, taking into account the historical inventory in the past 20 days for each 'procuct_id'</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">inventory_model</span>
+<span class="k">FROM</span> <span class="n">db_integration</span>
+<span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">inventory</span><span class="p">)</span> <span class="k">as</span> <span class="n">inventory</span>
+<span class="n">PREDICT</span> <span class="n">units_in_inventory</span> <span class="k">as</span> <span class="n">predicted_units_in_inventory</span>
+
+<span class="k">ORDER</span> <span class="k">BY</span> <span class="nb">date</span><span class="p">,</span>
+<span class="k">GROUP</span> <span class="k">BY</span> <span class="n">product_id</span><span class="p">,</span>
+
+<span class="n">WINDOW</span> <span class="mi">20</span>
+<span class="n">HORIZON</span> <span class="mi">7</span>
+</code></pre></div>
 <h2 id="using-keyword">USING keyword</h2>
 <p>The <code>USING</code> keyword accepts arguments as a JSON format where additional arguments can be provided to the <code>CREATE PREDICTOR</code> statement as:</p>
 <ul>
@@ -1284,7 +1270,6 @@
 <li><code>use_gpu</code> - Switch between training on CPU or GPU (True|False).</li>
 <li><code>sample_margin_of_error</code> - The amount of random sampling error in results (0 - 1)</li>
 <li><code>ignore_columns</code> - Columns to be removed from the model training.</li>
-<li><code>is_timeseries</code> - Training from time series data (True|False).</li>
 </ul>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
 <span class="k">FROM</span> <span class="n">integration_name</span> 
@@ -1292,66 +1277,13 @@
 <span class="n">PREDICT</span> <span class="k">column_name</span> <span class="k">as</span> <span class="n">column_alias</span>
 <span class="k">USING</span> <span class="err">{</span><span class="ss">&quot;ignore_columns&quot;</span><span class="p">:</span> <span class="ss">&quot;column_name3&quot;</span><span class="err">}</span><span class="p">;</span>
 </code></pre></div>
-<h2 id="using-example">USING example</h2>
+<h3 id="using-example">USING example</h3>
 <p>The following example trains the new <code>home_rentals_model</code> model which predicts the <code>rental_price</code> and removes the number of bathrooms.</p>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_model</span>
 <span class="k">FROM</span> <span class="n">db_integration</span> 
 <span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">house_rentals_data</span><span class="p">)</span> <span class="k">as</span> <span class="n">rentals</span>
 <span class="n">PREDICT</span> <span class="n">rental_price</span> <span class="k">as</span> <span class="n">price</span>
 <span class="k">USING</span> <span class="err">{</span><span class="ss">&quot;ignore_columns&quot;</span><span class="p">:</span> <span class="ss">&quot;number_of_bathrooms&quot;</span><span class="err">}</span><span class="p">;</span>
-</code></pre></div>
-<h2 id="time-series-keywords">Time Series keywords</h2>
-<p>To train a timeseries model, MindsDB provides additional keywords.</p>
-<ul>
-<li><code>WINDOW</code> - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be used to specify something like "Always use the previous 10 rows". </li>
-<li><code>HORIZON</code> - keyword specifies the number of future predictions. </li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
-<span class="k">FROM</span> <span class="n">db_integration</span> 
-<span class="p">(</span><span class="k">SELECT</span> <span class="k">column_name</span><span class="p">,</span> <span class="n">column_name2</span> <span class="k">FROM</span> <span class="k">table_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">ds_name</span>
-<span class="n">PREDICT</span> <span class="k">column_name</span> <span class="k">as</span> <span class="n">column_alias</span>
-<span class="k">GROUP</span> <span class="k">BY</span> <span class="k">column_name</span>
-<span class="n">WINDOW</span> <span class="mi">10</span>
-<span class="n">HORIZON</span> <span class="mi">7</span><span class="p">;</span>
-<span class="k">USING</span> <span class="err">{</span><span class="ss">&quot;is_timeseries&quot;</span><span class="p">:</span> <span class="ss">&quot;Yes&quot;</span><span class="err">}</span><span class="p">;</span>
-</code></pre></div>
-<h2 id="order-by-keyword">ORDER BY keyword</h2>
-<p>The <code>ORDER BY</code> keyword is used to order the data by descending (DESC) or ascending (ASC) order. The default order will always be <code>ASC</code></p>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
-<span class="k">FROM</span> <span class="n">integration_name</span> 
-<span class="p">(</span><span class="k">SELECT</span> <span class="k">column_name</span><span class="p">,</span> <span class="n">column_name2</span> <span class="k">FROM</span> <span class="k">table_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">ds_name</span>
-<span class="n">PREDICT</span> <span class="k">column_name</span> <span class="k">as</span> <span class="n">column_alias</span>
-<span class="k">ORDER</span> <span class="k">BY</span> <span class="k">column_name</span> <span class="n">column_name2</span> <span class="k">ASC</span> <span class="k">OR</span> <span class="k">DESC</span><span class="p">;</span>
-</code></pre></div>
-<h3 id="order-by-asc-example">ORDER BY ASC example</h3>
-<p>The following example trains the new <code>home_rentals_model</code> model which predicts the <code>rental_price</code> and orders the data in ascending order by the number of days on the market.</p>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_model</span>
-<span class="k">FROM</span> <span class="n">db_integration</span> <span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">house_rentals_data</span><span class="p">)</span> <span class="k">as</span> <span class="n">rentals</span>
-<span class="n">PREDICT</span> <span class="n">rental_price</span> <span class="k">as</span> <span class="n">price</span>
-<span class="k">ORDER</span> <span class="k">BY</span> <span class="n">days_on_market</span> <span class="k">ASC</span><span class="p">;</span>
-</code></pre></div>
-<h3 id="order-by-desc-example">ORDER BY DESC example</h3>
-<p>The following example trains the new <code>home_rentals_model</code> model which predicts the <code>rental_price</code> and orders the data in descending order by the number of days on the market.</p>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_model</span>
-<span class="k">FROM</span> <span class="n">db_integration</span> <span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">house_rentals_data</span><span class="p">)</span> <span class="k">as</span> <span class="n">rentals</span>
-<span class="n">PREDICT</span> <span class="n">rental_price</span> <span class="k">as</span> <span class="n">price</span>
-<span class="k">ORDER</span> <span class="k">BY</span> <span class="n">days_on_market</span> <span class="k">DESC</span><span class="p">;</span>
-</code></pre></div>
-<h2 id="group-by-statement">GROUP BY statement</h2>
-<p>The <code>GROUP BY</code> statement is used to group the rows that contain the same values into one row.</p>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
-<span class="k">FROM</span> <span class="n">integration_name</span> 
-<span class="p">(</span><span class="k">SELECT</span> <span class="k">column_name</span><span class="p">,</span> <span class="n">column_name2</span> <span class="k">FROM</span> <span class="k">table_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">ds_name</span>
-<span class="n">PREDICT</span> <span class="k">column_name</span> <span class="k">as</span> <span class="n">column_alias</span>
-<span class="k">GROUP</span> <span class="k">BY</span> <span class="k">column_name</span><span class="p">;</span>
-</code></pre></div>
-<h3 id="group-by-example">GROUP BY example</h3>
-<p>The following example trains the new <code>home_rentals_model</code> model which predicts the <code>rental_price</code> and groups the data per location (good,great).</p>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_model</span>
-<span class="k">FROM</span> <span class="n">db_integration</span> 
-<span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">house_rentals_data</span><span class="p">)</span> <span class="k">as</span> <span class="n">rentals</span>
-<span class="n">PREDICT</span> <span class="n">rental_price</span> <span class="k">as</span> <span class="n">price</span>
-<span class="k">GROUP</span> <span class="k">BY</span> <span class="k">location</span><span class="p">;</span>
 </code></pre></div>
                 
               

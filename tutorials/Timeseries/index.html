@@ -669,7 +669,7 @@
   
     <li class="md-nav__item">
       <a href="../../sql/tutorials/ai-tables/" class="md-nav__link">
-        AI Tables intro
+        AI Tables Intro
       </a>
     </li>
   
@@ -714,7 +714,7 @@
   
     <li class="md-nav__item">
       <a href="../../sql/tutorials/bodyfat/" class="md-nav__link">
-        Bodyfat Prediction
+        Body Fat Prediction
       </a>
     </li>
   
@@ -765,7 +765,7 @@
   
     <li class="md-nav__item">
       <a href="../../sql/tutorials/crop-prediction/" class="md-nav__link">
-        Crop Recomendation
+        Crop Recommendation
       </a>
     </li>
   
@@ -778,6 +778,18 @@
     <li class="md-nav__item">
       <a href="../../sql/tutorials/customer-churn/" class="md-nav__link">
         Customer Churn
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/tutorials/diabetes/" class="md-nav__link">
+        Diabetes
       </a>
     </li>
   
@@ -1037,7 +1049,7 @@
   order_by: List&lt;String&gt;              | Mandatory
   window: Int                         | Mandatory
   group_by: List&lt;String&gt;              | Optional (default: [])
-  nr_predictions: Int                 | Optional (default: 1)
+  horizon: Int                 | Optional (default: 1)
   use_previous_target: Bool           | Optional (default: True)
   historical_columns: List&lt;String&gt;    | Optional (default: [])
 }
@@ -1046,7 +1058,7 @@
 <ul>
 <li>order_by - The columns based on which the data should be ordered</li>
 <li>group_by - The columns based on which to group multiple unrelated entities present in your timeseries data. For example, let's say your data consists of sequential readings from 3x sensors. Treating the problem as a timeseries makes sense for individual sensors, so you would specify: <code>group_by=['sensor_id']</code></li>
-<li>nr_predictions - The number of points in the future that predictions should be made for, defaults to <code>1</code>. Once trained, the model will be able to predict up to this many points into the future.</li>
+<li>horizon - The number of points in the future that predictions should be made for, defaults to <code>1</code>. Once trained, the model will be able to predict up to this many points into the future.</li>
 <li>use_previous_target - Use the previous values of the target column[s] for making predictions. Defaults to <code>True</code>.</li>
 <li>window - The number of rows to "look back" into when making a prediction, after the rows are ordered by the order_by column and split into groups.</li>
 <li>historical_columns - The temporal dynamics of these columns will be used as additional context to train the time series encoder of the predictor. Note that non-historical columns will also be used to forecast, though without considering their change through time [Status: Experimental].</li>
@@ -1061,7 +1073,7 @@
     <span class="n">timeseries_settings</span> <span class="o">=</span> <span class="p">{</span>
       <span class="s1">&#39;order_by&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">],</span> <span class="c1"># Order the observations by timestamp</span>
       <span class="s1">&#39;group_by&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;machine_id&#39;</span><span class="p">],</span> <span class="c1"># The ordering should be done on a per-machine basis, rather than for every single row</span>
-      <span class="s1">&#39;nr_predictions&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="c1"># Predict failures for the timestamp given and for 2 more timesteps in the future</span>
+      <span class="s1">&#39;horizon&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="c1"># Predict failures for the timestamp given and for 2 more timesteps in the future</span>
       <span class="s1">&#39;use_previous_target&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># Use the previous values in the target column (`failure`), since when the last failure happened could be a relevant data-point for our prediction.</span>
       <span class="s1">&#39;window&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="c1"># Consider the previous 20 rows for every single row our model is trying to predict</span>
       <span class="s1">&#39;historical_columns&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;sensor_activity&#39;</span><span class="p">]</span> <span class="c1"># Mark `sensor_activity` column as historical, to use its temporal dynamics as additional context</span>

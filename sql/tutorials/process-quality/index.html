@@ -671,7 +671,7 @@
   
     <li class="md-nav__item">
       <a href="../ai-tables/" class="md-nav__link">
-        AI Tables intro
+        AI Tables Intro
       </a>
     </li>
   
@@ -786,7 +786,7 @@
   
     <li class="md-nav__item">
       <a href="../bodyfat/" class="md-nav__link">
-        Bodyfat Prediction
+        Body Fat Prediction
       </a>
     </li>
   
@@ -837,7 +837,7 @@
   
     <li class="md-nav__item">
       <a href="../crop-prediction/" class="md-nav__link">
-        Crop Recomendation
+        Crop Recommendation
       </a>
     </li>
   
@@ -850,6 +850,18 @@
     <li class="md-nav__item">
       <a href="../customer-churn/" class="md-nav__link">
         Customer Churn
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diabetes/" class="md-nav__link">
+        Diabetes
       </a>
     </li>
   
@@ -1246,11 +1258,11 @@ Now you can copy the forwarded address from the above output. You are interested
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">predictors</span> <span class="k">WHERE</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;process_quality_predictor&#39;</span><span class="p">;</span>
 </code></pre></div>
 <p>After the Predictor has finished training, you will see a similar output.</p>
-<div class="highlight"><pre><span></span><code><span class="go">+-----------------------------+----------+----------+--------------------+-------------------+---------------------+------------------+</span>
-<span class="go">| name                        | status   | accuracy | predict            | select_data_query | external_datasource | training_options |</span>
-<span class="go">+-----------------------------+----------+----------+--------------------+-------------------+---------------------+------------------+</span>
-<span class="go">| process_quality_predictor   | complete | 1        | silica_concentrate |                   |                     |                  |</span>
-<span class="go">+-----------------------------+----------+----------+--------------------+-------------------+---------------------+------------------+</span>
+<div class="highlight"><pre><span></span><code><span class="go">+-----------------------------+----------+----------+--------------------+-------------------+------------------+</span>
+<span class="go">| name                        | status   | accuracy | predict            | select_data_query | training_options |</span>
+<span class="go">+-----------------------------+----------+----------+--------------------+-------------------+------------------+</span>
+<span class="go">| process_quality_predictor   | complete | 1        | silica_concentrate |                   |                  |</span>
+<span class="go">+-----------------------------+----------+----------+--------------------+-------------------+------------------+</span>
 <span class="go">1 row in set (0.28 sec)</span>
 </code></pre></div>
 <p>As you can see the accuracy of the model is 1 (i.e. 100%). This is the result of using a limited dataset of 5000 rows. In reality when using the whole dataset, you will probably see a more reasonable accuracy.</p>

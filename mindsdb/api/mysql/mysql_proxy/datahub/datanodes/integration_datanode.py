@@ -35,4 +35,7 @@ class IntegrationDataNode(DataNode):
                 for i, rec in enumerate(data):
                     rec[column_name] = pass_data[i].timestamp()
 
+        if len(column_names) == 0:
+            column_names = ['dataframe_is_empty']
+
         return data, column_names

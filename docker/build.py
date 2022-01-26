@@ -31,13 +31,11 @@ with open(dockerfile_template, 'r') as fp:
 with open('dist/Dockerfile', 'w') as fp:
     fp.write(content)
 
+print(installer_version)
 command = (f"""
         cd dist &&
-        docker build -t {container_name} . &&
-        docker tag {container_name} mindsdb/{container_name}:latest &&
-        docker tag {container_name} mindsdb/{container_name}:{installer_version} &&
-        docker push mindsdb/{container_name};
-        cd ..
+        docker build -t mindsdb/{container_name}:latest -t mindsdb/{container_name}:{installer_version} . &&
+        docker push mindsdb/{container_name} --all-tags
       """)
 
 subprocess.run(command, shell=True, check=True)

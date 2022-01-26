@@ -78,75 +78,18 @@ USING {"ignore_columns": "number_of_bathrooms"};
 ## Time Series keywords
 
 To train a timeseries model, MindsDB provides additional keywords.
-
+* `ORDER BY` -  keyword is used as the column that defines the time series order by, these can be a date, or anything that defines the sequence of events to order the data by descending (DESC) or ascending (ASC) order. The default order will always be `ASC`
 * `WINDOW` - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be used to specify something like "Always use the previous 10 rows". 
-* `HORIZON` - keyword specifies the number of future predictions. 
+* `HORIZON` - (OPTIONAL, default value is 1) keyword specifies the number of future predictions. 
+* `GROUP BY` - (OPTIONAL) keyword is used to group the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. 
 
 ```sql
 CREATE PREDICTOR predictor_name
 FROM db_integration 
-(SELECT column_name, column_name2 FROM table_name) as ds_name
-PREDICT column_name as column_alias
-GROUP BY column_name
+(SELECT sequential_column, partition_column, other_column, target_column FROM table_name) as ds_name
+PREDICT target_column AS column_alias
+GROUP BY partition_column
+ORDER BY sequantial_column
 WINDOW 10
 HORIZON 7;
-USING {"is_timeseries": "Yes"};
-```
-
-## ORDER BY keyword
-
-The `ORDER BY` keyword is used to order the data by descending (DESC) or ascending (ASC) order. The default order will always be `ASC`
-
-```sql
-CREATE PREDICTOR predictor_name
-FROM integration_name 
-(SELECT column_name, column_name2 FROM table_name) as ds_name
-PREDICT column_name as column_alias
-ORDER BY column_name column_name2 ASC OR DESC;
-```
-
-### ORDER BY ASC example
-
-The following example trains the new `home_rentals_model` model which predicts the `rental_price` and orders the data in ascending order by the number of days on the market.
-
-```sql
-CREATE PREDICTOR home_rentals_model
-FROM db_integration (SELECT * FROM house_rentals_data) as rentals
-PREDICT rental_price as price
-ORDER BY days_on_market ASC;
-```
-
-### ORDER BY DESC example
-
-The following example trains the new `home_rentals_model` model which predicts the `rental_price` and orders the data in descending order by the number of days on the market.
-
-```sql
-CREATE PREDICTOR home_rentals_model
-FROM db_integration (SELECT * FROM house_rentals_data) as rentals
-PREDICT rental_price as price
-ORDER BY days_on_market DESC;
-```
-
-## GROUP BY statement
-
-The `GROUP BY` statement is used to group the rows that contain the same values into one row.
-
-```sql
-CREATE PREDICTOR predictor_name
-FROM integration_name 
-(SELECT column_name, column_name2 FROM table_name) as ds_name
-PREDICT column_name as column_alias
-GROUP BY column_name;
-```
-
-### GROUP BY example
-
-The following example trains the new `home_rentals_model` model which predicts the `rental_price` and groups the data per location (good,great).
-
-```sql
-CREATE PREDICTOR home_rentals_model
-FROM db_integration 
-(SELECT * FROM house_rentals_data) as rentals
-PREDICT rental_price as price
-GROUP BY location;
 ```

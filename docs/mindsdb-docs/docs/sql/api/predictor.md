@@ -48,9 +48,13 @@ SELECT * FROM mindsdb.predictors WHERE name='home_rentals_model';
 ## Time Series keywords
 
 To train a timeseries model, MindsDB provides additional keywords.
-* `ORDER BY` -  keyword is used as the column that defines the time series order by, these can be a date, or anything that defines the sequence of events to order the data by descending (DESC) or ascending (ASC) order. The default order will always be `ASC`
+
+* `ORDER BY` -  keyword is used as the column that defines the time series order by, these can be a date, or anything that defines the sequence of events to order the data by descending (DESC) or ascending (ASC) order. (The default order will always be `ASC`).
+
 * `WINDOW` - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be used to specify something like "Always use the previous 10 rows". 
+
 * `HORIZON` - (OPTIONAL, default value is 1) keyword specifies the number of future predictions. 
+
 * `GROUP BY` - (OPTIONAL) keyword is used to group the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. 
 
 ```sql

@@ -411,7 +411,9 @@ class MindsDBDataNode(DataNode):
                 if 'anomaly' in explanation[key]:
                     row[key + '_anomaly'] = explanation[key]['anomaly']
             for key in min_max_keys:
-                row[key + '_min'] = explanation[key]['confidence_lower_bound']
-                row[key + '_max'] = explanation[key]['confidence_upper_bound']
+                if 'confidence_lower_bound' in explanation[key]:
+                    row[key + '_min'] = explanation[key]['confidence_lower_bound']
+                if 'confidence_upper_bound' in explanation[key]:
+                    row[key + '_max'] = explanation[key]['confidence_upper_bound']
 
         return data

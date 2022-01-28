@@ -874,7 +874,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket, affected_rows=1).send()
         elif prepared_stmt['type'] == 'show variables':
             sql = prepared_stmt['statement'].sql
-            self.answer_show_variables(sql)
+
+            packages = []
+            packages += self.get_tabel_packets(
+                columns=[{
+                    'table_name': 'session_variables',
+                    'name': 'Variable_name',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': 'session_variables',
+                    'name': 'Value',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }],
+                data=[]
+            )
+
+            packages.append(self.last_packet())
+            self.send_package_group(packages)
+            return
         else:
             raise NotImplementedError(f"Unknown statement type: {prepared_stmt['type']}")
 

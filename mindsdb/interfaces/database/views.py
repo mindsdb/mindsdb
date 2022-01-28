@@ -26,14 +26,14 @@ class ViewController:
 
     def get(self, id=None, name=None, company_id=None):
         if id is not None:
-            record = View.query.get(id)
+            records = session.query(View).filter_by(id=id, company_id=company_id).all()
         elif name is not None:
-            records = View.query.filter_by(name=name, company_id=company_id).all()
-            if len(records) == 0:
-                raise Exception(f"Can't find view with name: {name}")
-            elif len(records) > 1:
-                raise Exception(f"There are multiple views with name: {name}")
-            record = records[0]
+            records = session.query(View).filter_by(name=name, company_id=company_id).all()
+        if len(records) == 0:
+            raise Exception(f"Can't find view with name/id: {name}/{id}")
+        elif len(records) > 1:
+            raise Exception(f"There are multiple views with name/id: {name}/{id}")
+        record = records[0]
         return self._get_view_record_data(record)
 
     def get_all(self, company_id=None):

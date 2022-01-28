@@ -9,9 +9,10 @@ from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 class ViewDataNode(DataNode):
     type = 'view'
 
-    def __init__(self, view_interface, datasource_interface):
+    def __init__(self, view_interface, datasource_interface, data_store):
         self.view_interface = view_interface
         self.datasource_interface = datasource_interface
+        self.data_store = data_store
 
     def get_tables(self):
         views = self.view_interface.get_all()
@@ -32,10 +33,21 @@ class ViewDataNode(DataNode):
             query = parse_sql(query, dialect='mysql')
         query_str = str(query)
 
-        table = query.from_table.parst[-1]
-        view_metadata = self.view_interface.get(table)
+        table = query.from_table.parts[-1]
+        view_metadata = self.view_interface.get(name=table)
 
-        datasource = self.datasource_interface()
+        datasource = self.datasource_interface.get_db_integration_by_id(view_metadata['datasource_id'])
+        datasource_name = datasource['name']
+
+        dataset_name = self.data_store.get_vacant_name(table)
+        dataset = self.data_store.save_datasource(dataset_name, datasource_name, {'query': view_metadata['query']})
+        try:
+            dataset_object = self.data_store.get_datasource_obj(dataset_name)
+            df = dataset_object.df
+        finally:
+            self.data_store.delete_datasource(dataset_name)
+
+        x = 1
 
         # if ds_name is None:
         #     ds_name = data_store.get_vacant_name(predictor_name)

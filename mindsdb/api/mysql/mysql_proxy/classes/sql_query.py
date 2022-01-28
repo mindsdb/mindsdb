@@ -37,6 +37,7 @@ from mindsdb_sql.planner.steps import (
     GetPredictorColumns,
     FetchDataframeStep,
     ApplyPredictorStep,
+    LimitOffsetStep,
     MapReduceStep,
     MultipleSteps,
     ProjectStep,
@@ -114,19 +115,19 @@ def markQueryVar(where):
     elif isinstance(where, UnaryOperation):
         markQueryVar(where.args[0])
     elif isinstance(where, Constant):
-        if where.value == '$var':
+        if str(where.value).startswith('$var['):
             where.is_var = True
 
 
-def replaceQueryVar(where, val):
+def replaceQueryVar(where, var_value, var_name):
     if isinstance(where, BinaryOperation):
-        replaceQueryVar(where.args[0], val)
-        replaceQueryVar(where.args[1], val)
+        replaceQueryVar(where.args[0], var_value, var_name)
+        replaceQueryVar(where.args[1], var_value, var_name)
     elif isinstance(where, UnaryOperation):
-        replaceQueryVar(where.args[0], val)
+        replaceQueryVar(where.args[0], var_value, var_name)
     elif isinstance(where, Constant):
-        if hasattr(where, 'is_var') and where.is_var is True:
-            where.value = val
+        if hasattr(where, 'is_var') and where.is_var is True and where.value == f'$var[{var_name}]':
+            where.value = var_value
 
 
 def join_query_data(target, source):
@@ -229,7 +230,7 @@ class SQLQuery():
             join_query_data(data, sub_data)
         return data
 
-    def _multiple_steps_reduce(self, step, values):
+    def _multiple_steps_reduce(self, step, vars):
         if step.reduce != 'union':
             raise Exception(f'Unknown MultipleSteps type: {step.reduce}')
 
@@ -244,9 +245,9 @@ class SQLQuery():
                 raise Exception(f'Wrong step type for MultipleSteps: {step}')
             markQueryVar(substep.query.where)
 
-        for v in values:
+        for name, value in vars.items():
             for substep in step.steps:
-                replaceQueryVar(substep.query.where, v)
+                replaceQueryVar(substep.query.where, value, name)
             sub_data = self._multiple_steps(step)
             join_query_data(data, sub_data)
 
@@ -331,7 +332,7 @@ class SQLQuery():
 
         integrations_names = self.datahub.get_datasources_names()
         integrations_names.append('information_schema')
-        integrations_names.append('file')
+        integrations_names.append('files')
 
         all_tables = get_all_tables(mindsdb_sql_struct)
 
@@ -346,14 +347,14 @@ class SQLQuery():
                             window = ts_settings.get('window')
                             order_by = ts_settings.get('order_by')[0]
                             group_by = ts_settings.get('group_by')
-                            if isinstance(group_by, list):
-                                group_by = ts_settings.get('group_by')[0]
+                            if isinstance(group_by, list) is False and group_by is not None:
+                                group_by = [group_by]
                             predictor_metadata[model_name] = {
                                 'timeseries': True,
                                 'window': window,
-                                'nr_predictions': ts_settings.get('nr_predictions'),
+                                'horizon': ts_settings.get('horizon'),
                                 'order_by_column': order_by,
-                                'group_by_column': group_by
+                                'group_by_columns': group_by
                             }
                         else:
                             predictor_metadata[model_name] = {
@@ -399,13 +400,13 @@ class SQLQuery():
                     raise Exception(f'Unknown MapReduceStep type: {step.reduce}')
 
                 step_data = steps_data[step.values.step_num]
-                values = []
+                vars = {}
                 step_data_values = step_data['values']
                 for row in step_data_values:
                     for row_data in row.values():
                         for name, value in row_data.items():
                             if name[0] != '__mindsdb_row_id':
-                                values.append(value)
+                                vars[name[1] or name[0]] = value
 
                 data = {
                     'values': [],
@@ -416,8 +417,8 @@ class SQLQuery():
                 if type(substep) == FetchDataframeStep:
                     query = substep.query
                     markQueryVar(query.where)
-                    for value in values:
-                        replaceQueryVar(query.where, value)
+                    for name, value in vars.items():
+                        replaceQueryVar(query.where, value, name)
                         sub_data = self._fetch_dataframe_step(substep)
                         if len(data['columns']) == 0:
                             data['columns'] = sub_data['columns']
@@ -425,7 +426,7 @@ class SQLQuery():
                             data['tables'] = sub_data['tables']
                         data['values'].extend(sub_data['values'])
                 elif type(substep) == MultipleSteps:
-                    data = self._multiple_steps_reduce(substep, values)
+                    data = self._multiple_steps_reduce(substep, vars)
                 else:
                     raise Exception(f'Unknown step type: {step.step}')
             elif type(step) == ApplyPredictorRowStep:
@@ -500,7 +501,7 @@ class SQLQuery():
                 # if is_timeseries:
                 #     if 'LATEST' not in self.raw:
                 #         # remove additional records from predictor results:
-                #         # first 'window_size' and last 'nr_prediction' records
+                #         # first 'window_size' and last 'horizon' records
                 #         # otherwise there are many unxpected rows in prediciton result:
                 #         # ----------------------------------------------------------------------------------------
                 #         # mysql> SELECT tb.time, tb.state, tb.pnew_case, tb.new_case from
@@ -529,11 +530,11 @@ class SQLQuery():
                 #         # 14 rows in set (2.52 sec)
 
                 #         window_size = predictor_metadata[predictor]['window']
-                #         nr_predictions = predictor_metadata[predictor]['nr_predictions']
-                #         if len(data) >= (window_size + nr_predictions):
+                #         horizon = predictor_metadata[predictor]['horizon']
+                #         if len(data) >= (window_size + horizon):
                 #             data = data[window_size:]
-                #             if len(data) > nr_predictions and nr_predictions > 1:
-                #                 data = data[:-nr_predictions+1]
+                #             if len(data) > horizon and horizon > 1:
+                #                 data = data[:-horizon + 1]
                 data = [{(key, key): value for key, value in row.items()} for row in data]
 
                 table_name = get_preditor_alias(step, self.database)
@@ -669,6 +670,17 @@ class SQLQuery():
                 raise Exception('FilterStep is not implemented')
             # elif type(step) == ApplyTimeseriesPredictorStep:
             #     raise Exception('ApplyTimeseriesPredictorStep is not implemented')
+            elif type(step) == LimitOffsetStep:
+                step_data = steps_data[step.dataframe.step_num]
+                data = {
+                    'values': step_data['values'].copy(),
+                    'columns': step_data['columns'].copy(),
+                    'tables': step_data['tables'].copy()
+                }
+                if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
+                    data['values'] = data['values'][step.offset.value:]
+                if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
+                    data['values'] = data['values'][:step.limit.value]
             elif type(step) == ProjectStep:
                 step_data = steps_data[step.dataframe.step_num]
                 columns_list = []

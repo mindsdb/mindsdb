@@ -912,6 +912,18 @@
   
 
           
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/mushrooms/" class="md-nav__link">
+        Mushrooms
+      </a>
+    </li>
+  
+
+          
         </ul>
       </nav>
     </li>
@@ -1234,11 +1246,13 @@
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">predictors</span> <span class="k">WHERE</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;home_rentals_model&#39;</span><span class="p">;</span>
 </code></pre></div>
 <h2 id="time-series-keywords">Time Series keywords</h2>
-<p>To train a timeseries model, MindsDB provides additional keywords.
-* <code>ORDER BY</code> -  keyword is used as the column that defines the time series order by, these can be a date, or anything that defines the sequence of events to order the data by descending (DESC) or ascending (ASC) order. The default order will always be <code>ASC</code>
-* <code>WINDOW</code> - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be used to specify something like "Always use the previous 10 rows". 
-* <code>HORIZON</code> - (OPTIONAL, default value is 1) keyword specifies the number of future predictions. 
-* <code>GROUP BY</code> - (OPTIONAL) keyword is used to group the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. </p>
+<p>To train a timeseries model, MindsDB provides additional keywords.</p>
+<ul>
+<li><code>ORDER BY</code> -  keyword is used as the column that defines the time series order by, these can be a date, or anything that defines the sequence of events to order the data by descending (DESC) or ascending (ASC) order. The default order will always be <code>ASC</code>.</li>
+<li><code>WINDOW</code> - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be used to specify something like "Always use the previous 10 rows". </li>
+<li><code>HORIZON</code> - (OPTIONAL, default value is 1) keyword specifies the number of future predictions. </li>
+<li><code>GROUP BY</code> - (OPTIONAL) keyword is used to group the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. </li>
+</ul>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
 <span class="k">FROM</span> <span class="n">db_integration</span> 
 <span class="p">(</span><span class="k">SELECT</span> <span class="n">sequential_column</span><span class="p">,</span> <span class="n">partition_column</span><span class="p">,</span> <span class="n">other_column</span><span class="p">,</span> <span class="n">target_column</span> <span class="k">FROM</span> <span class="k">table_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">ds_name</span>

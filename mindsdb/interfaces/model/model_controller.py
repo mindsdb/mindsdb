@@ -98,6 +98,14 @@ class ModelController():
                 f"Predict target must be 'str' or 'list' with 1 element. Got: {to_predict}"
             )
 
+        while '.' in str(list(kwargs.keys())):
+            for k in list(kwargs.keys()):
+                if '.' in k:
+                    lhs = '.'.join(k.split('.')[:-1])
+                    rhs = {k.split('.')[-1]: kwargs[k]}
+                    kwargs[lhs] = rhs
+                    del kwargs[k]
+
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']

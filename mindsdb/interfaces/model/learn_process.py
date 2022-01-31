@@ -83,7 +83,7 @@ def brack_to_mod(ovr):
 @mark_process(name='learn')
 def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None) -> int:
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-
+    print('Override of: ', json_ai_override)
     if json_ai_override is None:
         json_ai_override = {}
 
@@ -94,7 +94,10 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
 
     json_ai = json_ai.to_dict()
     rep_recur(json_ai, json_ai_override)
+    print(json_ai, json_ai_override)
+
     json_ai = JsonAI.from_dict(json_ai)
+    
 
     code = lightwood.code_from_json_ai(json_ai)
 

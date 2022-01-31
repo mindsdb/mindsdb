@@ -189,7 +189,7 @@ class DataStore():
                     }
                 }
                 ds = dsClass(**creation_info['kwargs'])
-            
+
             elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
                 creation_info = {
                     'class': dsClass.__name__,
@@ -234,7 +234,7 @@ class DataStore():
 
                 if 'database' in source:
                     kwargs['database'] = source['database']
-                
+
                 ds = dsClass(**kwargs)
 
             elif integration['type'] == 'snowflake':
@@ -242,7 +242,7 @@ class DataStore():
                     'class': dsClass.__name__,
                     'args': [],
                     'kwargs': {
-                        'query': source['query'].replace('"', "'"),
+                        'query': source['query'],
                         'schema': source.get('schema', integration['schema']),
                         'warehouse': source.get('warehouse', integration['warehouse']),
                         'database': source.get('database', integration['database']),
@@ -289,7 +289,7 @@ class DataStore():
                 }
 
                 ds = dsClass(**creation_info['kwargs'])
-            
+
             elif integration['type'] == 'trinodb':
                 creation_info = {
                     'class': dsClass.__name__,

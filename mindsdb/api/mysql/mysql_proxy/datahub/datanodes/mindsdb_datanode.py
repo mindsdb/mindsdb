@@ -285,9 +285,9 @@ class MindsDBDataNode(DataNode):
             __mdb_make_predictions = set([row.get('__mdb_make_predictions', True) for row in where_data]) == {True}
 
             predict = model['predict']
-            group_by = timeseries_settings['group_by']
+            group_by = timeseries_settings['group_by'] or []
             order_by_column = timeseries_settings['order_by'][0]
-            nr_predictions = timeseries_settings['nr_predictions']
+            horizon = timeseries_settings['horizon']
 
             groups = set()
             for row in pred_dicts:
@@ -329,18 +329,18 @@ class MindsDBDataNode(DataNode):
                         date_values = [date_values]
 
                 for i in range(len(rows) - 1):
-                    if nr_predictions > 1:
+                    if horizon > 1:
                         rows[i][predict] = rows[i][predict][0]
                         rows[i][order_by_column] = rows[i][order_by_column][0]
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if nr_predictions > 1:
+                        if horizon > 1:
                             explanations[i][predict][col] = explanations[i][predict][col][0]
 
                 last_row = rows.pop()
                 last_explanation = explanations.pop()
-                for i in range(nr_predictions):
+                for i in range(horizon):
                     new_row = copy.deepcopy(last_row)
-                    if nr_predictions > 1:
+                    if horizon > 1:
                         new_row[predict] = new_row[predict][i]
                         new_row[order_by_column] = new_row[order_by_column][i]
                     if '__mindsdb_row_id' in new_row and (i > 0 or __mdb_make_predictions is False):
@@ -349,7 +349,7 @@ class MindsDBDataNode(DataNode):
 
                     new_explanation = copy.deepcopy(last_explanation)
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if nr_predictions > 1:
+                        if horizon > 1:
                             new_explanation[predict][col] = new_explanation[predict][col][i]
                     if i != 0:
                         new_explanation[predict]['anomaly'] = None
@@ -411,7 +411,9 @@ class MindsDBDataNode(DataNode):
                 if 'anomaly' in explanation[key]:
                     row[key + '_anomaly'] = explanation[key]['anomaly']
             for key in min_max_keys:
-                row[key + '_min'] = explanation[key]['confidence_lower_bound']
-                row[key + '_max'] = explanation[key]['confidence_upper_bound']
+                if 'confidence_lower_bound' in explanation[key]:
+                    row[key + '_min'] = explanation[key]['confidence_lower_bound']
+                if 'confidence_upper_bound' in explanation[key]:
+                    row[key + '_max'] = explanation[key]['confidence_upper_bound']
 
         return data

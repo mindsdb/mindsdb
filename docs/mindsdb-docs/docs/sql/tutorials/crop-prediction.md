@@ -200,11 +200,11 @@ SELECT * FROM mindsdb.predictors WHERE name='crop_predictor';
 After the predictor has finished training, you will see a similar output. Note that MindsDB does model testing for you automatically, so you will immediately see if the predictor is accurate enough.
 
 ```console
-+-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
-| name            | status   | accuracy           | predict | update_status | mindsdb_version | error | select_data_query | external_datasource | training_options |
-+-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
-|  crop_predictor | complete | 0.9954545454545454 | label   | up_to_date    | 2.55.2          |       |                   |                     |                  |
-+-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
++-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+------------------+
+| name            | status   | accuracy           | predict | update_status | mindsdb_version | error | select_data_query | training_options |
++-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+------------------+
+|  crop_predictor | complete | 0.9954545454545454 | label   | up_to_date    | 2.55.2          |       |                   |                  |
++-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+------------------+
 1 row in set (0.29 sec)
 
 ```

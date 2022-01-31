@@ -35,9 +35,11 @@ from mindsdb_sql.parser.ast import (
     BinaryOperation,
     Identifier,
     Parameter,
+    Describe,
     Constant,
     Function,
     Explain,
+    Delete,
     Insert,
     Select,
     Star,
@@ -46,7 +48,7 @@ from mindsdb_sql.parser.ast import (
     Use
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource, CreatePredictor
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropDatasource, CreateDatasource, CreatePredictor, RetrainPredictor
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -55,7 +57,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
-from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser, SQL_PARAMETER, SQL_DEFAULT
+from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
@@ -334,10 +336,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         model_interface = self.session.model_interface
         data_store = self.session.data_store
 
-        for key in insert.keys():
-            if insert[key] is SQL_DEFAULT:
-                insert[key] = None  # all default values at this moment is null (None)
-
         select_data_query = insert.get('select_data_query')
         if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
             self.packet(
@@ -559,7 +557,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if statement.window is not None:
             struct['window'] = statement.window
         if statement.horizon is not None:
-            struct['nr_predictions'] = statement.horizon
+            struct['horizon'] = statement.horizon
 
         model_interface = self.session.model_interface
         data_store = self.session.data_store
@@ -583,7 +581,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds_data = data_store.get_datasource(ds_name)
 
         timeseries_settings = {}
-        for w in ['order_by', 'group_by', 'window', 'nr_predictions']:
+        for w in ['order_by', 'group_by', 'window', 'horizon']:
             if w in struct:
                 timeseries_settings[w] = struct.get(w)
 
@@ -690,7 +688,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             num_params = 0
             for row in statement.values:
                 for item in row:
-                    if isinstance(item, Parameter):
+                    if type(item) == Parameter:
                         num_params = num_params + 1
             num_columns = len(query.columns) - num_params
 
@@ -848,7 +846,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             parameter_index = 0
             for row in statement.values:
                 for item_index, item in enumerate(row):
-                    if isinstance(item, Parameter):
+                    if type(item) == Parameter:
                         row[item_index] = Constant(parameters[parameter_index])
                         parameter_index += 1
             self.process_insert(statement)
@@ -876,7 +874,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket, affected_rows=1).send()
         elif prepared_stmt['type'] == 'show variables':
             sql = prepared_stmt['statement'].sql
-            self.answer_show_variables(sql)
+
+            packages = []
+            packages += self.get_tabel_packets(
+                columns=[{
+                    'table_name': 'session_variables',
+                    'name': 'Variable_name',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': 'session_variables',
+                    'name': 'Value',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }],
+                data=[]
+            )
+
+            packages.append(self.last_packet())
+            self.send_package_group(packages)
+            return
         else:
             raise NotImplementedError(f"Unknown statement type: {prepared_stmt['type']}")
 
@@ -1078,7 +1093,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:
                 raise Exception('datanode is none')
-            result, _column_names = datanode.select(sql.replace('`', ''))
+            result, _column_names = datanode.select(sql)
 
             columns = []
             data = []
@@ -1117,7 +1132,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # not all statemts are parse by parse_sql
             pass
 
-        if isinstance(statement, CreateDatasource):
+        if type(statement) == CreateDatasource:
             struct = {
                 'datasource_name': statement.name,
                 'database_type': statement.engine,
@@ -1125,7 +1140,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             }
             self.answer_create_datasource(struct)
             return
-        if isinstance(statement, DropPredictor):
+        if type(statement) == DropPredictor:
             predictor_name = statement.name.parts[-1]
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
             self.packet(OkPacket).send()
@@ -1133,17 +1148,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # fallback for statement
             self.answer_create_datasource(struct)
             return
-        elif isinstance(statement, DropDatasource):
+        elif type(statement) == DropDatasource:
             ds_name = statement.name.parts[-1]
             self.answer_drop_datasource(ds_name)
             return
-        elif keyword == 'describe':
-            self.answer_describe_predictor(struct['predictor_name'])
+        elif type(statement) == Describe:
+            self.answer_describe_predictor(statement.value.parts[-1])
             return
-        elif keyword == 'retrain':
-            self.answer_retrain_predictor(struct['predictor_name'])
+        elif type(statement) == RetrainPredictor:
+            self.answer_retrain_predictor(statement.name.parts[-1])
             return
-        elif isinstance(statement, Show) or keyword == 'show':
+        elif type(statement) == Show or keyword == 'show':
             sql_category = statement.category.lower()
             condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
             expression = statement.expression
@@ -1305,9 +1320,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             elif sql_category in ('character set', 'charset'):
                 charset = None
                 if condition == 'where':
-                    if isinstance(expression, BinaryOperation):
+                    if type(expression) == BinaryOperation:
                         if expression.op == '=':
-                            if isinstance(expression.args[0], Identifier):
+                            if type(expression.args[0]) == Identifier:
                                 if expression.args[0].parts[0].lower() == 'charset':
                                     charset = expression.args[1].value
                                 else:
@@ -1357,9 +1372,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             elif sql_category == 'table status':
                 # SHOW TABLE STATUS LIKE 'table'
                 table_name = None
-                if condition == 'like' and isinstance(expression, Constant):
+                if condition == 'like' and type(expression) == Constant:
                     table_name = expression.value
-                elif condition == 'from' and isinstance(expression, Identifier):
+                elif condition == 'from' and type(expression) == Identifier:
                     table_name = expression.parts[-1]
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
@@ -1369,11 +1384,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             else:
                 raise Exception(f'Statement not implemented: {sql}')
-        elif isinstance(statement, (StartTransaction, CommitTransaction, RollbackTransaction)):
+        elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
             self.packet(OkPacket).send()
-        elif isinstance(statement, Set):
+        elif type(statement) == Set:
             category = (statement.category or '').lower()
-            if category == '' and isinstance(statement.arg, BinaryOperation):
+            if category == '' and type(statement.arg) == BinaryOperation:
                 self.packet(OkPacket).send()
             elif category == 'autocommit':
                 self.packet(OkPacket).send()
@@ -1399,28 +1414,31 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 log.warning(f'SQL statement is not processable, return OK package: {sql}')
                 self.packet(OkPacket).send()
-        elif isinstance(statement, Use):
+        elif type(statement) == Use:
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
             self.packet(OkPacket).send()
-        elif isinstance(statement, CreatePredictor):
+        elif type(statement) == CreatePredictor:
             self.answer_create_predictor(statement)
         elif keyword == 'set':
             log.warning(f'Unknown SET query, return OK package: {sql}')
             self.packet(OkPacket).send()
         elif keyword == 'create_ai_table':
             self.answer_create_ai_table(struct)
-        elif keyword == 'delete' and \
-                ('mindsdb.predictors' in sql_lower or self.session.database == 'mindsdb' and 'predictors' in sql_lower):
-            self.delete_predictor_sql(sql)
+        elif type(statement) == Delete:
+            if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
+                raise Exception("Only 'DELETE' from database 'mindsdb' is possible at this moment")
+            if statement.table.parts[-1] != 'predictors':
+                raise Exception("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
+            self.delete_predictor_sql(str(sql))
             self.packet(OkPacket).send()
-        elif isinstance(statement, Insert):
+        elif type(statement) == Insert:
             self.process_insert(statement)
         elif keyword in ('update', 'insert'):
             raise NotImplementedError('Update and Insert are not implemented')
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             self.packet(OkPacket).send()
-        elif isinstance(statement, Select):
+        elif type(statement) == Select:
             if statement.from_table is None:
                 self.answer_single_row_select(statement)
                 return
@@ -1465,7 +1483,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 session=self.session
             )
             self.answer_select(query)
-        elif isinstance(statement, Explain):
+        elif type(statement) == Explain:
             self.answer_explain_table(statement.target.parts)
         else:
             print(sql)
@@ -1476,7 +1494,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         columns = []
         data = []
         for target in statement.targets:
-            if isinstance(target, Variable):
+            if type(target) == Variable:
                 var_name = target.value
                 column_name = f'@@{var_name}'
                 column_alias = target.alias or column_name
@@ -1486,7 +1504,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     result = ''
                 else:
                     result = result[0]
-            elif isinstance(target, Function):
+            elif type(target) == Function:
                 functions_results = {
                     'connection_id': self.connection_id,
                     'database': self.session.database,
@@ -1498,14 +1516,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 column_name = f'{target.op}()'
                 column_alias = target.alias or column_name
                 result = functions_results[function_name]
-            elif isinstance(target, Constant):
+            elif type(target) == Constant:
                 result = target.value
                 column_name = str(result)
-                column_alias = '.'.join(target.alias.parts) if isinstance(target.alias, Identifier) else column_name
-            elif isinstance(target, Identifier):
+                column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
+            elif type(target) == Identifier:
                 result = '.'.join(target.parts)
                 column_name = str(result)
-                column_alias = '.'.join(target.alias.parts) if isinstance(target.alias, Identifier) else column_name
+                column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
 
             columns.append({
                 'table_name': '',

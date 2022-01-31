@@ -244,11 +244,11 @@ SELECT * FROM mindsdb.predictors WHERE name='process_quality_predictor';
 After the Predictor has finished training, you will see a similar output.
 
 ```console
-+-----------------------------+----------+----------+--------------------+-------------------+---------------------+------------------+
-| name                        | status   | accuracy | predict            | select_data_query | external_datasource | training_options |
-+-----------------------------+----------+----------+--------------------+-------------------+---------------------+------------------+
-| process_quality_predictor   | complete | 1        | silica_concentrate |                   |                     |                  |
-+-----------------------------+----------+----------+--------------------+-------------------+---------------------+------------------+
++-----------------------------+----------+----------+--------------------+-------------------+------------------+
+| name                        | status   | accuracy | predict            | select_data_query | training_options |
++-----------------------------+----------+----------+--------------------+-------------------+------------------+
+| process_quality_predictor   | complete | 1        | silica_concentrate |                   |                  |
++-----------------------------+----------+----------+--------------------+-------------------+------------------+
 1 row in set (0.28 sec)
 ```
 

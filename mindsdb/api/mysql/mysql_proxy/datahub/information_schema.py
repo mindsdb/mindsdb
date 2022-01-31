@@ -37,7 +37,7 @@ class InformationSchema(DataNode):
                 session.datasource_interface
             ),
             'files': FileDataNode(session.data_store),
-            'viewx': ViewDataNode(session.view_interface, session.datasource_interface, session.data_store)
+            'views': ViewDataNode(session.view_interface, session.datasource_interface, session.data_store)
         }
 
         self.get_dataframe_funcs = {

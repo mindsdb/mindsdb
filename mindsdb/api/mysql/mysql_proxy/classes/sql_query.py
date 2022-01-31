@@ -333,7 +333,7 @@ class SQLQuery():
         integrations_names = self.datahub.get_datasources_names()
         integrations_names.append('information_schema')
         integrations_names.append('files')
-        integrations_names.append('viewx')
+        integrations_names.append('views')
 
         all_tables = get_all_tables(mindsdb_sql_struct)
 

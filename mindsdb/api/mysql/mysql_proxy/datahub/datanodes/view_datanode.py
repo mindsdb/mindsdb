@@ -24,11 +24,9 @@ class ViewDataNode(DataNode):
 
     def get_table_columns(self, table):
         # TODO
-        ds = self.datastore.get_datasource(table)
-        return [x['name'] for x in ds['columns']]
+        raise Exception('not iomplemented')
 
     def select(self, query):
-        # TODO
         if isinstance(query, str):
             query = parse_sql(query, dialect='mysql')
         query_str = str(query)
@@ -40,28 +38,12 @@ class ViewDataNode(DataNode):
         datasource_name = datasource['name']
 
         dataset_name = self.data_store.get_vacant_name(table)
-        dataset = self.data_store.save_datasource(dataset_name, datasource_name, {'query': view_metadata['query']})
+        self.data_store.save_datasource(dataset_name, datasource_name, {'query': view_metadata['query']})
         try:
             dataset_object = self.data_store.get_datasource_obj(dataset_name)
-            df = dataset_object.df
+            data_df = dataset_object.df
         finally:
             self.data_store.delete_datasource(dataset_name)
 
-        x = 1
-
-        # if ds_name is None:
-        #     ds_name = data_store.get_vacant_name(predictor_name)
-
-        # ds = data_store.save_datasource(ds_name, integration_name, {'query': struct['select']})
-        # ds_data = data_store.get_datasource(ds_name)
-
-        # query_tables = get_all_tables(query)
-
-        # if len(query_tables) != 1:
-        #     raise Exception(f'Only one table can be used in query to information_schema: {query}')
-
-        # data = self.datastore.get_data(query_tables[0], where=None, limit=None, offset=None)
-        # data_df = DF(data['data'])
-        # result = query_df(data_df, query)
-        # return result.to_dict(orient='records'), result.columns.to_list()
-        return None
+        result = query_df(data_df, query_str)
+        return result.to_dict(orient='records'), result.columns.to_list()

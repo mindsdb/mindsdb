@@ -111,9 +111,9 @@ class ModelController():
 
         if kwargs.get('ignore_columns') is not None:
             problem_definition['ignore_features'] = kwargs['ignore_columns']
-        
+
         json_ai_override = {}
-        json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys()) + ['models']
+        json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
         for k in kwargs:
             if k in json_ai_keys:
                 json_ai_override[k] = kwargs[k]

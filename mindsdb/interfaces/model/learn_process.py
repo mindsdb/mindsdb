@@ -86,17 +86,9 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
 
     if json_ai_override is None:
         json_ai_override = {}
-    
+
     for k in json_ai_override:
         json_ai_override[k] = json.loads(json_ai_override[k])
-
-    if 'models' in json_ai_override:
-        json_ai_override['outputs'] = {
-            problem_definition.target: {
-                'mixers': json_ai_override['models']
-            }
-        }
-        del json_ai_override['models']
 
     json_ai_override = brack_to_mod(json_ai_override)
 

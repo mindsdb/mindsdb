@@ -61,7 +61,14 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatem
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
-    ErBadDbError
+    ErBadDbError,
+    ErBadTableError,
+    ErKeyColumnDoesNotExist,
+    ErTableExistError,
+    ErDubFieldName,
+    ErDbDropDelete,
+    ErNonInsertableTable,
+    ErNotSupportedYet,
 )
 
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
@@ -388,12 +395,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         ds_data = data_store.get_datasource(ds_name)
         if ds_data is None:
-            raise Exception(f"DataSource '{ds_name}' does not exists")
+            raise ErBadDbError(f"DataSource '{ds_name}' does not exists")
         ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
             if col not in ds_columns:
                 data_store.delete_datasource(ds_name)
-                raise Exception(f"Column '{col}' not exists")
+                raise ErKeyColumnDoesNotExist(f"Column '{col}' not exists")
 
         try:
             insert['predict'] = self._check_predict_columns(insert['predict'], ds_columns)
@@ -413,17 +420,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         table = ai_table.get_ai_table(struct['ai_table_name'])
         if table is not None:
-            raise Exception(f"AT Table with name {struct['ai_table_name']} already exists")
+            raise ErTableExistError(f"AT Table with name {struct['ai_table_name']} already exists")
 
         # check predictor exists
         models = model_interface.get_models()
         models_names = [x['name'] for x in models]
         if struct['predictor_name'] not in models_names:
-            raise Exception(f"Predictor with name {struct['predictor_name']} not exists")
+            raise ErBadTableError(f"Predictor with name {struct['predictor_name']} not exists")
 
         # check integration exists
         if self.session.datasource_interface.get_db_integration(struct['integration_name']) is None:
-            raise Exception(f"Integration with name {struct['integration_name']} not exists")
+            raise ErBadDbError(f"Datasource with name {struct['integration_name']} not exists")
 
         ai_table.add(
             name=struct['ai_table_name'],
@@ -448,20 +455,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             for column_name in ds_column_names:
                 if column_name == predict_column_name:
                     if candidate is not None:
-                        raise Exception("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
+                        raise ErKeyColumnDoesNotExist("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
                     candidate = column_name
             if candidate is None:
                 for column_name in ds_column_names:
                     if column_name.lower() == predict_column_name.lower():
                         if candidate is not None:
-                            raise Exception("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
+                            raise ErKeyColumnDoesNotExist("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
                         candidate = column_name
             if candidate is None:
-                raise Exception(f"Datasource has not column with name '{predict_column_name}'")
+                raise ErKeyColumnDoesNotExist(f"Datasource has not column with name '{predict_column_name}'")
             cleaned_predict_column_names.append(candidate)
 
         if len(cleaned_predict_column_names) != len(set(cleaned_predict_column_names)):
-            raise Exception("'predict' column name is duplicated")
+            raise ErDubFieldName("'predict' column name is duplicated")
 
         return cleaned_predict_column_names
 
@@ -469,7 +476,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         model_interface = self.session.model_interface
         models = model_interface.get_models()
         if predictor_name not in [x['name'] for x in models]:
-            raise Exception(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
+            raise ErBadTableError(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
         description = model_interface.get_model_description(predictor_name)
         description = [
             description['accuracies'],
@@ -515,7 +522,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         model_interface = self.session.model_interface
         models = model_interface.get_models()
         if predictor_name not in [x['name'] for x in models]:
-            raise Exception(f"Can't retrain predictor. There is no predictor with name '{predictor_name}'")
+            raise ErBadTableError(f"Can't retrain predictor. There is no predictor with name '{predictor_name}'")
         model_interface.update_model(predictor_name)
         self.packet(OkPacket).send()
 
@@ -537,7 +544,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds = self.session.datasource_interface.get_db_integration(ds_name)
             self.session.datasource_interface.remove_db_integration(ds['database_name'])
         except Exception:
-            raise Exception(f"Something went wrong during deleting of datasource '{ds_name}'.")
+            raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
         self.packet(OkPacket).send()
 
     def answer_create_predictor(self, statement):
@@ -548,7 +555,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'predict': [x.parts[-1] for x in statement.targets]
         }
         if len(struct['predict']) > 1:
-            raise Exception("Only one field can be in 'PREDICT'")
+            raise SqlApiException("Only one field can be in 'PREDICT'")
         if statement.using is not None:
             struct['using'] = statement.using
         if statement.datasource_name is not None:
@@ -556,7 +563,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if statement.order_by is not None:
             struct['order_by'] = [x.field.parts[-1] for x in statement.order_by]
             if len(struct['order_by']) > 1:
-                raise Exception("Only one field can be in 'OPRDER BY'")
+                raise SqlApiException("Only one field can be in 'OPRDER BY'")
         if statement.group_by is not None:
             struct['group_by'] = [x.parts[-1] for x in statement.group_by]
         if statement.window is not None:
@@ -576,7 +583,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds_data = data_store.get_datasource(ds_name)
         else:
             if self.session.datasource_interface.get_db_integration(integration_name) is None:
-                raise Exception(f"Unknown integration: {integration_name}")
+                raise ErBadDbError(f"Unknown datasource: {integration_name}")
 
             ds_name = struct.get('datasource_name')
             if ds_name is None:
@@ -674,10 +681,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 len(statement.table.parts) > 1 and statement.table.parts[0].lower() != 'mindsdb'
                 or len(statement.table.parts) == 1 and self.session.database != 'mindsdb'
             ):
-                raise Exception("Only parametrized insert into table from 'mindsdb' database supported at this moment")
+                raise ErNonInsertableTable("Only parametrized insert into table from 'mindsdb' database supported at this moment")
             table_name = statement.table.parts[-1]
             if table_name not in ['predictors', 'commands']:
-                raise Exception("Only parametrized insert into 'predictors' or 'commands' supported at this moment")
+                raise ErNonInsertableTable("Only parametrized insert into 'predictors' or 'commands' supported at this moment")
 
             new_statement = Select(
                 targets=statement.columns,
@@ -698,7 +705,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             num_columns = len(query.columns) - num_params
 
             if num_columns != 0:
-                raise Exception("At this moment supported only insert where all values is parameters.")
+                raise ErNonInsertableTable("At this moment supported only insert where all values is parameters.")
 
             columns_def = []
             for col in query.columns:
@@ -780,7 +787,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'type': TYPES.MYSQL_TYPE_VAR_STRING
             }]
         else:
-            raise SqlError(f"Only 'SELECT' and 'INSERT' statements supported. Got: {sql}")
+            raise SqlApiException(f"Only 'SELECT' and 'INSERT' statements supported. Got: {sql}")
 
         packages = [
             self.packet(
@@ -872,7 +879,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.send_package_group(packages)
         elif prepared_stmt['type'] == 'delete':
             if len(parameters) == 0:
-                raise SqlError("Delete statement must content 'where' filter")
+                raise SqlApiException("Delete statement must content 'where' filter")
             sql = prepared_stmt['statement'].sql
             sql = sql[:sql.find('?')] + f"'{parameters[0]}'"
             self.delete_predictor_sql(sql)
@@ -898,7 +905,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.send_package_group(packages)
             return
         else:
-            raise NotImplementedError(f"Unknown statement type: {prepared_stmt['type']}")
+            raise ErNotSupportedYet(f"Unknown statement type: {prepared_stmt['type']}")
 
     def answer_stmt_fetch(self, stmt_id, limit=100000):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
@@ -952,7 +959,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif table == 'commands' and db == 'mindsdb':
             self.answer_explain_commands()
         else:
-            raise NotImplementedError("Only 'EXPLAIN predictors' and 'EXPLAIN commands' supported")
+            raise ErNotSupportedYet("Only 'EXPLAIN predictors' and 'EXPLAIN commands' supported")
 
     def _get_explain_columns(self):
         return [{
@@ -1432,9 +1439,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answer_create_ai_table(struct)
         elif type(statement) == Delete:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
-                raise Exception("Only 'DELETE' from database 'mindsdb' is possible at this moment")
+                raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
             if statement.table.parts[-1] != 'predictors':
-                raise Exception("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
+                raise ErBadTableError("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
             self.delete_predictor_sql(str(sql))
             self.packet(OkPacket).send()
         elif type(statement) == Insert:

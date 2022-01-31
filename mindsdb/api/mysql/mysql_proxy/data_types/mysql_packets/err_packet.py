@@ -19,18 +19,36 @@ class ErrPacket(Packet):
     https://mariadb.com/kb/en/library/1-connecting-connecting/#initial-handshake-packet
     '''
 
-    def setup(self):
-        err_code = 0
+    # def setup(self):
+    def setup(self, length=0, count_header=1, body=''):
+        if length == 0:
+            return
+
+        self._length = length
+        self._seq = count_header
+        self._body = body
+
+        err_code = None
         if 'err_code' in self._kwargs:
             err_code = self._kwargs['err_code']
-
-        msg = 'ERROR'
+        msg = None
         if 'msg' in self._kwargs:
             msg = self._kwargs['msg']
 
         self.err_header = Datum('int<1>', 255)
-        self.err_code = Datum('int<2>', err_code)
-        self.msg = Datum('string<EOF>', msg)
+
+        if err_code is not None:
+            self.err_code = Datum('int<2>', err_code)
+        else:
+            self.err_code = Datum('int<2>')
+
+        if msg is not None:
+            self.msg = Datum('string<EOF>', msg)
+        else:
+            self.msg = Datum('string<EOF>')
+
+        for attr in (self.err_header, self.err_code, self.msg):
+            self._body = attr.setFromBuf(self._body)
 
     @property
     def body(self):

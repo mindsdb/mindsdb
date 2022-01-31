@@ -79,6 +79,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CAPABILITIES
 )
 
+from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     ErrPacket,
     HandshakePacket,
@@ -2272,8 +2273,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         while True:
             log.debug('Got a new packet')
-            p = self.packet(CommandPacket)
-
+            # p = self.packet(CommandPacket)
+            p = self.packet(Packet)
             try:
                 success = p.get()
             except Exception:
@@ -2285,6 +2286,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 log.debug('Session closed by client')
                 return
 
+            if p.body[0] == 255:
+                log.debug("of type ERR_PACKET")
+                p_class = ErrPacket
+            else:
+                log.debug("of type COMMAND_PACKET")
+                p_class = CommandPacket
+
+            p = p_class().setup(p.length, p.seq, p.body)
+            if p_class == ErrPacket:
+                p.send()
             log.debug('Command TYPE: {type}'.format(
                 type=getConstName(COMMANDS, p.type.value)))
 

@@ -586,14 +586,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds = data_store.get_datasource_obj(ds_name, raw=True)
             ds_data = data_store.get_datasource(ds_name)
         else:
-            if self.session.datasource_interface.get_db_integration(integration_name) is None:
+            if self.session.datasource_interface.get_db_integration(integration_name) is None and integration_name not in ('views', 'files'):
                 raise Exception(f"Unknown datasource: {integration_name}")
 
             ds_name = struct.get('datasource_name')
             if ds_name is None:
                 ds_name = data_store.get_vacant_name(predictor_name)
 
-            ds = data_store.save_datasource(ds_name, integration_name, {'query': struct['select']})
+            ds_kwargs = {'query': struct['select']}
+            if integration_name == 'views':
+                parsed = parse_sql(struct['select'])
+                ds_kwargs['source'] = parsed.from_table.parts[-1]
+            ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
             ds_data = data_store.get_datasource(ds_name)
 
         timeseries_settings = {}

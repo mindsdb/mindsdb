@@ -3,6 +3,7 @@ import shutil
 import os
 
 import pandas as pd
+from mindsdb_sql import parse_sql
 
 import mindsdb_datasources
 from mindsdb.__about__ import __version__ as mindsdb_version
@@ -17,6 +18,57 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import DatasourceController
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.interfaces.database.views import ViewController
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+
+
+class QueryDS:
+    def __init__(self, query, source, source_type, company_id):
+        self.query = query
+        self.source = source
+        self.source_type = source_type
+        self.company_id = company_id
+
+    def query(self, q):
+        pass
+
+    @property
+    def df(self):
+        view_interface = WithKWArgsWrapper(
+            ViewController(),
+            company_id=self.company_id
+        )
+
+        datasource_interface = WithKWArgsWrapper(
+            DatasourceController(),
+            company_id=self.company_id
+        )
+
+        data_store = WithKWArgsWrapper(
+            DataStore(),
+            company_id=self.company_id
+        )
+
+        query = self.query
+        if self.source_type == 'view_query':
+            if isinstance(query, str):
+                query = parse_sql(query, dialect='mysql')
+            query_str = str(query)
+
+            table = query.from_table.parts[-1]
+            view_metadata = view_interface.get(name=table)
+
+            datasource = datasource_interface.get_db_integration_by_id(view_metadata['datasource_id'])
+            datasource_name = datasource['name']
+
+            dataset_name = data_store.get_vacant_name(table)
+            data_store.save_datasource(dataset_name, datasource_name, {'query': view_metadata['query']})
+            try:
+                dataset_object = data_store.get_datasource_obj(dataset_name)
+                data_df = dataset_object.df
+            finally:
+                data_store.delete_datasource(dataset_name)
+        return data_df
 
 
 class DataStore():
@@ -138,7 +190,21 @@ class DataStore():
 
     def create_datasource(self, source_type, source, file_path=None, company_id=None, ds_meta_dir=None):
         datasource_controller = DatasourceController()
-        if source_type == 'file':
+        if source_type == 'file_query' or source_type == 'view_query':
+            dsClass = QueryDS
+            creation_info = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'query': source['query'],
+                    'source': source['source'],   # view|file
+                    'source_type': source_type,
+                    'company_id': company_id
+                }
+            }
+
+            ds = dsClass(**creation_info['kwargs'])
+        elif source_type == 'file':
             source = os.path.join(ds_meta_dir, source)
             shutil.move(file_path, source)
             ds = FileDS(source)
@@ -323,6 +389,11 @@ class DataStore():
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         while datasource_record is not None:
             raise Exception(f'Datasource with name {name} already exists')
+
+        if source_type == 'views':
+            source_type = 'view_query'
+        elif source_type == 'files':
+            source_type = 'file_query'
 
         try:
             datasource_record = Datasource(

@@ -59,6 +59,11 @@ from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapab
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import log
+from mindsdb.api.mysql.mysql_proxy.utilities import (
+    SqlApiException,
+    ErBadDbError
+)
+
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
@@ -2247,7 +2252,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if self.is_db_exists(db_name):
                 self.session.database = db_name
             else:
-                raise Exception(f"Database {db_name} does not exists")
+                raise ErBadDbError(f"Database {db_name} does not exists")
 
     def handle(self):
         """
@@ -2324,6 +2329,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     # that sends it to debug isntead
                     self.packet(OkPacket).send()
 
+            except SqlApiException as e:
+                log.error(
+                    f'ERROR while executing query\n'
+                    f'{traceback.format_exc()}\n'
+                    f'{e}'
+                )
+                self.packet(
+                    ErrPacket,
+                    err_code=e.err_code,
+                    msg=str(e)
+                ).send()
             except Exception as e:
                 log.error(
                     f'ERROR while executing query\n'

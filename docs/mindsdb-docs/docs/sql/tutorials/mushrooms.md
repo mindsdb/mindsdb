@@ -23,7 +23,7 @@ To ensure you can complete all the steps, make sure you have access to the follo
 
 1. Create a new project directory named e.g. `mindsdb-tutorial`
 2. Inside your project directory:
-    2.1 Create a new file named `docker-compose.yml`.
+  - Create a new file named `docker-compose.yml`.
 
 Open the `docker-compose.yml` file with any text-editor, copy the following and save.
 

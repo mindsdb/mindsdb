@@ -61,7 +61,7 @@ Data will be loaded from a csv file using the import tool.
 [Docker Volumes](https://docs.docker.com/storage/volumes/) are used for persistent storage of data.
 
 To run, open a terminal in the project folder and run `docker-compose up -d` .
-If you do not have the Docker images locally, it will first download them from docker hub and might take.
+If you do not have the Docker images locally, it will first download them from docker hub and might take a while.
 
 ## Creating a database
 

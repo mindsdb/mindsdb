@@ -1195,8 +1195,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     session=self.session
                 )
                 self.answer_select(query)
+            elif sql_category == 'views':
+                schema = 'views'
+                new_statement = Select(
+                    targets=[Identifier(parts=['table_name'], alias=Identifier('View'))],
+                    from_table=Identifier(parts=['information_schema', 'TABLES']),
+                    where=BinaryOperation('and', args=[
+                        BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
+                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                    ])
+                )
+
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.answer_select(query)
                 return
-            if sql_category == 'plugins':
+            elif sql_category == 'plugins':
                 if expression is not None:
                     raise Exception("'SHOW PLUGINS' query should be used without filters")
                 new_statement = Select(

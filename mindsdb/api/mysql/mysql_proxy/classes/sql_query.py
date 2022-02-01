@@ -697,147 +697,157 @@ class SQLQuery():
                         data['values'] = data['values'][:step.limit.value]
                 except Exception as e:
                     raise SqlApiException("error in limit offset step") from e
-            elif type(step) == ProjectStep:
-                step_data = steps_data[step.dataframe.step_num]
-                columns_list = []
-                for column_full_name in step.columns:
-                    table_name = None
-                    if type(column_full_name) == Star:
-                        for table_name, table_columns_list in step_data['columns'].items():
-                            for column in table_columns_list:
-                                columns_list.append(table_name + column)
-                    elif type(column_full_name) == Identifier:
-                        column_name_parts = column_full_name.parts
-                        column_alias = None if column_full_name.alias is None else '.'.join(column_full_name.alias.parts)
-                        if len(column_name_parts) > 2:
-                            raise Exception(f'Column name must contain no more than 2 parts. Got name: {".".join(column_full_name)}')
-                        elif len(column_name_parts) == 1:
-                            column_name = column_name_parts[0]
+            elif isinstance(step, ProjectStep):
+                try:
+                    step_data = steps_data[step.dataframe.step_num]
+                    columns_list = []
+                    for column_full_name in step.columns:
+                        table_name = None
+                        if type(column_full_name) == Star:
+                            for table_name, table_columns_list in step_data['columns'].items():
+                                for column in table_columns_list:
+                                    columns_list.append(table_name + column)
+                        elif type(column_full_name) == Identifier:
+                            column_name_parts = column_full_name.parts
+                            column_alias = None if column_full_name.alias is None else '.'.join(column_full_name.alias.parts)
+                            if len(column_name_parts) > 2:
+                                raise Exception(f'Column name must contain no more than 2 parts. Got name: {".".join(column_full_name)}')
+                            elif len(column_name_parts) == 1:
+                                column_name = column_name_parts[0]
 
-                            appropriate_table = None
-                            if len(step_data['tables']) == 1:
-                                appropriate_table = step_data['tables'][0]
-                            else:
+                                appropriate_table = None
+                                if len(step_data['tables']) == 1:
+                                    appropriate_table = step_data['tables'][0]
+                                else:
+                                    for table_name, table_columns in step_data['columns'].items():
+                                        if (column_name, column_name) in table_columns:
+                                            if appropriate_table is not None:
+                                                raise Exception('Found multiple appropriate tables for column {column_name}')
+                                            else:
+                                                appropriate_table = table_name
+                                if appropriate_table is None:
+                                    # it is probably constaint
+                                    # FIXME https://github.com/mindsdb/mindsdb_sql/issues/133
+                                    # column_name = column_name.strip("'")
+                                    # name_or_alias = column_alias or column_name
+                                    # column_alias = name_or_alias
+                                    # for row in step_data['values']:
+                                    #     for table in row:
+                                    #         row[table][(column_name, name_or_alias)] = row[table][(column_name, column_name)]
+                                    # appropriate_table = step_data['tables'][0]
+                                    columns_list.append(appropriate_table + (column_alias, column_alias))
+                                else:
+                                    columns_list.append(appropriate_table + (column_name, column_alias or column_name))  # column_name
+                            elif len(column_name_parts) == 2:
+                                table_name_or_alias = column_name_parts[0]
+                                column_name = column_name_parts[1]
+
+                                appropriate_table = None
                                 for table_name, table_columns in step_data['columns'].items():
-                                    if (column_name, column_name) in table_columns:
-                                        if appropriate_table is not None:
-                                            raise Exception('Found multiple appropriate tables for column {column_name}')
+                                    checkig_table_name_or_alias = table_name[2] or table_name[1]
+                                    if table_name_or_alias == checkig_table_name_or_alias:
+                                        for table_column_name in table_columns:
+                                            if (
+                                                table_column_name[1] == column_name
+                                                or table_column_name[1] is None and table_column_name[0] == column_name
+                                            ):
+                                                break
                                         else:
-                                            appropriate_table = table_name
-                            if appropriate_table is None:
-                                # it is probably constaint
-                                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/133
-                                # column_name = column_name.strip("'")
-                                # name_or_alias = column_alias or column_name
-                                # column_alias = name_or_alias
-                                # for row in step_data['values']:
-                                #     for table in row:
-                                #         row[table][(column_name, name_or_alias)] = row[table][(column_name, column_name)]
-                                # appropriate_table = step_data['tables'][0]
-                                columns_list.append(appropriate_table + (column_alias, column_alias))
+                                            raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
+                                        appropriate_table = table_name
+                                        break
+                                if appropriate_table is None:
+                                    raise Exception(f'Can not find approproate table for column {column_name}')
+
+                                columns_to_copy = None
+                                for column in step_data['columns'][appropriate_table]:
+                                    if column[0] == column_name and (column[1] is None or column[1] == column_name):
+                                        columns_to_copy = column
+                                        break
+                                else:
+                                    raise Exception(f'Can not find approproate column in data: {(column_name, column_alias)}')
+
+                                for row in step_data['values']:
+                                    row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][columns_to_copy]
+
+                                columns_list.append(appropriate_table + (column_name, column_alias))
                             else:
-                                columns_list.append(appropriate_table + (column_name, column_alias or column_name))  # column_name
-                        elif len(column_name_parts) == 2:
-                            table_name_or_alias = column_name_parts[0]
-                            column_name = column_name_parts[1]
-
-                            appropriate_table = None
-                            for table_name, table_columns in step_data['columns'].items():
-                                checkig_table_name_or_alias = table_name[2] or table_name[1]
-                                if table_name_or_alias == checkig_table_name_or_alias:
-                                    for table_column_name in table_columns:
-                                        if (
-                                            table_column_name[1] == column_name
-                                            or table_column_name[1] is None and table_column_name[0] == column_name
-                                        ):
-                                            break
-                                    else:
-                                        raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
-                                    appropriate_table = table_name
-                                    break
-                            if appropriate_table is None:
-                                raise Exception(f'Can not find approproate table for column {column_name}')
-
-                            columns_to_copy = None
-                            for column in step_data['columns'][appropriate_table]:
-                                if column[0] == column_name and (column[1] is None or column[1] == column_name):
-                                    columns_to_copy = column
-                                    break
-                            else:
-                                raise Exception(f'Can not find approproate column in data: {(column_name, column_alias)}')
-
-                            for row in step_data['values']:
-                                row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][columns_to_copy]
-
-                            columns_list.append(appropriate_table + (column_name, column_alias))
+                                raise Exception('Undefined column name')
                         else:
-                            raise Exception('Undefined column name')
-                    else:
-                        raise Exception(f'Unexpected column name type: {column_full_name}')
+                            raise Exception(f'Unexpected column name type: {column_full_name}')
 
-                self.columns_list = columns_list
-                data = step_data
+                    self.columns_list = columns_list
+                    data = step_data
+                except Exception as e:
+                    raise SqlApiException("error on project step") from e
             else:
-                raise Exception(F'Unknown planner step: {step}')
+                raise SqlApiException(F'Unknown planner step: {step}')
             steps_data.append(data)
 
-        if self.outer_query is not None:
-            data = []
-            # +++
-            result = []
-            for row in steps_data[-1]:
-                data_row = {}
-                for column_record in self.columns_list:
-                    table_name = column_record[:3]
-                    column_name = column_record[3]
-                    data_row[column_record[4] or column_record[3]] = row[table_name][column_name]
-                result.append(data_row)
-            # ---
-            data = self._make_list_result_view(result)
-            df = pd.DataFrame(data)
-            result = query_df(df, self.outer_query)
 
-            try:
-                self.columns_list = [
-                    ('', '', '', x, x) for x in result.columns
-                ]
-            except Exception:
-                self.columns_list = [
-                    ('', '', '', result.name, result.name)
-                ]
+        try:
+            if self.outer_query is not None:
+                data = []
+                # +++
+                result = []
+                for row in steps_data[-1]:
+                    data_row = {}
+                    for column_record in self.columns_list:
+                        table_name = column_record[:3]
+                        column_name = column_record[3]
+                        data_row[column_record[4] or column_record[3]] = row[table_name][column_name]
+                    result.append(data_row)
+                # ---
+                data = self._make_list_result_view(result)
+                df = pd.DataFrame(data)
+                result = query_df(df, self.outer_query)
 
-            # +++ make list result view
-            new_result = []
-            for row in result.to_dict(orient='records'):
-                data_row = []
-                for column_record in self.columns_list:
-                    column_name = column_record[4] or column_record[3]
-                    data_row.append(row.get(column_name))
-                new_result.append(data_row)
-            result = new_result
-            # ---
+                try:
+                    self.columns_list = [
+                        ('', '', '', x, x) for x in result.columns
+                    ]
+                except Exception:
+                    self.columns_list = [
+                        ('', '', '', result.name, result.name)
+                    ]
 
-            self.fetched_data = result
-        else:
-            self.fetched_data = steps_data[-1]
+                # +++ make list result view
+                new_result = []
+                for row in result.to_dict(orient='records'):
+                    data_row = []
+                    for column_record in self.columns_list:
+                        column_name = column_record[4] or column_record[3]
+                        data_row.append(row.get(column_name))
+                    new_result.append(data_row)
+                result = new_result
+                # ---
 
-        if hasattr(self, 'columns_list') is False:
-            self.columns_list = []
-            for row in self.fetched_data:
-                for table_key in row:
-                    for column_name in row[table_key]:
-                        if (table_key + (column_name, column_name)) not in self.columns_list:
-                            self.columns_list.append((table_key + (column_name, column_name)))
+                self.fetched_data = result
+            else:
+                self.fetched_data = steps_data[-1]
+        except Exception as e:
+            raise SqlApiException("error in preparing result quiery step") from e
 
-        # if there was no 'ProjectStep', then get columns list from last step:
-        if self.columns_list is None:
-            self.columns_list = []
-            for table_name in self.fetched_data['columns']:
-                self.columns_list.extend([
-                    table_name + column for column in self.fetched_data['columns'][table_name]
-                ])
+        try:
+            if hasattr(self, 'columns_list') is False:
+                self.columns_list = []
+                for row in self.fetched_data:
+                    for table_key in row:
+                        for column_name in row[table_key]:
+                            if (table_key + (column_name, column_name)) not in self.columns_list:
+                                self.columns_list.append((table_key + (column_name, column_name)))
 
-        self.columns_list = [x for x in self.columns_list if x[3] != '__mindsdb_row_id']
+            # if there was no 'ProjectStep', then get columns list from last step:
+            if self.columns_list is None:
+                self.columns_list = []
+                for table_name in self.fetched_data['columns']:
+                    self.columns_list.extend([
+                        table_name + column for column in self.fetched_data['columns'][table_name]
+                    ])
+
+            self.columns_list = [x for x in self.columns_list if x[3] != '__mindsdb_row_id']
+        except Exception as e:
+            raise SqlApiException("error in column list step") from e
 
     def _apply_where_filter(self, row, where):
         if isinstance(where, Identifier):
@@ -845,11 +855,11 @@ class SQLQuery():
         elif isinstance(where, Constant):
             return where.value
         elif not isinstance(where, (UnaryOperation, BinaryOperation)):
-            Exception(f'Unknown operation type: {where}')
+            SqlApiException(f'Unknown operation type: {where}')
 
         op_fn = operator_map.get(where.op)
         if op_fn is None:
-            raise Exception(f'unknown operator {where.op}')
+            raise SqlApiException(f'unknown operator {where.op}')
 
         args = [self._apply_where_filter(row, arg) for arg in where.args]
         result = op_fn(*args)

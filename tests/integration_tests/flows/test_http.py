@@ -239,10 +239,9 @@ class HTTPTest(unittest.TestCase):
 
         # Edit it
         json_ai = predictor_data['json_ai']
-        json_ai['problem_definition']
-        mixers = json_ai['outputs']['rental_price']['mixers']
+        mixers = json_ai['model']['args']['submodels']
         keep_only = [x for x in mixers if x['module'] != 'Regression']
-        json_ai['outputs']['rental_price']['mixers'] = keep_only
+        json_ai['model']['args']['submodels'] = keep_only
 
         # Upload it
         r = requests.put(

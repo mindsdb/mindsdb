@@ -90,13 +90,12 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
     if json_ai_override is None:
         json_ai_override = {}
+
     json_ai_override = brack_to_mod(json_ai_override)
     json_ai = json_ai.to_dict()
     rep_recur(json_ai, json_ai_override)
-    print('Result: ', json_ai, 'Override: ', json_ai_override)
 
     json_ai = JsonAI.from_dict(json_ai)
-    
 
     code = lightwood.code_from_json_ai(json_ai)
 

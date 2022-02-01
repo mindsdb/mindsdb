@@ -607,9 +607,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         ds_column_names = [x['name'] for x in ds_data['columns']]
         try:
             predict = self._check_predict_columns(struct['predict'], ds_column_names)
-        except Exception:
+        except Exception as e:
             data_store.delete_datasource(ds_name)
-            raise
+            raise e
 
         model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True)
 

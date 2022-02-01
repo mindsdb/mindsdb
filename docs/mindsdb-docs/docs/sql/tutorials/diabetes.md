@@ -138,19 +138,23 @@ CREATE TABLE Diabetes (
 
 ![Create table](/assets/tutorials/diabetes/pg4admin/Create_pgtable.gif)
 
-7. Before you import the data, please delete the first row as it is a table header. To import rows into your table, right click on the table name and select *Import/Export*.
+**7. Import Data**
 
-    7.1 Under the Options tab, ensure the slider is set to *Import*.
+Before you import the data, please delete the first row as it is a table header. To import rows into your table, right click on the table name and select *Import/Export*.
+
+- Under the Options tab, ensure the slider is set to *Import*.
  
-    7.2 Select your file name and ensure that the delimiters are set.
+- Select your file name and ensure that the delimiters are set.
 
 ![Import rows](/assets/tutorials/diabetes/pg4admin/Import_rows.gif)
 
-8. By making a select query, the data that has been loaded can be verified.
+**8. Select the data** 
 
-    8.1 Navigate to the table name to right click and select 'SCRIPTS', then choose 'SELECT scripts'.
+By making a select query, the data that has been loaded can be verified.
 
-    8.2 Run the below query and see the results returned.
+  - Navigate to the table name to right click and select 'SCRIPTS', then choose 'SELECT scripts'.
+
+  - Run the below query and see the results returned.
 
 ```sql
     SELECT * FROM "DIABETES_DATA".diabetes;

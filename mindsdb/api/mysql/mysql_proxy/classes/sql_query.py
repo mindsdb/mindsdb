@@ -53,16 +53,19 @@ from mindsdb.interfaces.ai_table.ai_table import AITableStore
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
+from mindsdb.api.mysql.mysql_proxy.utilities import (
+    SqlApiException,
+    ErBadDbError,
+    ErBadTableError,
+    ErKeyColumnDoesNotExist,
+    ErTableExistError,
+    ErDubFieldName,
+    ErDbDropDelete,
+    ErNonInsertableTable,
+    ErNotSupportedYet,
+)
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
-
-
-class NotImplementedError(Exception):
-    pass
-
-
-class SqlError(Exception):
-    pass
 
 
 def get_preditor_alias(step, mindsdb_database):
@@ -74,7 +77,7 @@ def get_preditor_alias(step, mindsdb_database):
 def get_table_alias(table_obj, default_db_name):
     # (database, table, alias)
     if len(table_obj.parts) > 2:
-        raise Exception(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
+        raise SqlApiException(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
     elif len(table_obj.parts) == 1:
         name = (default_db_name, table_obj.parts[0])
     else:
@@ -97,7 +100,7 @@ def get_all_tables(stmt):
     elif isinstance(stmt, (Identifier, Join)):
         from_stmt = stmt
     else:
-        raise Exception(f'Unknown type of identifier: {stmt}')
+        raise SqlApiException(f'Unknown type of identifier: {stmt}')
 
     result = []
     if isinstance(from_stmt, Identifier):
@@ -184,7 +187,7 @@ class SQLQuery():
         elif view == 'dict':
             self.result = self._make_dict_result_view(data)
         else:
-            raise Exception('Only "list" and "dict" views supported atm')
+            raise ErNotSupportedYet('Only "list" and "dict" views supported atm')
 
         return {
             'success': True,
@@ -232,7 +235,7 @@ class SQLQuery():
 
     def _multiple_steps_reduce(self, step, vars):
         if step.reduce != 'union':
-            raise Exception(f'Unknown MultipleSteps type: {step.reduce}')
+            raise SqlApiException(f'Unknown MultipleSteps type: {step.reduce}')
 
         data = {
             'values': [],
@@ -259,12 +262,12 @@ class SQLQuery():
         # is it query to 'predictors'?
         if (
             isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
-            and (
-                self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-            )
-        ):
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'):
+            if not (self.database == 'mindsdb'
+                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'):
+
+                raise ErTableExistError("predictors must be queried from 'mindsdb' database only.")
+
             dn = self.datahub.get(self.mindsdb_database_name)
             data, columns = dn.get_predictors(mindsdb_sql_struct)
             table_name = ('mindsdb', 'predictors', 'predictors')
@@ -287,12 +290,11 @@ class SQLQuery():
         # is it query to 'commands'?
         if (
             isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
-            and (
-                self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-            )
-        ):
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'):
+            if not (self.database == 'mindsdb'
+                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'):
+                raise ErTableExistError("commands must be queried from 'mindsdb' database only.")
+
             self.fetched_data = {
                 'values': [],
                 'columns': {('mindsdb', 'commands', 'commands'): [('command', 'command')]},
@@ -304,12 +306,11 @@ class SQLQuery():
         # is it query to 'datasources'?
         if (
             isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
-            and (
-                self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-            )
-        ):
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'):
+            if not (self.database == 'mindsdb'
+                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'):
+                raise ErTableExistError("datasources must be queried from 'mindsdb' database only.")
+
             dn = self.datahub.get(self.mindsdb_database_name)
             data, columns = dn.get_datasources(mindsdb_sql_struct)
             table_name = ('mindsdb', 'datasources', 'datasources')
@@ -373,7 +374,7 @@ class SQLQuery():
         steps_data = []
         for step in plan.steps:
             data = []
-            if type(step) == GetPredictorColumns:
+            if isinstance(step, GetPredictorColumns):
                 predictor_name = step.predictor.parts[-1]
                 dn = self.datahub.get(self.mindsdb_database_name)
                 columns = dn.get_table_columns(predictor_name)
@@ -387,300 +388,315 @@ class SQLQuery():
                     },
                     'tables': [(self.mindsdb_database_name, predictor_name, predictor_name)]
                 }
-            elif type(step) == FetchDataframeStep:
+            elif isinstance(step, FetchDataframeStep):
                 data = self._fetch_dataframe_step(step)
-            elif type(step) == UnionStep:
-                raise Exception('Union step is not implemented')
+            elif isinstance(step, UnionStep):
+                raise ErNotSupportedYet('Union step is not implemented')
                 # TODO add union support
                 # left_data = steps_data[step.left.step_num]
                 # right_data = steps_data[step.right.step_num]
                 # data = left_data + right_data
-            elif type(step) == MapReduceStep:
-                if step.reduce != 'union':
-                    raise Exception(f'Unknown MapReduceStep type: {step.reduce}')
+            elif isinstance(step, MapReduceStep):
+                try:
+                    if step.reduce != 'union':
+                        raise Exception(f'Unknown MapReduceStep type: {step.reduce}')
 
-                step_data = steps_data[step.values.step_num]
-                vars = {}
-                step_data_values = step_data['values']
-                for row in step_data_values:
-                    for row_data in row.values():
-                        for name, value in row_data.items():
-                            if name[0] != '__mindsdb_row_id':
-                                vars[name[1] or name[0]] = value
+                    step_data = steps_data[step.values.step_num]
+                    vars = {}
+                    step_data_values = step_data['values']
+                    for row in step_data_values:
+                        for row_data in row.values():
+                            for name, value in row_data.items():
+                                if name[0] != '__mindsdb_row_id':
+                                    vars[name[1] or name[0]] = value
 
-                data = {
-                    'values': [],
-                    'columns': {},
-                    'tables': []
-                }
-                substep = step.step
-                if type(substep) == FetchDataframeStep:
-                    query = substep.query
-                    markQueryVar(query.where)
-                    for name, value in vars.items():
-                        replaceQueryVar(query.where, value, name)
-                        sub_data = self._fetch_dataframe_step(substep)
-                        if len(data['columns']) == 0:
-                            data['columns'] = sub_data['columns']
-                        if len(data['tables']) == 0:
-                            data['tables'] = sub_data['tables']
-                        data['values'].extend(sub_data['values'])
-                elif type(substep) == MultipleSteps:
-                    data = self._multiple_steps_reduce(substep, vars)
-                else:
-                    raise Exception(f'Unknown step type: {step.step}')
-            elif type(step) == ApplyPredictorRowStep:
-                predictor = '.'.join(step.predictor.parts)
-                dn = self.datahub.get(self.mindsdb_database_name)
-                where_data = step.row_dict
-
-                data = dn.select(
-                    table=predictor,
-                    columns=None,
-                    where_data=where_data,
-                    integration_name=self.session.integration,
-                    integration_type=self.session.integration_type
-                )
-
-                data = [{(key, key): value for key, value in row.items()} for row in data]
-
-                table_name = get_preditor_alias(step, self.database)
-                values = [{table_name: x} for x in data]
-                columns = {table_name: []}
-                if len(data) > 0:
-                    row = data[0]
-                    columns[table_name] = list(row.keys())
-                # TODO else
-
-                data = {
-                    'values': values,
-                    'columns': columns,
-                    'tables': [table_name]
-                }
-            elif type(step) == ApplyPredictorStep or type(step) == ApplyTimeseriesPredictorStep:
-                dn = self.datahub.get(self.mindsdb_database_name)
-                predictor = '.'.join(step.predictor.parts)
-                where_data = []
-                for row in steps_data[step.dataframe.step_num]['values']:
-                    new_row = {}
-                    for table_name in row:
-                        keys_intersection = set(new_row) & set(row[table_name])
-                        if len(keys_intersection) > 0:
-                            raise Exception(
-                                f'The predictor got two identical keys from different datasources: {keys_intersection}'
-                            )
-                        new_row.update(row[table_name])
-                    where_data.append(new_row)
-
-                where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
-
-                is_timeseries = predictor_metadata[predictor]['timeseries']
-                _mdb_make_predictions = None
-                if is_timeseries:
-                    if 'LATEST' in self.raw:
-                        _mdb_make_predictions = False
+                    data = {
+                        'values': [],
+                        'columns': {},
+                        'tables': []
+                    }
+                    substep = step.step
+                    if isinstance(substep, FetchDataframeStep):
+                        query = substep.query
+                        markQueryVar(query.where)
+                        for name, value in vars.items():
+                            replaceQueryVar(query.where, value, name)
+                            sub_data = self._fetch_dataframe_step(substep)
+                            if len(data['columns']) == 0:
+                                data['columns'] = sub_data['columns']
+                            if len(data['tables']) == 0:
+                                data['tables'] = sub_data['tables']
+                            data['values'].extend(sub_data['values'])
+                    elif isinstance(substep, MultipleSteps):
+                        data = self._multiple_steps_reduce(substep, vars)
                     else:
-                        _mdb_make_predictions = True
+                        raise Exception(f'Unknown step type: {step.step}')
+                except Exception as e:
+                    raise SqlApiException("error in map reduce step") from e
+            elif isinstance(step, ApplyPredictorRowStep):
+                try:
+                    predictor = '.'.join(step.predictor.parts)
+                    dn = self.datahub.get(self.mindsdb_database_name)
+                    where_data = step.row_dict
+
+                    data = dn.select(
+                        table=predictor,
+                        columns=None,
+                        where_data=where_data,
+                        integration_name=self.session.integration,
+                        integration_type=self.session.integration_type
+                    )
+
+                    data = [{(key, key): value for key, value in row.items()} for row in data]
+
+                    table_name = get_preditor_alias(step, self.database)
+                    values = [{table_name: x} for x in data]
+                    columns = {table_name: []}
+                    if len(data) > 0:
+                        row = data[0]
+                        columns[table_name] = list(row.keys())
+                    # TODO else
+
+                    data = {
+                        'values': values,
+                        'columns': columns,
+                        'tables': [table_name]
+                    }
+                except Exception as e:
+                    raise SqlApiException("error in apply predictor row step.") from e
+            elif isinstance(step, (ApplyPredictorStep, ApplyTimeseriesPredictorStep)):
+                try:
+                    dn = self.datahub.get(self.mindsdb_database_name)
+                    predictor = '.'.join(step.predictor.parts)
+                    where_data = []
+                    for row in steps_data[step.dataframe.step_num]['values']:
+                        new_row = {}
+                        for table_name in row:
+                            keys_intersection = set(new_row) & set(row[table_name])
+                            if len(keys_intersection) > 0:
+                                raise Exception(
+                                    f'The predictor got two identical keys from different datasources: {keys_intersection}'
+                                )
+                            new_row.update(row[table_name])
+                        where_data.append(new_row)
+
+                    where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
+
+                    is_timeseries = predictor_metadata[predictor]['timeseries']
+                    _mdb_make_predictions = None
+                    if is_timeseries:
+                        if 'LATEST' in self.raw:
+                            _mdb_make_predictions = False
+                        else:
+                            _mdb_make_predictions = True
+                        for row in where_data:
+                            if '__mdb_make_predictions' not in row:
+                                row['__mdb_make_predictions'] = _mdb_make_predictions
+
                     for row in where_data:
-                        if '__mdb_make_predictions' not in row:
-                            row['__mdb_make_predictions'] = _mdb_make_predictions
+                        for key in row:
+                            if isinstance(row[key], datetime.date):
+                                row[key] = str(row[key])
 
-                for row in where_data:
-                    for key in row:
-                        if isinstance(row[key], datetime.date):
-                            row[key] = str(row[key])
+                    data = dn.select(
+                        table=predictor,
+                        columns=None,
+                        where_data=where_data,
+                        integration_name=self.session.integration,
+                        integration_type=self.session.integration_type
+                    )
 
-                data = dn.select(
-                    table=predictor,
-                    columns=None,
-                    where_data=where_data,
-                    integration_name=self.session.integration,
-                    integration_type=self.session.integration_type
-                )
+                    # if is_timeseries:
+                    #     if 'LATEST' not in self.raw:
+                    #         # remove additional records from predictor results:
+                    #         # first 'window_size' and last 'horizon' records
+                    #         # otherwise there are many unxpected rows in prediciton result:
+                    #         # ----------------------------------------------------------------------------------------
+                    #         # mysql> SELECT tb.time, tb.state, tb.pnew_case, tb.new_case from
+                    #         # MYSQL_LOCAL.test_data.covid AS
+                    #         # ta JOIN mindsdb.covid_hor3 AS tb
+                    #         # WHERE ta.state = "CA" AND ta.time BETWEEN "2020-10-19" AND "2020-10-20";
+                    #         # ----------------------------------------------------------------------------------------
+                    #         # +------------+-------+-----------+----------+
+                    #         # | time       | state | pnew_case | new_case |
+                    #         # +------------+-------+-----------+----------+
+                    #         # | 2020-10-09 | CA    | 0         | 2862     |
+                    #         # | 2020-10-10 | CA    | 0         | 2979     |
+                    #         # | 2020-10-11 | CA    | 0         | 3075     |
+                    #         # | 2020-10-12 | CA    | 0         | 3329     |
+                    #         # | 2020-10-13 | CA    | 0         | 2666     |
+                    #         # | 2020-10-14 | CA    | 0         | 2378     |
+                    #         # | 2020-10-15 | CA    | 0         | 3449     |
+                    #         # | 2020-10-16 | CA    | 0         | 3803     |
+                    #         # | 2020-10-17 | CA    | 0         | 4170     |
+                    #         # | 2020-10-18 | CA    | 0         | 3806     |
+                    #         # | 2020-10-19 | CA    | 0         | 3286     |
+                    #         # | 2020-10-20 | CA    | 0         | 3474     |
+                    #         # | 2020-10-21 | CA    | 0         | 3474     |
+                    #         # | 2020-10-22 | CA    | 0         | 3474     |
+                    #         # +------------+-------+-----------+----------+
+                    #         # 14 rows in set (2.52 sec)
 
-                # if is_timeseries:
-                #     if 'LATEST' not in self.raw:
-                #         # remove additional records from predictor results:
-                #         # first 'window_size' and last 'horizon' records
-                #         # otherwise there are many unxpected rows in prediciton result:
-                #         # ----------------------------------------------------------------------------------------
-                #         # mysql> SELECT tb.time, tb.state, tb.pnew_case, tb.new_case from
-                #         # MYSQL_LOCAL.test_data.covid AS
-                #         # ta JOIN mindsdb.covid_hor3 AS tb
-                #         # WHERE ta.state = "CA" AND ta.time BETWEEN "2020-10-19" AND "2020-10-20";
-                #         # ----------------------------------------------------------------------------------------
-                #         # +------------+-------+-----------+----------+
-                #         # | time       | state | pnew_case | new_case |
-                #         # +------------+-------+-----------+----------+
-                #         # | 2020-10-09 | CA    | 0         | 2862     |
-                #         # | 2020-10-10 | CA    | 0         | 2979     |
-                #         # | 2020-10-11 | CA    | 0         | 3075     |
-                #         # | 2020-10-12 | CA    | 0         | 3329     |
-                #         # | 2020-10-13 | CA    | 0         | 2666     |
-                #         # | 2020-10-14 | CA    | 0         | 2378     |
-                #         # | 2020-10-15 | CA    | 0         | 3449     |
-                #         # | 2020-10-16 | CA    | 0         | 3803     |
-                #         # | 2020-10-17 | CA    | 0         | 4170     |
-                #         # | 2020-10-18 | CA    | 0         | 3806     |
-                #         # | 2020-10-19 | CA    | 0         | 3286     |
-                #         # | 2020-10-20 | CA    | 0         | 3474     |
-                #         # | 2020-10-21 | CA    | 0         | 3474     |
-                #         # | 2020-10-22 | CA    | 0         | 3474     |
-                #         # +------------+-------+-----------+----------+
-                #         # 14 rows in set (2.52 sec)
+                    #         window_size = predictor_metadata[predictor]['window']
+                    #         horizon = predictor_metadata[predictor]['horizon']
+                    #         if len(data) >= (window_size + horizon):
+                    #             data = data[window_size:]
+                    #             if len(data) > horizon and horizon > 1:
+                    #                 data = data[:-horizon + 1]
+                    data = [{(key, key): value for key, value in row.items()} for row in data]
 
-                #         window_size = predictor_metadata[predictor]['window']
-                #         horizon = predictor_metadata[predictor]['horizon']
-                #         if len(data) >= (window_size + horizon):
-                #             data = data[window_size:]
-                #             if len(data) > horizon and horizon > 1:
-                #                 data = data[:-horizon + 1]
-                data = [{(key, key): value for key, value in row.items()} for row in data]
+                    table_name = get_preditor_alias(step, self.database)
+                    values = [{table_name: x} for x in data]
+                    columns = {table_name: []}
+                    if len(data) > 0:
+                        row = data[0]
+                        columns[table_name] = list(row.keys())
+                    # TODO else
 
-                table_name = get_preditor_alias(step, self.database)
-                values = [{table_name: x} for x in data]
-                columns = {table_name: []}
-                if len(data) > 0:
-                    row = data[0]
-                    columns[table_name] = list(row.keys())
-                # TODO else
+                    data = {
+                        'values': values,
+                        'columns': columns,
+                        'tables': [table_name]
+                    }
+                except Exception as e:
+                    raise SqlApiException("error in apply predictor step") from e
+            elif isinstance(step, JoinStep):
+                try:
+                    left_data = steps_data[step.left.step_num]
+                    right_data = steps_data[step.right.step_num]
 
-                data = {
-                    'values': values,
-                    'columns': columns,
-                    'tables': [table_name]
-                }
-            elif type(step) == JoinStep:
-                left_data = steps_data[step.left.step_num]
-                right_data = steps_data[step.right.step_num]
+                    # FIXME https://github.com/mindsdb/mindsdb_sql/issues/136
+                    is_timeseries = False
+                    if True in [type(step) == ApplyTimeseriesPredictorStep for step in plan.steps]:
+                        right_data = steps_data[step.left.step_num]
+                        left_data = steps_data[step.right.step_num]
+                        is_timeseries = True
 
-                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/136
-                is_timeseries = False
-                if True in [type(step) == ApplyTimeseriesPredictorStep for step in plan.steps]:
-                    right_data = steps_data[step.left.step_num]
-                    left_data = steps_data[step.right.step_num]
-                    is_timeseries = True
+                    if step.query.condition is not None:
+                        raise Exception('At this moment supported only JOIN without condition')
+                    if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
+                        raise Exception('At this moment supported only JOIN and LEFT JOIN')
+                    if (
+                        len(left_data['tables']) != 1 or len(right_data['tables']) != 1
+                        or left_data['tables'][0] == right_data['tables'][0]
+                    ):
+                        raise Exception('At this moment supported only JOIN of two different tables')
 
-                if step.query.condition is not None:
-                    raise Exception('At this moment supported only JOIN without condition')
-                if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
-                    raise Exception('At this moment supported only JOIN and LEFT JOIN')
-                if (
-                    len(left_data['tables']) != 1 or len(right_data['tables']) != 1
-                    or left_data['tables'][0] == right_data['tables'][0]
-                ):
-                    raise Exception('At this moment supported only JOIN of two different tables')
+                    data = {
+                        'values': [],
+                        'columns': {},
+                        'tables': list(set(left_data['tables'] + right_data['tables']))
+                    }
 
-                data = {
-                    'values': [],
-                    'columns': {},
-                    'tables': list(set(left_data['tables'] + right_data['tables']))
-                }
+                    for data_part in [left_data, right_data]:
+                        for table_name in data_part['columns']:
+                            if table_name not in data['columns']:
+                                data['columns'][table_name] = data_part['columns'][table_name]
+                            else:
+                                data['columns'][table_name].extend(data_part['columns'][table_name])
+                    for table_name in data['columns']:
+                        data['columns'][table_name] = list(set(data['columns'][table_name]))
 
-                for data_part in [left_data, right_data]:
-                    for table_name in data_part['columns']:
-                        if table_name not in data['columns']:
-                            data['columns'][table_name] = data_part['columns'][table_name]
-                        else:
-                            data['columns'][table_name].extend(data_part['columns'][table_name])
-                for table_name in data['columns']:
-                    data['columns'][table_name] = list(set(data['columns'][table_name]))
+                    left_key = left_data['tables'][0]
+                    right_key = right_data['tables'][0]
 
-                left_key = left_data['tables'][0]
-                right_key = right_data['tables'][0]
+                    left_columns_map = {}
+                    left_columns_map_reverse = {}
+                    for i, column_name in enumerate(left_data['columns'][left_key]):
+                        left_columns_map[f'a{i}'] = column_name
+                        left_columns_map_reverse[column_name] = f'a{i}'
 
-                left_columns_map = {}
-                left_columns_map_reverse = {}
-                for i, column_name in enumerate(left_data['columns'][left_key]):
-                    left_columns_map[f'a{i}'] = column_name
-                    left_columns_map_reverse[column_name] = f'a{i}'
+                    right_columns_map = {}
+                    right_columns_map_reverse = {}
+                    for i, column_name in enumerate(right_data['columns'][right_key]):
+                        right_columns_map[f'b{i}'] = column_name
+                        right_columns_map_reverse[column_name] = f'b{i}'
 
-                right_columns_map = {}
-                right_columns_map_reverse = {}
-                for i, column_name in enumerate(right_data['columns'][right_key]):
-                    right_columns_map[f'b{i}'] = column_name
-                    right_columns_map_reverse[column_name] = f'b{i}'
+                    left_df_data = []
+                    for row in left_data['values']:
+                        row = row[left_key]
+                        left_df_data.append({left_columns_map_reverse[key]: value for key, value in row.items()})
 
-                left_df_data = []
-                for row in left_data['values']:
-                    row = row[left_key]
-                    left_df_data.append({left_columns_map_reverse[key]: value for key, value in row.items()})
+                    right_df_data = []
+                    for row in right_data['values']:
+                        row = row[right_key]
+                        right_df_data.append({right_columns_map_reverse[key]: value for key, value in row.items()})
 
-                right_df_data = []
-                for row in right_data['values']:
-                    row = row[right_key]
-                    right_df_data.append({right_columns_map_reverse[key]: value for key, value in row.items()})
+                    df_a = pd.DataFrame(left_df_data)
+                    df_b = pd.DataFrame(right_df_data)
 
-                df_a = pd.DataFrame(left_df_data)
-                df_b = pd.DataFrame(right_df_data)
+                    a_name = f'a{round(time.time()*1000)}'
+                    b_name = f'b{round(time.time()*1000)}'
+                    con = duckdb.connect(database=':memory:')
+                    con.register(a_name, df_a)
+                    con.register(b_name, df_b)
+                    resp_df = con.execute(f"""
+                        SELECT * FROM {a_name} as ta full join {b_name} as tb
+                        ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
+                         = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
+                    """).fetchdf()
+                    con.unregister(a_name)
+                    con.unregister(b_name)
+                    con.close()
+                    resp_df = resp_df.where(pd.notnull(resp_df), None)
+                    resp_dict = resp_df.to_dict(orient='records')
 
-                a_name = f'a{round(time.time()*1000)}'
-                b_name = f'b{round(time.time()*1000)}'
-                con = duckdb.connect(database=':memory:')
-                con.register(a_name, df_a)
-                con.register(b_name, df_b)
-                resp_df = con.execute(f"""
-                    SELECT * FROM {a_name} as ta full join {b_name} as tb
-                    ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
-                     = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
-                """).fetchdf()
-                con.unregister(a_name)
-                con.unregister(b_name)
-                con.close()
-                resp_df = resp_df.where(pd.notnull(resp_df), None)
-                resp_dict = resp_df.to_dict(orient='records')
+                    for row in resp_dict:
+                        new_row = {left_key: {}, right_key: {}}
+                        for key, value in row.items():
+                            if key.startswith('a'):
+                                new_row[left_key][left_columns_map[key]] = value
+                            else:
+                                new_row[right_key][right_columns_map[key]] = value
+                        data['values'].append(new_row)
 
-                for row in resp_dict:
-                    new_row = {left_key: {}, right_key: {}}
-                    for key, value in row.items():
-                        if key.startswith('a'):
-                            new_row[left_key][left_columns_map[key]] = value
-                        else:
-                            new_row[right_key][right_columns_map[key]] = value
-                    data['values'].append(new_row)
+                    # remove all records with empty data from predictor from join result
+                    # otherwise there are emtpy records in the final result:
+                    # +------------+------------+-------+-----------+----------+
+                    # | time       | time       | state | pnew_case | new_case |
+                    # +------------+------------+-------+-----------+----------+
+                    # | 2020-10-21 | 2020-10-24 | CA    | 0.0       | 5945.0   |
+                    # | 2020-10-22 | 2020-10-23 | CA    | 0.0       | 6141.0   |
+                    # | 2020-10-23 | 2020-10-22 | CA    | 0.0       | 2940.0   |
+                    # | 2020-10-24 | 2020-10-21 | CA    | 0.0       | 3707.0   |
+                    # | NULL       | 2020-10-20 | NULL  | nan       | nan      |
+                    # | NULL       | 2020-10-19 | NULL  | nan       | nan      |
+                    # | NULL       | 2020-10-18 | NULL  | nan       | nan      |
+                    # | NULL       | 2020-10-17 | NULL  | nan       | nan      |
+                    # | NULL       | 2020-10-16 | NULL  | nan       | nan      |
+                    # +------------+------------+-------+-----------+----------+
+                    # 9 rows in set (2.07 sec)
 
-                # remove all records with empty data from predictor from join result
-                # otherwise there are emtpy records in the final result:
-                # +------------+------------+-------+-----------+----------+
-                # | time       | time       | state | pnew_case | new_case |
-                # +------------+------------+-------+-----------+----------+
-                # | 2020-10-21 | 2020-10-24 | CA    | 0.0       | 5945.0   |
-                # | 2020-10-22 | 2020-10-23 | CA    | 0.0       | 6141.0   |
-                # | 2020-10-23 | 2020-10-22 | CA    | 0.0       | 2940.0   |
-                # | 2020-10-24 | 2020-10-21 | CA    | 0.0       | 3707.0   |
-                # | NULL       | 2020-10-20 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-19 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-18 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-17 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-16 | NULL  | nan       | nan      |
-                # +------------+------------+-------+-----------+----------+
-                # 9 rows in set (2.07 sec)
+                    # if is_timeseries:
+                    #     data_values = []
+                    #     for row in data['values']:
+                    #         for key in row:
+                    #             if 'mindsdb' in key:
+                    #                 if not is_empty_prediction_row(row[key]):
+                    #                     data_values.append(row)
+                    #                     break
+                    #     data['values'] = data_values
+                except Exception as e:
+                    raise SqlApiException("error in join step") from e
 
-                # if is_timeseries:
-                #     data_values = []
-                #     for row in data['values']:
-                #         for key in row:
-                #             if 'mindsdb' in key:
-                #                 if not is_empty_prediction_row(row[key]):
-                #                     data_values.append(row)
-                #                     break
-                #     data['values'] = data_values
-
-            elif type(step) == FilterStep:
-                raise Exception('FilterStep is not implemented')
+            elif isinstance(step, FilterStep):
+                raise ErNotSupportedYet('FilterStep is not implemented')
             # elif type(step) == ApplyTimeseriesPredictorStep:
             #     raise Exception('ApplyTimeseriesPredictorStep is not implemented')
-            elif type(step) == LimitOffsetStep:
-                step_data = steps_data[step.dataframe.step_num]
-                data = {
-                    'values': step_data['values'].copy(),
-                    'columns': step_data['columns'].copy(),
-                    'tables': step_data['tables'].copy()
-                }
-                if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
-                    data['values'] = data['values'][step.offset.value:]
-                if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
-                    data['values'] = data['values'][:step.limit.value]
+            elif isinstance(step, LimitOffsetStep):
+                try:
+                    step_data = steps_data[step.dataframe.step_num]
+                    data = {
+                        'values': step_data['values'].copy(),
+                        'columns': step_data['columns'].copy(),
+                        'tables': step_data['tables'].copy()
+                    }
+                    if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
+                        data['values'] = data['values'][step.offset.value:]
+                    if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
+                        data['values'] = data['values'][:step.limit.value]
+                except Exception as e:
+                    raise SqlApiException("error in limit offset step") from e
             elif type(step) == ProjectStep:
                 step_data = steps_data[step.dataframe.step_num]
                 columns_list = []

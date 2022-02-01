@@ -74,8 +74,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
-    NotImplementedError,
-    SqlError
 )
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
@@ -640,7 +638,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         predictors_names = [x[0] for x in result['result']]
 
         if len(predictors_names) == 0:
-            raise NotImplementedError('nothing to delete')
+            raise SqlApiException('nothing to delete')
 
         for predictor_name in predictors_names:
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
@@ -1062,15 +1060,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             db_name = statement.table.parts[0].lower()
         table_name = statement.table.parts[-1].lower()
         if db_name != 'mindsdb' or table_name not in ('predictors', 'commands'):
-            raise Exception("At this moment only insert to 'mindsdb.predictors' or 'mindsdb.commands' is possible")
+            raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' or 'mindsdb.commands' is possible")
         column_names = []
         for column_identifier in statement.columns:
             if isinstance(column_identifier, Identifier) is False or len(column_identifier.parts) != 1:
-                raise Exception(f'Incorrect column name: {column_identifier}')
+                raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
             column_name = column_identifier.parts[0].lower()
             column_names.append(column_name)
         if len(statement.values) > 1:
-            raise Exception('At this moment only 1 row can be inserted.')
+            raise SqlApiException('At this moment only 1 row can be inserted.')
         for row in statement.values:
             values = []
             for value in row:
@@ -1104,7 +1102,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         ):
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:
-                raise Exception('datanode is none')
+                raise ErBadDbError('Unknown database - %s' % self.session.database)
             result, _column_names = datanode.select(sql)
 
             columns = []
@@ -1176,7 +1174,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             expression = statement.expression
             if sql_category == 'predictors':
                 if expression is not None:
-                    raise Exception("'SHOW PREDICTORS' query should be used without filters")
+                    raise SqlApiException("'SHOW PREDICTORS' query should be used without filters")
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors'])
@@ -1189,7 +1187,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             if sql_category == 'plugins':
                 if expression is not None:
-                    raise Exception("'SHOW PLUGINS' query should be used without filters")
+                    raise SqlApiException("'SHOW PLUGINS' query should be used without filters")
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=['information_schema', 'PLUGINS'])
@@ -1208,7 +1206,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 if condition == 'like':
                     new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), expression])
                 elif condition is not None:
-                    raise Exception(f'Not implemented: {sql}')
+                    raise ErNotSupportedYet(f'Not implemented: {sql}')
 
                 query = SQLQuery(
                     str(new_statement),
@@ -1232,7 +1230,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 if condition == 'from':
                     schema = expression.parts[0]
                 elif condition is not None:
-                    raise Exception(f'Unknown condition in query: {statement}')
+                    raise SqlApiException(f'Unknown condition in query: {statement}')
 
                 new_statement = Select(
                     targets=[Identifier(parts=['table_name'], alias=Identifier(f'Tables_in_{schema}'))],
@@ -1260,7 +1258,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 elif condition == 'where':
                     new_statement.where = expression
                 elif condition is not None:
-                    raise Exception(f'Unknown condition in query: {statement}')
+                    raise SqlApiException(f'Unknown condition in query: {statement}')
 
                 data = {}
                 is_session = 'session' in sql_category
@@ -1338,27 +1336,27 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                                 if expression.args[0].parts[0].lower() == 'charset':
                                     charset = expression.args[1].value
                                 else:
-                                    raise Exception(
+                                    raise SqlApiException(
                                         f'Error during processing query: {sql}\n'
                                         f"Only filter by 'charset' supported 'WHERE', but '{expression.args[0].parts[0]}' found"
                                     )
                             else:
-                                raise Exception(
+                                raise SqlApiException(
                                     f'Error during processing query: {sql}\n'
                                     f"Expected identifier in 'WHERE', but '{expression.args[0]}' found"
                                 )
                         else:
-                            raise Exception(
+                            raise SqlApiException(
                                 f'Error during processing query: {sql}\n'
                                 f"Expected '=' comparison in 'WHERE', but '{expression.op}' found"
                             )
                     else:
-                        raise Exception(
+                        raise SqlApiException(
                             f'Error during processing query: {sql}\n'
                             f"Expected binary operation in 'WHERE', but '{expression}' found"
                         )
                 elif condition is not None:
-                    raise Exception(
+                    raise SqlApiException(
                         f'Error during processing query: {sql}\n'
                         f"Only 'WHERE' filter supported, but '{condition}' found"
                     )
@@ -1391,11 +1389,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
                     log.warning(err_str)
-                    raise Exception(err_str)
+                    raise ErTableExistError(err_str)
                 self.answer_show_table_status(table_name)
                 return
             else:
-                raise Exception(f'Statement not implemented: {sql}')
+                raise ErNotSupportedYet(f'Statement not implemented: {sql}')
         elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
             self.packet(OkPacket).send()
         elif type(statement) == Set:
@@ -1447,7 +1445,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif type(statement) == Insert:
             self.process_insert(statement)
         elif keyword in ('update', 'insert'):
-            raise NotImplementedError('Update and Insert are not implemented')
+            raise ErNotSupportedYet('Update and Insert are not implemented')
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             self.packet(OkPacket).send()
         elif type(statement) == Select:
@@ -1498,9 +1496,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif type(statement) == Explain:
             self.answer_explain_table(statement.target.parts)
         else:
-            print(sql)
             log.warning(f'Unknown SQL statement: {sql}')
-            raise NotImplementedError('Action not implemented')
+            raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
 
     def answer_single_row_select(self, statement):
         columns = []
@@ -2050,7 +2047,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif charset not in charsets:
             err_str = f'Unknown charset: {charset}'
             log.warning(err_str)
-            raise Exception(err_str)
+            raise SqlApiException(err_str)
         else:
             data = [charsets.get(charset)]
 

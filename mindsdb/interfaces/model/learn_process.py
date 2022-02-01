@@ -73,6 +73,11 @@ def brack_to_mod(ovr):
                     'module': mod,
                     'args': args
                 }
+            elif '{' in ovr and '}' in ovr:
+                try:
+                    ovr = json.loads(ovr)
+                except Exception:
+                    pass
         return ovr
     else:
         for k in ovr.keys():
@@ -83,19 +88,10 @@ def brack_to_mod(ovr):
 @mark_process(name='learn')
 def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None) -> int:
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-    print('Override of: ', json_ai_override)
     if json_ai_override is None:
         json_ai_override = {}
-    print(1)
-    for k in json_ai_override:
-        if isinstance(json_ai_override[k], str):
-            if '{' in json_ai_override[k] and '}' in json_ai_override[k]:
-                json_ai_override[k] = json.loads(json_ai_override[k])
-    print(2)
     json_ai_override = brack_to_mod(json_ai_override)
-    print(3)
     json_ai = json_ai.to_dict()
-    print(4)
     rep_recur(json_ai, json_ai_override)
     print('Result: ', json_ai, 'Override: ', json_ai_override)
 

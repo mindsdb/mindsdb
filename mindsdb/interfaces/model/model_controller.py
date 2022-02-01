@@ -225,16 +225,19 @@ class ModelController():
             explain_arr = []
             dict_arr = []
             for i, row in enumerate(predictions):
-                explain_arr.append({
+                obj = {
                     target: {
                         'predicted_value': row['prediction'],
                         'confidence': row.get('confidence', None),
-                        'confidence_lower_bound': row.get('lower', None),
-                        'confidence_upper_bound': row.get('upper', None),
                         'anomaly': row.get('anomaly', None),
                         'truth': row.get('truth', None)
                     }
-                })
+                }
+                if 'lower' in row:
+                    obj[target]['confidence_lower_bound'] = row.get('lower', None)
+                    obj[target]['confidence_upper_bound'] = row.get('upper', None)
+                    
+                explain_arr.append(obj)
 
                 td = {'predicted_value': row['prediction']}
                 for col in df.columns:

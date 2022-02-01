@@ -86,15 +86,18 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
     print('Override of: ', json_ai_override)
     if json_ai_override is None:
         json_ai_override = {}
-
+    print(1)
     for k in json_ai_override:
-        json_ai_override[k] = json.loads(json_ai_override[k])
-
+        if isinstance(json_ai_override[k], str):
+            if '{' in json_ai_override[k] and '}' in json_ai_override[k]:
+                json_ai_override[k] = json.loads(json_ai_override[k])
+    print(2)
     json_ai_override = brack_to_mod(json_ai_override)
-
+    print(3)
     json_ai = json_ai.to_dict()
+    print(4)
     rep_recur(json_ai, json_ai_override)
-    print(json_ai, json_ai_override)
+    print('Result: ', json_ai, 'Override: ', json_ai_override)
 
     json_ai = JsonAI.from_dict(json_ai)
     

@@ -601,6 +601,30 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data_store.delete_datasource(ds_name)
             raise
 
+        def get_column_in_case(columns, name):
+            candidates = []
+            name_lower = name.lower()
+            for column in columns:
+                if column.lower() == name_lower:
+                    candidates.append(column)
+            if len(candidates) != 1:
+                raise Exception(f'Cant get appropriate cast column case. Columns: {columns}, column: {name}, candidates: {candidates}')
+            return candidates[0]
+
+        for i, p in enumerate(predict):
+            predict[i] = get_column_in_case(ds_column_names, p)
+
+        # Cast all column names to same case
+        if isinstance(kwargs.get('timeseries_settings'), dict):
+            order_by = kwargs['timeseries_settings'].get('order_by')
+            if order_by is not None:
+                for i, col in enumerate(order_by):
+                    kwargs['timeseries_settings']['order_by'][i] = get_column_in_case(ds_column_names, col)
+            group_by = kwargs['timeseries_settings'].get('group_by')
+            if group_by is not None:
+                for i, col in enumerate(group_by):
+                    kwargs['timeseries_settings']['group_by'][i] = get_column_in_case(ds_column_names, col)
+
         model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True)
 
         self.packet(OkPacket).send()

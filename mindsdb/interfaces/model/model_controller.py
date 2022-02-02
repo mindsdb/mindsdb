@@ -98,6 +98,18 @@ class ModelController():
                 f"Predict target must be 'str' or 'list' with 1 element. Got: {to_predict}"
             )
 
+        while '.' in str(list(kwargs.keys())):
+            for k in list(kwargs.keys()):
+                if '.' in k:
+                    nks = k.split('.')
+                    obj = kwargs
+                    for nk in nks[:-1]:
+                        if nk not in obj:
+                            obj[nk] = {}
+                        obj = obj[nk]
+                    obj[nks[-1]] = kwargs[k]
+                    del kwargs[k]
+
         join_learn_process = kwargs.get('join_learn_process', False)
         if 'join_learn_process' in kwargs:
             del kwargs['join_learn_process']
@@ -112,15 +124,21 @@ class ModelController():
         if kwargs.get('ignore_columns') is not None:
             problem_definition['ignore_features'] = kwargs['ignore_columns']
 
+        json_ai_override = {}
+        json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
+        for k in kwargs:
+            if k in json_ai_keys:
+                json_ai_override[k] = kwargs[k]
+
+
         if (
-            problem_definition.get('ignore_features') is not None
-            and isinstance(problem_definition['ignore_features'], list) is False
+            problem_definition.get('ignore_features') is not None and isinstance(problem_definition['ignore_features'], list) is False
         ):
             problem_definition['ignore_features'] = [problem_definition['ignore_features']]
 
         df = self._get_from_data_df(from_data)
 
-        return df, problem_definition, join_learn_process
+        return df, problem_definition, join_learn_process, json_ai_override
 
     @mark_process(name='learn')
     def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict,
@@ -129,7 +147,7 @@ class ModelController():
         if predictor_record is not None:
             raise Exception('Predictor name must be unique.')
 
-        df, problem_definition, join_learn_process = self._unpack_old_args(from_data, kwargs, to_predict)
+        df, problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(from_data, kwargs, to_predict)
 
         problem_definition = ProblemDefinition.from_dict(problem_definition)
         predictor_record = db.Predictor(
@@ -147,7 +165,7 @@ class ModelController():
         db.session.commit()
         predictor_id = predictor_record.id
 
-        p = LearnProcess(df, problem_definition, predictor_id, delete_ds_on_fail)
+        p = LearnProcess(df, problem_definition, predictor_id, delete_ds_on_fail, json_ai_override)
         p.start()
         if join_learn_process:
             p.join()
@@ -417,7 +435,7 @@ class ModelController():
         if predictor_record is not None:
             raise Exception('Predictor name must be unique.')
 
-        df, problem_definition, _ = self._unpack_old_args(from_data, problem_definition_dict)
+        df, problem_definition, _, _ = self._unpack_old_args(from_data, problem_definition_dict)
 
         problem_definition = ProblemDefinition.from_dict(problem_definition)
 

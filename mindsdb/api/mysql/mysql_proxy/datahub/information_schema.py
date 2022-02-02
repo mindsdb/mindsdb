@@ -58,7 +58,8 @@ class InformationSchema(DataNode):
         datasource_names = self.datasource_interface.get_db_integrations().keys()
         for datasource_name in datasource_names:
             if datasource_name.lower() == name_lower:
-                return IntegrationDataNode(datasource_name, self.data_store)
+                datasource = self.datasource_interface.get_db_integration(name=datasource_name)
+                return IntegrationDataNode(datasource_name, self.data_store, ds_type=datasource['type'])
 
         return None
 

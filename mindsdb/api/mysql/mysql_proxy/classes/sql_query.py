@@ -262,11 +262,12 @@ class SQLQuery():
         # is it query to 'predictors'?
         if (
             isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'):
-            if not (self.database == 'mindsdb'
-                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'):
-
-                raise ErTableExistError("predictors must be queried from 'mindsdb' database only.")
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
+            and (
+                self.database == 'mindsdb'
+                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+            )
+        ):
 
             dn = self.datahub.get(self.mindsdb_database_name)
             data, columns = dn.get_predictors(mindsdb_sql_struct)
@@ -290,10 +291,12 @@ class SQLQuery():
         # is it query to 'commands'?
         if (
             isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'):
-            if not (self.database == 'mindsdb'
-                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'):
-                raise ErTableExistError("commands must be queried from 'mindsdb' database only.")
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
+            and (
+                self.database == 'mindsdb'
+                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+            )
+        ):
 
             self.fetched_data = {
                 'values': [],
@@ -306,10 +309,12 @@ class SQLQuery():
         # is it query to 'datasources'?
         if (
             isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'):
-            if not (self.database == 'mindsdb'
-                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'):
-                raise ErTableExistError("datasources must be queried from 'mindsdb' database only.")
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
+            and (
+                self.database == 'mindsdb'
+                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+            )
+        ):
 
             dn = self.datahub.get(self.mindsdb_database_name)
             data, columns = dn.get_datasources(mindsdb_sql_struct)
@@ -374,7 +379,7 @@ class SQLQuery():
         steps_data = []
         for step in plan.steps:
             data = []
-            if isinstance(step, GetPredictorColumns):
+            if type(step) == GetPredictorColumns:
                 predictor_name = step.predictor.parts[-1]
                 dn = self.datahub.get(self.mindsdb_database_name)
                 columns = dn.get_table_columns(predictor_name)
@@ -388,15 +393,15 @@ class SQLQuery():
                     },
                     'tables': [(self.mindsdb_database_name, predictor_name, predictor_name)]
                 }
-            elif isinstance(step, FetchDataframeStep):
+            elif type(step) == FetchDataframeStep:
                 data = self._fetch_dataframe_step(step)
-            elif isinstance(step, UnionStep):
+            elif type(step) == UnionStep:
                 raise ErNotSupportedYet('Union step is not implemented')
                 # TODO add union support
                 # left_data = steps_data[step.left.step_num]
                 # right_data = steps_data[step.right.step_num]
                 # data = left_data + right_data
-            elif isinstance(step, MapReduceStep):
+            elif type(step) == MapReduceStep:
                 try:
                     if step.reduce != 'union':
                         raise Exception(f'Unknown MapReduceStep type: {step.reduce}')
@@ -416,7 +421,7 @@ class SQLQuery():
                         'tables': []
                     }
                     substep = step.step
-                    if isinstance(substep, FetchDataframeStep):
+                    if substep == FetchDataframeStep:
                         query = substep.query
                         markQueryVar(query.where)
                         for name, value in vars.items():
@@ -427,13 +432,13 @@ class SQLQuery():
                             if len(data['tables']) == 0:
                                 data['tables'] = sub_data['tables']
                             data['values'].extend(sub_data['values'])
-                    elif isinstance(substep, MultipleSteps):
+                    elif substep == MultipleSteps:
                         data = self._multiple_steps_reduce(substep, vars)
                     else:
                         raise Exception(f'Unknown step type: {step.step}')
                 except Exception as e:
                     raise SqlApiException("error in map reduce step") from e
-            elif isinstance(step, ApplyPredictorRowStep):
+            elif type(step) == ApplyPredictorRowStep:
                 try:
                     predictor = '.'.join(step.predictor.parts)
                     dn = self.datahub.get(self.mindsdb_database_name)
@@ -464,7 +469,7 @@ class SQLQuery():
                     }
                 except Exception as e:
                     raise SqlApiException("error in apply predictor row step.") from e
-            elif isinstance(step, (ApplyPredictorStep, ApplyTimeseriesPredictorStep)):
+            elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
                 try:
                     dn = self.datahub.get(self.mindsdb_database_name)
                     predictor = '.'.join(step.predictor.parts)
@@ -560,7 +565,7 @@ class SQLQuery():
                     }
                 except Exception as e:
                     raise SqlApiException("error in apply predictor step") from e
-            elif isinstance(step, JoinStep):
+            elif type(step) == JoinStep:
                 try:
                     left_data = steps_data[step.left.step_num]
                     right_data = steps_data[step.right.step_num]
@@ -679,11 +684,11 @@ class SQLQuery():
                 except Exception as e:
                     raise SqlApiException("error in join step") from e
 
-            elif isinstance(step, FilterStep):
+            elif type(step) == FilterStep:
                 raise ErNotSupportedYet('FilterStep is not implemented')
             # elif type(step) == ApplyTimeseriesPredictorStep:
             #     raise Exception('ApplyTimeseriesPredictorStep is not implemented')
-            elif isinstance(step, LimitOffsetStep):
+            elif type(step) == LimitOffsetStep:
                 try:
                     step_data = steps_data[step.dataframe.step_num]
                     data = {
@@ -697,7 +702,7 @@ class SQLQuery():
                         data['values'] = data['values'][:step.limit.value]
                 except Exception as e:
                     raise SqlApiException("error in limit offset step") from e
-            elif isinstance(step, ProjectStep):
+            elif type(step) == ProjectStep:
                 try:
                     step_data = steps_data[step.dataframe.step_num]
                     columns_list = []

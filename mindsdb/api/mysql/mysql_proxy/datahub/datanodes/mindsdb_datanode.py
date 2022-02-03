@@ -250,6 +250,9 @@ class MindsDBDataNode(DataNode):
 
             where_data = [new_where]
 
+        if isinstance(where_data, dict):
+            where_data = [where_data]
+
         model = self.model_interface.get_model_data(name=table)
         columns = list(model['dtype_dict'].keys())
 

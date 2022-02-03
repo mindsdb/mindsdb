@@ -13,13 +13,14 @@ from mindsdb_datasources import (
     SnowflakeDS, AthenaDS, CassandraDS, ScyllaDS, TrinoDS
 )
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import log
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import DatasourceController
-from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.interfaces.database.views import ViewController
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
 
 class QueryDS:
@@ -68,6 +69,13 @@ class QueryDS:
                 data_df = dataset_object.df
             finally:
                 data_store.delete_datasource(dataset_name)
+        elif self.source_type == 'file_query':
+            if isinstance(query, str):
+                query = parse_sql(query, dialect='mysql')
+            table = query.from_table.parts[-1]
+            ds = data_store.get_datasource_obj(table, raw=False)
+            file_df = ds.df
+            data_df = query_df(file_df, query)
         return data_df
 
 

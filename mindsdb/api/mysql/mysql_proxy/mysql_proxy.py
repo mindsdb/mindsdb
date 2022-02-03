@@ -594,7 +594,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ds_name = data_store.get_vacant_name(predictor_name)
 
             ds_kwargs = {'query': struct['select']}
-            if integration_name == 'views':
+            if integration_name in ('views', 'files'):
                 parsed = parse_sql(struct['select'])
                 ds_kwargs['source'] = parsed.from_table.parts[-1]
             ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)

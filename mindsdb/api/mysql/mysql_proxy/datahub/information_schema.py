@@ -6,6 +6,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.file_datanode import FileDataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.view_datanode import ViewDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
 
@@ -24,12 +25,19 @@ class InformationSchema(DataNode):
         'ENGINES': ['ENGINE', 'SUPPORT', 'COMMENT', 'TRANSACTIONS', 'XA', 'SAVEPOINTS']
     }
 
-    def __init__(self, model_interface, ai_table, data_store, datasource_interface):
-        self.datasource_interface = datasource_interface
-        self.data_store = data_store
+    def __init__(self, session):
+        self.datasource_interface = session.datasource_interface
+        self.data_store = session.data_store
+        self.view_interface = session.view_interface
         self.persis_datanodes = {
-            'mindsdb': MindsDBDataNode(model_interface, ai_table, data_store, datasource_interface),
-            'files': FileDataNode(data_store)
+            'mindsdb': MindsDBDataNode(
+                session.model_interface,
+                session.ai_table,
+                session.data_store,
+                session.datasource_interface
+            ),
+            'files': FileDataNode(session.data_store),
+            'views': ViewDataNode(session.view_interface, session.datasource_interface, session.data_store)
         }
 
         self.get_dataframe_funcs = {

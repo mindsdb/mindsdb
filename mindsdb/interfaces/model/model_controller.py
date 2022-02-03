@@ -26,6 +26,7 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess
 from mindsdb.interfaces.datastore.datastore import DataStore
+from mindsdb.interfaces.datastore.datastore import QueryDS
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -81,8 +82,11 @@ class ModelController():
             self._unlock_predictor(id)
 
     def _get_from_data_df(self, from_data: dict) -> DataFrame:
-        ds_cls = getattr(mindsdb_datasources, from_data['class'])
-        ds = ds_cls(*from_data['args'], **from_data['kwargs'])
+        if from_data['class'] == 'QueryDS':
+            ds = QueryDS(*from_data['args'], **from_data['kwargs'])
+        else:
+            ds_cls = getattr(mindsdb_datasources, from_data['class'])
+            ds = ds_cls(*from_data['args'], **from_data['kwargs'])
         return ds.df
 
     def _unpack_old_args(

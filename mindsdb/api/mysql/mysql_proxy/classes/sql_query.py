@@ -121,6 +121,18 @@ def markQueryVar(where):
     elif isinstance(where, Constant):
         if str(where.value).startswith('$var['):
             where.is_var = True
+            where.var_name = where.value
+
+
+def unmarkQueryVar(where):
+    if isinstance(where, BinaryOperation):
+        unmarkQueryVar(where.args[0])
+        unmarkQueryVar(where.args[1])
+    elif isinstance(where, UnaryOperation):
+        unmarkQueryVar(where.args[0])
+    elif isinstance(where, Constant):
+        if where.is_var is True:
+            where.value = where.var_name
 
 
 def replaceQueryVar(where, var_value, var_name):
@@ -409,13 +421,15 @@ class SQLQuery():
                         raise Exception(f'Unknown MapReduceStep type: {step.reduce}')
 
                     step_data = steps_data[step.values.step_num]
-                    vars = {}
+                    vars = []
                     step_data_values = step_data['values']
                     for row in step_data_values:
+                        var_group = {}
+                        vars.append(var_group)
                         for row_data in row.values():
                             for name, value in row_data.items():
                                 if name[0] != '__mindsdb_row_id':
-                                    vars[name[1] or name[0]] = value
+                                    var_group[name[1] or name[0]] = value
 
                     data = {
                         'values': [],
@@ -423,18 +437,20 @@ class SQLQuery():
                         'tables': []
                     }
                     substep = step.step
-                    if substep == FetchDataframeStep:
+                    if type(substep) == FetchDataframeStep:
                         query = substep.query
-                        markQueryVar(query.where)
-                        for name, value in vars.items():
-                            replaceQueryVar(query.where, value, name)
+                        for var_group in vars:
+                            markQueryVar(query.where)
+                            for name, value in var_group.items():
+                                replaceQueryVar(query.where, value, name)
                             sub_data = self._fetch_dataframe_step(substep)
                             if len(data['columns']) == 0:
                                 data['columns'] = sub_data['columns']
                             if len(data['tables']) == 0:
                                 data['tables'] = sub_data['tables']
                             data['values'].extend(sub_data['values'])
-                    elif substep == MultipleSteps:
+                            unmarkQueryVar(query.where)
+                    elif type(substep) == MultipleSteps:
                         data = self._multiple_steps_reduce(substep, vars)
                     else:
                         raise Exception(f'Unknown step type: {step.step}')

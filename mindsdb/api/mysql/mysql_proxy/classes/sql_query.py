@@ -52,6 +52,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.interfaces.ai_table.ai_table import AITableStore
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
@@ -706,17 +707,17 @@ class SQLQuery():
                 try:
                     step_data = steps_data[step.dataframe.step_num]
                     columns_list = []
-                    for column_full_name in step.columns:
+                    for column_identifier in step.columns:
                         table_name = None
-                        if type(column_full_name) == Star:
+                        if type(column_identifier) == Star:
                             for table_name, table_columns_list in step_data['columns'].items():
                                 for column in table_columns_list:
                                     columns_list.append(table_name + column)
-                        elif type(column_full_name) == Identifier:
-                            column_name_parts = column_full_name.parts
-                            column_alias = None if column_full_name.alias is None else '.'.join(column_full_name.alias.parts)
+                        elif type(column_identifier) == Identifier:
+                            column_name_parts = column_identifier.parts
+                            column_alias = None if column_identifier.alias is None else '.'.join(column_identifier.alias.parts)
                             if len(column_name_parts) > 2:
-                                raise Exception(f'Column name must contain no more than 2 parts. Got name: {".".join(column_full_name)}')
+                                raise Exception(f'Column name must contain no more than 2 parts. Got name: {column_identifier}')
                             elif len(column_name_parts) == 1:
                                 column_name = column_name_parts[0]
 
@@ -725,7 +726,9 @@ class SQLQuery():
                                     appropriate_table = step_data['tables'][0]
                                 else:
                                     for table_name, table_columns in step_data['columns'].items():
-                                        if (column_name, column_name) in table_columns:
+                                        table_column_names_list = [x[1] or x[0] for x in table_columns]
+                                        column_exists = get_column_in_case(table_column_names_list, column_name)
+                                        if column_exists:
                                             if appropriate_table is not None:
                                                 raise Exception('Found multiple appropriate tables for column {column_name}')
                                             else:
@@ -749,24 +752,23 @@ class SQLQuery():
 
                                 appropriate_table = None
                                 for table_name, table_columns in step_data['columns'].items():
+                                    table_column_names_list = [x[1] or x[0] for x in table_columns]
                                     checkig_table_name_or_alias = table_name[2] or table_name[1]
-                                    if table_name_or_alias == checkig_table_name_or_alias:
-                                        for table_column_name in table_columns:
-                                            if (
-                                                table_column_name[1] == column_name
-                                                or table_column_name[1] is None and table_column_name[0] == column_name
-                                            ):
-                                                break
+                                    if table_name_or_alias.lower() == checkig_table_name_or_alias.lower():
+                                        column_exists = get_column_in_case(table_column_names_list, column_name)
+                                        if column_exists:
+                                            appropriate_table = table_name
+                                            break
                                         else:
                                             raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
-                                        appropriate_table = table_name
-                                        break
                                 if appropriate_table is None:
                                     raise Exception(f'Can not find approproate table for column {column_name}')
 
                                 columns_to_copy = None
+                                table_column_names_list = [x[1] or x[0] for x in table_columns]
+                                checking_name = get_column_in_case(table_column_names_list, column_name)
                                 for column in step_data['columns'][appropriate_table]:
-                                    if column[0] == column_name and (column[1] is None or column[1] == column_name):
+                                    if column[0] == checking_name and (column[1] is None or column[1] == checking_name):
                                         columns_to_copy = column
                                         break
                                 else:
@@ -779,7 +781,7 @@ class SQLQuery():
                             else:
                                 raise Exception('Undefined column name')
                         else:
-                            raise Exception(f'Unexpected column name type: {column_full_name}')
+                            raise Exception(f'Unexpected column name type: {column_identifier}')
 
                     self.columns_list = columns_list
                     data = step_data

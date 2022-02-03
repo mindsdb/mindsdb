@@ -8,6 +8,7 @@ import numpy as np
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mariadb.mariadb import Mariadb
@@ -249,8 +250,27 @@ class MindsDBDataNode(DataNode):
 
             where_data = [new_where]
 
+        if isinstance(where_data, dict):
+            where_data = [where_data]
+
         model = self.model_interface.get_model_data(name=table)
         columns = list(model['dtype_dict'].keys())
+
+        # cast where_data column to case of original predicto column
+        if len(where_data) > 0:
+            row = where_data[0]
+            col_name_map = {}
+            for i, col_name in enumerate(row):
+                if col_name in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                    continue
+                new_col_name = get_column_in_case(columns, col_name)
+                if col_name != new_col_name:
+                    col_name_map[col_name] = new_col_name
+            if len(col_name_map) > 0:
+                for row in where_data:
+                    for old_col_name, new_col_name in col_name_map.items():
+                        row[new_col_name] = row[old_col_name]
+                        del row[old_col_name]
 
         predicted_columns = model['predict']
         if not isinstance(predicted_columns, list):

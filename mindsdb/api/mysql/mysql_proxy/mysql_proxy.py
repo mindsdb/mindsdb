@@ -640,11 +640,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             order_by = kwargs['timeseries_settings'].get('order_by')
             if order_by is not None:
                 for i, col in enumerate(order_by):
-                    kwargs['timeseries_settings']['order_by'][i] = get_column_in_case(ds_column_names, col)
+                    new_name = get_column_in_case(ds_column_names, col)
+                    if new_name is None:
+                        raise Exception(
+                            f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
+                        )
+                    kwargs['timeseries_settings']['order_by'][i] = new_name
             group_by = kwargs['timeseries_settings'].get('group_by')
             if group_by is not None:
                 for i, col in enumerate(group_by):
-                    kwargs['timeseries_settings']['group_by'][i] = get_column_in_case(ds_column_names, col)
+                    new_name = get_column_in_case(ds_column_names, col)
+                    kwargs['timeseries_settings']['group_by'][i] = new_name
+                    if new_name is None:
+                        raise Exception(
+                            f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
+                        )
 
         model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True)
 

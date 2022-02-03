@@ -264,7 +264,7 @@ class MindsDBDataNode(DataNode):
                 if col_name in ('__mindsdb_row_id', '__mdb_make_predictions'):
                     continue
                 new_col_name = get_column_in_case(columns, col_name)
-                if col_name != new_col_name:
+                if new_col_name is not None and col_name != new_col_name:
                     col_name_map[col_name] = new_col_name
             if len(col_name_map) > 0:
                 for row in where_data:

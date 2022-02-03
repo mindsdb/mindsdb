@@ -7,5 +7,5 @@ def get_column_in_case(columns, name):
         if column.lower() == name_lower:
             candidates.append(column)
     if len(candidates) != 1:
-        raise Exception(f'Cant get appropriate cast column case. Columns: {columns}, column: {name}, candidates: {candidates}')
+        return None
     return candidates[0]

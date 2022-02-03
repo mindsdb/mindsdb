@@ -23,7 +23,7 @@ To ensure you can complete all the steps, make sure you have access to the follo
 
 1. Create a new project directory named e.g. `mindsdb-tutorial`
 2. Inside your project directory:
-    2.1 Create a new file named `docker-compose.yml`.
+  - Create a new file named `docker-compose.yml`.
 
 Open the `docker-compose.yml` file with any text-editor, copy the following and save.
 
@@ -61,7 +61,7 @@ Data will be loaded from a csv file using the import tool.
 [Docker Volumes](https://docs.docker.com/storage/volumes/) are used for persistent storage of data.
 
 To run, open a terminal in the project folder and run `docker-compose up -d` .
-If you do not have the Docker images locally, it will first download them from docker hub and might take.
+If you do not have the Docker images locally, it will first download them from docker hub and might take a while.
 
 ## Creating a database
 

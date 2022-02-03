@@ -70,6 +70,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErNonInsertableTable,
     ErNotSupportedYet,
 )
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
@@ -610,16 +611,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         except Exception as e:
             data_store.delete_datasource(ds_name)
             raise e
-
-        def get_column_in_case(columns, name):
-            candidates = []
-            name_lower = name.lower()
-            for column in columns:
-                if column.lower() == name_lower:
-                    candidates.append(column)
-            if len(candidates) != 1:
-                raise Exception(f'Cant get appropriate cast column case. Columns: {columns}, column: {name}, candidates: {candidates}')
-            return candidates[0]
 
         for i, p in enumerate(predict):
             predict[i] = get_column_in_case(ds_column_names, p)

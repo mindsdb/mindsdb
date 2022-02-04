@@ -116,6 +116,6 @@ CREATE PREDICTOR home_rentals_model
 FROM db_integration 
 (SELECT * FROM house_rentals_data) as rentals
 PREDICT rental_price as price
-USING {"ignore_columns": "number_of_bathrooms"};
+USING ignore_columns="number_of_bathrooms";
 ```
 

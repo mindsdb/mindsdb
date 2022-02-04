@@ -470,51 +470,104 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         return cleaned_predict_column_names
 
-    def answer_describe_predictor(self, predictor_name):
+    def _get_features_info(self, data):
+        ai_info = data.get('json_ai', {})
+        if ai_info == {}:
+            raise ErBadTableError("predictor doesn't contain enough data.")
+        data = []
+        dtype_dict = ai_info["dtype_dict"]
+        for column in dtype_dict:
+            c_data = []
+            c_data.append(column)
+            c_data.append(dtype_dict[column])
+            c_data.append(ai_info["encoders"][column]["module"])
+            if ai_info["encoders"][column]["args"].get("is_target", "False") == "True":
+                c_data.append("target")
+            else:
+                c_data.append("feature")
+            data.append(c_data)
+        return data
+
+    def answer_describe_predictor(self, predictor_value):
+        log.info("PREDICTOR_VALUE: %s", predictor_value)
+        predictor_attr = None
+        if isinstance(predictor_value, (list, tuple)):
+            predictor_name = predictor_value[0]
+            predictor_attr = predictor_value[1]
+        else:
+            predictor_name = predictor_value
         model_interface = self.session.model_interface
         models = model_interface.get_models()
         if predictor_name not in [x['name'] for x in models]:
             raise ErBadTableError(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
         description = model_interface.get_model_description(predictor_name)
-        description = [
-            description['accuracies'],
-            description['column_importances'],
-            description['outputs'],
-            description['inputs'],
-            description['datasource'],
-            description['model']
-        ]
-        packages = self.get_tabel_packets(
-            columns=[{
-                'table_name': '',
-                'name': 'accuracies',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'column_importances',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': "outputs",
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'inputs',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'datasource',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'model',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }],
-            data=[description]
-        )
+
+        if predictor_attr is None:
+            description = [
+                description['accuracies'],
+                description['column_importances'],
+                description['outputs'],
+                description['inputs'],
+                description['datasource'],
+                description['model']
+            ]
+            packages = self.get_tabel_packets(
+                columns=[{
+                    'table_name': '',
+                    'name': 'accuracies',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': 'column_importances',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': "outputs",
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': 'inputs',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': 'datasource',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': 'model',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }],
+                data=[description]
+            )
+        else:
+            data = model_interface.get_model_data(predictor_name)
+            if predictor_attr == "features":
+                data = self._get_features_info(data)
+                log.info("FEATURE DATA: %s", data)
+                packages = self.get_tabel_packets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'column',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'type',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': "encoder",
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'role',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=data
+                )
+            else:
+                raise ErNotSupportedYet("DESCRIBE '%s' predictor attribute is not supported yet" % predictor_attr)
         packages.append(self.last_packet())
         self.send_package_group(packages)
-        return
 
     def answer_retrain_predictor(self, predictor_name):
         model_interface = self.session.model_interface
@@ -1163,7 +1216,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answer_drop_datasource(ds_name)
             return
         elif type(statement) == Describe:
-            self.answer_describe_predictor(statement.value.parts[-1])
+            if statement.value.parts[-1] in ("model", "features"):
+                self.answer_describe_predictor(statement.value.parts[-2:])
+            else:
+                self.answer_describe_predictor(statement.value.parts[-1])
             return
         elif type(statement) == RetrainPredictor:
             self.answer_retrain_predictor(statement.name.parts[-1])

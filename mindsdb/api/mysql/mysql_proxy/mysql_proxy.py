@@ -673,7 +673,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def answer_stmt_prepare(self, sql):
         sqlquery = SQLQuery(
             sql,
-            session=self.session
+            session=self.session,
+            execute=False
         )
 
         stmt_id = self.session.register_stmt(sqlquery)

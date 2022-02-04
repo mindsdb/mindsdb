@@ -169,7 +169,7 @@ class Column:
 
 
 class SQLQuery():
-    def __init__(self, sql, session):
+    def __init__(self, sql, session, execute=True):
         self.session = session
         self.integration = session.integration
         self.database = None if session.database == '' else session.database.lower()
@@ -194,8 +194,13 @@ class SQLQuery():
         self.query = None
         self.planner = None
         self.parameters_count = None
+        self.fetched_data = None
         self.model_types = {}
         self._parse_query(sql)
+        if execute:
+            self.prepare_query()
+            self.execute_query()
+
 
     def fetch(self, datahub, view='list'):
         data = self.fetched_data
@@ -398,7 +403,7 @@ class SQLQuery():
             return
 
         steps_data = []
-        for step in self.planner.prepare_steps():
+        for step in self.planner.prepare_steps(self.query):
             data = self.execute_step(step, steps_data)
             step.set_result(data)
             steps_data.append(data)
@@ -420,11 +425,17 @@ class SQLQuery():
         self.parameters_count = statement_info['parameters_count']
 
     def execute_query(self, params=None):
+        if self.fetched_data is not None:
+            # no need to execute
+            return
 
         steps_data = []
         for step in self.planner.execute_steps(params):
             data = self.execute_step(step, steps_data)
             steps_data.append(data)
+
+        # save updated query
+        self.query = self.planner.query
 
         if self.outer_query is not None:
             data = []

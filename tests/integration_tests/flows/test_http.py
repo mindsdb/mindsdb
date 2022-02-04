@@ -54,7 +54,7 @@ class HTTPTest(unittest.TestCase):
         assert res.status_code == 200
         test_integration = res.json()
         print(test_integration)
-        assert len(test_integration) == 9  # 8 + id field
+        assert len(test_integration) == 10
 
         for k in test_integration_data:
             if k != 'password':
@@ -240,9 +240,10 @@ class HTTPTest(unittest.TestCase):
         # Edit it
         json_ai = predictor_data['json_ai']
         json_ai['problem_definition']
-        mixers = json_ai['outputs']['rental_price']['mixers']
+        mixers = json_ai['model']['args']['submodels']
         keep_only = [x for x in mixers if x['module'] != 'Regression']
-        json_ai['outputs']['rental_price']['mixers'] = keep_only
+        json_ai['model']['args']['submodels'] = keep_only
+
 
         # Upload it
         r = requests.put(

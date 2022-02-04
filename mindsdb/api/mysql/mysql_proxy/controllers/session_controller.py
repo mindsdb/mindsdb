@@ -53,13 +53,12 @@ class SessionController():
             company_id=company_id
         )
 
-        self.datahub = init_datahub(
-            model_interface=self.model_interface,
-            ai_table=self.ai_table,
-            data_store=self.data_store,
-            datasource_interface=self.datasource_interface,
+        self.view_interface = WithKWArgsWrapper(
+            server.original_view_controller,
             company_id=company_id
         )
+
+        self.datahub = init_datahub(self)
 
         self.prepared_stmts = {}
         self.packet_sequence_number = 0

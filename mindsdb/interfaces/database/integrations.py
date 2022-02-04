@@ -159,8 +159,13 @@ class DatasourceController:
                 data['connection'] = None
 
         data['id'] = integration_record.id
+        data['name'] = integration_record.name
 
         return data
+
+    def get_db_integration_by_id(self, id, company_id=None, sensitive_info=True):
+        integration_record = session.query(Integration).filter_by(company_id=company_id, id=id).first()
+        return self._get_integration_record_data(integration_record, sensitive_info)
 
     def get_db_integration(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:

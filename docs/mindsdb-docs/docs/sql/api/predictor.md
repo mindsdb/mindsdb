@@ -104,7 +104,7 @@ CREATE PREDICTOR predictor_name
 FROM integration_name 
 (SELECT column_name, column_name2 FROM table_name) as ds_name
 PREDICT column_name as column_alias
-USING {"ignore_columns": "column_name3"};
+USING ignore_columns="column_name3";
 ```
 
 ### USING example

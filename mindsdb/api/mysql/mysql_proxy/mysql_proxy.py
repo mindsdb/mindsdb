@@ -489,7 +489,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return data
 
     def answer_describe_predictor(self, predictor_value):
-        log.info("PREDICTOR_VALUE: %s", predictor_value)
         predictor_attr = None
         if isinstance(predictor_value, (list, tuple)):
             predictor_name = predictor_value[0]
@@ -543,7 +542,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data = model_interface.get_model_data(predictor_name)
             if predictor_attr == "features":
                 data = self._get_features_info(data)
-                log.info("FEATURE DATA: %s", data)
                 packages = self.get_tabel_packets(
                     columns=[{
                         'table_name': '',

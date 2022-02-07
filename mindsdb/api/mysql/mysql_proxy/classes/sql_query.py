@@ -158,8 +158,8 @@ class Column:
                  type=None, database=None):
         if alias is None:
             alias = name
-        if table_alias is None:
-            table_alias = name
+        # if table_alias is None:
+        #     table_alias = table_name
         self.name = name
         self.alias = alias
         self.table_name = table_name
@@ -167,6 +167,8 @@ class Column:
         self.type = type
         self.database = database
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.__dict__})'
 
 class SQLQuery():
     def __init__(self, sql, session, execute=True):
@@ -326,17 +328,23 @@ class SQLQuery():
         mindsdb_sql_struct = self.query
         # is it query to 'predictors'?
         if (
-                isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
-                and (
+            isinstance(mindsdb_sql_struct.from_table, Identifier)
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
+            and (
                 self.database == 'mindsdb'
                 or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-        )
+            )
         ):
             dn = self.datahub.get(self.mindsdb_database_name)
             data, columns = dn.get_predictors(mindsdb_sql_struct)
             table_name = ('mindsdb', 'predictors', 'predictors')
-            data = [{(key, key): value for key, value in row.items()} for row in data]
+            data = [
+                {
+                    (key, key): value
+                    for key, value in row.items()
+                }
+                for row in data
+            ]
             data = [{table_name: x} for x in data]
             self.columns_list = [
                 Column(database='mindsdb',
@@ -356,12 +364,12 @@ class SQLQuery():
 
         # is it query to 'commands'?
         if (
-                isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
-                and (
+            isinstance(mindsdb_sql_struct.from_table, Identifier)
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
+            and (
                 self.database == 'mindsdb'
                 or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-        )
+            )
         ):
             self.fetched_data = {
                 'values': [],
@@ -373,17 +381,24 @@ class SQLQuery():
 
         # is it query to 'datasources'?
         if (
-                isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
-                and (
+            isinstance(mindsdb_sql_struct.from_table, Identifier)
+            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
+            and (
                 self.database == 'mindsdb'
                 or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-        )
+            )
         ):
             dn = self.datahub.get(self.mindsdb_database_name)
             data, columns = dn.get_datasources(mindsdb_sql_struct)
             table_name = ('mindsdb', 'datasources', 'datasources')
-            data = [{(key, key): value for key, value in row.items()} for row in data]
+            data = [
+                {
+                    (key, key): value
+                    for key, value in row.items()
+                }
+                for row in data
+            ]
+
             data = [{table_name: x} for x in data]
 
             self.columns_list = [
@@ -432,6 +447,7 @@ class SQLQuery():
         steps_data = []
         for step in self.planner.execute_steps(params):
             data = self.execute_step(step, steps_data)
+            step.set_result(data)
             steps_data.append(data)
 
         # save updated query
@@ -536,12 +552,17 @@ class SQLQuery():
             cols = []
             for col in columns:
                 if not isinstance(col, dict):
-                    col = {'name': col, type: 'str'}
+                    col = {'name': col, 'type': 'str'}
                 cols.append(col)
+
+            table_alias = (self.database, table, None)
 
             data = {
                 'values': [],
-                'columns': cols,
+                'columns': {
+                    table_alias: cols
+                },
+                'tables': [table_alias]
             }
 
         elif type(step) == FetchDataframeStep:
@@ -971,13 +992,17 @@ class SQLQuery():
             for column_record in self.columns_list:
                 table_name = (column_record.database, column_record.table_name, column_record.table_alias)
                 column_name = (column_record.name, column_record.alias)
+                if not table_name in row:
+                    # try without alias
+                    table_name = (table_name[0], table_name[1], None)
+
                 data_row.append(row[table_name][column_name])
             result.append(data_row)
         return result
 
     def _make_dict_result_view(self, data):
         result = []
-        for row in data:
+        for row in data['values']:
             data_row = {}
             for table_name in row:
                 data_row.update(row[table_name])

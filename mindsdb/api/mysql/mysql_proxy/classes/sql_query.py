@@ -200,7 +200,7 @@ class SQLQuery():
         self.model_types = {}
         self._parse_query(sql)
         if execute:
-            self.prepare_query()
+            self.prepare_query(save_columns=False)
             self.execute_query()
 
 
@@ -324,7 +324,7 @@ class SQLQuery():
             default_namespace=self.database
         )
 
-    def prepare_query(self):
+    def prepare_query(self, save_columns=True):
         mindsdb_sql_struct = self.query
         # is it query to 'predictors'?
         if (
@@ -417,27 +417,29 @@ class SQLQuery():
             }
             return
 
-        steps_data = []
-        for step in self.planner.prepare_steps(self.query):
-            data = self.execute_step(step, steps_data)
-            step.set_result(data)
-            steps_data.append(data)
+        if save_columns:
+            # it is prepared statement call
+            steps_data = []
+            for step in self.planner.prepare_steps(self.query):
+                data = self.execute_step(step, steps_data)
+                step.set_result(data)
+                steps_data.append(data)
 
-        statement_info = self.planner.get_statement_info()
+            statement_info = self.planner.get_statement_info()
 
-        self.columns_list = []
-        for col in statement_info['columns']:
-            self.columns_list.append(
-                Column(
-                    database=col['ds'],
-                    table_name=col['table_name'],
-                    table_alias=col['table_alias'],
-                    name=col['name'],
-                    alias=col['alias'],
-                    type=col['type']
+            self.columns_list = []
+            for col in statement_info['columns']:
+                self.columns_list.append(
+                    Column(
+                        database=col['ds'],
+                        table_name=col['table_name'],
+                        table_alias=col['table_alias'],
+                        name=col['name'],
+                        alias=col['alias'],
+                        type=col['type']
+                    )
                 )
-            )
-        self.parameters_count = statement_info['parameters_count']
+            self.parameters_count = statement_info['parameters_count']
 
     def execute_query(self, params=None):
         if self.fetched_data is not None:
@@ -1028,7 +1030,7 @@ class SQLQuery():
             elif field_type == dtype.integer:
                 column_type = TYPES.MYSQL_TYPE_LONG
 
-        result.append({
+            result.append({
                 'database': column_record.database or self.database,
                 #  TODO add 'original_table'
                 'table_name': column_record.table_name,

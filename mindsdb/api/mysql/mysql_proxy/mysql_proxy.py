@@ -470,10 +470,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         return cleaned_predict_column_names
 
+    def _get_model_info(self, data):
+        models_data = data.get("submodel_data", [])
+        if models_data == []:
+            raise ErBadTableError("predictor doesn't contain enough data to generate 'model' attribute")
+        data = []
+        for model in models_data:
+            m_data = []
+            m_data.append(model["name"])
+            m_data.append(model["accuracy"])
+            m_data.append(1 if model["is_best"] else 0)
+            data.append(m_data)
+        return data
+
     def _get_features_info(self, data):
         ai_info = data.get('json_ai', {})
         if ai_info == {}:
-            raise ErBadTableError("predictor doesn't contain enough data.")
+            raise ErBadTableError("predictor doesn't contain enough data to generate 'feature' attribute.")
         data = []
         dtype_dict = ai_info["dtype_dict"]
         for column in dtype_dict:
@@ -558,6 +571,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     }, {
                         'table_name': '',
                         'name': 'role',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=data
+                )
+            elif predictor_attr == "model":
+                data = self._get_model_info(data)
+                packages = self.get_tabel_packets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'name',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'performance',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': "selected",
                         'type': TYPES.MYSQL_TYPE_VAR_STRING
                     }],
                     data=data

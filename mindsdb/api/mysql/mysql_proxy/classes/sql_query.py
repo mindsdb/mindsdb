@@ -550,7 +550,10 @@ class SQLQuery():
         elif type(step) == GetTableColumns:
             table = step.table
             dn = self.datahub.get(step.namespace)
-            columns = dn.get_table_columns(table)
+            ds_query = Select(from_table=Identifier(table), targets=[Star()])
+            dso, _ = dn.data_store.create_datasource(dn.integration_name, {'query': ds_query.to_string()})
+
+            columns = dso.get_columns()
             cols = []
             for col in columns:
                 if not isinstance(col, dict):

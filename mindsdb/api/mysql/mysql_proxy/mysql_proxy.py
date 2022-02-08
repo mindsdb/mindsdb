@@ -556,7 +556,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_create_view(self, statement):
         name = statement.name
-        query = str(statement.query)
+        query = str(statement.query_str)
         datasource_name = statement.from_table.parts[-1]
 
         self.session.view_interface.add(name, query, datasource_name)

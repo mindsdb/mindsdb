@@ -158,8 +158,8 @@ class Column:
                  type=None, database=None):
         if alias is None:
             alias = name
-        # if table_alias is None:
-        #     table_alias = table_name
+        if table_alias is None:
+            table_alias = table_name
         self.name = name
         self.alias = alias
         self.table_name = table_name
@@ -547,7 +547,7 @@ class SQLQuery():
                 },
                 'tables': [(self.mindsdb_database_name, predictor_name, predictor_name)]
             }
-        if type(step) == GetTableColumns:
+        elif type(step) == GetTableColumns:
             table = step.table
             dn = self.datahub.get(step.namespace)
             columns = dn.get_table_columns(table)
@@ -557,7 +557,7 @@ class SQLQuery():
                     col = {'name': col, 'type': 'str'}
                 cols.append(col)
 
-            table_alias = (self.database, table, None)
+            table_alias = (self.database, table, table)
 
             data = {
                 'values': [],

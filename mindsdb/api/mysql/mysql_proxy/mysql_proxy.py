@@ -608,7 +608,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def delete_predictor_query(self, query):
 
         query2 = Select(targets=[Identifier('name')],
-                        from_table=query.from_table,
+                        from_table=query.table,
                         where=query.where)
         # fake_sql = sql.strip(' ')
         # fake_sql = 'select name ' + fake_sql[len('delete '):]

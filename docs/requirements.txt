@@ -4,3 +4,4 @@ mkdocs-redirects
 mkdocs-table-reader-plugin == 0.3.0
 pymdown-extensions 
 pygments 
+mkdocs-static-i18n>=0.43

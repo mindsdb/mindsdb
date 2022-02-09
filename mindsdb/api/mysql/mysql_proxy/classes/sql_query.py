@@ -455,7 +455,7 @@ class SQLQuery():
                     else:
                         raise Exception(f'Unknown step type: {step.step}')
                 except Exception as e:
-                    raise SqlApiException("error in map reduce step") from e
+                    raise SqlApiException(f'error in map reduce step: {e}') from e
             elif type(step) == ApplyPredictorRowStep:
                 try:
                     predictor = '.'.join(step.predictor.parts)
@@ -486,7 +486,7 @@ class SQLQuery():
                         'tables': [table_name]
                     }
                 except Exception as e:
-                    raise SqlApiException("error in apply predictor row step.") from e
+                    raise SqlApiException(f'error in apply predictor row step: {e}') from e
             elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
                 try:
                     dn = self.datahub.get(self.mindsdb_database_name)
@@ -582,7 +582,7 @@ class SQLQuery():
                         'tables': [table_name]
                     }
                 except Exception as e:
-                    raise SqlApiException("error in apply predictor step") from e
+                    raise SqlApiException(f'error in apply predictor step: {e}') from e
             elif type(step) == JoinStep:
                 try:
                     left_data = steps_data[step.left.step_num]
@@ -700,7 +700,7 @@ class SQLQuery():
                     #                     break
                     #     data['values'] = data_values
                 except Exception as e:
-                    raise SqlApiException("error in join step") from e
+                    raise SqlApiException(f'error in join step: {e}') from e
 
             elif type(step) == FilterStep:
                 raise ErNotSupportedYet('FilterStep is not implemented')
@@ -719,7 +719,7 @@ class SQLQuery():
                     if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
                         data['values'] = data['values'][:step.limit.value]
                 except Exception as e:
-                    raise SqlApiException("error in limit offset step") from e
+                    raise SqlApiException(f'error in limit offset step: {e}') from e
             elif type(step) == ProjectStep:
                 try:
                     step_data = steps_data[step.dataframe.step_num]
@@ -803,7 +803,7 @@ class SQLQuery():
                     self.columns_list = columns_list
                     data = step_data
                 except Exception as e:
-                    raise SqlApiException("error on project step") from e
+                    raise SqlApiException(f'error on project step:{e} ') from e
             else:
                 raise SqlApiException(F'Unknown planner step: {step}')
             steps_data.append(data)

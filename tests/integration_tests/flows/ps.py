@@ -1,9 +1,10 @@
+# Import files
 import sys
 import time
 from collections import namedtuple
 import psutil
 
-
+# net_connection function
 def net_connections():
     """Cross-platform psutil.net_connections like interface"""
     if sys.platform.lower().startswith('linux'):
@@ -32,7 +33,7 @@ def net_connections():
             pass
     return all_connections
 
-
+# is_port_in_use function
 def is_port_in_use(port_num):
     """Check does any of child process uses specified port."""
     parent_process = psutil.Process()
@@ -42,7 +43,7 @@ def is_port_in_use(port_num):
     portsinuse.sort()
     return int(port_num) in portsinuse
 
-
+# wait_func_is_true function
 def wait_func_is_true(func, timeout, *args, **kwargs):
     start_time = time.time()
 
@@ -53,11 +54,11 @@ def wait_func_is_true(func, timeout, *args, **kwargs):
 
     return result
 
-
+# wait_port function
 def wait_port(port_num, timeout):
     return wait_func_is_true(func=is_port_in_use, timeout=timeout, port_num=port_num)
 
-
+# get_listen_ports(pid) function
 def get_listen_ports(pid):
     try:
         p = psutil.Process(pid)
@@ -67,7 +68,7 @@ def get_listen_ports(pid):
         return []
     return cons
 
-
+# is_pid_listen_port(pid, port)
 def is_pid_listen_port(pid, port):
     ports = get_listen_ports(pid)
     return int(port) in ports

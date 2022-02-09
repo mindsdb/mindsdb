@@ -26,16 +26,19 @@ class IntegrationDataNode(DataNode):
         return []
 
     def select(self, query):
-        if self.ds_type in ('postgres', 'snowflake'):
-            dialect = 'postgres'
+        if isinstance(query, str):
+            query_str = query
         else:
-            dialect = 'mysql'
-        render = SqlalchemyRender(dialect)
-        try:
-            query_str = render.get_string(query, with_failback=False)
-        except Exception as e:
-            log.error(f"Exception during query casting to '{dialect}' dialect. Query: {query}. Error: {e}")
-            query_str = render.get_string(query, with_failback=True)
+            if self.ds_type in ('postgres', 'snowflake'):
+                dialect = 'postgres'
+            else:
+                dialect = 'mysql'
+            render = SqlalchemyRender(dialect)
+            try:
+                query_str = render.get_string(query, with_failback=False)
+            except Exception as e:
+                log.error(f"Exception during query casting to '{dialect}' dialect. Query: {query}. Error: {e}")
+                query_str = render.get_string(query, with_failback=True)
 
         dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': query_str})
         data = dso.df.to_dict(orient='records')

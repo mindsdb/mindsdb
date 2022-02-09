@@ -1,3 +1,4 @@
+# about.py file
 __title__ = 'MindsDB'
 __package_name__ = 'mindsdb'
 __version__ = '22.2.1.2'

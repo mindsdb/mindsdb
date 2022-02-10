@@ -33,6 +33,7 @@ from mindsdb_sql.parser.ast import (
     CommitTransaction,
     StartTransaction,
     BinaryOperation,
+    NullConstant,
     Identifier,
     Parameter,
     Describe,
@@ -1652,7 +1653,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         columns = []
         data = []
         for target in statement.targets:
-            if type(target) == Variable:
+            target_type = type(target)
+            if target_type == Variable:
                 var_name = target.value
                 column_name = f'@@{var_name}'
                 column_alias = target.alias or column_name
@@ -1662,7 +1664,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     result = ''
                 else:
                     result = result[0]
-            elif type(target) == Function:
+            elif target_type == Function:
                 functions_results = {
                     'connection_id': self.connection_id,
                     'database': self.session.database,
@@ -1674,14 +1676,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 column_name = f'{target.op}()'
                 column_alias = target.alias or column_name
                 result = functions_results[function_name]
-            elif type(target) == Constant:
+            elif target_type == Constant:
                 result = target.value
                 column_name = str(result)
                 column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
-            elif type(target) == Identifier:
+            elif target_type == NullConstant:
+                result = None
+                column_name = 'NULL'
+                column_alias = 'NULL'
+            elif target_type == Identifier:
                 result = '.'.join(target.parts)
                 column_name = str(result)
                 column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
+            else:
+                raise Exception(f'Unknown constant type: {target_type}')
 
             columns.append({
                 'table_name': '',

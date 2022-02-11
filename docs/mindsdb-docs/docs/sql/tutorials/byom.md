@@ -4,6 +4,16 @@ Mindsdb allows you to integrate your own machine learning models into it.
 
 In order to do this your model will require some sort of API wrapper, for now we have 2x API specifications we support, mlflow and ray serve.
 
+The former supports importing already trained models and predicting with them from mindsdb. The later supports both training and predicting with external models.
+
+In order to use custom models there are three mandatory arguments one must past inside the `USING` statement:
+- `url.predict`, this is the url to call for getting predictions from your model
+- `format`, this can be == `mlflow` or `ray_serve`
+- `dtype_dict`, this is a json specifying all columns expected by their models and their types
+
+There's an additional optional argument if you want to train the model via mindsdb:
+- `url.train`, which is the endpoint we'll call when training your model
+
 ## Ray Server
 
 Ray serve is a simple high-thoroughput service that can wrap over your own ml models.
@@ -60,6 +70,17 @@ while True:
     time.sleep(1)
 ```
 
+The important bits here are having a train and predict endpoint.
+
+The `train` endpoint accept two parameters in the json sent via POST:
+- `df` -- a serialized dictionary that can be converted into a pandas dataframe
+- `target` -- the name of the target column
+
+The `predict` endpoint needs only one parameter:
+- `df` -- a serialized dictionary that can be converted into a pandas dataframe
+
+The training endpoints must return a json that contains the keys `status` set to `ok`. The predict endpoint must return a dictionayr containing the `prediction` key, storing the predictions. Additional keys can be returned for confidence and confidence intervals.
+
 Once you start this ray serve wrapped model you can train it via the query:
 
 ```
@@ -89,10 +110,20 @@ SELECT tb.number_of_rooms, t.rental_price FROM mydb.test_data.home_rentals AS t 
 
 ## MLFlow
 
-### Train 
+MLFlow is a tool that you can use to train and serve models.
 
-You cannot train models served by MLFlow through mindsdb.
+As training is done through code rather than the API, that bit you will have to do from outside of mindsdb by pulling your data manually.
 
-### Predict
+The first step would be to install mlflow and get a model going, you can use the one in this very simple tutorial: https://github.com/mlflow/mlflow#saving-and-serving-models
 
-Already-trained MLFlow models can be used from within Mindsdb.
+Next, we're going to add this to mindsdb:
+
+```
+CREATE PREDICTOR byom2 PREDICT `1` USING url.predict='http://localhost:5000/invocations', format='mlflow', data_dtype={"0": "integer", "1": "integer"}
+```
+
+Then we can run predictions as usual, by using the `WHERE` statement or joining on a data table with an appropriate schema:
+
+```
+SELECT y FROM byom2 WHERE `0`=2;
+```

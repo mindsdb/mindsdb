@@ -46,8 +46,9 @@ By default, when you run the MindsDB container, it does not publish any of its p
 Next, run the below command to start the container:
 
 ```
-docker run -p 47334:47334 mindsdb/mindsdb
+docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
+Note. the above command only have ports for GUI and MYSQL. Please add your desired db port before you run the command. 
 
 ![Docker run](/assets/docker-install.gif)
 

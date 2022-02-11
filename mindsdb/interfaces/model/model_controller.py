@@ -28,7 +28,7 @@ from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess
+from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess, LearnRemoteProcess
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.datastore.datastore import QueryDS
 
@@ -160,7 +160,8 @@ class ModelController():
         if 'url' in problem_definition:
             train_url = problem_definition['url'].get('train', None)
             predict_url = problem_definition['url'].get('predict', None)
-            format = problem_definition['format']
+            com_format = problem_definition['format']
+            print(problem_definition['target'])
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,
@@ -169,17 +170,23 @@ class ModelController():
                 lightwood_version=lightwood_version,
                 to_predict=problem_definition['target'],
                 learn_args=ProblemDefinition.from_dict(problem_definition).to_dict(),
-                data={'name': name, 'train_url': train_url, 'predict_url': predict_url, 'format': format, 
+                data={'name': name, 'train_url': train_url, 'predict_url': predict_url, 'format': com_format, 
                       'status': 'complete' if train_url is None else 'training'},
                 is_custom=True,
                 # @TODO: For testing purposes, remove afterwards!
-                dtype_dict={'x': 'integer', 'y': 'integer'},
+                dtype_dict=json_ai_override['dtype_dict'],
             )
+
             db.session.add(predictor_record)
             db.session.commit()
             if train_url is not None:
-                # @TODO: Launch process that calls train url /w the data and updates the predictor object with status
-                pass
+                p = LearnRemoteProcess(df, predictor_record.id)
+                p.start()
+                if join_learn_process:
+                    p.join()
+                    if not IS_PY36:
+                        p.close()
+                db.session.refresh(predictor_record)
             return
 
         problem_definition = ProblemDefinition.from_dict(problem_definition)
@@ -240,10 +247,6 @@ class ModelController():
 
         if predictor_record.is_custom:
             if predictor_data['format'] == 'mlflow':
-                # @TODO -- REMOVE AFTER TEST
-                if 'x' in df.columns:
-                    df[0] = df['x']
-                    del df['x']
                 columns = list(df.columns)
                 data = []
                 for col in columns:
@@ -258,6 +261,13 @@ class ModelController():
                 predictions = pd.DataFrame({
                     'prediction': answer
                 })
+            elif predictor_data['format'] == 'ray_server':
+                serialized_df = json.dumps(df.to_dict())
+                resp = requests.post(predictor_data['predict_url'], json={'df': serialized_df})
+                print(resp.text)
+                print(resp)
+                predictions = pd.DataFrame(resp.json())
+
         else:
             fs_name = f'predictor_{company_id}_{predictor_record.id}'
 

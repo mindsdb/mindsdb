@@ -17,6 +17,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import log
 
 class Datum():
     def __init__(self, type, value=None):
+        # TODO other types: float, timestamp
         self.type = type
         self.value = b''
         self.var_type = self.type.split('<')[0]

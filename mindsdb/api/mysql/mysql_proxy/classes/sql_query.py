@@ -29,7 +29,9 @@ from mindsdb_sql.parser.ast import (
     Select,
     Union,
     Join,
-    Star
+    Star,
+    Insert,
+    Delete,
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
@@ -98,8 +100,13 @@ def get_all_tables(stmt):
         from_stmt = stmt.from_table
     elif isinstance(stmt, (Identifier, Join)):
         from_stmt = stmt
+    elif isinstance(stmt, Insert):
+        from_stmt = stmt.table
+    elif isinstance(stmt, Delete):
+        from_stmt = stmt.table
     else:
-        raise Exception(f'Unknown type of identifier: {stmt}')
+        # raise Exception(f'Unknown type of identifier: {stmt}')
+        return []
 
     result = []
     if isinstance(from_stmt, Identifier):
@@ -195,12 +202,12 @@ class SQLQuery():
         self.raw = sql
         self.query = None
         self.planner = None
-        self.parameters_count = None
+        self.parameters = []
         self.fetched_data = None
         self.model_types = {}
         self._parse_query(sql)
         if execute:
-            self.prepare_query(save_columns=False)
+            self.prepare_query(prepare=False)
             self.execute_query()
 
 
@@ -324,100 +331,102 @@ class SQLQuery():
             default_namespace=self.database
         )
 
-    def prepare_query(self, save_columns=True):
+    def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query
-        # is it query to 'predictors'?
-        if (
-            isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
-            and (
-                self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-            )
-        ):
-            dn = self.datahub.get(self.mindsdb_database_name)
-            data, columns = dn.get_predictors(mindsdb_sql_struct)
-            table_name = ('mindsdb', 'predictors', 'predictors')
-            data = [
-                {
-                    (key, key): value
-                    for key, value in row.items()
+
+        if isinstance(mindsdb_sql_struct, Select):
+            # is it query to 'predictors'?
+            if (
+                isinstance(mindsdb_sql_struct.from_table, Identifier)
+                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
+                and (
+                    self.database == 'mindsdb'
+                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+                )
+            ):
+                dn = self.datahub.get(self.mindsdb_database_name)
+                data, columns = dn.get_predictors(mindsdb_sql_struct)
+                table_name = ('mindsdb', 'predictors', 'predictors')
+                data = [
+                    {
+                        (key, key): value
+                        for key, value in row.items()
+                    }
+                    for row in data
+                ]
+                data = [{table_name: x} for x in data]
+                self.columns_list = [
+                    Column(database='mindsdb',
+                           table_name='predictors',
+                           name=column_name)
+                    for column_name in columns
+                ]
+
+                columns = [(column_name, column_name) for column_name in columns]
+
+                self.fetched_data = {
+                    'values': data,
+                    'columns': {table_name: columns},
+                    'tables': [table_name]
                 }
-                for row in data
-            ]
-            data = [{table_name: x} for x in data]
-            self.columns_list = [
-                Column(database='mindsdb',
-                       table_name='predictors',
-                       name=column_name)
-                for column_name in columns
-            ]
+                return
 
-            columns = [(column_name, column_name) for column_name in columns]
-
-            self.fetched_data = {
-                'values': data,
-                'columns': {table_name: columns},
-                'tables': [table_name]
-            }
-            return
-
-        # is it query to 'commands'?
-        if (
-            isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
-            and (
-                self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-            )
-        ):
-            self.fetched_data = {
-                'values': [],
-                'columns': {('mindsdb', 'commands', 'commands'): [('command', 'command')]},
-                'tables': [('mindsdb', 'commands', 'commands')]
-            }
-            self.columns_list = [Column(database='mindsdb', table_name='commands', name='command')]
-            return
-
-        # is it query to 'datasources'?
-        if (
-            isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
-            and (
-                self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-            )
-        ):
-            dn = self.datahub.get(self.mindsdb_database_name)
-            data, columns = dn.get_datasources(mindsdb_sql_struct)
-            table_name = ('mindsdb', 'datasources', 'datasources')
-            data = [
-                {
-                    (key, key): value
-                    for key, value in row.items()
+            # is it query to 'commands'?
+            if (
+                isinstance(mindsdb_sql_struct.from_table, Identifier)
+                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
+                and (
+                    self.database == 'mindsdb'
+                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+                )
+            ):
+                self.fetched_data = {
+                    'values': [],
+                    'columns': {('mindsdb', 'commands', 'commands'): [('command', 'command')]},
+                    'tables': [('mindsdb', 'commands', 'commands')]
                 }
-                for row in data
-            ]
+                self.columns_list = [Column(database='mindsdb', table_name='commands', name='command')]
+                return
 
-            data = [{table_name: x} for x in data]
+            # is it query to 'datasources'?
+            if (
+                isinstance(mindsdb_sql_struct.from_table, Identifier)
+                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
+                and (
+                    self.database == 'mindsdb'
+                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+                )
+            ):
+                dn = self.datahub.get(self.mindsdb_database_name)
+                data, columns = dn.get_datasources(mindsdb_sql_struct)
+                table_name = ('mindsdb', 'datasources', 'datasources')
+                data = [
+                    {
+                        (key, key): value
+                        for key, value in row.items()
+                    }
+                    for row in data
+                ]
 
-            self.columns_list = [
-                Column(database='mindsdb',
-                       table_name='datasources',
-                       name=column_name)
-                for column_name in columns
-            ]
+                data = [{table_name: x} for x in data]
 
-            columns = [(column_name, column_name) for column_name in columns]
+                self.columns_list = [
+                    Column(database='mindsdb',
+                           table_name='datasources',
+                           name=column_name)
+                    for column_name in columns
+                ]
 
-            self.fetched_data = {
-                'values': data,
-                'columns': {table_name: columns},
-                'tables': [table_name]
-            }
-            return
+                columns = [(column_name, column_name) for column_name in columns]
 
-        if save_columns:
+                self.fetched_data = {
+                    'values': data,
+                    'columns': {table_name: columns},
+                    'tables': [table_name]
+                }
+                return
+
+        if prepare:
             # it is prepared statement call
             steps_data = []
             for step in self.planner.prepare_steps(self.query):
@@ -439,7 +448,15 @@ class SQLQuery():
                         type=col['type']
                     )
                 )
-            self.parameters_count = statement_info['parameters_count']
+
+            self.parameters = [
+                Column(
+                    name=col['name'],
+                    alias=col['alias'],
+                    type=col['type']
+                )
+                for col in statement_info['parameters']
+            ]
 
     def execute_query(self, params=None):
         if self.fetched_data is not None:
@@ -454,6 +471,10 @@ class SQLQuery():
 
         # save updated query
         self.query = self.planner.query
+
+        # there was no executing
+        if len(steps_data) == 0:
+            return
 
         if self.outer_query is not None:
             data = []
@@ -1016,8 +1037,11 @@ class SQLQuery():
 
     @property
     def columns(self):
+        return self.to_mysql_columns(self.columns_list)
+
+    def to_mysql_columns(self, columns_list):
         result = []
-        for column_record in self.columns_list:
+        for column_record in columns_list:
             try:
                 field_type = self.model_types.get(column_record.name)
             except Exception:

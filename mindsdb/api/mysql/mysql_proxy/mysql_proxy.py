@@ -681,7 +681,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
 
         sqlquery.prepare_query()
-        num_params = sqlquery.parameters_count
+        parameters = sqlquery.parameters
         columns_def = sqlquery.columns
 
         statement = sqlquery.query
@@ -699,7 +699,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise Exception("Only parametrized insert into 'predictors' or 'commands' supported at this moment")
 
 
-            # num_params = 0
+            # parameters = []
             # for row in statement.values:
             #     for item in row:
             #         if type(item) == Parameter:
@@ -707,7 +707,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # num_columns = len(query.columns) - num_params
 
             # ???
-            if len(sqlquery.columns) != sqlquery.parameters_count:
+            if len(sqlquery.columns) != len(sqlquery.parameters):
                 raise Exception("At this moment supported only insert where all values is parameters.")
 
             columns_def = []
@@ -725,7 +725,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # statement.cut_from_tail('for update')
             # query = SQLQuery(statement.sql, session=self.session)
             # num_columns = len(query.columns)
-            # num_params = 0
+            # parameters = []
             for col in columns_def:
                 col['charset'] = CHARSET_NUMBERS['utf8_general_ci']
 
@@ -738,12 +738,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # num_columns = 0
             # num_params = sql.count('?')
             columns_def = []
-            for i in range(sqlquery.parameters_count):
+            for col in sqlquery.parameters:
                 columns_def.append(dict(
                     database='',
                     table_alias='',
                     table_name='',
-                    alias='?',
+                    alias=col.name,
                     name='',
                     type=TYPES.MYSQL_TYPE_VAR_STRING,
                     charset=CHARSET_NUMBERS['utf8_general_ci'],
@@ -752,7 +752,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # elif statement.keyword == 'select' and 'connection_id()' in sql.lower():
         #     prepared_stmt['type'] = 'select'
         #     num_columns = 1
-        #     num_params = 0
+        #     parameters = []
         #     columns_def = [{
         #         'database': '',
         #         'table_name': '',
@@ -765,14 +765,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             prepared_stmt['type'] = 'select'
         #     query = SQLQuery(sql, session=self.session)
         #     num_columns = len(query.columns)
-        #     num_params = 0
+        #     parameters = []
         #     columns_def = query.columns
         elif isinstance (statement, Show) and statement.category in (
             'variables', 'session variables', 'show session status'
         ):
             prepared_stmt['type'] = 'show variables'
             num_columns = 2
-            num_params = 0
+            parameters = []
             columns_def = [{
                 'table_name': '',
                 'name': 'Variable_name',
@@ -790,17 +790,27 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 STMTPrepareHeaderPacket,
                 stmt_id=stmt_id,
                 num_columns=len(columns_def),
-                num_params=num_params
+                num_params=len(parameters)
             )
         ]
 
-        packages.extend(
-            self._get_column_defenition_packets(columns_def)
-        )
+        parameters_def = sqlquery.to_mysql_columns(parameters)
+        if len(parameters_def) > 0:
+            packages.extend(
+                self._get_column_defenition_packets(parameters_def)
+            )
+            if self.client_capabilities.DEPRECATE_EOF is False:
+                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                packages.append(self.packet(EofPacket, status=status))
 
-        if self.client_capabilities.DEPRECATE_EOF is False:
-            status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
-            packages.append(self.packet(EofPacket, status=status))
+        if len(columns_def) > 0:
+            packages.extend(
+                self._get_column_defenition_packets(columns_def)
+            )
+
+            if self.client_capabilities.DEPRECATE_EOF is False:
+                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                packages.append(self.packet(EofPacket, status=status))
 
         self.send_package_group(packages)
 
@@ -853,12 +863,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.send_package_group(packages)
         elif prepared_stmt['type'] == 'insert':
             # statement = parse_sql(prepared_stmt['statement'].sql, dialect='mindsdb')
-            parameter_index = 0
-            for row in query.values:
-                for item_index, item in enumerate(row):
-                    if type(item) == Parameter:
-                        row[item_index] = Constant(parameters[parameter_index])
-                        parameter_index += 1
+            # parameter_index = 0
+            # for row in query.values:
+            #     for item_index, item in enumerate(row):
+            #         if type(item) == Parameter:
+            #             row[item_index] = Constant(parameters[parameter_index])
+            #             parameter_index += 1
             self.process_insert(query)
 
         elif prepared_stmt['type'] == 'lock':

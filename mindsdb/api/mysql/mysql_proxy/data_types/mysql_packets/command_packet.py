@@ -32,6 +32,61 @@ class CommandPacket(Packet):
         b = struct.unpack('<B', b)[0]
         return b, buffer
 
+    def read_params(self, buffer, num_params):
+        if not num_params > 0:
+            return
+
+        # read null-map
+        null_bytes = math.floor((num_params + 7) / 8)
+        nulls = []
+        for i in range(null_bytes):
+            b, buffer = self._read_byte(buffer)
+            for i in range(8):
+                nulls.append(((1 << i) & b) != 0)
+
+        # read send-type byte
+        b, buffer = self._read_byte(buffer)
+
+        types = []
+        if b == 1:
+            # read types
+            for i in range(num_params):
+                t, buffer = self._read_byte(buffer)
+                s, buffer = self._read_byte(buffer)
+                types.append(dict(
+                    type=t,
+                    signed=s
+                ))
+
+        datumtypes = {
+            TYPES.MYSQL_TYPE_VAR_STRING: 'string<lenenc>',
+            TYPES.MYSQL_TYPE_STRING: 'string<lenenc>',
+            TYPES.MYSQL_TYPE_VARCHAR: 'string<lenenc>',
+
+            TYPES.MYSQL_TYPE_TINY: 'int<1>',
+            TYPES.MYSQL_TYPE_SHORT: 'int<2>',
+            TYPES.MYSQL_TYPE_LONG: 'int<4>',
+            TYPES.MYSQL_TYPE_LONGLONG: 'int<8>',
+        }
+
+        for i in range(num_params):
+            if nulls[i]:
+                self.parameters.append(None)
+                continue
+
+            datum_type = datumtypes.get(types[i]['type'])
+            if datum_type is not None:
+                x = Datum(datum_type)
+                buffer = x.setFromBuff(buffer)
+                value = x.value
+                if isinstance(value, bytes):
+                    value = value.decode()
+
+                self.parameters.append(value)
+            else:
+                # NOTE at this moment all sends as strings and it works
+                raise Exception(f"Unsupported type {types[i]['type']}")
+
     def setup(self, length=0, count_header=1, body=''):
         if length == 0:
             return
@@ -62,53 +117,26 @@ class CommandPacket(Packet):
 
             prepared_stmt = self.session.prepared_stmts[self.stmt_id.value]
 
-            if prepared_stmt['type'] in ['insert', 'delete']:
-                if prepared_stmt['type'] == 'insert':
-                    prepared_stmt['statement'].sql
-                    statement = parse_sql(prepared_stmt['statement'].sql)
-                    num_params = 0
-                    for row in statement.values:
-                        for item in row:
-                            if isinstance(item, Parameter):
-                                num_params = num_params + 1
-                elif prepared_stmt['type'] == 'delete':
-                    num_params = prepared_stmt['statement'].sql.count('?')
+            if prepared_stmt['type'] == 'select':
+                num_params = len(prepared_stmt['statement'].parameters)
 
-                if num_params > 0:
-                    # read null-map
-                    null_bytes = math.floor((num_params + 7) / 8)
-                    nulls = []
-                    for i in range(null_bytes):
-                        b, buffer = self._read_byte(buffer)
-                        for i in range(8):
-                            nulls.append(((1 << i) & b) != 0)
+                self.read_params(buffer, num_params)
 
-                    # read send-type byte
-                    b, buffer = self._read_byte(buffer)
+            elif prepared_stmt['type'] in ['insert', 'delete']:
+                # if prepared_stmt['type'] == 'insert':
+                #     prepared_stmt['statement'].sql
+                #     statement = parse_sql(prepared_stmt['statement'].sql)
+                #     num_params = 0
+                #     for row in statement.values:
+                #         for item in row:
+                #             if isinstance(item, Parameter):
+                #                 num_params = num_params + 1
+                # elif prepared_stmt['type'] == 'delete':
+                #     num_params = prepared_stmt['statement'].sql.count('?')
 
-                    types = []
-                    if b == 1:
-                        # read types
-                        for i in range(num_params):
-                            t, buffer = self._read_byte(buffer)
-                            s, buffer = self._read_byte(buffer)
-                            types.append(dict(
-                                type=t,
-                                signed=s
-                            ))
+                num_params = len(prepared_stmt['statement'].parameters)
+                self.read_params(buffer, num_params)
 
-                    self.parameters = []
-                    for i in range(num_params):
-                        if nulls[i]:
-                            self.parameters.append(None)
-                            continue
-                        if types[i]['type'] in (TYPES.MYSQL_TYPE_VAR_STRING, TYPES.MYSQL_TYPE_STRING):
-                            x = Datum('string<lenenc>')
-                            buffer = x.setFromBuff(buffer)
-                            self.parameters.append(x.value.decode())
-                        else:
-                            # NOTE at this moment all sends as strings and it works
-                            raise Exception(f"Unsupported type {types[i]['type']}")
 
         elif self.type.value == COMMANDS.COM_STMT_CLOSE:
             self.stmt_id = Datum('int<4>')

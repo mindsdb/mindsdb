@@ -3,8 +3,6 @@ import traceback
 import tempfile
 from pathlib import Path
 from typing import Optional
-from aiohttp import request
-from numpy import isin
 import json
 import requests
 
